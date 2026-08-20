@@ -178,7 +178,7 @@ broken step. It reads the demo records, so seed first:
 make seed-dev && make verify-boot
 ```
 
-You need Go ≥ 1.26, Docker (Compose), `jq`, `golangci-lint`, and
+You need Go ≥ 1.27, Docker (Compose), `jq`, `golangci-lint`, and
 node+pnpm for the frontend lane. On a fresh worktree, `make install` does
 the one-time setup: frontend deps, the Go gate binaries, and the git
 hooks. After that, `make check` runs straight away. `make help` lists the

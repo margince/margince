@@ -10,6 +10,6 @@
 // are narrow.
 module github.com/margince/margince/tools/gitleakspolicy
 
-go 1.26.6
+go 1.27.0
 
 require github.com/pelletier/go-toml/v2 v2.3.1

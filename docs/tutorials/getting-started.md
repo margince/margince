@@ -6,7 +6,7 @@ Makefile targets.
 
 ## Prerequisites
 
-- Go ≥ 1.26 (the module pins toolchain `go1.26.4`)
+- Go ≥ 1.27 (the module pins toolchain `go1.27.0`)
 - Docker (dev Postgres 16 + Redis 7 run as containers)
 - `golangci-lint` (only needed for `make check`)
 

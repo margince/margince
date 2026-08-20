@@ -1,18 +1,10 @@
 module github.com/margince/margince/backend
 
-// Go 1.26 is a deliberate floor (M5): the code uses composite-FK
+// Go 1.27 is a deliberate floor (M5): the code uses composite-FK
 // `ON DELETE SET NULL (column_list)` semantics and current-toolchain
-// tooling. Contributors/operators need the 1.26 toolchain; this is a PoC
+// tooling. Contributors/operators need the 1.27 toolchain; this is a PoC
 // choice, revisit if broader portability becomes a goal.
-go 1.26.6
-
-// The composed extension set (ADR-0120): a constant import path the role
-// binaries wire — api, worker and mcp today; migrate joins when the
-// extension migration namespace lands. Bare builds resolve the committed
-// vanilla stub via this replace, `make` lanes override it with the
-// generated module under build/composition/ via the generated go.work (a
-// workspace `use` wins over a member replace).
-require github.com/margince/margince/composition v0.0.0
+go 1.27.0
 
 replace github.com/margince/margince/composition => ../composition
 
@@ -26,6 +18,13 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/klippa-app/go-pdfium v1.19.8
+	// The composed extension set (ADR-0120): a constant import path the role
+	// binaries wire — api, worker and mcp today; migrate joins when the
+	// extension migration namespace lands. Bare builds resolve the committed
+	// vanilla stub via this replace, `make` lanes override it with the
+	// generated module under build/composition/ via the generated go.work (a
+	// workspace `use` wins over a member replace).
+	github.com/margince/margince/composition v0.0.0
 	github.com/minio/minio-go/v7 v7.2.1
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/prometheus/client_golang v1.24.1
