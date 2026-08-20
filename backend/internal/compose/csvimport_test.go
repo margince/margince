@@ -35,83 +35,89 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 		migration.ObjectLead: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := leadCreateFrom(fields, "import:csv", "ext-1", "src")
 			up := leadUpdateFrom(fields)
-			return map[string]bool{
-					"full_name":    in.FullName != nil,
-					"email":        in.Email != nil,
-					"title":        in.Title != nil,
-					"company_name": in.CompanyName != nil,
-				}, map[string]bool{
-					"full_name":    up.FullName != nil,
-					"email":        up.Email != nil,
-					"title":        up.Title != nil,
-					"company_name": up.CompanyName != nil,
-				}
+			created := map[string]bool{
+				"full_name":    in.FullName != nil,
+				"email":        in.Email != nil,
+				"title":        in.Title != nil,
+				"company_name": in.CompanyName != nil,
+			}
+			patched := map[string]bool{
+				"full_name":    up.FullName != nil,
+				"email":        up.Email != nil,
+				"title":        up.Title != nil,
+				"company_name": up.CompanyName != nil,
+			}
+			return created, patched
 		},
 		migration.ObjectCompany: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := companyCreateFrom(fields, "src")
 			up := companyUpdateFrom(fields)
-			return map[string]bool{
-					"display_name":        in.DisplayName != "",
-					"legal_name":          in.LegalName != nil,
-					"industry":            in.Industry != nil,
-					"size_band":           in.SizeBand != nil,
-					"description":         in.Description != nil,
-					"domain":              len(in.Domains) > 0,
-					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
-					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
-					"address.city":        in.Address != nil && in.Address.City != nil,
-					"address.region":      in.Address != nil && in.Address.Region != nil,
-					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
-					"address.country":     in.Address != nil && in.Address.Country != nil,
-				}, map[string]bool{
-					"display_name": up.DisplayName != nil,
-					"legal_name":   up.LegalName != nil,
-					"industry":     up.Industry != nil,
-					"size_band":    up.SizeBand != nil,
-					"description":  up.Description != nil,
-					// The replace-set behind a pointer: non-nil means the file
-					// carried a domain column, and only then is the stored set
-					// rewritten.
-					"domain":              up.Domains != nil && len(*up.Domains) > 0,
-					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
-					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
-					"address.city":        up.Address != nil && up.Address.City != nil,
-					"address.region":      up.Address != nil && up.Address.Region != nil,
-					"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
-					"address.country":     up.Address != nil && up.Address.Country != nil,
-				}
+			created := map[string]bool{
+				"display_name":        in.DisplayName != "",
+				"legal_name":          in.LegalName != nil,
+				"industry":            in.Industry != nil,
+				"size_band":           in.SizeBand != nil,
+				"description":         in.Description != nil,
+				"domain":              len(in.Domains) > 0,
+				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
+				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
+				"address.city":        in.Address != nil && in.Address.City != nil,
+				"address.region":      in.Address != nil && in.Address.Region != nil,
+				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
+				"address.country":     in.Address != nil && in.Address.Country != nil,
+			}
+			patched := map[string]bool{
+				"display_name": up.DisplayName != nil,
+				"legal_name":   up.LegalName != nil,
+				"industry":     up.Industry != nil,
+				"size_band":    up.SizeBand != nil,
+				"description":  up.Description != nil,
+				// The replace-set behind a pointer: non-nil means the file
+				// carried a domain column, and only then is the stored set
+				// rewritten.
+				"domain":              up.Domains != nil && len(*up.Domains) > 0,
+				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
+				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
+				"address.city":        up.Address != nil && up.Address.City != nil,
+				"address.region":      up.Address != nil && up.Address.Region != nil,
+				"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
+				"address.country":     up.Address != nil && up.Address.Country != nil,
+			}
+			return created, patched
 		},
 		migration.ObjectContact: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := contactCreateFrom(fields, "src")
 			up := contactUpdateFrom(fields)
-			return map[string]bool{
-					"full_name":           in.FullName != "",
-					"first_name":          in.FirstName != nil,
-					"last_name":           in.LastName != nil,
-					"title":               in.Title != nil,
-					"email":               len(in.Emails) > 0,
-					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
-					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
-					"address.city":        in.Address != nil && in.Address.City != nil,
-					"address.region":      in.Address != nil && in.Address.Region != nil,
-					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
-					"address.country":     in.Address != nil && in.Address.Country != nil,
-				}, map[string]bool{
-					"full_name":  up.FullName != nil,
-					"first_name": up.FirstName != nil,
-					"last_name":  up.LastName != nil,
-					"title":      up.Title != nil,
-					// The half that did not exist before this object did: a
-					// contact's emails are child rows, and the patch input
-					// carried no member for them at all.
-					"email":               len(up.Emails) > 0,
-					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
-					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
-					"address.city":        up.Address != nil && up.Address.City != nil,
-					"address.region":      up.Address != nil && up.Address.Region != nil,
-					"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
-					"address.country":     up.Address != nil && up.Address.Country != nil,
-				}
+			created := map[string]bool{
+				"full_name":           in.FullName != "",
+				"first_name":          in.FirstName != nil,
+				"last_name":           in.LastName != nil,
+				"title":               in.Title != nil,
+				"email":               len(in.Emails) > 0,
+				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
+				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
+				"address.city":        in.Address != nil && in.Address.City != nil,
+				"address.region":      in.Address != nil && in.Address.Region != nil,
+				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
+				"address.country":     in.Address != nil && in.Address.Country != nil,
+			}
+			patched := map[string]bool{
+				"full_name":  up.FullName != nil,
+				"first_name": up.FirstName != nil,
+				"last_name":  up.LastName != nil,
+				"title":      up.Title != nil,
+				// The half that did not exist before this object did: a
+				// contact's emails are child rows, and the patch input
+				// carried no member for them at all.
+				"email":               len(up.Emails) > 0,
+				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
+				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
+				"address.city":        up.Address != nil && up.Address.City != nil,
+				"address.region":      up.Address != nil && up.Address.Region != nil,
+				"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
+				"address.country":     up.Address != nil && up.Address.Country != nil,
+			}
+			return created, patched
 		},
 	} {
 		t.Run(object, func(t *testing.T) {
