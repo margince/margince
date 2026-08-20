@@ -19,13 +19,15 @@
 # the paragraph above. Whether this bundle has a floor at all then depends on a
 # transitive dependency's build tags, which is not a decision anyone made.
 #
-# 12.0 is not arbitrary: it is Go's own floor for this toolchain, so the C
+# 13.0 is not arbitrary: it is Go's own floor for this toolchain, so the C
 # halves (Postgres, the bus) and the Go halves (api, worker, migrate, the
-# launcher) agree on one number instead of disagreeing silently. Raising it
-# means raising Go's too; check what a Go binary reports before changing it:
+# launcher) agree on one number instead of disagreeing silently. It follows Go
+# rather than leading it — go1.27 ended macOS 12 support, so a Go binary from
+# this tree reports minos 13.0 and the assertion below refuses the bundle until
+# this number matches. Check what a Go binary reports before changing it:
 #
 #     vtool -show-build <a built Go binary> | grep minos
-MACOS_MIN="12.0"
+MACOS_MIN="13.0"
 export MACOSX_DEPLOYMENT_TARGET="$MACOS_MIN"
 
 # assert_min_os <file>... — no shipped binary may require a NEWER macOS than
@@ -50,7 +52,7 @@ assert_min_os() {
       offenders=$((offenders + 1))
       continue
     fi
-    # sort -V so 9.0 sorts below 12.0 the way a version does, not the way a
+    # sort -V so 9.0 sorts below 13.0 the way a version does, not the way a
     # string does.
     newest="$(printf '%s\n%s\n' "$MACOS_MIN" "$minos" | sort -V | tail -1)"
     if [[ "$newest" != "$MACOS_MIN" ]]; then
