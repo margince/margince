@@ -3912,6 +3912,27 @@ func (e DealWonWithoutContractReason) Valid() bool {
 	}
 }
 
+// Defines values for DealCoverageSectionsOmitted.
+const (
+	DealCoverageSectionsOmittedOurSide      DealCoverageSectionsOmitted = "our_side"
+	DealCoverageSectionsOmittedRisks        DealCoverageSectionsOmitted = "risks"
+	DealCoverageSectionsOmittedStakeholders DealCoverageSectionsOmitted = "stakeholders"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSectionsOmitted enum.
+func (e DealCoverageSectionsOmitted) Valid() bool {
+	switch e {
+	case DealCoverageSectionsOmittedOurSide:
+		return true
+	case DealCoverageSectionsOmittedRisks:
+		return true
+	case DealCoverageSectionsOmittedStakeholders:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealCoverageRiskKind.
 const (
 	DealCoverageRiskKindChampionLeft         DealCoverageRiskKind = "champion_left"
@@ -14115,7 +14136,7 @@ type CreateDealRequest struct {
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
 	PartnerAttribution *CreateDealRequestPartnerAttribution `json:"partner_attribution,omitempty"`
 
-	// PartnerOrgId The partner this deal is attributed to at birth. The org must have a `partner` row, and the caller must be able to read it.
+	// PartnerOrgId The partner this deal is attributed to at birth. The org must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it.
 	PartnerOrgId *openapi_types.UUID `json:"partner_org_id,omitempty"`
 	PipelineId   openapi_types.UUID  `json:"pipeline_id"`
 
@@ -14657,7 +14678,7 @@ type Deal struct {
 	// PartnerAttribution What the partner named by `partner_org_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 	PartnerAttribution *DealPartnerAttribution `json:"partner_attribution,omitempty"`
 
-	// PartnerOrgId Deal registration/attribution to a partner org (A38/A41/ADR-0032). The org must have a `partner` row. Null when the caller may not read that organization, in which case `masked_fields` names it.
+	// PartnerOrgId Deal registration/attribution to a partner org (A38/A41/ADR-0032). The org must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that organization, in which case `masked_fields` names it.
 	PartnerOrgId *openapi_types.UUID `json:"partner_org_id,omitempty"`
 
 	// PipelineId Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
@@ -14708,11 +14729,30 @@ type DealWonWithoutContractReason string
 
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
-	DealId       openapi_types.UUID       `json:"deal_id"`
-	OurSide      []PersonNetworkColleague `json:"our_side"`
-	Risks        []DealCoverageRisk       `json:"risks"`
-	Stakeholders []DealCoverageSeat       `json:"stakeholders"`
+	DealId  openapi_types.UUID       `json:"deal_id"`
+	OurSide []PersonNetworkColleague `json:"our_side"`
+	Risks   []DealCoverageRisk       `json:"risks"`
+
+	// SectionsOmitted The sections withheld for lack of the `relationship` grant — so a client can say
+	// "you can't see this" instead of "there is none". Never returned absent, and empty
+	// on the ordinary read: empty and forbidden are different answers, and a client that
+	// had to infer the difference from an empty `risks` array would render a withheld
+	// coverage view as a clean one.
+	//
+	// All three sections go together or none does. Every seat on the deal is a
+	// `deal_stakeholder` EDGE, `our_side` is derived from the seats, and every risk rule
+	// but `going_cold` reads them — so there is no partial answer to give here.
+	//
+	// A named section is EMPTY, never partial. `going_cold` needs no edge and could have
+	// survived, but a `risks` array holding one finding while this array names it would
+	// leave a client unable to say whether the list is complete. The deal's last touch is
+	// on the deal record; only this card's copy of the finding is withheld.
+	SectionsOmitted []DealCoverageSectionsOmitted `json:"sections_omitted"`
+	Stakeholders    []DealCoverageSeat            `json:"stakeholders"`
 }
+
+// DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
+type DealCoverageSectionsOmitted string
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -21235,12 +21275,14 @@ type UpdateDealRequest struct {
 	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
-	PartnerAttribution   *UpdateDealRequestPartnerAttribution `json:"partner_attribution,omitempty"`
-	PartnerOrgId         *openapi_types.UUID                  `json:"partner_org_id,omitempty"`
-	ProjectId            *openapi_types.UUID                  `json:"project_id,omitempty"`
-	Status               *UpdateDealRequestStatus             `json:"status,omitempty"`
-	WaitUntil            *openapi_types.Date                  `json:"wait_until,omitempty"`
-	AdditionalProperties map[string]interface{}               `json:"-"`
+	PartnerAttribution *UpdateDealRequestPartnerAttribution `json:"partner_attribution,omitempty"`
+
+	// PartnerOrgId The partner who brought this deal. The org must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.
+	PartnerOrgId         *openapi_types.UUID      `json:"partner_org_id,omitempty"`
+	ProjectId            *openapi_types.UUID      `json:"project_id,omitempty"`
+	Status               *UpdateDealRequestStatus `json:"status,omitempty"`
+	WaitUntil            *openapi_types.Date      `json:"wait_until,omitempty"`
+	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
 // UpdateDealRequestForecastCategory defines model for UpdateDealRequest.ForecastCategory.
@@ -42624,6 +42666,8 @@ func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *htt
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42676,6 +42720,8 @@ func (siw *ServerInterfaceWrapper) GetImportRun(w http.ResponseWriter, r *http.R
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42708,6 +42754,8 @@ func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *ht
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42739,6 +42787,8 @@ func (siw *ServerInterfaceWrapper) GetImportRunReport(w http.ResponseWriter, r *
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 

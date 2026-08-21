@@ -259,9 +259,10 @@ export const de = {
   "deal.partnerSourced": "über",
   "deal.partnerInfluenced": "unterstützt von",
   "deal.partnerAttribution": "Was der Partner getan hat",
-  "deal.attributionUnset": "Nicht angegeben (gilt als gebracht)",
-  "deal.attributionSourced": "Hat den Deal gebracht",
-  "deal.attributionInfluenced": "Hat bei einem bestehenden Deal geholfen",
+  "deal.attributionUnset": "Nicht angegeben — gilt als gebracht",
+  "deal.attributionSourced": "Hat diesen Deal gebracht (mit Provision)",
+  "deal.attributionInfluenced":
+    "Hat bei einem bestehenden Deal geholfen (ohne Provision)",
   "partnerDeals.panelTitle": "Gebrachte Deals",
   "partnerDeals.panelSub":
     "Deals bei anderen Firmen, die über diesen Partner zustande kamen",
@@ -304,9 +305,9 @@ export const de = {
   "partner.cert.applied": "Beantragt",
   "partner.cert.certified": "Zertifiziert",
   "partner.cert.suspended": "Ausgesetzt",
-  "partner.marginTier.tier1": "Stufe 1 (15 %)",
-  "partner.marginTier.tier2": "Stufe 2 (20 %)",
-  "partner.marginTier.tier3": "Stufe 3 (25 %)",
+  "partner.marginTier.tier1": "Intro (15 %)",
+  "partner.marginTier.tier2": "Aktive Zusammenarbeit (20 %)",
+  "partner.marginTier.tier3": "Partner hat abgeschlossen (25 %)",
   "partner.stage.research": "Recherche",
   "partner.stage.identified": "Identifiziert",
   "partner.stage.contacted": "Kontaktiert",
@@ -4033,6 +4034,8 @@ export const de = {
   "coverage.title": "Abdeckung",
   "coverage.clear":
     "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",
+  "coverage.withheld":
+    "Abdeckung zurückgehalten — Sie können die Beziehungen dieses Deals nicht lesen, daher wurde keine Prüfung durchgeführt.",
   "coverage.daysSinceTouch": "{days} Tage",
   "coverage.risk.single_threaded_theirs": "Nur ein Kontakt",
   "coverage.risk.single_threaded_ours": "Von einer Person getragen",
@@ -4837,6 +4840,22 @@ export const de = {
   "installationSettings.readOnly":
     "Nur ein Admin oder Ops kann diese Einstellungen ändern.",
   "installationSettings.save": "Speichern",
+  "aiRouting.title": "Modell-Routing",
+  "aiRouting.sub":
+    "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
+  "aiRouting.unbound":
+    "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Die erste Bindung deklariert eine Bereitstellung unter seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.label": "Standort",
+  "aiRouting.profile.help":
+    "Wo die Inferenz läuft. Souverän bedeutet kein Datenabfluss: nur Modelle auf eigenen Hosts — abgelehnt beim Speichern, nicht erst beim ersten Aufruf.",
+  "aiRouting.profile.eu_hosted": "In der EU gehostet",
+  "aiRouting.profile.sovereign": "Souverän (kein Datenabfluss)",
+  "aiRouting.profile.cloud_frontier": "Cloud-Frontier",
+  "aiRouting.model.label": "Modell",
+  "aiRouting.save": "Routing speichern",
+  "aiRouting.saving": "Bindung wird gespeichert…",
+  "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",
+  "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
   "captureSettings.title": "Anreicherung",
   "captureSettings.sub":
     "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",

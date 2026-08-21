@@ -268,9 +268,10 @@ export const en = {
   "deal.partnerSourced": "via",
   "deal.partnerInfluenced": "helped by",
   "deal.partnerAttribution": "What the partner did",
-  "deal.attributionUnset": "Not said (counts as brought us the deal)",
-  "deal.attributionSourced": "Brought us the deal",
-  "deal.attributionInfluenced": "Helped a deal we had",
+  "deal.attributionUnset": "Not specified — treated as brought us the deal",
+  "deal.attributionSourced": "Brought us this deal (earns commission)",
+  "deal.attributionInfluenced":
+    "Helped on a deal we already had (no commission)",
   "partnerDeals.panelTitle": "Deals they brought",
   "partnerDeals.panelSub":
     "Deals at other companies that came through this partner",
@@ -312,9 +313,9 @@ export const en = {
   "partner.cert.applied": "Applied",
   "partner.cert.certified": "Certified",
   "partner.cert.suspended": "Suspended",
-  "partner.marginTier.tier1": "Tier 1 (15%)",
-  "partner.marginTier.tier2": "Tier 2 (20%)",
-  "partner.marginTier.tier3": "Tier 3 (25%)",
+  "partner.marginTier.tier1": "Intro (15%)",
+  "partner.marginTier.tier2": "Active Collab (20%)",
+  "partner.marginTier.tier3": "Partner closed (25%)",
   "partner.stage.research": "Research",
   "partner.stage.identified": "Identified",
   "partner.stage.contacted": "Contacted",
@@ -4051,6 +4052,8 @@ export const en = {
   "network.bucket.strong": "Strong",
   "coverage.title": "Coverage",
   "coverage.clear": "Nothing flagged — this deal passes every coverage check.",
+  "coverage.withheld":
+    "Coverage was withheld — you cannot read this deal’s relationships, so no check was run.",
   "coverage.daysSinceTouch": "{days} days",
   "coverage.risk.single_threaded_theirs": "Single-threaded",
   "coverage.risk.single_threaded_ours": "Carried by one colleague",
@@ -4840,6 +4843,24 @@ export const en = {
   "installationSettings.readOnly":
     "Only an admin or ops can change these settings.",
   "installationSettings.save": "Save",
+  // Which vendor this installation's text is sent to. Admin/ops only, on both
+  // verbs â see the ai_routing RBAC object.
+  "aiRouting.title": "Model routing",
+  "aiRouting.sub":
+    "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
+  "aiRouting.unbound":
+    "This installation has no models bound, so its AI features are off. A deployment declares its first binding under seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.label": "Location",
+  "aiRouting.profile.help":
+    "Where inference runs. Sovereign means zero egress: only models on your own hosts, refused at save time rather than at the first call.",
+  "aiRouting.profile.eu_hosted": "EU-hosted",
+  "aiRouting.profile.sovereign": "Sovereign (no egress)",
+  "aiRouting.profile.cloud_frontier": "Cloud frontier",
+  "aiRouting.model.label": "Model",
+  "aiRouting.save": "Save routing",
+  "aiRouting.saving": "Saving the binding…",
+  "aiRouting.saved": "Routing saved. Every process is now serving it.",
+  "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
   "captureSettings.title": "Enrichment",
   "captureSettings.sub":
     "How captured companies and contacts are enriched after they are created.",
