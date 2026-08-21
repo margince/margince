@@ -7,7 +7,14 @@
  *
  * Its geometry is the rail's own, to the pixel, because a block in a sidebar
  * that stands on a second grid reads as something bolted on. What makes it a
- * different KIND of row is its ink and its ring, not its alignment.
+ * different KIND of row is its ink and the hairline above it, not its alignment.
+ *
+ * It has NO frame. Four closed sides around a centred figure with a caption
+ * under it is the shape of a playing card whatever colour the border is, and a
+ * card in a sidebar reads as an object resting on the rail rather than a part of
+ * it. So the frame is gone: one hairline separates the section, the state's tone
+ * lives in that line, and the light the orb spills on the rail floor has no edge
+ * to stop it.
  *
  * The panel is taken out of the flow, sideways: a 252px column cannot carry five
  * sections, and a panel that pushed the rail wider would move every destination
@@ -16,32 +23,20 @@
 .arblock {
   position: relative;
   flex: none;
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 /* The state's leading colour, declared on the block so the row AND the panel
  * beside it inherit one tone.
  *
  * It cannot read the Core's own: `--coreC1` is declared on the `.core` element,
- * so it resolves inside the orb and nowhere else. The pip, the ring and the
- * panel's finding marks all need the same tone, so the state maps to one token
- * HERE, and `agentrail.test.tsx` asserts every state the Core knows has a rule
- * in this file, so a ninth state cannot be added and silently draw green.
+ * so it resolves inside the orb and nowhere else. The light under the orb and the
+ * panel's finding marks need the same tone, so the state maps to one token HERE,
+ * and `agentrail.test.tsx` asserts every state the Core knows has a rule in this
+ * file, so a sixth state cannot be added and silently draw green.
  */
 .arblock {
   --arTone: var(--accent);
-  /* How loudly the ring is allowed to speak. At rest it is a tinted hairline:
-     the section is on every screen, all day, and a lit edge that never goes
-     quiet is an alarm nobody can switch off. The states that want a person, and
-     the ones with work in flight, take the full ring. */
-  --arRing: 22%;
-}
-/* The ring speaks up for the three states that are not the resting one. */
-.arblock[data-core-state="warning"],
-.arblock[data-core-state="error"],
-.arblock[data-core-state="ingest"],
-.arblock[data-core-state="working"] {
-  --arRing: 100%;
 }
 .arblock[data-core-state="ingest"] {
   --arTone: var(--orbJade);
@@ -78,108 +73,53 @@
   align-items: center;
   gap: var(--space-1);
   width: 100%;
-  padding: var(--space-1) 0 var(--space-2);
+  /* Tight. The ball is the biggest thing in the chrome and it needs room to be
+     read, not room around the room: with no card to hold, air above and below it
+     is just rail nobody uses. */
+  padding: 0 0 var(--space-1);
   border: 0;
+  /* Nothing draws this corner. It is here for the focus ring, which is the one
+     time this control does take an outline and needs it to follow the shape a
+     reader expects. */
   border-radius: var(--r-md);
-  /* A pale wash rather than a flat fill: the orb is a lit body, and a light body
-     on a dead-flat panel reads as a sticker. The wash is the light it spills onto
-     the card, brightest under it and gone by the edges. */
-  background:
-    radial-gradient(
-      120% 85% at 50% 26%,
-      color-mix(in srgb, var(--arTone) 9%, transparent),
-      transparent 68%
-    ),
-    var(--bgHover);
+  /* The light the orb spills, and nothing under it. No panel fill, because a
+     fill needs an edge to end at, an edge needs a corner, and a corner around a
+     centred figure with a caption under it is a playing card. This wash fades
+     out before it reaches anything, so a reader sees the rail lit from within
+     rather than a lit object placed on the rail. */
+  background: radial-gradient(
+    88% 58% at 50% 32%,
+    color-mix(in srgb, var(--arTone) 6%, transparent),
+    transparent 62%
+  );
   color: var(--textPrimary);
   text-align: center;
   cursor: pointer;
-  overflow: hidden;
 }
+/* Hover raises the light rather than filling a shape: a tinted rectangle
+   appearing under the pointer would put the card back for as long as the pointer
+   was there. */
 .arhit:hover {
-  background:
-    radial-gradient(
-      120% 85% at 50% 26%,
-      color-mix(in srgb, var(--arTone) 14%, transparent),
-      transparent 68%
-    ),
-    var(--accentLight);
+  background: radial-gradient(
+    88% 58% at 50% 32%,
+    color-mix(in srgb, var(--arTone) 12%, transparent),
+    transparent 62%
+  );
 }
 .arhit:focus-visible {
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
 
-/* The ring, in the state's own tone: the same colour the orb inside it is
- * running, so the block reads as one lit thing rather than a box with a
- * coloured ball in it.
+/* No line, and no frame either.
  *
- * Built as a masked fill in the border box, which is the only way to stroke a
- * rounded box from a pseudo-element without tracking the radius by hand. At rest
- * it is EVEN: a gradient ring lights one side and reads as a highlight somebody
- * forgot to finish.
+ * A hairline here read as the top edge of something rather than as a divider:
+ * with nothing else drawn, one horizontal rule above a lit ball is a lid. What
+ * separates this section from the destinations is the space around it and the
+ * light in it, and the state's tone lives in that light (`--arTone` above) and
+ * in the screen's own margins (app/agent-edge.css), which is where the animation
+ * went when it left this file.
  */
-.arhit::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px; /* ds:ignore the ring's own thickness, a stroke weight and not spacing */
-  /* Keyword, not a token: a mask's colour is a stencil rather than a colour of
-     the design system, and the purity gate is right to refuse a literal here. */
-  mask:
-    linear-gradient(black 0 0) content-box exclude,
-    linear-gradient(black 0 0);
-  pointer-events: none;
-}
-.arhit::before {
-  background: color-mix(
-    in srgb,
-    var(--arTone) var(--arRing),
-    var(--borderStrong)
-  );
-}
-/* The travel: one bright pass sweeping the frame while work is in flight. The
- * state's own tone BRIGHTENED rather than mixed toward white, because one colour
- * per state is the rule the Core keeps and a white pass over the red of `error`
- * would put a colour in the ring that no state owns. */
-.arblock::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: var(--r-md);
-  padding: 1.5px; /* ds:ignore the ring's own thickness, a stroke weight and not spacing */
-  mask:
-    linear-gradient(black 0 0) content-box exclude,
-    linear-gradient(black 0 0);
-  background:
-    linear-gradient(100deg, transparent 30%, var(--arTone) 50%, transparent 70%)
-    0 0 / 260% 100% no-repeat;
-  filter: brightness(1.55) saturate(1.3);
-  opacity: 0;
-  pointer-events: none;
-}
-.arblock.working::after {
-  opacity: 1;
-  animation: artravel 2.4s linear infinite;
-}
-@keyframes artravel {
-  from {
-    background-position: 140% 0;
-  }
-  to {
-    background-position: -140% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .arblock.working::after {
-    animation: none;
-    /* Work in flight still reads, without the motion: the ring brightens and
-       stays. A reduced-motion reader loses the sweep, not the signal. */
-    background-position: 50% 0;
-    opacity: 0.5;
-  }
-}
 
 /* The Core primitive at the size it deserves (WDS-CORE-1): sizing through its
    own custom properties is the one thing a caller may do to it. The glass is
@@ -202,9 +142,10 @@
   /* The viewport cap is for a hero standing in a content column; the rail's own
      width and height are the only caps this one needs. */
   --coreCap: 100%;
-  /* Most of the halo off. At this size the ball IS the signal, and a bloom wide
-     enough to suit a hero reaches the destinations above it. */
-  --coreHalo: 0.18;
+  /* Nearly all of the halo off. At this size the ball IS the signal: a bloom
+     wide enough to suit a hero reaches the destinations above it, and with no
+     card edge to contain it there is nothing to stop it either. */
+  --coreHalo: 0.08;
   flex: none;
 }
 
@@ -217,8 +158,8 @@
   gap: 1px; /* ds:ignore two lines of one reading, not spaced content */
   width: 100%;
   min-width: 0;
-  /* The card gave up its own side padding to the ball; the words take theirs
-     back, or a long line runs into the edge of the rail. */
+  /* The ball takes the rail's full width; the words take a margin back, or a
+     long line runs into the edge of the rail. */
   padding: 0 var(--space-2);
 }
 .arline {
@@ -364,8 +305,8 @@
   .arspend {
     justify-content: flex-start;
   }
-  /* The corner belongs to a card that is a column. On a row the chevron sits in
-     the flow, or it lands on top of the words. */
+  /* The corner belongs to a column. On a row the chevron sits in the flow, or
+     it lands on top of the words. */
   .archev {
     position: static;
     margin-left: auto;

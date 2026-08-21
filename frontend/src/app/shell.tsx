@@ -15,6 +15,7 @@ import { Button, Modal } from "../design-system/atoms";
 import { Logomark } from "../design-system/logomark";
 import { useT } from "../i18n";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settings";
+import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
@@ -781,6 +782,12 @@ export function Shell({
           {children}
         </div>
       </main>
+      {/* The agent's own periphery, drawn around the WHOLE workspace rather than
+          around the content column: what it reports is true of the window a
+          person is working in, and a contour that stopped at the sidebar would
+          read as a panel border. Last in the tree, because it is an overlay and
+          not a column. */}
+      <AgentEdge />
     </div>
   );
 }

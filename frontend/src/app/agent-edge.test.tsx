@@ -1,0 +1,137 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+/** @vitest-environment jsdom */
+
+import { act, cleanup, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AgentEdge } from "./agent-edge";
+import {
+  AGENT_EDGE_STILL,
+  clearAgentEdge,
+  currentAgentEdge,
+  publishAgentEdge,
+} from "./agent-edge-signal";
+
+// The margins are decoration with a job: they are the only place on a screen
+// that says the agent is working, and the only place that says something has
+// stopped for a person. What these cases hold is the difference between those
+// two and silence, because silence is the default and a mark drawn by mistake
+// would be the surface claiming work nobody asked for.
+
+const edge = (container: HTMLElement) => container.querySelector(".agentedge");
+
+beforeEach(() => {
+  // Module state, so it survives between cases: a test that inherited the last
+  // one's reading would pass for the wrong reason.
+  clearAgentEdge();
+});
+
+afterEach(cleanup);
+
+describe("the agent edge signal", () => {
+  it("starts still, which is what a screen with no agent on it should say", () => {
+    expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
+  });
+
+  it("keeps one object per reading, so a subscriber can compare by identity", () => {
+    const first = currentAgentEdge();
+    publishAgentEdge({ reading: false, waiting: false });
+
+    expect(currentAgentEdge()).toBe(first);
+  });
+
+  it("carries both facts at once, because both can be true", () => {
+    // An agent reading right now while an approval from ten minutes ago still
+    // waits is an ordinary Tuesday, not an edge case.
+    publishAgentEdge({ reading: true, waiting: true });
+
+    expect(currentAgentEdge()).toEqual({ reading: true, waiting: true });
+  });
+
+  it("goes still when cleared, so a reading cannot outlive its session", () => {
+    publishAgentEdge({ reading: true, waiting: true });
+    clearAgentEdge();
+
+    expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
+  });
+});
+
+describe("the agent edge", () => {
+  it("draws nothing at all while nothing is happening", () => {
+    const { container } = render(<AgentEdge />);
+    const mark = edge(container);
+
+    expect(mark).not.toBeNull();
+    expect(mark?.hasAttribute("data-reading")).toBe(false);
+    expect(mark?.hasAttribute("data-waiting")).toBe(false);
+  });
+
+  it("marks reading, and stops marking it when the work stops", () => {
+    const { container } = render(<AgentEdge />);
+    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    expect(edge(container)?.hasAttribute("data-reading")).toBe(true);
+
+    act(() => publishAgentEdge({ reading: false, waiting: false }));
+    expect(edge(container)?.hasAttribute("data-reading")).toBe(false);
+  });
+
+  it("marks waiting without marking work, since nothing is in flight", () => {
+    // The two marks are read differently by the stylesheet: one moves, one holds
+    // perfectly still. A staged action that also lit the working mark would look
+    // busy while it was in fact waiting for the reader.
+    const { container } = render(<AgentEdge />);
+    act(() => publishAgentEdge({ reading: false, waiting: true }));
+
+    expect(edge(container)?.hasAttribute("data-waiting")).toBe(true);
+    expect(edge(container)?.hasAttribute("data-reading")).toBe(false);
+  });
+
+  it("draws the lit edge only while the agent is reading", () => {
+    // A turning gradient and a blurred copy of it: cheap to composite, not free
+    // to have. A dark edge has nothing to say, so an idle screen must not be
+    // paying for it, and neither must a screen only waiting on an approval.
+    const { container } = render(<AgentEdge />);
+    expect(container.querySelector(".agentedge-lit")).toBeNull();
+
+    act(() => publishAgentEdge({ reading: true, waiting: false }));
+    expect(container.querySelector(".agentedge-ring")).not.toBeNull();
+    expect(container.querySelector(".agentedge-bloom")).not.toBeNull();
+
+    act(() => publishAgentEdge({ reading: false, waiting: true }));
+    expect(container.querySelector(".agentedge-lit")).toBeNull();
+  });
+
+  it("takes no pointer and is hidden from a screen reader", () => {
+    // Everything it says is also said in words in the rail, so this is
+    // decoration: a reader who cannot see it loses nothing, and one who can
+    // must never have it swallow a click meant for the page underneath.
+    const { container } = render(<AgentEdge />);
+
+    expect(edge(container)?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("follows the signal from more than one place on the page at once", () => {
+    // Two mounted margins would be a bug, but the store is the thing under test
+    // here: it has to serve every subscriber, not the last one to arrive.
+    const first = render(<AgentEdge />);
+    const second = render(<AgentEdge />);
+    act(() => publishAgentEdge({ reading: true, waiting: false }));
+
+    expect(edge(first.container)?.hasAttribute("data-reading")).toBe(true);
+    expect(edge(second.container)?.hasAttribute("data-reading")).toBe(true);
+  });
+
+  it("stops hearing the signal once it is gone", () => {
+    // A listener left in the set after unmount is a leak that React reports as
+    // a state update on an unmounted component, and this store outlives every
+    // component that reads it.
+    const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { unmount } = render(<AgentEdge />);
+    unmount();
+    act(() => publishAgentEdge({ reading: true, waiting: false }));
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});

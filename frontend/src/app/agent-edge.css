@@ -1,0 +1,376 @@
+/* ===== The agent, in the margins of the screen =====
+ *
+ * Two marks, both drawn on the periphery of the whole window, both absent unless
+ * there is something to say. The window and not the content column: what they
+ * report is true of the workspace a person is working in, and a contour that
+ * stopped at the sidebar would read as a panel border. `fixed` for the same
+ * reason, so neither mark moves when a screen scrolls or the sidebar collapses.
+ *
+ * The rules they keep are the point of the design, so they are written here
+ * rather than left to be inferred:
+ *
+ * 1. **Rest is still.** No mark at all when nothing is happening. A light that is
+ *    always on is not a signal, it is trim, and a reader stops seeing it inside a
+ *    day.
+ * 2. **Movement means work.** Only the working mark moves, and only while work is
+ *    actually in flight. Nothing here loops for decoration.
+ * 3. **Waiting is the stillest state, not the loudest.** Something that cannot
+ *    proceed without a person holds a complete, motionless contour. A staged
+ *    action that looked busy would be lying about who it is waiting for.
+ */
+.agentedge {
+  position: fixed;
+  inset: 0;
+  /* Over the ground the screens float their cards on, under everything that
+     takes a click: modals and toasts stand on the viewport at 28 and above
+     (shell.css), so they keep their place over this. */
+  z-index: 5;
+  pointer-events: none;
+  /* The lit layer is deliberately bigger than the window (see `.agentedge-lit`),
+     so this is what trims it back. Without it an element hanging past the viewport
+     can persuade the document it has somewhere to scroll to. */
+  overflow: hidden;
+}
+
+/* ===== The lit edge =====
+ *
+ * Light behind the window's rim, and the rim is a window onto it. Three widths of
+ * that window, from a hairline out to a soft falloff that reaches into the page.
+ *
+ * The wrapper carries the warp. A filter applies to an element BEFORE its own mask
+ * clips it, so warping a rim directly bends the light inside a dead-straight band
+ * and the edge stays flat; warping the wrapper bends what the children already
+ * cut, which is what lets the rim's own thickness undulate.
+ */
+.agentedge-lit {
+  position: absolute;
+  /* BLEED, and it is a fix rather than a flourish. The warp below pushes pixels
+     both ways, so a rim sitting exactly on the viewport edge gets pulled inward
+     with nothing behind it and the screen edge shows through as a gap. Starting
+     the band outside the window means a warp can only ever move lit pixels across
+     the edge, never off it. The bleed has to stay larger than the displacement
+     scale in agent-edge.tsx. */
+  inset: -14px; /* ds:ignore bleed past the viewport, not spacing */
+  filter: url(#agentedgewabern);
+}
+.agentedge-ring,
+.agentedge-bloom,
+.agentedge-pulse {
+  position: absolute;
+  inset: 0;
+  /* Keyword, not a token: a mask's colour is a stencil rather than a colour of
+     the design system, and the purity gate is right to refuse a literal here. */
+  mask:
+    linear-gradient(black 0 0) content-box exclude,
+    linear-gradient(black 0 0);
+}
+/* The crisp rim. Thin, because the thing a reader reads as an edge has to be thin;
+   everything else here is the light around it. */
+.agentedge-ring {
+  /* The band spans the bleed plus the visible rim, so what a reader sees inside
+     the window is the difference: this minus the 14px bleed above. */
+  padding: 15px; /* ds:ignore a stroke weight, not spacing */
+}
+/* The near glow: a wider window, softened. */
+.agentedge-bloom {
+  padding: 21px; /* ds:ignore a stroke weight, not spacing */
+  opacity: 0.85;
+  filter: blur(10px);
+}
+/* The pulse: a swell travelling the rim, on the same band as the crisp rim so it
+ * brightens the edge itself rather than the glow around it.
+ *
+ * Mostly transparent, and that is the point: one arc of light and a long empty
+ * sweep behind it, added on top of a rim that is already lit. A travelling arc on
+ * its own is the thing that was removed earlier, because it leaves three sides
+ * dark while it works on the fourth.
+ */
+.agentedge-pulse {
+  padding: 15px; /* ds:ignore matches the rim's own band, not spacing */
+  opacity: 0.55;
+  filter: blur(3px);
+}
+.agentedge-sweep {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--orbMint) 70%, transparent) 26deg,
+    var(--orbMint) 44deg,
+    color-mix(in srgb, var(--orbLime) 60%, transparent) 66deg,
+    transparent 110deg,
+    transparent 360deg
+  );
+  /* Slow enough to be a swell rather than a spinner, and unrelated to every period
+     the bodies below run on, so the pulse never lands in the same place twice. */
+  animation: agentedgelap 9.5s linear infinite;
+}
+@keyframes agentedgelap {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: 1turn;
+  }
+}
+
+/* The spill: the light the frame throws INTO the page.
+ *
+ * Not a ring. A ring mask can only make a paler ring, and glow is the part that
+ * reaches past the edge, so this is masked by a falloff instead: opaque at the
+ * window's edges and transparent seventy-odd pixels in. Two gradients, one per
+ * axis, composited as a union so the band follows all four sides and doubles up in
+ * the corners, which is where light collects anyway.
+ *
+ * Faint on purpose. If a reader can point at where it ends it is too strong.
+ */
+.agentedge-spill {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  filter: blur(26px);
+  mask-image:
+    linear-gradient(
+      to right,
+      black 0,
+      transparent 72px,
+      transparent calc(100% - 72px),
+      black 100%
+    ),
+    linear-gradient(
+      to bottom,
+      black 0,
+      transparent 72px,
+      transparent calc(100% - 72px),
+      black 100%
+    );
+  /* The union of the two bands rather than their intersection: `add` is the
+     default, and it is named here because the whole shape depends on it. */
+  mask-composite: add;
+}
+
+/* ===== The light =====
+ *
+ * Two parts, and the split is what fixed this. An even light that does not move,
+ * and five bodies that vary it without going anywhere.
+ *
+ * The field is the even light: every hue at once, all four sides lit, static. A
+ * gradient that rotates under a rim is a bright patch touring the perimeter, and
+ * whichever side it is not on stays dark until it arrives.
+ *
+ * The bodies are the variation. Each drifts a few percent of the window and no
+ * further, and swells on its own period, with none of the periods related. Where
+ * two overlap the rim brightens; as they part it dims. Because none of them
+ * travels, that happens everywhere at once instead of sweeping past.
+ *
+ * Every body is soft to its edge (`transparent 70%`), so nothing here has an
+ * outline of its own. What a reader sees is only ever the sum, sampled through a
+ * rim two pixels wide.
+ */
+.agentedge-field {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 210deg,
+    var(--teal),
+    var(--orbJade),
+    var(--orbMint),
+    var(--orbLime),
+    var(--orbAmber),
+    var(--orbMint),
+    var(--orbJade),
+    var(--teal)
+  );
+}
+.agentedge-body {
+  position: absolute;
+  border-radius: 50%;
+  /* Each body is a good fraction of the window: smaller ones leave stretches of
+     rim dark for seconds at a time, which reads as flickering rather than as
+     billowing. */
+  width: 70%;
+  height: 70%;
+  filter: blur(30px);
+  /* Two rhythms per body, on unrelated periods: one moves it, the other changes
+     its size. Together they never return to the same state twice inside a period
+     anybody watches. */
+  animation:
+    var(--bodyDrift) var(--bodyDriftTime) ease-in-out infinite,
+    agentedgeswell var(--bodySwellTime) ease-in-out infinite;
+}
+/* Cool, and the slowest: this is the one that sets the base colour of a side for
+   long enough to be noticed. */
+.agentedge-body-1 {
+  --bodyDrift: agentedgedrift1;
+  --bodyDriftTime: 17s;
+  --bodySwellTime: 11s;
+  left: -18%;
+  top: -12%;
+  background: radial-gradient(circle, var(--teal), transparent 70%);
+}
+.agentedge-body-2 {
+  --bodyDrift: agentedgedrift2;
+  --bodyDriftTime: 13s;
+  --bodySwellTime: 9s;
+  right: -20%;
+  top: -16%;
+  background: radial-gradient(circle, var(--orbJade), transparent 70%);
+}
+.agentedge-body-3 {
+  --bodyDrift: agentedgedrift3;
+  --bodyDriftTime: 21s;
+  --bodySwellTime: 14s;
+  left: 22%;
+  bottom: -22%;
+  background: radial-gradient(circle, var(--orbLime), transparent 70%);
+}
+.agentedge-body-4 {
+  --bodyDrift: agentedgedrift4;
+  --bodyDriftTime: 15s;
+  --bodySwellTime: 10s;
+  right: -14%;
+  bottom: -18%;
+  background: radial-gradient(circle, var(--orbAmber), transparent 70%);
+}
+/* The smallest and the quickest: the highlight that crosses the others. */
+.agentedge-body-5 {
+  --bodyDrift: agentedgedrift5;
+  --bodyDriftTime: 8.5s;
+  --bodySwellTime: 6.5s;
+  width: 46%;
+  height: 46%;
+  left: 34%;
+  top: -14%;
+  background: radial-gradient(circle, var(--orbMint), transparent 70%);
+}
+
+/* Each path visits its keyframes at uneven intervals, and none of them retraces
+   its outward leg on the way back: a cycle whose second half mirrors its first
+   reads as rocking, which is a rhythm rather than a drift. */
+@keyframes agentedgedrift1 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  30% {
+    transform: translate(5vw, 3vh);
+  }
+  55% {
+    transform: translate(2vw, 7vh);
+  }
+  80% {
+    transform: translate(-4vw, 2vh);
+  }
+}
+@keyframes agentedgedrift2 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  26% {
+    transform: translate(-4vw, 5vh);
+  }
+  61% {
+    transform: translate(-7vw, -2vh);
+  }
+  84% {
+    transform: translate(-2vw, 6vh);
+  }
+}
+@keyframes agentedgedrift3 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  34% {
+    transform: translate(6vw, -4vh);
+  }
+  58% {
+    transform: translate(-3vw, -7vh);
+  }
+  79% {
+    transform: translate(-6vw, -1vh);
+  }
+}
+@keyframes agentedgedrift4 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  29% {
+    transform: translate(-6vw, -3vh);
+  }
+  63% {
+    transform: translate(-1vw, -7vh);
+  }
+  86% {
+    transform: translate(-7vw, -5vh);
+  }
+}
+@keyframes agentedgedrift5 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  24% {
+    transform: translate(-5vw, 6vh);
+  }
+  52% {
+    transform: translate(3vw, 8vh);
+  }
+  77% {
+    transform: translate(6vw, 2vh);
+  }
+}
+/* The swell. Scale rather than opacity: a body that fades keeps its shape and
+   reads as a light being turned down, and one that grows displaces the bodies it
+   overlaps, which is what makes the rim's brightness move. */
+@keyframes agentedgeswell {
+  0%,
+  100% {
+    scale: 0.82;
+  }
+  50% {
+    scale: 1.18;
+  }
+}
+
+/* The filter's own carrier: it has to be in the document to be referenced, and it
+   draws nothing itself. */
+.agentedge-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* ===== Waiting: the contour closes =====
+ *
+ * Complete, and completely still. No light and no glow: a drawn line rather than a
+ * lit one, which is what tells it apart from the working edge at a glance. This is
+ * the state where nothing happens until a person acts.
+ *
+ * It dissolves when the queue does, which is what makes it bearable on every
+ * screen: a contour that stayed after the last approval was answered would be an
+ * alarm with no switch.
+ */
+.agentedge-wait {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+.agentedge[data-waiting] .agentedge-wait {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The light survives, the drift does not: the bodies stop where they are and the
+     rim stays lit unevenly, which is still the signal. A reader who has asked for
+     less movement learns that the agent is working. */
+  .agentedge-body,
+  .agentedge-sweep {
+    animation: none;
+  }
+}
