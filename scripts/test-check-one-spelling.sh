@@ -180,6 +180,17 @@ expect silent "a waiver written in a block comment" \
 expect fires "code after an inline block comment" \
   'var n = 1 /* a note */ ; var dedupe = "23505"'
 
+# A backslash escapes the quote after it, so the string does NOT end there and
+# the `//` inside it is not a comment. Drop that one character of lookahead and
+# the scanner leaves the string early, reads the rest as a comment, and throws
+# away the defect beside it.
+expect fires "an escaped quote does not end the string early" \
+  'var s = "a\"//b"; var dedupe = "23505"'
+# The scheme guard that used to sit in the comment test is gone; what actually
+# spares a URL is the quote state, and this is the case that says so.
+expect fires "a scheme inside a string is not a comment" \
+  'var endpoint = "https://example.test/v1"; var dedupe = "23505"'
+
 echo
 if [[ $fails -eq 1 ]]; then
   echo "FAIL: check-one-spelling.sh does not behave as its header claims"

@@ -126,6 +126,26 @@ expect fires go "a defect after a /* inside a string" 'var globPattern = "**/*.g
 
 func probe(amountMinor int64) int64 { return amountMinor / 100 }'
 
+# The same one character of lookahead, on the blanking side. Without it the
+# scanner leaves the string at the escaped quote and reads the PROSE after it
+# as code — so a line explaining the defect becomes the defect.
+expect silent ts "prose quoting the shape, after an escaped quote" 'const help = "write \"amountMinor / 100\" instead";'
+
+# A Go raw string spans lines, and its interior is string content on EVERY one
+# of them. Blanking only the line the backtick opens on leaves the rest read as
+# code, so a query that mentions the shape becomes the shape.
+expect silent go "the shape inside a multi-line raw string" 'const explain = `the old code did
+	amountMinor / 100
+and that was the bug`'
+
+# TypeScript has three string delimiters and the scanner has to honour all
+# three. A single-quoted path carrying a `//` used to end the line there and
+# throw the defect after it away...
+expect fires ts "a  //  inside a single-quoted string" "const path = '/oauth // token'; const amountMinor = major * 100;"
+# ...and a template literal's contents are contents, so a line quoting the
+# shape inside one is prose, not arithmetic.
+expect silent ts "the shape inside a template literal" 'const help = `amountMinor / 100`;'
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'

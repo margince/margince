@@ -74,7 +74,15 @@ function scanLine(s,   i, ch, quote, prev) {
     # not tracked as a state of their own (that needs to know whether a `/`
     # is division or a literal, which needs a parser); skipping an escaped
     # slash covers the spelling that actually occurs.
-    if (ch == "/" && prev != "\\" && prev != ":" && substr(s, i + 1, 1) == "/") { CMT = i; CMTKIND = "//"; break }
+    #
+    # There is no `prev != ":"` guard here any more. It predated the quote
+    # scanning and was meant to spare `https://`, but a scheme only ever
+    # appears inside a STRING and the quote state already spares every one of
+    # the 1797 in this tree. Outside a string `://` does not occur in either
+    # language, so the guard could not fire — and where it could, on a
+    # `case x: //note`, it was wrong. An untestable branch in a gate is the
+    # thing this change exists to stop shipping.
+    if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "/") { CMT = i; CMTKIND = "//"; break }
     if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "*") { CMT = i; CMTKIND = "/*"; break }
     prev = ch
   }
