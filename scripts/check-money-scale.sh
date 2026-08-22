@@ -41,9 +41,14 @@
 # scripts/test-check-money-scale.sh proves each language's arm fires, that the
 # waiver works and is line-scoped, and that comments are not code.
 set -euo pipefail
+# CDPATH turns a relative `cd` into a search, so `cd "$(dirname "$0")"` can land
+# in a directory that merely shares a name and the gate then cannot find its own
+# library. `-P` resolves symlinks too, so invoking the gate through one derives
+# the physical directory rather than the link's.
+CDPATH=
 # Resolved BEFORE the cd, so the library is found however the script is invoked.
-COMMENT_SCAN="$(cd "$(dirname "$0")" && pwd)/lib-commentscan.awk"
-STRIP_PROG="$(cd "$(dirname "$0")" && pwd)/money-scale-strip.awk"
+COMMENT_SCAN="$(cd -P -- "$(dirname -- "$0")" && pwd)/lib-commentscan.awk"
+STRIP_PROG="$(cd -P -- "$(dirname -- "$0")" && pwd)/money-scale-strip.awk"
 cd "$(dirname "$0")/.."
 for lib in "$COMMENT_SCAN" "$STRIP_PROG"; do
   [[ -f "$lib" ]] || { echo "FAIL: $lib is missing — this gate cannot read code without it"; exit 1; }

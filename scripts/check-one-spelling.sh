@@ -44,9 +44,14 @@
 # already uses. scripts/test-check-one-spelling.sh proves each arm fires, each
 # arm's waiver works, and the named non-money lookalikes stay silent.
 set -euo pipefail
+# CDPATH turns a relative `cd` into a search, so `cd "$(dirname "$0")"` can land
+# in a directory that merely shares a name and the gate then cannot find its own
+# library. `-P` resolves symlinks too, so invoking the gate through one derives
+# the physical directory rather than the link's.
+CDPATH=
 # Resolved BEFORE the cd, so they are found however the script is invoked.
-COMMENT_SCAN="$(cd "$(dirname "$0")" && pwd)/lib-commentscan.awk"
-STRIP_PROG="$(cd "$(dirname "$0")" && pwd)/one-spelling-strip.awk"
+COMMENT_SCAN="$(cd -P -- "$(dirname -- "$0")" && pwd)/lib-commentscan.awk"
+STRIP_PROG="$(cd -P -- "$(dirname -- "$0")" && pwd)/one-spelling-strip.awk"
 cd "$(dirname "$0")/.."
 for lib in "$COMMENT_SCAN" "$STRIP_PROG"; do
   [[ -f "$lib" ]] || { echo "FAIL: $lib is missing — this gate cannot read code without it"; exit 1; }
@@ -103,7 +108,19 @@ find "${scan[@]}" -type f -name '*.go' \
 # correctly, so an OK over it means nothing. Refusing here rather than stating
 # it as residue: this is the one failure mode where the gate cannot tell the
 # difference between clean and blind.
-unclosed="$(grep '^commentscan-unclosed:' "$corpus" || true)"
+# `|| true` would swallow status 2 as well, which is grep saying it could not
+# READ the corpus — and a gate that cannot read its own corpus must not go on to
+# report it clean. Only status 1, "no matches", is the ordinary answer.
+# `set +e` around it and not `|| true`: the fallback would swallow status 2 as
+# well, which is grep saying it could not READ the corpus — and a gate that
+# cannot read its own corpus must not go on to report it clean. Only status 1,
+# "no matches", is an ordinary answer. `$?` is read here and not inside an
+# `if !`, where the negation has already replaced it with 0.
+set +e
+unclosed="$(grep '^commentscan-unclosed:' "$corpus")"
+grep_status=$?
+set -e
+[[ $grep_status -le 1 ]] || { echo "FAIL: could not read the scanned corpus (grep exited $grep_status)"; exit 1; }
 if [[ -n "$unclosed" ]]; then
   echo "FAIL: the comment scanner reached the end of a file still inside a string or a block comment,"
   echo "      so everything after that point was read as something it is not and this gate saw none of it."

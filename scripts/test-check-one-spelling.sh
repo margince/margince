@@ -20,6 +20,7 @@ PROBE_DIR="$(mktemp -d)"
 PLANT="$PROBE_DIR/zz_one_spelling_probe.go"
 trap 'rm -rf "$PROBE_DIR"' EXIT
 fails=0
+ran=0
 
 # plant <body> — write a compiling-shaped probe file carrying <body>.
 plant() { printf '// SPDX-License-Identifier: BUSL-1.1\npackage storekit\n\n%s\n' "$1" > "$PLANT"; }
@@ -53,7 +54,15 @@ expect() {
   # all and refused rather than pretend. Scoring one as the other would let a
   # scanner that has stopped working satisfy every detection case in the suite.
   if [[ "$want" == unclosed ]] && ! grep -q "still inside a string or a block comment" <<< "$out"; then
-    echo "FAIL: $name — the gate did not refuse the unreadable file by name (exit $rc)"
+    echo "FAIL: $name — the gate did not refuse the unreadable file (exit $rc)"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  # And it must NAME the file. The whole point of refusing rather than passing
+  # is that the reader can go and look, so the diagnostic contract is the path,
+  # not the sentence around it — a refusal that says only "some file somewhere"
+  # tells them nothing they can act on.
+  if [[ "$want" == unclosed ]] && ! grep -qF -- "$PLANT" <<< "$out"; then
+    echo "FAIL: $name — the gate refused but did not say WHICH file it could not read"
     echo "$out" | sed 's/^/    /'; fails=1; return
   fi
   if [[ "$want" == unclosed && $rc -eq 0 ]]; then
@@ -63,6 +72,15 @@ expect() {
   if [[ "$want" == silent && $rc -ne 0 ]]; then
     echo "FAIL: $name — the gate refused it"; echo "$out" | sed 's/^/    /'; fails=1; return
   fi
+  # `must` is REQUIRED for a detection case, not optional. The gate has three
+  # arms and a fourth refusal for a file it could not read, so "exited non-zero"
+  # is four different sentences — and a case that reads only the status passes
+  # on any of them. Every `fires` case names the token it expects to see
+  # reported, so the arm that fired is the arm being tested.
+  if [[ "$want" == fires && -z "$must" ]]; then
+    echo "FAIL: $name — a detection case must name the token it expects reported, or it passes on any refusal"
+    fails=1; return
+  fi
   if [[ -n "$must" ]] && ! grep -qF -- "$must" <<< "$out"; then
     echo "FAIL: $name — it never reported $must, so the red came from something else"
     echo "$out" | sed 's/^/    /'; fails=1; return
@@ -71,6 +89,7 @@ expect() {
     echo "FAIL: $name — it reported $mustnot, which is waived"
     echo "$out" | sed 's/^/    /'; fails=1; return
   fi
+  ran=$((ran + 1))
   echo "ok: $name"
 }
 
@@ -122,14 +141,16 @@ echo "== a comment is not a string, and a string is not a comment =="
 # as one. Without this case the whole reading can be reverted and the suite
 # stays green, which is how the bypass survived its own review.
 expect fires "a waiver forged inside a string literal" \
-  'func probe(c string) (bool, string) { return c == "23505", "one-spelling-exempt: fake" }'
+  'func probe(c string) (bool, string) { return c == "23505", "one-spelling-exempt: fake" }' \
+  '23505'
 
 # No forgery needed for this one. The strip pass used to cut the line at the
 # first ` //`, so a string carrying one hid every defect after it — and 167
 # lines in this tree already carry a `//` inside a string, mostly //nolint:
 # directives quoted in prose and URL paths.
 expect fires "a  //  inside a string does not truncate the line" \
-  'func probe(c string) bool { path := "/oauth // token"; _ = path; return c == "23505" }'
+  'func probe(c string) bool { path := "/oauth // token"; _ = path; return c == "23505" }' \
+  '23505'
 
 # A Go raw string spans lines, so a scanner reading one line at a time takes
 # the CLOSING backtick for an opening quote and swallows the trailing comment
@@ -138,6 +159,17 @@ expect fires "a  //  inside a string does not truncate the line" \
 expect silent "a comment on the line closing a raw string" \
   'const query = `SELECT 1
 FROM person` // the store maps "23505" via storekit, never here'
+# Silence on that line is only half the claim. one-spelling KEEPS string
+# contents, so a scanner that still misreads the closing backtick emits the
+# `23505` from a later line and satisfies a bare `fires` — the state has to be
+# shown closed, by planting a real defect after the string and requiring the
+# gate to name THAT one.
+expect fires "the raw-string state closes, so a later defect is still seen" \
+  'const query = `SELECT 1
+FROM person` // the store maps "23503" via storekit, never here
+
+func probe(c string) bool { return c == "23505" }' \
+  '23505' '23503'
 expect silent "a waiver on the line closing a raw string" \
   'const query = `SELECT 1
 FROM person` + probe("23505") // one-spelling-exempt: seeding the dedupe fixture'
@@ -148,11 +180,14 @@ FROM person` + probe("23505") // one-spelling-exempt: seeding the dedupe fixture
 expect fires "a defect after a multi-line raw string" \
   'const query = `SELECT 1
 FROM person`
-func probe(c string) bool { return c == "23505" }'
+func probe(c string) bool { return c == "23505" }' \
+  '23505'
 expect fires "a defect after a raw string ending in a backslash" \
   'const winPath = `C:\\tmp\\`
-func probe(c string) bool { return c == "23505" }'
-
+func probe(c string) bool { return c == "23505" }' \
+  '23505'
+ \
+  '23505'
 # SQL text inside a raw string compares against the code in SQL quotes, and
 # storekit is not reachable from a query string — so this stays silent, and did
 # before the state was carried across lines too. Pinned because carrying it is
@@ -169,7 +204,8 @@ FROM person\`"
 # that discarded the defect after it. `\` is the Windows separator idiom and
 # there are seven of them in this tree already.
 expect fires "a defect after a backslash in a Go raw string" \
-  'func normalize(p string) string { return strings.NewReplacer(`\`, `//`).Replace(p) + errFor("23505") }'
+  'func normalize(p string) string { return strings.NewReplacer(`\`, `//`).Replace(p) + errFor("23505") }' \
+  '23505'
 # The same desync in the other direction disarms the waiver, which leaves the
 # author of such a line no way through the gate at all.
 expect silent "a waiver on a line holding a backslash raw string" \
@@ -184,11 +220,13 @@ echo "== a block comment is code's absence, not a string's contents =="
 expect fires "a /* inside a string does not blind the file" \
   'var globPattern = "**/*.go"
 
-var dedupe = "23505"'
+var dedupe = "23505"' \
+  '23505'
 expect fires "a /* inside a raw string does not blind the file" \
   'var globPattern = `**/*.go`
 
-var dedupe = "23505"'
+var dedupe = "23505"' \
+  '23505'
 # ...and the real thing still behaves: prose inside a block comment is not code,
 # a waiver written in one still counts, and code after an inline one is judged.
 expect silent "prose inside a real block comment" \
@@ -199,18 +237,21 @@ func probe() {}'
 expect silent "a waiver written in a block comment" \
   'var code = "23505" /* one-spelling-exempt: probing the gate */'
 expect fires "code after an inline block comment" \
-  'var n = 1 /* a note */ ; var dedupe = "23505"'
+  'var n = 1 /* a note */ ; var dedupe = "23505"' \
+  '23505'
 
 # A backslash escapes the quote after it, so the string does NOT end there and
 # the `//` inside it is not a comment. Drop that one character of lookahead and
 # the scanner leaves the string early, reads the rest as a comment, and throws
 # away the defect beside it.
 expect fires "an escaped quote does not end the string early" \
-  'var s = "a\"//b"; var dedupe = "23505"'
+  'var s = "a\"//b"; var dedupe = "23505"' \
+  '23505'
 # The scheme guard that used to sit in the comment test is gone; what actually
 # spares a URL is the quote state, and this is the case that says so.
 expect fires "a scheme inside a string is not a comment" \
-  'var endpoint = "https://example.test/v1"; var dedupe = "23505"'
+  'var endpoint = "https://example.test/v1"; var dedupe = "23505"' \
+  '23505'
 
 # The gate's last line of defence, and the reason it has no residue paragraph:
 # a file the scanner cannot follow to the end is a file it stopped reading, and
@@ -220,6 +261,13 @@ expect unclosed "a file that ends inside an unclosed raw string" \
   'var query = `SELECT 1 FROM person'
 
 echo
+# A case whose own shell quoting is wrong prints an error and is SKIPPED, and
+# the suite would go on to report OK over a case that never ran. Raise the floor
+# when cases are added.
+if [[ $ran -lt 25 ]]; then
+  echo "FAIL: only $ran cases ran, so some were skipped before they planted anything"
+  exit 1
+fi
 if [[ $fails -eq 1 ]]; then
   echo "FAIL: check-one-spelling.sh does not behave as its header claims"
   exit 1

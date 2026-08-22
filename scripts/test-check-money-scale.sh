@@ -11,6 +11,7 @@ GATE=./scripts/check-money-scale.sh
 PROBE="$(mktemp -d)"
 trap 'rm -rf "$PROBE"' EXIT
 fails=0
+ran=0
 
 # expect <fires|silent> <go|ts> <name> <body>
 expect() {
@@ -42,7 +43,15 @@ expect() {
   # all and refused rather than pretend. Scoring one as the other would let a
   # scanner that has stopped working satisfy every detection case in the suite.
   if [[ "$want" == unclosed ]] && ! grep -q "still inside a string or a block comment" <<< "$out"; then
-    echo "FAIL: $name — the gate did not refuse the unreadable file by name (exit $rc)"
+    echo "FAIL: $name — the gate did not refuse the unreadable file (exit $rc)"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  # And it must NAME the file. The whole point of refusing rather than passing
+  # is that the reader can go and look, so the diagnostic contract is the path,
+  # not the sentence around it — a refusal that says only "some file somewhere"
+  # tells them nothing they can act on.
+  if [[ "$want" == unclosed ]] && ! grep -qF -- "$file" <<< "$out"; then
+    echo "FAIL: $name — the gate refused but did not say WHICH file it could not read"
     echo "$out" | sed 's/^/    /'; fails=1; return
   fi
   if [[ "$want" == unclosed && $rc -eq 0 ]]; then
@@ -52,6 +61,7 @@ expect() {
   if [[ "$want" == silent && $rc -ne 0 ]]; then
     echo "FAIL: $name — the gate refused it"; echo "$out" | sed 's/^/    /'; fails=1; return
   fi
+  ran=$((ran + 1))
   echo "ok: $name"
 }
 
@@ -165,6 +175,40 @@ expect silent ts "the shape inside a template literal" 'const help = `amountMino
 expect unclosed ts "a file that ends inside an unclosed template literal" 'const re = /[`]/;
 const amountMinor = major * 100;'
 
+echo
+echo "== what review found in the shared scanner, each direction =="
+# A Go backtick string is RAW and never interpolates, so `${…}` written inside
+# one is prose. Keeping it as executable text reported a comment describing the
+# old bug as the bug.
+expect silent go 'an interpolation inside a Go raw string is prose' 'const explain = `see ${amountMinor / 100} in the old code`'
+# In TypeScript it IS executable, on one line and across several.
+expect fires ts "a defect inside an interpolation" 'const s = `${amountMinor / 100}`;'
+expect fires ts "a defect inside a multi-line interpolation" 'const s = `${
+  amountMinor / 100
+}`;'
+# A remainder is how the cents half is taken, and it was the one shape in this
+# gate's own vocabulary its continuation rule could not rejoin.
+expect fires ts "a remainder split after a trailing %" 'const centsPart = amountMinor %
+  100;'
+# A comment-only line is not a statement boundary; treating it as one judged
+# the two halves of a wrapped expression apart.
+expect fires ts "a comment line between a name and its power" 'const amountMinor =
+  /* a note */
+  major * 100;'
+# A line ending ON a colon has its value on the next one — how biome wraps a
+# long object property, and the write direction this gate exists for.
+expect fires ts "an object property breaking after the colon" 'const body = {
+  amountMinor:
+    major * 100,
+};'
+# ...while a member ending in a COMMA still ends its statement, which is the
+# case the old rule was written for and got right.
+expect silent ts "a comma-terminated member near an unrelated power" 'const row = {
+  valueMinor: 1,
+  label: "x",
+  ageMs: seconds * 1000,
+};'
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'
@@ -217,6 +261,14 @@ expect silent ts "the shape described in a TS comment" \
   '// Not `(valueMinor / 100).toFixed(2)` — the scale is the currency'"'"'s.'
 
 echo
+# A case whose own shell quoting is wrong prints an error to stderr and is
+# SKIPPED — and the suite went on to report OK over a case that never ran, which
+# is the failure this whole gate is about wearing the test harness's clothes.
+# The floor is the count at the time of writing; raise it when cases are added.
+if [[ $ran -lt 38 ]]; then
+  echo "FAIL: only $ran cases ran, so some were skipped before they planted anything"
+  exit 1
+fi
 if [[ $fails -eq 1 ]]; then
   echo "FAIL: check-money-scale.sh does not behave as its header claims"
   exit 1
