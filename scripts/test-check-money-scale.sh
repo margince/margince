@@ -100,6 +100,22 @@ expect fires ts "a regex literal does not hide the defect after it" \
 expect fires ts "a grouped 1_000"  'export const m = (kwdMinor: number) => kwdMinor / 1_000;'
 expect fires go "a grouped 10_000" 'func probe(amountMinor int64) int64 { return amountMinor / 10_000 }'
 
+# A `${…}` on a continuation line used to reset the statement accumulator to
+# zero, because blankStrings tracked its braces in a variable it had forgotten
+# to declare local — and awk has no other way to declare one, so it was the
+# SAME global the strip pass counts brackets in. The buffer flushed mid-
+# statement and the two halves of the defect were judged apart.
+expect fires ts "a wrapped defect after a template interpolation" 'const amountMinor = toMinor(
+  `${label}`,
+  major * 100,
+);'
+# ...and the inverse: an interpolation must not GLUE unrelated statements
+# either, which the same collision did in the other direction.
+expect silent ts "an open interpolation does not glue later statements" 'const s = `${
+  x}`;
+const valueMinor = 1;
+const ageMs = 2 * 100;'
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'

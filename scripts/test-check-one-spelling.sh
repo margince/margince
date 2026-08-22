@@ -95,6 +95,53 @@ expect silent "the same token in an inline block comment" \
   'const probeN = 1 /* not "23505" */'
 
 echo
+echo "== a comment is not a string, and a string is not a comment =="
+# The gate's waiver used to be `the marker appears somewhere on this line`, so a
+# marker inside a STRING silenced the defect beside it — a waiver nobody wrote
+# as one. Without this case the whole reading can be reverted and the suite
+# stays green, which is how the bypass survived its own review.
+expect fires "a waiver forged inside a string literal" \
+  'func probe(c string) (bool, string) { return c == "23505", "one-spelling-exempt: fake" }'
+
+# No forgery needed for this one. The strip pass used to cut the line at the
+# first ` //`, so a string carrying one hid every defect after it — and 167
+# lines in this tree already carry a `//` inside a string, mostly //nolint:
+# directives quoted in prose and URL paths.
+expect fires "a  //  inside a string does not truncate the line" \
+  'func probe(c string) bool { path := "/oauth // token"; _ = path; return c == "23505" }'
+
+# A Go raw string spans lines, so a scanner reading one line at a time takes
+# the CLOSING backtick for an opening quote and swallows the trailing comment
+# as string content. Both directions were live: a truthful comment became a
+# finding, and a waiver on such a line stopped being read at all.
+expect silent "a comment on the line closing a raw string" \
+  'const query = `SELECT 1
+FROM person` // the store maps "23505" via storekit, never here'
+expect silent "a waiver on the line closing a raw string" \
+  'const query = `SELECT 1
+FROM person` + probe("23505") // one-spelling-exempt: seeding the dedupe fixture'
+
+# ...and the inverse, which is the direction that costs a gate everything: a
+# raw string must CLOSE. If the scanner stays inside one, every line after it
+# is read as string content and the rest of the file is silently exempt.
+expect fires "a defect after a multi-line raw string" \
+  'const query = `SELECT 1
+FROM person`
+func probe(c string) bool { return c == "23505" }'
+expect fires "a defect after a raw string ending in a backslash" \
+  'const winPath = `C:\\tmp\\`
+func probe(c string) bool { return c == "23505" }'
+
+# SQL text inside a raw string compares against the code in SQL quotes, and
+# storekit is not reachable from a query string — so this stays silent, and did
+# before the state was carried across lines too. Pinned because carrying it is
+# exactly the change that could start reading query text as Go.
+expect silent "a SQLSTATE in SQL text inside a raw string" \
+  "const query = \`SELECT 1
+WHERE sqlstate = '23505'
+FROM person\`"
+
+echo
 if [[ $fails -eq 1 ]]; then
   echo "FAIL: check-one-spelling.sh does not behave as its header claims"
   exit 1

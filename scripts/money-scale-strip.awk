@@ -9,15 +9,21 @@ function opens(s,   n, t) { t = s; n = gsub(/[([]/, "", t); return n }
 function closes(s,  n, t) { t = s; n = gsub(/[)\]]/, "", t); return n }
 
 function flush() { if (buf != "") print FILENAME ":" start ":" buf; buf = ""; depth = 0; lines = 0 }
-FNR == 1 { flush(); inblock = 0 }
+FNR == 1 { flush(); inblock = 0; RAW = 0 }
 {
   c = $0
   # The waiver counts only where a waiver can be WRITTEN — in a comment. A
   # line carrying the marker inside a string literal was skipping the whole
   # line, which let any code on it bypass the gate under a marker its author
   # never wrote as one.
-  if (waived(c, waiver)) { flush(); next }
   if (inblock) { if (match(c, /\*\//)) { inblock = 0; c = substr(c, RSTART + RLENGTH) } else next }
+  # ONE scan per line of code, and it must run BEFORE any early `next` — the
+  # waived one included, or the raw-string state desyncs on exactly the lines
+  # somebody deliberately excluded, and every line after them is read against
+  # the wrong state. A block-comment continuation is the one line it skips,
+  # because nothing there is code and no string opens in prose.
+  scanLine(c)
+  if (waived(c, waiver)) { flush(); next }
   t = c; sub(/^[[:space:]]+/, "", t)
   if (t ~ /^(\/\/|\*)/) next
   while (match(c, /\/\*[^*]*\*+([^\/*][^*]*\*+)*\//)) { c = substr(c, 1, RSTART - 1) substr(c, RSTART + RLENGTH) }
