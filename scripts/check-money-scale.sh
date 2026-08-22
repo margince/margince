@@ -104,12 +104,26 @@ powers='[/*%][[:space:]]*(10|100|1000|10000|1_000|10_000)([^0-9._]|$)'
 # an inline /* … */, and the interior of a multi-line block, which needs
 # per-file state.
 #
-# The residue, stated rather than hidden: a `/*` or an unbalanced bracket inside
-# a STRING literal confuses the accumulator, and a `//` inside one truncates the
-# line. Both are false NEGATIVES — the gate under-reports rather than crying
-# wolf, which is the direction a scanner should fail in.
+# There is no residue paragraph here any more. The holes this file used to state
+# — a `/*` or an unbalanced bracket inside a string confusing the accumulator, a
+# `//` inside one truncating the line — are closed by
+# scripts/lib-commentscan.awk, which blanks a string's contents before the
+# accumulator ever sees them. What is left is DETECTED rather than stated:
+# A file the scanner leaves mid-string or mid-comment is a file it stopped
+# reading correctly, and an OK over it means nothing — so the strip pass reports
+# one and the run refuses below.
+#
+# `>>` and not `>`: strip runs once per language and awk truncates on its first
+# open, so a single `>` would lose whichever language ran first. And the
+# variable is `unclosed_out`, not `log` — `log` is an awk BUILT-IN, so `-v log=`
+# is coerced to a number (-inf here) and every line is redirected to a file
+# named after it. Silently: the filter still consumed the marker, so the gate
+# read clean while the evidence went nowhere.
+unclosed_log="$(mktemp)"
+trap 'rm -f "$unclosed_log"' EXIT
 strip() {
-  xargs -0 awk -f "$COMMENT_SCAN" -f "$STRIP_PROG" -v waiver="$waiver"
+  xargs -0 awk -f "$COMMENT_SCAN" -f "$STRIP_PROG" -v waiver="$waiver" \
+    | awk -v unclosed_out="$unclosed_log" '/^commentscan-unclosed:/ { print >> unclosed_out; next } { print }'
 }
 
 # A scan root that does not exist makes find print an error and match nothing,
@@ -156,6 +170,18 @@ ts_hits="$(find "${ts_scan[@]}" -type f \( -name '*.ts' -o -name '*.tsx' \) \
              ! -name '*.test.ts' ! -name '*.test.tsx' ! -name 'schema.d.ts' -print0 2>/dev/null \
            | strip | hits "$names" "$powers" \
            | grep -v 'format/minorunits' || true)"
+
+# Refusing here rather than stating it as residue: this is the one failure mode
+# where the gate cannot tell the difference between clean and blind.
+if [[ -s "$unclosed_log" ]]; then
+  echo "FAIL: the comment scanner reached the end of a file still inside a string or a block comment,"
+  echo "      so everything after that point was read as something it is not and this gate saw none of it."
+  sed 's/^commentscan-unclosed:/  /' "$unclosed_log" | sort -u
+  echo "      Usually a backtick inside a TypeScript regex literal, which opens a template literal the"
+  echo "      language never closes. Rewrite it as a character escape, or if the construct is genuinely"
+  echo "      needed, teach scripts/lib-commentscan.awk about it — do not waive the file."
+  exit 1
+fi
 
 if [[ -n "$go_hits" || -n "$ts_hits" ]]; then
   echo "FAIL: an amount in minor units is scaled by a hard-coded power of ten."

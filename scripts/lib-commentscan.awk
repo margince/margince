@@ -189,6 +189,26 @@ function codeOf(s,   out, rest, entry, guard) {
   return out
 }
 
+# UNCLOSED is the line a strip pass emits when it is about to leave a file with
+# a string or a block comment still open. That state means the scanner lost
+# track partway through and read the rest of the file as something it is not —
+# which is a gate reporting OK over code it never looked at, the one failure a
+# gate must not have.
+#
+# It is an assertion rather than a residue paragraph because it is CHEAP and it
+# is CHECKABLE: measured over this tree, no scanned file ends in either state
+# (0 of 3763 Go, 0 of 926 TypeScript once the *.test.ts the gates already skip
+# are set aside). So the one construct still known to desync the scanner — a
+# backtick inside a TypeScript regex literal, which opens a template literal
+# the language never closes — stops being a silent hole and becomes a failure
+# that names the file.
+#
+# Call closeFile() at FNR == 1, BEFORE resetting the state, and again in END.
+function closeFile() {
+  if (SCANNED != "" && (RAW || INBLOCK)) print "commentscan-unclosed:" SCANNED
+  SCANNED = FILENAME
+}
+
 # waived: the marker appears in a REAL comment on this line.
 function waived(s, marker,   at) {
   at = commentAt(s)

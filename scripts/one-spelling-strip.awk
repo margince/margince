@@ -10,7 +10,8 @@
 # would blind it completely, where money-scale must blank them or a line
 # describing the defect reads as the defect.
 
-FNR == 1 { INBLOCK = 0; RAW = 0 }
+FNR == 1 { closeFile(); INBLOCK = 0; RAW = 0 }
+END { closeFile() }
 {
   c = $0
   # ONE call per line, and it must come BEFORE any early `next` — the waived

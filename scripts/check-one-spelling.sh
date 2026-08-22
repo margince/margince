@@ -83,16 +83,38 @@ waiver='one-spelling-exempt:'
 # and the interior of a multi-line block. A line carrying the waiver marker is
 # dropped whole.
 #
-# The residue, stated rather than hidden: a `/*` inside a STRING literal opens a
-# block this cannot tell from a real one, and everything to the next `*/` stops
-# being scanned. That is a false NEGATIVE in code no author writes by accident,
-# and the alternative is lexing Go in awk. The space before // avoids eating a
-# `scheme://…` inside a string.
+# There is no residue paragraph here any more, and that is the point. The three
+# holes this file used to state — a `/*` inside a string opening a block, a `//`
+# inside one truncating the line, a waiver marker inside one silencing it — are
+# all closed by scripts/lib-commentscan.awk, which reads a string as a string.
+#
+# What is left is not stated, it is DETECTED. A construct the scanner cannot
+# follow leaves it inside a string at the end of the file, and the run refuses
+# by name rather than reporting OK over code it never read. A residue paragraph
+# asks the reader to trust that the hole is small; the assertion below does not
+# need trusting.
 corpus="$(mktemp)"
 trap 'rm -f "$corpus"' EXIT
 find "${scan[@]}" -type f -name '*.go' \
      ! -name '*_test.go' ! -name '*_gen.go' ! -name '*.gen.go' -print0 \
   | xargs -0 awk -f "$COMMENT_SCAN" -f "$STRIP_PROG" -v waiver="$waiver" > "$corpus"
+
+# A file the scanner left mid-string or mid-comment is a file it stopped reading
+# correctly, so an OK over it means nothing. Refusing here rather than stating
+# it as residue: this is the one failure mode where the gate cannot tell the
+# difference between clean and blind.
+unclosed="$(grep '^commentscan-unclosed:' "$corpus" || true)"
+if [[ -n "$unclosed" ]]; then
+  echo "FAIL: the comment scanner reached the end of a file still inside a string or a block comment,"
+  echo "      so everything after that point was read as something it is not and this gate saw none of it."
+  echo "$unclosed" | sed 's/^commentscan-unclosed:/  /'
+  echo "      Usually a backtick inside a TypeScript regex literal (/[\`]/), which opens a template"
+  echo "      literal the language never closes. Rewrite it as a character escape, or if the construct"
+  echo "      is genuinely needed, teach scripts/lib-commentscan.awk about it — do not waive the file."
+  exit 1
+fi
+grep -v '^commentscan-unclosed:' "$corpus" > "$corpus.clean" && mv "$corpus.clean" "$corpus"
+
 
 # scan_for <regex> [exclude-path-regex]: matching CODE rows, or nothing.
 scan_for() {

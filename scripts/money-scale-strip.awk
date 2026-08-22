@@ -9,7 +9,7 @@ function opens(s,   n, t) { t = s; n = gsub(/[([]/, "", t); return n }
 function closes(s,  n, t) { t = s; n = gsub(/[)\]]/, "", t); return n }
 
 function flush() { if (buf != "") print FILENAME ":" start ":" buf; buf = ""; depth = 0; lines = 0 }
-FNR == 1 { flush(); INBLOCK = 0; RAW = 0 }
+FNR == 1 { closeFile(); flush(); INBLOCK = 0; RAW = 0 }
 {
   c = $0
   # ONE call per line, and it must come BEFORE any early `next` — the waived
@@ -60,4 +60,4 @@ FNR == 1 { flush(); INBLOCK = 0; RAW = 0 }
   # nothing to do with each other. A blank line ends a statement too.
   if (depth <= 0 || lines >= 6) flush()
 }
-END { flush() }
+END { flush(); closeFile() }

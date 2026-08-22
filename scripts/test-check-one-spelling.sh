@@ -36,8 +36,29 @@ expect() {
   plant "$body"
   out="$(ONE_SPELLING_SCAN="$PROBE_DIR" $GATE 2>&1)"; rc=$?
   rm -f "$PLANT"
+  # A non-zero exit is not the same as a DETECTION. The gate also refuses when it
+  # could not finish reading a file, and a `fires` case that reads only the
+  # status would score that as the defect being caught — so every detection case
+  # in this suite could be satisfied by a scanner that has stopped working.
+  if [[ "$want" == fires ]] && grep -q "still inside a string or a block comment" <<< "$out"; then
+    echo "FAIL: $name — the gate refused because it could not READ the probe, not because of what it plants"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
   if [[ "$want" == fires && $rc -eq 0 ]]; then
     echo "FAIL: $name — the gate passed over it"; echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  # `unclosed` is its own expectation and not a flavour of `fires`, because the
+  # two refusals mean opposite things about the run: `fires` says the gate READ
+  # the code and found the defect, `unclosed` says it could not read the code at
+  # all and refused rather than pretend. Scoring one as the other would let a
+  # scanner that has stopped working satisfy every detection case in the suite.
+  if [[ "$want" == unclosed ]] && ! grep -q "still inside a string or a block comment" <<< "$out"; then
+    echo "FAIL: $name — the gate did not refuse the unreadable file by name (exit $rc)"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  if [[ "$want" == unclosed && $rc -eq 0 ]]; then
+    echo "FAIL: $name — the gate reported OK over a file it never finished reading"
+    echo "$out" | sed 's/^/    /'; fails=1; return
   fi
   if [[ "$want" == silent && $rc -ne 0 ]]; then
     echo "FAIL: $name — the gate refused it"; echo "$out" | sed 's/^/    /'; fails=1; return
@@ -190,6 +211,13 @@ expect fires "an escaped quote does not end the string early" \
 # spares a URL is the quote state, and this is the case that says so.
 expect fires "a scheme inside a string is not a comment" \
   'var endpoint = "https://example.test/v1"; var dedupe = "23505"'
+
+# The gate's last line of defence, and the reason it has no residue paragraph:
+# a file the scanner cannot follow to the end is a file it stopped reading, and
+# reporting OK over one is the only failure a gate must never have. So it
+# refuses by name instead. This case is the assertion firing.
+expect unclosed "a file that ends inside an unclosed raw string" \
+  'var query = `SELECT 1 FROM person'
 
 echo
 if [[ $fails -eq 1 ]]; then

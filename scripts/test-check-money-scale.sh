@@ -36,6 +36,19 @@ expect() {
   if [[ "$want" == fires && $rc -eq 0 ]]; then
     echo "FAIL: $name — the gate passed over it"; echo "$out" | sed 's/^/    /'; fails=1; return
   fi
+  # `unclosed` is its own expectation and not a flavour of `fires`, because the
+  # two refusals mean opposite things about the run: `fires` says the gate READ
+  # the code and found the defect, `unclosed` says it could not read the code at
+  # all and refused rather than pretend. Scoring one as the other would let a
+  # scanner that has stopped working satisfy every detection case in the suite.
+  if [[ "$want" == unclosed ]] && ! grep -q "still inside a string or a block comment" <<< "$out"; then
+    echo "FAIL: $name — the gate did not refuse the unreadable file by name (exit $rc)"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  if [[ "$want" == unclosed && $rc -eq 0 ]]; then
+    echo "FAIL: $name — the gate reported OK over a file it never finished reading"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
   if [[ "$want" == silent && $rc -ne 0 ]]; then
     echo "FAIL: $name — the gate refused it"; echo "$out" | sed 's/^/    /'; fails=1; return
   fi
@@ -145,6 +158,12 @@ expect fires ts "a  //  inside a single-quoted string" "const path = '/oauth // 
 # ...and a template literal's contents are contents, so a line quoting the
 # shape inside one is prose, not arithmetic.
 expect silent ts "the shape inside a template literal" 'const help = `amountMinor / 100`;'
+
+# The same last line of defence. A backtick inside a regex literal opens a
+# template literal the language never closes, so the scanner runs off the end
+# of the file — and the run says which file rather than saying OK.
+expect unclosed ts "a file that ends inside an unclosed template literal" 'const re = /[`]/;
+const amountMinor = major * 100;'
 
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
