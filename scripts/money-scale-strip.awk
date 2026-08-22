@@ -9,32 +9,22 @@ function opens(s,   n, t) { t = s; n = gsub(/[([]/, "", t); return n }
 function closes(s,  n, t) { t = s; n = gsub(/[)\]]/, "", t); return n }
 
 function flush() { if (buf != "") print FILENAME ":" start ":" buf; buf = ""; depth = 0; lines = 0 }
-FNR == 1 { flush(); inblock = 0; RAW = 0 }
+FNR == 1 { flush(); INBLOCK = 0; RAW = 0 }
 {
   c = $0
+  # ONE call per line, and it must come BEFORE any early `next` — the waived
+  # one included, or the cross-line states desync on exactly the lines somebody
+  # deliberately excluded, and every line after them is read against the wrong
+  # one. codeOf carries both and hands back the code with the comments gone.
+  code = codeOf(c)
+
   # The waiver counts only where a waiver can be WRITTEN — in a comment. A
   # line carrying the marker inside a string literal was skipping the whole
   # line, which let any code on it bypass the gate under a marker its author
   # never wrote as one.
-  if (inblock) { if (match(c, /\*\//)) { inblock = 0; c = substr(c, RSTART + RLENGTH) } else next }
-  # ONE scan per line of code, and it must run BEFORE any early `next` — the
-  # waived one included, or the raw-string state desyncs on exactly the lines
-  # somebody deliberately excluded, and every line after them is read against
-  # the wrong state. A block-comment continuation is the one line it skips,
-  # because nothing there is code and no string opens in prose.
-  scanLine(c)
   if (waived(c, waiver)) { flush(); next }
+  c = code
   t = c; sub(/^[[:space:]]+/, "", t)
-  if (t ~ /^(\/\/|\*)/) next
-  while (match(c, /\/\*[^*]*\*+([^\/*][^*]*\*+)*\//)) { c = substr(c, 1, RSTART - 1) substr(c, RSTART + RLENGTH) }
-  if (match(c, /\/\*/)) { inblock = 1; c = substr(c, 1, RSTART - 1) }
-  # `x:=minor/100//note` is a comment too. Anchored on a `//` that is not
-  # part of a scheme (`https://`), which is the only form that routinely
-  # appears inside a string here.
-  # The same scanner decides where a trailing comment starts, so a `//`
-  # inside a string is not mistaken for one — and `https://` is not either.
-  at = commentAt(c)
-  if (at > 0) c = substr(c, 1, at - 1)
   # And the contents of a STRING are not code. A line mentioning the shape
   # in prose — "see amountMinor / 100 in the old code" — was reported as
   # the arithmetic it describes. The same quote scanner that finds the

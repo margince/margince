@@ -50,7 +50,7 @@
 function scanLine(s,   i, ch, quote, prev) {
   RAWIN = RAW
   quote = RAW ? "`" : ""
-  CMT = 0
+  CMT = 0; CMTKIND = ""
   for (i = 1; i <= length(s); i++) {
     ch = substr(s, i, 1)
     if (quote != "") {
@@ -74,8 +74,8 @@ function scanLine(s,   i, ch, quote, prev) {
     # not tracked as a state of their own (that needs to know whether a `/`
     # is division or a literal, which needs a parser); skipping an escaped
     # slash covers the spelling that actually occurs.
-    if (ch == "/" && prev != "\\" && prev != ":" && substr(s, i + 1, 1) == "/") { CMT = i; break }
-    if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "*") { CMT = i; break }
+    if (ch == "/" && prev != "\\" && prev != ":" && substr(s, i + 1, 1) == "/") { CMT = i; CMTKIND = "//"; break }
+    if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "*") { CMT = i; CMTKIND = "/*"; break }
     prev = ch
   }
   # A comment cannot begin inside a string, so reaching one means no quote is
@@ -106,7 +106,11 @@ function blankStrings(s,   i, ch, quote, out, braces) {
   for (i = 1; i <= length(s); i++) {
     ch = substr(s, i, 1)
     if (quote != "") {
-      if (ch == "\\") { out = out "  "; i++; continue }
+      # Same language-specific rule as scanLine: a backslash is literal inside
+      # a Go raw string, and eating the closing backtick blanks the rest of the
+      # line as string content — which hid `amountMinor/100` after a
+      # `strings.TrimPrefix(path, \`\\\`)`.
+      if (ch == "\\" && !(quote == "`" && FILENAME ~ /\.go$/)) { out = out "  "; i++; continue }
       if (ch == quote) { quote = ""; out = out ch; continue }
       # `${…}` inside a template literal is EXECUTABLE, not string content,
       # so it is kept. Blanking it hid `${amountMinor / 100}` entirely.
@@ -134,6 +138,45 @@ function blankStrings(s,   i, ch, quote, out, braces) {
     }
     if (ch == "\"" || ch == "\x27" || ch == "`") { quote = ch; out = out ch; continue }
     out = out ch
+  }
+  return out
+}
+
+# codeOf returns the CODE on a line — every comment removed, string literals
+# left intact — and carries both cross-line states: INBLOCK for a `/* */` that
+# has not closed, RAW for a Go raw string that has not closed. An all-comment
+# line comes back as "".
+#
+# It is HERE rather than in each strip pass because both passes had written the
+# same nine lines out and neither had noticed that they detected a block comment
+# with a bare `match(c, /\/\*/)` on the raw line — which a string is enough to
+# forge:
+#
+#   var globPattern = "**/*.go"
+#
+# opened a block comment that never closed, and every arm of the gate went blind
+# from that line to the end of the file. The scanner that can tell the two apart
+# shipped beside this and was not being used for the one job it was written for.
+#
+# The bound on the splice loop is a hundred inline block comments on one line.
+# It is not a real limit; it is there so a scanner bug cannot hang a merge gate.
+function codeOf(s,   out, rest, entry, guard) {
+  if (INBLOCK) {
+    if (match(s, /\*\//)) { INBLOCK = 0; s = substr(s, RSTART + RLENGTH) } else return ""
+  }
+  entry = RAW
+  out = s
+  for (guard = 0; guard < 100; guard++) {
+    RAW = entry
+    scanLine(out)
+    if (CMT == 0) return out
+    if (CMTKIND == "//") return substr(out, 1, CMT - 1)
+    rest = substr(out, CMT)
+    # A `*/` inside a block comment is its terminator; there are no strings in
+    # comment prose to confuse it with.
+    if (match(rest, /\*\//)) { out = substr(out, 1, CMT - 1) substr(rest, RSTART + RLENGTH); continue }
+    INBLOCK = 1
+    return substr(out, 1, CMT - 1)
   }
   return out
 }

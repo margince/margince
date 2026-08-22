@@ -116,6 +116,16 @@ expect silent ts "an open interpolation does not glue later statements" 'const s
 const valueMinor = 1;
 const ageMs = 2 * 100;'
 
+# The same two library holes on the money side: a backslash inside a Go raw
+# string blanked the rest of the line as string content, and a `/*` inside a
+# string opened a block comment that never closed.
+expect fires go "a defect after a backslash in a Go raw string" 'func windows(path string, amountMinor int64) string {
+	return strings.TrimPrefix(path, `\`) + fmt.Sprint(amountMinor/100)
+}'
+expect fires go "a defect after a /* inside a string" 'var globPattern = "**/*.go"
+
+func probe(amountMinor int64) int64 { return amountMinor / 100 }'
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'

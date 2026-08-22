@@ -141,6 +141,45 @@ expect silent "a SQLSTATE in SQL text inside a raw string" \
 WHERE sqlstate = '23505'
 FROM person\`"
 
+# A backslash is literal inside a Go raw string and an escape inside a
+# TypeScript template, so one rule cannot serve both. Reading Go's as an escape
+# ate the closing backtick: the NEXT backtick closed the string instead, quote
+# parity inverted, and a `//` that was string content became a comment opener
+# that discarded the defect after it. `\` is the Windows separator idiom and
+# there are seven of them in this tree already.
+expect fires "a defect after a backslash in a Go raw string" \
+  'func normalize(p string) string { return strings.NewReplacer(`\`, `//`).Replace(p) + errFor("23505") }'
+# The same desync in the other direction disarms the waiver, which leaves the
+# author of such a line no way through the gate at all.
+expect silent "a waiver on a line holding a backslash raw string" \
+  'var sepAndCode = strings.TrimSuffix(p, `\`) + "23505" // one-spelling-exempt: a build id, not a SQLSTATE'
+
+echo
+echo "== a block comment is code's absence, not a string's contents =="
+# Both strip passes used to open a block comment on a bare `match(c, /\/\*/)`
+# over the raw line, which a STRING is enough to forge. The block never closed,
+# and every arm went blind from that line to the end of the file — no forgery
+# needed, since a glob is spelt exactly like one.
+expect fires "a /* inside a string does not blind the file" \
+  'var globPattern = "**/*.go"
+
+var dedupe = "23505"'
+expect fires "a /* inside a raw string does not blind the file" \
+  'var globPattern = `**/*.go`
+
+var dedupe = "23505"'
+# ...and the real thing still behaves: prose inside a block comment is not code,
+# a waiver written in one still counts, and code after an inline one is judged.
+expect silent "prose inside a real block comment" \
+  '/*
+A dedupe hit is "23505", named in sqlstate.go.
+*/
+func probe() {}'
+expect silent "a waiver written in a block comment" \
+  'var code = "23505" /* one-spelling-exempt: probing the gate */'
+expect fires "code after an inline block comment" \
+  'var n = 1 /* a note */ ; var dedupe = "23505"'
+
 echo
 if [[ $fails -eq 1 ]]; then
   echo "FAIL: check-one-spelling.sh does not behave as its header claims"
