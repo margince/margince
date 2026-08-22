@@ -102,7 +102,7 @@ func MajorUnits(amountMinor int64, currency string) string {
 	if digits == 0 {
 		return strconv.FormatInt(amountMinor, 10)
 	}
-	scale := minorUnitScale(digits)
+	scale := powerOfTen(digits)
 	// The magnitude is taken as UNSIGNED, because negating an int64 does not
 	// always produce a positive one: math.MinInt64 has no positive counterpart
 	// and negating it yields itself, which would print a minus sign in front of
@@ -121,17 +121,36 @@ func MajorUnits(amountMinor int64, currency string) string {
 	return fmt.Sprintf("%s%d.%0*d", sign, magnitude/unsigned, digits, magnitude%unsigned)
 }
 
-// minorUnitScale is 10^digits — how many minor units make one major unit.
+// powerOfTen is 10^digits — how many minor units make one major unit.
 //
-// One spelling because both callers would otherwise write the same loop:
+// One spelling because every caller would otherwise write the same loop:
 // MajorUnits to split the figure into its two halves, WholeMajorUnits to
-// truncate it to the upper one.
-func minorUnitScale(digits int) int64 {
+// truncate it to the upper one, and MinorUnitScale for a caller outside this
+// package that needs the multiplier itself.
+//
+// Named for what it computes rather than for what its callers want, because
+// the alternative — minorUnitScale beside the exported MinorUnitScale — is two
+// names one capital letter apart for two different signatures, which is a
+// reader's problem before it is a linter's.
+func powerOfTen(digits int) int64 {
 	scale := int64(1)
 	for range digits {
 		scale *= 10
 	}
 	return scale
+}
+
+// MinorUnitScale is how many minor units make one major unit of the currency:
+// 100 for EUR, 1000 for KWD, 1 for VND. It is the multiplier a caller converting
+// a decimal figure INTO minor units needs, which MajorUnits and WholeMajorUnits
+// cannot supply because they only ever divide by it.
+//
+// It is exported for that one shape and no other. A caller that wants to RENDER
+// an amount wants MajorUnits or WholeMajorUnits instead — reaching for the scale
+// to do the division by hand is how a currency's digit count comes to be right
+// in this table and wrong at the surface reading it.
+func MinorUnitScale(currency string) int64 {
+	return powerOfTen(MinorUnitDigits(currency))
 }
 
 // WholeMajorUnits is the amount in whole major units, the fraction discarded:
@@ -149,7 +168,7 @@ func minorUnitScale(digits int) int64 {
 // abbreviates further, and rounding 999999 EUR up to "€10000" would state a
 // number the record does not hold.
 func WholeMajorUnits(amountMinor int64, currency string) int64 {
-	return amountMinor / minorUnitScale(MinorUnitDigits(currency))
+	return amountMinor / powerOfTen(MinorUnitDigits(currency))
 }
 
 // MinorUnits is MajorUnits' inverse: the figure a document writes ("12500.00",
