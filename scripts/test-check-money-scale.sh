@@ -209,6 +209,22 @@ expect silent ts "a comma-terminated member near an unrelated power" 'const row 
   ageMs: seconds * 1000,
 };'
 
+# Inside an interpolation the contents are CODE, so a `//` there is a real
+# comment — and the interpolation is still open after it. Zeroing that state
+# read the closing `}` as ordinary code and the backtick after it as a NEW
+# template, leaving the scanner inside a string for the rest of the file.
+expect silent ts "a // inside an interpolation is a comment" 'const s = `${x // amountMinor / 100
+}`;'
+expect fires ts "and the interpolation still closes afterwards" 'const s = `${x // a note
+}`;
+const amountMinor = major * 100;'
+# A nested string inside an interpolation is still a string.
+expect silent ts "a nested string inside an interpolation" 'const s = `${label("see amountMinor / 100 here")}`;'
+expect fires ts "a defect beside that nested string" 'const s = `${label("a note") + amountMinor / 100}`;'
+# A statement buffered at end of file must be reported under ITS file, not the
+# next one, and must not be joined to that file's first line.
+expect silent ts "a dangling continuation at end of file" 'const amountMinor ='
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'
@@ -265,7 +281,7 @@ echo
 # SKIPPED — and the suite went on to report OK over a case that never ran, which
 # is the failure this whole gate is about wearing the test harness's clothes.
 # The floor is the count at the time of writing; raise it when cases are added.
-if [[ $ran -lt 38 ]]; then
+if [[ $ran -lt 43 ]]; then
   echo "FAIL: only $ran cases ran, so some were skipped before they planted anything"
   exit 1
 fi

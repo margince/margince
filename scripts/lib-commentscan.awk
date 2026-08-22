@@ -131,9 +131,20 @@ function lexLine(s,   i, ch, quote, prev, interp, tmpl, out) {
   # the caller decides whether to keep it, and CMT tells it where.
   if (CMT > 0) out = out substr(s, CMT)
   BLANK = out
-  # A comment cannot begin inside a string or mid-interpolation, so reaching
-  # one closes both.
-  if (CMT > 0) { RAW = 0; INTERP = 0 } else { RAW = (quote == "`"); INTERP = interp }
+  # A comment cannot begin inside a STRING, so reaching one means no string
+  # carries to the next line. An INTERPOLATION is different: its contents are
+  # code, so a `//` is a real comment THERE and the interpolation is still open
+  # after it —
+  #
+  #   const s = `${x // a note
+  #   }`;
+  #
+  # Zeroing it here read the `}` on the next line as ordinary code and the
+  # backtick after it as a NEW template, which left the scanner inside a string
+  # for the rest of the file. The unclosed-file assertion caught that, which is
+  # what it is for.
+  RAW = (CMT > 0) ? 0 : (quote == "`")
+  INTERP = interp
 }
 
 # commentAt answers only the first half, for a caller holding one line in hand
