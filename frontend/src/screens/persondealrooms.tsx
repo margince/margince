@@ -30,8 +30,10 @@ type DealRoom = components["schemas"]["DealRoom"];
 // requirement for a key. localeCompare is locale-DEPENDENT, so the same
 // addresses would key differently under different locales and a revoke would
 // refresh a cache entry nobody is looking at. Sonar's S2871 asks for
-// localeCompare here; it is right about its real target, sorting NUMBERS with
-// the default comparator, and backwards about strings being joined into a key.
+// localeCompare here: it flags a bare sort on strings because code-unit order
+// is not human alphabetical order — "Ä" after "Z", "a" after "Z". That is a
+// real concern for a list somebody READS and no concern at all for a key
+// nobody reads, where identical-everywhere is the only property that matters.
 export function roomsOfKey(emails: readonly string[]) {
   return ["deal-rooms-of", [...emails].sort().join(",")] as const;
 }
