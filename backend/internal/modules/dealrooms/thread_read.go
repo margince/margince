@@ -202,18 +202,3 @@ func scanDecision(row rowScanner) (crmcontracts.DealRoomDecision, error) {
 	d.ParticipantName = &name
 	return d, nil
 }
-
-// openRequiredThreads counts what still blocks confirming a document.
-func openRequiredThreads(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentID ids.UUID) (int, error) {
-	var n int
-	// FOR SHARE on the rows counted, so a resolve racing this confirmation
-	// cannot commit between the count and the decision's insert.
-	err := tx.QueryRow(ctx,
-		`SELECT count(*) FROM (SELECT 1 FROM deal_room_thread
-		   WHERE room_id = $1 AND document_id = $2 AND required_change AND state = 'open'
-		   FOR SHARE) blocking`, roomID, documentID).Scan(&n)
-	if err != nil {
-		return 0, fmt.Errorf("count blocking deal room threads: %w", err)
-	}
-	return n, nil
-}

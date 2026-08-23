@@ -880,15 +880,13 @@ export const vi = {
   "access.sub": "Ai được vào, và mỗi người được làm gì.",
   "access.invite": "Mời",
   "access.empty": "Chưa mời ai.",
-  "access.noReviewer":
-    "Có tài liệu nhưng không ai có thể xác nhận chúng. Hãy mời một người duyệt, hoặc đổi ai đó thành người duyệt.",
   "access.cap.view": "Chỉ đọc",
   "access.cap.viewHint": "Có thể đọc tài liệu và cuộc trao đổi.",
   "access.cap.comment": "Đọc và bình luận",
   "access.cap.commentHint": "Cũng có thể đặt câu hỏi và trả lời.",
-  "access.cap.reviewer": "Đọc, bình luận và xác nhận tài liệu",
+  "access.cap.reviewer": "Đọc và bình luận",
   "access.cap.reviewerHint":
-    "Cũng có thể yêu cầu sửa một tài liệu hoặc xác nhận một phiên bản.",
+    "Hiện giống như quyền bình luận. Giữ riêng để bước phê duyệt sau này có chỗ.",
   "access.state.invited": "đã mời",
   "access.state.active": "đã đăng nhập",
   "access.state.revoked": "đã thu hồi",
@@ -907,6 +905,8 @@ export const vi = {
   "access.nameLabel": "Tên",
   "access.emailLabel": "Địa chỉ email",
   "access.capabilityLegend": "Họ được làm gì?",
+  "access.inviteBeforePublish":
+    "Phòng này chưa từng được xuất bản, nên người bạn mời sẽ thấy một trang trống cho đến khi bạn bấm Xuất bản.",
   "access.inviteNote":
     "Bạn sẽ nhận được liên kết để sao chép. Nếu đã cấu hình gửi thư, liên kết cũng được gửi cho họ.",
   "access.issued.title": "Liên kết cho {name}",
@@ -4309,15 +4309,9 @@ export const vi = {
   "threads.reply": "Trả lời",
   "threads.resolve": "Giải quyết",
   "threads.newLabel": "Chủ đề mới",
-  "threads.requireChangeLabel":
-    "Cần thay đổi trước khi tôi có thể xác nhận tài liệu",
+  "threads.requireChangeLabel": "Tài liệu này cần được sửa",
   "threads.open": "Đăng",
   "threads.readOnly": "Quyền truy cập của bạn chỉ đọc.",
-  "buyer.decide.requestChanges": "Yêu cầu thay đổi",
-  "buyer.decide.confirm": "Xác nhận phiên bản này",
-  "buyer.decide.confirmed":
-    "Bạn đã xác nhận phiên bản này. Đây là quyết định làm việc trong phòng, không phải chữ ký.",
-  "buyer.decide.requested": "Bạn đã yêu cầu thay đổi phiên bản này.",
   "room.decisions.confirm_version": "đã xác nhận phiên bản",
   "room.decisions.request_changes": "đã yêu cầu thay đổi",
   "dealbrief.title": "Tóm tắt giao dịch",

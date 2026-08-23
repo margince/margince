@@ -31,7 +31,6 @@ import {
 import { buyerLink, DealRoomAccess, useParticipants } from "./dealroomaccess";
 import { changesKey, useRoomChanges } from "./dealroomchanges";
 import { DealRoomConversation } from "./dealroomconversation";
-import { useRoomDocuments } from "./dealroomdocuments";
 import "./dealroompage.css";
 
 // The seller's Deal Room page: one place to decide who may enter, what they
@@ -80,8 +79,6 @@ function RoomPage({
   const mayWrite = useCanWrite("deal_room", "update");
   const finished = FINISHED_STATES.has(room.state);
   const refusal = refusalFor(finished, mayWrite, t);
-  const docs = useRoomDocuments(room.id);
-  const hasDocuments = (docs.data?.data?.length ?? 0) > 0;
   return (
     <div className="roompage">
       <header className="roompage-head">
@@ -111,11 +108,7 @@ function RoomPage({
           <DealRoomConversation room={room} refusal={refusal} />
         </div>
         <div className="roompage-side">
-          <DealRoomAccess
-            room={room}
-            mayManage={mayWrite}
-            hasDocuments={hasDocuments}
-          />
+          <DealRoomAccess room={room} mayManage={mayWrite} />
           <PublishPanel room={room} />
         </div>
       </div>

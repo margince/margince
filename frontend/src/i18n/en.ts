@@ -933,15 +933,13 @@ export const en = {
   "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",
   "access.empty": "Nobody has been invited yet.",
-  "access.noReviewer":
-    "There are documents but nobody who can confirm them. Invite a reviewer, or change somebody to reviewer.",
   "access.cap.view": "Read only",
   "access.cap.viewHint": "Can read the documents and the conversation.",
   "access.cap.comment": "Read and comment",
   "access.cap.commentHint": "Can also ask questions and reply.",
-  "access.cap.reviewer": "Read, comment and confirm documents",
+  "access.cap.reviewer": "Read and comment",
   "access.cap.reviewerHint":
-    "Can also request changes to a document or confirm a version.",
+    "The same as commenting today. Kept as a separate seat so a future approval step has somewhere to land.",
   "access.state.invited": "invited",
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
@@ -960,6 +958,8 @@ export const en = {
   "access.nameLabel": "Name",
   "access.emailLabel": "Email",
   "access.capabilityLegend": "What may they do?",
+  "access.inviteBeforePublish":
+    "This room has never been published, so whoever you invite will see an empty page until you press Publish.",
   "access.inviteNote":
     "You will get the link to copy. If a mail relay is configured it is also sent to them.",
   "access.issued.title": "Link for {name}",
@@ -4401,15 +4401,9 @@ export const en = {
   "threads.reply": "Reply",
   "threads.resolve": "Resolve",
   "threads.newLabel": "New thread",
-  "threads.requireChangeLabel":
-    "This requires a change before I can confirm the document",
+  "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
-  "buyer.decide.requestChanges": "Request changes",
-  "buyer.decide.confirm": "Confirm this version",
-  "buyer.decide.confirmed":
-    "You confirmed this version. This is a working decision inside the room, not a signature.",
-  "buyer.decide.requested": "You asked for changes to this version.",
   "room.decisions.confirm_version": "confirmed the version",
   "room.decisions.request_changes": "asked for changes",
   "dealbrief.title": "Deal brief",

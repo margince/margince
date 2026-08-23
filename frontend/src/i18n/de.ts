@@ -894,15 +894,13 @@ export const de = {
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
   "access.empty": "Noch niemand eingeladen.",
-  "access.noReviewer":
-    "Es gibt Dokumente, aber niemanden, der sie bestätigen kann. Laden Sie einen Prüfer ein oder machen Sie jemanden zum Prüfer.",
   "access.cap.view": "Nur lesen",
   "access.cap.viewHint": "Kann Dokumente und Unterhaltung lesen.",
   "access.cap.comment": "Lesen und kommentieren",
   "access.cap.commentHint": "Kann außerdem Fragen stellen und antworten.",
-  "access.cap.reviewer": "Lesen, kommentieren und Dokumente bestätigen",
+  "access.cap.reviewer": "Lesen und kommentieren",
   "access.cap.reviewerHint":
-    "Kann außerdem Änderungen an einem Dokument anfordern oder eine Version bestätigen.",
+    "Heute dasselbe wie Kommentieren. Bleibt ein eigener Platz, damit ein späterer Freigabeschritt einen Ort hat.",
   "access.state.invited": "eingeladen",
   "access.state.active": "angemeldet",
   "access.state.revoked": "entzogen",
@@ -921,6 +919,8 @@ export const de = {
   "access.nameLabel": "Name",
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
+  "access.inviteBeforePublish":
+    "Dieser Raum wurde noch nie veröffentlicht. Wen Sie jetzt einladen, sieht eine leere Seite, bis Sie auf Veröffentlichen klicken.",
   "access.inviteNote":
     "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
   "access.issued.title": "Link für {name}",
@@ -4348,16 +4348,9 @@ export const de = {
   "threads.reply": "Antworten",
   "threads.resolve": "Erledigen",
   "threads.newLabel": "Neuer Thread",
-  "threads.requireChangeLabel":
-    "Das muss geändert werden, bevor ich das Dokument bestätigen kann",
+  "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
-  "buyer.decide.requestChanges": "Änderungen anfordern",
-  "buyer.decide.confirm": "Diese Version bestätigen",
-  "buyer.decide.confirmed":
-    "Sie haben diese Version bestätigt. Das ist eine Arbeitsentscheidung im Raum, keine Unterschrift.",
-  "buyer.decide.requested":
-    "Sie haben Änderungen an dieser Version angefordert.",
   "room.decisions.confirm_version": "hat die Version bestätigt",
   "room.decisions.request_changes": "hat Änderungen angefordert",
   "dealbrief.title": "Deal-Briefing",

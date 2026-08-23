@@ -1,11 +1,31 @@
 /* The document rows of a Deal Room, seller and buyer alike: the name and its
    group on the left, the one action on the right. Tokens only. */
 
+/* The header of a document card: the name on the left, the actions on the
+   right, and the name is what yields when there is not enough width. A
+   filename can be a hundred characters of German compound noun — centred and
+   unbounded it shoved the buttons off the card and left the thread below
+   looking unattached to anything. */
 .room-doc {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+/* min-width:0 is what actually lets the title wrap: a flex item defaults to
+   min-content, so a long unbroken filename would otherwise widen the row
+   rather than fold. */
+.room-doc > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The actions keep their own width and never wrap mid-button. */
+.room-doc > .card-actions {
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .room-doc p {
