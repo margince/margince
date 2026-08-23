@@ -134,6 +134,30 @@ describe("the walk the source-wide gates share", () => {
     }
   });
 
+  it("reports one layer when a SIBLING link reaches it", () => {
+    // The parents are distinct real paths, so both are walked and the layer is
+    // reached twice — a shape the parent-link case below cannot produce, and
+    // the one that made the layer come back doubled.
+    mkdirSync(join(dir, "a", "frontend"), { recursive: true });
+    symlinkSync(join(dir, "a", "frontend"), join(dir, "b"), "dir");
+    mkdirSync(join(dir, "c"), { recursive: true });
+    symlinkSync(join(dir, "a", "frontend"), join(dir, "c", "frontend"), "dir");
+    expect(extensionLayers(dir).length).toBe(1);
+  });
+
+  it("still finds a layer whose target sits beside it", () => {
+    // The case a single visited set breaks: `elsewhere` is walked through on
+    // the way to nothing, and its real path is also the layer's target, so the
+    // layer is marked seen before it is ever returned. Walked-through and
+    // emitted are different questions.
+    const real = join(dir, "elsewhere");
+    mkdirSync(real, { recursive: true });
+    writeFileSync(join(real, "s.tsx"), "");
+    mkdirSync(join(dir, "unit"), { recursive: true });
+    symlinkSync(real, join(dir, "unit", "frontend"), "dir");
+    expect(rel(extensionLayers(dir))).toEqual(["unit/frontend"]);
+  });
+
   it("reports one layer when two paths reach it", () => {
     // Keyed on the REAL path, so a link and its target are one place rather
     // than two readings of one layer — which would judge every file in it
@@ -176,6 +200,33 @@ describe("the walk the source-wide gates share", () => {
       scriptKindFor("a.ts"),
     );
     expect(generic.statements.length).toBe(1);
+  });
+
+  it("reads files behind a symlinked subdirectory", () => {
+    // `frontend/vendor -> ../../elsewhere` — the files under it were never
+    // collected and so never judged, while a bundler follows the link and
+    // ships what is behind it. The gate read past them in silence, which is
+    // the failure mode this whole file exists to refuse.
+    const outside = mkdtempSync(join(tmpdir(), "source-tree-vendor-"));
+    try {
+      writeFileSync(join(outside, "shipped.tsx"), "");
+      writeFileSync(join(dir, "own.ts"), "");
+      symlinkSync(outside, join(dir, "vendor"), "dir");
+      expect(rel(filesUnder(dir))).toEqual(["own.ts", "vendor/shipped.tsx"]);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("survives a cycle while reading files, not only while finding layers", () => {
+    // Following links is what makes a cycle reachable, and filesUnder follows
+    // them now too — so it needs the guard for the same reason extensionLayers
+    // does. Without it the walk recurses until the stack gives out, and a gate
+    // that dies reads as a broken gate rather than as a finding.
+    writeFileSync(join(dir, "own.ts"), "");
+    mkdirSync(join(dir, "deep"), { recursive: true });
+    symlinkSync(dir, join(dir, "deep", "loop"), "dir");
+    expect(rel(filesUnder(dir))).toEqual(["own.ts"]);
   });
 
   it("does not descend into a node_modules looking for layers", () => {

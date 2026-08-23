@@ -18,6 +18,7 @@
 // of the two and invisible to the other — for no reason either author chose.
 // There is ONE set here, and it is the wide one.
 
+import type { Dirent } from "node:fs";
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
@@ -34,15 +35,32 @@ export const MODULE_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 // extension: pnpm links the host into
 // extensions/<unit>/frontend/node_modules/@margince/frontend, so a walk that
 // followed it would read the entire core tree as though the unit shipped it.
-export function filesUnder(dir: string): string[] {
+export function filesUnder(dir: string, seen = new Set<string>()): string[] {
   if (!existsSync(dir)) return [];
+  const here = realpathSync(dir);
+  if (seen.has(here)) return [];
+  seen.add(here);
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" ? [] : filesUnder(full);
+    // A symlinked subdirectory is DESCENDED, for the same reason a symlinked
+    // layer is followed: `Dirent.isDirectory()` is false for one, so the files
+    // under `frontend/vendor -> ../../elsewhere` were never collected and so
+    // never judged — the gate read past them in silence. A bundler follows the
+    // link and ships what is behind it.
+    if (isDirectory(entry, full)) {
+      return entry.name === "node_modules" ? [] : filesUnder(full, seen);
     }
     return MODULE_FILE.test(entry.name) ? [full] : [];
   });
+}
+
+// isDirectory answers for a symlink what `Dirent.isDirectory()` will not: it is
+// false for every link, so both walks used to treat a linked directory as a
+// file and skip it. A broken link answers false rather than throwing.
+function isDirectory(entry: Dirent, full: string): boolean {
+  return entry.isSymbolicLink()
+    ? existsSync(full) && statSync(full).isDirectory()
+    : entry.isDirectory();
 }
 
 // extensionLayers returns every directory named `frontend` under `root`, at ANY
@@ -52,15 +70,28 @@ export function filesUnder(dir: string): string[] {
 // survives to bite somebody later.
 export function extensionLayers(
   root: string,
-  seen = new Set<string>(),
+  visited = { walked: new Set<string>(), emitted: new Set<string>() },
 ): string[] {
   if (!existsSync(root)) return [];
-  // Keyed on the REAL path, so a link and its target are one place. Without it
-  // a cycle — `extensions/a/loop -> ..` is enough — recurses until the stack
-  // gives out, and the gate dies instead of reporting.
+  // TWO sets, keyed on real paths, and they are not interchangeable.
+  //
+  //   walked  — directories recursed THROUGH. Without it a cycle (`a/loop -> ..`
+  //             is enough) recurses until the stack gives out, and the gate dies
+  //             instead of reporting.
+  //   emitted — layers already RETURNED. Two parents can reach one layer —
+  //             `a/frontend` real, `b/frontend` a link to it — and those parents
+  //             are distinct real paths, so both are visited and the layer came
+  //             back twice: every file judged twice, every finding reported
+  //             twice.
+  //
+  // One set for both jobs looks like the tidier version and drops a real layer:
+  // a directory walked through on the way to nothing, whose real path is also a
+  // layer's target, marks that layer seen before it is ever returned. That is
+  // `unit/frontend -> elsewhere` where `elsewhere` sits beside it, and the walk
+  // reaches `elsewhere` first.
   const here = realpathSync(root);
-  if (seen.has(here)) return [];
-  seen.add(here);
+  if (visited.walked.has(here)) return [];
+  visited.walked.add(here);
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     if (entry.name === "node_modules") return [];
     const full = join(root, entry.name);
@@ -69,11 +100,12 @@ export function extensionLayers(
     // absent from the walk rather than refused — and the census floor stays
     // green off the other units, so nothing notices. Git commits symlinks, so
     // such a unit ships in a PR that looks like two ordinary files.
-    const isDir = entry.isSymbolicLink()
-      ? existsSync(full) && statSync(full).isDirectory()
-      : entry.isDirectory();
-    if (!isDir) return [];
-    return entry.name === "frontend" ? [full] : extensionLayers(full, seen);
+    if (!isDirectory(entry, full)) return [];
+    if (entry.name !== "frontend") return extensionLayers(full, visited);
+    const real = realpathSync(full);
+    if (visited.emitted.has(real)) return [];
+    visited.emitted.add(real);
+    return [full];
   });
 }
 
@@ -94,5 +126,9 @@ export function scriptKindFor(path: string): ts.ScriptKind {
 // A unit's screen is shipped UI in the same bundle, so a gate stopping at
 // frontend/src would hold the core to a standard the extension tier escapes.
 export function extensionFrontendFiles(extensionsDir: string): string[] {
-  return extensionLayers(extensionsDir).flatMap(filesUnder);
+  // A fresh visited set per layer, and NOT `.flatMap(filesUnder)` — a bare
+  // reference hands flatMap's INDEX to the second parameter, so layer 1 walks
+  // with `1` where a Set belongs. The compiler catches it; the shape is worth
+  // naming because the point-free version is the one that looks tidier.
+  return extensionLayers(extensionsDir).flatMap((layer) => filesUnder(layer));
 }

@@ -367,7 +367,14 @@ function judge(args: {
       // decides what it resolves to. `"evil": "file:../../../frontend/src"` is
       // a declaration the gate used to accept, and pnpm resolves it straight
       // into core, so rule 3 was a check that a string appeared in a list.
-      return /^(file|link):/.test(declaredAs)
+      //
+      // The refused set is the PATH protocols, and `workspace:` is not one of
+      // them — both shipped units declare `"@margince/frontend": "workspace:*"`
+      // today, so blocking it would refuse the tree as it stands. A workspace
+      // descriptor names a declared member; `file:`, `link:` and yarn's
+      // `portal:` name a directory, as does a bare `./` or `../` value, and a
+      // directory is how a unit reaches something nobody published to it.
+      return /^(file|link|portal):|^[./]/.test(declaredAs)
         ? [
             `${where(s)}: '${s.text}' is declared as '${declaredAs}', a path into the tree rather than a package — a unit reaches the core through @margince/frontend/<subpath>, never by resolving to it`,
           ]
@@ -385,7 +392,7 @@ function judge(args: {
 // clean" is one that keeps passing after it stops working.
 function auditLayers(roots: { extensions: string; surface: string }): {
   violations: string[];
-  files: number;
+  files: Map<string, number>;
   layers: string[];
 } {
   const published = publishedSubpaths(roots.surface);
@@ -395,7 +402,7 @@ function auditLayers(roots: { extensions: string; surface: string }): {
   // lets a fixture case assert the exact line a reader of the real census
   // would be handed.
   const shownRoot = dirname(roots.extensions);
-  let files = 0;
+  const files = new Map<string, number>();
   const violations = layers.flatMap((layer) => {
     const pkg = readJson(join(layer, "package.json"));
     // SHIPPED code may reach dependencies and peers. A screen importing a dev
@@ -410,7 +417,7 @@ function auditLayers(roots: { extensions: string; surface: string }): {
       ...entriesOf(pkg.devDependencies),
     ]);
     return filesUnder(layer).flatMap((file) => {
-      files += 1;
+      files.set(layer, (files.get(layer) ?? 0) + 1);
       return judge({
         file,
         shown: relative(shownRoot, file),
@@ -422,6 +429,25 @@ function auditLayers(roots: { extensions: string; surface: string }): {
     });
   });
   return { violations, files, layers };
+}
+
+// layersThatReadNothing names the layers the walk found and read nothing
+// inside. Such a layer judges nothing and reports the same word for it as a
+// clean one: PASS.
+//
+// A function rather than an inline loop, because the assertion that uses it can
+// only ever run against a tree where every layer HAS files — so a mutant in it
+// survives, which is the census-of-zero problem one level up. Pulled out, the
+// rule is reachable with a layer that read nothing, and the mutant dies.
+//
+// Per layer rather than a total, and that is the whole point: with three layers
+// and ten files in one of them, `10 > 3` holds while two layers read nothing.
+// A floor one populous layer can carry for the others is not a floor.
+function layersThatReadNothing(
+  layers: string[],
+  files: Map<string, number>,
+): string[] {
+  return layers.filter((layer) => (files.get(layer) ?? 0) === 0);
 }
 
 describe("a unit reaches the core only through the published surface", () => {
@@ -441,13 +467,11 @@ describe("a unit reaches the core only through the published surface", () => {
       layers.length,
       "no extension frontend layer was found — this gate is dark",
     ).toBeGreaterThan(0);
-    // And a FILE floor, not only a layer one. A layer the walk finds but reads
-    // nothing inside judges nothing, and reports the same word for it: PASS.
-    // The counter existed and was returned to nobody.
+    // And a FILE floor, PER LAYER — see layersThatReadNothing.
     expect(
-      files,
-      "extension layers were found but no file inside them was read",
-    ).toBeGreaterThan(layers.length);
+      layersThatReadNothing(layers, files).map((l) => relative(repoRoot, l)),
+      "these layers were found but no file inside them was read",
+    ).toEqual([]);
     expect(violations).toEqual([]);
   });
 });
@@ -649,6 +673,35 @@ describe("the extension-import detector sees what it claims to", () => {
       manifest: JSON.stringify({
         name: "@margince-ext/probe",
         dependencies: { sneaky: "link:../../../frontend/src" },
+      }),
+    },
+    {
+      name: "a dependency declared as a yarn portal",
+      want: "a path into the tree rather than a package",
+      files: { "screen.tsx": 'import { x } from "sneaky";' },
+      manifest: JSON.stringify({
+        name: "@margince-ext/probe",
+        dependencies: { sneaky: "portal:../../../frontend/src" },
+      }),
+    },
+    {
+      name: "a dependency declared as a bare relative path",
+      want: "a path into the tree rather than a package",
+      files: { "screen.tsx": 'import { x } from "sneaky";' },
+      manifest: JSON.stringify({
+        name: "@margince-ext/probe",
+        dependencies: { sneaky: "../../../frontend/src" },
+      }),
+    },
+    // `workspace:` is NOT a path protocol, and refusing it would refuse the
+    // tree as it stands: both shipped units declare the surface that way.
+    {
+      name: "a workspace descriptor, which both real units use",
+      want: null,
+      files: { "screen.tsx": 'import { q } from "@tanstack/react-query";' },
+      manifest: JSON.stringify({
+        name: "@margince-ext/probe",
+        peerDependencies: { "@tanstack/react-query": "workspace:*" },
       }),
     },
     {
@@ -903,6 +956,35 @@ describe("the extension-import detector sees what it claims to", () => {
     );
     writeFileSync(join(layer, "screen.tsx"), 'import dayjs from "dayjs";');
     expect(audit(root).join("\n")).toContain("is not declared by");
+  });
+
+  it("refuses a layer that read no file, even beside one that read many", () => {
+    // The floor is per LAYER because a total is satisfied by the wrong thing:
+    // one populous layer carries the count for a layer that read nothing, and
+    // a layer judged on zero files reports the same word as a clean one, PASS.
+    const root = mkdtempSync(join(tmpdir(), "ext-imports-floor-"));
+    try {
+      const full = join(root, "extensions", "full", "frontend");
+      const empty = join(root, "extensions", "empty", "frontend");
+      mkdirSync(full, { recursive: true });
+      mkdirSync(empty, { recursive: true });
+      for (const dir of [full, empty]) {
+        writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "p" }));
+      }
+      writeFileSync(join(full, "a.tsx"), "export const a = 1;");
+      writeFileSync(join(full, "b.tsx"), "export const b = 2;");
+      const { files, layers } = auditLayers({
+        extensions: join(root, "extensions"),
+        surface: surfacePkg,
+      });
+      expect(layers.length).toBe(2);
+      // The TOTAL clears any sane floor — two files against two layers — while
+      // one of the two read nothing. That is the assertion shape being refused.
+      expect([...files.values()].reduce((a, b) => a + b, 0)).toBe(2);
+      expect(layersThatReadNothing(layers, files)).toEqual([empty]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("reads the surface out of the exports map, root included", () => {
