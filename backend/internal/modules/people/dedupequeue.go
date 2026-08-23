@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -98,10 +99,10 @@ func decodeDedupeCursor(token string) (dedupeCursor, error) {
 	var c dedupeCursor
 	raw, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return c, &DedupeInputError{Field: fieldCursor, Msg: "malformed page token"}
+		return c, &storekit.MalformedCursorError{}
 	}
 	if err := json.Unmarshal(raw, &c); err != nil {
-		return c, &DedupeInputError{Field: fieldCursor, Msg: "malformed page token"}
+		return c, &storekit.MalformedCursorError{}
 	}
 	return c, nil
 }

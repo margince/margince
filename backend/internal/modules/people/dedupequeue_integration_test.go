@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -106,8 +107,12 @@ func TestDedupeQueueRefusesBadInput(t *testing.T) {
 	if _, err := e.store.DisposeDedupeCandidate(ctx, c.ID, "merge", &stranger); !errors.As(err, &input) {
 		t.Fatalf("winner outside the pair = %v, want DedupeInputError", err)
 	}
-	if _, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Cursor: "not-base64!"}); !errors.As(err, &input) {
-		t.Fatalf("malformed cursor = %v, want DedupeInputError", err)
+	// A malformed page token is the SAME refusal every paginated endpoint gives,
+	// so the queue answers the contract's malformed_cursor rather than its own
+	// module-shaped "invalid".
+	var badCursor *storekit.MalformedCursorError
+	if _, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Cursor: "not-base64!"}); !errors.As(err, &badCursor) {
+		t.Fatalf("malformed cursor = %v, want MalformedCursorError", err)
 	}
 }
 
