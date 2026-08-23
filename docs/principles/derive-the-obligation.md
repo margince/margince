@@ -8,7 +8,7 @@ The binding form is
 [*Rules learned from the review loop*](../../CLAUDE.md#rules-learned-from-the-review-loop-binding).
 This page is the method for writing a gate that actually holds.
 
-## The six rules, and what each one is defending against
+## The eight rules, and what each one is defending against
 
 1. **Fix the invariant, not the call site.** Grep every mutation and read site
    of the same column, constraint or record, and fix them as one change. The
@@ -29,6 +29,12 @@ This page is the method for writing a gate that actually holds.
    hand-copied adapter mirroring what compose wires. Seed through the real
    writer; reach for the real wiring. An unexpectedly uncovered new file usually
    means a test double stands where the real thing should.
+7. **One invariant broken in two languages is one item.** Fixing one side of a
+   wire alone can be a regression, not half a fix. See
+   [find the other side](#find-the-other-side-before-you-fix-this-one).
+8. **A census that can fail short has already failed.** Under-recognition is
+   silent: the gate reads less and still says PASS. Everything under *Writing a
+   gate that holds* below is about this one.
 
 ## Writing a gate that holds
 
@@ -70,6 +76,77 @@ like a predicate that drops the right things. Measure what your gate *excludes*.
 
 **Write the mirror gate.** A gate can read green over its own defect reversed.
 If you assert A implies B, ask what happens when B appears without A.
+
+**The gate is part of its own subject.** A gate that hard-codes any slice of
+what it guards has become a second copy of it — and the copy inside a test is
+the worst kind, because it is invisible to the author extending the owner. A
+consumer-mail census shipped with its own 25-domain sample inside the very test
+that forbids second consumer-mail lists; two reviewers named it independently,
+and it asks `freemail.Domains()` now. Before the first assertion, ask what this
+gate hard-codes: its file list, its element list, its claim patterns, its
+domains. Derive each from the owner, or write down in the test why you cannot.
+
+**Plant the shape the detector cannot see.** One mutation proves the gate fires;
+it does not find the hole. Once the gate is green, ask what shape of the defect
+it is structurally blind to and plant that case. Every hole found in review
+during the duplication sweep was found this way, and none by re-reading the
+implementation — because the thing that hid a copy from a reader also hid it
+from the detector written to find copies. A `String(err)` hid behind being the
+fallback half of a ternary somebody had already fixed; a raw backtick string hid
+behind a prefilter that only knew double quotes.
+
+**Measure a shortcut before you defend it, and prefer deleting a dimension to
+narrowing it.** A skip-list or prefilter in front of a scan is where the gate
+goes blind, and the miss is silent: the file is dropped before anything looks at
+it — no finding, no error, indistinguishable from a clean tree. One census in
+this tree carried a cheap file-skip that six review rounds found narrower than
+the census behind it in six separate dimensions, two of them introduced by the
+fix for the one before. It was deleted rather than narrowed a seventh time,
+because measuring ended the argument: parsing every file was FASTER than the
+shortcut, and the saving originally credited to it had come from an unrelated
+map lookup.
+
+**Statements, not lines, and bound the join.** A per-line matcher misses a rule
+a formatter wrapped across three lines — the money gate missed an entire write
+direction that way. Joining lines into statements fixes it and introduces the
+opposite failure: unbounded, one join swallowed a thirty-line `const (` block
+and reported an unrelated pairing inside it.
+
+**A self-test that reads only an exit status proves nothing about a waiver.** A
+scanner that reports both the waived and the unwaived finding exits non-zero
+too. Assert on what the gate SAID, not just that it failed.
+
+**Let a parser own the grammar.** One text-matching gate produced six defect
+classes in a single PR, every one of them a defect in the matcher rather than in
+the rule: no `\b` in POSIX ERE so a guard shipped inert, a built-in name
+coerced to `-inf`, an undeclared local colliding as a global, a flat flag unable
+to express a nested template literal, a backslash meaning different things in a
+Go raw string and a TS template. A parser that already knows the language
+answers all six for nothing — `go/ast` in Go, `ts.createSourceFile` in
+TypeScript, both already used by censuses in this tree. And a parse error is not
+silence, which is the failure mode a text gate has to invent an assertion to
+catch.
+
+## Find the other side before you fix this one
+
+When the same invariant is spelled in Go and in TypeScript, it is one item until
+proven otherwise, and a per-language PR is what hides that.
+
+The case that taught it: the frontend wrote `Math.round(amount * 100)` for every
+currency and the backend divided by 100 for every currency, so the two errors
+CANCELLED — a zero-decimal price was stored a hundredfold and displayed
+correctly, the screen agreed with itself, and only the record was wrong. The
+sweep catalogued the two halves as two findings on two tiers. Shipping the
+backend half alone would have uncancelled them and printed a hundred times the
+price on an outbound offer.
+
+So: when a sweep finds one invariant broken on both sides of a wire, land both
+sides in one change, and give the two test suites **one corpus** — a single
+case file tagged by language, read by both, with a drift gate over it
+(`frontend/src/format/minorunits.ts` + `backend/frontendminorunits_test.go`).
+What stays singular is the rule and the case corpus; only the parser differs,
+and neither parser is hand-written. Splitting a rule into "a Go test for Go and
+a text scan for TypeScript" is the defect wearing the fix's clothes.
 
 ## What this does not ask for
 
