@@ -1772,6 +1772,8 @@ export const vi = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.filterOwnerMe": "Deal của tôi",
+  "deals.filterPartner": "Đối tác",
+  "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterPartnerSourced": "Do đối tác mang về",
   "deals.filterStageAll": "Mọi giai đoạn",
   "deals.filterOrgAll": "Mọi công ty",

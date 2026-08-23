@@ -119,9 +119,15 @@ var prebuiltReports = map[string]reportSpec{
 			fieldOwnerID:        colOwnerID,
 			fieldOrganizationID: colOrganizationID,
 			fieldPartnerSourced: deals.PartnerSourcedSQL("t"),
-			fieldStalled:        deals.StalledSQL("t"),
-			fieldCurrency:       colCurrency,
-			fieldProjectID:      colProjectID,
+			// Narrowing to ONE partner, beside the boolean that asks whether
+			// there is one. The board's totals are read from this report with
+			// the deals screen's own filter dials, so a dial the screen offers
+			// and this report refuses answers 422 — and the board then falls
+			// back to counting loaded cards, which looks like a working total.
+			fieldPartnerOrgID: colPartnerOrgID,
+			fieldStalled:      deals.StalledSQL("t"),
+			fieldCurrency:     colCurrency,
+			fieldProjectID:    colProjectID,
 		},
 		filterScopes: projectFilterScope,
 		// partner_org_id points at an organization, which a normal deal read
@@ -198,6 +204,12 @@ var prebuiltReports = map[string]reportSpec{
 			"forecast_category": forecastCategoryExpr,
 			fieldCurrency:       colCurrency,
 			fieldWinProbability: colWinProbability,
+			// The same question deals-by-stage answers, asked of the pipeline
+			// rather than of what already landed: what is a partner bringing
+			// us THIS quarter. It was on one of the two deal reports and not
+			// the other, so "revenue by partner" could be read backwards and
+			// never forwards.
+			fieldPartnerOrgID: colPartnerOrgID,
 		},
 		measures: map[string]string{
 			fieldAmountMinor:         colAmountMinor,
@@ -210,9 +222,19 @@ var prebuiltReports = map[string]reportSpec{
 			"forecast_category": forecastCategoryExpr,
 			fieldCurrency:       colCurrency,
 			fieldProjectID:      colProjectID,
+			// Narrowing to ONE partner, the dial the deals screen now offers.
+			// partner_sourced is deliberately absent here and present on
+			// deals-by-stage: that report's filters mirror the board's dials,
+			// and a forecast asks which partner rather than whether there is
+			// one.
+			fieldPartnerOrgID: colPartnerOrgID,
 		},
 		filterScopes: projectFilterScope,
-		defaultBy:    moneyDefaultBy("forecast_category"),
+		// partner_org_id points at an organization a normal deal read masks
+		// per row when the caller cannot open it, so grouping by it must not
+		// name one they could not have seen.
+		referenceScopes: map[string]string{colPartnerOrgID: tableOrganization},
+		defaultBy:       moneyDefaultBy("forecast_category"),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "unweighted_minor"},
