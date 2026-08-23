@@ -52,10 +52,9 @@ afterEach(() => {
 
 describe("a locale a reader picked", () => {
   it("is read back by the next mount, which is what a reload is", async () => {
+    const user = userEvent.setup();
     mount();
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "pick de" }));
+    await user.click(screen.getByRole("button", { name: "pick de" }));
     expect(shown()).toBe("de");
     cleanup();
 
@@ -64,10 +63,9 @@ describe("a locale a reader picked", () => {
   });
 
   it("is the value that reaches storage, under a namespaced key", async () => {
+    const user = userEvent.setup();
     mount();
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "pick de" }));
+    await user.click(screen.getByRole("button", { name: "pick de" }));
     expect(localStorage.getItem(STORAGE_KEY)).toBe("de");
   });
 
@@ -112,10 +110,11 @@ describe("a locale nobody picked", () => {
 // boundary's own, so the whole application went blank rather than one section.
 describe("a locale the server reports but this release does not ship", () => {
   it("falls back instead of reaching the catalogs, and never blanks the app", async () => {
+    const user = userEvent.setup();
     localStorage.setItem(STORAGE_KEY, "de");
     mount(undefined, "de-DE");
 
-    await userEvent.click(screen.getByRole("button", { name: "adopt" }));
+    await user.click(screen.getByRole("button", { name: "adopt" }));
 
     // "de", the reader's own pick on this machine — never "de-DE", which is
     // not a key the catalogs have.
@@ -126,9 +125,10 @@ describe("a locale the server reports but this release does not ship", () => {
     // Nobody has picked on this machine, so detection decides — and the point
     // is that an unusable answer resolves rather than being ignored, which
     // would have kept whatever the last account was reading.
+    const user = userEvent.setup();
     mount("de", "de-DE");
 
-    await userEvent.click(screen.getByRole("button", { name: "adopt" }));
+    await user.click(screen.getByRole("button", { name: "adopt" }));
 
     expect(shown()).not.toBe("de-DE");
     expect(shown()).toBe("en");
