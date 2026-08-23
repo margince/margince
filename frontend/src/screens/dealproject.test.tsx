@@ -17,6 +17,7 @@ import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
+import { dealProjectFields } from "./dealproject";
 import { DealScreen, DealsScreen } from "./deals";
 import { project } from "./projects.fixtures";
 
@@ -412,5 +413,83 @@ describe("the deal page", () => {
     render(<DealScreen id="d1" />);
     await screen.findByRole("heading", { name: "Fleet retrofit" });
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+  });
+
+  // The bug Lars hit: many projects exist, and editing a deal offers only "New
+  // project…".
+  //
+  // The picker used to fetch EVERY project and filter on organization_id, which
+  // names a project's CUSTOMER. A deal on a company that is on the project as a
+  // PARTNER matched nothing, so the list came back empty on an installation
+  // full of projects.
+  //
+  // The edit form asks the server for its own company's projects now — the
+  // server matches ANY of a project's companies — and passes narrowedByServer,
+  // which is what stops the second filter from undoing the answer.
+  it("does not re-filter a list the server already narrowed to one company", () => {
+    const partnerProject = project({
+      id: "pr-1",
+      name: "Joint rollout",
+      // The CUSTOMER is a different company: this deal's company is on the
+      // project as a partner, which organization_id cannot say.
+      organization_id: "o-customer",
+    });
+    const t = (key: string) => key;
+
+    const narrowed = dealProjectFields(
+      t,
+      [partnerProject],
+      undefined,
+      true,
+      "o-partner",
+    );
+    const asked = narrowed.find((field) => field.key === "project_id");
+    expect(
+      asked?.optionsFor?.({ organization_id: "o-partner" }).map((o) => o.label),
+    ).toContain("Joint rollout");
+
+    // And the create form, which has no company to ask about and narrows here,
+    // still keeps its own filter: it would otherwise offer every project in the
+    // installation under whichever company was picked.
+    const unnarrowed = dealProjectFields(t, [partnerProject]);
+    const client = unnarrowed.find((field) => field.key === "project_id");
+    expect(
+      client
+        ?.optionsFor?.({ organization_id: "o-partner" })
+        .map((o) => o.label),
+    ).not.toContain("Joint rollout");
+  });
+
+  it("offers nothing once the form names a company the list was not read for", () => {
+    const partnerProject = project({
+      id: "pr-1",
+      name: "Joint rollout",
+      organization_id: "o-customer",
+    });
+    const t = (key: string) => key;
+    // The list was read for o-partner; the reader has since changed the form's
+    // company to o-other. Nothing on a project row says whether o-other is on
+    // this project, so the only honest answer is none — offering the old
+    // company's projects is what lets a save carry a pairing the server
+    // refuses (deal_project_same_org, 422).
+    const fields = dealProjectFields(
+      t,
+      [partnerProject],
+      { id: "pr-1", label: "Joint rollout" },
+      true,
+      "o-partner",
+    );
+    const asked = fields.find((field) => field.key === "project_id");
+    const labels = asked
+      ?.optionsFor?.({ organization_id: "o-other" })
+      .map((o) => o.label);
+    expect(labels).not.toContain("Joint rollout");
+    // The current-project fallback is withdrawn too, so `submittedValues`
+    // blanks it rather than carrying it into the new company.
+    expect(labels).toEqual(["deal.projectNew"]);
+
+    // Same list, same company it was read for: still offered.
+    const same = asked?.optionsFor?.({ organization_id: "o-partner" });
+    expect(same?.map((o) => o.label)).toContain("Joint rollout");
   });
 });
