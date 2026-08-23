@@ -424,9 +424,16 @@ func TestReadOnlyIsDerivedFromTheEnforcedScope(t *testing.T) {
 // reading it as one. Derived from the registered set, so a new confirm-first
 // tool is enrolled the day it is written.
 func TestEveryConfirmFirstToolAdvertisesItsApprovalArgument(t *testing.T) {
+	// Selected by whether the tool CAN be confirmed, not by whether it is
+	// today. These verbs execute directly by default, but a workspace tier
+	// floor puts any of them back behind an approval — and a tool that could
+	// not then advertise approval_id would be advertised and unredeemable.
+	registry := fullRegistry(t)
 	checked := 0
-	for _, spec := range fullRegistry(t).Specs() {
-		if spec.Tier != mcp.TierConfirmationRequired {
+	for _, spec := range registry.Specs() {
+		if _, stageable := registry.tools[spec.Name].(interface {
+			StageInfo(context.Context, json.RawMessage) (StageInfo, error)
+		}); !stageable {
 			continue
 		}
 		checked++
@@ -454,7 +461,7 @@ func TestEveryConfirmFirstToolAdvertisesItsApprovalArgument(t *testing.T) {
 		}
 	}
 	if checked == 0 {
-		t.Fatal("no confirm-first tool resolved — this gate asserted nothing")
+		t.Fatal("no stageable tool resolved — this gate asserted nothing")
 	}
 }
 

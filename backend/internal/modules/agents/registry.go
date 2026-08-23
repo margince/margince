@@ -351,21 +351,6 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 	return &workflow.StagedApprovalError{ApprovalID: id, AlreadyApproved: alreadyApproved}
 }
 
-// Stageable reports whether a refused 🟡 call on this verb has somewhere to
-// land. Exported for the composition root's gate: a tier the contract tightens
-// onto a verb that cannot stage turns an approval question into a dead end, so
-// the gate has to be able to ask this rather than assume it.
-func (r *Registry) Stageable(name string) bool {
-	r.mu.RLock()
-	t, ok := r.tools[name]
-	r.mu.RUnlock()
-	if !ok {
-		return false
-	}
-	_, stageable := t.(stageableTool)
-	return stageable
-}
-
 // NamesRecordType reports whether this verb can say which record type a given
 // call acts on, which is the only way the contract's per-record-type floor is
 // ever consulted for it (tierfloor.go). Exported for the same gate as Stageable:

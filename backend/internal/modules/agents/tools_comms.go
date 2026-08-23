@@ -236,7 +236,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
 		Description:   sendEmailCopy.render(),
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendEmail",
 		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body","consent_purpose"],"properties":{
 			"activity_id":{"type":"string","format":"uuid"},
@@ -288,6 +288,18 @@ func (t sendEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	// The resolver's own guards (commandcomms.go), on the door that now
+	// executes directly. They used to run only at staging, which was enough
+	// while nothing reached here without an approval; a verb that executes has
+	// no such shelter, and a send with no addressee — or anchored to a record
+	// whose authority lives in another system — must be refused before the
+	// mail leaves rather than after.
+	if err := requireAddressee(args.To); err != nil {
+		return nil, err
+	}
+	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
+		return nil, err
+	}
 	noteEvidence(ctx, datasource.EntityActivity, args.ActivityID)
 	return marshalResult(t.comms.SendEmail(ctx, args.ActivityID, args.SendEmailArgs))
 }
@@ -306,7 +318,7 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
 		Description:   sendMessageCopy.render(),
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendMessage",
 		InputSchema: schema(`{"type":"object","required":["activity_id","body","consent_purpose"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured conversation being replied to"},
@@ -341,6 +353,11 @@ func (t sendMessageTool) StageInfo(ctx context.Context, in json.RawMessage) (Sta
 func (t sendMessageTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args sendMessageToolArgs
 	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	// Same reason as its mail twin above: the anchor's authority is checked on
+	// the door that sends, not only on the one that staged.
+	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
 		return nil, err
 	}
 	noteEvidence(ctx, datasource.EntityActivity, args.ActivityID)

@@ -290,7 +290,7 @@ func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
 		Description:   commitImportCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{
 			"run_id":{"type":"string","format":"uuid"},

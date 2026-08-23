@@ -80,7 +80,14 @@ type enrichCompany struct {
 func (t enrichCompany) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "enrich", Title: "Enrich an organization from its website", Version: toolVersionV1,
-		Description:   enrichCopy.render(),
+		Description: enrichCopy.render(),
+		// Stays confirm-first, against the general rule that a passport does
+		// what its holder could do unaided. The argument does not reach this
+		// verb: a person picking a URL in the browser chose it, while here the
+		// MODEL names the address the server fetches — a destination nobody
+		// chose, reachable by persuading the model rather than by holding the
+		// credential. TestUrlTakingOperationsAreNeverAutoExecuteForAgents is
+		// the gate that says so, and it is about egress, not about authority.
 		RequiredScope: principal.ScopeEnrich, Tier: mcp.TierConfirmationRequired, Egress: true,
 		OpenAPIOp: "scrapeCompany/deepReadCompany",
 		InputSchema: schema(`{"type":"object","required":["organization_id"],"properties":{

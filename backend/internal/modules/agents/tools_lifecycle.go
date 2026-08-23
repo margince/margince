@@ -111,7 +111,8 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid","description":"The record to link it to"},
 			"replace_existing_of_type":{"type":"boolean","default":false,
-				"description":"Replace the existing link of the same entity_type (move) rather than adding one (associate)"}},
+				"description":"Replace the existing link of the same entity_type (move) rather than adding one (associate)"},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PassthroughEntityResult](),
 	}
@@ -163,7 +164,7 @@ func (t disqualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
 		Description:   disqualifyLeadCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead to disqualify"},
@@ -223,7 +224,7 @@ func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_project_phase", Title: "Move a project to a phase", Version: toolVersionV1,
 		Description:   advanceProjectPhaseCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "advanceProjectPhase",
 		InputSchema: schema(`{"type":"object","required":["project_id","to_phase"],"properties":{
 			"project_id":{"type":"string","format":"uuid"},

@@ -56,7 +56,8 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 			"thread_key":{"type":"string","minLength":1},
 			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
-			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"}},
+			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}
@@ -112,7 +113,8 @@ func (t relinkActivities) Spec() mcp.ToolSpec {
 			"activity_ids":{"type":"array","minItems":1,"maxItems":500,"items":{"type":"string","format":"uuid"}},
 			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
-			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"}},
+			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}

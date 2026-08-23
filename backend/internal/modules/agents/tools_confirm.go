@@ -3,11 +3,23 @@
 
 package agents
 
-// The 🟡 confirm-first tool family: every tool here is TierConfirmationRequired, so a
-// call is staged for a human decision before its Handle ever runs
-// (ADR-0036). Each implements StageInfo to pin the staged call to the
-// target's CURRENT version — an approval is a judgment about the record
-// as the human saw it, never about whatever it became since.
+// The consequential-write tool family. Each still implements StageInfo, which
+// pins a staged call to the target's CURRENT version — an approval is a
+// judgment about the record as the human saw it, never about whatever it
+// became since — and that machinery is what a workspace tier floor uses when
+// an installation asks for these to be confirmed.
+//
+// They no longer stage by DEFAULT. A passport carries the granting human's own
+// seat, grants and row scope, so a verb this family holds is one its holder
+// could perform unaided in the web app, and requiring a second confirmation
+// from the same person made the agent surface weaker than the person behind
+// it rather than safer. This is ADR-0055's argument — already accepted for
+// DECIDING an approval — applied to doing the thing itself.
+//
+// What still bounds a call is what bounds the human: RBAC, row scope, the seat
+// ceiling, expiry, and the passport scope its holder chose to lend. An
+// installation that wants a verb confirmed sets a tier floor for it; the
+// default is now what the person can already do.
 
 import (
 	"context"
@@ -93,7 +105,7 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
 		Description:   archiveRecordCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "archivePerson/archiveOrganization/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
 			"record_type":{"type":"string","enum":["person","organization","deal","project","relationship","activity"]},
@@ -138,21 +150,40 @@ func (t archiveRecord) StageInfo(ctx context.Context, in json.RawMessage) (Stage
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	archivable, err := archivableHere(ctx, t.p)
-	if err != nil {
+	if err := refuseUnarchivableType(ctx, t.p, args.RecordType); err != nil {
 		return StageInfo{}, err
 	}
-	if !slices.Contains(archivable, args.RecordType) {
-		return StageInfo{}, &BadArgsError{Cause: fmt.Errorf(
-			"this verb does not archive %q records, so no approval of it could ever be carried out; it archives %s",
-			args.RecordType, strings.Join(archivable, ", "))}
-	}
 	return StageSubject(ctx, NewArchiveCall(t.p, ArchiveCommand(args)))
+}
+
+// refuseUnarchivableType holds the verb to the types the seam actually routes,
+// naming the whole set rather than saying the value is invalid.
+//
+// Both doors call it. It used to sit in StageInfo alone, which was enough while
+// the verb always staged — nothing reached Handle without an approval, and the
+// approval could not be minted for a type that would fail. Executing directly
+// removes that shelter: the refusal has to be here, or `activity` is admitted
+// and fails deep in the seam with a message about the system of record. That is
+// the defect this refusal was written for in the first place.
+func refuseUnarchivableType(ctx context.Context, p datasource.SystemOfRecordProvider, recordType string) error {
+	archivable, err := archivableHere(ctx, p)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(archivable, recordType) {
+		return &BadArgsError{Cause: fmt.Errorf(
+			"this verb does not archive %q records; it archives %s",
+			recordType, strings.Join(archivable, ", "))}
+	}
+	return nil
 }
 
 func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args archiveArgs
 	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	if err := refuseUnarchivableType(ctx, t.p, args.RecordType); err != nil {
 		return nil, err
 	}
 	ref, err := archiveAt(ctx, t.p, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
@@ -186,7 +217,7 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "promote_lead", Title: "Promote a lead to a person", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
 			"lead_id":{"type":"string","format":"uuid"},
@@ -271,7 +302,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "mergePerson/mergeOrganization",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
 			"record_type":{"type":"string","enum":["person","organization"]},

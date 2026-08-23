@@ -41,7 +41,7 @@ func (t sendAccountEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_account_email", Title: "Start an email conversation from a record", Version: toolVersionV1,
 		Description:   sendAccountEmailCopy.render(),
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendAccountEmail",
 		InputSchema: schema(`{"type":"object","required":["to","subject","body","consent_purpose","links"],"properties":{
 			"to":{"type":"array","items":{"type":"string","format":"email"},"minItems":1},
@@ -110,6 +110,15 @@ func readAccountSendArgs(in json.RawMessage) (SendAccountEmailArgs, []RecordLink
 func (t sendAccountEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	args, links, err := readAccountSendArgs(in)
 	if err != nil {
+		return nil, err
+	}
+	// Every link is read under the caller's row scope BEFORE anything leaves.
+	// This used to happen only in StageInfo, which was enough while the tool
+	// always staged: the approval could not be minted for a record the caller
+	// could not see. Now that the verb executes directly, a check that lives
+	// only at staging is a check that never runs — the hazard readAccountSendArgs
+	// already names for argument rules, applied to visibility.
+	if _, err := readStageableLinks(ctx, t.p, links); err != nil {
 		return nil, err
 	}
 	for _, link := range links {
