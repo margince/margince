@@ -145,16 +145,20 @@ function scriptKindFor(path: string): ts.ScriptKind {
 // detecting, and the shell gate this replaces had no such test at all — its
 // hand-written lexer was verified only by the tree happening to be clean.
 function findNativeControls(path: string, text: string): string[] {
-  // A file that does not mention any of the three names cannot hold one, so it
-  // is not parsed at all. This is a cost fix, not a coverage one: the census
-  // parses ~930 files and reparses every non-TSX one as TSX, which took 21s on
-  // a CI runner against 1.3s locally and timed the test out. Most files mention
-  // none of the names, so most are never parsed.
+  // A file that can produce none of the three names is not parsed at all. The
+  // census reads ~930 files and reparses every non-TSX one as TSX, which took
+  // 21s on a CI runner against 1.3s locally and timed the test out; roughly
+  // half the tree is skipped here.
   //
-  // The names WITHOUT the angle bracket, deliberately: an escaped `\u003cselect>`
-  // has no `<` in its raw text and is still a native dropdown, so filtering on
-  // `<select` would reintroduce the very miss this file already fixed once.
-  if (!/select|option|optgroup/.test(text)) return [];
+  // The filter has to be SOUND, not merely quick, and two escape routes decide
+  // its shape. The names carry no angle bracket, because `\u003cselect>` spells
+  // one with no `<` in its raw text. And a lone backslash is enough on its own,
+  // because the string scan below reads COOKED text: `'<sel\u0065ct>'` holds no
+  // verbatim `select` either, and `'<sel\ect>'` cooks to the same markup. A
+  // character reaches cooked text only by appearing raw or by coming from an
+  // escape, and every escape begins with a backslash — so a file with neither a
+  // name nor a backslash cannot spell one, and skipping it costs no coverage.
+  if (!/select|option|optgroup|\\/.test(text)) return [];
   const source = ts.createSourceFile(
     path,
     text,
@@ -182,7 +186,7 @@ function findNativeControls(path: string, text: string): string[] {
     source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
 
   // The boundary is ANY character that cannot continue an element name —
-  // anything outside letters, digits, `-`, `.` and `:`. Stated that way round
+  // anything outside letters, digits, `_`, `-`, `.` and `:`. Stated that way round
   // because the alternative was tried twice and was wrong both times:
   // `[^a-zA-Z0-9]` accepted a hyphen, so `<select-menu>`, `<option-item>` and
   // `<optgroup-picker>` read as native controls when a custom element is the
@@ -510,6 +514,16 @@ describe("the native-control detector sees what it claims to", () => {
       // The raw text has no `<` at all; the cooked text renders a native
       // dropdown. Scanning raw missed it entirely.
       src: "const html = `\\u003cselect>`;",
+      expect: ["1: <select> inside a string"],
+    },
+    {
+      name: "an escape that spells the NAME, not just the bracket",
+      fires: true,
+      // The pre-filter reads raw text and the scan reads cooked, so escaping
+      // the name is a way past a filter that only looks for the name. Nothing
+      // here is exotic: `\e` cooks to `e` too, which is why the filter treats
+      // any backslash as reason enough to parse.
+      src: "const html = `<sel\\u0065ct>`;",
       expect: ["1: <select> inside a string"],
     },
     {
