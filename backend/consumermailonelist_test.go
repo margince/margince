@@ -37,7 +37,6 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,6 +67,31 @@ var baselineDomains = sync.OnceValue(func() map[string]struct{} {
 	}
 	return set
 })
+
+// THERE IS NO FILE-SKIP SHORTCUT, and its absence is the most reviewed thing
+// about this test.
+//
+// One sat here: a cheap textual scan that decided which files were worth
+// parsing. It was found narrower than the census behind it SIX times, each
+// time by a reviewer and never by re-reading it — a double-quote pattern blind
+// to raw strings; a raw-text compare blind to `"gmail\x2ecom"`; a literal-only
+// read blind to `const b = a`; then blind to `"gmail" + ".com"`; then a
+// four-part cap blind to five fragments; then a literal-adjacency regex blind
+// to `"gmail" /* c */ + ".com"`. Every one dropped a file before anything
+// looked at it, which produces no finding and no error and is indistinguishable
+// from a clean tree.
+//
+// It was deleted rather than fixed a seventh time, because MEASURING it ended
+// the argument: parsing every file is 2.49s and the shortcut made it 2.95s.
+// The shortcut cost more than the parse it avoided.
+//
+// The saving I originally credited to it was real but came from somewhere else
+// — replacing an inner loop over all 8,758 baseline domains with a map lookup,
+// which is what took the sweep from ~54s to seconds. I attributed it to the
+// wrong half and then defended that half through six rounds of review.
+//
+// So: no shortcut, no dimension to be narrower along, and a faster test. If a
+// future reader is tempted to add one back, measure first.
 
 // looksLikeADomain screens a string literal before the baseline is consulted.
 //
@@ -118,7 +142,8 @@ var freemailDomains = map[string]bool{
 		{
 			// The pair CodeRabbit named: both are in the shipped dataset and
 			// neither was in the sampled catalog this file used to carry, so a
-			// file holding exactly this was dropped by the prefilter before the
+			// file holding exactly this was dropped by the file-skip shortcut that
+			// used to sit in front of this census, before
 			// census ever parsed it.
 			name: "two providers the old hand-written sample could not see",
 			code: `package p
@@ -146,7 +171,7 @@ var providers = []string{gmail, "outlook.com"}`,
 			// of the domain, and a reader of string literals alone sees two
 			// fragments and no provider — in BOTH paths: the census counted one
 			// provider and reported nothing, and a list written entirely this
-			// way was dropped by the shortcut before anything parsed it.
+			// way was dropped by that shortcut before anything parsed it.
 			name: "a constant built by concatenation",
 			code: `package p
 const gmail = "gmail" + ".com"
@@ -154,13 +179,13 @@ var providers = []string{gmail, "outlook.com"}`,
 			want: 1,
 		},
 		{
-			name: "a list whose every domain is concatenated, which the shortcut dropped",
+			name: "a list whose every domain is concatenated",
 			code: `package p
 var providers = []string{"gmail" + ".com", "outlook" + ".com"}`,
 			want: 1,
 		},
 		{
-			// FIVE fragments. The prefilter's first draft joined runs of up to
+			// FIVE fragments. The shortcut's first draft joined runs of up to
 			// four and dropped this, which was a narrowing in a dimension the
 			// detector does not have — `stringValue` resolves `+` to whatever
 			// depth it is written at. A bigger number would only move the cliff.
@@ -186,7 +211,7 @@ var providers = []string{("gmail" + ".com"), "out" + "look" + ".com"}`,
 		},
 		{
 			// The escape dimension: the detector unquotes, so it counts this —
-			// and a prefilter comparing the RAW captured text dropped the file
+			// and a shortcut comparing the RAW captured text dropped the file
 			// before anything parsed it.
 			name: "providers written with escapes, which unquote to the real names",
 			code: `package p
@@ -194,7 +219,7 @@ var providers = []string{"gmail\x2ecom", "outlook\u002ecom"}`,
 			want: 1,
 		},
 		{
-			name: "a raw-string list, which the prefilter regex once dropped",
+			name: "a raw-string list, written with backticks",
 			code: "package p\nvar providers = []string{`gmail.com`, `outlook.com`}",
 			want: 1,
 		},
@@ -270,80 +295,11 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 			t.Fatalf("read %s: %v", path, err)
 		}
 		code := string(raw)
-		// A file that names no provider cannot declare a list of them, and
-		// parsing it anyway is what this gate would otherwise cost.
-		if !namesAnyProvider(code) {
-			continue
-		}
 		found = append(found, consumerMailListsInSource(t, path, code)...)
 	}
 	sort.Strings(found)
 	return found
 }
-
-// namesAnyProvider is the parse-cost shortcut, and it is derived from the SAME
-// set the census counts against. A prefilter narrower than the detector is how
-// a real list gets dropped before anything looks at it — which is exactly what
-// the sampled version did to `laposte.net`.
-//
-// It reads the file's own string tokens and asks the set about each, rather
-// than asking the file about each of 8,758 domains: same answer, and it turns
-// a whole-tree sweep from a minute into a second.
-//
-// The shortcut must be at least as BROAD as the detector in every dimension the
-// detector reads, and there are two:
-//
-//   - the STRING FORM. Go has two, and `strconv.Unquote` accepts both, so a
-//     pattern matching only double quotes drops a file spelling
-//     "`gmail.com`" before anything parses it.
-//   - the ESCAPE. `"gmail\x2ecom"` unquotes to `gmail.com` — the detector
-//     counts it, and a prefilter testing the RAW captured text does not. So the
-//     token is unquoted here too, by the same function, rather than compared as
-//     written.
-//
-// Both were wrong in the first draft, in the same direction, which is the
-// failure this whole file describes: a shortcut narrower than the thing it
-// feeds reports nothing and looks exactly like a clean tree.
-var stringToken = regexp.MustCompile("\"(?:[^\"\\\n]|\\\\.)*\"|`[^`]*`")
-
-func namesAnyProvider(code string) bool {
-	var values []string
-	for _, token := range stringToken.FindAllString(code, -1) {
-		value, err := strconv.Unquote(token)
-		if err != nil {
-			// Unparseable as a literal: admit the file rather than drop it. A
-			// prefilter that guesses wrong must guess toward PARSING, since the
-			// census behind it is the thing that decides.
-			return true
-		}
-		values = append(values, value)
-	}
-	// Each token on its own, and then — if the file concatenates string
-	// literals at all — the file is admitted regardless.
-	//
-	// The first draft joined runs of consecutive tokens up to FOUR parts. That
-	// bound was itself a narrowing, and in a dimension the detector does not
-	// have: `stringValue` resolves `+` to whatever depth it is written at, so a
-	// list spelling every provider in five fragments produced no window that
-	// matched and the file was dropped. Choosing a bigger number would only
-	// move the cliff.
-	//
-	// So the shortcut stops guessing at this point and defers. A file that
-	// concatenates literals MIGHT spell a provider its fragments do not, the
-	// census behind this is the thing that can actually decide, and the cost of
-	// being wrong in this direction is one parse.
-	for _, value := range values {
-		if looksLikeADomain(value) {
-			return true
-		}
-	}
-	return concatenatesLiterals.MatchString(code)
-}
-
-// A string literal with a `+` on either side of it: the syntax of a Go string
-// constant expression, which is the only way a name can be spelled by pieces
-// that are individually not one.
-var concatenatesLiterals = regexp.MustCompile("(\"|`)\\s*\\+|\\+\\s*(\"|`)")
 
 // consumerMailListsInSource reports `<file>:<line> (<n> providers)` for every
 // composite literal in one source file naming two or more DISTINCT providers.
