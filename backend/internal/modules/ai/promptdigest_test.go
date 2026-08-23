@@ -3,41 +3,59 @@
 
 package ai
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+)
+
+func briefLike(fence promptfence.Fence) string {
+	return "You write a brief.\n" + fence.Rule("account summary")
+}
 
 // A digest that does not move when the wording does is worse than no digest at
 // all: the surface reads as versioned, and serves yesterday's writing anyway.
 func TestARewordedPromptDigestsDifferently(t *testing.T) {
-	before := PromptDigest("You write a brief.")
-	after := PromptDigest("You write a short brief.")
-	if before == after {
+	reworded := func(fence promptfence.Fence) string {
+		return "You write a short brief.\n" + fence.Rule("account summary")
+	}
+	if before, after := PromptDigest(briefLike), PromptDigest(reworded); before == after {
 		t.Errorf("rewording the prompt left the digest at %s, so a cache key would not move", before)
 	}
 }
 
-// Same input, same key — otherwise every deploy rewrites every cached answer
-// and the fingerprint stops meaning anything.
-func TestTheSamePromptsDigestTheSameWay(t *testing.T) {
-	if first, second := PromptDigest("a", "b"), PromptDigest("a", "b"); first != second {
-		t.Errorf("the digest is unstable: %s then %s", first, second)
+// The boundary marker is a fresh nonce per call, so an uncanonicalized digest
+// would differ on every process start and the cache would never hit — a defect
+// that looks like nothing at all, just a cache that stopped earning its keep.
+func TestTheSamePromptDigestsAlikeUnderDifferentBoundaries(t *testing.T) {
+	if first, second := PromptDigest(briefLike), PromptDigest(briefLike); first != second {
+		t.Errorf("the digest is unstable across calls: %s then %s", first, second)
 	}
 }
 
-// The separator is the whole reason this joins rather than concatenates. Two
-// prompts where text shifts across the boundary are a DIFFERENT pair of
-// prompts, and a digest that cannot tell them apart would hold a stale key for
-// one of them — the exact failure it exists to prevent, reached by a route
-// nobody would think to test for.
+// The boundary RULE is prompt wording too. It is appended by Go code rather
+// than typed into the constant, and it rides every prompt in the product — so a
+// digest that covered only the constant would hold still while the text
+// actually sent changed.
+func TestTheBoundaryRuleRidesTheDigest(t *testing.T) {
+	otherKind := func(fence promptfence.Fence) string {
+		return "You write a brief.\n" + fence.Rule("deal timeline")
+	}
+	if same, other := PromptDigest(briefLike), PromptDigest(otherKind); same == other {
+		t.Errorf("two prompts whose boundary rules differ share the digest %s", same)
+	}
+}
+
+// Text moving across the boundary between two prompts is a DIFFERENT input. A
+// digest that could not tell them apart would hold a stale key for one of them,
+// by a route nobody would think to test for.
 func TestTextMovingAcrossThePromptBoundaryIsNotTheSameInput(t *testing.T) {
-	if joined, shifted := PromptDigest("ab", "c"), PromptDigest("a", "bc"); joined == shifted {
-		t.Errorf("(%q,%q) and (%q,%q) share the digest %s", "ab", "c", "a", "bc", joined)
+	fixed := func(text string) func(promptfence.Fence) string {
+		return func(promptfence.Fence) string { return text }
 	}
-}
-
-// One prompt and two are different inputs even when the text is identical, so
-// a surface that grows a second prompt gets a new key without editing either.
-func TestAddingASecondPromptMovesTheDigest(t *testing.T) {
-	if one, two := PromptDigest("a"), PromptDigest("a", ""); one == two {
-		t.Errorf("adding an empty second prompt left the digest at %s", one)
+	joined := PromptDigest(fixed("ab"), fixed("c"))
+	shifted := PromptDigest(fixed("a"), fixed("bc"))
+	if joined == shifted {
+		t.Errorf("(%q,%q) and (%q,%q) share the digest %s", "ab", "c", "a", "bc", joined)
 	}
 }

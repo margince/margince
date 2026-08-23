@@ -31,21 +31,24 @@ import (
 //
 // The floor's output is what gets cached, and its sentences are built by Go
 // code — `fmt.Sprintf` formats inside deterministic.go — so there is nothing to
-// hash. A deploy that reworded the floor and left this alone keeps serving the
+// hash. A deploy that rewords the floor and leaves this alone keeps serving the
 // old sentences to every account whose facts have not moved, which is most of
-// them. That has happened.
+// them.
 //
-// It covers ONLY the floor. The prompts version themselves below, so the case
-// this constant used to also cover — somebody edits a prompt and forgets — is
-// no longer possible rather than merely warned about.
+// It covers ONLY the floor. The model prompt versions itself below.
 const floorVersion = "org-brief-floor-v6"
 
-// promptVersion is DERIVED from the prompt text it versions, so editing a
-// prompt bumps it whether or not anybody remembers to.
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so editing that wording bumps it whether or not anybody remembers
+// to.
+//
+// The ask prompt is deliberately absent. Ask answers are not cached (see
+// Service.Ask), so binding them to the brief's key would rewrite every cached
+// brief for a change that cannot affect one.
 //
 // The input's SHAPE still rides the fingerprint separately: `Input` is
 // marshalled into the sum, so a changed field changes the key on its own.
-var promptVersion = ai.PromptDigest(briefSystem, askSystem)
+var promptVersion = ai.PromptDigest(briefSystemFor)
 
 // Input is what one brief is written from: the account's identity, its
 // pipeline, its people, and what has moved recently — each already pruned

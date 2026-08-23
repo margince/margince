@@ -26,9 +26,10 @@ import (
 // than served forever.
 const projectionVersion = "deal-status-projection-1"
 
-// promptVersion is DERIVED from the prompt it versions, so rewording the prompt
-// rewrites the cards whether or not anybody remembers to bump anything.
-var promptVersion = ai.PromptDigest(statusSystem)
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so rewording it rewrites the cards whether or not anybody
+// remembers to bump anything.
+var promptVersion = ai.PromptDigest(statusSystemFor)
 
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,

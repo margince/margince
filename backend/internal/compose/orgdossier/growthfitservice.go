@@ -39,14 +39,15 @@ import (
 // (DOSS-AC-14).
 const growthFitAssemblyVersion = "growth-fit-assembly-v2"
 
-// growthFitPromptVersion is DERIVED from the prompt it versions, so editing
-// that prompt bumps it whether or not anybody remembers to.
+// growthFitPromptVersion is DERIVED from the prompt as it is SENT — boundary
+// rule included — so editing that wording bumps it whether or not anybody
+// remembers to.
 //
 // Its own digest rather than the dossier's: the two surfaces keep separate
 // fingerprints, and folding both prompts into one would rewrite every cached
 // dossier whenever the growth-fit wording moved, and every cached assessment
 // whenever the dossier's did.
-var growthFitPromptVersion = ai.PromptDigest(growthFitSystem)
+var growthFitPromptVersion = ai.PromptDigest(growthFitSystemFor)
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
 // v2 adds the sub-scores (DOSS-AC-17): a v1 payload has none, and serving one

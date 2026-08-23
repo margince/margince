@@ -38,9 +38,10 @@ import (
 // (DOSS-AC-14).
 const assemblyVersion = "dossier-assembly-v1"
 
-// promptVersion is DERIVED from the prompt text it versions, so editing a
-// prompt bumps it whether or not anybody remembers to.
-var promptVersion = ai.PromptDigest(dossierSystem)
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so editing that wording bumps it whether or not anybody remembers
+// to.
+var promptVersion = ai.PromptDigest(dossierSystemFor)
 
 // storedVersion is the payload SHAPE this build writes and can read. A row
 // written by an older shape unmarshals cleanly into a newer envelope with its
