@@ -307,17 +307,33 @@ func followBuilders(pkg promptPackage, follow []string, reached map[string]bool)
 	}
 }
 
-// returnedNames are the identifiers a body's return statements name — the
-// functions and constants its value is built from.
+// returnedNames are the identifiers this body's OWN return statements name —
+// the constants its value is built from, and the functions it delegates to.
+//
+// A nested closure's return is not this function's, so the walk does not descend
+// into one. Otherwise a helper defined inline and never called would put its
+// prompt on the chain, which is the same over-reach as following a call made for
+// an unrelated effect. A literal handed to the digest is a builder in its own
+// right and is walked as one, from its own body.
+//
+// A function called INSIDE a return expression is followed on purpose: `return
+// statusSystemFor(fence)` sends what that builder sends, and delegation is the
+// shape this has to see through.
 func returnedNames(body *ast.BlockStmt) []string {
 	var names []string
 	ast.Inspect(body, func(node ast.Node) bool {
+		if _, nested := node.(*ast.FuncLit); nested {
+			return false
+		}
 		ret, ok := node.(*ast.ReturnStmt)
 		if !ok {
 			return true
 		}
 		for _, result := range ret.Results {
 			ast.Inspect(result, func(inner ast.Node) bool {
+				if _, nested := inner.(*ast.FuncLit); nested {
+					return false
+				}
 				if ident, ok := inner.(*ast.Ident); ok {
 					names = append(names, ident.Name)
 				}
