@@ -75,17 +75,19 @@ function show(ui: ReactNode) {
   );
 }
 
-async function open() {
-  await userEvent.click(
-    screen.getByRole("button", { name: "Compare coverage" }),
-  );
+// Takes the test's own session rather than reaching for the static API:
+// userEvent.setup() is once per TEST, and a helper that sets up its own would
+// hand each caller a second one.
+async function open(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Compare coverage" }));
 }
 
 describe("comparing the colleagues a reader chooses", () => {
   it("reads a cell with no connection as Untried, not as a blank", async () => {
+    const user = userEvent.setup();
     stubGraph();
     show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
-    await open();
+    await open(user);
 
     // Sam Silent has no edge. "Untried" says nobody has written to them, which
     // is a different instruction from a cold band — and a blank cell says
@@ -99,9 +101,10 @@ describe("comparing the colleagues a reader chooses", () => {
   // carries the column header that says whose relationship it describes —
   // otherwise the meaning scrolls off the top with the header row.
   it("carries each column's colleague on the cell, so a narrow layout can label it", async () => {
+    const user = userEvent.setup();
     stubGraph();
     show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
-    await open();
+    await open(user);
     await screen.findByText("Sam Silent");
 
     // Queried from the document: the explorer opens in a dialog, which the
@@ -117,9 +120,10 @@ describe("comparing the colleagues a reader chooses", () => {
   });
 
   it("offers only colleagues who have actually reached this account", async () => {
+    const user = userEvent.setup();
     stubGraph();
     show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
-    await open();
+    await open(user);
 
     // A column the reader has to rule out is worse than no column, so a
     // colleague with no edge to this account never appears at all.
@@ -128,9 +132,10 @@ describe("comparing the colleagues a reader chooses", () => {
   });
 
   it("says a grid built from a capped read may be short", async () => {
+    const user = userEvent.setup();
     stubGraph(7);
     show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
-    await open();
+    await open(user);
 
     // "No connection" and "the read stopped short" are different claims, and a
     // reader told nobody covers a contact would stop looking.
@@ -138,16 +143,36 @@ describe("comparing the colleagues a reader chooses", () => {
   });
 
   it("filters the contact rows without touching the columns", async () => {
+    const user = userEvent.setup();
     stubGraph();
     show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
-    await open();
+    await open(user);
     await screen.findByText("Dana Buyer");
 
-    await userEvent.type(
+    await user.type(
       screen.getByRole("searchbox", { name: "Find a contact" }),
       "Sam",
     );
     expect(screen.queryByText("Dana Buyer")).toBeNull();
     expect(screen.getByText("Sam Silent")).toBeTruthy();
+  });
+
+  // The matrix is one column per colleague, so it runs past the panel on any
+  // real account. It had no scroll box at all: the columns past the right edge
+  // were unreachable by mouse AND keyboard, and the `.coverage-scroll` rule
+  // sat in the stylesheet referenced by nothing. `TableScroll` is the one box,
+  // and its tab stop and announced name come with it.
+  it("draws the matrix inside the shared scroll box", async () => {
+    const user = userEvent.setup();
+    stubGraph();
+    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    await open(user);
+    await screen.findByText("Sam Silent");
+
+    // Queried from the document: the explorer opens in a dialog, which the
+    // design system renders outside the caller's container.
+    const table = document.querySelector("table.coverage-table");
+    expect(table).not.toBeNull();
+    expect(table?.closest(".table-scroll")).not.toBeNull();
   });
 });

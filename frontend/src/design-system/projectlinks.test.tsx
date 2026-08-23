@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../i18n";
+import { ProblemError } from "../screens/common";
 import { ProjectLinks, type ProjectLinksAdapter } from "./projectlinks";
 
 afterEach(cleanup);
@@ -84,8 +85,15 @@ describe("ProjectLinks", () => {
     const user = userEvent.setup();
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
+      // Every real adapter refuses through throwProblem (companyprojects,
+      // personprojects, projectcompanies all do), so the stand-in refuses the
+      // same way. A plain Error here would be a test supplying its own version
+      // of production and proving nothing about it.
       attach: async () => {
-        throw new Error("this company still has 2 deal(s) on the project");
+        throw new ProblemError({
+          code: "project_link_conflict",
+          detail: "this company still has 2 deal(s) on the project",
+        });
       },
     });
 
@@ -207,5 +215,31 @@ describe("ProjectLinks", () => {
     // name, which is what a screen reader announces.
     expect(screen.getByRole("button", { name: "Attach company" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
+  });
+
+  // The disclosure this section used to make. A reader who may see a company
+  // but not attach it to a project is refused by `auth.Require`, whose detail
+  // is the RBAC object and the verb.
+  it("answers a permission refusal in the reader's words, never the server's", async () => {
+    const user = userEvent.setup();
+    draw({
+      search: async () => [{ id: "p9", name: "Warehouse rollout" }],
+      attach: async () => {
+        throw new ProblemError({
+          code: "permission_denied",
+          detail: "organization.link_project: permission denied",
+        });
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.type(
+      screen.getByRole("searchbox", { name: /Search projects/ }),
+      "ware",
+    );
+    await user.click(await screen.findByText("Warehouse rollout"));
+
+    expect(await screen.findByText(/do not have permission/)).toBeTruthy();
+    expect(screen.queryByText(/organization\.link_project/)).toBeNull();
   });
 });

@@ -143,6 +143,7 @@ function render(ui: ReactNode) {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   globalThis.sessionStorage.clear();
   globalThis.location.hash = "";
@@ -241,5 +242,73 @@ describe("BuyerRoomScreen", () => {
     expect(globalThis.sessionStorage.getItem("margince.room.session")).toBe(
       null,
     );
+  });
+
+  // The download used to spell the object-URL dance inline — create, anchor,
+  // click, revoke — beside `download.ts`, whose docblock names the revoke as
+  // "the step a second copy forgets". Two copies of a four-step sequence is
+  // one chance to forget it; this asserts the shared one runs, revoke and all,
+  // and that the blob keeps the type the server chose (a PDF handed over as
+  // application/octet-stream downloads with the wrong icon and opens in
+  // nothing).
+  it("hands the buyer a file through the shared download, revoke included", async () => {
+    const created: Blob[] = [];
+    const createObjectURL = vi.fn((source: Blob | MediaSource) => {
+      if (source instanceof Blob) {
+        created.push(source);
+      }
+      return "blob:room";
+    });
+    const revokeObjectURL = vi.fn();
+    // spyOn, not defineProperties: the file's afterEach calls
+    // vi.unstubAllGlobals(), which does not undo a defineProperties, so a
+    // hand-installed mock would stay on URL for every later test in this file.
+    vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL);
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
+    stubRoom({
+      "GET /public/rooms/documents/d-1/file": () =>
+        new Response(new Blob(["%PDF-1.7"], { type: "application/pdf" }), {
+          status: 200,
+          headers: { "Content-Type": "application/pdf" },
+        }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Download Data processing agreement/i,
+      }),
+    );
+
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledOnce());
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:room");
+    expect(created[0]?.type).toBe("application/pdf");
+  });
+
+  // The same file request, refused. The screen's own translated sentence still
+  // reaches the reader — a plain `Error` would have been dropped as wording
+  // nobody wrote for a user.
+  it("says why a refused download did not happen", async () => {
+    stubRoom({
+      "GET /public/rooms/documents/d-1/file": () =>
+        jsonResponse({ code: "not_found" }, 404),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Download Data processing agreement/i,
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "The download did not start. Try again, or ask your contact.",
+      ),
+    ).toBeTruthy();
   });
 });
