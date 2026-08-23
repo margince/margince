@@ -34,11 +34,14 @@ import (
 // tagCurator is a principal that may author the tag vocabulary and apply it.
 // The harness's admin fixture mirrors the real seed, which carries no tag
 // grant, so the fixture asks for exactly the object it needs rather than
-// widening the shared one.
+// widening the shared one. Applying a tag to a person is also a READ of that
+// person (the same gate RemoveTag and EnsureTaggable hold), so the curator
+// carries person.read too — a curator without it is refused at the store door.
 func tagCurator(e *Env) context.Context {
 	return e.As(ids.NewV7(), nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"tag": {Create: true, Read: true, Update: true},
+			"tag":    {Create: true, Read: true, Update: true},
+			"person": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	})

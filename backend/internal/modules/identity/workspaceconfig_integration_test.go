@@ -34,7 +34,7 @@ import (
 // is not the fallback — so a restore that reached one of them CHANGES the row
 // instead of coincidentally rewriting it with what was already there.
 var configBootstrap = InstallationBootstrap{
-	BaseCurrency: "CHF", Timezone: "Europe/Berlin",
+	BaseCurrency: "CHF", BaseLanguage: "de", Timezone: "Europe/Berlin",
 	AdminName: "Admin", AdminPassword: "a bootstrap password!",
 }
 
@@ -294,8 +294,8 @@ func TestAResetWorkspaceMatchesAFreshlyBootstrappedOne(t *testing.T) {
 	// createInstallation writes it there, and this test can only see it if
 	// configBootstrap sets it off-default. Neither is checkable from here, so
 	// the field count is the tripwire that sends the next author to look.
-	if got := reflect.TypeOf(InstallationBootstrap{}).NumField(); got != 6 {
-		t.Errorf("InstallationBootstrap has %d fields, this test was written against 6 — if the new one lands on the workspace row, declare its column in preservedWorkspaceColumns and give it an off-default value in configBootstrap, then update this count", got)
+	if got := reflect.TypeOf(InstallationBootstrap{}).NumField(); got != 7 {
+		t.Errorf("InstallationBootstrap has %d fields, this test was written against 7 — if the new one lands on the workspace row, declare its column in preservedWorkspaceColumns and give it an off-default value in configBootstrap, then update this count", got)
 	}
 
 	// ONE bootstrapped workspace, snapshotted before it is configured away.

@@ -60,7 +60,24 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
 		return
 	}
-	s, err := h.store.UpdateInstallation(r.Context(), req.Name, req.Timezone, req.BaseCurrency)
+	patch := identity.InstallationPatch{
+		Name:         req.Name,
+		Timezone:     req.Timezone,
+		BaseCurrency: req.BaseCurrency,
+	}
+	if req.BaseLanguage != nil {
+		// The generated enum refuses an unknown value at the edge, so a code
+		// that reaches here is one the contract admits. The entry validates it
+		// again on the write — the contract and the setting each state the
+		// language set, and neither defers to the other.
+		if !req.BaseLanguage.Valid() {
+			httperr.Write(w, r, httperr.Validation("base_language", "invalid", "a base language is one of en, de, vi"))
+			return
+		}
+		lang := string(*req.BaseLanguage)
+		patch.BaseLanguage = &lang
+	}
+	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -80,6 +97,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		Name:               s.Name,
 		Timezone:           s.Timezone,
 		BaseCurrency:       s.BaseCurrency,
+		BaseLanguage:       crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
 		BaseCurrencyLocked: s.BaseCurrencyLocked,
 		MaxUploadBytes:     h.maxUploadBytes,
 	}

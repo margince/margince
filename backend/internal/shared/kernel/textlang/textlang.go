@@ -45,6 +45,31 @@ const (
 	Vietnamese Lang = "vi"
 )
 
+// Shipped is every language the product speaks, in the order a chooser offers
+// them. Unknown is absent: it is the detector's honest shrug, never a language
+// anyone selects.
+//
+// The Go side answers to this list — the installation's base language and the
+// per-member display language both validate against it. The contract's enums
+// and the frontend's own LOCALES are separate declarations of the same set, and
+// nothing yet fails when the three disagree, so widening the product to a
+// fourth language means editing all three by hand.
+var Shipped = []Lang{English, German, Vietnamese}
+
+// Known reports whether a code names a language the product speaks.
+//
+// It takes a string rather than a Lang because every caller is validating
+// something a human or a config file supplied, where the whole question is
+// whether that text IS one of these.
+func Known(code string) bool {
+	for _, lang := range Shipped {
+		if string(lang) == code {
+			return true
+		}
+	}
+	return false
+}
+
 // The bar a winner clears.
 const (
 	// MinHits is how many stopwords a language needs before its lead means

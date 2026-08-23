@@ -2392,7 +2392,8 @@ export const en = {
   // The opt-out. Not "remove" or "delete": nothing is destroyed, the message
   // simply is not filed under this project.
   "compose.fileUnderProject": "File under this project",
-  "compose.relinkTarget": "Search a person, organization, deal, or lead",
+  "compose.relinkTarget":
+    "Search a person, organization, deal, lead, or project",
   "compose.relinkReplace": "Move instead of also-link",
   "compose.relinkReplaceHint":
     "Replaces the existing link of the same type rather than adding another.",
@@ -4219,6 +4220,17 @@ export const en = {
   "setup.tokenHint":
     "From the token file the server wrote at first start — the server log names its path, and carries the token itself if that file could not be written.",
   "setup.organization": "Organization name",
+  "setup.baseCurrency": "Base currency",
+  "setup.baseCurrencyHint":
+    "Every amount in the product is converted to this currency. It can be changed in Settings, but only until the first amount converts against it — so it is worth getting right now.",
+  "setup.baseCurrencyMalformed":
+    "A currency is three letters, like EUR, CHF or USD.",
+  "setup.baseLanguage": "Base language",
+  "setup.baseLanguageHint":
+    "The language AI writes in when the whole team reads what it wrote. Each person still picks their own display language, and replies to customers follow the language of the conversation.",
+  "setup.timezone": "Reporting timezone",
+  "setup.timezoneHint":
+    "IANA zone name. Every reporting period is computed in it — guessed from this browser, so change it if you are not where the team works.",
   "setup.adminName": "Your name",
   "setup.adminEmail": "Your email",
   "setup.adminPassword": "Choose a password",
@@ -4382,31 +4394,18 @@ export const en = {
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
-  "dealbrief.title": "Deal brief",
-  "dealbrief.sub": "Where it stands, in sentences you can check.",
-  "dealbrief.empty": "Nothing on the record yet.",
-  "dealbrief.standing": "Where it stands",
-  "dealbrief.activity": "Last and next",
-  "dealbrief.open": "Still owed",
-  "dealbrief.room": "Deal Room",
+  "dealstatus.title": "Deal status",
+  "dealstatus.sub": "Where it stands, what could lose it, what to do next.",
+  "dealstatus.risk": "What could lose this",
+  "dealstatus.rewrite": "Write it again",
+  "dealstatus.unreadable":
+    "This card could not be read. Reload the page, or write it again.",
+  "dealstatus.createTask": "Add this task",
+  "dealstatus.draftReply": "Draft the reply",
+  "dealstatus.openBrief": "Open the meeting brief",
   "dealmeeting.title": "Next meeting",
   "dealmeeting.untitled": "Meeting",
   "dealmeeting.openBrief": "Open the brief",
-  "nba.title": "Next move",
-  "nba.sub": "One thing to do on this deal, and why.",
-  "nba.createTask": "Add this task",
-  "nba.draftReply": "Draft the reply",
-  "nba.openBrief": "Open the meeting brief",
-  "nba.nothingToDo": "Nothing to add right now.",
-  "pulse.title": "Deal pulse",
-  "pulse.sub": "Four things the deal's health is read from.",
-  "pulse.atRisk": "At risk",
-  "pulse.onTrack": "On track",
-  "pulse.recency": "Recent activity",
-  "pulse.velocity": "Pace in stage",
-  "pulse.engagement": "Engagement",
-  "pulse.commitments": "Commitments kept",
-  "pulse.total": "Overall reading: {value} of 100.",
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
   "prefs.subscribed": "Subscribed",
@@ -5335,9 +5334,12 @@ export const en = {
     "IANA zone name (for example Europe/Berlin). Period boundaries in every report are computed in it, separate from your own display timezone.",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
-    "ISO-4217 code every amount converts to for roll-ups. Changeable until the first deal converts against it.",
+    "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",
   "installationSettings.baseCurrencyLocked":
-    "Locked: deals have already converted against this currency, so changing it would re-mean every roll-up built on them.",
+    "Locked: amounts have already converted against this currency, so changing it would re-mean every roll-up built on them.",
+  "installationSettings.baseLanguage": "Base language",
+  "installationSettings.baseLanguageHint":
+    "The language AI writes in when the whole team reads what it wrote. Your own display language is separate, and replies to customers still follow the language of the conversation.",
   "installationSettings.readOnly":
     "Only an admin or ops can change these settings.",
   "installationSettings.edit": "Edit",
@@ -6196,7 +6198,7 @@ export const en = {
   "project.emptyBody":
     "A project is the body of work a deal is about. It starts during the deal, in the initiative phase, and outlives close-won: once the deal is won, delivery is tracked here.",
   "project.emptyKey":
-    "Give a project a key and any email whose subject carries [KEY] is filed under it automatically.",
+    "Every project gets a short key. Any email whose subject carries it in brackets is filed under that project automatically.",
   "project.rollups.empty": "No figures for this project yet.",
   "project.rollups.openValue": "Open deal value",
   "project.rollups.wonValue": "Won deal value",

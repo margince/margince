@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
@@ -100,9 +101,38 @@ var BaseCurrency = settings.Define[string](
 	},
 ).AsInstallationIdentity()
 
+// BaseLanguage is the language AI writes in when what it writes is read by the
+// whole team rather than by one person.
+//
+// A model asked nothing about language answers in whatever language its input
+// happened to be in, so a Vietnamese thread produced a Vietnamese claim on a
+// record a German colleague then had to read. The installation names one
+// language for that shared writing, the way it names one currency for money.
+//
+// It does NOT govern everything a model writes. Correspondence keeps the
+// language of the correspondence — a German thread gets a German reply however
+// this is set — and a brief cached for one reader keeps that reader's language.
+// This is the language of the shared record.
+//
+// No freeze, unlike BaseCurrency. Changing it re-means nothing already stored:
+// old artifacts stay in the language they were written in, and nothing converts
+// against the answer the way money does.
+var BaseLanguage = settings.Define[string](
+	"installation.base_language",
+	installationSettingsObject,
+	"update",
+	string(textlang.English),
+	func(v string) error {
+		if !textlang.Known(v) {
+			return fmt.Errorf("a base language is one of en, de, vi")
+		}
+		return nil
+	},
+).AsInstallationIdentity()
+
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
-	return []settings.Definition{Name, Timezone, BaseCurrency, SMTPPasswordRef, LicenseTokenRef}
+	return []settings.Definition{Name, Timezone, BaseCurrency, BaseLanguage, SMTPPasswordRef, LicenseTokenRef}
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a
@@ -141,4 +171,19 @@ func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // where one is unset has the other two unset as well.
 func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.RequireTx(ctx, tx, Name)
+}
+
+// BaseLanguageOf resolves the language shared AI writing is written in, inside
+// a transaction the caller already holds.
+//
+// GetTx rather than RequireTx, which is the opposite choice from the three
+// above, and the reason is the upgrade rather than the value: every
+// installation bootstrapped before this setting existed has no row for it. The
+// three others are seeded together at bootstrap, so an absent row there means a
+// broken installation and refusing is right. Here an absent row means an older
+// one, and a brief that refuses to generate because nobody has named a language
+// is worse than one that comes out in English — which is what those
+// installations get today anyway.
+func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.GetTx(ctx, tx, BaseLanguage)
 }

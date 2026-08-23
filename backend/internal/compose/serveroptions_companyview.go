@@ -23,8 +23,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
+	"github.com/gradionhq/margince/backend/internal/compose/dealstatus"
 	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
-	"github.com/gradionhq/margince/backend/internal/compose/nextaction"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
 )
@@ -128,18 +128,21 @@ func WithMeetingBriefWriter(brain completer) Option {
 	}
 }
 
-// WithNextMoveWriter binds the deal_health lane that turns the Next-move
-// card's fallback task into a concrete one.
+// WithDealStatusWriter binds the deal_health lane that writes the deal status
+// card's words.
 //
-// Without it the card serves its deterministic fallback rather than failing: a
-// role that runs no model still answers the endpoint, and generated_by tells
-// the reader which writer they have. Nothing is cached, so there is no routing
-// version to carry.
-func WithNextMoveWriter(brain completer) Option {
+// Without it the card is its deterministic composition rather than a failure:
+// a role that runs no model still answers the endpoint, and generated_by tells
+// the reader which writer they have.
+//
+// The routing version rides along because the card IS cached: a card written
+// under one routing configuration must not be served after the configuration
+// changes, so the version is part of the fingerprint.
+func WithDealStatusWriter(brain completer, routingVersion string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		if s.nextActionSvc == nil {
+		if s.dealStatusSvc == nil {
 			return
 		}
-		s.nextActionHandlers = nextaction.NewHandlers(s.nextActionSvc.WithLane(brain))
+		s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc.WithLane(brain, routingVersion))
 	}
 }

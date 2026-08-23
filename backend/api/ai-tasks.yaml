@@ -181,9 +181,9 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [next_move]
+    sites: [deal_status]
     company_context: none
-    doc: "next_move — the deal card's one next step, proposed as a concrete task when no rule already names the move: the model reads the deal's own timeline (subjects, directions, bounded excerpts the CALLER may read — the facts are assembled under the caller's row scope) and writes the task's subject and the why. The verb never moves: the answer is always create_task, the deterministic rules (booked meeting, unanswered inbound, existing open task) run first, and a missing lane, an over-budget call or a reply the grounding filter refuses degrades to the deterministic fallback task with generated_by saying so."
+    doc: "deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever."
 
   brief_ranking:
     ladder: [premium, cheap_cloud]

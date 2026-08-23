@@ -11,6 +11,7 @@ import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { dealRecordKeys } from "./activitykeys";
 import { problemMessageOf, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { useEntityName } from "./entityref";
@@ -287,7 +288,9 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
       return input.project;
     },
     onSuccess: (project) => {
-      queryClient.invalidateQueries({ queryKey: ["deal", deal.id] });
+      for (const queryKey of dealRecordKeys(deal.id)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
       queryClient.invalidateQueries({ queryKey: ["project", project.id] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -296,7 +299,9 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
     // Whatever landed before the failure is real: re-read both records so
     // the offer below says what is still owed rather than what was owed.
     onError: (_error, input) => {
-      queryClient.invalidateQueries({ queryKey: ["deal", input.dealId] });
+      for (const queryKey of dealRecordKeys(input.dealId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       queryClient.invalidateQueries({
         queryKey: ["project", input.project.id],
       });

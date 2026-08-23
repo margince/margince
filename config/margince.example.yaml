@@ -15,9 +15,21 @@
 # (OPS-CFG-1): defaults -> this file -> the overlay -> env vars -> flags.
 version: 1
 
+# These four are what the installation IS, and they are read ONCE — the first
+# time this build boots against an empty database. After that the settings rows
+# are authoritative and this block is never consulted again, so a real
+# deployment replaces the demo values below BEFORE first boot.
+#
+# Getting one wrong is not fatal: Settings → General edits all four afterwards.
+# But base_currency stops being changeable once anything has converted against
+# it (a closed deal, a sent offer, a mirrored invoice, a loaded rate sheet), so
+# it is the one worth checking twice.
 organization:
   name: Demo Workspace
   base_currency: EUR
+  # The language AI writes in for the whole team — en, de or vi. Not a person's
+  # display language, which each user picks for themselves.
+  base_language: en
   timezone: Europe/Berlin
 
 bootstrap_admin:

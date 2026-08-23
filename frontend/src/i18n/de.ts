@@ -2359,7 +2359,8 @@ export const de = {
   "compose.subjectTagged":
     "{tag} wird dem Betreff hinzugefügt, damit die Antwort sich hier einordnet.",
   "compose.fileUnderProject": "Unter diesem Projekt ablegen",
-  "compose.relinkTarget": "Person, Organisation, Deal oder Lead suchen",
+  "compose.relinkTarget":
+    "Person, Organisation, Deal, Lead oder Projekt suchen",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",
   "compose.relinkReplaceHint":
     "Ersetzt die bestehende Verknüpfung desselben Typs, statt eine weitere hinzuzufügen.",
@@ -4145,6 +4146,17 @@ export const de = {
   "setup.tokenHint":
     "Aus der Token-Datei, die der Server beim ersten Start geschrieben hat — das Serverprotokoll nennt ihren Pfad und enthält das Token selbst, falls die Datei nicht geschrieben werden konnte.",
   "setup.organization": "Name der Organisation",
+  "setup.baseCurrency": "Basiswährung",
+  "setup.baseCurrencyHint":
+    "Jeder Betrag im Produkt wird in diese Währung umgerechnet. Sie lässt sich in den Einstellungen ändern, aber nur solange noch kein Betrag dagegen umgerechnet wurde — es lohnt sich also, sie jetzt richtig zu setzen.",
+  "setup.baseCurrencyMalformed":
+    "Eine Währung besteht aus drei Buchstaben, zum Beispiel EUR, CHF oder USD.",
+  "setup.baseLanguage": "Basissprache",
+  "setup.baseLanguageHint":
+    "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Jede Person wählt ihre eigene Anzeigesprache weiterhin selbst, und Antworten an Kunden folgen der Sprache des Gesprächs.",
+  "setup.timezone": "Zeitzone für Auswertungen",
+  "setup.timezoneHint":
+    "IANA-Zonenname. Jeder Auswertungszeitraum wird darin berechnet — aus diesem Browser übernommen, also ändere ihn, wenn du nicht dort bist, wo das Team arbeitet.",
   "setup.adminName": "Dein Name",
   "setup.adminEmail": "Deine E-Mail-Adresse",
   "setup.adminPassword": "Passwort wählen",
@@ -4316,31 +4328,19 @@ export const de = {
   "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
-  "dealbrief.title": "Deal-Briefing",
-  "dealbrief.sub": "Wo der Deal steht, in nachprüfbaren Sätzen.",
-  "dealbrief.empty": "Noch nichts in der Akte.",
-  "dealbrief.standing": "Stand",
-  "dealbrief.activity": "Zuletzt und als Nächstes",
-  "dealbrief.open": "Noch offen",
-  "dealbrief.room": "Deal Room",
+  "dealstatus.title": "Deal-Status",
+  "dealstatus.sub":
+    "Wo der Deal steht, was ihn kosten kann, was als Nächstes zu tun ist.",
+  "dealstatus.risk": "Was den Deal kosten kann",
+  "dealstatus.rewrite": "Neu schreiben",
+  "dealstatus.unreadable":
+    "Diese Karte konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
+  "dealstatus.createTask": "Aufgabe anlegen",
+  "dealstatus.draftReply": "Antwort entwerfen",
+  "dealstatus.openBrief": "Meeting-Briefing öffnen",
   "dealmeeting.title": "Nächstes Meeting",
   "dealmeeting.untitled": "Meeting",
   "dealmeeting.openBrief": "Briefing öffnen",
-  "nba.title": "Nächster Schritt",
-  "nba.sub": "Eine Sache, die auf diesem Deal zu tun ist — und warum.",
-  "nba.createTask": "Aufgabe anlegen",
-  "nba.draftReply": "Antwort entwerfen",
-  "nba.openBrief": "Meeting-Briefing öffnen",
-  "nba.nothingToDo": "Gerade nichts hinzuzufügen.",
-  "pulse.title": "Deal-Puls",
-  "pulse.sub": "Die vier Größen, aus denen der Zustand des Deals gelesen wird.",
-  "pulse.atRisk": "Gefährdet",
-  "pulse.onTrack": "Auf Kurs",
-  "pulse.recency": "Letzte Aktivität",
-  "pulse.velocity": "Tempo in der Phase",
-  "pulse.engagement": "Engagement",
-  "pulse.commitments": "Eingehaltene Zusagen",
-  "pulse.total": "Gesamtwert: {value} von 100.",
   "prefs.rateLimited":
     "Gerade zu viele Versuche von hier aus. Warte eine Minute und lade neu.",
   "prefs.subscribed": "Abonniert",
@@ -5289,9 +5289,12 @@ export const de = {
     "IANA-Zonenname (zum Beispiel Europe/Berlin). Periodengrenzen aller Auswertungen werden darin berechnet, unabhängig von Ihrer eigenen Anzeigezeitzone.",
   "installationSettings.baseCurrency": "Basiswährung",
   "installationSettings.baseCurrencyHint":
-    "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Deal dagegen umgerechnet wurde.",
+    "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Betrag dagegen umgerechnet wurde.",
   "installationSettings.baseCurrencyLocked":
-    "Gesperrt: Es wurden bereits Deals gegen diese Währung umgerechnet — eine Änderung würde jede darauf aufbauende Auswertung neu bedeuten.",
+    "Gesperrt: Es wurden bereits Beträge gegen diese Währung umgerechnet — eine Änderung würde jede darauf aufbauende Auswertung neu bedeuten.",
+  "installationSettings.baseLanguage": "Basissprache",
+  "installationSettings.baseLanguageHint":
+    "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Ihre eigene Anzeigesprache ist davon getrennt, und Antworten an Kunden folgen weiterhin der Sprache des Gesprächs.",
   "installationSettings.readOnly":
     "Nur ein Admin oder Ops kann diese Einstellungen ändern.",
   "installationSettings.edit": "Ändern",
@@ -6116,7 +6119,7 @@ export const de = {
   "project.emptyBody":
     "Ein Projekt ist das Vorhaben, um das es in einem Deal geht. Es beginnt während des Deals in der Phase Initiative und überlebt den Abschluss: Ist der Deal gewonnen, wird die Umsetzung hier verfolgt.",
   "project.emptyKey":
-    "Gib einem Projekt ein Kürzel, und jede E-Mail mit [KÜRZEL] im Betreff wird ihm automatisch zugeordnet.",
+    "Jedes Projekt bekommt ein kurzes Kürzel. Jede E-Mail, die es in eckigen Klammern im Betreff trägt, wird dem Projekt automatisch zugeordnet.",
   "project.rollups.empty": "Noch keine Kennzahlen zu diesem Projekt.",
   "project.rollups.openValue": "Offenes Dealvolumen",
   "project.rollups.wonValue": "Gewonnenes Dealvolumen",

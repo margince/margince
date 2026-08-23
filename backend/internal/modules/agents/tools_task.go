@@ -19,7 +19,7 @@ import (
 // A task IS an activity of kind `task`, and log_activity can store one — but a
 // verb catalog that makes "create a task" a special case of "log something that
 // happened" makes every caller that wants a to-do learn the indirection. The
-// next-best-action surface is the first such caller; this verb exists so its
+// deal status card is the first such caller; this verb exists so its
 // catalog, and an agent's, can say create_task and mean it.
 
 type createTask struct {

@@ -4368,7 +4368,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Apply a tag to an entity (person/org/deal/lead). */
+        /** Apply a tag to an entity (person/org/deal/lead/project). */
         post: operations["applyTag"];
         /**
          * Take one tag off one entity, leaving the tag itself in place.
@@ -8642,7 +8642,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/deals/{id}/brief": {
+    "/deals/{id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -8653,70 +8653,36 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
-         * @description Deterministic: every sentence restates a record the caller can open and
-         *     cites it, so the card renders the same whichever writer produced it. No
-         *     inference — a sentence nobody can check is worth less than the number it
-         *     paraphrases. Reads the deal, its health, its timeline, its open tasks and
-         *     its Deal Room through their own gated reads; a record the caller cannot
-         *     see never reaches a sentence.
+         * Where the deal stands, what could lose it, and the one thing to do next.
+         * @description The deal page's one written card, replacing the three that stood beside each
+         *     other and disagreed: a brief that restated records, a health score with no
+         *     words, and a next-move box that read an open task back to you and then said
+         *     it had nothing to add.
+         *
+         *     Written by the model from the deal's own facts — its stage and value, its
+         *     timeline, its open tasks, its health factors and what the buyer said in the
+         *     Deal Room — and assembled under the CALLER's row scope, so a record they
+         *     cannot see never reaches a sentence.
+         *
+         *     Three parts, each earning its place. `standing` says where the deal is.
+         *     `risk` says what could lose it, and is absent when nothing is wrong rather
+         *     than padded with a reassurance. `next` is the one move to make, carrying the
+         *     verb the client performs on click — the same three verbs the retired
+         *     next-best-action named, so nothing about performing an action changed.
+         *
+         *     CACHED ON THE FACTS, not on a clock. The key is a fingerprint over the
+         *     assembled input plus the prompt and routing versions, so a deal nobody
+         *     touched costs one model call ever, and a deal that just moved is rewritten
+         *     before the request answers rather than served stale. A five-minute floor caps
+         *     how often the MODEL is asked, not how fresh the card is: inside it a changed
+         *     deal is still rewritten, deterministically, and `generated_by` says so.
+         *
+         *     DEGRADES RATHER THAN FAILS. With no model lane, an exhausted budget, or a
+         *     reply the grounding filter refuses, the same card is composed
+         *     deterministically and `generated_by` says which wrote it. There is no blank
+         *     AI card and no spinner that never resolves.
          */
-        get: operations["getDealBrief"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deals/{id}/next-best-action": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * The one thing to do next on this deal, computed — never performed — on read.
-         * @description A pure read: it COMPUTES a recommendation and returns it with the evidence
-         *     it rests on. Nothing executes here, because the deal page's reads retry and
-         *     re-run on remount, and a mutation hidden in a read would fire repeatedly and
-         *     skip the write shape. Performing it is the client's click, through the verb
-         *     the recommendation names: `draft_email` (`POST /activities/{id}/draft-email`),
-         *     `create_task` (`POST /tasks`, the arguments are its body), or
-         *     `open_meeting_brief` (navigation to the activity's brief). `none` says why
-         *     nothing is recommended. Deterministic: the same facts give the same answer.
-         */
-        get: operations["getDealNextBestAction"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deals/{id}/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * How the deal stands — four named factors, each with the fact behind it.
-         * @description The deal-health formula (recency × velocity × engagement × commitments) with
-         *     its evidence, so a reader can see what each factor was read from and
-         *     disagree. Computed on read; nothing is stored.
-         */
-        get: operations["getDealHealth"];
+        get: operations["getDealStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8900,6 +8866,37 @@ export interface paths {
          *     stored here is exactly what arrives under every message the caller sends.
          */
         put: operations["saveMyEmailSignature"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/locale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the language your own interface is in.
+         * @description Always the CALLER's own, never anybody else's — an admin does not pick a
+         *     colleague's display language through this API.
+         *
+         *     This is a person's own interface, not the installation's basis. It does
+         *     not change what AI writes for the whole team, which is the installation's
+         *     `base_language` and is admin/ops to set.
+         *
+         *     Stored so the choice follows the person to their next browser. Until they
+         *     make one there is no row and no value, which is not the same as `en`:
+         *     somebody who never chose follows whatever their browser asks for, and
+         *     writing a choice they did not make would freeze one browser's guess
+         *     forever.
+         */
+        put: operations["saveMyLocale"];
         post?: never;
         delete?: never;
         options?: never;
@@ -10103,13 +10100,25 @@ export interface components {
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
             /**
-             * @description True once a deal has frozen a conversion rate against the base currency, after
-             *     which it can no longer be changed (ADR-0085 §7).
+             * @description The language AI writes in when what it writes is read by the whole team — claims,
+             *     signals, extracted facts, agent answers. Not a user's display language, which is
+             *     per-user.
+             *
+             *     It does not govern everything a model writes: correspondence keeps the language of
+             *     the correspondence, so a German thread still gets a German reply, and a brief cached
+             *     for one reader keeps that reader's language.
+             * @enum {string}
+             */
+            base_language: "en" | "de" | "vi";
+            /**
+             * @description True once a conversion rate has been frozen against the base currency — by a closed
+             *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+             *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming how many deals have already converted against
-             *     it. Absent when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it. Absent
+             *     when it is still changeable.
              */
             base_currency_locked_reason?: string;
             /**
@@ -10132,10 +10141,16 @@ export interface components {
             /** @description The IANA reporting zone. */
             timezone?: string;
             /**
-             * @description ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+             * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
              *     rate against the current base.
              */
             base_currency?: string;
+            /**
+             * @description The language shared AI writing is written in. Never frozen: changing it re-means
+             *     nothing already written, so artifacts stay in the language they were written in.
+             * @enum {string}
+             */
+            base_language?: "en" | "de" | "vi";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -12764,7 +12779,7 @@ export interface components {
                 converted_count: number;
                 /**
                  * Format: date
-                 * @description The OLDEST rate date among the converted deals: each freezes its rate on its own issue date, so this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
+                 * @description The OLDEST rate date among the converted deals. An open deal has frozen no rate — that happens on close — so each converts at the latest rate stored on or before this read's day, and an installation does not hold every currency's rate for every day: the dates behind one total can differ, and this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
                  */
                 fx_as_of?: string | null;
                 /** @description The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the workspace's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is. */
@@ -14031,52 +14046,47 @@ export interface components {
              */
             days_since_touch?: number | null;
         };
-        DealBrief: {
+        /**
+         * @description The deal page's one written card. `standing` is always present; `risk` is
+         *     absent when nothing threatens the deal, because an invented reassurance is
+         *     worse than silence. `next` is absent only when the deal is closed.
+         */
+        DealStatusCard: {
             /** Format: uuid */
             deal_id: string;
+            /** @description Where the deal is right now — what moved, what is waiting. */
+            standing: components["schemas"]["DealStatusCardSection"];
+            /** @description What could lose this deal. Absent when nothing does. */
+            risk?: components["schemas"]["DealStatusCardSection"];
+            /** @description The one move to make, with the verb to perform it. */
+            next?: components["schemas"]["DealStatusCardMove"];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
-            sections: components["schemas"]["DealBriefSection"][];
         };
-        DealBriefSection: {
+        DealStatusCardSection: {
             /**
-             * @description `standing` — stage, value, close date, health.
-             *     `activity` — what happened last and what is booked next.
-             *     `open` — the tasks still owed.
-             *     `room` — the Deal Room: state, what the buyer said, what they decided.
-             * @enum {string}
+             * @description Each sentence cites the record it rests on. A sentence whose citations do
+             *     not resolve is dropped whole rather than shown uncited.
              */
-            kind: "standing" | "activity" | "open" | "room";
             sentences: components["schemas"]["OrganizationBriefSentence"][];
         };
         /**
-         * @description One recommendation for a deal. `action` is one of `draft_email`,
-         *     `create_task`, `open_meeting_brief`, `none` — a plain string for the reason
-         *     `DealRoomParticipantCapability` gives. `arguments` is the body or the operand the named
-         *     verb takes, ready to send; absent for `none`.
+         * @description The one thing to do next, and what performing it means. `action` is one of
+         *     `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
+         *     the retired next-best-action carried, so a client that already performs them
+         *     needs no new code. `arguments` is the body or operand the verb takes, ready
+         *     to send; absent for `none`.
          */
-        DealNextBestAction: {
-            /** Format: uuid */
-            deal_id: string;
+        DealStatusCardMove: {
             action: string;
-            /** @description One sentence, in the user's terms, saying why this and not something else. */
+            /** @description One sentence saying why this move and not another. */
             reason: string;
             /** @description `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
             arguments?: {
                 [key: string]: unknown;
             };
             evidence: components["schemas"]["DealNextBestActionEvidence"][];
-            /** Format: date-time */
-            computed_at: string;
-            /**
-             * @description Which writer produced the recommendation. `model` only on the `create_task`
-             *     fallback, where the deal_health lane proposes the concrete next step; every
-             *     rule-matched answer — and the fallback whenever the lane is absent, over
-             *     budget, or refused — is `deterministic`. Absent means `deterministic`, so a
-             *     client reading an older server fails honest.
-             */
-            generated_by?: components["schemas"]["WrittenBy"];
         };
         DealNextBestActionEvidence: {
             text: string;
@@ -14084,33 +14094,6 @@ export interface components {
             activity_id?: string | null;
             /** Format: date-time */
             occurred_at?: string | null;
-        };
-        DealHealthReading: {
-            /** Format: uuid */
-            deal_id: string;
-            /** @description The weighted reading, 0..1. */
-            health: number;
-            /** @description Below the at-risk threshold. */
-            at_risk: boolean;
-            /** @description The four parts, in the order they weigh. Each names the fact it was read from. */
-            factors: components["schemas"]["DealHealthFactor"][];
-            /** Format: date-time */
-            computed_at: string;
-        };
-        DealHealthFactor: {
-            /** @description `activity_recency`, `stage_velocity`, `engagement` or `commitments`. */
-            key: string;
-            /** @description The factor, 0..1. */
-            value: number;
-            /** @description Its share of the reading. */
-            weight: number;
-            /** @description The fact behind the number, in one sentence. */
-            reason: string;
-            /**
-             * Format: uuid
-             * @description The activity the factor points at, where one does.
-             */
-            activity_id?: string | null;
         };
         DealCoverage: {
             /** Format: uuid */
@@ -14153,6 +14136,16 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+        };
+        SaveMyLocaleRequest: {
+            /**
+             * @description The language to render this person's own interface in. One of the
+             *     languages the product ships a catalog for — a tag it does not
+             *     (`en-GB`, `fr`) is refused rather than approximated, because a locale
+             *     with no catalog renders as raw message keys.
+             * @enum {string}
+             */
+            locale: "en" | "de" | "vi";
         };
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
@@ -17322,6 +17315,12 @@ export interface components {
              * @default UTC
              */
             timezone: string;
+            /**
+             * @description The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+             *     Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
             /**
              * @default active
              * @enum {string}
@@ -36738,9 +36737,12 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getDealBrief: {
+    getDealStatus: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
+                refresh?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -36750,65 +36752,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The brief. */
+            /** @description The status. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealBrief"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    getDealNextBestAction: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The recommendation. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealNextBestAction"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    getDealHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The health reading. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealHealthReading"];
+                    "application/json": components["schemas"]["DealStatusCard"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -36989,6 +36939,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyLocaleRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the chosen locale. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             401: components["responses"]["Unauthorized"];

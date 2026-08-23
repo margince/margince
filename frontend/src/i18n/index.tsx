@@ -14,11 +14,18 @@ import { vi } from "./vi";
 
 // Locale is a presentation concern only (architecture/10 §3): it resolves at
 // the render edge and never participates in storage or math. The resolution
-// order is user.locale → workspace.locale → the browser's Accept-Language →
-// en-GB (A100). Until /v1/me carries a locale, the browser guess is the best
-// signal we have, and A100 stays the floor when the browser asks for a
-// language we don't ship. An explicit `initial` (later fed from /v1/me)
-// always wins; the switch flips it locally after mount.
+// order is the signed-in person's own `user.locale` → their stored pick on this
+// machine → the browser's Accept-Language → en-GB (A100), which stays the floor
+// when the browser asks for a language we don't ship.
+//
+// The first of those ARRIVES: `/v1/me` resolves below this provider, so whoever
+// holds it calls `adoptLocale`. Until it answers — and for a reader who has
+// never chosen — the stored pick and then the browser decide, which is what a
+// signed-out page renders from.
+//
+// The installation's `base_language` is a different setting and does not appear
+// here: it governs what AI writes for the whole team, not what any one person
+// reads the interface in.
 
 // The catalog registry is what we ship. `Locale` derives from it, so the type
 // needs no edit when a locale arrives. `LOCALES` below does NOT derive: it is
@@ -158,11 +165,21 @@ export function translate(
 type LocaleContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  /**
+   * Take the language the signed-in person chose, as reported by the server.
+   *
+   * Separate from `setLocale` because it is not a choice being MADE: it is one
+   * already on record arriving late, so it must not be written back as a fresh
+   * pick. The caller is whoever holds `/me` — the provider sits above it and
+   * cannot ask.
+   */
+  adoptLocale: (locale: Locale) => void;
 };
 
 const LocaleContext = createContext<LocaleContextValue>({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
+  adoptLocale: () => {},
 });
 
 export function LocaleProvider({
@@ -172,13 +189,40 @@ export function LocaleProvider({
   initial?: Locale;
   children: ReactNode;
 }>) {
-  // Three sources, in falling order of authority: an explicit initial (a
-  // server-provided locale, once /v1/me carries one), then the reader's own
-  // stored pick, then the browser's preference. The stored pick outranks
-  // detection because it is the more specific statement of the same intent —
-  // this reader, on this machine, asked for this language.
+  // Three sources, in falling order of authority: the server's answer for this
+  // person (`/v1/me` carries their chosen locale), then the reader's own stored
+  // pick, then the browser's preference. The stored pick outranks detection
+  // because it is the more specific statement of the same intent — this reader,
+  // on this machine, asked for this language.
   const [locale, setLocaleState] = useState<Locale>(
     () => initial ?? storedLocale() ?? detectLocale(),
+  );
+  // The signed-in person's own choice, which ARRIVES rather than being present
+  // at mount: `/me` resolves after this provider renders, so seeding state once
+  // would mean a stored choice never reached the browser they signed in from —
+  // the whole reason for storing it on the server.
+  //
+  // Adopted only when it CHANGES, so a reader who switches language mid-session
+  // is not dragged back to their saved one before the write lands.
+  // What the signed-in person chose, once it is known. It ARRIVES rather than
+  // being present at mount — `/me` resolves below this provider — so the
+  // provider takes it through `adoptLocale` instead of seeding state once,
+  // which is what lets a stored choice reach the browser they just signed in
+  // from.
+  //
+  // Adopted only when it DIFFERS from the last adopted value, so a reader who
+  // switches language mid-session is not dragged back to their saved one while
+  // the write is still in flight.
+  const [adopted, setAdopted] = useState<Locale | undefined>(initial);
+  const adoptLocale = useCallback(
+    (next: Locale) => {
+      if (next === adopted) {
+        return;
+      }
+      setAdopted(next);
+      setLocaleState(next);
+    },
+    [adopted],
   );
   // A pick is remembered where a detected default is not, so the two cannot be
   // confused later. Wrapped rather than persisted in an effect: an effect would
@@ -202,7 +246,10 @@ export function LocaleProvider({
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
-  const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
+  const value = useMemo(
+    () => ({ locale, setLocale, adoptLocale }),
+    [locale, setLocale, adoptLocale],
+  );
   return (
     <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
   );

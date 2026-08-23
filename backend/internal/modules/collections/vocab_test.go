@@ -20,7 +20,7 @@ import (
 // Derived, not listed: a fifth taggable type fails here rather than shipping
 // without a tag filter, which is the failure nobody would notice.
 func TestEveryTaggableTypeCanBeFilteredByTag(t *testing.T) {
-	for _, entity := range taggableEntityTypes() {
+	for _, entity := range TaggableEntityTypes() {
 		engine, ok := segmentEngines[entity]
 		if !ok {
 			t.Fatalf("%s is taggable but has no segment engine", entity)

@@ -4045,30 +4045,6 @@ func (e DealWonWithoutContractReason) Valid() bool {
 	}
 }
 
-// Defines values for DealBriefSectionKind.
-const (
-	DealBriefSectionKindActivity DealBriefSectionKind = "activity"
-	DealBriefSectionKindOpen     DealBriefSectionKind = "open"
-	DealBriefSectionKindRoom     DealBriefSectionKind = "room"
-	DealBriefSectionKindStanding DealBriefSectionKind = "standing"
-)
-
-// Valid indicates whether the value is a known member of the DealBriefSectionKind enum.
-func (e DealBriefSectionKind) Valid() bool {
-	switch e {
-	case DealBriefSectionKindActivity:
-		return true
-	case DealBriefSectionKindOpen:
-		return true
-	case DealBriefSectionKindRoom:
-		return true
-	case DealBriefSectionKindStanding:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DealCoverageSectionsOmitted.
 const (
 	DealCoverageSectionsOmittedOurSide      DealCoverageSectionsOmitted = "our_side"
@@ -4969,6 +4945,27 @@ func (e IngestVoiceCorpusSourceRequestRegister) Valid() bool {
 	case IngestVoiceCorpusSourceRequestRegisterSocial:
 		return true
 	case IngestVoiceCorpusSourceRequestRegisterSpoken:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstallationSettingsBaseLanguage.
+const (
+	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
+	InstallationSettingsBaseLanguageEn InstallationSettingsBaseLanguage = "en"
+	InstallationSettingsBaseLanguageVi InstallationSettingsBaseLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsBaseLanguage enum.
+func (e InstallationSettingsBaseLanguage) Valid() bool {
+	switch e {
+	case InstallationSettingsBaseLanguageDe:
+		return true
+	case InstallationSettingsBaseLanguageEn:
+		return true
+	case InstallationSettingsBaseLanguageVi:
 		return true
 	default:
 		return false
@@ -8401,6 +8398,27 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	}
 }
 
+// Defines values for SaveMyLocaleRequestLocale.
+const (
+	SaveMyLocaleRequestLocaleDe SaveMyLocaleRequestLocale = "de"
+	SaveMyLocaleRequestLocaleEn SaveMyLocaleRequestLocale = "en"
+	SaveMyLocaleRequestLocaleVi SaveMyLocaleRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the SaveMyLocaleRequestLocale enum.
+func (e SaveMyLocaleRequestLocale) Valid() bool {
+	switch e {
+	case SaveMyLocaleRequestLocaleDe:
+		return true
+	case SaveMyLocaleRequestLocaleEn:
+		return true
+	case SaveMyLocaleRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SavePersonResearchClaimField.
 const (
 	SavePersonResearchClaimFieldLinkedin SavePersonResearchClaimField = "linkedin"
@@ -9421,6 +9439,27 @@ func (e UpdateDealRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpdateInstallationSettingsRequestBaseLanguage.
+const (
+	UpdateInstallationSettingsRequestBaseLanguageDe UpdateInstallationSettingsRequestBaseLanguage = "de"
+	UpdateInstallationSettingsRequestBaseLanguageEn UpdateInstallationSettingsRequestBaseLanguage = "en"
+	UpdateInstallationSettingsRequestBaseLanguageVi UpdateInstallationSettingsRequestBaseLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestBaseLanguage enum.
+func (e UpdateInstallationSettingsRequestBaseLanguage) Valid() bool {
+	switch e {
+	case UpdateInstallationSettingsRequestBaseLanguageDe:
+		return true
+	case UpdateInstallationSettingsRequestBaseLanguageEn:
+		return true
+	case UpdateInstallationSettingsRequestBaseLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateLeadRequestStatus.
 const (
 	UpdateLeadRequestStatusContacted UpdateLeadRequestStatus = "contacted"
@@ -9724,6 +9763,27 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 	case UpsertPartnerRequestRelationshipStageNoFit:
 		return true
 	case UpsertPartnerRequestRelationshipStageResearch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserLocale.
+const (
+	UserLocaleDe UserLocale = "de"
+	UserLocaleEn UserLocale = "en"
+	UserLocaleVi UserLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the UserLocale enum.
+func (e UserLocale) Valid() bool {
+	switch e {
+	case UserLocaleDe:
+		return true
+	case UserLocaleEn:
+		return true
+	case UserLocaleVi:
 		return true
 	default:
 		return false
@@ -11598,22 +11658,22 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	Dropped       ListSignalsParamsResolutionState = "dropped"
-	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	Resolved      ListSignalsParamsResolutionState = "resolved"
-	Unresolved    ListSignalsParamsResolutionState = "unresolved"
+	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
+	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
+	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case Dropped:
+	case ListSignalsParamsResolutionStateDropped:
 		return true
-	case LowConfidence:
+	case ListSignalsParamsResolutionStateLowConfidence:
 		return true
-	case Resolved:
+	case ListSignalsParamsResolutionStateResolved:
 		return true
-	case Unresolved:
+	case ListSignalsParamsResolutionStateUnresolved:
 		return true
 	default:
 		return false
@@ -15373,35 +15433,6 @@ type DealStatus string
 // DealWonWithoutContractReason Why this deal was won with no contract behind it (ADR-0109 §6). NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
 
-// DealBrief defines model for DealBrief.
-type DealBrief struct {
-	DealId      openapi_types.UUID `json:"deal_id"`
-	GeneratedAt time.Time          `json:"generated_at"`
-
-	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
-	GeneratedBy WrittenBy          `json:"generated_by"`
-	Sections    []DealBriefSection `json:"sections"`
-}
-
-// DealBriefSection defines model for DealBriefSection.
-type DealBriefSection struct {
-	// Kind `standing` — stage, value, close date, health.
-	// `activity` — what happened last and what is booked next.
-	// `open` — the tasks still owed.
-	// `room` — the Deal Room: state, what the buyer said, what they decided.
-	Kind      DealBriefSectionKind        `json:"kind"`
-	Sentences []OrganizationBriefSentence `json:"sentences"`
-}
-
-// DealBriefSectionKind `standing` — stage, value, close date, health.
-// `activity` — what happened last and what is booked next.
-// `open` — the tasks still owed.
-// `room` — the Deal Room: state, what the buyer said, what they decided.
-type DealBriefSectionKind string
-
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
 	DealId  openapi_types.UUID       `json:"deal_id"`
@@ -15485,66 +15516,10 @@ type DealDocumentOrigin struct {
 	Subject    *string   `json:"subject,omitempty"`
 }
 
-// DealHealthFactor defines model for DealHealthFactor.
-type DealHealthFactor struct {
-	// ActivityId The activity the factor points at, where one does.
-	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
-
-	// Key `activity_recency`, `stage_velocity`, `engagement` or `commitments`.
-	Key string `json:"key"`
-
-	// Reason The fact behind the number, in one sentence.
-	Reason string `json:"reason"`
-
-	// Value The factor, 0..1.
-	Value float32 `json:"value"`
-
-	// Weight Its share of the reading.
-	Weight float32 `json:"weight"`
-}
-
-// DealHealthReading defines model for DealHealthReading.
-type DealHealthReading struct {
-	// AtRisk Below the at-risk threshold.
-	AtRisk     bool               `json:"at_risk"`
-	ComputedAt time.Time          `json:"computed_at"`
-	DealId     openapi_types.UUID `json:"deal_id"`
-
-	// Factors The four parts, in the order they weigh. Each names the fact it was read from.
-	Factors []DealHealthFactor `json:"factors"`
-
-	// Health The weighted reading, 0..1.
-	Health float32 `json:"health"`
-}
-
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
 	Data []Deal   `json:"data"`
 	Page PageInfo `json:"page"`
-}
-
-// DealNextBestAction One recommendation for a deal. `action` is one of `draft_email`,
-// `create_task`, `open_meeting_brief`, `none` — a plain string for the reason
-// `DealRoomParticipantCapability` gives. `arguments` is the body or the operand the named
-// verb takes, ready to send; absent for `none`.
-type DealNextBestAction struct {
-	Action string `json:"action"`
-
-	// Arguments `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
-	Arguments  *map[string]interface{}      `json:"arguments,omitempty"`
-	ComputedAt time.Time                    `json:"computed_at"`
-	DealId     openapi_types.UUID           `json:"deal_id"`
-	Evidence   []DealNextBestActionEvidence `json:"evidence"`
-
-	// GeneratedBy Which writer produced the recommendation. `model` only on the `create_task`
-	// fallback, where the deal_health lane proposes the concrete next step; every
-	// rule-matched answer — and the fallback whenever the lane is absent, over
-	// budget, or refused — is `deterministic`. Absent means `deterministic`, so a
-	// client reading an older server fails honest.
-	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
-
-	// Reason One sentence, in the user's terms, saying why this and not something else.
-	Reason string `json:"reason"`
 }
 
 // DealNextBestActionEvidence defines model for DealNextBestActionEvidence.
@@ -15879,6 +15854,52 @@ type DealRoomThread struct {
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
 type DealRoomThreadListResponse struct {
 	Data []DealRoomThread `json:"data"`
+}
+
+// DealStatusCard The deal page's one written card. `standing` is always present; `risk` is
+// absent when nothing threatens the deal, because an invented reassurance is
+// worse than silence. `next` is absent only when the deal is closed.
+type DealStatusCard struct {
+	DealId      openapi_types.UUID `json:"deal_id"`
+	GeneratedAt time.Time          `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Next The one move to make, with the verb to perform it.
+	Next *DealStatusCardMove `json:"next,omitempty"`
+
+	// Risk What could lose this deal. Absent when nothing does.
+	Risk *DealStatusCardSection `json:"risk,omitempty"`
+
+	// Standing Where the deal is right now — what moved, what is waiting.
+	Standing DealStatusCardSection `json:"standing"`
+}
+
+// DealStatusCardMove The one thing to do next, and what performing it means. `action` is one of
+// `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
+// the retired next-best-action carried, so a client that already performs them
+// needs no new code. `arguments` is the body or operand the verb takes, ready
+// to send; absent for `none`.
+type DealStatusCardMove struct {
+	Action string `json:"action"`
+
+	// Arguments `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
+	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
+	Evidence  []DealNextBestActionEvidence `json:"evidence"`
+
+	// Reason One sentence saying why this move and not another.
+	Reason string `json:"reason"`
+}
+
+// DealStatusCardSection defines model for DealStatusCardSection.
+type DealStatusCardSection struct {
+	// Sentences Each sentence cites the record it rests on. A sentence whose citations do
+	// not resolve is dropped whole rather than shown uncited.
+	Sentences []OrganizationBriefSentence `json:"sentences"`
 }
 
 // DecideCommissionRequest defines model for DecideCommissionRequest.
@@ -16679,13 +16700,23 @@ type InstallationSettings struct {
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
-	// BaseCurrencyLocked True once a deal has frozen a conversion rate against the base currency, after
-	// which it can no longer be changed (ADR-0085 §7).
+	// BaseCurrencyLocked True once a conversion rate has been frozen against the base currency — by a closed
+	// deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+	// rate sheet — after which it can no longer be changed (ADR-0085 §7).
 	BaseCurrencyLocked bool `json:"base_currency_locked"`
 
-	// BaseCurrencyLockedReason Why the currency is locked, naming how many deals have already converted against
-	// it. Absent when it is still changeable.
+	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it. Absent
+	// when it is still changeable.
 	BaseCurrencyLockedReason *string `json:"base_currency_locked_reason,omitempty"`
+
+	// BaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
+	// signals, extracted facts, agent answers. Not a user's display language, which is
+	// per-user.
+	//
+	// It does not govern everything a model writes: correspondence keeps the language of
+	// the correspondence, so a German thread still gets a German reply, and a brief cached
+	// for one reader keeps that reader's language.
+	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
@@ -16704,6 +16735,15 @@ type InstallationSettings struct {
 	// display timezone, which is per-user).
 	Timezone string `json:"timezone"`
 }
+
+// InstallationSettingsBaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
+// signals, extracted facts, agent answers. Not a user's display language, which is
+// per-user.
+//
+// It does not govern everything a model writes: correspondence keeps the language of
+// the correspondence, so a German thread still gets a German reply, and a brief cached
+// for one reader keeps that reader's language.
+type InstallationSettingsBaseLanguage string
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
@@ -18532,7 +18572,7 @@ type Organization360StateStrip struct {
 		// ConvertedCount How many of `priced_count` needed a currency conversion to enter the sum — the rest were already in the base. Zero means the total is a same-currency sum and no rate stands behind it.
 		ConvertedCount int `json:"converted_count"`
 
-		// FxAsOf The OLDEST rate date among the converted deals: each freezes its rate on its own issue date, so this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
+		// FxAsOf The OLDEST rate date among the converted deals. An open deal has frozen no rate — that happens on close — so each converts at the latest rate stored on or before this read's day, and an installation does not hold every currency's rate for every day: the dates behind one total can differ, and this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
 		FxAsOf *openapi_types.Date `json:"fx_as_of,omitempty"`
 
 		// NextCloseOn The nearest expected close date among the open deals; null when none names one.
@@ -21927,6 +21967,21 @@ type SaveLinkedInAccountRequest struct {
 	ProfileUrl *string `json:"profile_url,omitempty"`
 }
 
+// SaveMyLocaleRequest defines model for SaveMyLocaleRequest.
+type SaveMyLocaleRequest struct {
+	// Locale The language to render this person's own interface in. One of the
+	// languages the product ships a catalog for — a tag it does not
+	// (`en-GB`, `fr`) is refused rather than approximated, because a locale
+	// with no catalog renders as raw message keys.
+	Locale SaveMyLocaleRequestLocale `json:"locale"`
+}
+
+// SaveMyLocaleRequestLocale The language to render this person's own interface in. One of the
+// languages the product ships a catalog for — a tag it does not
+// (`en-GB`, `fr`) is refused rather than approximated, because a locale
+// with no catalog renders as raw message keys.
+type SaveMyLocaleRequestLocale string
+
 // SavePersonResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SavePersonResearchClaim struct {
 	// Field Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
@@ -22952,9 +23007,13 @@ type UpdateDealRoomRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
-	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
 	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
+	// nothing already written, so artifacts stay in the language they were written in.
+	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
@@ -22962,6 +23021,10 @@ type UpdateInstallationSettingsRequest struct {
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
 }
+
+// UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
+// nothing already written, so artifacts stay in the language they were written in.
+type UpdateInstallationSettingsRequestBaseLanguage string
 
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
 type UpdateLeadDisqualifyReasonRequest struct {
@@ -23282,6 +23345,10 @@ type User struct {
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
 
+	// Locale The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+	// Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+	Locale *UserLocale `json:"locale,omitempty"`
+
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles  *[]string  `json:"roles,omitempty"`
 	Status UserStatus `json:"status"`
@@ -23290,6 +23357,10 @@ type User struct {
 	Timezone  *string    `json:"timezone,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
+
+// UserLocale The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+// Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+type UserLocale string
 
 // UserStatus defines model for User.Status.
 type UserStatus string
@@ -25031,6 +25102,12 @@ type CreateOfferParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetDealStatusParams defines parameters for GetDealStatus.
+type GetDealStatusParams struct {
+	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
+	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
 
 // ListDedupeCandidatesParams defines parameters for ListDedupeCandidates.
@@ -28112,6 +28189,9 @@ type SaveMyLinkedInAccountJSONRequestBody = SaveLinkedInAccountRequest
 
 // ImportLinkedInConnectionsMultipartRequestBody defines body for ImportLinkedInConnections for multipart/form-data ContentType.
 type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMultipartBody
+
+// SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
+type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
 
 // CreateOfferTemplateJSONRequestBody defines body for CreateOfferTemplate for application/json ContentType.
 type CreateOfferTemplateJSONRequestBody = CreateOfferTemplateRequest
@@ -36527,9 +36607,6 @@ type ServerInterface interface {
 	// Advance a deal to a new stage (audit-logged with prior + next stage).
 	// (POST /deals/{id}/advance)
 	AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id, params AdvanceDealParams)
-	// The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
-	// (GET /deals/{id}/brief)
-	GetDealBrief(w http.ResponseWriter, r *http.Request, id Id)
 	// Who covers this deal, and what is wrong with how it is covered.
 	// (GET /deals/{id}/coverage)
 	GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -36542,12 +36619,6 @@ type ServerInterface interface {
 	// Stop listing a captured file on this deal without touching the file.
 	// (PUT /deals/{id}/documents/{attachmentId}/hide)
 	HideDealDocument(w http.ResponseWriter, r *http.Request, id Id, attachmentId openapi_types.UUID)
-	// How the deal stands — four named factors, each with the fact behind it.
-	// (GET /deals/{id}/health)
-	GetDealHealth(w http.ResponseWriter, r *http.Request, id Id)
-	// The one thing to do next on this deal, computed — never performed — on read.
-	// (GET /deals/{id}/next-best-action)
-	GetDealNextBestAction(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's offers, newest revision first.
 	// (GET /deals/{id}/offers)
 	ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams)
@@ -36557,6 +36628,9 @@ type ServerInterface interface {
 	// List a deal's stakeholders (deal↔person relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
+	// Where the deal stands, what could lose it, and the one thing to do next.
+	// (GET /deals/{id}/status)
+	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
 	// The dedupe review queue, confidence-sorted.
 	// (GET /dedupe/candidates)
 	ListDedupeCandidates(w http.ResponseWriter, r *http.Request, params ListDedupeCandidatesParams)
@@ -36743,6 +36817,9 @@ type ServerInterface interface {
 	// Which accounts your imported network reaches.
 	// (GET /me/linkedin-reach)
 	GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params GetMyLinkedInReachParams)
+	// Choose the language your own interface is in.
+	// (PUT /me/locale)
+	SaveMyLocale(w http.ResponseWriter, r *http.Request)
 	// What the OAuth consent screen renders for one pending authorization.
 	// (GET /oauth/consent-request)
 	GetConsentRequest(w http.ResponseWriter, r *http.Request, params GetConsentRequestParams)
@@ -37325,7 +37402,7 @@ type ServerInterface interface {
 	// Take one tag off one entity, leaving the tag itself in place.
 	// (DELETE /tags/{id}/apply)
 	RemoveTag(w http.ResponseWriter, r *http.Request, id Id)
-	// Apply a tag to an entity (person/org/deal/lead).
+	// Apply a tag to an entity (person/org/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Create a task — a commitment with an owner, on the records it is about.
@@ -38423,12 +38500,6 @@ func (_ Unimplemented) AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
-// (GET /deals/{id}/brief)
-func (_ Unimplemented) GetDealBrief(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Who covers this deal, and what is wrong with how it is covered.
 // (GET /deals/{id}/coverage)
 func (_ Unimplemented) GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -38453,18 +38524,6 @@ func (_ Unimplemented) HideDealDocument(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How the deal stands — four named factors, each with the fact behind it.
-// (GET /deals/{id}/health)
-func (_ Unimplemented) GetDealHealth(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The one thing to do next on this deal, computed — never performed — on read.
-// (GET /deals/{id}/next-best-action)
-func (_ Unimplemented) GetDealNextBestAction(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // List a deal's offers, newest revision first.
 // (GET /deals/{id}/offers)
 func (_ Unimplemented) ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams) {
@@ -38480,6 +38539,12 @@ func (_ Unimplemented) CreateOffer(w http.ResponseWriter, r *http.Request, id Id
 // List a deal's stakeholders (deal↔person relationships).
 // (GET /deals/{id}/stakeholders)
 func (_ Unimplemented) ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Where the deal stands, what could lose it, and the one thing to do next.
+// (GET /deals/{id}/status)
+func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -38852,6 +38917,12 @@ func (_ Unimplemented) ImportLinkedInConnections(w http.ResponseWriter, r *http.
 // Which accounts your imported network reaches.
 // (GET /me/linkedin-reach)
 func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params GetMyLinkedInReachParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose the language your own interface is in.
+// (PUT /me/locale)
+func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -40019,7 +40090,7 @@ func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Apply a tag to an entity (person/org/deal/lead).
+// Apply a tag to an entity (person/org/deal/lead/project).
 // (POST /tags/{id}/apply)
 func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -47169,40 +47240,6 @@ func (siw *ServerInterfaceWrapper) AdvanceDeal(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
-// GetDealBrief operation middleware
-func (siw *ServerInterfaceWrapper) GetDealBrief(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealBrief(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetDealCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCoverage(w http.ResponseWriter, r *http.Request) {
 
@@ -47406,74 +47443,6 @@ func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// GetDealHealth operation middleware
-func (siw *ServerInterfaceWrapper) GetDealHealth(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealHealth(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetDealNextBestAction operation middleware
-func (siw *ServerInterfaceWrapper) GetDealNextBestAction(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealNextBestAction(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListDealOffers operation middleware
 func (siw *ServerInterfaceWrapper) ListDealOffers(w http.ResponseWriter, r *http.Request) {
 
@@ -47633,6 +47602,56 @@ func (siw *ServerInterfaceWrapper) ListDealStakeholders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDealStakeholders(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDealStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDealStatusParams
+
+	// ------------- Optional query parameter "refresh" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "refresh", r.URL.Query(), &params.Refresh, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "refresh"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "refresh", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealStatus(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -50053,6 +50072,26 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMyLinkedInReach(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyLocale operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyLocale(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -62239,9 +62278,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/advance", wrapper.AdvanceDeal)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/brief", wrapper.GetDealBrief)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/coverage", wrapper.GetDealCoverage)
 	})
 	r.Group(func(r chi.Router) {
@@ -62254,12 +62290,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/deals/{id}/documents/{attachmentId}/hide", wrapper.HideDealDocument)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/health", wrapper.GetDealHealth)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/next-best-action", wrapper.GetDealNextBestAction)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/offers", wrapper.ListDealOffers)
 	})
 	r.Group(func(r chi.Router) {
@@ -62267,6 +62297,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/dedupe/candidates", wrapper.ListDedupeCandidates)
@@ -62453,6 +62486,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/linkedin-reach", wrapper.GetMyLinkedInReach)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/oauth/consent-request", wrapper.GetConsentRequest)

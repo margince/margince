@@ -358,6 +358,7 @@ func (h Handlers) meResponse(
 			Email:       openapi_types.Email(id.Email),
 			DisplayName: id.DisplayName,
 			Status:      "active",
+			Locale:      contractLocale(id.Locale),
 		},
 		Roles:         roles,
 		Teams:         teams,

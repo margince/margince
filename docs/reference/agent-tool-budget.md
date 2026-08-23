@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2190 | 9% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 16996 | 70% | — | — | — |
+| _whole served catalog, for scale_ | 56 | 17004 | 70% | — | — | — |
 
 ### `morning_brief`
 
@@ -168,11 +168,11 @@ a term in an addition.
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
 | `read_brief` | 213 | — |
-| `apply_tag` | 206 | — |
+| `apply_tag` | 211 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
 | `intro_path_to` | 197 | 2 scenarios |
-| `remove_tag` | 187 | — |
+| `remove_tag` | 190 | — |
 | `list_channel_providers` | 181 | — |
 | `account_coverage` | 178 | 2 scenarios |
 | `read_project_360` | 163 | — |

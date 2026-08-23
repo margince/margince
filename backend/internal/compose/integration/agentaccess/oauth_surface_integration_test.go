@@ -44,17 +44,19 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	_, body := o.exchange(t, url.Values{"code": {code}})
 	agentBearer := map[string]string{"Authorization": "Bearer " + body["access_token"].(string)}
 
-	var person struct {
-		ID string `json:"id"`
-	}
-	if status := o.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "JWS Target"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
-	}
+	// A webhook subscription create, because it is one of the few writes the
+	// contract still declares confirm-first. Archiving a person staged this
+	// call until #2426 moved 32 verbs to auto_execute under ADR-0055: a
+	// passport carries the granting human's own seat and grants, so a verb it
+	// can spend is one its holder could spend unaided. The claim under test is
+	// the SHAPE of the approval token, not which verb earned it.
 	var problem struct {
 		Detail string `json:"detail"`
 	}
-	if status := o.Call(t, "DELETE", "/v1/people/"+person.ID, nil, agentBearer, &problem); status != http.StatusForbidden {
-		t.Fatalf("agent archive → %d, want staged 403", status)
+	if status := o.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+		"target_url": "https://jws.example/hook", "event_types": []string{"organization.created"},
+	}, agentBearer, &problem); status != http.StatusForbidden {
+		t.Fatalf("agent webhook-subscription create → %d, want staged 403", status)
 	}
 	approvalID := integration.ExtractStagedApprovalID(t, problem.Detail)
 
@@ -88,8 +90,13 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if claims.ApprovalID.String() != approvalID || claims.Kind != "archive_record" ||
-		claims.TargetID == nil || claims.DiffHash == "" || claims.PassportID == nil {
+	// A CREATE binds by diff, not by target: there is no row yet to name, so
+	// TargetID and TargetVersion are legitimately absent and asserting them
+	// would be asserting the shape of a different verb. The binding that must
+	// hold for every kind is the one checked here — this approval, this
+	// passport, this diff.
+	if claims.ApprovalID.String() != approvalID || claims.Kind != "create_record" ||
+		claims.DiffHash == "" || claims.PassportID == nil {
 		t.Fatalf("claims not effect-bound: %+v", claims)
 	}
 

@@ -20,6 +20,25 @@ type stubTags struct {
 	vocabulary       []Tag
 	listedArchived   *bool
 	capped           bool
+	taggable         []string
+}
+
+func (s stubTags) TaggableTypes() []string { return s.taggable }
+
+// Both schemas advertise whatever the seam answers — the enum is the seam's
+// vocabulary read at Spec time, not a list this package owns. The compose lane
+// proves the composed wiring serves the store's list; this is the module-local
+// half, that taggingSchema actually reads its argument.
+func TestTheTaggingSchemasAdvertiseTheSeamsVocabulary(t *testing.T) {
+	seam := stubTags{taggable: []string{"person", "project"}}
+	for name, raw := range map[string]json.RawMessage{
+		"apply_tag":  applyTag{tags: seam}.Spec().InputSchema,
+		"remove_tag": removeTag{tags: seam}.Spec().InputSchema,
+	} {
+		if !bytes.Contains(raw, []byte(`"enum":["person","project"]`)) {
+			t.Errorf("%s's record_type enum does not carry the seam's vocabulary: %s", name, raw)
+		}
+	}
 }
 
 func (s stubTags) ListTags(_ context.Context, includeArchived bool) ([]Tag, bool, error) {

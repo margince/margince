@@ -24,7 +24,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // deal's own name in a placeholder.
   "room.card.title",
   "persondealrooms.title",
-  "dealbrief.room",
   "dealmeeting.untitled",
   "room.create.defaultTitle",
   "buyer.poweredBy",

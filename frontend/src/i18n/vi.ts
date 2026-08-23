@@ -2334,7 +2334,7 @@ export const vi = {
   "compose.subjectTagged":
     "{tag} được thêm vào tiêu đề để thư trả lời tự động vào đúng dự án.",
   "compose.fileUnderProject": "Lưu vào dự án này",
-  "compose.relinkTarget": "Tìm một người, tổ chức, deal hay lead",
+  "compose.relinkTarget": "Tìm một người, tổ chức, deal, lead hay dự án",
   "compose.relinkReplace": "Chuyển hẳn thay vì liên kết thêm",
   "compose.relinkReplaceHint":
     "Thay liên kết cùng loại đang có thay vì thêm một liên kết nữa.",
@@ -4113,6 +4113,17 @@ export const vi = {
   "setup.tokenHint":
     "Lấy từ tệp chứa mã thiết lập mà máy chủ ghi ở lần khởi động đầu tiên — nhật ký máy chủ nêu đường dẫn của tệp, và chứa chính mã đó nếu không ghi được tệp.",
   "setup.organization": "Tên tổ chức",
+  "setup.baseCurrency": "Đơn vị tiền tệ cơ sở",
+  "setup.baseCurrencyHint":
+    "Mọi số tiền trong sản phẩm đều được quy đổi về đơn vị này. Bạn có thể đổi trong phần Cài đặt, nhưng chỉ cho đến khi số tiền đầu tiên được quy đổi theo nó — vì vậy nên chọn đúng ngay bây giờ.",
+  "setup.baseCurrencyMalformed":
+    "Mã tiền tệ gồm ba chữ cái, ví dụ EUR, CHF hoặc USD.",
+  "setup.baseLanguage": "Ngôn ngữ cơ sở",
+  "setup.baseLanguageHint":
+    "Ngôn ngữ mà AI dùng để viết những nội dung cả nhóm cùng đọc. Mỗi người vẫn tự chọn ngôn ngữ hiển thị riêng, và thư trả lời khách hàng vẫn theo ngôn ngữ của cuộc trao đổi.",
+  "setup.timezone": "Múi giờ báo cáo",
+  "setup.timezoneHint":
+    "Tên múi giờ IANA. Mọi kỳ báo cáo đều được tính theo múi giờ này — lấy từ trình duyệt này, hãy đổi nếu bạn không ở nơi nhóm làm việc.",
   "setup.adminName": "Tên của bạn",
   "setup.adminEmail": "Email của bạn",
   "setup.adminPassword": "Chọn mật khẩu",
@@ -4279,32 +4290,19 @@ export const vi = {
   "threads.requireChangeLabel": "Tài liệu này cần được sửa",
   "threads.open": "Đăng",
   "threads.readOnly": "Quyền truy cập của bạn chỉ đọc.",
-  "dealbrief.title": "Tóm tắt giao dịch",
-  "dealbrief.sub":
-    "Giao dịch đang ở đâu, bằng những câu bạn có thể kiểm chứng.",
-  "dealbrief.empty": "Chưa có gì trong hồ sơ.",
-  "dealbrief.standing": "Hiện trạng",
-  "dealbrief.activity": "Gần nhất và tiếp theo",
-  "dealbrief.open": "Còn nợ",
-  "dealbrief.room": "Deal Room",
+  "dealstatus.title": "Trạng thái giao dịch",
+  "dealstatus.sub":
+    "Giao dịch đang ở đâu, điều gì có thể làm mất nó, việc cần làm tiếp theo.",
+  "dealstatus.risk": "Điều có thể làm mất giao dịch",
+  "dealstatus.rewrite": "Viết lại",
+  "dealstatus.unreadable":
+    "Không đọc được thẻ này. Hãy tải lại trang hoặc viết lại.",
+  "dealstatus.createTask": "Thêm việc này",
+  "dealstatus.draftReply": "Soạn thư trả lời",
+  "dealstatus.openBrief": "Mở bản tóm tắt cuộc họp",
   "dealmeeting.title": "Cuộc họp tiếp theo",
   "dealmeeting.untitled": "Cuộc họp",
   "dealmeeting.openBrief": "Mở bản tóm tắt",
-  "nba.title": "Bước tiếp theo",
-  "nba.sub": "Một việc cần làm trên giao dịch này, và lý do.",
-  "nba.createTask": "Thêm việc này",
-  "nba.draftReply": "Soạn thư trả lời",
-  "nba.openBrief": "Mở bản tóm tắt cuộc họp",
-  "nba.nothingToDo": "Hiện không có gì cần thêm.",
-  "pulse.title": "Nhịp giao dịch",
-  "pulse.sub": "Bốn yếu tố dùng để đọc sức khỏe của giao dịch.",
-  "pulse.atRisk": "Có rủi ro",
-  "pulse.onTrack": "Đúng hướng",
-  "pulse.recency": "Hoạt động gần đây",
-  "pulse.velocity": "Tốc độ trong giai đoạn",
-  "pulse.engagement": "Mức tương tác",
-  "pulse.commitments": "Cam kết đã giữ",
-  "pulse.total": "Điểm tổng: {value} trên 100.",
   "prefs.rateLimited":
     "Vừa có quá nhiều lần thử từ đây. Hãy đợi một phút rồi tải lại.",
   "prefs.subscribed": "Đã đăng ký",
@@ -5241,9 +5239,12 @@ export const vi = {
     "Tên múi giờ IANA (ví dụ Europe/Berlin). Ranh giới kỳ của mọi báo cáo được tính theo múi giờ này, tách biệt với múi giờ hiển thị của riêng bạn.",
   "installationSettings.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
-    "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi giao dịch đầu tiên được quy đổi theo nó.",
+    "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi số tiền đầu tiên được quy đổi theo nó.",
   "installationSettings.baseCurrencyLocked":
-    "Đã khoá: đã có giao dịch được quy đổi theo đơn vị tiền tệ này, nên việc thay đổi sẽ làm sai lệch mọi số liệu tổng hợp dựa trên chúng.",
+    "Đã khoá: đã có số tiền được quy đổi theo đơn vị tiền tệ này, nên việc thay đổi sẽ làm sai lệch mọi số liệu tổng hợp dựa trên chúng.",
+  "installationSettings.baseLanguage": "Ngôn ngữ cơ sở",
+  "installationSettings.baseLanguageHint":
+    "Ngôn ngữ mà AI dùng để viết những nội dung cả nhóm cùng đọc. Ngôn ngữ hiển thị của riêng bạn là thiết lập riêng, và thư trả lời khách hàng vẫn theo ngôn ngữ của cuộc trao đổi.",
   "installationSettings.readOnly":
     "Chỉ quản trị viên hoặc ops mới có thể thay đổi các thiết lập này.",
   "installationSettings.edit": "Sửa",
@@ -6065,7 +6066,7 @@ export const vi = {
   "project.emptyBody":
     "Dự án là phần việc mà một thương vụ hướng tới. Nó bắt đầu trong thương vụ, ở giai đoạn khởi xướng, và tiếp tục sau khi thắng: khi thương vụ đã thắng, việc triển khai được theo dõi ở đây.",
   "project.emptyKey":
-    "Đặt mã cho dự án thì mọi email có [MÃ] trong tiêu đề sẽ tự động được xếp vào dự án đó.",
+    "Mỗi dự án đều được cấp một mã ngắn. Mọi email có mã đó trong ngoặc vuông ở tiêu đề sẽ tự động được xếp vào dự án.",
   "project.rollups.empty": "Chưa có số liệu cho dự án này.",
   "project.rollups.openValue": "Giá trị thương vụ đang mở",
   "project.rollups.wonValue": "Giá trị thương vụ đã thắng",

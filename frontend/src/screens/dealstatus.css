@@ -1,0 +1,34 @@
+/* The deal page's one status card. Tokens only. */
+
+.dealstatus-risk-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--warn);
+}
+
+.dealstatus-move {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.dealstatus-move-reason {
+  margin: 0;
+}
+
+.dealstatus-evidence {
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--textMeta);
+}
+
+.dealstatus-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
