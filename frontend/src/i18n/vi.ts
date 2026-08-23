@@ -6110,8 +6110,6 @@ export const vi = {
   "project.rollups.lastActivity": "Hoạt động gần nhất",
   "project.rollups.never": "chưa có gì",
   "project.rollups.activityCount": "Hoạt động",
-  "project.coverage":
-    "{attributed} đã gán · {awaiting} chờ quyết định · {nearby} ở người và thương vụ của dự án này chưa gán",
   "project.history.title": "Lịch sử giai đoạn",
   "project.history.empty": "Chưa ghi nhận thay đổi giai đoạn nào.",
   "project.history.current": "hiện tại",
