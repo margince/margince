@@ -60,11 +60,12 @@ const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
 //	"public"."user_record_view"      quoted, in any combination
 //	UPDATE ONLY user_record_view     the inheritance-scoped form
 //
-// The NAME's end is a delimiter, not `\b`. `$` and `.` are legal in a Postgres
-// identifier and are not word characters, so a boundary alone matched
-// `user_record_view$archive` and `"user_record_view.extra"` — different tables,
-// reported as this one. The unquoted branch requires a character that cannot
-// continue an identifier; the quoted branch requires the closing quote.
+// The NAME's end is a delimiter, not `\b`. `$`, `.` and `"` are all legal
+// around a Postgres identifier and none is a word character, so a boundary
+// alone reported `user_record_view$archive`, `"user_record_view.extra"` and
+// `user_record_view.extra` — different relations — as this one. The delimiter
+// excludes every character that can CONTINUE or QUALIFY a name, so a trailing
+// `.` is refused whether the target was quoted or not.
 //
 // And the quoted branch is case-SENSITIVE while the rest is not, because that
 // is Postgres: an unquoted `USER_RECORD_VIEW` folds to this table, a quoted
@@ -76,7 +77,7 @@ const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
 // forms are all planted as must-MISS.
 var writesViewBaseline = regexp.MustCompile(
 	`(?is)(INSERT\s+INTO|UPDATE(?:\s+ONLY)?)\s+` +
-		`(?:"?[\w$]+"?\s*\.\s*)*(?:(?-i:"user_record_view")|user_record_view(?:[^\w$"]|$))`)
+		`(?:"?[\w$]+"?\s*\.\s*)*(?:(?-i:"user_record_view")|user_record_view)(?:[^\w$".]|$)`)
 
 // TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
 // comment names.
@@ -221,6 +222,11 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		// A QUOTED identifier is case-sensitive in Postgres, so this names a
 		// different table than the one the gate protects.
 		`INSERT INTO "USER_RECORD_VIEW" (user_id) VALUES ($1)`,
+		// A trailing qualifier names something else again: here the target is
+		// the SCHEMA, not the table.
+		"INSERT INTO user_record_view.extra (user_id) VALUES ($1)",
+		`INSERT INTO "user_record_view".extra (user_id) VALUES ($1)`,
+		`INSERT INTO "user_record_view""archive" (user_id) VALUES ($1)`,
 	}
 	for _, statement := range missed {
 		if writesViewBaseline.MatchString(statement) {
