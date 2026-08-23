@@ -4,6 +4,8 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
+import { formatDate } from "../format/format";
+import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
@@ -365,7 +367,12 @@ function VersionRow({
         {t("voice.history.versionRow", { n: version.profile_version })}{" "}
         <Badge>{versionStatusLabel(t, version.status)}</Badge>
         {" · "}
-        {new Date(version.created_at).toLocaleDateString(locale)}
+        {/* `locale` is the app's own code ("en"), which is not a BCP-47 tag —
+            handed straight to Intl it resolves to en-US and prints 8/21/2026
+            where every other date in this product prints 21/08/2026. The tag
+            comes from format/, and the record's zone with it: a profile
+            version is stamped by the record, not by where its reader sits. */}
+        {formatDate(version.created_at, locale, RECORD_ZONE)}
       </span>
       {canEdit && version.status === "superseded" && (
         <button

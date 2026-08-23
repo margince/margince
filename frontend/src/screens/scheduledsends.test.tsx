@@ -200,6 +200,24 @@ it("stays silent about the zone when it is the reader's own", async () => {
   expect(screen.queryByText(new RegExp(`in ${readerZone}`))).toBeNull();
 });
 
+it.each(["Etc/GMT-1", "Etc/GMT+5", "GMT", "+01:00"])(
+  "keeps the list up when the wire names %s, which Intl resolves but the formatter refuses",
+  async (offsetZone) => {
+    // The row's fallback used to ask Intl whether the name RESOLVED, and every
+    // one of these does — so the fallback accepted them and the formatter one
+    // line later threw on the same value, unmounting the whole list over one
+    // row. That is the exact failure the fallback exists to prevent, and it was
+    // reachable from wire data: `scheduled_tz` is a string the server chooses.
+    mount([{ ...WAITING, scheduled_tz: offsetZone }, HELD]);
+    // Both rows drawn, not a blank screen.
+    expect(await screen.findByText("The renewal quote")).toBeTruthy();
+    expect(await screen.findByText("The follow-up")).toBeTruthy();
+    // And the moment falls back to the reader's own zone rather than claiming
+    // the offset: a zone this product will not render is not one it may name.
+    expect(screen.queryByText(new RegExp(`in ${offsetZone}`, "i"))).toBeNull();
+  },
+);
+
 it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);

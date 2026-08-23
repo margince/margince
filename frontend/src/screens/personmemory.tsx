@@ -3,7 +3,9 @@ import type { components } from "../api/schema";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { emailSummaryText } from "../format/emailtext";
-import { useT } from "../i18n";
+import { formatDayMonth, formatTimeOfDay } from "../format/format";
+import { RECORD_ZONE } from "../format/timezone";
+import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 
@@ -33,6 +35,7 @@ type Filter = (typeof FILTERS)[number];
 
 export function PersonMemory({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [filter, setFilter] = useState<Filter>("all");
   const interactionLabel = useInteractionLabel();
   const entries = view.conversation_memory ?? [];
@@ -42,8 +45,8 @@ export function PersonMemory({ view }: Readonly<{ view: Person360 }>) {
   // beside it is withholding.
   const rows =
     entries.length > 0
-      ? entries.map((entry) => fromEntry(entry, t, interactionLabel))
-      : foldActivities(view, t, interactionLabel);
+      ? entries.map((entry) => fromEntry(entry, t, interactionLabel, locale))
+      : foldActivities(view, t, interactionLabel, locale);
   const shown = rows.filter((row) => matches(row, filter));
 
   return (
@@ -162,12 +165,13 @@ function fromEntry(
   entry: NonNullable<Person360["conversation_memory"]>[number],
   t: ReturnType<typeof useT>,
   interactionLabel: InteractionLabel,
+  locale: Locale,
 ): Row {
   const status = entry.status ?? null;
   return {
     key: entry.key,
-    date: dayMonth(entry.occurred_at),
-    time: clock(entry.occurred_at),
+    date: formatDayMonth(entry.occurred_at, locale, RECORD_ZONE),
+    time: formatTimeOfDay(entry.occurred_at, locale, RECORD_ZONE),
     // first_activity_id is what "expand to original" opens, and it is the right
     // anchor for a reply too: the send resolves the conversation from the
     // anchor's own links and thread key, so the first message of a thread names
@@ -196,6 +200,7 @@ function foldActivities(
   view: Person360,
   t: ReturnType<typeof useT>,
   interactionLabel: InteractionLabel,
+  locale: Locale,
 ): Row[] {
   const rows = view.activities?.data ?? [];
   return rows
@@ -204,8 +209,8 @@ function foldActivities(
       const status = statusOf(row, view);
       return {
         key: row.id,
-        date: dayMonth(row.occurred_at),
-        time: clock(row.occurred_at),
+        date: formatDayMonth(row.occurred_at, locale, RECORD_ZONE),
+        time: formatTimeOfDay(row.occurred_at, locale, RECORD_ZONE),
         activityId: row.id,
         kind: row.kind,
         channelProvider: row.channel_provider ?? null,
@@ -290,18 +295,7 @@ function matches(row: Row, filter: Filter): boolean {
   }
 }
 
-function dayMonth(at: string): string {
-  return new Date(at).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
-}
-
-// The exact time, because a reader deciding whether to follow up wants the
-// hour and not "recently".
-function clock(at: string): string {
-  return new Date(at).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// When a conversation happened is a fact about the RECORD, not about where the
+// reader is sitting: two colleagues discussing the same thread have to name the
+// same day. The exact time rides beside it because a reader deciding whether to
+// follow up wants the hour and not "recently".

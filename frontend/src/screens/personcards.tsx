@@ -4,7 +4,8 @@ import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { formatMoneyCompact } from "../format/format";
+import { formatDayMonth, formatMoneyCompact } from "../format/format";
+import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
@@ -302,7 +303,15 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
                 deal.stage,
                 deal.close_date
                   ? t("person.commercial.closes", {
-                      date: shortDate(deal.close_date),
+                      // The record's own zone: a close date is a date-only
+                      // wire value with no instant to localize, and a reader
+                      // west of UTC rendering it in their own would quote the
+                      // day before to a colleague quoting the right one.
+                      date: formatDayMonth(
+                        deal.close_date,
+                        locale,
+                        RECORD_ZONE,
+                      ),
                     })
                   : null,
               ]
@@ -351,13 +360,6 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
 export function readableRole(role: string): string {
   const words = role.replace(/_/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-function shortDate(date: string): string {
-  return new Date(date).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
 }
 
 // --- Commitments and open loops (§5.9) -------------------------------------

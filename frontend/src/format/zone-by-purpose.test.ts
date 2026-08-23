@@ -172,6 +172,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "formatDate's whole contract is that it attaches the zone it is given, which needs a named zone on both sides of the assertion.",
   },
   {
+    file: "format/one-locale.test.ts",
+    why: "The locale gate's sibling rule. It carries the browser-zone lookup as a fixture line, to prove it does NOT report the one shape that constructs a formatter to read a zone rather than to render — the carve-out that keeps the two gates from claiming one rule each.",
+  },
+  {
     file: "format/timezone.test.ts",
     why: "Pins viewerZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },

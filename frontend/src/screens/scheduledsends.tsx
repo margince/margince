@@ -17,7 +17,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { localDateTimeValue } from "../format/calendarday";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, isRenderableZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -127,15 +127,22 @@ const STILL_MOVABLE: ReadonlySet<Status> = new Set<Status>([
  * logged. That is a claim about the SERVER, not about the reader: a conforming
  * one cannot produce it, and swallowing it silently is how a fork's malformed
  * zone would go unnoticed while every moment on the page quietly shifted.
+ *
+ * The question is asked with `isRenderableZone` — the formatter's OWN
+ * predicate — and not by probing Intl here. Probing Intl answers a different
+ * question: whether the name RESOLVES, which every fixed offset does. So
+ * `Etc/GMT-1`, `GMT` and `+01:00` all passed the probe this used to carry and
+ * then threw inside `formatDateTime` one line later, taking the list down in
+ * exactly the case the fallback exists for.
  */
 function renderZone(wireZone: string, readerZone: string): string {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: wireZone }).format();
+  if (isRenderableZone(wireZone)) {
     return wireZone;
-  } catch (error) {
-    logUnexpectedError(error);
-    return readerZone;
   }
+  logUnexpectedError(
+    new Error(`scheduled_tz is not a renderable IANA zone: "${wireZone}"`),
+  );
+  return readerZone;
 }
 
 /**

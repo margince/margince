@@ -723,9 +723,15 @@ describe("ReadTheatre cost strip", () => {
     );
 
     expect(screen.getByText("Transparency")).toBeInTheDocument();
-    // Fractions of a cent stay visible rather than rounding to $0.00.
+    // Fractions of a cent stay visible rather than rounding to US$0.00.
+    //
+    // "US$" and not "$": unconfigured English is en-GB here (A100), and en-GB
+    // qualifies a dollar rather than assuming which country's it is. The line
+    // read "$0.0042" while this screen built its own formatter from the app's
+    // locale CODE — "en", which Intl resolves to en-US — so the disclosure
+    // spoke American to a reader the rest of the product speaks British to.
     expect(
-      screen.getByText("6 calls · 15,500 tokens · $0.0042"),
+      screen.getByText("6 calls · 15,500 tokens · US$0.0042"),
     ).toBeInTheDocument();
   });
 

@@ -19,7 +19,8 @@ import {
   SettingRow,
 } from "../design-system/settingrow";
 import { ToastRegion, useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import { VOICE_MIN_WORDS } from "./voice-intake-core";
@@ -430,6 +431,7 @@ function CorpusManifest({
   onChanged: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const sources = useVoiceSources(profileId);
   const [error, setError] = useState<string | null>(null);
 
@@ -457,8 +459,8 @@ function CorpusManifest({
           <div>
             <p className="t-small">
               {t("settings.voice.meter", {
-                count: manifest.summary.total_words.toLocaleString(),
-                target: manifest.summary.target_words.toLocaleString(),
+                count: formatNumber(manifest.summary.total_words, locale),
+                target: formatNumber(manifest.summary.target_words, locale),
               })}
             </p>
             {/* The meter above tracks the 30,000-word quality target, which
@@ -501,6 +503,7 @@ function CorpusManifest({
 // longer the question the reader is asking.
 function FloorMeter({ words }: Readonly<{ words: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <p className="t-small vdna-floor">
       <progress
@@ -510,8 +513,8 @@ function FloorMeter({ words }: Readonly<{ words: number }>) {
       />
       <span>
         {t("settings.voice.floorProgress", {
-          words: words.toLocaleString(),
-          min: VOICE_MIN_WORDS.toLocaleString(),
+          words: formatNumber(words, locale),
+          min: formatNumber(VOICE_MIN_WORDS, locale),
         })}
       </span>
     </p>
@@ -575,6 +578,7 @@ function SourceRow({
   onRemove: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [armed, setArmed] = useState(false);
   const bandAfter = bandFor(
     Math.max(0, summary.total_words - source.word_count),
@@ -590,7 +594,7 @@ function SourceRow({
   return (
     <li className="vdna-row">
       <span>
-        {source.source_label} · {source.word_count.toLocaleString()}
+        {source.source_label} · {formatNumber(source.word_count, locale)}
         <span className="vdna-register">
           {registerLabel(t, source.register)}
         </span>

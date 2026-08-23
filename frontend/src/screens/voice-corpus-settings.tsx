@@ -3,7 +3,8 @@ import type { ChangeEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Field, Modal, Radio, Textarea } from "../design-system/atoms";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { useFileDrop } from "./use-file-drop";
 import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
@@ -223,6 +224,7 @@ function SpeakerPanel({
   onDismiss: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [choice, setChoice] = useState<string | null>(null);
   return (
     <fieldset className="vdna-speaker">
@@ -237,7 +239,7 @@ function SpeakerPanel({
               checked={choice === speaker.label}
               onChange={() => setChoice(speaker.label)}
               label={`${speaker.label} · ${t("settings.voice.speakerDetail", {
-                words: speaker.words.toLocaleString(),
+                words: formatNumber(speaker.words, locale),
                 turns: speaker.turns,
               })}`}
             />
@@ -263,13 +265,17 @@ function SpeakerPanel({
 
 // What one finished intake says to the reader. A refusal the core did not
 // recognize quotes the server's own detail rather than inventing a reason.
-function noticeText(t: ReturnType<typeof useT>, notice: IntakeNotice): string {
+function noticeText(
+  t: ReturnType<typeof useT>,
+  notice: IntakeNotice,
+  locale: Locale,
+): string {
   switch (notice.kind) {
     case "kept":
       return t("settings.voice.noticeKept", {
         name: notice.label,
-        kept: (notice.keptWords ?? 0).toLocaleString(),
-        total: (notice.inputWords ?? 0).toLocaleString(),
+        kept: formatNumber(notice.keptWords ?? 0, locale),
+        total: formatNumber(notice.inputWords ?? 0, locale),
       });
     case "skippedType":
       return t("settings.voice.noticeSkippedType", { name: notice.label });
@@ -302,12 +308,13 @@ function noticeText(t: ReturnType<typeof useT>, notice: IntakeNotice): string {
 
 function NoticeRow({ notice }: Readonly<{ notice: IntakeNotice }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <li
       className={`t-small vdna-notice vdna-notice-${notice.tone}`}
       role={notice.tone === "warn" ? "alert" : undefined}
     >
-      {noticeText(t, notice)}
+      {noticeText(t, notice, locale)}
     </li>
   );
 }

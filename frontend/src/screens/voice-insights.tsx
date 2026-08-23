@@ -1,7 +1,8 @@
 import { FileText, Lightbulb, Quote } from "lucide-react";
 import type { components } from "../api/schema";
 import { Badge, Card } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import "./voice-dna.css";
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
@@ -130,6 +131,7 @@ export function parseVoiceInsights(
 function nextBestCopy(
   t: ReturnType<typeof useT>,
   data: VoiceInsightsData,
+  locale: Locale,
 ): string | null {
   switch (data.nextBestKey) {
     case "add_transcript":
@@ -138,7 +140,7 @@ function nextBestCopy(
       return t("voice.insights.next.addEmail");
     case "add_words":
       return t("voice.insights.next.addWords", {
-        count: (data.nextBestWords ?? 0).toLocaleString(),
+        count: formatNumber(data.nextBestWords ?? 0, locale),
       });
     case "at_target":
       return t("voice.insights.next.atTarget");
@@ -155,6 +157,7 @@ export function VoiceInsights({
   profileVersion,
 }: Readonly<{ data: VoiceInsightsData; profileVersion: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="vdna-insights">
       <div className="vdna-provenance t-small">
@@ -169,7 +172,7 @@ export function VoiceInsights({
         <div className="t-small">
           {data.words !== null &&
             t("voice.insights.statWords", {
-              count: data.words.toLocaleString(),
+              count: formatNumber(data.words, locale),
             })}
           {data.sources !== null &&
             ` · ${t("voice.insights.statSources", { count: data.sources })}`}
@@ -208,7 +211,7 @@ export function VoiceInsights({
       {(data.nextBestKey || data.nextBest) && (
         <div className="vdna-nextbest">
           <b>{t("voice.insights.nextBestLabel")}</b>{" "}
-          {nextBestCopy(t, data) ?? data.nextBest}
+          {nextBestCopy(t, data, locale) ?? data.nextBest}
         </div>
       )}
     </div>

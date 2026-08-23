@@ -123,6 +123,28 @@ function assertIanaZone(zone: string): void {
   new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
 }
 
+/**
+ * Whether the formatters above will accept this zone, asked without throwing.
+ *
+ * A page rendering a LIST of moments cannot let one row's zone take the page
+ * down, so it needs to ask the question before it formats. Asking it any other
+ * way is how the two answers come apart: a caller that probed with Intl alone
+ * learned only that the name resolves, which every fixed offset does — so
+ * `Etc/GMT-1`, `GMT` and `+01:00` all passed the probe and then threw inside
+ * `formatDate`, in the exact place the probe existed to protect.
+ *
+ * So the predicate is this module's, derived from the assertion rather than
+ * restated beside it. There is no second reading of "a zone this renders".
+ */
+export function isRenderableZone(zone: string): boolean {
+  try {
+    assertIanaZone(zone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Zone-by-purpose (architecture/10 §2): personal deadlines localize to the
 // USER zone, reporting-period labels bucket on the WORKSPACE zone — the
 // caller picks the purpose, this helper only attaches the zone.
@@ -157,6 +179,55 @@ export function formatDateAbbrev(
     day: "numeric",
     month: "short",
     year: "numeric",
+  }).format(new Date(utcIso));
+}
+
+/**
+ * A day and its month, with NO year — "21 Aug".
+ *
+ * For a date the surrounding text already places in time: a row inside a
+ * period the reader picked, an employment span whose years are printed beside
+ * it, a meeting the page has already called the next one. `formatDateAbbrev`
+ * is the same rendering WITH the year and is the right one everywhere the
+ * reader cannot tell which year is meant from the context.
+ *
+ * Four screens carried a byte-identical private copy of this before it lived
+ * here, each with its own `undefined` locale — so the same person record
+ * printed its dates in the browser's guessed locale on four surfaces and in
+ * the reader's chosen one nowhere.
+ */
+export function formatDayMonth(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+  }).format(new Date(utcIso));
+}
+
+/**
+ * The wall-clock time of an instant, with no date — "09:05".
+ *
+ * For a row whose date is already printed beside it, where repeating the date
+ * per line is noise. One caller today: it lives here because this module is
+ * where a locale reaches a formatter, not because a second caller is expected.
+ * A private copy in the screen would be a second locale decision, which is the
+ * thing this module exists to prevent.
+ */
+export function formatTimeOfDay(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(utcIso));
 }
 
