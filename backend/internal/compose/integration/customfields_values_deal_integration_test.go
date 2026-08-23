@@ -27,7 +27,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/modules/customfields"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -69,11 +68,10 @@ func setupDealCFV(t *testing.T) dealCFVFixture {
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
 	pipeline, open, _ := DealFixture(t, e)
 	return dealCFVFixture{
-		e:     e,
-		svc:   svc,
-		store: deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(svc),
-		projects: projects.NewStore(e.DB()).WithFieldCatalog(svc).
-			WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)),
+		e:        e,
+		svc:      svc,
+		store:    deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(svc),
+		projects: ProjectsStore(e.DB()).WithFieldCatalog(svc),
 		ctx:      e.As(e.Rep1, nil, dealCFVPerms),
 		pipeline: pipeline,
 		stage:    open,

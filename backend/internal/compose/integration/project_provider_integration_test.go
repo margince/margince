@@ -23,7 +23,6 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -36,8 +35,7 @@ func projectProvider(e *Env) *projects.Provider {
 	// Built the way compose builds it, seams and all: a provider without the
 	// company edges refuses every create, and a test that wired its own would be
 	// proving something production never runs.
-	return projects.ProviderOver(projects.NewStore(e.DB()).
-		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)))
+	return projects.ProviderOver(ProjectsStore(e.DB()))
 }
 
 // dealProvider is the deals half of the same seam. The advance verb and the
