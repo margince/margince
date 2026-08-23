@@ -4395,7 +4395,8 @@ export const en = {
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
   "deal360.title": "Deal360",
-  "deal360.sub": "What has happened, what is holding it up, and what to say next.",
+  "deal360.sub":
+    "What has happened, what is holding it up, and what to say next.",
   "deal360.blocker": "What is holding this up",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict": "Where this stands",
@@ -4408,7 +4409,8 @@ export const en = {
   "deal360.createTask": "Add this task",
   "deal360.draftReply": "Draft the reply",
   "deal360.openBrief": "Open the meeting brief",
-  "deal360.unreadable": "This briefing could not be read. Reload the page, or write it again.",
+  "deal360.unreadable":
+    "This briefing could not be read. Reload the page, or write it again.",
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
   "prefs.subscribed": "Subscribed",

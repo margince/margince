@@ -85,19 +85,6 @@ import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { DealBulkBar } from "./dealbulk";
 
-// The deal page's aside: the next move first, then the Deal Room when the deal
-// has one. Its own component so the screen's render stays readable.
-function DealAside({
-  dealId,
-  dealName,
-}: Readonly<{ dealId: string; dealName: string }>) {
-  return (
-    <>
-      <DealRoomAside dealId={dealId} dealName={dealName} />
-    </>
-  );
-}
-
 import { DealFiles } from "./dealfiles";
 import {
   DealProjectChip,
@@ -3133,6 +3120,23 @@ function DealSubtitle({
   );
 }
 
+// Deal360 leads the page. It is absent on an overlay-backed deal: the briefing
+// is written from records this installation holds, and a mirrored deal's
+// timeline is the incumbent's rather than ours.
+function DealLead({
+  dealId,
+  overlay,
+}: Readonly<{ dealId: string; overlay: boolean }>) {
+  if (overlay) {
+    return null;
+  }
+  return (
+    <div className="deal360-lead">
+      <DealStatusCardPanel dealId={dealId} />
+    </div>
+  );
+}
+
 function DealOverviewPane({
   deal,
   stages,
@@ -3459,16 +3463,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               )}
               aside={
                 overlay ? undefined : (
-                  <DealAside dealId={id} dealName={deal.name} />
+                  <DealRoomAside dealId={id} dealName={deal.name} />
                 )
               }
               asideLabel={t("room.card.title")}
             >
-              {overlay ? null : (
-                <div className="deal360-lead">
-                  <DealStatusCardPanel dealId={id} />
-                </div>
-              )}
+              <DealLead dealId={id} overlay={overlay} />
               <div style={{ marginBottom: 16 }}>
                 <SegmentedControl
                   options={DEAL_TABS}

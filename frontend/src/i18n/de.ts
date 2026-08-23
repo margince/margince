@@ -4329,7 +4329,8 @@ export const de = {
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
   "deal360.title": "Deal360",
-  "deal360.sub": "Was passiert ist, was den Deal aufhält, und was als Nächstes zu sagen ist.",
+  "deal360.sub":
+    "Was passiert ist, was den Deal aufhält, und was als Nächstes zu sagen ist.",
   "deal360.blocker": "Was den Deal aufhält",
   "deal360.buyer": "Was der Käufer will",
   "deal360.verdict": "Wie es um den Deal steht",
@@ -4342,7 +4343,8 @@ export const de = {
   "deal360.createTask": "Aufgabe anlegen",
   "deal360.draftReply": "Antwort entwerfen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
-  "deal360.unreadable": "Dieses Briefing konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
+  "deal360.unreadable":
+    "Dieses Briefing konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
   "prefs.rateLimited":
     "Gerade zu viele Versuche von hier aus. Warte eine Minute und lade neu.",
   "prefs.subscribed": "Abonniert",

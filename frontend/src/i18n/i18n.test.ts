@@ -23,6 +23,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface, and a title that is only the
   // deal's own name in a placeholder.
   "room.card.title",
+  "deal360.title",
   "persondealrooms.title",
   "room.create.defaultTitle",
   "buyer.poweredBy",
