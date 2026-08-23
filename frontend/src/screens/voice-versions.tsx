@@ -367,11 +367,13 @@ function VersionRow({
         {t("voice.history.versionRow", { n: version.profile_version })}{" "}
         <Badge>{versionStatusLabel(t, version.status)}</Badge>
         {" · "}
-        {/* `locale` is the app's own code ("en"), which is not a BCP-47 tag —
-            handed straight to Intl it resolves to en-US and prints 8/21/2026
-            where every other date in this product prints 21/08/2026. The tag
-            comes from format/, and the record's zone with it: a profile
-            version is stamped by the record, not by where its reader sits. */}
+        {/* `locale` is the app's own code ("en") — a valid BCP-47 tag, but a
+            language-only one, and an unspecified region is exactly the gap
+            A100 exists to close. Handed straight to Intl it resolves to en-US
+            defaults and prints 8/21/2026 where every other date in this
+            product prints 21/08/2026. The regioned tag comes from format/, and
+            the record's zone with it: a profile version is stamped by the
+            record, not by where its reader sits. */}
         {formatDate(version.created_at, locale, RECORD_ZONE)}
       </span>
       {canEdit && version.status === "superseded" && (

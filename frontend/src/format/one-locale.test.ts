@@ -219,6 +219,9 @@ type Finding = Readonly<{ file: string; line: number; text: string }>;
  * TypeScript program, and it is asked once per file rather than per call.
  */
 function importsTheMapping(parsed: ts.SourceFile): boolean {
+  if (bindsTheNameLocally(parsed)) {
+    return false;
+  }
   return parsed.statements.some((statement) => {
     if (
       !ts.isImportDeclaration(statement) ||
@@ -234,6 +237,42 @@ function importsTheMapping(parsed: ts.SourceFile): boolean {
       bindings.elements.some((element) => element.name.text === "INTL_LOCALE")
     );
   });
+}
+
+/**
+ * Whether anything in this file DECLARES the name the mapping is imported
+ * under.
+ *
+ * A parameter, a local, a destructured binding — any of them shadows the import
+ * inside its scope, so `INTL_LOCALE[locale]` there reads a table this module
+ * never saw. Checked per FILE rather than per scope: a file that both imports
+ * the mapping and declares something under the same name is ambiguous, and the
+ * safe reading of an ambiguous file is that its call sites are not proven.
+ *
+ * Not a substitute for resolving the identifier through a type checker, and it
+ * does not pretend to be. It is the half that costs one walk instead of a whole
+ * TypeScript program, and it fails CLOSED — the direction a gate must fail in.
+ */
+function bindsTheNameLocally(parsed: ts.SourceFile): boolean {
+  let bound = false;
+  const walk = (node: ts.Node): void => {
+    if (bound) {
+      return;
+    }
+    if (
+      (ts.isVariableDeclaration(node) ||
+        ts.isParameter(node) ||
+        ts.isBindingElement(node)) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "INTL_LOCALE"
+    ) {
+      bound = true;
+      return;
+    }
+    node.forEachChild(walk);
+  };
+  walk(parsed);
+  return bound;
 }
 
 /**
@@ -299,6 +338,19 @@ function intlAliases(
   const isIntl = (node: ts.Expression): boolean =>
     ts.isIdentifier(node) && node.text === "Intl";
   const walk = (node: ts.Node): void => {
+    // `let NF; NF = Intl.NumberFormat` binds the same thing a declaration does,
+    // one statement later. A collector that knew only declarations would report
+    // the first spelling and wave the second through.
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(node.left)
+    ) {
+      const member = memberOfIntl(node.right, isIntl);
+      if (member !== undefined && formatters.includes(member)) {
+        aliases.add(node.left.text);
+      }
+    }
     if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
       const init = node.initializer;
       // const { NumberFormat, DateTimeFormat } = Intl
@@ -410,8 +462,14 @@ function findingsIn(
       // locale the call renders in, and that does not depend on the type. The
       // ARGUMENT POSITION comes from the declaration rather than from this
       // file's knowledge of which method puts it where.
-      if (ts.isPropertyAccessExpression(callee)) {
-        const name = callee.name.text;
+      const method = ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : ts.isElementAccessExpression(callee) &&
+            ts.isStringLiteralLike(callee.argumentExpression)
+          ? callee.argumentExpression.text
+          : undefined;
+      if (method !== undefined) {
+        const name = method;
         const position = methods.get(name);
         if (
           position !== undefined &&
@@ -472,8 +530,25 @@ describe("one locale for every rendered value", () => {
   );
 
   it("reads the tree it is meant to sweep, extension screens included", () => {
-    // A miswired walk passes every assertion below by inspecting nothing.
-    expect(files.length).toBeGreaterThan(200);
+    // Every immediate subdirectory of src/ that holds a module file has to be
+    // represented, DERIVED from the directory listing rather than named here.
+    //
+    // A floor was the first spelling and it does not hold this: the sweep reads
+    // ~900 files, so `toBeGreaterThan(200)` clears comfortably even after a
+    // walk stops descending into `screens/` — which is where two thirds of the
+    // subject lives. The regression the arm exists to catch would pass it, and
+    // every assertion below would then vet a silently smaller tree.
+    const swept = new Set(
+      files
+        .filter((path) => path.startsWith(srcRoot))
+        .map((path) => relative(srcRoot, path).split(/[/\\]/)[0]),
+    );
+    const expectedDirs = readdirSync(srcRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "node_modules")
+      .map((entry) => entry.name)
+      .filter((name) => filesUnder(join(srcRoot, name)).length > 0);
+    expect(expectedDirs.length).toBeGreaterThan(4);
+    expect(expectedDirs.filter((name) => !swept.has(name))).toEqual([]);
     // And the extension tier is genuinely in it: a unit's screen ships in the
     // same bundle, so a sweep that quietly stopped at src/ would hold the core
     // to a standard the extension tier escapes.
@@ -527,45 +602,106 @@ describe("one locale for every rendered value", () => {
   });
 
   it("sees each shape of the defect, including the ones a grep cannot", () => {
-    const planted = [
+    // Each line says for ITSELF whether it is a finding, so the expectation is
+    // read off the fixture rather than kept beside it as line numbers. A
+    // parallel index list was the first spelling and it was wrong within the
+    // hour — a second list that has to agree with the first is the defect this
+    // whole gate is about, and putting one inside the gate is how it gets
+    // written twice.
+    const planted: { code: string; finding: boolean }[] = [
       // The fixture IMPORTS the mapping, which is the realistic shape: a file
       // that uses it correctly somewhere and then builds a second formatter
       // beside it. It also keeps this arm honest — without the import every
       // line below is refused by `importsTheMapping` before the argument is
       // ever looked at, so the argument check would be untested and a mutation
       // removing it passed this suite. It did, once.
-      'import { INTL_LOCALE } from "../format/format";',
+      {
+        code: 'import { INTL_LOCALE } from "../format/format";',
+        finding: false,
+      },
       // No locale at all — the browser's guess.
-      "const a = (1234).toLocaleString();",
-      "const b = new Date(x).toLocaleDateString();",
-      "const c = new Date(x).toLocaleTimeString(undefined, {});",
-      // A locale, but not through the mapping. `"en"` is not `en-GB`, and this
-      // whole class contains no `toLocale` for a text search to find.
-      "const d = new Intl.NumberFormat(locale).format(1);",
-      'const e = new Intl.NumberFormat("en-US").format(1);',
-      "const f = Intl.DateTimeFormat(locale).format(now);",
-      // A formatter the TypeScript lib in this tree does not declare, reached
-      // because the runtime does know it.
-      "const g = new Intl.DurationFormat(locale);",
+      { code: "const a = (1234).toLocaleString();", finding: true },
+      { code: "const b = new Date(x).toLocaleDateString();", finding: true },
+      {
+        code: "const c = new Date(x).toLocaleTimeString(undefined, {});",
+        finding: true,
+      },
+      // A locale, but not through the mapping. `"en"` is a language-only tag,
+      // valid BCP-47 and NOT `en-GB`: with no region it resolves to en-US
+      // defaults. This whole class contains no `toLocale` for a grep to find.
+      {
+        code: "const d = new Intl.NumberFormat(locale).format(1);",
+        finding: true,
+      },
+      {
+        code: 'const e = new Intl.NumberFormat("en-US").format(1);',
+        finding: true,
+      },
+      {
+        code: "const f = Intl.DateTimeFormat(locale).format(now);",
+        finding: true,
+      },
       // A tag held in a variable is still a second answer: the point is that
       // the mapping is read where the reader of the line can see it.
-      "const h = new Intl.NumberFormat(tag).format(1);",
+      {
+        code: "const h = new Intl.NumberFormat(tag).format(1);",
+        finding: true,
+      },
       // The mapping read with a PINNED key: the shared table, and still English
       // for every reader. This passed an earlier predicate that looked only at
       // the identifier.
-      'const i = new Intl.NumberFormat(INTL_LOCALE["en"]).format(1);',
-      // The namespace reached by element access rather than by property.
-      'const j = new Intl["NumberFormat"](locale).format(1);',
-      // And reached through a local bound to it — a destructure and an alias.
-      "const { DateTimeFormat } = Intl;",
-      "const k = new DateTimeFormat(locale).format(now);",
-      "const NF = Intl.NumberFormat;",
-      "const l = new NF(locale).format(1);",
-    ].join("\n");
-    const lines = findingsIn("planted.ts", planted, formatters, methods).map(
-      ({ line }) => line,
-    );
-    expect(lines).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15]);
+      {
+        code: 'const i = new Intl.NumberFormat(INTL_LOCALE["en"]).format(1);',
+        finding: true,
+      },
+      // The namespace and the method reached by element access rather than by
+      // property — the spelling a gate anchored on the dot cannot see.
+      {
+        code: 'const j = new Intl["NumberFormat"](locale).format(1);',
+        finding: true,
+      },
+      { code: 'const m = (1234)["toLocaleString"]();', finding: true },
+      // A formatter reached through a local bound to it — by destructure, by
+      // declaration, and by an assignment one statement later. The binding
+      // lines are not findings; the calls through them are.
+      { code: "const { DateTimeFormat } = Intl;", finding: false },
+      {
+        code: "const k = new DateTimeFormat(locale).format(now);",
+        finding: true,
+      },
+      { code: "const NF = Intl.NumberFormat;", finding: false },
+      { code: "const l = new NF(locale).format(1);", finding: true },
+      { code: "let LF;", finding: false },
+      { code: "LF = Intl.NumberFormat;", finding: false },
+      { code: "const n = new LF(locale).format(1);", finding: true },
+    ];
+    // EVERY formatter the runtime reports, one line each, DERIVED — not a list
+    // of names typed here. A hard-coded `Intl.DurationFormat` line was the
+    // first spelling and it is wrong in both directions: on a runtime that has
+    // it the line proves one formatter rather than the set, and on a runtime
+    // that does not (Node 22 has no DurationFormat; CI pins 24) it yields no
+    // finding and the arm goes red for a reason that is not a defect. A gate
+    // whose suite depends on which Node somebody has is a gate people turn off.
+    const beforeDerived = planted.length;
+    for (const formatter of formatters) {
+      planted.push({
+        code: `const z = new Intl.${formatter}(locale);`,
+        finding: true,
+      });
+    }
+    const lines = findingsIn(
+      "planted.ts",
+      planted.map(({ code }) => code).join("\n"),
+      formatters,
+      methods,
+    ).map(({ line }) => line);
+    const expected = planted
+      .map(({ finding }, index) => (finding ? index + 1 : 0))
+      .filter((line) => line > 0);
+    expect(lines).toEqual(expected);
+    // The derived tail is genuinely there, so a runtime reporting an empty
+    // formatter set cannot make this arm vacuous.
+    expect(planted.length).toBeGreaterThan(beforeDerived);
   });
 
   it("passes the one permitted spelling, and the zone lookup next door", () => {
@@ -601,6 +737,34 @@ describe("one locale for every rendered value", () => {
         ({ line }) => line,
       ),
     ).toEqual([2]);
+    // A file that imports the mapping AND declares the name is the case the
+    // shadowing check alone can refuse: the import check passes it, so if that
+    // were the only guard the local table below would be read as the shared
+    // one. Both spellings — a local and a parameter — because a fixture that
+    // exercised only one leaves the other untested, and a mutation disabling
+    // the whole check passed this suite until this case existed.
+    const shadowedLocal = [
+      'import { INTL_LOCALE } from "../format/format";',
+      'const INTL_LOCALE = { en: "en-US" };',
+      "const a = new Intl.NumberFormat(INTL_LOCALE[locale]).format(1);",
+    ].join("\n");
+    expect(
+      findingsIn("shadowedlocal.ts", shadowedLocal, formatters, methods).map(
+        ({ line }) => line,
+      ),
+    ).toEqual([3]);
+    const shadowedParam = [
+      'import { INTL_LOCALE } from "../format/format";',
+      "function render(INTL_LOCALE) {",
+      "  return new Intl.NumberFormat(INTL_LOCALE[locale]).format(1);",
+      "}",
+    ].join("\n");
+    expect(
+      findingsIn("shadowedparam.ts", shadowedParam, formatters, methods).map(
+        ({ line }) => line,
+      ),
+    ).toEqual([3]);
+
     // A default import of the module does not carry the binding either.
     const wrongImport = [
       'import format from "../format/format";',
