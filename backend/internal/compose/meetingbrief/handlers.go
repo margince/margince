@@ -41,7 +41,10 @@ func (h Handlers) GetMeetingBrief(w http.ResponseWriter, r *http.Request, id crm
 		project := ids.From[ids.ProjectKind](ids.UUID(*params.ProjectId))
 		requested = &project
 	}
-	brief, err := h.svc.GetScoped(r.Context(), ids.UUID(id), requested)
+	// The reader's own language, so the model lane answers in it. The
+	// deterministic floor ignores it and is unaffected.
+	ctx := WithReaderLanguage(r.Context(), languageOf(r))
+	brief, err := h.svc.GetScoped(ctx, ids.UUID(id), requested)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

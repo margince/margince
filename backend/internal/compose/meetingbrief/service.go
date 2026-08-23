@@ -61,11 +61,23 @@ type Service struct {
 	view   Assembler
 	claims ClaimReader
 	now    func() time.Time
+	// lane rewrites the deterministic floor in Margince's voice when a
+	// deployment binds one. Nil is the floor, which is not an error state.
+	lane Completer
 }
 
 // NewService binds the brief to the reads it is written from.
 func NewService(pool *pgxpool.Pool, view Assembler, claimReader ClaimReader, now func() time.Time) *Service {
 	return &Service{pool: pool, view: view, claims: claimReader, now: now}
+}
+
+// WithLane binds the summarize lane that REWRITES the deterministic sections
+// in Margince's own voice. Without it the service serves the floor and says so
+// in generated_by, which is the deployment running no model rather than an
+// error. Returns the service so a caller can bind it where it is built.
+func (s *Service) WithLane(lane Completer) *Service {
+	s.lane = lane
+	return s
 }
 
 // Get assembles the brief for one meeting, fresh.
@@ -131,6 +143,9 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	if err != nil {
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
+	// The lane rewrites the same facts in Margince's voice, or answers the
+	// floor: Write decides, and writtenBy tells the reader which they got.
+	sections, writtenBy := Write(ctx, s.lane, in)
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
@@ -146,11 +161,9 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		// Always the instant of the read. Nothing is stored, so there is no
 		// older instant this could honestly report.
 		GeneratedAt: s.now().UTC(),
-		// No model lane is wired: the sections are the deterministic floor and
-		// say so, rather than passing a composition off as a written brief.
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: writtenBy,
 		Scope:       scope,
-		Sections:    wireSections(Deterministic(in)),
+		Sections:    wireSections(sections),
 		Omitted:     omissions(in),
 	}, filed, nil
 }
@@ -239,6 +252,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	}
 
 	in := FromMeeting(room, perAttendee, s.now().UTC())
+	in.Language = ReaderLanguage(ctx)
 	in.PriorMeetings = foldPriorMeetings(earlier)
 	in.LastSpokeAt = lastSpoke
 	in.DealMoves = moves
