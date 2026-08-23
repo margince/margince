@@ -1,8 +1,8 @@
 import type { components } from "../api/schema";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { toMajorUnits } from "../format/minorunits";
-import { useT } from "../i18n";
+import { formatMoneyCompact } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 
 // The relationship state strip (concept §5.3): six facts that change how a
 // reader interprets everything below them.
@@ -26,6 +26,7 @@ export function PersonStrip({
   consentVerdict: string | undefined;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const omitted = new Set(view.sections_omitted ?? []);
   // A withheld slot says so. Rendering it empty would read as "there is none",
   // which is a claim about the record rather than about the reader's grants —
@@ -56,7 +57,7 @@ export function PersonStrip({
       />
       <StatCard
         label={t("person.strip.openDeal")}
-        value={reading(openDeal(view, t), omitted.has("commercial"))}
+        value={reading(openDeal(view, t, locale), omitted.has("commercial"))}
       />
       <StatCard
         label={t("person.strip.nextMeeting")}
@@ -109,7 +110,11 @@ function reciprocity(view: Person360, t: ReturnType<typeof useT>): string {
   return t("person.strip.inOut", { inbound, outbound });
 }
 
-function openDeal(view: Person360, t: ReturnType<typeof useT>): string {
+function openDeal(
+  view: Person360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   const deal = view.commercial?.deal;
   if (!deal) {
     return t("person.strip.noOpenDeal");
@@ -117,7 +122,11 @@ function openDeal(view: Person360, t: ReturnType<typeof useT>): string {
   if (deal.amount_minor == null || !deal.currency) {
     return deal.title;
   }
-  return money(deal.amount_minor, deal.currency);
+  // The design system's glance formatter, which company360 already uses for
+  // the same job on the account page. It reads the scale off the CURRENCY and
+  // abbreviates in the reader's own conventions — German goes to "Mio." where
+  // English goes to "m", and a locale-blind table said "k" to everyone.
+  return formatMoneyCompact(deal.amount_minor, deal.currency, locale);
 }
 
 function nextMeeting(view: Person360, t: ReturnType<typeof useT>): string {
@@ -158,45 +167,4 @@ function consentTone(
     return "good";
   }
   return verdict === "blocked" ? "danger" : undefined;
-}
-
-// Money arrives in MINOR units and is rendered whole: the strip shows €95k,
-// not €95,000.00, because the slot is a glance and the exact figure lives on
-// the deal card below.
-//
-// The scale is the CURRENCY's. A hard-coded /100 rendered ₫18,000,000 as
-// "VND 180k" — the same hundredfold understatement the three server-side
-// copies of this function carried, which is what makes this the fourth.
-//
-// It is still a fourth FORMATTER, and that half is not fixed here.
-// format/formatMoneyCompact does this job locale-aware and currency-aware
-// already, but neither this component nor personcards.tsx has a locale in
-// scope, and threading one in changes the rendered string on both surfaces —
-// a visual change that belongs with the frontend formatter sweep, not with a
-// correctness fix to the scale. Adopting it is tracked there.
-export function money(minor: number, currency: string): string {
-  // The tier comes from the MAGNITUDE and the sign goes in front. Comparing the
-  // signed value abbreviated only the positive half, so a credit read
-  // "€-95000" with the minus inside the figure — the shape a glance slot exists
-  // to avoid. The server-side sibling had the same defect and the same fix.
-  const major = toMajorUnits(minor, currency);
-  const sign = minor < 0 ? "-" : "";
-  const magnitude = Math.abs(major);
-  if (magnitude >= 1000) {
-    return `${sign}${symbolFor(currency)}${Math.round(magnitude / 1000)}k`;
-  }
-  return `${sign}${symbolFor(currency)}${magnitude}`;
-}
-
-function symbolFor(currency: string): string {
-  switch (currency) {
-    case "EUR":
-      return "€";
-    case "USD":
-      return "$";
-    case "GBP":
-      return "£";
-    default:
-      return `${currency} `;
-  }
 }

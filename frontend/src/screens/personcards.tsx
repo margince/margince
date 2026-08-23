@@ -4,10 +4,10 @@ import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatMoneyCompact } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
-import { money } from "./personstrip";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a
@@ -31,6 +31,7 @@ export function PersonBriefCard({
   view: Person360;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const firstName = view.person.full_name.split(" ")[0];
   // The timeline the page already read, by id. A citation is resolved from it
   // rather than fetched, on the same terms as every other card here: a chip
@@ -89,7 +90,7 @@ export function PersonBriefCard({
           <h3 className="pe-brief-label t-caption">
             {t("person.commercial.title")}
           </h3>
-          <p className="pe-brief-line">{commercialLine(view, t)}</p>
+          <p className="pe-brief-line">{commercialLine(view, t, locale)}</p>
         </div>
         <div className="pe-brief-block">
           <h3 className="pe-brief-label t-caption">
@@ -123,7 +124,11 @@ export function hasCommercial(view: Person360): boolean {
   );
 }
 
-function commercialLine(view: Person360, t: ReturnType<typeof useT>): string {
+function commercialLine(
+  view: Person360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   const commercial = view.commercial;
   if (!commercial) {
     return t("person.commercial.withheld");
@@ -132,7 +137,7 @@ function commercialLine(view: Person360, t: ReturnType<typeof useT>): string {
   if (deal) {
     const amount =
       deal.amount_minor != null && deal.currency
-        ? money(deal.amount_minor, deal.currency)
+        ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
         : null;
     return [deal.title, amount].filter(Boolean).join(" · ");
   }
@@ -256,6 +261,7 @@ function Absent(): ReactNode {
 
 export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const commercial = view.commercial;
   if (!commercial) {
     // The section was withheld. "You may not see deals" and "there is no deal"
@@ -291,7 +297,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
             <div className="pe-deal-figures">
               {[
                 deal.amount_minor != null && deal.currency
-                  ? money(deal.amount_minor, deal.currency)
+                  ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
                   : null,
                 deal.stage,
                 deal.close_date
