@@ -28,7 +28,7 @@ import (
 )
 
 // seedProject creates a project on a fresh company, owned by the given
-// user (nil = ownerless).
+// user (nil = the creating admin, since a project defaults to its creator).
 type projectFixture struct {
 	ID      ids.ProjectID
 	Version int64
@@ -908,5 +908,47 @@ func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
 	fourth := seedProject(e.Admin(), t, e, "Warehouse revamp", org, nil)
 	if k := mintedKey(e.Admin(), t, e, fourth.ID); strings.EqualFold(k, "wr-9") {
 		t.Errorf("minted %q over a live lower-cased key; the index would refuse it", k)
+	}
+}
+
+// A project created without a requested owner belongs to its creator — the
+// same birth default person, organization, lead and deal already apply. The
+// stake is the New-deal form's "New project…" flow: write authority reads an
+// unowned row as nobody's to change, so an ownerless project could never be
+// attached to a deal by the very rep who had just created it.
+func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	org := e.SeedOrg(t, "BAER Pharma", &e.Rep1)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"project":      {Create: true, Read: true, Update: true},
+			"deal":         {Create: true, Read: true, Update: true},
+			"organization": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	})
+
+	p, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+		Name: "ERP rollout", OrganizationID: orgIDOf(org), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("a rep creating a project on their own company: %v", err)
+	}
+	if p.OwnerId == nil || ids.UUID(*p.OwnerId) != e.Rep1 {
+		t.Fatalf("owner = %v, want the creating rep %s", p.OwnerId, e.Rep1)
+	}
+
+	// The flow that exposed the gap: the same rep immediately binds a new
+	// deal to the project they just created.
+	orgID := orgIDOf(org)
+	projID := projectIDOf(ids.UUID(p.Id))
+	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
+		Name: "ERP rollout deal", PipelineID: pipeline, StageID: open,
+		OrganizationID: &orgID, ProjectID: &projID, Source: "manual",
+	}); err != nil {
+		t.Fatalf("the creating rep attaching their new project to a new deal: %v", err)
 	}
 }

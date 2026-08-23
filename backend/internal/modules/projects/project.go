@@ -68,6 +68,12 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
+	// A project with no requested owner belongs to its creator, the same
+	// default person/organization/lead/deal births apply. Ownerless matters
+	// more here than elsewhere: write authority reads an unowned row as
+	// nobody's to change, so an ownerless project can never be attached to a
+	// deal by the rep who just created it (projects.EnsureAttachable).
+	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
