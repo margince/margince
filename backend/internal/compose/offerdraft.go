@@ -51,6 +51,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -303,7 +304,7 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 // draftCandidates asks the model for offer-line candidates over the
 // gathered context and the rate card the caller read for it.
 func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product) ([]offerLineCandidate, error) {
-	req := offerDraftRequest(dealContext, catalog, BaseLanguageForPrompt(ctx, d.pool))
+	req := offerDraftRequest(dealContext, catalog, identity.BaseLanguageForPrompt(ctx, d.pool))
 
 	var (
 		resp model.Response

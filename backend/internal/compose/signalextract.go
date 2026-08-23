@@ -36,6 +36,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -267,7 +268,7 @@ var errRefusedReading = errors.New("signal extract: the model's reading was refu
 
 // ask makes the one structured call that reads a conversation.
 func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extractedEvent, error) {
-	req := extractRequest(thread, BaseLanguageForPrompt(ctx, x.pool))
+	req := extractRequest(thread, identity.BaseLanguageForPrompt(ctx, x.pool))
 	validate := extractShapeValid(thread)
 	var resp model.Response
 	var err error

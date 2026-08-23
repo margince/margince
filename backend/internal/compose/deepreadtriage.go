@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/freemail"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -295,7 +296,7 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 			Reason: "the landing page carries no readable text",
 		}, nil
 	}
-	req := triageRequest(seed, BaseLanguageForPrompt(ctx, w.pool))
+	req := triageRequest(seed, identity.BaseLanguageForPrompt(ctx, w.pool))
 	var resp model.Response
 	var err error
 	if structured, ok := w.triageBrain.(validatedBrain); ok {

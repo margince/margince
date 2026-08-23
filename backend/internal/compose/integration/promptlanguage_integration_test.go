@@ -14,7 +14,7 @@ package integration
 // question is a settings row, a workspace transaction and an accessor, and the
 // only honest way to check those is to write the row and read the prompt back.
 //
-// It goes through compose.BaseLanguageForPrompt rather than a hand-copied
+// It goes through identity.BaseLanguageForPrompt rather than a hand-copied
 // six-line settings read, because a test that supplies its own version of the
 // production path proves nothing about production.
 
@@ -25,7 +25,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -66,7 +65,7 @@ func TestTheBaseLanguageSetOnTheInstallationReachesThePrompt(t *testing.T) {
 
 	setBaseLanguage(ctx, t, e, "de")
 
-	rule := promptlang.Rule(compose.BaseLanguageForPrompt(ctx, e.Pool))
+	rule := promptlang.Rule(identity.BaseLanguageForPrompt(ctx, e.Pool))
 	if !strings.Contains(rule, "German") {
 		t.Fatalf("the installation is set to German and the prompt rule does not say so:\n%s", rule)
 	}
@@ -76,7 +75,7 @@ func TestTheBaseLanguageSetOnTheInstallationReachesThePrompt(t *testing.T) {
 	// passes against code that always says German.
 	setBaseLanguage(ctx, t, e, "vi")
 
-	rule = promptlang.Rule(compose.BaseLanguageForPrompt(ctx, e.Pool))
+	rule = promptlang.Rule(identity.BaseLanguageForPrompt(ctx, e.Pool))
 	if !strings.Contains(rule, "Vietnamese") {
 		t.Fatalf("the installation was changed to Vietnamese and the prompt rule did not follow:\n%s", rule)
 	}
@@ -103,7 +102,7 @@ func TestAnInstallationThatNeverNamedALanguageStillGetsAPrompt(t *testing.T) {
 		t.Fatalf("removing the base-language row: %v", err)
 	}
 
-	rule := promptlang.Rule(compose.BaseLanguageForPrompt(ctx, e.Pool))
+	rule := promptlang.Rule(identity.BaseLanguageForPrompt(ctx, e.Pool))
 	if !strings.Contains(rule, "English") {
 		t.Fatalf("an installation with no base-language row did not fall back to English:\n%s", rule)
 	}

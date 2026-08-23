@@ -24,7 +24,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // timelineWindow bounds how much of the timeline the card reads. The timeline
@@ -130,7 +129,21 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	if verdict.serve {
 		return verdict.card, nil
 	}
-	card := s.write(ctx, f, mv, in, verdict.askModel)
+	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel)
+	if laneFailed {
+		// The lane was wired and did not answer: a timeout, a budget, an
+		// unparseable reply. The reader gets the floor, which is a working
+		// card — but storing it under the CURRENT fingerprint would make one
+		// transient outage permanent, because a matching fingerprint is served
+		// without ever asking again. The card would stand until some unrelated
+		// fact moved.
+		//
+		// This is reachable in a way it was not before: the language is part of
+		// the fingerprint now, so an installation that switches to German mints
+		// a new key, and a lane that happens to be down while it does would
+		// freeze the ENGLISH floor as that installation's German card.
+		return card, nil
+	}
 	if err := s.save(ctx, userID, dealID, stored{
 		Fingerprint: fingerprint,
 		GeneratedAt: card.GeneratedAt,
@@ -176,12 +189,17 @@ func (s *Service) decideFromCache(
 // refused, absent or over-budget lane is the declared degrade posture, not an
 // error to surface: the reader gets the deterministic card and generated_by
 // says so.
+// The second return says the lane FAILED, as opposed to being absent or held
+// back by the call floor. Both of those produce the same card, and only the
+// first is a reason not to cache it: a lane nobody wired will answer no
+// differently next time, so its floor is the real answer and belongs in the
+// cache, while a lane that timed out will.
 func (s *Service) write(
 	ctx context.Context, f facts, mv crmcontracts.DealStatusCardMove, in StatusInput, askModel bool,
-) crmcontracts.DealStatusCard {
+) (card crmcontracts.DealStatusCard, laneFailed bool) {
 	floor := composeDeterministic(f, mv)
 	if s.lane == nil || !askModel {
-		return floor
+		return floor, false
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)
 	defer cancel()
@@ -193,9 +211,9 @@ func (s *Service) write(
 		// than the reply, because the reply is the buyer's words.
 		slog.WarnContext(ctx, "deal status fell back to the deterministic card",
 			"deal_id", f.deal.Id.String(), "reason", err)
-		return floor
+		return floor, true
 	}
-	return foldWritten(floor, written, f, mv)
+	return foldWritten(floor, written, f, mv), false
 }
 
 func (s *Service) ask(ctx context.Context, in StatusInput, lang string) (WrittenStatus, error) {
@@ -237,34 +255,8 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
 	}
-	f.lang = s.baseLanguage(ctx)
+	f.lang = identity.BaseLanguageForPrompt(ctx, s.pool)
 	return f, nil
-}
-
-// baseLanguage resolves the language this installation's shared writing is in.
-//
-// It never fails the read. The card has a deterministic floor that needs no
-// model at all, so refusing the whole deal page because a settings row could
-// not be read would trade a working page for a formatting preference. English
-// is what these cards were written in before the setting existed, and a German
-// installation suddenly reading English is a visible complaint rather than a
-// silent one.
-func (s *Service) baseLanguage(ctx context.Context) string {
-	lang := string(textlang.English)
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		resolved, err := identity.BaseLanguageOf(ctx, tx)
-		if err != nil {
-			return err
-		}
-		lang = resolved
-		return nil
-	})
-	if err != nil {
-		slog.WarnContext(ctx, "deal status could not read the base language and wrote in English",
-			"reason", err)
-		return string(textlang.English)
-	}
-	return lang
 }
 
 // gatherRoom reads the deal's room, when there is one, with its conversation.

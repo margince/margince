@@ -35,6 +35,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
@@ -243,7 +244,7 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 
 // ask puts one transcript to the model and returns what it may act on.
 func (p *TranscriptProposer) ask(ctx context.Context, lines []string) ([]proposedStep, error) {
-	req := transcriptRequest(lines, BaseLanguageForPrompt(ctx, p.pool))
+	req := transcriptRequest(lines, identity.BaseLanguageForPrompt(ctx, p.pool))
 	validate := transcriptShapeValid(len(lines))
 	var resp model.Response
 	var err error

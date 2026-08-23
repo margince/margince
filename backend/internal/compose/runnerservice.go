@@ -281,7 +281,7 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 		Grounding:  grounding,
 		// The rendered rule, not a code: the runner is a module and may not
 		// import compose, where the one spelling of this block lives.
-		LanguageRule: promptlang.Rule(BaseLanguageForPrompt(bounded, s.pool)),
+		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
 	})
 	s.landOutcome(runCtx, runID, job.TriggerRef, res, err)
 	s.finishJob(ctx, job.ID, &runID, "")
@@ -382,7 +382,7 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 		// the summary is written after the human answers, so it takes the
 		// language the installation has NOW, the same way Tools rides the
 		// current catalog entry above.
-		LanguageRule: promptlang.Rule(BaseLanguageForPrompt(bounded, s.pool)),
+		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
 	}, runner.Decision{
 		Pending:  suspended.Pending,
 		Approved: payload.Verdict == "approved",

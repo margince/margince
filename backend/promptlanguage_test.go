@@ -338,3 +338,64 @@ func TestOnlyPromptlangSpellsTheLanguageRule(t *testing.T) {
 			"text from being translated", path)
 	}
 }
+
+// A request assembled field by field is invisible to the census above, which
+// looks for composite literals. Rather than teach it to trace assignments —
+// which is a type-checker's job and would still miss a field set through a
+// pointer — this refuses the pattern outright.
+//
+// Nothing in the tree builds a request that way today, so the rule costs
+// nothing to hold and closes the one hole a reader of the census would
+// reasonably worry about: `var req model.Request` followed by `req.System = …`
+// reaches a model exactly like a literal does, and would carry no rule while
+// the gate stayed green.
+func TestAModelRequestIsBuiltAsALiteral(t *testing.T) {
+	for _, tree := range promptTrees {
+		err := filepath.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() || !strings.HasSuffix(path, ".go") ||
+				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+				return nil
+			}
+			fset := token.NewFileSet()
+			file, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			if parseErr != nil {
+				t.Fatalf("parsing %s: %v", path, parseErr)
+			}
+			local, ok := localNameFor(file, "shared/ports/model")
+			if !ok {
+				return nil
+			}
+			ast.Inspect(file, func(node ast.Node) bool {
+				decl, isVar := node.(*ast.ValueSpec)
+				// A declaration with values is `var x = model.Request{…}`,
+				// whose literal the census already sees. The zero-value form
+				// is the one that gets filled in afterwards.
+				if !isVar || len(decl.Values) > 0 || !namesRequestType(decl.Type, local) {
+					return true
+				}
+				t.Errorf("%s:%d declares a zero-value model.Request and fills it in afterwards. "+
+					"The language gate finds requests by their composite literal, so this one is invisible to it — "+
+					"build the request as a literal instead",
+					path, fset.Position(decl.Pos()).Line)
+				return true
+			})
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", tree, err)
+		}
+	}
+}
+
+// namesRequestType reports whether this type expression is model.Request.
+func namesRequestType(expr ast.Expr, local string) bool {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok || sel.Sel.Name != "Request" {
+		return false
+	}
+	ident, ok := sel.X.(*ast.Ident)
+	return ok && ident.Name == local
+}
