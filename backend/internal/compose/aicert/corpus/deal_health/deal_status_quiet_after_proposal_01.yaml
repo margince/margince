@@ -18,12 +18,14 @@ fixture:
       direction: inbound
       subject: "Re: pilot scope — looks right"
       at: "2026-08-20"
+      when: past
       excerpt: "Scope reads well. Booking the kickoff with our ops lead for next week."
     - label: kickoff
       kind: meeting
       direction: outbound
       subject: "Kickoff — WMS pilot scope walkthrough"
       at: "2026-08-26"
+      when: scheduled
       excerpt: "Walk the pilot scope with ops before the pilot starts."
 expect:
   outcome: accepted

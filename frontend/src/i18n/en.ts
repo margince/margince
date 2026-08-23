@@ -4369,6 +4369,7 @@ export const en = {
   "dealstatus.sub": "Where it stands, what could lose it, what to do next.",
   "dealstatus.risk": "What could lose this",
   "dealstatus.rewrite": "Write it again",
+  "dealstatus.unreadable": "This card could not be read. Reload the page, or write it again.",
   "dealstatus.createTask": "Add this task",
   "dealstatus.draftReply": "Draft the reply",
   "dealstatus.openBrief": "Open the meeting brief",

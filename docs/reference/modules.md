@@ -52,19 +52,34 @@ still answer a generated `501` until its handler lands; it is not an implementat
 | **overlay** | The HubSpot-as-system-of-record adapter — binds the frozen `datasource` seam via an inner `incumbent.Incumbent` seam, mirrors a connected portal into a governed, T2-tagged, per-user-visibility-filtered read model, and meters/degrades force-fresh reads under the shared HubSpot rate budget. Connection lifecycle is admin/ops-only; every role reads status. **Write-back is incumbent-first and partial**: `Update` and `Archive` write to the incumbent, then re-mirror the record it returns; `Create`, `Merge`, `PromoteLead` and `AdvanceDeal` return `unsupported_by_sor`, as does `RunReport`. The ADR-0071 overlay→native cutover is live — see [flip-an-overlay-to-native.md](../how-to/flip-an-overlay-to-native.md). | Handlers→Service (`NewService`) + a seam-shaped substrate (mirror/backfill/reconcile/teardown, no HTTP of their own) | `incumbent_connection, overlay_mirror, overlay_association, overlay_sync_state, mirror_user_map, mirror_user_automap_block, mirror_visibility, overlay_write_ledger, overlay_tombstone, overlay_mirror_halt, overlay_backfill_cursor, overlay_reconcile_watermark` | `/overlay/connection`, `/overlay/sync-status`, `/overlay/reconcile`, `/overlay/budget`, `/overlay/export`, `/overlay/flip:preflight`, `/overlay/flip`, `/overlay/user-map` (+`/{id}`), `/overlay/owners` |
 | **webhooks** | The governed outbound egress surface (E10/S-E10.6) — tenant-registered HTTPS subscriptions to a subset of the published event catalog, and a delivery engine that fans matching domain events off `cg:webhooks` as [Standard Webhooks](https://www.standardwebhooks.com/)-signed POSTs (`webhook-id`/`webhook-timestamp`/`webhook-signature`), retried with exponential backoff, dead-lettered, and human-replayable. Every delivered payload is generated contract-first from the isolated `api/public-events.yaml` (one `PublicEvent<Event>` schema per subscribable event, additive-only versioning) via `backend/tools/gen-payloads`, and bound to its emit site through the typed `storekit.EmitEvent`/`EmitEventForEntity` seam — a schema/code mismatch fails to build. The per-subscription signing secret is AES-256-GCM-sealed at rest (shown once at create/rotate); the fan-out is owner-scoped (BYO-EVT-4 — a webhook never delivers an event its owner may not see, with a ratified deferred-delivery exception for overlay `mirror.*` and two retention-telemetry subjects, ownership model still pending upstream); the dialer is SSRF-guarded. Managing subscriptions is admin/ops config; agent create/update is 🟡. Needs a deployment signing key — unconfigured, reads still list but secret paths answer 503. Also reachable from Settings → Integrations (create/pause/resume/re-target/archive/rotate + a deliveries/dead-letter/replay panel). See [outbound-webhooks.md](../explanation/outbound-webhooks.md). | Handlers→Store (`NewStore`) for CRUD; a bus-consumer + retry-sweep `Deliverer` (worker-driven, no HTTP spine) | `webhook_subscription, webhook_delivery` | `/webhook-subscriptions` (+`/{id}`,`/{id}/rotate-secret`,`/{id}/deliveries`,`/{id}/deliveries/{deliveryId}/replay`) |
 
-Seven tables are owned by the composition layer, not a module: `idempotency_key`
-(HTTP replay protection — transport plumbing), `brief_run`/`brief_item` (the
-morning-brief ranker's own snapshot, `compose/briefs`), `signal_thread_scan`
-(the per-thread scan cursor the signal extraction reads maintain), and three company-view
-tables that are **view state rather than record facts**, written without an audit
-row under the saved-view ruling — `user_record_view` (the per-user visit
-baseline) and `suggestion_dismissal` (the rep's own "not this, not now") in
-`compose/org360`, and `org_brief` (the account brief's per-user, regenerable
-cache) in `compose/orgbrief`. The live list is the map in
-`backend/tableownership_test.go`, which gates it. Compose-level *features* —
-company context, the cold-start transport, reply drafting, deep-read
-orchestration, the AI certification lane — are likewise not modules: they wire
-module stores together
+Sixteen tables are owned by the composition layer rather than by a module, and
+they fall into three kinds.
+
+**Transport plumbing** — `idempotency_key` (HTTP replay protection),
+`activity_participant_replay`, and the two vocabulary tables `activity_kind`
+and `channel_provider`.
+
+**Orchestration state** — `brief_run`/`brief_item` (the morning-brief ranker's
+snapshot, `compose/briefs`), `signal_thread_scan` (the per-thread scan cursor
+the signal-extraction reads maintain), and `agent_task`.
+
+**Per-reader view state and derived caches**, written without an audit row
+under the saved-view ruling: a row generated for one reader is never served to
+another, so regenerating it for somebody else produces different rows
+legitimately and an audit trail over that would record reading rather than
+changing. These are `user_record_view` (the per-user visit baseline) and
+`suggestion_dismissal` in `compose/org360`, `person_moment_dismissal` in
+`compose/person360`, `org_brief` in `compose/orgbrief`, `org_dossier` and
+`org_growth_fit` in `compose/orgdossier`, `person_brief` in
+`compose/personbrief`, and `deal_status_card` in `compose/dealstatus` — the
+deal page's one written card, cached per reader on a fingerprint of the facts
+it was written from.
+
+The live list is the map in `backend/tableownership_test.go`, which gates it;
+this paragraph is prose over that map and the map wins. Compose-level
+*features* — company context, the cold-start transport, reply drafting,
+deep-read orchestration, the AI certification lane — are likewise not modules:
+they wire module stores together
 ([explanation/composition-layer.md](../explanation/composition-layer.md)).
 
 ## Notable subpackages

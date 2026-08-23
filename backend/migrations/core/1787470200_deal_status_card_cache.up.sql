@@ -19,7 +19,20 @@ CREATE TABLE deal_status_card (
     generated_by text NOT NULL,
     generated_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT deal_status_card_pkey PRIMARY KEY (user_id, deal_id),
-    CONSTRAINT deal_status_card_generated_by_check CHECK (generated_by IN ('model', 'deterministic'))
+    CONSTRAINT deal_status_card_generated_by_check CHECK (generated_by IN ('model', 'deterministic')),
+    -- The payload holds sentences written from mail subjects, body excerpts and
+    -- Deal Room comments. Deleting the deal or the reader has to take that text
+    -- with it, and a cascade is the only thing that reaches a derived row no
+    -- code path enumerates. person_brief carries the same pair for the same
+    -- reason.
+    CONSTRAINT deal_status_card_deal_fkey FOREIGN KEY (deal_id)
+        REFERENCES deal(id) ON DELETE CASCADE,
+    CONSTRAINT deal_status_card_user_fkey FOREIGN KEY (user_id)
+        REFERENCES app_user(id) ON DELETE CASCADE
 );
+
+-- The primary key leads on user_id, so a delete cascading from the DEAL side
+-- would scan without this.
+CREATE INDEX deal_status_card_deal_ix ON deal_status_card USING btree (deal_id);
 
 COMMENT ON TABLE deal_status_card IS 'Read-model cache for the deal status card, keyed per READER: no card crosses readers, whatever their scope.';

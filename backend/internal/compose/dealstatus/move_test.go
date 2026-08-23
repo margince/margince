@@ -92,6 +92,49 @@ func TestAnAnsweredInboundMailIsNotStillWaiting(t *testing.T) {
 	}
 }
 
+func TestLastContactIgnoresWhatIsOnlyScheduled(t *testing.T) {
+	// The timeline is newest first and holds booked meetings at the top, which
+	// are plans rather than contact. Counting one as contact prints "the last
+	// contact was 3 days ago" about a meeting that has not happened.
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{
+			act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 20)),
+			act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -6)),
+		},
+	}
+	last, ok := lastContact(f)
+	if !ok {
+		t.Fatal("a deal with a past mail has had contact")
+	}
+	if last.Kind != crmcontracts.ActivityKindEmail {
+		t.Fatalf("last contact = %v, want the mail: a meeting 20 days out has not happened", last.Kind)
+	}
+}
+
+func TestACreateTaskArgumentIsAReadyTaskBody(t *testing.T) {
+	// The click sends these arguments as the task's body, unedited. A missing
+	// link or source is a task the server refuses after the reader clicked.
+	mv := decideMove(facts{deal: openDeal(), now: testNow})
+	if mv.Action != ActionCreateTask || mv.Arguments == nil {
+		t.Fatalf("move = %+v, want a create_task carrying a body", mv)
+	}
+	args := *mv.Arguments
+	if args["subject"] == "" || args["subject"] == nil {
+		t.Fatalf("the task carries no subject: %v", args)
+	}
+	if args["source"] != "ui" {
+		t.Fatalf("source = %v, want ui", args["source"])
+	}
+	links, ok := args["links"].([]map[string]any)
+	if !ok || len(links) != 1 {
+		t.Fatalf("links = %v, want the deal it belongs to", args["links"])
+	}
+	if links[0]["entity_type"] != "deal" {
+		t.Fatalf("link = %v, want the deal", links[0])
+	}
+}
+
 func TestAClosedDealGetsNoMove(t *testing.T) {
 	deal := openDeal()
 	deal.Status = crmcontracts.DealStatusWon

@@ -59,7 +59,12 @@ type dealStatusActFixture struct {
 	Direction string `json:"direction"`
 	Subject   string `json:"subject"`
 	At        string `json:"at"`
-	Excerpt   string `json:"excerpt"`
+	// When is "past" or "scheduled". Production always sets it, so a fixture
+	// that left it blank would send the model a prompt production never sends
+	// — and the case that certifies a booked meeting is not read as one that
+	// already happened would score green with the field it tests absent.
+	When    string `json:"when"`
+	Excerpt string `json:"excerpt"`
 }
 
 type dealStatusCases struct{}
@@ -110,9 +115,13 @@ func dealStatusInput(f dealStatusFixture) (dealstatus.StatusInput, map[string]st
 		}
 		id := ids.NewV7().String()
 		label[act.Label] = id
+		when := act.When
+		if when == "" {
+			when = "past"
+		}
 		in.Timeline = append(in.Timeline, dealstatus.ActIn{
 			ID: id, Kind: act.Kind, Direction: act.Direction,
-			Subject: act.Subject, At: act.At, Excerpt: act.Excerpt,
+			Subject: act.Subject, At: act.At, When: when, Excerpt: act.Excerpt,
 		})
 	}
 	return in, label, nil

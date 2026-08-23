@@ -43,7 +43,7 @@ export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
         params: { path: { id: dealId } },
       });
       if (error) {
-        throwProblem(error);
+        throwProblem(error, t);
       }
       return data;
     },
@@ -77,6 +77,15 @@ export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
             rewriting={rewrite.isPending}
           />
         ) : null}
+        {status.isSuccess && !status.data?.standing ? (
+          // `standing` is required on the wire and the server always writes at
+          // least one line, so reaching here means a response that is not the
+          // shape the contract promises. Saying so beats an empty panel with a
+          // title, which reads as a deal nobody has touched.
+          <PanelBody>
+            <p className="t-small">{t("dealstatus.unreadable")}</p>
+          </PanelBody>
+        ) : null}
       </QueryStates>
     </Panel>
   );
@@ -105,7 +114,7 @@ function StatusBody({
     <>
       <PanelBody>
         <SentenceList
-          sentences={card.standing.sentences ?? []}
+          sentences={card.standing.sentences}
           onOpenRecord={open}
         />
       </PanelBody>
@@ -116,7 +125,7 @@ function StatusBody({
             {t("dealstatus.risk")}
           </p>
           <SentenceList
-            sentences={card.risk.sentences ?? []}
+            sentences={card.risk.sentences}
             onOpenRecord={open}
           />
         </PanelBody>

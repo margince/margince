@@ -22,8 +22,18 @@ describe("which reads a timeline write has to invalidate", () => {
     ]);
   });
 
+  it("names the deal status card, which is WRITTEN FROM the timeline it does not show", () => {
+    // A stale timeline visibly lacks the new row. A stale card says something
+    // confident about a deal that has since moved, which reads as a current
+    // judgement rather than a missing update.
+    expect(entityTimelineKeys("deal", "d1")).toEqual([
+      ["activities", "deal", "d1"],
+      ["deal-status", "d1"],
+    ]);
+  });
+
   it("names only the record's own timeline for a kind with no seeded page", () => {
-    for (const kind of ["deal", "lead"] as const) {
+    for (const kind of ["lead"] as const) {
       expect(entityTimelineKeys(kind, "x1")).toEqual([
         ["activities", kind, "x1"],
       ]);

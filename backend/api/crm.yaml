@@ -20221,12 +20221,6 @@ components:
         next:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardMove' }]
           description: The one move to make, with the verb to perform it.
-        health:
-          type: number
-          description: The deal-health reading, 0..1, carried so the card can show it without a second request.
-        at_risk:
-          type: boolean
-          description: Below the at-risk threshold. The card reads this, not the number, to decide its tone.
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
       additionalProperties: false

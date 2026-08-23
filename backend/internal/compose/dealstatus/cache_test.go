@@ -17,12 +17,12 @@ import (
 func TestTheFingerprintMovesWhenTheFactsDo(t *testing.T) {
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	before, err := Fingerprint(in, reader, "routing-1")
+	before, err := Fingerprint(in, reader, "routing-1", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
 	in.Timeline = append(in.Timeline, ActIn{ID: "act-3", Kind: "email", At: "2026-08-22"})
-	after, err := Fingerprint(in, reader, "routing-1")
+	after, err := Fingerprint(in, reader, "routing-1", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -33,11 +33,11 @@ func TestTheFingerprintMovesWhenTheFactsDo(t *testing.T) {
 
 func TestTheSameFactsFingerprintTheSame(t *testing.T) {
 	reader := ids.NewV7()
-	first, err := Fingerprint(inputWithTimeline(), reader, "routing-1")
+	first, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	second, err := Fingerprint(inputWithTimeline(), reader, "routing-1")
+	second, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -46,31 +46,51 @@ func TestTheSameFactsFingerprintTheSame(t *testing.T) {
 	}
 }
 
-func TestTwoReadersNeverShareACard(t *testing.T) {
-	// The input was assembled under the reader's row scope, so a card written
-	// for one is not a card the other may read.
+func TestTheCardGoesStaleWhenTheDayTurns(t *testing.T) {
+	// The card says "the last contact was 4 days ago" — prose rendered from
+	// the clock over facts that have not moved. Without the day in the key a
+	// card written on Monday still says "4 days ago" on Friday.
+	reader := ids.NewV7()
 	in := inputWithTimeline()
-	mine, err := Fingerprint(in, ids.NewV7(), "routing-1")
+	monday, err := Fingerprint(in, reader, "routing-1", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	theirs, err := Fingerprint(in, ids.NewV7(), "routing-1")
+	friday, err := Fingerprint(in, reader, "routing-1", testNow.AddDate(0, 0, 4))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	if mine == theirs {
-		t.Fatal("two readers fingerprinted the same, so one could be served the other's card")
+	if monday == friday {
+		t.Fatal("four days passed and the fingerprint did not move, so the card still says the old age")
+	}
+}
+
+func TestTheSameDayDoesNotRewriteAQuietDeal(t *testing.T) {
+	// A day's granularity is what those sentences resolve to. Anything finer
+	// would rewrite a deal nobody touched, for prose that reads identically.
+	reader := ids.NewV7()
+	in := inputWithTimeline()
+	morning, err := Fingerprint(in, reader, "routing-1", testNow)
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	evening, err := Fingerprint(in, reader, "routing-1", testNow.Add(7*time.Hour))
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	if morning != evening {
+		t.Fatal("the same day fingerprinted differently, so a quiet deal pays for a rewrite on every read")
 	}
 }
 
 func TestANewRoutingVersionRewritesTheCard(t *testing.T) {
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	old, err := Fingerprint(in, reader, "routing-1")
+	old, err := Fingerprint(in, reader, "routing-1", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	fresh, err := Fingerprint(in, reader, "routing-2")
+	fresh, err := Fingerprint(in, reader, "routing-2", testNow)
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}

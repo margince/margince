@@ -15776,8 +15776,6 @@ type DealRoomThreadListResponse struct {
 // absent when nothing threatens the deal, because an invented reassurance is
 // worse than silence. `next` is absent only when the deal is closed.
 type DealStatusCard struct {
-	// AtRisk Below the at-risk threshold. The card reads this, not the number, to decide its tone.
-	AtRisk      *bool              `json:"at_risk,omitempty"`
 	DealId      openapi_types.UUID `json:"deal_id"`
 	GeneratedAt time.Time          `json:"generated_at"`
 
@@ -15786,9 +15784,6 @@ type DealStatusCard struct {
 	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
-
-	// Health The deal-health reading, 0..1, carried so the card can show it without a second request.
-	Health *float32 `json:"health,omitempty"`
 
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`

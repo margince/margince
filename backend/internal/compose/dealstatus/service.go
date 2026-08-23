@@ -84,11 +84,14 @@ type facts struct {
 	now       time.Time
 }
 
-// stored is the cached envelope. The whole thing round-trips through the
-// payload column, version included: unmarshalling into the card alone would
-// leave the fingerprint empty, the check could never pass, and the cache would
-// never once answer — a rewrite on every page load, invisible to a gate
-// because nothing about the served card looks wrong.
+// stored is the cached envelope: the card in the payload column, and the three
+// fields the cache decision needs in columns of their own.
+//
+// The split is deliberate. Deciding whether a stored card still stands means
+// comparing a fingerprint and an age, and those are answered from the row
+// without decoding the payload at all — a card this build cannot unmarshal is
+// then a MISS rather than a failed request, because the fields that decide
+// were never inside the thing that failed to decode.
 type stored struct {
 	Fingerprint string                      `json:"-"`
 	GeneratedAt time.Time                   `json:"-"`
@@ -112,7 +115,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	}
 	mv := decideMove(f)
 	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}

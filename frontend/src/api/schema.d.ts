@@ -14001,10 +14001,6 @@ export interface components {
             risk?: components["schemas"]["DealStatusCardSection"];
             /** @description The one move to make, with the verb to perform it. */
             next?: components["schemas"]["DealStatusCardMove"];
-            /** @description The deal-health reading, 0..1, carried so the card can show it without a second request. */
-            health?: number;
-            /** @description Below the at-risk threshold. The card reads this, not the number, to decide its tone. */
-            at_risk?: boolean;
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];

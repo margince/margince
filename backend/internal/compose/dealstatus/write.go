@@ -18,7 +18,10 @@ package dealstatus
 import (
 	"fmt"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 )
 
@@ -27,7 +30,7 @@ type sentence = crmcontracts.OrganizationBriefSentence
 // composeDeterministic builds the card from the facts alone.
 func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontracts.DealStatusCard {
 	out := crmcontracts.DealStatusCard{
-		DealId:      dealUUID(f),
+		DealId:      f.deal.Id,
 		GeneratedAt: f.now,
 		GeneratedBy: crmcontracts.Deterministic,
 		Standing:    crmcontracts.DealStatusCardSection{Sentences: standingLines(f)},
@@ -38,21 +41,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	if mv.Action != ActionNone {
 		out.Next = &mv
 	}
-	carryHealth(&out, f)
 	return out
-}
-
-// carryHealth puts the reading on the card so the client shows it without a
-// second request. The card reads at_risk rather than the number to decide its
-// tone: a threshold the formula owns is not one the frontend should re-derive.
-func carryHealth(out *crmcontracts.DealStatusCard, f facts) {
-	if f.health == nil {
-		return
-	}
-	health := float32(f.health.Health)
-	atRisk := f.health.AtRisk
-	out.Health = &health
-	out.AtRisk = &atRisk
 }
 
 // standingLines say where the deal is: its own fields, then what happened
@@ -160,12 +149,17 @@ func foldWritten(
 // to a record. A citation naming a row this build no longer holds is dropped;
 // a sentence left with none goes with it, because an uncited claim is the one
 // thing the grounding rule exists to prevent.
+//
+// Every id the filter admits must resolve HERE. A citation the filter accepts
+// and this cannot render drops the sentence after it survived grounding, which
+// is worse than refusing it: the card loses its best-grounded line silently and
+// can end up with no standing at all.
 func wire(lines []WrittenLine, f facts) []sentence {
 	out := make([]sentence, 0, len(lines))
 	for _, line := range lines {
 		evidence := make([]crmcontracts.OrganizationBriefEvidence, 0, len(line.Evidence))
 		for _, id := range line.Evidence {
-			if a, ok := timelineRow(f, id); ok {
+			if a, ok := citedRecord(f, id); ok {
 				evidence = append(evidence, activityEvidence(a))
 			}
 		}
@@ -177,11 +171,33 @@ func wire(lines []WrittenLine, f facts) []sentence {
 	return out
 }
 
-func timelineRow(f facts, id string) (crmcontracts.Activity, bool) {
+// citedRecord finds the record one citation names. An open task is an activity
+// row like any other, so it cites as one and the reader opens it the same way.
+func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
 		if a.Id.String() == id {
 			return a, true
 		}
 	}
+	for _, t := range f.openTasks {
+		if t.ID.String() == id {
+			return taskAsActivity(t), true
+		}
+	}
 	return crmcontracts.Activity{}, false
+}
+
+// taskAsActivity renders an open task as the activity row it is, so a sentence
+// resting on a promise cites something the reader can open.
+func taskAsActivity(t activities.OpenTask) crmcontracts.Activity {
+	subject := t.Subject
+	out := crmcontracts.Activity{
+		Id:      openapi_types.UUID(t.ID),
+		Kind:    crmcontracts.ActivityKindTask,
+		Subject: &subject,
+	}
+	if t.DueAt != nil {
+		out.OccurredAt = *t.DueAt
+	}
+	return out
 }

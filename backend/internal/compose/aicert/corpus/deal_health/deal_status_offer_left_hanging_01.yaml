@@ -20,12 +20,14 @@ fixture:
       direction: outbound
       subject: "Call — depot rollout scope and pricing"
       at: "2026-08-11"
+      when: past
       excerpt: "They asked for a revised offer covering the two extra depots. We said it would go out this week."
     - label: earlier_intro
       kind: email
       direction: outbound
       subject: "Intro and first scope sketch"
       at: "2026-07-28"
+      when: past
       excerpt: "First outline of the rollout, five depots, pilot in Hamburg."
 expect:
   outcome: accepted

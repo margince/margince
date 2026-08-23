@@ -130,20 +130,31 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 }
 
 // Fingerprint keys the cache on everything that could change the card: the
-// assembled input, the prompt version, and the reader.
+// assembled input, the prompt version, the reader, and the DAY.
+//
+// The day is in the key because the card says "the last contact was 4 days
+// ago" — prose rendered from the clock at write time, over facts that have not
+// moved. Without it a card written on Monday still says "4 days ago" on
+// Friday, and the fingerprint has no reason to notice. A day's granularity is
+// exactly what those sentences resolve to; anything finer would rewrite a
+// quiet deal for nothing.
 //
 // The READER is in the key because the input was assembled under their row
-// scope. Two people with different grants see different facts, so a card
-// written for one is not a card the other may read — sharing the cache row
-// would either leak a scoped activity or serve the deal's owner the
-// restricted colleague's thinner card.
-func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string) (string, error) {
+// scope. It is a belt over the braces rather than the isolation itself: what
+// keeps two readers apart is the (user_id, deal_id) primary key and the
+// explicit user_id predicate in Service.cached, where user_id comes from the
+// authenticated principal and never from the request.
+func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, day time.Time) (string, error) {
 	encoded, err := json.Marshal(struct {
 		In      StatusInput `json:"in"`
 		Prompt  string      `json:"prompt"`
 		Routing string      `json:"routing"`
 		Reader  string      `json:"reader"`
-	}{In: in, Prompt: promptVersion, Routing: routingVersion, Reader: userID.String()})
+		Day     string      `json:"day"`
+	}{
+		In: in, Prompt: promptVersion, Routing: routingVersion,
+		Reader: userID.String(), Day: day.UTC().Format("2006-01-02"),
+	})
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the deal status input: %w", err)
 	}

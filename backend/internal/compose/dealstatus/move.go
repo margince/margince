@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"time"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 )
 
@@ -188,9 +186,4 @@ func spell(days int) string {
 	default:
 		return fmt.Sprintf("%d days ago", days)
 	}
-}
-
-// dealUUID is the deal's id in the wire's type, spelled once.
-func dealUUID(f facts) openapi_types.UUID {
-	return f.deal.Id
 }

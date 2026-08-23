@@ -22,6 +22,10 @@ export function entityTimelineKeys(
   if (seed) {
     keys.push(seed);
   }
+  const derived = DERIVED_FROM_TIMELINE[entityType]?.(entityId);
+  if (derived) {
+    keys.push(derived);
+  }
   return keys;
 }
 
@@ -35,6 +39,16 @@ const TIMELINE_SEED_KEYS: Partial<
   organization: (id) => ORGANIZATION_360_KEY(id),
   person: (id) => ["person360", id],
   project: (id) => ["project", id, "360"],
+};
+
+// Reads WRITTEN FROM a record's timeline rather than showing it. The deal
+// status card says what the deal's activity means, so logging one leaves it
+// describing a deal that has since moved — and unlike a timeline that visibly
+// lacks the new row, a stale sentence reads as a current judgement.
+const DERIVED_FROM_TIMELINE: Partial<
+  Record<EntityKind, (entityId: string) => QueryKey>
+> = {
+  deal: (id) => ["deal-status", id],
 };
 
 // A task is also a row in the standing work queue, which is keyed per workspace

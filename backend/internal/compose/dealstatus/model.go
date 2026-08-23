@@ -218,8 +218,8 @@ func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
 	if err := json.Unmarshal([]byte(reply), &parsed); err != nil {
 		return WrittenStatus{}, fmt.Errorf("parse deal status: %w", err)
 	}
-	known := knownIDs(in)
-	standing, err := keepGrounded(parsed.Standing, known, in.Deal.ID, maxStandingRows)
+	known, citable := knownIDs(in), citableIDs(in)
+	standing, err := keepGrounded(parsed.Standing, known, citable, maxStandingRows)
 	if err != nil {
 		return WrittenStatus{}, fmt.Errorf("standing: %w", err)
 	}
@@ -228,7 +228,7 @@ func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
 	}
 	// Risk is allowed to be empty and that is the point: a card that always
 	// finds something wrong teaches the reader to stop reading the risk line.
-	risk, err := keepGrounded(parsed.Risk, known, in.Deal.ID, maxRiskRows)
+	risk, err := keepGrounded(parsed.Risk, known, citable, maxRiskRows)
 	if err != nil {
 		return WrittenStatus{}, fmt.Errorf("risk: %w", err)
 	}
@@ -252,7 +252,9 @@ type replyLine struct {
 // the whole reply when a sentence breaks a bound. The difference matters: an
 // ungrounded sentence is one bad claim among good ones, while an oversized or
 // id-leaking one says the reply is not the shape the prompt asked for.
-func keepGrounded(lines []replyLine, known map[string]bool, dealID string, limit int) ([]WrittenLine, error) {
+func keepGrounded(
+	lines []replyLine, known, citable map[string]bool, limit int,
+) ([]WrittenLine, error) {
 	out := make([]WrittenLine, 0, len(lines))
 	for _, line := range lines {
 		text := strings.TrimSpace(line.Text)
@@ -267,9 +269,9 @@ func keepGrounded(lines []replyLine, known map[string]bool, dealID string, limit
 		}
 		cited := make([]string, 0, len(line.Evidence))
 		for _, id := range line.Evidence {
-			// The deal's own id grounds nothing: every sentence is about this
-			// deal, so citing it says only that the model read the prompt.
-			if known[id] && id != dealID {
+			// The deal's own id grounds nothing — every sentence is about this
+			// deal — and it is absent from the citable set for that reason.
+			if citable[id] {
 				cited = append(cited, id)
 			}
 		}
@@ -298,22 +300,37 @@ func refuseIDsInReaderText(text string, known map[string]bool) error {
 	return nil
 }
 
-// knownIDs is every id this input carried — the set a citation must come from
-// and reader text must be free of.
+// knownIDs is every id this input carried — the set reader text must be free
+// of. Being known is not the same as being CITABLE: see citableIDs.
 func knownIDs(in StatusInput) map[string]bool {
-	known := map[string]bool{in.Deal.ID: true}
-	for _, a := range in.Timeline {
-		known[a.ID] = true
-	}
-	for _, t := range in.OpenTasks {
-		known[t.ID] = true
-	}
+	known := citableIDs(in)
+	known[in.Deal.ID] = true
 	if in.Room != nil {
 		for _, th := range in.Room.Threads {
 			known[th.ID] = true
 		}
 	}
 	return known
+}
+
+// citableIDs is the narrower set a citation may come from: the records the
+// card can render as evidence the reader opens.
+//
+// A Deal Room thread is deliberately absent. The card cites through the
+// activity evidence type, and a thread is not an activity — admitting one
+// would pass the filter and then be dropped when the card is assembled, which
+// costs the sentence its grounding after it had already earned it. The buyer's
+// words still reach the model; they are just cited through the deal's timeline
+// rather than by thread id.
+func citableIDs(in StatusInput) map[string]bool {
+	citable := map[string]bool{}
+	for _, a := range in.Timeline {
+		citable[a.ID] = true
+	}
+	for _, t := range in.OpenTasks {
+		citable[t.ID] = true
+	}
+	return citable
 }
 
 // excerpt bounds one body's contribution, cutting on a rune so a multi-byte
