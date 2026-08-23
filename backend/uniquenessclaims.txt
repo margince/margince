@@ -12,12 +12,10 @@
 #
 #     // Held by: TestSomethingHasOneWriter (backend/somethingwriters_test.go)
 #
-# WIDENING A SHAPE IS NOT ADDING AN ENTRY. If a detector shape learns to see a
-# wording it used to miss, it finds claims that were already here and this file
-# grows to hold them — regenerate it in the SAME commit as the shape change, and
-# say in the message how many lines that added. Every such line names a
-# declaration that already existed, which is what a reviewer checks. A file that
-# grows in a commit adding no shape is the case the gate refuses by itself.
+# WIDENING A DETECTOR SHAPE IS NOT ADDING A CLAIM. A shape that learns to see a
+# wording it used to miss finds claims that were already here, and this file
+# grows to hold them. `registeredDebt` in the gate is the ceiling that growth
+# has to pass through.
 #
 # THE NUMBER IS THE POINT, AND IT OTHERWISE ONLY GOES DOWN. To remove a line: write the
 # test that fails when a second implementation appears and name it in the doc

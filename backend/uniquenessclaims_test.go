@@ -51,18 +51,11 @@ package backendarch
 //   - An entry that has stopped matching a real claim fails too, so the
 //     register tracks the tree rather than rotting beside it.
 //
-// CLOSED TO NEW CLAIMS, NOT TO A BETTER DETECTOR. Those are different things
-// and only one of them is the debt. A shape that learns to see a wording it
-// used to miss finds claims that were already here, and the register has to
-// grow to hold them — otherwise "closed" would mean the detector may never
-// improve, which is the opposite of the point.
-//
-// The two are told apart by the DIFF, not by this file: every line a widening
-// adds names a declaration that already existed, and a reviewer can see that at
-// a glance. So the procedure is to widen the shape and regenerate the register
-// in the SAME commit, and to say in the message how many lines that added and
-// why. A register growing in a commit that adds no shape is the case this gate
-// refuses on its own.
+// CLOSED TO NEW CLAIMS, NOT TO A BETTER DETECTOR. A shape that learns to see a
+// wording it used to miss finds claims that were already there, and the
+// register grows to hold them; "closed" would otherwise mean the detector may
+// never improve, which is the opposite of the point. `registeredDebt` is the
+// line where that growth is agreed to.
 //
 // The register is 646 lines with no reasons, and that is deliberate rather than
 // sloppy: a reason per entry would be 646 rationalisations written by somebody
@@ -828,6 +821,35 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 			"written on that declaration inherits it. This is also how the number goes DOWN: hold a "+
 			"claim with a test, or delete the claim, then remove its line here.\n\n\t%s",
 			len(idle), strings.Join(idle, "\n\t"))
+	}
+}
+
+// registeredDebt is the number of unheld claims this tree carries. It may only
+// be LOWERED, and lowering it is the whole point of the file it counts.
+//
+// Pinned because "the register is closed to new entries" is a claim, and a
+// claim about membership that nothing counts is exactly what this gate refuses
+// everywhere else: the other arms check that each line describes a live unheld
+// claim, which a line added for a claim written this morning satisfies
+// perfectly. Only a count catches that.
+//
+// Raising it is legal and is what a widened detector shape requires — the ONE
+// line a reviewer has to agree with, rather than a growth spread across a
+// diff nobody reads to the end.
+const registeredDebt = 646
+
+func TestTheRegisterOnlyEverShrinks(t *testing.T) {
+	keys := readRegister(t)
+	if len(keys) > registeredDebt {
+		t.Errorf("the register holds %d entries against a ceiling of %d.\n\n"+
+			"A claim written today must name the test that holds it, not take a line here. "+
+			"If a DETECTOR shape was widened, it now sees claims that were already in the tree: "+
+			"raise registeredDebt in the same change, so the growth is one line somebody agreed to.",
+			len(keys), registeredDebt)
+	}
+	if len(keys) < registeredDebt {
+		t.Errorf("the register holds %d entries and the ceiling still says %d — lower it, "+
+			"because the number is the thing this file is for", len(keys), registeredDebt)
 	}
 }
 
