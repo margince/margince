@@ -18,9 +18,13 @@ Margince you can:
 - **Answer "what have we earned?"** — the question every partner eventually
   asks — from one screen on their company page.
 
-It is a prototype. Two things are missing, and both are covered at the end:
-you cannot mark a commission as paid from the app, and partners cannot log in
-to see their own numbers.
+One thing is deliberately absent and is covered at the end: partners cannot
+log in to see their own numbers.
+
+**Margince does not pay anybody.** You settle a partner in whatever system you
+pay people from; what Margince holds is the record of what was earned, agreed
+and settled. Marking an entry *Paid* here says your finance system already
+paid it.
 
 **This page explains how partner programs work and shows you one deal from
 start to finish.** For the setup form field by field — every role, every
@@ -133,8 +137,23 @@ Every entry has a status:
 |---|---|
 | **Accrued** | earned, not yet agreed — where every entry starts |
 | **Approved** | signed off |
-| **Paid** | the money has gone out |
-| **Reversed** | cancelled, because the deal was reopened |
+| **Paid** | your finance system has paid it |
+| **Reversed** | cancelled — by you, or because the deal was reopened |
+
+**Moving an entry along.** Each row offers the steps its current state allows:
+an accrued entry can be **Approved**, an approved one **Marked as paid**, and
+anything still live can be **Reversed**. Every one asks you to confirm first,
+because none of them is undone by pressing the same button again. Reversing
+asks why, and the reason travels with the entry so it can be explained to the
+partner later.
+
+You will see no buttons at all if your seat cannot decide commissions — the
+column says so rather than going blank, so you can tell "nothing to decide
+here" from "not yours to decide".
+
+**What is still owed** sits above the ledger: everything accrued or approved,
+totalled per currency. Two currencies are never added together, because the
+sum would mean nothing.
 
 **Reopening a won deal does not delete the commission.** Margince adds a
 reversal row and marks the original *Reversed*, leaving both on the page. Win
@@ -146,18 +165,22 @@ The rate is fixed at the moment a deal is won. Move a partner to a different
 tier and it changes what their *next* deals earn; it never rewrites what an
 old one already paid.
 
-## What this prototype cannot do yet
+## What this cannot do
 
-- **You cannot approve or pay from the app.** Those steps exist behind the
-  scenes but have no buttons. Use the Commission panel as the record of what
-  is owed, and pay it however you normally pay people.
-- **Partners cannot see any of this.** There is no partner login. Everything
-  here is yours internally.
-- **The API is more permissive than the app.** Deals created through the API
-  can name any company as the partner, even one that is not a partner — in
-  which case nothing is ever earned. The web form only offers real partners.
-- **Assistants can read a deal's partner** and what they did, but cannot yet
-  read or change the partner record itself.
+- **Margince does not move money.** Approving and marking paid are record
+  keeping: they say what your finance system has agreed and settled. Nothing
+  here pays anybody.
+- **Partners cannot see any of this.** There is no partner login, and none is
+  planned. When a partner asks what they have earned, somebody on your side
+  opens their company page and tells them — that is the intended workflow, not
+  a gap.
+- **A partner with no margin tier earns nothing, quietly.** Win a deal they
+  sourced and no entry appears, because there is no rate to apply. That is
+  correct for a partner you never agreed a rate with; if you expected a
+  commission and see none, check the tier on their Partner tab.
+- **Assistants can READ partners now** — a partner's tier, certification and
+  stage, and the list of partners — but cannot change any of it. Setting a
+  partner's terms is a human act.
 
 ## Where next
 
