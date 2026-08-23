@@ -11,9 +11,9 @@ package backendarch
 // This tree's own rulebook already says so, in `Reuse before you build`:
 // "a comment may not claim to be the only implementation unless a test holds
 // it. If no test fails when a second one appears, delete the claim or write the
-// test." It has been instruction since #2220, and instruction was not enough —
-// a sweep in 2026-08 audited ten such claims exhaustively and **nine were
-// false**. Among them:
+// test." That has been instruction for a while, and instruction was not enough:
+// a sweep audited ten such claims exhaustively and NINE were false. Among
+// them:
 //
 //   - "the only definition of a current employment in this product" — eight
 //     compose sites spelled the predicate by hand, which is the exact
@@ -201,8 +201,8 @@ var heldBy = regexp.MustCompile(`Held by:\s*(Test[A-Z_][A-Za-z0-9_]*)\s*\(([^)]+
 // goTestFunc finds the declarations a `Held by:` may name.
 // A test `go test` will RUN: the uppercase continuation it requires of the
 // name, and the `*testing.T` parameter it requires of the signature. A no-arg
-// `func Testhelperghost() {}` satisfies neither and was accepted by the first
-// spelling of this — a gate that can never run is not a gate.
+// `func Testhelperghost() {}` satisfies neither, and a gate that can never run
+// is not a gate.
 var goTestFunc = regexp.MustCompile(`(?m)^func (Test[A-Z_][A-Za-z0-9_]*)\([a-zA-Z_][a-zA-Z0-9_]* \*testing\.T\)`)
 
 // claimedTrees are the hand-written Go trees this rule covers. The backend
@@ -247,10 +247,9 @@ type claim struct {
 	heldIn string // the file that test is claimed to live in
 	// bindingOpens is true when `Held by:` is the FIRST line of the doc
 	// comment, which Go's own convention forbids: a doc comment opens with the
-	// identifier it documents. Recorded rather than merely discouraged because
-	// this file already learned that stating a convention is not holding it —
-	// revive caught one instance, the docblock wrote the rule down, and the
-	// very next binding written broke it in a file revive does not check.
+	// identifier it documents. Recorded rather than merely discouraged, because
+	// revive enforces it only on EXPORTED declarations while this rule applies
+	// to every one.
 	bindingOpens bool
 }
 
@@ -298,14 +297,12 @@ func findClaims(root string) ([]claim, error) {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
 			return nil
 		}
-		if filepath.Base(path) == gateFile {
+		if filepath.ToSlash(path) == gateFile {
 			// This file spells out the very phrases it hunts for, so a sweep
-			// that read it would register its own prose as debt — and it did:
-			// the sentence "the `is EVERY` shape above" put
-			// `func namedExhaustiveness` in the register for a claim it does
-			// not make. A gate describing its own subject cannot also be
-			// judged by it. `format/zone-by-purpose.test.ts` skips itself for
-			// the same reason and says so in the same words.
+			// that read it would register its own prose as debt: a sentence
+			// naming a shape is not a claim made by the declaration it sits
+			// on. A gate describing its own subject cannot also be judged by
+			// it. `format/zone-by-purpose.test.ts` skips itself likewise.
 			return nil
 		}
 		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
@@ -436,6 +433,12 @@ func genericReceiverName(expr ast.Expr) string {
 			expr = node.X
 		case *ast.Ident:
 			return node.Name
+		case *ast.SelectorExpr:
+			// A package-qualified type, which is how an embedded field usually
+			// arrives. Unqualified, `io.Reader` and `fmt.Stringer` embedded in
+			// one struct would both key as `?` — the same collision the
+			// receiver rule above exists to remove, one declaration kind over.
+			return genericReceiverName(node.X) + "." + node.Sel.Name
 		default:
 			return "?"
 		}
@@ -486,9 +489,8 @@ func recordGenDecl(node *ast.GenDecl, record func(*ast.CommentGroup, string)) {
 	}
 	// A multi-spec block is named by its FIRST declared name, not by the bare
 	// word "block". Two `const ( … )` blocks in one file both keyed as
-	// `const block`, so the second one's claim rode the first's register entry
-	// — a new, unheld claim passing the gate that exists to refuse exactly
-	// that. Measured before the fix: seven claims aliasing into three lines.
+	// `const block`, so the second one's claim would ride the first's register
+	// entry — a new, unheld claim passing the gate that refuses exactly that.
 	label := node.Tok.String() + " block"
 	if len(node.Specs) > 0 {
 		if first, ok := name(node.Specs[0]); ok {
@@ -530,9 +532,11 @@ func allClaims(t *testing.T) []claim {
 	return all
 }
 
-// gateFile is this file, skipped by the sweep below. Named rather than derived
-// from the runtime, because runtime.Caller inside a walk is a worse kind of
-// clever than a constant a reader can check against the file they are in.
+// gateFile is this file, by PATH. A basename match would skip every file so
+// named in every swept tree, and a nested one could then carry an unbound
+// claim. Named rather than derived from the runtime, because runtime.Caller
+// inside a walk is a worse kind of clever than a constant a reader can check
+// against the file they are in.
 const gateFile = "uniquenessclaims_test.go"
 
 const registerPath = "uniquenessclaims.txt"
@@ -744,18 +748,14 @@ func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
 // TestEveryShapeEarnsItsPlaceInTheRealTree is the positive half, and it is
 // DERIVED — the corpus is the tree.
 //
-// It was a list of sentences typed into this file and described as "taken
-// verbatim from this tree". A reviewer grepped them: most were invented.
-// `companyform.go` does not exist. `signalTone` does not exist. The `is EVERY`
-// case was a real sentence with its `every` upper-cased so the case-sensitive
-// pattern would match it. So the file that exists to refuse unbacked claims
-// opened with one — which is the whole failure mode, committed in its own
-// docblock, and a hand-typed corpus is how it happens: nothing keeps the copy
-// and the original in step.
+// A corpus of sentences typed into this file and called "verbatim" is a copy
+// with nothing keeping it in step with the original, so it drifts into fiction
+// — and a fabricated corpus is the exact defect this file refuses, standing in
+// its own docblock.
 //
-// Now every shape must be attributed at least one claim by the SWEEP. A shape
+// So every shape must be attributed at least one claim by the SWEEP. A shape
 // matching nothing in the real tree fails, and there is nothing to fabricate:
-// the evidence is whatever the walk found this morning.
+// the evidence is whatever the walk found.
 func TestEveryShapeEarnsItsPlaceInTheRealTree(t *testing.T) {
 	claims := allClaims(t)
 	perShape := map[string]string{}
@@ -778,11 +778,9 @@ func TestEveryShapeEarnsItsPlaceInTheRealTree(t *testing.T) {
 	// The derived shape reads the DECLARATION's name, so it has to be shown
 	// working on both spellings of a declaration that has one. Keying the label
 	// by receiver — which the register needs, so two `Close` methods stay apart
-	// — silently stopped it matching every METHOD in the tree, and every arm
-	// above stayed green: they ask whether a shape matches anything, and its
-	// plain-function claims still did. Twenty-four claims were invisible,
-	// including `readProfileFields`, which is the example the docblock argues
-	// the whole rule from.
+	// — can stop it matching every METHOD in the tree while the arms above stay
+	// green: they ask whether a shape matches ANYTHING, and its plain-function
+	// claims still would.
 	kinds := map[string]bool{}
 	for _, c := range claims {
 		if c.shape == namedShape {
@@ -807,11 +805,9 @@ func TestEveryShapeEarnsItsPlaceInTheRealTree(t *testing.T) {
 // TestNoShapeReadsOrdinaryProseAsAClaim is the negative half, and it covers
 // EVERY shape including the derived one.
 //
-// The first version covered four of nine: `cannot-drift`, `once`, `one-truth`
-// and `never-twice` had no near-miss at all, so any of them could have been
-// widened arbitrarily and this arm would have stayed green. A negative corpus
-// with holes is a negative corpus that permits exactly the widening it exists
-// to refuse.
+// A near-miss for every shape, because a shape with no case can be widened
+// arbitrarily and this arm stays green — a negative corpus with holes permits
+// exactly the widening it exists to refuse.
 func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
 	// One sentence per shape, each written to graze the shape it is paired
 	// with — the pairing is asserted below, so a case cannot quietly stop
