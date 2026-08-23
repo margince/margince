@@ -1,0 +1,43 @@
+name: deal_status_says_nothing_is_wrong_when_nothing_is
+task: deal_health
+site: deal_status
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  deal:
+    name: "Kessler GmbH — WMS Pilot"
+    status: open
+    amount: "1200000 EUR (minor units)"
+    expected_close: "2026-10-15"
+  move: "open_meeting_brief: A meeting is booked in 3 days — read the brief before it."
+  timeline:
+    # A deal doing fine: they answered, a meeting is booked, nothing is owed.
+    # The card must not manufacture a risk to fill its own layout.
+    - label: scope_reply
+      kind: email
+      direction: inbound
+      subject: "Re: pilot scope — looks right"
+      at: "2026-08-20"
+      excerpt: "Scope reads well. Booking the kickoff with our ops lead for next week."
+    - label: kickoff
+      kind: meeting
+      direction: outbound
+      subject: "Kickoff — WMS pilot scope walkthrough"
+      at: "2026-08-26"
+      excerpt: "Walk the pilot scope with ops before the pilot starts."
+expect:
+  outcome: accepted
+  # Standing rests on the reply that moved the deal and the booked kickoff.
+  answer: [scope_reply]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the card is honest about a deal that is going well. "standing"
+    must say the buyer accepted the scope and a kickoff is booked. "risk" must
+    be EMPTY: nothing in the fixture threatens this deal, and a card that
+    invents a concern — "no pricing discussed yet", "close date is tight" —
+    fails the scenario outright, because a risk line that always finds
+    something teaches the reader to stop reading it. "move_reason" must explain
+    reading the brief before the booked meeting.

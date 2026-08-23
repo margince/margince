@@ -13257,74 +13257,54 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /deals/{id}/brief:
+  /deals/{id}/status:
     parameters:
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Deals]
-      operationId: getDealBrief
-      summary: The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
+      operationId: getDealStatus
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Where the deal stands, what could lose it, and the one thing to do next.
+      x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
       description: |
-        Deterministic: every sentence restates a record the caller can open and
-        cites it, so the card renders the same whichever writer produced it. No
-        inference — a sentence nobody can check is worth less than the number it
-        paraphrases. Reads the deal, its health, its timeline, its open tasks and
-        its Deal Room through their own gated reads; a record the caller cannot
-        see never reaches a sentence.
-      responses:
-        '200':
-          description: The brief.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealBrief' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        The deal page's one written card, replacing the three that stood beside each
+        other and disagreed: a brief that restated records, a health score with no
+        words, and a next-move box that read an open task back to you and then said
+        it had nothing to add.
 
-  /deals/{id}/next-best-action:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Deals]
-      operationId: getDealNextBestAction
-      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      summary: The one thing to do next on this deal, computed — never performed — on read.
-      description: |
-        A pure read: it COMPUTES a recommendation and returns it with the evidence
-        it rests on. Nothing executes here, because the deal page's reads retry and
-        re-run on remount, and a mutation hidden in a read would fire repeatedly and
-        skip the write shape. Performing it is the client's click, through the verb
-        the recommendation names: `draft_email` (`POST /activities/{id}/draft-email`),
-        `create_task` (`POST /tasks`, the arguments are its body), or
-        `open_meeting_brief` (navigation to the activity's brief). `none` says why
-        nothing is recommended. Deterministic: the same facts give the same answer.
+        Written by the model from the deal's own facts — its stage and value, its
+        timeline, its open tasks, its health factors and what the buyer said in the
+        Deal Room — and assembled under the CALLER's row scope, so a record they
+        cannot see never reaches a sentence.
+
+        Three parts, each earning its place. `standing` says where the deal is.
+        `risk` says what could lose it, and is absent when nothing is wrong rather
+        than padded with a reassurance. `next` is the one move to make, carrying the
+        verb the client performs on click — the same three verbs the retired
+        next-best-action named, so nothing about performing an action changed.
+
+        CACHED ON THE FACTS, not on a clock. The key is a fingerprint over the
+        assembled input plus the prompt and routing versions, so a deal nobody
+        touched costs one model call ever, and a deal that just moved is rewritten
+        before the request answers rather than served stale. A floor of five minutes
+        caps a deal whose facts churn on every page load.
+
+        DEGRADES RATHER THAN FAILS. With no model lane, an exhausted budget, or a
+        reply the grounding filter refuses, the same card is composed
+        deterministically and `generated_by` says which wrote it. There is no blank
+        AI card and no spinner that never resolves.
+      parameters:
+        - name: refresh
+          in: query
+          required: false
+          schema: { type: boolean }
+          description: Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
       responses:
         '200':
-          description: The recommendation.
+          description: The status.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DealNextBestAction' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /deals/{id}/health:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Deals]
-      operationId: getDealHealth
-      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      summary: How the deal stands — four named factors, each with the fact behind it.
-      description: |
-        The deal-health formula (recency × velocity × engagement × commitments) with
-        its evidence, so a reader can see what each factor was read from and
-        disagree. Computed on read; nothing is stored.
-      responses:
-        '200':
-          description: The health reading.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealHealthReading' }
+              schema: { $ref: '#/components/schemas/DealStatusCard' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20222,45 +20202,58 @@ components:
             60-day no-touch views (REPORT-PARAM-2) are the same finding filtered — a deal at
             61 days cannot appear on one surface and not the other.
 
-    DealBrief:
-      type: object
-      required: [deal_id, generated_at, generated_by, sections]
-      properties:
-        deal_id: { type: string, format: uuid }
-        generated_at: { type: string, format: date-time }
-        generated_by: { $ref: '#/components/schemas/WrittenBy' }
-        sections:
-          type: array
-          items: { $ref: '#/components/schemas/DealBriefSection' }
-
-    DealBriefSection:
-      type: object
-      required: [kind, sentences]
-      properties:
-        kind:
-          type: string
-          enum: [standing, activity, open, room]
-          description: |
-            `standing` — stage, value, close date, health.
-            `activity` — what happened last and what is booked next.
-            `open` — the tasks still owed.
-            `room` — the Deal Room: state, what the buyer said, what they decided.
-        sentences:
-          type: array
-          items: { $ref: '#/components/schemas/OrganizationBriefSentence' }
-
-    DealNextBestAction:
+    DealStatusCard:
       type: object
       description: |
-        One recommendation for a deal. `action` is one of `draft_email`,
-        `create_task`, `open_meeting_brief`, `none` — a plain string for the reason
-        `DealRoomParticipantCapability` gives. `arguments` is the body or the operand the named
-        verb takes, ready to send; absent for `none`.
-      required: [deal_id, action, reason, evidence, computed_at]
+        The deal page's one written card. `standing` is always present; `risk` is
+        absent when nothing threatens the deal, because an invented reassurance is
+        worse than silence. `next` is absent only when the deal is closed.
+      required: [deal_id, standing, generated_at, generated_by]
       properties:
         deal_id: { type: string, format: uuid }
+        standing:
+          allOf: [{ $ref: '#/components/schemas/DealStatusCardSection' }]
+          description: Where the deal is right now — what moved, what is waiting.
+        risk:
+          allOf: [{ $ref: '#/components/schemas/DealStatusCardSection' }]
+          description: What could lose this deal. Absent when nothing does.
+        next:
+          allOf: [{ $ref: '#/components/schemas/DealStatusCardMove' }]
+          description: The one move to make, with the verb to perform it.
+        health:
+          type: number
+          description: The deal-health reading, 0..1, carried so the card can show it without a second request.
+        at_risk:
+          type: boolean
+          description: Below the at-risk threshold. The card reads this, not the number, to decide its tone.
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+      additionalProperties: false
+
+    DealStatusCardSection:
+      type: object
+      required: [sentences]
+      properties:
+        sentences:
+          type: array
+          description: |
+            Each sentence cites the record it rests on. A sentence whose citations do
+            not resolve is dropped whole rather than shown uncited.
+          items: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+      additionalProperties: false
+
+    DealStatusCardMove:
+      type: object
+      description: |
+        The one thing to do next, and what performing it means. `action` is one of
+        `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
+        the retired next-best-action carried, so a client that already performs them
+        needs no new code. `arguments` is the body or operand the verb takes, ready
+        to send; absent for `none`.
+      required: [action, reason, evidence]
+      properties:
         action: { type: string }
-        reason: { type: string, description: "One sentence, in the user's terms, saying why this and not something else." }
+        reason: { type: string, description: "One sentence saying why this move and not another." }
         arguments:
           type: object
           additionalProperties: true
@@ -20268,15 +20261,6 @@ components:
         evidence:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
-        computed_at: { type: string, format: date-time }
-        generated_by:
-          allOf: [{ $ref: '#/components/schemas/WrittenBy' }]
-          description: |
-            Which writer produced the recommendation. `model` only on the `create_task`
-            fallback, where the deal_health lane proposes the concrete next step; every
-            rule-matched answer — and the fallback whenever the lane is absent, over
-            budget, or refused — is `deterministic`. Absent means `deterministic`, so a
-            client reading an older server fails honest.
       additionalProperties: false
 
     DealNextBestActionEvidence:
@@ -20287,30 +20271,7 @@ components:
         activity_id: { type: [string, 'null'], format: uuid }
         occurred_at: { type: [string, 'null'], format: date-time }
       additionalProperties: false
-    DealHealthReading:
-      type: object
-      required: [deal_id, health, at_risk, factors, computed_at]
-      properties:
-        deal_id: { type: string, format: uuid }
-        health: { type: number, description: 'The weighted reading, 0..1.' }
-        at_risk: { type: boolean, description: 'Below the at-risk threshold.' }
-        factors:
-          type: array
-          description: The four parts, in the order they weigh. Each names the fact it was read from.
-          items: { $ref: '#/components/schemas/DealHealthFactor' }
-        computed_at: { type: string, format: date-time }
-      additionalProperties: false
 
-    DealHealthFactor:
-      type: object
-      required: [key, value, weight, reason]
-      properties:
-        key: { type: string, description: '`activity_recency`, `stage_velocity`, `engagement` or `commitments`.' }
-        value: { type: number, description: 'The factor, 0..1.' }
-        weight: { type: number, description: Its share of the reading. }
-        reason: { type: string, description: 'The fact behind the number, in one sentence.' }
-        activity_id: { type: [string, 'null'], format: uuid, description: 'The activity the factor points at, where one does.' }
-      additionalProperties: false
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]

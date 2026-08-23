@@ -84,8 +84,6 @@ import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { DealBulkBar } from "./dealbulk";
-import { DealHealthCard } from "./dealhealth";
-import { DealNextAction } from "./dealnextaction";
 
 // The deal page's aside: the next move first, then the Deal Room when the deal
 // has one. Its own component so the screen's render stays readable.
@@ -95,16 +93,13 @@ function DealAside({
 }: Readonly<{ dealId: string; dealName: string }>) {
   return (
     <>
-      <DealNextAction dealId={dealId} />
+      <DealStatusCardPanel dealId={dealId} />
       <DealNextMeeting dealId={dealId} />
-      <DealBriefCard dealId={dealId} />
-      <DealHealthCard dealId={dealId} />
       <DealRoomAside dealId={dealId} dealName={dealName} />
     </>
   );
 }
 
-import { DealBriefCard } from "./dealbrief";
 import { DealFiles } from "./dealfiles";
 import { DealNextMeeting } from "./dealmeeting";
 import {
@@ -116,6 +111,7 @@ import {
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealRoomAside } from "./dealroom";
+import { DealStatusCardPanel } from "./dealstatus";
 import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
@@ -3465,7 +3461,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   <DealAside dealId={id} dealName={deal.name} />
                 )
               }
-              asideLabel={t("nba.title")}
+              asideLabel={t("dealstatus.title")}
             >
               <div style={{ marginBottom: 16 }}>
                 <SegmentedControl

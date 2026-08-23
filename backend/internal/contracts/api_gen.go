@@ -4045,30 +4045,6 @@ func (e DealWonWithoutContractReason) Valid() bool {
 	}
 }
 
-// Defines values for DealBriefSectionKind.
-const (
-	DealBriefSectionKindActivity DealBriefSectionKind = "activity"
-	DealBriefSectionKindOpen     DealBriefSectionKind = "open"
-	DealBriefSectionKindRoom     DealBriefSectionKind = "room"
-	DealBriefSectionKindStanding DealBriefSectionKind = "standing"
-)
-
-// Valid indicates whether the value is a known member of the DealBriefSectionKind enum.
-func (e DealBriefSectionKind) Valid() bool {
-	switch e {
-	case DealBriefSectionKindActivity:
-		return true
-	case DealBriefSectionKindOpen:
-		return true
-	case DealBriefSectionKindRoom:
-		return true
-	case DealBriefSectionKindStanding:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DealCoverageSectionsOmitted.
 const (
 	DealCoverageSectionsOmittedOurSide      DealCoverageSectionsOmitted = "our_side"
@@ -11598,22 +11574,22 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	Dropped       ListSignalsParamsResolutionState = "dropped"
-	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	Resolved      ListSignalsParamsResolutionState = "resolved"
-	Unresolved    ListSignalsParamsResolutionState = "unresolved"
+	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
+	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
+	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case Dropped:
+	case ListSignalsParamsResolutionStateDropped:
 		return true
-	case LowConfidence:
+	case ListSignalsParamsResolutionStateLowConfidence:
 		return true
-	case Resolved:
+	case ListSignalsParamsResolutionStateResolved:
 		return true
-	case Unresolved:
+	case ListSignalsParamsResolutionStateUnresolved:
 		return true
 	default:
 		return false
@@ -15373,35 +15349,6 @@ type DealStatus string
 // DealWonWithoutContractReason Why this deal was won with no contract behind it (ADR-0109 §6). NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
 
-// DealBrief defines model for DealBrief.
-type DealBrief struct {
-	DealId      openapi_types.UUID `json:"deal_id"`
-	GeneratedAt time.Time          `json:"generated_at"`
-
-	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
-	GeneratedBy WrittenBy          `json:"generated_by"`
-	Sections    []DealBriefSection `json:"sections"`
-}
-
-// DealBriefSection defines model for DealBriefSection.
-type DealBriefSection struct {
-	// Kind `standing` — stage, value, close date, health.
-	// `activity` — what happened last and what is booked next.
-	// `open` — the tasks still owed.
-	// `room` — the Deal Room: state, what the buyer said, what they decided.
-	Kind      DealBriefSectionKind        `json:"kind"`
-	Sentences []OrganizationBriefSentence `json:"sentences"`
-}
-
-// DealBriefSectionKind `standing` — stage, value, close date, health.
-// `activity` — what happened last and what is booked next.
-// `open` — the tasks still owed.
-// `room` — the Deal Room: state, what the buyer said, what they decided.
-type DealBriefSectionKind string
-
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
 	DealId  openapi_types.UUID       `json:"deal_id"`
@@ -15485,66 +15432,10 @@ type DealDocumentOrigin struct {
 	Subject    *string   `json:"subject,omitempty"`
 }
 
-// DealHealthFactor defines model for DealHealthFactor.
-type DealHealthFactor struct {
-	// ActivityId The activity the factor points at, where one does.
-	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
-
-	// Key `activity_recency`, `stage_velocity`, `engagement` or `commitments`.
-	Key string `json:"key"`
-
-	// Reason The fact behind the number, in one sentence.
-	Reason string `json:"reason"`
-
-	// Value The factor, 0..1.
-	Value float32 `json:"value"`
-
-	// Weight Its share of the reading.
-	Weight float32 `json:"weight"`
-}
-
-// DealHealthReading defines model for DealHealthReading.
-type DealHealthReading struct {
-	// AtRisk Below the at-risk threshold.
-	AtRisk     bool               `json:"at_risk"`
-	ComputedAt time.Time          `json:"computed_at"`
-	DealId     openapi_types.UUID `json:"deal_id"`
-
-	// Factors The four parts, in the order they weigh. Each names the fact it was read from.
-	Factors []DealHealthFactor `json:"factors"`
-
-	// Health The weighted reading, 0..1.
-	Health float32 `json:"health"`
-}
-
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
 	Data []Deal   `json:"data"`
 	Page PageInfo `json:"page"`
-}
-
-// DealNextBestAction One recommendation for a deal. `action` is one of `draft_email`,
-// `create_task`, `open_meeting_brief`, `none` — a plain string for the reason
-// `DealRoomParticipantCapability` gives. `arguments` is the body or the operand the named
-// verb takes, ready to send; absent for `none`.
-type DealNextBestAction struct {
-	Action string `json:"action"`
-
-	// Arguments `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
-	Arguments  *map[string]interface{}      `json:"arguments,omitempty"`
-	ComputedAt time.Time                    `json:"computed_at"`
-	DealId     openapi_types.UUID           `json:"deal_id"`
-	Evidence   []DealNextBestActionEvidence `json:"evidence"`
-
-	// GeneratedBy Which writer produced the recommendation. `model` only on the `create_task`
-	// fallback, where the deal_health lane proposes the concrete next step; every
-	// rule-matched answer — and the fallback whenever the lane is absent, over
-	// budget, or refused — is `deterministic`. Absent means `deterministic`, so a
-	// client reading an older server fails honest.
-	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
-
-	// Reason One sentence, in the user's terms, saying why this and not something else.
-	Reason string `json:"reason"`
 }
 
 // DealNextBestActionEvidence defines model for DealNextBestActionEvidence.
@@ -15879,6 +15770,57 @@ type DealRoomThread struct {
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
 type DealRoomThreadListResponse struct {
 	Data []DealRoomThread `json:"data"`
+}
+
+// DealStatusCard The deal page's one written card. `standing` is always present; `risk` is
+// absent when nothing threatens the deal, because an invented reassurance is
+// worse than silence. `next` is absent only when the deal is closed.
+type DealStatusCard struct {
+	// AtRisk Below the at-risk threshold. The card reads this, not the number, to decide its tone.
+	AtRisk      *bool              `json:"at_risk,omitempty"`
+	DealId      openapi_types.UUID `json:"deal_id"`
+	GeneratedAt time.Time          `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Health The deal-health reading, 0..1, carried so the card can show it without a second request.
+	Health *float32 `json:"health,omitempty"`
+
+	// Next The one move to make, with the verb to perform it.
+	Next *DealStatusCardMove `json:"next,omitempty"`
+
+	// Risk What could lose this deal. Absent when nothing does.
+	Risk *DealStatusCardSection `json:"risk,omitempty"`
+
+	// Standing Where the deal is right now — what moved, what is waiting.
+	Standing DealStatusCardSection `json:"standing"`
+}
+
+// DealStatusCardMove The one thing to do next, and what performing it means. `action` is one of
+// `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
+// the retired next-best-action carried, so a client that already performs them
+// needs no new code. `arguments` is the body or operand the verb takes, ready
+// to send; absent for `none`.
+type DealStatusCardMove struct {
+	Action string `json:"action"`
+
+	// Arguments `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
+	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
+	Evidence  []DealNextBestActionEvidence `json:"evidence"`
+
+	// Reason One sentence saying why this move and not another.
+	Reason string `json:"reason"`
+}
+
+// DealStatusCardSection defines model for DealStatusCardSection.
+type DealStatusCardSection struct {
+	// Sentences Each sentence cites the record it rests on. A sentence whose citations do
+	// not resolve is dropped whole rather than shown uncited.
+	Sentences []OrganizationBriefSentence `json:"sentences"`
 }
 
 // DecideCommissionRequest defines model for DecideCommissionRequest.
@@ -25031,6 +24973,12 @@ type CreateOfferParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetDealStatusParams defines parameters for GetDealStatus.
+type GetDealStatusParams struct {
+	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
+	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
 
 // ListDedupeCandidatesParams defines parameters for ListDedupeCandidates.
@@ -36527,9 +36475,6 @@ type ServerInterface interface {
 	// Advance a deal to a new stage (audit-logged with prior + next stage).
 	// (POST /deals/{id}/advance)
 	AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id, params AdvanceDealParams)
-	// The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
-	// (GET /deals/{id}/brief)
-	GetDealBrief(w http.ResponseWriter, r *http.Request, id Id)
 	// Who covers this deal, and what is wrong with how it is covered.
 	// (GET /deals/{id}/coverage)
 	GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -36542,12 +36487,6 @@ type ServerInterface interface {
 	// Stop listing a captured file on this deal without touching the file.
 	// (PUT /deals/{id}/documents/{attachmentId}/hide)
 	HideDealDocument(w http.ResponseWriter, r *http.Request, id Id, attachmentId openapi_types.UUID)
-	// How the deal stands — four named factors, each with the fact behind it.
-	// (GET /deals/{id}/health)
-	GetDealHealth(w http.ResponseWriter, r *http.Request, id Id)
-	// The one thing to do next on this deal, computed — never performed — on read.
-	// (GET /deals/{id}/next-best-action)
-	GetDealNextBestAction(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's offers, newest revision first.
 	// (GET /deals/{id}/offers)
 	ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams)
@@ -36557,6 +36496,9 @@ type ServerInterface interface {
 	// List a deal's stakeholders (deal↔person relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
+	// Where the deal stands, what could lose it, and the one thing to do next.
+	// (GET /deals/{id}/status)
+	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
 	// The dedupe review queue, confidence-sorted.
 	// (GET /dedupe/candidates)
 	ListDedupeCandidates(w http.ResponseWriter, r *http.Request, params ListDedupeCandidatesParams)
@@ -38423,12 +38365,6 @@ func (_ Unimplemented) AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
-// (GET /deals/{id}/brief)
-func (_ Unimplemented) GetDealBrief(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Who covers this deal, and what is wrong with how it is covered.
 // (GET /deals/{id}/coverage)
 func (_ Unimplemented) GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -38453,18 +38389,6 @@ func (_ Unimplemented) HideDealDocument(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How the deal stands — four named factors, each with the fact behind it.
-// (GET /deals/{id}/health)
-func (_ Unimplemented) GetDealHealth(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The one thing to do next on this deal, computed — never performed — on read.
-// (GET /deals/{id}/next-best-action)
-func (_ Unimplemented) GetDealNextBestAction(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // List a deal's offers, newest revision first.
 // (GET /deals/{id}/offers)
 func (_ Unimplemented) ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams) {
@@ -38480,6 +38404,12 @@ func (_ Unimplemented) CreateOffer(w http.ResponseWriter, r *http.Request, id Id
 // List a deal's stakeholders (deal↔person relationships).
 // (GET /deals/{id}/stakeholders)
 func (_ Unimplemented) ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Where the deal stands, what could lose it, and the one thing to do next.
+// (GET /deals/{id}/status)
+func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47169,40 +47099,6 @@ func (siw *ServerInterfaceWrapper) AdvanceDeal(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
-// GetDealBrief operation middleware
-func (siw *ServerInterfaceWrapper) GetDealBrief(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealBrief(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetDealCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCoverage(w http.ResponseWriter, r *http.Request) {
 
@@ -47406,74 +47302,6 @@ func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// GetDealHealth operation middleware
-func (siw *ServerInterfaceWrapper) GetDealHealth(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealHealth(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetDealNextBestAction operation middleware
-func (siw *ServerInterfaceWrapper) GetDealNextBestAction(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealNextBestAction(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListDealOffers operation middleware
 func (siw *ServerInterfaceWrapper) ListDealOffers(w http.ResponseWriter, r *http.Request) {
 
@@ -47633,6 +47461,56 @@ func (siw *ServerInterfaceWrapper) ListDealStakeholders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDealStakeholders(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDealStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDealStatusParams
+
+	// ------------- Optional query parameter "refresh" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "refresh", r.URL.Query(), &params.Refresh, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "refresh"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "refresh", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealStatus(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -62239,9 +62117,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/advance", wrapper.AdvanceDeal)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/brief", wrapper.GetDealBrief)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/coverage", wrapper.GetDealCoverage)
 	})
 	r.Group(func(r chi.Router) {
@@ -62254,12 +62129,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/deals/{id}/documents/{attachmentId}/hide", wrapper.HideDealDocument)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/health", wrapper.GetDealHealth)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/next-best-action", wrapper.GetDealNextBestAction)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/offers", wrapper.ListDealOffers)
 	})
 	r.Group(func(r chi.Router) {
@@ -62267,6 +62136,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/dedupe/candidates", wrapper.ListDedupeCandidates)
