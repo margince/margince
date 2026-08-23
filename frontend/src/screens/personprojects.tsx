@@ -22,14 +22,22 @@ import type { ProjectPhase } from "./projects.form";
 
 // The same row shape the company page's section takes: the two 360 reads share
 // one project row, which is what lets one section serve both.
+type PersonRole = components["schemas"]["SetProjectStakeholderRequest"]["role"];
+
 type LinkedProjectRow = components["schemas"]["Organization360Project"];
 
-// The role a person takes when the section attaches them with no role picked.
-// `user` is the weakest true claim in the contract's vocabulary: it says they
-// are on the delivery without asserting they sponsor or lead it, which is what
-// a one-click attach can honestly mean. A reader who needs a truer role sets it
-// on the project's own stakeholder list.
-const DEFAULT_STAKEHOLDER_ROLE = "user";
+// What a person can BE on a project — the delivery half of the contract's
+// stakeholder vocabulary, which is what this section is for. The reader picks;
+// nothing is guessed, because attaching with a guessed role OVERWRITES a role
+// somebody set deliberately (the write is a PUT that re-roles an existing edge),
+// and a section cannot both be one click and be safe about that.
+const PERSON_ROLES = [
+  { value: "sponsor", key: "personRole.sponsor" },
+  { value: "project_lead", key: "personRole.projectLead" },
+  { value: "delivery_lead", key: "personRole.deliveryLead" },
+  { value: "subject_matter_expert", key: "personRole.expert" },
+  { value: "user", key: "personRole.user" },
+] as const;
 
 export function PersonProjects({
   personId,
@@ -45,14 +53,22 @@ export function PersonProjects({
 
   const settled = () => {
     queryClient.invalidateQueries({ queryKey: ["person360", personId] });
-    queryClient.invalidateQueries({ queryKey: ["project360"] });
+    // The project pages this person was attached to or detached from — keyed
+    // the way project360.tsx reads them.
+    queryClient.invalidateQueries({ queryKey: ["project"] });
   };
 
   const attach = useMutation({
-    mutationFn: async (projectId: string) => {
+    mutationFn: async ({
+      projectId,
+      role,
+    }: {
+      projectId: string;
+      role: string;
+    }) => {
       const { error } = await api.PUT("/projects/{id}/stakeholders", {
         params: { path: { id: projectId } },
-        body: { person_id: personId, role: DEFAULT_STAKEHOLDER_ROLE },
+        body: { person_id: personId, role: role as PersonRole },
       });
       if (error) {
         throwProblem(error);
@@ -88,7 +104,8 @@ export function PersonProjects({
     readOnly,
     allowsMany: true,
     search: searchProjects,
-    attach: (projectId) => attach.mutateAsync(projectId),
+    roles: PERSON_ROLES.map((one) => ({ value: one.value, label: t(one.key) })),
+    attach: (projectId, role) => attach.mutateAsync({ projectId, role }),
     detach: (projectId) => detach.mutateAsync(projectId),
   };
 

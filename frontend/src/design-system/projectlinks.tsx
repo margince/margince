@@ -13,19 +13,23 @@
 // the verbs, the empty state, the confirm, the pending and refused states — is
 // here, so every record page says it the same way.
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { Button, EmptyState } from "./atoms";
+import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Panel, PanelBody, PanelRow } from "./panel";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
+import { Select } from "./select";
 import "./projectlinks.css";
 
 // One project as this section shows it: enough to name it, phase it, and open
 // it. The same four fields the 360 sections already carry, so a page hands in
 // what it already has rather than fetching a second shape.
+// One role a link may hold, with the words the reader sees.
+export type LinkRole = Readonly<{ value: string; label: string }>;
+
 export type LinkedProject = Readonly<{
   // The linked record's id. Named for the project because the projects side is
   // the common case; the project page's own mirror puts a company id here, and
@@ -50,6 +54,14 @@ export type ProjectLinksAdapter = Readonly<{
   linked: readonly LinkedProject[];
   // Whether the reader may change them at all — a read-only page, an archived
   // record, a seat without the write grant.
+  //
+  // It is the RECORD's answer, not each linked project's: the 360 rows carry no
+  // per-project writability, so a reader holding the record's write grant but
+  // not one project's still sees the verb. That refusal is the server's to
+  // make, and it makes it — the dialog stays open carrying the 403's own words
+  // rather than the verb quietly doing nothing. Hiding the verb on a guess
+  // would be worse: a reader who MAY write the project would be told they
+  // cannot, with nothing to read and nowhere to appeal.
   readOnly?: boolean;
   // Whether a SECOND project may be attached. A deal carries at most one, so
   // its adapter answers false once it has one, and the verb becomes "move"
@@ -59,9 +71,15 @@ export type ProjectLinksAdapter = Readonly<{
   // company's page offers its own company's projects, a deal's offers the
   // deal's company's.
   search: (query: string) => Promise<RecordPickerCandidate[]>;
-  // Attach the picked project. Rejecting leaves the dialog open with the pick
-  // still made, so a refused write is legible rather than silent.
-  attach: (projectID: string) => Promise<void>;
+  // What a link can BE, and what the picker offers. A record's place on a
+  // project is a claim — a customer is not a subcontractor, a sponsor is not a
+  // bystander — so the reader says which, rather than the page choosing one for
+  // them and re-roling whatever they picked.
+  roles: readonly LinkRole[];
+  // Attach the picked project with the role the reader chose. Rejecting leaves
+  // the dialog open with the pick still made, so a refused write is legible
+  // rather than silent.
+  attach: (projectID: string, role: string) => Promise<void>;
   // Take this project off the record. Absent means the link cannot be removed
   // from HERE — a project's own company list says so on the project page.
   detach?: (projectID: string) => Promise<void>;
@@ -92,12 +110,28 @@ export function ProjectLinks({
   const [detaching, setDetaching] = useState<LinkedProject | null>(null);
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [role, setRole] = useState(adapter.roles[0]?.value ?? "");
+  // Focus returns to the SECTION rather than to the row's own verb: a
+  // successful detach removes that button, and focus restored to a node that
+  // is about to unmount leaves a keyboard reader nowhere.
+  const section = useRef<HTMLDivElement>(null);
 
   const canAdd =
     !adapter.readOnly && (adapter.allowsMany || adapter.linked.length === 0);
   // A deal that already has a project offers to MOVE it rather than to add a
   // second, because that is what the write does.
   const moving = !adapter.allowsMany && adapter.linked.length > 0;
+
+  // A dialog cannot be dismissed while its write is in flight. Escape and the
+  // backdrop both reach onClose, and closing there loses the refusal the write
+  // is about to return — the caller sees nothing and believes it worked.
+  function closeWhenIdle(close: () => void) {
+    return () => {
+      if (!busy) {
+        close();
+      }
+    };
+  }
 
   async function run(work: () => Promise<void>, done: () => void) {
     setBusy(true);
@@ -115,103 +149,208 @@ export function ProjectLinks({
   }
 
   return (
-    <Panel
-      title={t(titleKey)}
-      titleAction={
-        !adapter.readOnly && (
-          <div className="pl-verbs">
-            {adapter.onCreate && (
-              <Button variant="ghost" onClick={adapter.onCreate}>
-                {t("projectLinks.new")}
-              </Button>
-            )}
-            {canAdd || moving ? (
-              <Button variant="ghost" onClick={() => setPicking(true)}>
-                {t(moving ? "projectLinks.move" : "projectLinks.attach")}
-              </Button>
-            ) : null}
-          </div>
-        )
-      }
-    >
-      {adapter.linked.length === 0 ? (
-        <PanelBody>
-          <EmptyState title={t("projectLinks.emptyTitle")}>
-            <p>{t(emptyBody)}</p>
-          </EmptyState>
-        </PanelBody>
-      ) : (
-        adapter.linked.map((project) => (
-          <PanelRow key={project.project_id}>
-            <div className="pl-row">
-              <a
-                className="pl-name"
-                href={project.href ?? `#/projects/${project.project_id}`}
-              >
-                {project.name}
-              </a>
-              {project.key && (
-                <span className="t-mono pl-key">{project.key}</span>
-              )}
-              {project.phase}
-              {adapter.detach && !adapter.readOnly && (
-                <Button variant="ghost" onClick={() => setDetaching(project)}>
-                  {t("projectLinks.detach")}
+    <div ref={section}>
+      <Panel
+        title={t(titleKey)}
+        titleAction={
+          !adapter.readOnly && (
+            <div className="pl-verbs">
+              {adapter.onCreate && (
+                <Button variant="ghost" onClick={adapter.onCreate}>
+                  {t("projectLinks.new")}
                 </Button>
               )}
+              {canAdd || moving ? (
+                <Button variant="ghost" onClick={() => setPicking(true)}>
+                  {t(moving ? "projectLinks.move" : "projectLinks.attach")}
+                </Button>
+              ) : null}
             </div>
-          </PanelRow>
-        ))
-      )}
+          )
+        }
+      >
+        {adapter.linked.length === 0 ? (
+          <PanelBody>
+            <EmptyState title={t("projectLinks.emptyTitle")}>
+              <p>{t(emptyBody)}</p>
+            </EmptyState>
+          </PanelBody>
+        ) : (
+          adapter.linked.map((project) => (
+            <PanelRow key={project.project_id}>
+              <div className="pl-row">
+                <a
+                  className="pl-name"
+                  href={project.href ?? `#/projects/${project.project_id}`}
+                >
+                  {project.name}
+                </a>
+                {project.key && (
+                  <span className="t-mono pl-key">{project.key}</span>
+                )}
+                {project.phase}
+                {adapter.detach && !adapter.readOnly && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setDetaching(project)}
+                    // Every row's verb reads the same to the eye and must not to
+                    // a screen reader: a button list of five "Detach" entries
+                    // cannot say which record each one takes off.
+                    aria-label={t("projectLinks.detachNamed", {
+                      name: project.name,
+                    })}
+                  >
+                    {t("projectLinks.detach")}
+                  </Button>
+                )}
+              </div>
+            </PanelRow>
+          ))
+        )}
 
-      {/* The pick dialog is a ConfirmModal with no confirm of its own: picking
-        IS the act, so a second "OK" would ask a reader to agree with what they
-        just chose. Its pending and error slots are what carry a refused write,
-        which is why this is not a bare Modal. */}
-      {picking && (
-        <ConfirmModal
-          open
-          onClose={() => setPicking(false)}
-          title={t(moving ? "projectLinks.move" : "projectLinks.attach")}
-          confirmLabel={t("projectLinks.attach")}
-          confirmDisabled
-          onConfirm={() => undefined}
-          pending={busy}
-          error={refusal}
-        >
-          <RecordPicker
-            label={searchLabel ?? t("projectLinks.searchLabel")}
-            searchTargets={adapter.search}
-            disabled={busy}
-            onPick={(candidate) =>
-              run(
-                () => adapter.attach(candidate.id),
-                () => setPicking(false),
-              )
-            }
-          />
-        </ConfirmModal>
-      )}
-
-      {detaching && adapter.detach && (
-        <ConfirmModal
-          open
-          onClose={() => setDetaching(null)}
-          title={t("projectLinks.detachTitle")}
-          confirmLabel={t("projectLinks.detachConfirm")}
-          confirmVariant="danger"
-          pending={busy}
-          error={refusal}
-          onConfirm={() =>
+        <AttachDialog
+          open={picking}
+          adapter={adapter}
+          role={role}
+          onRole={setRole}
+          moving={moving}
+          busy={busy}
+          refusal={refusal}
+          searchLabel={searchLabel}
+          onClose={closeWhenIdle(() => setPicking(false))}
+          onPick={(id) =>
             run(
-              () => adapter.detach?.(detaching.project_id) ?? Promise.resolve(),
+              () => adapter.attach(id, role),
+              () => setPicking(false),
+            )
+          }
+        />
+        <DetachDialog
+          project={detaching}
+          detach={adapter.detach}
+          busy={busy}
+          refusal={refusal}
+          returnFocusTo={() => section.current}
+          onClose={closeWhenIdle(() => setDetaching(null))}
+          onConfirm={(id) =>
+            run(
+              () => adapter.detach?.(id) ?? Promise.resolve(),
               () => setDetaching(null),
             )
           }
-        >
-          <p>{t("projectLinks.detachBody", { name: detaching.name })}</p>
-        </ConfirmModal>
+        />
+      </Panel>
+    </div>
+  );
+}
+
+// The pick dialog, lifted out of the section: it carries a role, a search and a
+// refusal, and folding all three back in is what took the section past what one
+// function should ask a reader to hold at once.
+//
+// It confirms nothing of its own — picking IS the act — so its confirm button
+// is permanently disabled, present only because ConfirmModal's pending and
+// error slots are what make a refused write legible.
+function AttachDialog({
+  open,
+  adapter,
+  role,
+  onRole,
+  moving,
+  busy,
+  refusal,
+  searchLabel,
+  onClose,
+  onPick,
+}: Readonly<{
+  open: boolean;
+  adapter: ProjectLinksAdapter;
+  role: string;
+  onRole: (role: string) => void;
+  moving: boolean;
+  busy: boolean;
+  refusal: string | null;
+  searchLabel?: string;
+  onClose: () => void;
+  onPick: (projectID: string) => void;
+}>) {
+  const t = useT();
+  if (!open) {
+    return null;
+  }
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t(moving ? "projectLinks.move" : "projectLinks.attach")}
+      confirmLabel={t("projectLinks.attach")}
+      confirmDisabled
+      onConfirm={() => undefined}
+      pending={busy}
+      error={refusal}
+    >
+      {adapter.roles.length > 1 && (
+        <Field label={t("projectLinks.roleLabel")}>
+          {(control) => (
+            <Select
+              {...control}
+              name="pl-role"
+              options={adapter.roles.map((one) => ({
+                value: one.value,
+                label: one.label,
+              }))}
+              value={role}
+              onChange={onRole}
+              disabled={busy}
+            />
+          )}
+        </Field>
       )}
-    </Panel>
+      <RecordPicker
+        label={searchLabel ?? t("projectLinks.searchLabel")}
+        searchTargets={adapter.search}
+        disabled={busy}
+        onPick={(candidate) => onPick(candidate.id)}
+      />
+    </ConfirmModal>
+  );
+}
+
+// The detach confirm, lifted out for the same reason.
+function DetachDialog({
+  project,
+  detach,
+  busy,
+  refusal,
+  returnFocusTo,
+  onClose,
+  onConfirm,
+}: Readonly<{
+  project: LinkedProject | null;
+  detach?: (projectID: string) => Promise<void>;
+  busy: boolean;
+  refusal: string | null;
+  returnFocusTo: () => HTMLElement | null;
+  onClose: () => void;
+  onConfirm: (projectID: string) => void;
+}>) {
+  const t = useT();
+  if (!project || !detach) {
+    return null;
+  }
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      returnFocusTo={returnFocusTo}
+      title={t("projectLinks.detachTitle")}
+      confirmLabel={t("projectLinks.detachConfirm")}
+      confirmVariant="danger"
+      pending={busy}
+      error={refusal}
+      onConfirm={() => onConfirm(project.project_id)}
+    >
+      <p>{t("projectLinks.detachBody", { name: project.name })}</p>
+    </ConfirmModal>
   );
 }

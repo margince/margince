@@ -19,6 +19,7 @@ import {
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
+import { COMPANY_ROLES, roleKey } from "./companyprojects";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
 
@@ -35,15 +36,23 @@ export function ProjectCompanies({
   const queryClient = useQueryClient();
 
   const settled = () => {
-    queryClient.invalidateQueries({ queryKey: ["project360", projectId] });
+    // The key the project page actually reads under (project360.tsx), not a
+    // guess: a mismatch leaves the section showing the state before the write.
+    queryClient.invalidateQueries({ queryKey: ["project", projectId, "360"] });
     queryClient.invalidateQueries({ queryKey: ["organization360"] });
   };
 
   const attach = useMutation({
-    mutationFn: async (organizationId: string) => {
+    mutationFn: async ({
+      organizationId,
+      role,
+    }: {
+      organizationId: string;
+      role: string;
+    }) => {
       const { error } = await api.PUT("/projects/{id}/companies", {
         params: { path: { id: projectId } },
-        body: { organization_id: organizationId, role: "partner" },
+        body: { organization_id: organizationId, role },
       });
       if (error) {
         throwProblem(error);
@@ -81,7 +90,12 @@ export function ProjectCompanies({
     readOnly,
     allowsMany: true,
     search: searchCompanies,
-    attach: (organizationId) => attach.mutateAsync(organizationId),
+    // The same three roles the company page offers, from the other side: one
+    // vocabulary, so a company attached here and one attached there mean the
+    // same thing.
+    roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
+    attach: (organizationId, role) =>
+      attach.mutateAsync({ organizationId, role }),
     detach: (organizationId) => detach.mutateAsync(organizationId),
   };
 

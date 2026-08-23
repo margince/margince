@@ -13,11 +13,31 @@ import {
   type ProjectLinksAdapter,
 } from "../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";
 
 type Organization360Project = components["schemas"]["Organization360Project"];
+
+// What a company can BE to a project. The vocabulary the server records and the
+// reports group by, so a reader picks from it rather than every attach landing
+// as one guessed role.
+export const COMPANY_ROLES = ["customer", "partner", "subcontractor"] as const;
+
+// The message key for one role, spelled once so the picker and any row that
+// renders a role cannot disagree about the words.
+export function roleKey(role: string): MessageKey {
+  switch (role) {
+    case "customer":
+      return "projectRole.customer";
+    case "subcontractor":
+      return "projectRole.subcontractor";
+    default:
+      return "projectRole.partner";
+  }
+}
 
 export function CompanyProjects({
   organizationId,
@@ -30,6 +50,7 @@ export function CompanyProjects({
   readOnly?: boolean;
   onCreate?: () => void;
 }>) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   // Both writes invalidate the company's own 360, because that read is where
@@ -40,13 +61,24 @@ export function CompanyProjects({
       queryKey: ["organization360", organizationId],
     });
     queryClient.invalidateQueries({ queryKey: ["projects"] });
+    // And any project page open behind this one: the company just joined or
+    // left the project it would be showing. Keyed the way project360.tsx reads
+    // it — a mismatch here leaves stale rows on screen and looks like a write
+    // that did not happen.
+    queryClient.invalidateQueries({ queryKey: ["project"] });
   };
 
   const attach = useMutation({
-    mutationFn: async (projectId: string) => {
+    mutationFn: async ({
+      projectId,
+      role,
+    }: {
+      projectId: string;
+      role: string;
+    }) => {
       const { error } = await api.PUT("/projects/{id}/companies", {
         params: { path: { id: projectId } },
-        body: { organization_id: organizationId, role: "partner" },
+        body: { organization_id: organizationId, role },
       });
       if (error) {
         throwProblem(error);
@@ -84,7 +116,8 @@ export function CompanyProjects({
     // the edge this section writes.
     allowsMany: true,
     search: searchProjects,
-    attach: (projectId) => attach.mutateAsync(projectId),
+    roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
+    attach: (projectId, role) => attach.mutateAsync({ projectId, role }),
     detach: (projectId) => detach.mutateAsync(projectId),
     onCreate,
   };
