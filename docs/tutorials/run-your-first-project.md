@@ -259,48 +259,40 @@ one if you give it.
 
 ## 7. Email, and how it finds the project
 
-There are two composers, and they behave differently on purpose.
-
-### Replying from the deal or the project
-
 Open the project (or the deal) and press **Reply** on a message in the
-timeline. Above the Subject field you will see:
+timeline. Above the Subject field is one control:
 
-> ☑ **File under this project**
-> This will be filed under Nordwind ERP rollout, this deal's project.
-> [NER-1] is added to the subject so their reply files itself here.
+> **Project**  `NER-1 · Nordwind ERP rollout` ▾
 
 And the **Subject** field already contains `[NER-1]`.
 
-Nothing was asked of you. The composer worked out where this message belongs
-and said so, in this order:
+Open the picker and you get **No project**, then every live project Nordwind
+reaches — including any it works as a partner or a subcontractor, not only the
+ones it is the customer of.
 
-1. **The thread's own project**, if the conversation is already filed. Then the
-   first line reads *…like the rest of this conversation* instead.
-2. **The deal's project**, when the thread carries none — and only when you are
-   replying from a **deal**. This is the ordinary case for a conversation that
-   started before the project was attached, and the line names the reason —
-   *this deal's project* — because you never put that project on this
-   conversation and deserve to be told where it came from. Replying from a
-   company or a contact page has no deal to fall back on, so only rung 1
-   applies there.
+- **Choosing a project** puts its `[KEY]` at the front of the Subject.
+- **Choosing No project** takes the tag out.
+- **Switching projects** swaps the tag.
 
-If neither names a project, **nothing appears at all**: no line, no tickbox, no
-tag. A message that belongs to no project is the common case and says so by
-staying quiet.
+Nothing explains this on screen, and nothing needs to: the tag is right there
+in the Subject field. Edit it, delete it, type your own — it is ordinary text
+and Margince leaves your version alone.
 
-**To decline**, untick the box. The two lines disappear and `[NER-1]` is taken
-back out of the Subject — the tag would otherwise promise a routing that will
-not happen. Tick it again and the tag returns, in front of whatever you have
-since typed. You can also just delete the tag yourself; it stays deleted.
+### What it starts on
 
-**The box only appears when the project came from the deal**, as it does here.
-Reply to a conversation that is *already* filed under a project and you get the
-sentence and the tag but no box: that reply lands on the project whatever you
-do, because it inherits the filing of the message it answers. Rather than offer
-you a switch that would not be honoured, Margince states the fact. Moving a
-filed conversation is **Relink**, on the message's own timeline row, and it
-moves the whole thread at once.
+The picker suggests rather than decides:
+
+1. **The thread's own project**, when the conversation is already filed. A
+   conversation is one body of work, and a sibling message settled it.
+2. **The deal's project**, when the thread carries none and you are replying
+   from a deal. This is the ordinary case for a conversation that started
+   before the project was attached.
+3. **The company's only live project**, when it has exactly one and neither of
+   the above applies.
+
+Otherwise it starts on **No project**. Every one of those is a starting point
+you can change — and when the company reaches no live project at all, the
+picker does not appear.
 
 > **The tag is doing real work, not decoration.** Your customer's mail client
 > keeps `[NER-1]` in the subject when they reply. Margince reads it back on the
@@ -308,35 +300,39 @@ moves the whole thread at once.
 > broken by a forward, a new subject, or a colleague brought in on a fresh
 > message. This is what makes the filing survive leaving your installation.
 
-One limit, stated plainly: **when the project came from the deal, the tag is
-the only thing carrying it.** A reply is filed under whatever the message you
-are answering was filed under, and it cannot add a link of its own. So on a
-conversation the project never reached, your sent copy does not appear on the
-project's timeline — the customer's tagged answer is what brings the whole
-thread in. A conversation already filed does not have this problem. This is
-[issue #2422](https://github.com/margince/margince/issues/2422); the
-account-started composer below does not have it either.
+One limit worth knowing: **on a reply, the tag may be the only thing carrying
+the project.** A reply is filed under whatever the message you are answering
+was filed under, and it cannot add a link of its own. So on a conversation the
+project never reached, your sent copy does not appear on the project's timeline
+— the customer's tagged answer is what brings the whole thread in. A
+conversation already filed does not have this problem, and neither does the
+composer below. This is
+[issue #2422](https://github.com/margince/margince/issues/2422).
 
 ### Writing to an account from the company page
 
 Open the company page (**Companies** → *Nordwind Logistik*) and press
-**Write email**. This composer starts a new conversation rather than continuing
-one, so there is no thread to inherit from and it **asks** instead of stating:
+**Write email**. A fresh mail is filed under a project exactly the same way: the
+**Project** picker is the same control, in the same place, filling the Subject
+with the same tag. There is no thread to inherit from, so it starts on the
+company's only live project when it has one, and on **No project** otherwise.
+
+Two more pickers sit above it here, because a new conversation needs what a
+reply already knows:
 
 - **Draft to** — which contact.
 - **Related to** — which deal, when the account has any.
-- **Project** — **No project**, then the projects on this account as
-  `NER-1 · Nordwind ERP rollout`. With exactly one live project it is
-  pre-selected; with several it starts at **No project**.
 
-Choosing one shows **Scoped to NER-1** beneath it, and that does two things:
+Choosing a project shows **Scoped to NER-1** beneath the picker, and here it
+does one extra thing beyond filing the mail:
 
-- **What the AI reads.** Press **Draft with AI**. The draft is grounded only in
-  what is filed under this project or under no project at all; mail filed under
-  a *different* project on the same account is left out, and the **Based on:**
-  line lists what it did draw from.
-- **Where the mail is filed.** The sent message is linked to the project, so it
-  appears on the project's timeline and replies inherit that filing.
+**What the AI reads.** Press **Draft with AI**. The draft is grounded only in
+what is filed under this project or under no project at all; mail filed under a
+*different* project on the same account is left out, and the **Based on:** line
+lists what it did draw from.
+
+The sent message is also **linked** to the project — this composer does send the
+link — so it appears on the project's timeline straight away.
 
 ### One more thing the composer does quietly
 
