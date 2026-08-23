@@ -114,9 +114,6 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 				if !endedAtCurrency.MatchString(sql) {
 					continue
 				}
-				if strings.Contains(sql, employmentHelper) || strings.Contains(sql, primaryHelper) {
-					continue
-				}
 				if blockedByTheModuleDAG.Waived(t, filepath.ToSlash(path)) {
 					continue
 				}
@@ -184,11 +181,20 @@ func employmentStatements(decl ast.Decl) []string {
 // flattenSQL renders a string expression as the text it builds, marking every
 // node it consumed so an inner piece is not judged again on its own.
 //
-// A CallExpr becomes its function name and an unknown expression becomes a
-// space: this gate asks whether a statement decides employment currency by
-// hand, and the runtime VALUE of an interpolated fragment is not something a
-// parser can know. Rendering the name is enough to see that the one definition
-// was reached.
+// A call to the ONE DEFINITION renders as a neutral marker: the predicate it
+// produces exists only at runtime, so the statement's text carries no
+// `ended_at` test from it, and a statement that calls the helper is simply a
+// statement with nothing hand-written left to find.
+//
+// That replaced an exemption — "this statement mentions the helper, so skip
+// it" — which was too coarse in the direction that matters: a query calling
+// the helper for one half and hand-writing the other was skipped WHOLESALE.
+// Calling the one definition is not a licence to write a second one beside it.
+//
+// Other calls render as their name and their arguments, because a formatter
+// holds its SQL in an argument: `fmt.Sprintf(`… kind = 'employment' … `, …)`
+// keeps the statement inside the call, and a flattener that stopped at the
+// call name would judge nothing.
 func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
 	switch v := n.(type) {
 	case *ast.BasicLit:
@@ -210,18 +216,46 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
 		return left + right, true
 	case *ast.CallExpr:
 		seen[n] = true
-		switch f := v.Fun.(type) {
-		case *ast.Ident:
-			return " " + f.Name + " ", true
-		case *ast.SelectorExpr:
-			return " " + f.Sel.Name + " ", true
+		if name := employmentCalleeName(v); name == employmentHelper || name == primaryHelper {
+			markSeen(v, seen)
+			return " " + name + " ", true
 		}
-		return " ", true
+		text := ""
+		for _, a := range v.Args {
+			if part, ok := flattenSQL(a, seen); ok {
+				text += part
+			}
+		}
+		return " " + text + " ", true
 	case ast.Expr:
 		seen[n] = true
 		return " ", true
 	}
 	return "", false
+}
+
+// employmentCalleeName is the function's own name, however it is qualified.
+// Prefixed because retentionscope_test.go already has a calleeName in this
+// package.
+func employmentCalleeName(call *ast.CallExpr) string {
+	switch f := call.Fun.(type) {
+	case *ast.Ident:
+		return f.Name
+	case *ast.SelectorExpr:
+		return f.Sel.Name
+	}
+	return ""
+}
+
+// markSeen claims a whole subtree, so nothing inside a helper call is judged as
+// though somebody had written it into the statement.
+func markSeen(n ast.Node, seen map[ast.Node]bool) {
+	ast.Inspect(n, func(c ast.Node) bool {
+		if c != nil {
+			seen[c] = true
+		}
+		return true
+	})
 }
 
 // firstEmploymentLine returns the line of the statement that names the
