@@ -111,12 +111,3 @@ func createOfferCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 		Fields: json.RawMessage(body),
 	}), nil
 }
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func upsertPartnerCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewUpsertPartnerCall(deps.records, agents.UpsertPartnerCommand{ID: id}), nil
-}

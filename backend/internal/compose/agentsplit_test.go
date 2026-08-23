@@ -162,50 +162,6 @@ func TestSplitAllHumanOwnedRefusesAnExternallyHeldRecord(t *testing.T) {
 	}
 }
 
-// TestUpsertPartnerStagesAHumanOwnedPartnerField pins actionShapedUpdateOps'
-// own claim about upsertPartner (its comment, above the map): the resolver
-// maps partner→organization, so this patch IS a field patch on the routed
-// organization, and an agent overwriting a human-typed partner field
-// (cert_status here) has to STAGE, the same §2.1 precedence protection
-// every ordinary organization field patch gets — not silently apply, which
-// is what would happen if upsertPartner were ever added to the map.
-//
-// Run through admitAgentCall — the layer that actually reads
-// actionShapedUpdateOps to decide between splitHumanOwnedUpdate and a bare
-// next.ServeHTTP (agentgate.go) — rather than splitHumanOwnedUpdate directly,
-// so this test is sensitive to the membership question itself, not only to
-// splitHumanOwnedUpdate's own internals. Verified by hand: adding
-// `opUpsertPartner: true` back into actionShapedUpdateOps and rerunning
-// this test fails it — the call takes the bare next.ServeHTTP branch
-// instead, the handler runs, and nothing stages.
-func TestUpsertPartnerStagesAHumanOwnedPartnerField(t *testing.T) {
-	orgID := ids.NewV7()
-	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner}
-	body := []byte(`{"cert_status":"certified"}`)
-	req := operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "", body)
-	rec := httptest.NewRecorder()
-	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		t.Fatal("the handler ran — cert_status is human-owned, so the write must stage, not apply")
-	})
-
-	admitAgentCall(rec, req, next, admissionOutcome{
-		staging: staging, ownership: allHumanOwned{},
-		commands: restCommandDeps{records: seamRecord{}}, pol: pol, body: body,
-	})
-
-	if staging.last.TargetType != "organization" || staging.last.TargetID != orgID {
-		t.Fatalf("staged target = (%s,%s), want (organization,%s) — the resolver maps partner→organization, "+
-			"so the approval binds to the org whose field this patch actually sets",
-			staging.last.TargetType, staging.last.TargetID, orgID)
-	}
-	if rec.Code != http.StatusForbidden {
-		t.Errorf("status = %d, want %d (approval_required) — a human-owned field applied silently is the "+
-			"§2.1 precedence protection this test exists to hold, and an unclassified 500 must not read "+
-			"as that refusal", rec.Code, http.StatusForbidden)
-	}
-}
-
 // mixedHumanOwned answers the ownership probe by naming only ONE field as
 // human-owned, leaving any other touched field to auto-execute — the shape
 // that sends splitHumanOwnedUpdate down applyAutoExecuteAndStageResidue's
@@ -215,55 +171,6 @@ type mixedHumanOwned struct{ conflict string }
 
 func (m mixedHumanOwned) HumanOwnedConflicts(context.Context, string, ids.UUID, json.RawMessage) ([]string, error) {
 	return []string{m.conflict}, nil
-}
-
-// TestUpsertPartnerResidueStagesTheOrganizationNotPartner pins the third
-// staging call site: applyAutoExecuteAndStageResidue builds its StageRequest
-// through the resolver seam (stagedTarget) rather than straight off
-// pol.RecordType ("partner" for this op) and the routed id, which is what the
-// two call sites TestUpsertPartnerStagesAHumanOwnedPartnerField covers already
-// do. "partner" has no rule in either
-// targetProbes or existenceProbes (approvals/targetvisibility.go), so a
-// row staged under it fails closed — invisible in the inbox, undecidable
-// at the decision — the zombie authority object this whole seam exists to
-// prevent, for the exact write §2.1 is supposed to protect.
-//
-// A MIXED patch (one human-owned field, one agent-owned) is what reaches
-// the residue path rather than the all-human-owned terminal branch, so
-// this drives one through admitAgentCall — the same layer
-// TestUpsertPartnerStagesAHumanOwnedPartnerField uses — with an
-// auto-execute handler that answers the shape a real 200 record has.
-// Verified to fail against the pre-fix residue path: it staged
-// target_type "partner" instead of "organization".
-func TestUpsertPartnerResidueStagesTheOrganizationNotPartner(t *testing.T) {
-	orgID := ids.NewV7()
-	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner}
-	body := []byte(`{"cert_status":"certified","margin_tier":"tier1_15"}`)
-	req := operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "", body)
-	rec := httptest.NewRecorder()
-	// The stand-in for the real UpsertPartner handler: applies the
-	// agent-owned half and answers 200 with a record body, the shape
-	// applyAutoExecuteAndStageResidue decodes to read the post-write
-	// version and splice the staging note into.
-	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"organization_id":"` + orgID.String() + `","margin_tier":"tier1_15","version":3}`))
-	})
-	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-
-	admitAgentCall(rec, req, next, admissionOutcome{
-		staging: staging, ownership: mixedHumanOwned{conflict: "cert_status"},
-		commands: restCommandDeps{records: seamRecord{}}, pol: pol, body: body,
-		registry: reg,
-	})
-
-	if staging.last.TargetType != "organization" || staging.last.TargetID != orgID {
-		t.Fatalf("residue staged target = (%s,%s), want (organization,%s) — the residue path must "+
-			"resolve through the same seam the all-human-owned branch does, not off pol.RecordType "+
-			"directly", staging.last.TargetType, staging.last.TargetID, orgID)
-	}
 }
 
 // A refusal describes a request that changed nothing
@@ -280,9 +187,9 @@ func TestUpsertPartnerResidueStagesTheOrganizationNotPartner(t *testing.T) {
 func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *testing.T) {
 	orgID := ids.NewV7()
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner}
-	body := []byte(`{"cert_status":"certified","margin_tier":"tier1_15"}`)
-	req := operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "", body)
+	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
+	req := patchRequest("/v1/organizations", orgID, body)
 	rec := httptest.NewRecorder()
 	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("the handler ran — the agent-owned half was written for a call this door then refused, " +
@@ -290,7 +197,7 @@ func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *t
 	})
 
 	admitAgentCall(rec, req, next, admissionOutcome{
-		staging: staging, ownership: mixedHumanOwned{conflict: "cert_status"},
+		staging: staging, ownership: mixedHumanOwned{conflict: "display_name"},
 		commands: restCommandDeps{records: mirroredRecord{}}, pol: pol, body: body,
 		registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
 	})
@@ -326,18 +233,18 @@ func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *t
 func TestAResidueStagedUnderAnIdempotencyKeyIsRedeemableByItsRetry(t *testing.T) {
 	orgID := ids.NewV7()
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner}
-	body := []byte(`{"cert_status":"certified","margin_tier":"tier1_15"}`)
-	req := operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "", body)
+	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
+	req := operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "", "", body)
 	req.Header.Set(idempotencyKeyHeader, "01J0-agent-retry-key")
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"organization_id":"` + orgID.String() + `","margin_tier":"tier1_15","version":3}`))
+		_, _ = w.Write([]byte(`{"id":"` + orgID.String() + `","display_name":"Renamed GmbH","version":3}`))
 	})
 
 	admitAgentCall(httptest.NewRecorder(), req, next, admissionOutcome{
-		staging: staging, ownership: mixedHumanOwned{conflict: "cert_status"},
+		staging: staging, ownership: mixedHumanOwned{conflict: "display_name"},
 		commands: restCommandDeps{records: seamRecord{}}, pol: pol, body: body,
 		registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
 	})
@@ -348,10 +255,10 @@ func TestAResidueStagedUnderAnIdempotencyKeyIsRedeemableByItsRetry(t *testing.T)
 	// The retry the staging note instructs: the withheld fields alone, the
 	// approval token, and NO idempotency key — the original is settled and a
 	// fresh one would be a different call.
-	retry := operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "",
+	retry := operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "", "",
 		[]byte(staging.last.ProposedChange))
 	_, retryHash, err := canonicalRESTCall(pol.Op, retry.URL.Path, retry.Header,
-		[]byte(`{"cert_status":"certified"}`), keyBindsTheRetry)
+		[]byte(`{"display_name":"Renamed GmbH"}`), keyBindsTheRetry)
 	if err != nil {
 		t.Fatalf("canonicalizing the retry answered %v", err)
 	}

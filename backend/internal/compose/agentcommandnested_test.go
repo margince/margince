@@ -56,10 +56,6 @@ func TestANestedCommandMalformedRouteIDAnswersNotFound(t *testing.T) {
 			"createOffer", createOfferCommand,
 			operandRequest(http.MethodPost, "/v1/deals", "not-a-uuid", "", "", []byte(`{}`)),
 		},
-		{
-			"upsertPartner", upsertPartnerCommand,
-			operandRequest(http.MethodPut, "/v1/organizations", "not-a-uuid", "", "", []byte(`{}`)),
-		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -121,7 +117,7 @@ func TestAMalformedLineItemIDAnswers422(t *testing.T) {
 // createOffer is the one exception: it stages the record TYPE with no id
 // (gradionhq/margince-poc-v1#1046), asserted separately below.
 func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
-	listID, tagID, offerID, orgID := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	listID, tagID, offerID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	lineItemID := ids.NewV7()
 	cases := []struct {
 		name           string
@@ -161,12 +157,6 @@ func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
 			operandRequest(http.MethodDelete, "/v1/offers", offerID.String(), "lineItemId", lineItemID.String(), nil), nil,
 			"offer", offerID,
 		},
-		{
-			"upsertPartner",
-			agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner},
-			operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "", []byte(`{}`)), []byte(`{}`),
-			"organization", orgID,
-		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -205,13 +195,12 @@ func TestCreateOfferStagesNoIDThroughStageRefusal(t *testing.T) {
 	}
 }
 
-// The behaviour change registering these seven in restCommands buys over
-// the route-walk fallback: Guards now runs, for the two families the
-// record seam actually serves. createOffer refuses a DEAL the caller
-// cannot see; upsertPartner refuses an ORGANIZATION the caller cannot see.
-// The other five (list, tag, offer) have no such proof — the seam has
-// never served those types, so there is no read for Guards to skip, the
-// same bound task 5's custom_field commands stand on.
+// The behaviour change registering these six in restCommands buys over
+// the route-walk fallback: Guards now runs, for the one family the record
+// seam actually serves — createOffer refuses a DEAL the caller cannot see.
+// The other five (list, tag, offer) have no such proof: the seam has never
+// served those types, so there is no read for Guards to skip, the same
+// bound task 5's custom_field commands stand on.
 func TestANestedCommandOfAnUnseeableParentStagesNothing(t *testing.T) {
 	cases := []struct {
 		name string
@@ -223,11 +212,6 @@ func TestANestedCommandOfAnUnseeableParentStagesNothing(t *testing.T) {
 			"createOffer",
 			agentPolicy{Op: "createOffer", Access: accessTool, Tool: "create_record", RecordType: recordTypeOffer},
 			operandRequest(http.MethodPost, "/v1/deals", ids.NewV7().String(), "", "", []byte(`{}`)), []byte(`{}`),
-		},
-		{
-			"upsertPartner",
-			agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner},
-			operandRequest(http.MethodPut, "/v1/organizations", ids.NewV7().String(), "", "", []byte(`{}`)), []byte(`{}`),
 		},
 	}
 	for _, c := range cases {
