@@ -226,13 +226,19 @@ func setCompanyRoleTx(
 	// and outbox rows commit with the edge, in this transaction, like every
 	// other mutation in this tree.
 	row, err := scanRelationship(tx.QueryRow(ctx,
+		// The kind is a LITERAL in both the insert and the conflict predicate,
+		// not a bind parameter. uq_rel_project_company is a PARTIAL index, and
+		// Postgres infers a partial index only from a predicate it can prove
+		// matches — a parameter is opaque to that proof, so the same words with
+		// $1 in them raise 42P10, "no unique or exclusion constraint matching
+		// the ON CONFLICT specification", and every attach fails.
 		`INSERT INTO relationship (kind, project_id, organization_id, role, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		 VALUES ('`+ProjectCompanyKind+`', $1, $2, $3, $4, $5)
 		 ON CONFLICT (project_id, organization_id)
-		   WHERE kind = 'project_company' AND archived_at IS NULL
+		   WHERE kind = '`+ProjectCompanyKind+`' AND archived_at IS NULL
 		   DO UPDATE SET role = EXCLUDED.role, version = relationship.version + 1, updated_at = now()
 		 RETURNING `+relationshipColumns,
-		ProjectCompanyKind, projectID, organizationID, role, projectCompanySource, by))
+		projectID, organizationID, role, projectCompanySource, by))
 	if err != nil {
 		return fmt.Errorf("put the company on the project: %w", err)
 	}
