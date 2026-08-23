@@ -294,11 +294,13 @@ back out of the Subject — the tag would otherwise promise a routing that will
 not happen. Tick it again and the tag returns, in front of whatever you have
 since typed. You can also just delete the tag yourself; it stays deleted.
 
-One thing unticking does **not** do: if the conversation was already filed
-under a project, the reply still lands on that project, because a reply
-inherits the links of the message it answers. Unticking takes off the tag and
-the claim, not the filing. Moving a filed conversation is **Relink**, which
-moves all of it at once.
+**The box only appears when the project came from the deal**, as it does here.
+Reply to a conversation that is *already* filed under a project and you get the
+sentence and the tag but no box: that reply lands on the project whatever you
+do, because it inherits the filing of the message it answers. Rather than offer
+you a switch that would not be honoured, Margince states the fact. Moving a
+filed conversation is **Relink**, on the message's own timeline row, and it
+moves the whole thread at once.
 
 > **The tag is doing real work, not decoration.** Your customer's mail client
 > keeps `[NER-1]` in the subject when they reply. Margince reads it back on the

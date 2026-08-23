@@ -140,16 +140,18 @@ can only offer when you are replying from a deal. Replying from a company or a
 contact has no deal to fall back on. If neither names a project, nothing is
 shown at all.
 
-The **Subject** field is stamped with `[KEY]`. Untick the box and both lines go
-and the tag is removed; tick it again and the tag comes back in front of
+The **Subject** field is stamped with `[KEY]`.
+
+**The tickbox appears only when the project came from the DEAL.** There it is a
+real choice: nothing else is carrying that project, so unticking both drops the
+filing and removes the tag. Tick it again and the tag comes back in front of
 whatever you have typed. A tag you delete by hand stays deleted.
 
-**What unticking does depends on where the project came from.** On the deal
-fallback it genuinely declines the filing: nothing else was carrying it. On a
-thread already filed under a project, the reply **still inherits that project
-link** from the message it answers — unticking removes the tag and the claim,
-not the filing. To move a filed conversation, use **Relink**, which moves the
-whole thread.
+**A thread already filed under a project gets no tickbox** — only the sentence
+and the tag. The reply inherits that project from the message it answers and no
+control on this form can undo it, so offering one would be offering a choice
+the send does not honour. To move a filed conversation, use **Relink** on its
+timeline row, which moves the whole thread rather than one message.
 
 If the subject already carries a **different** project's key, sending under this
 one removes it — two keys in a subject make the inbound rule ambiguous, so it

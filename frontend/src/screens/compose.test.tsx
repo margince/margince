@@ -1950,7 +1950,7 @@ describe("ComposeModal started from an account", () => {
           ],
         }),
       "GET /projects/pr-1": () =>
-        jsonResponse({ id: "pr-1", name: "ERP rollout Acme" }),
+        jsonResponse({ id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" }),
     });
     render(
       <ComposeModal
@@ -1968,6 +1968,17 @@ describe("ComposeModal started from an account", () => {
     // It SAYS rather than offers: a picker here would file one message of a
     // conversation away from the rest of it.
     expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull();
+    // And no tickbox either. The send inherits the thread's links whatever
+    // this form says, so a box here would offer a choice that is not honoured
+    // — unticking it would remove the tag and file the reply anyway.
+    expect(screen.queryByLabelText("File under this project")).toBeNull();
+    // The subject is still stamped: the tag is what carries the project out to
+    // the customer's reply, and nothing above declined it.
+    await waitFor(() =>
+      expect(
+        (screen.getByPlaceholderText("Subject") as HTMLInputElement).value,
+      ).toBe("[ERP-27]"),
+    );
   });
 
   // A thread filed under no project has nothing to announce, and "filed under
