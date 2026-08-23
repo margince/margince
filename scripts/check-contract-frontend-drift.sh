@@ -11,6 +11,9 @@
 #                     — enforced ONLY by the frontend lane's fe-drift leg
 #   -update-mcp-info → the published MCP surface docs
 #                     — enforced by a unit test in check-backend
+#   -update-agent-tool-budget → docs/reference/agent-tool-budget.{json,md}, what
+#                     each scheduled agent's tool listing costs its window
+#                     — enforced by a unit test in check-backend, same shape
 #
 # `make gen` has no frontend reference at all, and a backend-only author has no
 # reason to run the lane that would catch the second. So a contract change could
