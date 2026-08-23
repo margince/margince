@@ -42,7 +42,7 @@ import (
 func tightenedPairs(t *testing.T) map[toolRecordType]string {
 	t.Helper()
 	registry := NewRegistry(nil, SendPath{})
-	routes := routesPerToolRecordType()
+	ambiguous := ambiguousPairs()
 	pairs := map[toolRecordType]string{}
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
@@ -52,8 +52,8 @@ func tightenedPairs(t *testing.T) map[toolRecordType]string {
 		if !registered || spec.Tier == mcp.TierConfirmationRequired {
 			continue
 		}
-		if routes[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] > 1 &&
-			!isCanonicalRecordRoute(route) {
+		pair := toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}
+		if ambiguous[pair] && !isCanonicalRecordRoute(route) {
 			continue
 		}
 		if !registry.Performs(pol.Tool, string(pol.RecordType)) {
@@ -119,12 +119,12 @@ func TestEveryVerbTheFloorTightensNamesItsRecordType(t *testing.T) {
 // it is invisible to every gate above, all of which only ask whether the floor
 // knows ENOUGH.
 func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
-	routes := routesPerToolRecordType()
+	ambiguous := ambiguousPairs()
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierAutoExecute {
 			continue
 		}
-		if routes[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] > 1 &&
+		if ambiguous[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] &&
 			!isCanonicalRecordRoute(route) {
 			continue
 		}
@@ -157,34 +157,80 @@ func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
 // to be expressed, and the default becomes the only setting there is.
 func TestEveryStageableVerbCanBeFlooredBack(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
-	seen := map[string]bool{}
-	for _, pol := range agentPolicies {
-		if pol.Access != accessTool || pol.RecordType == "" || seen[pol.Tool] {
+	for _, spec := range registry.Specs() {
+		if !registry.Stageable(spec.Name) || spec.Tier == mcp.TierConfirmationRequired {
+			// Already confirm-first for every call, or unable to stage at all —
+			// either way there is nothing a floor could add.
 			continue
 		}
-		spec, registered := registry.Spec(pol.Tool)
-		if !registered || !registry.Stageable(pol.Tool) {
-			continue
-		}
-		seen[pol.Tool] = true
-		if spec.Tier == mcp.TierConfirmationRequired {
-			// Already confirm-first for every call, so there is nothing a floor
-			// could add and nothing an installation has to reach for.
-			continue
-		}
-		if !registry.NamesRecordType(pol.Tool) {
+		if !registry.NamesRecordType(spec.Name) {
 			t.Errorf("%s executes directly and can stage, so an installation may want it confirmed — "+
 				"but it does not report the record type of a call, so no tier floor can reach it and "+
-				"the default is the only setting there is", pol.Tool)
+				"the default is the only setting there is", spec.Name)
+		}
+	}
+}
+
+// The failure mode Codex named on the first draft of this filter: a verb that
+// performs ONE effect losing its floor because arbitration was applied to it.
+//
+// Arbitration drops every route that is not the record's own collection route.
+// That is right for a generic verb, whose pair really is declared by several
+// operations and only one of them is the effect. It is wrong for a dedicated
+// verb, whose single route may be action-shaped — and when it is, arbitration
+// drops the ONLY route and the floor disappears with it. Six verbs were in
+// exactly that state before this branch.
+//
+// The gate walks it from the outcome rather than from the rule: every verb the
+// contract tightens must end up with a floor it can be tightened by. If a future
+// route makes a dedicated verb's pair look ambiguous, this fails rather than
+// quietly removing a human from the loop.
+func TestNoDedicatedVerbLosesItsFloorToArbitration(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	for route, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
 			continue
 		}
-		// Whether the verb PERFORMS this particular record type is deliberately not
-		// asserted. A route may borrow a verb's annotation for an effect the verb
-		// does not have — `replyDealRoomThread` is annotated `create_record` for
-		// `deal_room_comment`, which create_record does not create — and
-		// Registry.tightened is built to leave such a pair alone rather than stage
-		// a call that would die at the provider. What this gate is about is
-		// narrower and unconditional: can a floor be resolved for this verb AT
-		// ALL.
+		if !registry.Performs(pol.Tool, string(pol.RecordType)) {
+			continue
+		}
+		if _, declared := tierFloor(pol.Tool, string(pol.RecordType)); !declared {
+			t.Errorf("%s tightens %s for %q and performs it, but no floor survives for that pair — "+
+				"canonical-route arbitration dropped the only route the verb has, so an installation "+
+				"declaring this tightening gets nothing", route, pol.Tool, pol.RecordType)
+		}
+	}
+}
+
+// Arbitration must still bite where it was written to.
+//
+// `PATCH /v1/custom-fields/{id}/options` is confirm-first: editing the option set
+// of a field rewrites what existing rows can say, which is a schema change. The
+// canonical route on the same pair — `PATCH /v1/custom-fields/{id}`, a rename —
+// is auto-execute. Both declare (update_record, custom_field).
+//
+// Without arbitration the options route's tightening collapses onto that pair,
+// and every ordinary custom-field rename stages on the tool door while the REST
+// door runs it unattended. That is #982 pointing the other way, and it is what
+// the first draft of this fix actually did.
+func TestArbitrationStillDropsASidecarRoutesTightening(t *testing.T) {
+	const sidecar = "PATCH /v1/custom-fields/{id}/options"
+	const canonical = "PATCH /v1/custom-fields/{id}"
+
+	side, declared := agentPolicies[sidecar]
+	canon, alsoDeclared := agentPolicies[canonical]
+	if !declared || !alsoDeclared {
+		t.Fatalf("%s and %s are the pair this gate is built on and one is gone from the contract; "+
+			"point it at another sidecar route rather than deleting it", sidecar, canonical)
+	}
+	if side.Tier != tierConfirmationRequired || canon.Tier != tierAutoExecute {
+		t.Skipf("the custom-field routes no longer have the tightened-sidecar shape "+
+			"(sidecar=%s, canonical=%s); pick another pair for this gate", side.Tier, canon.Tier)
+	}
+
+	if _, floored := tierFloor("update_record", "custom_field"); floored {
+		t.Errorf("%s tightens an OPTION SET rewrite, and its tightening reached the "+
+			"(update_record, custom_field) floor — every ordinary rename through %s would now stage "+
+			"on the tool door while the REST door runs it unattended", sidecar, canonical)
 	}
 }

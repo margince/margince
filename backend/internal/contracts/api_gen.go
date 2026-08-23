@@ -22488,7 +22488,7 @@ type SignalEvidenceSourceType string
 
 // SignalIntroPath An actionable warm-intro path — names the route-in contact, the relationship we
 // have, and a concrete next move with a drafted message. Proposal only: the send is
-// the 🟡 confirm-first send tool, never this read.
+// the governed send tool, never this read.
 type SignalIntroPath struct {
 	// ContactId The route-in contact (the strongest live relationship at the resolved organization).
 	ContactId   openapi_types.UUID `json:"contact_id"`

@@ -3012,7 +3012,7 @@ export interface paths {
          * Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
          * @description Reads connected-calendar free/busy and returns candidate slots. 🟢 read-only — proposes,
          *     never books. Scheduling is a **governed MCP tool** (`features/07 §5c`): this read pairs with
-         *     the 🟡 `book_meeting` action below.
+         *     the `book_meeting` action below, which writes.
          */
         get: operations["getAvailability"];
         put?: never;
@@ -8318,8 +8318,8 @@ export interface paths {
          *     organization), the relationship we have, and a concrete suggested next move with a
          *     drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
          *     warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
-         *     send rides the 🟡 confirm-first send tool (POST /activities/{id}/send-email); the
-         *     warm room proposes, the rep sends.
+         *     send rides the governed send tool (POST /activities/{id}/send-email); the warm
+         *     room proposes, the rep sends.
          */
         get: operations["getSignalIntroPath"];
         put?: never;
@@ -16958,7 +16958,7 @@ export interface components {
         /**
          * @description An actionable warm-intro path — names the route-in contact, the relationship we
          *     have, and a concrete next move with a drafted message. Proposal only: the send is
-         *     the 🟡 confirm-first send tool, never this read.
+         *     the governed send tool, never this read.
          */
         SignalIntroPath: {
             /** Format: uuid */

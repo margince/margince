@@ -51,13 +51,13 @@ type toolRecordType struct{ tool, recordType string }
 // there rather than wrong here, and it is the tool that knows.
 var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 	floors := map[toolRecordType]mcp.RiskTier{}
-	routes := routesPerToolRecordType()
+	ambiguous := ambiguousPairs()
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
 			continue
 		}
 		pair := toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}
-		if routes[pair] > 1 && !isCanonicalRecordRoute(route) {
+		if ambiguous[pair] && !isCanonicalRecordRoute(route) {
 			continue
 		}
 		floors[pair] = mcp.TierConfirmationRequired
@@ -65,26 +65,36 @@ var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 	return floors
 }()
 
-// routesPerToolRecordType counts how many operations declare each (verb, record
-// type) pair, which is what decides whether isCanonicalRecordRoute has a question
-// to answer.
+// ambiguousPairs are the (verb, record type) pairs that more than one operation
+// declares — the only pairs canonical-route arbitration has a question to answer
+// for.
 //
-// Canonicality exists to pick ONE operation out of several sharing a pair:
+// Canonicality exists to pick ONE operation out of several sharing a pair.
 // `update_record`+`organization` is declared by five routes, and only
-// `PATCH /v1/organizations/{id}` is the field patch the verb performs. Where a pair
-// is declared by exactly ONE route, there is nothing to pick — that route IS the
-// operation, whatever its shape.
+// `PATCH /v1/organizations/{id}` is the field patch the verb performs; the rest
+// write facts, memberships and profile corrections that verb cannot reach. Where
+// a pair is declared by exactly one route, there is nothing to pick — that route
+// IS the operation, whatever shape it has.
 //
-// Applying the canonical filter unconditionally silently dropped every
-// action-shaped verb from the floor table: `promote_lead` lives at
-// `POST /v1/leads/{id}/promote`, `send_email` at
+// Applying the filter to every route silently dropped six verbs from the floor
+// table. `promote_lead` lives at `POST /v1/leads/{id}/promote`, `send_email` at
 // `POST /v1/activities/{id}/send-email`, `merge_records` at
 // `POST /v1/people/{id}/merge` — three segments each, so none of them could be
 // floored at all. That was invisible while those verbs were statically
-// confirm-first and became load-bearing the moment they started executing
-// directly, because the floor is the whole of what an installation has to tighten
-// them back.
-func routesPerToolRecordType() map[toolRecordType]int {
+// confirm-first, and became load-bearing the moment they started executing
+// directly, because the floor is the whole of what an installation has to
+// tighten them back.
+//
+// Keyed on the PAIR rather than on the verb. Keying on the verb reads the same
+// way for today's table and is wrong in a way that matters: `archive_record` and
+// `merge_records` both READ their record type from arguments like the generic
+// verbs do, but each of their pairs has exactly one route, so arbitrating them
+// would drop merge_records' floor entirely. What decides the question is whether
+// there is more than one operation to choose between, which is what this asks.
+//
+// TestNoDedicatedVerbLosesItsFloorToArbitration is the gate that keeps this
+// honest as routes are added.
+func ambiguousPairs() map[toolRecordType]bool {
 	counts := map[toolRecordType]int{}
 	for _, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" {
@@ -92,7 +102,11 @@ func routesPerToolRecordType() map[toolRecordType]int {
 		}
 		counts[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}]++
 	}
-	return counts
+	ambiguous := make(map[toolRecordType]bool, len(counts))
+	for pair, n := range counts {
+		ambiguous[pair] = n > 1
+	}
+	return ambiguous
 }
 
 // isCanonicalRecordRoute reports whether a route is a whole-record write on the

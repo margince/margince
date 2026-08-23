@@ -4572,7 +4572,7 @@ paths:
       description: |
         Reads connected-calendar free/busy and returns candidate slots. 🟢 read-only — proposes,
         never books. Scheduling is a **governed MCP tool** (`features/07 §5c`): this read pairs with
-        the 🟡 `book_meeting` action below.
+        the `book_meeting` action below, which writes.
       x-mcp-tool: { verb: check_availability, tier: auto_execute, scope: read }
       parameters:
         - { name: host_user_id, in: query, required: false, schema: { type: string, format: uuid }, description: 'Host to check (defaults to the caller).' }
@@ -12553,8 +12553,8 @@ paths:
         organization), the relationship we have, and a concrete suggested next move with a
         drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
         warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
-        send rides the 🟡 confirm-first send tool (POST /activities/{id}/send-email); the
-        warm room proposes, the rep sends.
+        send rides the governed send tool (POST /activities/{id}/send-email); the warm
+        room proposes, the rep sends.
       responses:
         '200':
           description: The proposed intro path.
@@ -23224,7 +23224,7 @@ components:
       description: |
         An actionable warm-intro path — names the route-in contact, the relationship we
         have, and a concrete next move with a drafted message. Proposal only: the send is
-        the 🟡 confirm-first send tool, never this read.
+        the governed send tool, never this read.
       required: [signal_id, resolved_org_id, contact_id, relationship, next_move, evidence]
       properties:
         signal_id: { type: string, format: uuid }

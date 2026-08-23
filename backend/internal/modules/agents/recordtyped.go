@@ -27,8 +27,8 @@ package agents
 // at some construction site and answer "" — silently removing that door from the
 // floor rather than failing to compile.
 //
-// Four of the single-type verbs — advance_deal, and the three relink verbs —
-// resolve their tier DYNAMICALLY. A floor is not the same lever and does not
+// Five of the single-type verbs — advance_deal, progress_deal, and the three
+// relink verbs — resolve their tier DYNAMICALLY. A floor is not the same lever and does not
 // duplicate the resolver: the resolver raises one call on that call's own facts,
 // where a floor tightens every call of the verb for a record type. An
 // installation that wants the whole verb confirmed cannot get there by waiting
@@ -115,11 +115,13 @@ func (sendAccountEmailTool) ServesRecordType(recordType string) bool {
 // --- single-type verbs whose tier is resolved dynamically (see the note above) ---
 
 func (advanceDeal) RecordTypeOf(json.RawMessage) string      { return typeDeal }
+func (progressDeal) RecordTypeOf(json.RawMessage) string     { return typeDeal }
 func (relinkActivity) RecordTypeOf(json.RawMessage) string   { return typeActivity }
 func (relinkThread) RecordTypeOf(json.RawMessage) string     { return typeActivity }
 func (relinkActivities) RecordTypeOf(json.RawMessage) string { return typeActivity }
 
 func (advanceDeal) ServesRecordType(recordType string) bool      { return recordType == typeDeal }
+func (progressDeal) ServesRecordType(recordType string) bool     { return recordType == typeDeal }
 func (relinkActivity) ServesRecordType(recordType string) bool   { return recordType == typeActivity }
 func (relinkThread) ServesRecordType(recordType string) bool     { return recordType == typeActivity }
 func (relinkActivities) ServesRecordType(recordType string) bool { return recordType == typeActivity }

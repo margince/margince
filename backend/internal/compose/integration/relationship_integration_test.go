@@ -332,10 +332,14 @@ func TestAnApprovedEdgeArchiveRefusesAfterTheEdgeMoves(t *testing.T) {
 
 	// The identical retry now refuses: same verb, same arguments, same
 	// diff_hash — and a row that is no longer the one the human approved.
-	if _, err := invoke(`{"record_type":"relationship","id":"` + edge.ID +
-		`","approval_id":"` + approvalID + `"}`); err == nil {
-		t.Fatal("the approved retry archived an edge that had been rewritten since the human saw it; " +
-			"the version pin is what must refuse that")
+	// The sentinel, not merely "an error": a refusal for a spent approval, a
+	// missing grant or a decode fault would satisfy `err != nil` while proving
+	// nothing about the pin, and the pin is the whole subject here.
+	_, err = invoke(`{"record_type":"relationship","id":"` + edge.ID +
+		`","approval_id":"` + approvalID + `"}`)
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("the approved retry answered %v, want ErrVersionSkew — the edge had been rewritten "+
+			"since the human saw it, and the version pin is what must refuse that", err)
 	}
 
 	// And nothing was archived.

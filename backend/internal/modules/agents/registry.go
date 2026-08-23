@@ -381,6 +381,27 @@ func (r *Registry) Performs(name, recordType string) bool {
 	return isTyped && typed.ServesRecordType(recordType)
 }
 
+// RecordTypeOfCall answers the record type this verb would resolve for these
+// arguments, or "" when the verb names none.
+//
+// Exported for the composition's own gate on genericRecordVerbs: whether a verb
+// READS its record type or answers a constant is what decides if canonical-route
+// arbitration applies to it, and that is a fact about the tool rather than a list
+// a reader has to keep true by hand.
+func (r *Registry) RecordTypeOfCall(name string, args json.RawMessage) string {
+	r.mu.RLock()
+	t, ok := r.tools[name]
+	r.mu.RUnlock()
+	if !ok {
+		return ""
+	}
+	typed, isTyped := t.(recordTypedTool)
+	if !isTyped {
+		return ""
+	}
+	return typed.RecordTypeOf(args)
+}
+
 // Spec returns the registered spec for name — the REST admission path
 // (ADR-0055) resolves a mutating operation's tool twin through this.
 func (r *Registry) Spec(name string) (mcp.ToolSpec, bool) {
