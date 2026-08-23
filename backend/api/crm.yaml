@@ -6766,7 +6766,7 @@ paths:
       tags: [Tags]
       operationId: applyTag
       x-mcp-tool: { verb: apply_tag, record_type: tag, tier: auto_execute, scope: write }
-      summary: Apply a tag to an entity (person/org/deal/lead).
+      summary: Apply a tag to an entity (person/org/deal/lead/project).
       requestBody:
         required: true
         content:

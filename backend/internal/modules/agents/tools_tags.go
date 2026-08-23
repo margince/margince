@@ -20,6 +20,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	"errors"
 
@@ -60,6 +62,10 @@ type Tags interface {
 	EnsureTag(ctx context.Context, name string) (ids.UUID, error)
 	ApplyTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
 	RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
+	// TaggableTypes answers the record types a tagging may name — the store's
+	// own vocabulary, so the apply/remove schemas advertise exactly what the
+	// `taggable` table admits rather than a copy of that list kept here.
+	TaggableTypes() []string
 }
 
 // RegisterTagTools joins the tag verbs to the surface; a nil seam registers
@@ -73,17 +79,24 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(removeTag{tags: tags})
 }
 
-// tagTargetEnum is the vocabulary a tagging may name, and it is the store's:
-// person, organization, deal and lead are what `taggable` admits.
-const tagTargetEnum = `["person","organization","deal","lead"]`
-
 // taggingSchema is apply's and remove's argument shape, spelled once: they name
-// the same three things, and two copies is two places for them to drift.
-const taggingSchema = `{"type":"object","required":["record_type","record_id"],"properties":{
+// the same arguments, and two copies is two places for them to drift. The
+// record_type enum comes from the seam rather than a literal here, so the
+// schema advertises what the store admits by construction.
+func taggingSchema(taggableTypes []string) string {
+	quoted := make([]string, len(taggableTypes))
+	for i, t := range taggableTypes {
+		// strconv.Quote, not raw splicing: Go and JSON string quoting agree on
+		// every character these plain type names carry, and quoting has no
+		// error path where a marshal call would invite one.
+		quoted[i] = strconv.Quote(t)
+	}
+	return `{"type":"object","required":["record_type","record_id"],"properties":{
 	"tag_id":{"type":"string","format":"uuid"},
 	"tag_name":{"type":"string","maxLength":120,"description":"Instead of tag_id: the tag is created if the workspace has no such word"},
-	"record_type":{"type":"string","enum":` + tagTargetEnum + `},
+	"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
 	"record_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`
+}
 
 // --- list_tags (🟢 read) ---
 
@@ -133,7 +146,7 @@ func (t applyTag) Spec() mcp.ToolSpec {
 		Description:   applyTagCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "applyTag",
-		InputSchema:  schema(taggingSchema),
+		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),
 	}
 }
@@ -182,7 +195,7 @@ func (t removeTag) Spec() mcp.ToolSpec {
 		Description:   removeTagCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "removeTag",
-		InputSchema:  schema(taggingSchema),
+		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),
 	}
 }

@@ -89,6 +89,12 @@ func (a tagAdapter) FindTag(ctx context.Context, name string) (ids.UUID, bool, e
 	return a.store.FindTag(ctx, name)
 }
 
+// TaggableTypes hands through the collections module's own list, so the tool
+// schemas' record_type enum and the store's CHECK cannot drift apart.
+func (a tagAdapter) TaggableTypes() []string {
+	return collections.TaggableEntityTypes()
+}
+
 func (a tagAdapter) ApplyTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
 	_, err := a.store.ApplyTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
 	return err
