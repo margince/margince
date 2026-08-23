@@ -20,6 +20,7 @@ package compose
 // one there.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -28,19 +29,32 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
 )
 
 // buildsAJobLegitimately are the files that may construct a runner.Job.
 // Adding one is a decision about the catalog boundary, so it is made here in
 // review rather than discovered later in a sweep.
-var buildsAJobLegitimately = map[string]string{
+//
+// gatekit.Waive rather than a bare map: it holds each reason to a floor, and
+// AssertAllMatched reports an entry that no longer matches anything — so a file
+// that stops building a Job cannot leave its permission behind for whatever is
+// written there next.
+var buildsAJobLegitimately = gatekit.Waive(map[string]string{
 	"internal/compose/runnerservice.go":      "the two production paths, each carrying a spec's own allowlist",
 	"internal/compose/certcase_agentloop.go": "the certification lane, whose fixture is the offered surface",
-}
+})
 
 // jobConstructionForms are the ways a runner.Job comes into existence. A gate
 // that knew only the composite literal would be evaded by three of these while
 // reporting the tree clean, which is worse than not having it.
+//
+// It matches on the `runner.Job` spelling, so an import alias (`import r
+// ".../runner"` then `r.Job{}`) walks past it. That is a known limit, shared
+// with the older gate in agentspectools_test.go, and it is left rather than
+// papered over: closing it means resolving imports per file, and an alias for
+// this package would itself be a strange thing to find in review.
 func jobConstructionForms(file *ast.File) []token.Pos {
 	var at []token.Pos
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -83,11 +97,15 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 			return err
 		}
 		if d.IsDir() {
+			rel := filepath.ToSlash(strings.TrimPrefix(path, root+string(filepath.Separator)))
 			// The runner's own package builds Jobs constantly and is the one
 			// place that legitimately does: it OWNS the type, and its tests
-			// exercise the empty case on purpose.
-			switch d.Name() {
-			case ".git", "node_modules", "runner":
+			// exercise the empty case on purpose. Pinned to the full path
+			// rather than the base name — a future modules/<x>/runner/ must not
+			// inherit the exemption by being called the same thing.
+			switch {
+			case d.Name() == ".git" || d.Name() == "node_modules",
+				rel == "internal/modules/agents/runner":
 				return filepath.SkipDir
 			}
 			return nil
@@ -97,14 +115,18 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 		}
 		parsed, perr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if perr != nil {
-			return nil // not this gate's subject; the build catches an unparseable file
+			// A file this scan cannot read is a file it cannot clear, and
+			// "unreadable" must not resolve to "clean". The build would also
+			// fail on it, but not before this gate had already reported the
+			// tree green.
+			return fmt.Errorf("parsing %s, so this gate cannot say whether it builds a runner.Job: %w", path, perr)
 		}
 		if len(jobConstructionForms(parsed)) == 0 {
 			return nil
 		}
 		rel := filepath.ToSlash(strings.TrimPrefix(path, root+string(filepath.Separator)))
 		seen[rel] = true
-		if _, sanctioned := buildsAJobLegitimately[rel]; !sanctioned {
+		if !buildsAJobLegitimately.Waived(t, rel) {
 			offenders = append(offenders, rel)
 		}
 		return nil
@@ -120,12 +142,12 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 			"compose's scheduledAgents(), or add the file to buildsAJobLegitimately with the reason", file)
 	}
 	// A gate that finds nothing because it is looking in the wrong place reads
-	// exactly like a clean tree.
-	for file, why := range buildsAJobLegitimately {
-		if !seen[file] {
-			t.Errorf("%s is sanctioned to build a runner.Job (%s) but builds none — "+
-				"this gate is reading the wrong tree, or the entry is stale", file, why)
-		}
+	// exactly like a clean tree, so a sanction that matched nothing is reported
+	// rather than assumed dormant.
+	buildsAJobLegitimately.AssertAllMatched(t)
+	if len(seen) == 0 {
+		t.Error("no file in the tree builds a runner.Job — this gate is reading the wrong root, " +
+			"which is indistinguishable from a tree with nothing to find")
 	}
 }
 

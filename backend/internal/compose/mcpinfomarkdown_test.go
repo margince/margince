@@ -110,7 +110,8 @@ func writeMCPInfoHead(page *strings.Builder, doc mcpInfo) {
 	page.WriteString("Those are the WIRE bytes: they carry each tool's output schema and the governance\n")
 	page.WriteString("clause the transport appends. The Surface-B listing a run re-sends every step is\n")
 	page.WriteString("smaller — name, description and input schema only — and is held against its own\n")
-	page.WriteString("budget in `agenttooldescriptions_test.go`.\n\n")
+	page.WriteString("budget in `agenttooldescriptions_test.go`. What that listing costs each SCHEDULED\n")
+	page.WriteString("agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).\n\n")
 	writeMCPInfoComposition(page, doc.Totals)
 }
 

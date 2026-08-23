@@ -6,6 +6,7 @@ package compose
 import (
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
@@ -35,8 +36,12 @@ import (
 // nothing would look wrong: the run would work, the diff would look complete,
 // and the boundary would be off.
 //
-// TestTheScheduledCatalogIsTotalAgainstTheContract holds the claim that this is
-// the only such assembly by holding both halves total against each other.
+// TestTheScheduledCatalogIsTotalAgainstTheContract holds both halves total
+// against each other. It does NOT hold that this is the only assembly of them —
+// no test does, so this comment does not claim it. What is gated is narrower
+// and is the part that matters: TestOnlySanctionedFilesBuildARunnerJob names
+// the only two files that may construct a Job at all, so a second assembly
+// would have nowhere to deliver its result.
 func scheduledAgents() ([]runner.AgentSpec, error) {
 	return joinScheduledAgents(runner.Catalog(), ai.AgentsFor(ai.TaskAgentLoop))
 }
@@ -72,23 +77,39 @@ func joinScheduledAgents(specs []runner.AgentSpec, declared []ai.Agent) ([]runne
 	return assembled, nil
 }
 
-// mustScheduledAgents is the composition-time reading. A mismatch between the
-// contract and the catalog is a build-shaped defect that no deployment can
-// configure its way out of, and the two are checked against each other by a
-// gate, so reaching this panic means the binary was assembled from halves that
-// were never meant to go together.
-func mustScheduledAgents() []runner.AgentSpec {
+// mustScheduledAgents reads the join once, and panics if the halves disagree.
+//
+// A mismatch is a build-shaped defect no deployment can configure its way out
+// of — both halves are compile-time constants, and a gate holds them total
+// against each other — so a panic here means the binary was assembled from
+// parts that were never meant to go together.
+//
+// WHERE IT PANICS MATTERS, which is why NewRunnerService calls it eagerly.
+// Left to first use, the first evaluation would be inside Tick on a River
+// worker goroutine, and River recovers a worker panic into a job error: a
+// mismatched binary would boot green and fail quietly in river_job rows, tick
+// after tick. Reading it at construction turns that into a refusal to start.
+//
+// OnceValue also stops the join re-running per executed or resumed job.
+// Harmless at two agents; it is simply not work that needs doing twice.
+var mustScheduledAgents = sync.OnceValue(func() []runner.AgentSpec {
 	specs, err := scheduledAgents()
 	if err != nil {
 		panic("compose: " + err.Error())
 	}
 	return specs
-}
+})
 
-// agentSpecByName resolves a stored job's catalog entry WITH its declared
-// allowlist. It is RunnerService's production default; the seam stays open for
-// the integration lane, which needs a spec no shipped agent has.
-func agentSpecByName(name string) (runner.AgentSpec, bool) {
+// ScheduledAgentSpecByName resolves a stored job's catalog entry WITH its
+// declared allowlist. It is RunnerService's production default.
+//
+// Exported because WithSpecResolver leaves one door open: a caller that
+// supplies its own resolver still has to answer for the agents it did NOT
+// invent, and the only correct answer is this one. It is exported so that
+// fallback is reachable rather than approximated — the runner's own by-name
+// lookup was deleted for exactly this reason, having become a function that
+// returned a spec with no allowlist and looked like the obvious choice.
+func ScheduledAgentSpecByName(name string) (runner.AgentSpec, bool) {
 	for _, spec := range mustScheduledAgents() {
 		if spec.Name == name {
 			return spec, true

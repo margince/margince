@@ -24,8 +24,8 @@ feature is expected to argue with.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 3 | 992 | 4.1% | 16008 | 4 | 2 |
-| `overnight_at_risk_sweep` | 7 | 2190 | 9.1% | 14810 | 14 | 5 |
+| `morning_brief` | 3 | 992 | 4.1% | 16008 | 4 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2190 | 9.1% | 14810 | 14 | 8 |
 | _whole served catalog, for scale_ | 56 | 16829 | 70.1% | — | — | — |
 
 ### `morning_brief`
@@ -108,17 +108,7 @@ scenario's goal, so summing them over one agent's fixed goal borrows precision t
 number does not have. Read it as an ordering of which tools cause trouble on this
 surface, not as a prediction about one agent.
 
-**9 scenarios were skipped by the scan** and are named here rather than dropped:
-
-- a_draft_precedes_a_send.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- a_warm_path_is_not_a_search.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- catchup_over_raw_reads.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- coverage_names_the_gap.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- enrichment_is_not_search.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- logging_what_happened_changes_nothing_else.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- meeting_prep_is_not_a_catchup.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- the_calendar_event_is_the_anchor.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
-- who_knows_needs_the_person.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)
+Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
@@ -126,18 +116,18 @@ Median 275 tokens, mean 300, across 56 served tools.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1201 | 2 scenarios |
-| `update_record` | 565 | 3 scenarios |
+| `run_report` | 1201 | 3 scenarios |
+| `update_record` | 565 | 4 scenarios |
 | `send_account_email` | 546 | — |
 | `resolve_entities` | 513 | — |
 | `list_records` | 475 | — |
 | `advance_deal` | 474 | 1 scenarios |
-| `send_email` | 472 | — |
+| `send_email` | 472 | 1 scenarios |
 | `log_activity` | 448 | 1 scenarios |
-| `progress_deal` | 435 | 2 scenarios |
+| `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 432 | — |
 | `query_workspace` | 402 | 3 scenarios |
-| `search_records` | 392 | 3 scenarios |
+| `search_records` | 392 | 6 scenarios |
 | `enrich` | 388 | — |
 | `create_record` | 370 | 1 scenarios |
 | `search_context` | 352 | — |
@@ -151,7 +141,7 @@ Median 275 tokens, mean 300, across 56 served tools.
 | `decide_approval` | 303 | — |
 | `promote_lead` | 303 | — |
 | `archive_record` | 293 | — |
-| `catch_me_up_on` | 287 | 1 scenarios |
+| `catch_me_up_on` | 287 | 3 scenarios |
 | `relink_activity` | 286 | — |
 | `prepare_handoff` | 275 | 1 scenarios |
 | `list_approvals` | 274 | — |
@@ -159,7 +149,7 @@ Median 275 tokens, mean 300, across 56 served tools.
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
-| `read_record` | 229 | 1 scenarios |
+| `read_record` | 229 | 2 scenarios |
 | `disqualify_lead` | 222 | — |
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
@@ -170,10 +160,10 @@ Median 275 tokens, mean 300, across 56 served tools.
 | `apply_tag` | 206 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
-| `intro_path_to` | 197 | — |
+| `intro_path_to` | 197 | 2 scenarios |
 | `remove_tag` | 187 | — |
 | `list_channel_providers` | 181 | — |
-| `account_coverage` | 178 | 1 scenarios |
+| `account_coverage` | 178 | 2 scenarios |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
 | `commit_import` | 150 | — |

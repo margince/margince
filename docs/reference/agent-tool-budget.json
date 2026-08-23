@@ -27,7 +27,7 @@
         "list_records → run_report",
         "list_records → search_records"
       ],
-      "temptation_weight": 2
+      "temptation_weight": 5
     },
     {
       "name": "overnight_at_risk_sweep",
@@ -60,7 +60,7 @@
         "whats_slipping_this_week → draft_follow_ups_for",
         "whats_slipping_this_week → run_report"
       ],
-      "temptation_weight": 5
+      "temptation_weight": 8
     }
   ],
   "tool_cost": [
@@ -291,23 +291,39 @@
   ],
   "corpus_wrong_reach": [
     {
-      "name": "query_workspace",
-      "scenarios_naming_it_as_the_wrong_reach": 3
-    },
-    {
       "name": "search_records",
-      "scenarios_naming_it_as_the_wrong_reach": 3
+      "scenarios_naming_it_as_the_wrong_reach": 6
     },
     {
       "name": "update_record",
+      "scenarios_naming_it_as_the_wrong_reach": 4
+    },
+    {
+      "name": "catch_me_up_on",
       "scenarios_naming_it_as_the_wrong_reach": 3
     },
     {
       "name": "progress_deal",
-      "scenarios_naming_it_as_the_wrong_reach": 2
+      "scenarios_naming_it_as_the_wrong_reach": 3
+    },
+    {
+      "name": "query_workspace",
+      "scenarios_naming_it_as_the_wrong_reach": 3
     },
     {
       "name": "run_report",
+      "scenarios_naming_it_as_the_wrong_reach": 3
+    },
+    {
+      "name": "account_coverage",
+      "scenarios_naming_it_as_the_wrong_reach": 2
+    },
+    {
+      "name": "intro_path_to",
+      "scenarios_naming_it_as_the_wrong_reach": 2
+    },
+    {
+      "name": "read_record",
       "scenarios_naming_it_as_the_wrong_reach": 2
     },
     {
@@ -315,15 +331,7 @@
       "scenarios_naming_it_as_the_wrong_reach": 2
     },
     {
-      "name": "account_coverage",
-      "scenarios_naming_it_as_the_wrong_reach": 1
-    },
-    {
       "name": "advance_deal",
-      "scenarios_naming_it_as_the_wrong_reach": 1
-    },
-    {
-      "name": "catch_me_up_on",
       "scenarios_naming_it_as_the_wrong_reach": 1
     },
     {
@@ -339,23 +347,13 @@
       "scenarios_naming_it_as_the_wrong_reach": 1
     },
     {
-      "name": "read_record",
+      "name": "send_email",
       "scenarios_naming_it_as_the_wrong_reach": 1
     }
   ],
   "corpus": {
     "scenarios": 23,
     "offering_the_whole_catalog": 21,
-    "skipped_by_the_scan": [
-      "a_draft_precedes_a_send.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "a_warm_path_is_not_a_search.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "catchup_over_raw_reads.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "coverage_names_the_gap.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "enrichment_is_not_search.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "logging_what_happened_changes_nothing_else.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "meeting_prep_is_not_a_catchup.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "the_calendar_event_is_the_anchor.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)",
-      "who_knows_needs_the_person.yaml (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)"
-    ]
+    "skipped_by_the_scan": null
   }
 }

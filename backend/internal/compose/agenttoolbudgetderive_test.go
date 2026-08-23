@@ -12,10 +12,10 @@ package compose
 //
 // The listing rides in every step of a tool-fed window, so attaching a tool
 // spends prompt on every turn of every run for as long as the agent exists.
-// Until #2355 the only statement of that cost was a single number in a test,
-// and it measured the whole catalog — which no agent is ever offered. An author
-// adding a tool could see neither what it cost their agent nor what it cost
-// that agent's ability to pick the right tool.
+// An author adding a tool needs to see what it costs THEIR agent — both in
+// prompt and in that agent's ability to pick the right tool — and a number
+// measured across the whole catalog, which no agent is ever offered, answers
+// neither question.
 //
 // These are the three things the published page reports, each derived from an
 // artefact already in this tree so none of them can be maintained into being
@@ -117,9 +117,16 @@ type wrongReachCensus struct {
 }
 
 var (
-	scenarioAnswer = regexp.MustCompile(`(?m)^\s{2}answer:\s*(\S+)\s*$`)
-	scenarioTools  = regexp.MustCompile(`(?m)^\s{2}tools:\s*(\S+)\s*$`)
-	scenarioRubric = regexp.MustCompile(`(?s)\n  rubric:(.*?)\n  bands:`)
+	// The corpus writes an expected step two ways: `answer: read_record` when
+	// the step alone is graded, and a nested `answer:` block carrying `step:`
+	// when the arguments are graded too. Nine of the twenty-three use the
+	// second, and reading only the first would silently drop them — along with
+	// the catch_me_up_on/prep_for_meeting confusion this census exists to
+	// surface.
+	scenarioAnswer       = regexp.MustCompile(`(?m)^\s{2}answer:\s*(\S+)\s*$`)
+	scenarioAnswerNested = regexp.MustCompile(`(?m)^\s{2}answer:\s*\n\s{4}step:\s*(\S+)\s*$`)
+	scenarioTools        = regexp.MustCompile(`(?m)^\s{2}tools:\s*(\S+)\s*$`)
+	scenarioRubric       = regexp.MustCompile(`(?s)\n  rubric:(.*?)\n  bands:`)
 )
 
 func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, error) {
@@ -151,20 +158,22 @@ func readWrongReachCensus(dir string, specs []mcp.ToolSpec) (wrongReachCensus, e
 				entry.Name()+" (no rubric block this scan could read)")
 			continue
 		}
-		// A scenario whose intended answer lives only in rubric prose CANNOT be
+		// A scenario whose expected step this scan cannot read CANNOT be
 		// counted: with no answer to subtract, the tool the scenario exists to
-		// reward is counted as a wrong reach — the census would then report the
-		// right answer as the temptation. Nine of the corpus's scenarios are
-		// written that way today. They are named rather than absorbed, because
-		// a scan that quietly dropped them would report a smaller, cleaner
-		// number for a reason nobody could see.
+		// reward is counted as a wrong reach, and the census would report the
+		// right answer as the temptation. Such a scenario is NAMED rather than
+		// absorbed — a scan that quietly dropped one would publish a smaller,
+		// cleaner number for a reason nobody could see.
 		answer := ""
-		if got := scenarioAnswer.FindStringSubmatch(text); len(got) == 2 {
-			answer = got[1]
+		for _, pattern := range []*regexp.Regexp{scenarioAnswer, scenarioAnswerNested} {
+			if got := pattern.FindStringSubmatch(text); len(got) == 2 {
+				answer = got[1]
+				break
+			}
 		}
 		if answer == "" {
 			census.Skipped = append(census.Skipped,
-				entry.Name()+" (its intended answer is stated only in rubric prose, so a wrong reach cannot be told from the right one)")
+				entry.Name()+" (this scan could not read its expected step, so a wrong reach cannot be told from the right one)")
 			continue
 		}
 		named := map[string]bool{}

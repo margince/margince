@@ -52,7 +52,7 @@ func TestTheScheduledCatalogIsTotalAgainstTheContract(t *testing.T) {
 // scheduled run is narrowed by its passport alone and nothing looks wrong.
 func TestTheDefaultResolverCarriesEachAgentsDeclaredAllowlist(t *testing.T) {
 	for _, want := range runner.Catalog() {
-		spec, known := agentSpecByName(want.Name)
+		spec, known := ScheduledAgentSpecByName(want.Name)
 		if !known {
 			t.Errorf("the default resolver does not know scheduled agent %q", want.Name)
 			continue
@@ -62,7 +62,7 @@ func TestTheDefaultResolverCarriesEachAgentsDeclaredAllowlist(t *testing.T) {
 				"as NO narrowing, so this run would be bounded by its passport alone", want.Name)
 		}
 	}
-	if _, known := agentSpecByName("an_agent_no_release_ever_shipped"); known {
+	if _, known := ScheduledAgentSpecByName("an_agent_no_release_ever_shipped"); known {
 		t.Error("the default resolver claims to know an agent the catalog does not schedule")
 	}
 }
@@ -99,5 +99,37 @@ func TestTheAssemblyRefusesEitherHalfGoingMissing(t *testing.T) {
 				t.Errorf("the refusal does not say what is wrong: want it to mention %q, got %v", tc.wantErr, err)
 			}
 		})
+	}
+}
+
+// The other half of runner's TestNoUnattendedAgentSpecCanAnswerAnApproval,
+// here because the allowlist is here.
+//
+// decide_approval and decide_approval_bundle are auto-execute and write-scoped,
+// so nothing in the admission gate stops a run calling them: a passport that
+// may decide is exactly what an interactive caller needs, and it is the RUN
+// that must not be able to spend it. The declaration is the only thing in the
+// way, and a decide verb added to it would look like an ordinary line in a
+// list of tools — while making a scheduled run able to release the calls it
+// staged for itself, which is the first unattended self-approval in the tree.
+func TestNoScheduledAgentAttachesADecideVerb(t *testing.T) {
+	decideVerbs := []string{"decide_approval", "decide_approval_bundle"}
+	agents := mustScheduledAgents()
+	if len(agents) == 0 {
+		t.Fatal("no scheduled agents — this gate checked nothing")
+	}
+	checked := 0
+	for _, spec := range agents {
+		for _, tool := range spec.Tools {
+			checked++
+			if slices.Contains(decideVerbs, tool) {
+				t.Errorf("agent %q attaches %s, so a scheduled run could release the calls it stages "+
+					"for itself — the confirm-first tier is a formality for that agent", spec.Name, tool)
+			}
+		}
+	}
+	if checked == 0 {
+		t.Error("no agent attaches any tool, so this gate compared nothing — the declaration is not " +
+			"reaching the assembled catalog")
 	}
 }

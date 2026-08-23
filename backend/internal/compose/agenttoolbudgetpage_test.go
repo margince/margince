@@ -26,8 +26,8 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("exists, and what it displaces is the observations the run is reasoning over.\n\n")
 	p.WriteString("Each agent declares its tools in [`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml)\n")
 	p.WriteString("under `agent_loop`'s `agents:`. Read the numbers below **before** adding one.\n\n")
-	fmt.Fprintf(&p, "The window is %d tokens. An agent's listing may take %d of them (17/24). The whole\n",
-		b.PromptCeiling, b.AgentBudget)
+	fmt.Fprintf(&p, "The window is %d tokens. An agent's listing may take %d of them (%d/%d). The whole\n",
+		b.PromptCeiling, b.AgentBudget, listingBudgetNumerator, listingBudgetDenominator)
 	fmt.Fprintf(&p, "served catalog is held to %d — a floor for the certification lane, not a budget any\n", b.CatalogFloor)
 	p.WriteString("feature is expected to argue with.\n\n")
 

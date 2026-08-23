@@ -89,14 +89,3 @@ func (a AgentSpec) DueAt(day time.Time) time.Time {
 	d := day.UTC()
 	return time.Date(d.Year(), d.Month(), d.Day(), a.DueHourUTC, 0, 0, 0, time.UTC)
 }
-
-// SpecByName resolves a stored job's spec; a job naming a spec the
-// catalog no longer carries fails its run loudly.
-func SpecByName(name string) (AgentSpec, bool) {
-	for _, spec := range Catalog() {
-		if spec.Name == name {
-			return spec, true
-		}
-	}
-	return AgentSpec{}, false
-}
