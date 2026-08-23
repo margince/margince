@@ -119,24 +119,33 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 	if err != nil {
 		return extensionTool{}, err
 	}
-	// Every core tool that leaves the workspace — send_email, send_message,
-	// book_meeting, the enrich pair — is 🟡, because the only control over a
-	// destination the product did not choose is a human deciding the call. A
-	// served extension tool cannot be 🟡 (see just above), so serving an
-	// outbound one would put this surface on the wrong side of that rule:
-	// outbound authority nothing declares, on a call nobody can be asked
-	// about. A handler-LESS outbound tool is fine — it is a manifest request,
-	// not a capability.
+	// A served extension tool may not spend an outbound cap, and the reason is
+	// no longer that the core egress verbs are 🟡 — since ADR-0055 they are not.
+	// send_email, send_message and book_meeting now run directly, because a
+	// passport carries the granting human's own seat and grants, and every one
+	// of those sends is something that person could make unaided in the app.
+	//
+	// The reason that survives is what an extension is: code the workspace did
+	// not write, reaching a destination the product did not choose, on authority
+	// no seat holder ever exercised. There is no human whose ordinary reach this
+	// mirrors, so ADR-0055's argument does not carry over. What WOULD make it
+	// safe is a floor an installation can set on the unit's verb, and this
+	// surface cannot stage at all (see the refusal just above), so a floor here
+	// would have nowhere to land.
+	//
+	// A handler-LESS outbound tool is fine — it is a manifest request, not a
+	// capability.
 	//
 	// This binds the DECLARATION. A handler is ordinary Go and could reach the
 	// network whatever cap it asks for — that is bounded by the composed set
 	// being the trust boundary (see buildExtensionTools), not by this check.
 	// What the check buys is that a unit cannot ASK for outbound authority and
-	// be granted it silently on the auto-execute tier.
+	// be granted it silently.
 	if scope.Egresses() {
 		return extensionTool{}, fmt.Errorf(
 			"a served tool spending the outbound %q cap is not yet supported "+
-				"(leaving the workspace requires the confirm-first tier, which this surface cannot stage)", scope)
+				"(an extension reaches a destination no seat holder chose, and this surface "+
+				"cannot stage, so an installation has no way to require a human)", scope)
 	}
 	// LAST of the refusals, because the two above are about what this surface
 	// can HONESTLY serve and this one is about what a caller is told. A served

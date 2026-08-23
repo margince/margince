@@ -21,8 +21,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
 // accountSendArgs is one well-formed call, so a test that varies ONE thing
@@ -49,8 +47,9 @@ func TestTheAccountStartedSendGovernsAsTheReplyDoes(t *testing.T) {
 	if spec.RequiredScope != principal.ScopeSend {
 		t.Errorf("RequiredScope = %q, want %q", spec.RequiredScope, principal.ScopeSend)
 	}
-	if spec.Tier != mcp.TierConfirmationRequired {
-		t.Errorf("Tier = %v, want TierConfirmationRequired — an unapproved send would leave the workspace", spec.Tier)
+	if spec.Tier != reply.Tier {
+		t.Errorf("Tier = %v, want the reply's %v — the twin must not be governed more loosely by accident",
+			spec.Tier, reply.Tier)
 	}
 	if !spec.Egress {
 		t.Error("Egress = false; the message leaves the workspace")
@@ -161,27 +160,22 @@ func TestAnUnsendableAccountStartedCallIsRefusedAtBothDoors(t *testing.T) {
 	}
 }
 
-// The refused call reaches the inbox rather than dead-ending: Registry.Invoke
-// stages only a tool that describes its own staging, so a 🟡 verb without one
-// is advertised and unusable. It is the same loop send_email's own pin covers,
-// asked of the twin.
-func TestARefusedAccountStartedSendReachesTheInbox(t *testing.T) {
-	approvals := &recordingApprovals{}
-	comms := &recordingComms{}
-	registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
-	RegisterCommsTools(registry, comms, &multiLinkProvider{})
+// The send still DESCRIBES its own staging, and that has to keep working even
+// though the verb no longer stages by default: an installation that sets a tier
+// floor on it gets the confirm-first behaviour back, and a tool whose StageInfo
+// had rotted would be advertised and unusable the moment somebody did.
+//
+// So this asks the machinery directly rather than through Invoke, which no
+// longer stages: the call must yield a subject an inbox can render.
+func TestAnAccountStartedSendCanStillDescribeItsStaging(t *testing.T) {
+	tool := sendAccountEmailTool{comms: &recordingComms{}, p: &multiLinkProvider{}}
 
-	_, err := registry.Invoke(sendCtx(), "send_account_email", accountSendArgs(orgLink(ids.NewV7())))
-
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("Invoke err = %v, want the refusal to have staged an approval", err)
+	info, err := tool.StageInfo(sendCtx(), accountSendArgs(orgLink(ids.NewV7())))
+	if err != nil {
+		t.Fatalf("StageInfo: %v — a floored installation could not stage this verb", err)
 	}
-	if len(approvals.staged) != 1 {
-		t.Fatalf("staged %d approvals, want exactly one", len(approvals.staged))
-	}
-	if comms.accountSent != nil {
-		t.Error("the unapproved call reached the comms seam")
+	if info.Summary == "" {
+		t.Error("the staged subject has no summary; an inbox would show a human nothing to decide")
 	}
 }
 

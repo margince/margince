@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 152.2 KB |
+| Tool catalog | 152.0 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39730 |
+| Approx. wire tokens | 39689 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.0 KB | 23% | Yes, every step |
-| Input schemas | 33.3 KB | 21% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.7 KB | 22% | Yes, every step |
+| Input schemas | 33.5 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **68.4 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **68.2 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -62,15 +62,15 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 |---|---|:-:|---|---:|
 | [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 2.7 KB |
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
-| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.3 KB |
+| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.0 KB |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 2.2 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.5 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.7 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 1.8 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 2.6 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 2.7 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
@@ -89,9 +89,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 2.7 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 2.5 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
-| [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.5 KB |
+| [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 3.5 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
@@ -101,8 +101,8 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.3 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.2 KB |
-| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 1.9 KB |
+| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
+| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 2.9 KB |
@@ -684,7 +684,7 @@ Move a deal to a different stage of its pipeline. The stage is named by id from 
 
 **Move a project to a phase**
 
-Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read; a person approves the move before it runs. (Governance: a person approves every call before it runs; requires passport scope "write".)
+Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read; a person approves the move before it runs. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -693,7 +693,7 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -999,7 +999,7 @@ Tag a person, company, deal or lead by tag_id, or by tag_name, which reuses the 
 
 **Archive a record**
 
-Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. A person approves this call before it runs; do not report the record as archived until the retry that carries their approval has answered. (Governance: a person approves every call before it runs; requires passport scope "write".)
+Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. A person approves this call before it runs; do not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1008,7 +1008,7 @@ Retire a record that should no longer be worked — a duplicate, a dead account,
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -1334,7 +1334,7 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
 
 **Book a meeting**
 
-Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, so a person approves it first. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: a person approves every call before it runs; requires passport scope "send".)
+Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, so a person approves it first. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -1343,7 +1343,7 @@ Hold a slot in the host's calendar and record the meeting against the records it
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -1894,7 +1894,7 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
 
 **Commit an import**
 
-Write a checked import into the workspace, once a person approves. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: a person approves every call before it runs; requires passport scope "write".)
+Write a checked import into the workspace, once a person approves. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1903,7 +1903,7 @@ Write a checked import into the workspace, once a person approves. Only from awa
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -2051,6 +2051,11 @@ Create a person, organization, deal, lead, project, activity or relationship tha
 {
   "additionalProperties": false,
   "properties": {
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
     "fields": {
       "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
       "type": "object"
@@ -2817,7 +2822,7 @@ Answer every still-waiting proposal that one act staged together — the overnig
 
 **Disqualify a lead**
 
-Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. A person approves this call before it runs; do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: a person approves every call before it runs; requires passport scope "write".)
+Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. A person approves this call before it runs; do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -2826,7 +2831,7 @@ Close out a lead that is not going anywhere, so it stops appearing as live work.
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -3330,7 +3335,7 @@ Learn about an organization by reading its public website, and propose what was 
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -4849,7 +4854,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
 
 **Merge two records**
 
-Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing, because a person approves the call as you described it. (Governance: a person approves every call before it runs; requires passport scope "write".)
+Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing, because a person approves the call as you described it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -4858,7 +4863,7 @@ Collapse two records for the same real person or company into one, moving the so
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -5630,7 +5635,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates` and still created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates`. Give the user both numbers before committing — "100 companies, 94 already here" is their decision, not yours. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -5662,7 +5667,7 @@ Bring a spreadsheet in: send the CSV as text and this checks every row against t
       "type": "string"
     },
     "on_duplicate": {
-      "description": "A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way.",
+      "description": "A company already here: create (default) lands a second; skip leaves the incumbent.",
       "enum": [
         "create",
         "skip"
@@ -6003,7 +6008,7 @@ Move a deal to a new stage and leave a note on its timeline saying why, in one c
 
 **Promote a lead to a person**
 
-Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. A person approves this call before it runs; the promoted person's id comes back only from the retry that carries their approval. (Governance: a person approves every call before it runs; requires passport scope "write".)
+Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. A person approves this call before it runs; the promoted person's id comes back only from the retry that carries their approval. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -6012,7 +6017,7 @@ Turn a lead who has genuinely engaged into a person record, carrying their histo
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -6978,7 +6983,7 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable, and how many are already here (`duplicates`). These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -8151,6 +8156,11 @@ Move up to 500 named activities onto one record, all or nothing. Each id must be
       "minItems": 1,
       "type": "array"
     },
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
     "entity_id": {
       "format": "uuid",
       "type": "string"
@@ -8302,6 +8312,11 @@ Fix what a recorded activity is about, when a captured mail or meeting landed on
       "format": "uuid",
       "type": "string"
     },
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
     "entity_id": {
       "description": "The record to link it to",
       "format": "uuid",
@@ -8450,6 +8465,11 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
 {
   "additionalProperties": false,
   "properties": {
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
     "entity_id": {
       "format": "uuid",
       "type": "string"
@@ -9791,7 +9811,7 @@ Find people, organizations, deals, leads and projects when you know roughly what
 
 **Start an email conversation from a record**
 
-Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose, and a person approves the send first — a sent mail cannot be recalled. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: a person approves every call before it runs; requires passport scope "send".)
+Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose, and a person approves the send first — a sent mail cannot be recalled. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -9800,7 +9820,7 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -10000,7 +10020,7 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
 
 **Send an email**
 
-Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names, and a person approves the send before it leaves — a message leaving the workspace cannot be recalled. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: a person approves every call before it runs; requires passport scope "send".)
+Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names, and a person approves the send before it leaves — a message leaving the workspace cannot be recalled. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -10013,7 +10033,7 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
       "type": "string"
     },
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -10183,7 +10203,7 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
 
 **Reply on a channel conversation**
 
-Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names, and a person approves it before it leaves. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: a person approves every call before it runs; requires passport scope "send".)
+Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names, and a person approves it before it leaves. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -10197,7 +10217,7 @@ Reply on a captured chat conversation — the channels this workspace has connec
       "type": "string"
     },
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },

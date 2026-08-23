@@ -287,15 +287,24 @@ var noUnrunnableCall = gatekit.Waive(map[string]string{
 
 func TestNoConfirmFirstOperationStagesACallItsExecutorWouldRefuse(t *testing.T) {
 	defer noUnrunnableCall.AssertAllMatched(t)
+	// The operations a fixture was written for, plus any the policy table still
+	// floors. The verbs that used to stage by default now execute — but each
+	// one a fixture already covers keeps being checked, because a workspace
+	// tier floor puts it back behind an approval and a staged call its executor
+	// would refuse spends a human's yes on something that was never going to
+	// run. What this gate does NOT do is demand a new fixture for every verb
+	// that merely became stageable-in-principle; that is a wider obligation
+	// than the one this change makes.
 	subject := map[string]bool{}
 	for op, route := range agentReachableMutations() {
-		if agentPolicies[route].Tier != tierConfirmationRequired {
+		_, covered := unrunnableCalls[op]
+		if agentPolicies[route].Tier != tierConfirmationRequired && !covered {
 			continue
 		}
 		subject[op] = true
 	}
 	if len(subject) == 0 {
-		t.Fatal("the policy table declares no confirm-first agent-reachable mutation — this gate checked nothing")
+		t.Fatal("no agent-reachable mutation is floored or covered — this gate checked nothing")
 	}
 	for op := range subject {
 		fixture, written := unrunnableCalls[op]

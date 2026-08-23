@@ -32,6 +32,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +51,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
 // bothDoorsFixture is one intended act, written twice — once as the request the
@@ -667,30 +667,41 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 		t.Fatalf("the REST door's command refused to name a subject: %v", err)
 	}
 
-	staging := &capturingApprovals{}
-	_, err = bothDoorsRegistry(staging).Invoke(agentDoorCtx(), tool,
+	// Asked of the tool's own StageInfo. These verbs execute directly now, so
+	// Invoke no longer stages — but the subject each door would put in front of
+	// a human must still be the SAME subject, because a workspace tier floor
+	// brings the confirm-first path back for either of them.
+	subject, err := stageToolSubject(agentDoorCtx(), bothDoorsRegistry(&capturingApprovals{}), tool,
 		json.RawMessage(fixture.args(primary, secondary)))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("the tool door answered %v rather than staging the call its own schema declares", err)
+	if err != nil {
+		t.Fatalf("the tool door refused to name a subject for the call its own schema declares: %v", err)
 	}
 
-	if staging.last.TargetType != rest.TargetType || staging.last.TargetID != rest.TargetID {
+	if subject.TargetType != rest.TargetType || subject.TargetID != rest.TargetID {
 		t.Errorf("the doors bind one operation to two records: REST (%s,%s), tool (%s,%s) — one of them asks "+
 			"a human about a row the other would not have written",
-			rest.TargetType, rest.TargetID, staging.last.TargetType, staging.last.TargetID)
+			rest.TargetType, rest.TargetID, subject.TargetType, subject.TargetID)
 	}
-	if staging.last.Summary != rest.Summary {
+	if subject.Summary != rest.Summary {
 		t.Errorf("the doors resolve one operation to two commands:\n  REST: %q\n  tool: %q\nThe sentence is "+
 			"the only place an erased command's own arguments show, so the two doors would perform different "+
-			"acts for one call", rest.Summary, staging.last.Summary)
+			"acts for one call", rest.Summary, subject.Summary)
 	}
-	if (staging.last.TargetVersion == nil) != (rest.TargetVersion == nil) {
+	if (subject.TargetVersion == nil) != (rest.TargetVersion == nil) {
 		t.Errorf("one door pins a version the other does not (REST %v, tool %v) — the same call would be held "+
 			"to a record's version through one door and not through the other",
-			rest.TargetVersion, staging.last.TargetVersion)
+			rest.TargetVersion, subject.TargetVersion)
 	}
-	if staging.last.Tool != tool {
-		t.Errorf("the tool door staged kind %q for verb %s", staging.last.Tool, tool)
+}
+
+// stageToolSubject asks one tool for the subject it would put in front of a
+// human. Registry.Invoke no longer stages these verbs — they execute — so the
+// comparison reaches StageInfo directly, which is what a workspace tier floor
+// reaches too.
+func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args json.RawMessage) (agents.StageInfo, error) {
+	stager, ok := r.StagerFor(tool)
+	if !ok {
+		return agents.StageInfo{}, fmt.Errorf("%s describes no staging", tool)
 	}
+	return stager.StageInfo(ctx, args)
 }

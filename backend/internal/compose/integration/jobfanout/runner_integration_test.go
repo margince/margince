@@ -60,9 +60,15 @@ type runnerEnv struct {
 // asserts that refusal).
 //
 // This spec is the same shape a real entry has and differs in one way that
-// matters: its allowlist NAMES archive_record, so the confirm-first path is
-// reachable the way it would be for any future agent that legitimately proposes
-// a risky action.
+// matters: its allowlist NAMES a confirm-first verb, so that path is reachable
+// the way it would be for any future agent that legitimately proposes a risky
+// action.
+//
+// The verb is `enrich`. It was archive_record until a passport stopped needing
+// a second confirmation from the person who granted it; enrich stays
+// confirm-first for a different reason — the MODEL names the URL the server
+// fetches — which is exactly what makes it the verb a scheduled, unattended run
+// must still put in front of a human.
 const stagingSpecName = "e2e_staging_agent"
 
 // stagingSpec resolves the catalog for the 🟡 tests: the shipped entries
@@ -71,9 +77,9 @@ func stagingSpec(name string) (runner.AgentSpec, bool) {
 	if name == stagingSpecName {
 		return runner.AgentSpec{
 			Name:       stagingSpecName,
-			Goal:       "Archive the duplicate records this workspace has accumulated, one at a time.",
+			Goal:       "Fill in what this workspace does not yet know about its companies, one at a time.",
 			DueHourUTC: 2,
-			Tools:      []string{"search_records", "read_record", "archive_record"},
+			Tools:      []string{"search_records", "read_record", "enrich"},
 		}, true
 	}
 	// The shipped agents fall back to the COMPOSE resolver, not the runner
@@ -93,7 +99,7 @@ func setupRunner(t *testing.T) *runnerEnv {
 		PassportID string `json:"passport_id"`
 	}
 	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
-		"label": "overnight runner", "scopes": []string{"read", "write"},
+		"label": "overnight runner", "scopes": []string{"read", "write", "enrich"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
 	}
@@ -254,14 +260,14 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Stale Duplicate"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Unknown Co"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-confirmation-required"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"person","id":"%s"}}`, person.ID),
-		`{"final":{"summary":"archive executed after approval"}}`,
+		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
+		`{"final":{"summary":"enrich executed after approval"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
 	re.tick(t)
@@ -274,7 +280,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var parked struct {
 		ArchivedAt *string `json:"archived_at"`
 	}
-	if got := re.Call(t, "GET", "/v1/people/"+person.ID, nil, nil, &parked); got != http.StatusOK || parked.ArchivedAt != nil {
+	if got := re.Call(t, "GET", "/v1/organizations/"+person.ID, nil, nil, &parked); got != http.StatusOK || parked.ArchivedAt != nil {
 		t.Fatalf("target mutated while approval pending: GET → %d archived_at=%v", got, parked.ArchivedAt)
 	}
 
@@ -293,15 +299,16 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	if status != "completed" {
 		t.Fatalf("resumed run status = %s, want completed", status)
 	}
-	var after struct {
-		ArchivedAt *string `json:"archived_at"`
-	}
-	if got := re.Call(t, "GET", "/v1/people/"+person.ID, nil, nil, &after); got != http.StatusOK || after.ArchivedAt == nil {
-		t.Fatalf("approved archive did not land: GET → %d archived_at=%v; trace: %+v", got, after.ArchivedAt, trace)
-	}
-	// The trace is one continuous record across the approval gap.
+	// The APPROVED call reached the tool, which is what the suspend/resume loop
+	// exists to deliver. What enrich then answers is the crawler's business —
+	// this deployment binds no model path — and the distinction is admission:
+	// a step still awaiting a decision never runs at all.
 	if len(trace) < 2 {
 		t.Fatalf("trace lost the suspension boundary: %+v", trace)
+	}
+	if first, resumed := trace[0], trace[len(trace)-1]; first.Admission != "staged" || resumed.Admission == "staged" {
+		t.Fatalf("the run did not cross the approval gap: first=%q resumed=%q; trace: %+v",
+			first.Admission, resumed.Admission, trace)
 	}
 }
 
@@ -311,13 +318,13 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-reject"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"person","id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
 		`{"final":{"summary":"left the record alone after rejection"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -337,11 +344,12 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	if status != "completed" {
 		t.Fatalf("rejected resume status = %s, want completed", status)
 	}
-	var after struct {
-		ArchivedAt *string `json:"archived_at"`
-	}
-	if got := re.Call(t, "GET", "/v1/people/"+person.ID, nil, nil, &after); got != http.StatusOK || after.ArchivedAt != nil {
-		t.Fatalf("rejected action executed anyway: GET → %d archived_at=%v", got, after.ArchivedAt)
+	// A rejected action never reaches the tool: no step in the trace is admitted.
+	_, trace, _ := re.runRow(t, trigger)
+	for _, step := range trace {
+		if step.Admission == "executed" {
+			t.Fatalf("a rejected action executed anyway: %+v", trace)
+		}
 	}
 }
 
@@ -399,8 +407,8 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-resume-once"
@@ -408,8 +416,8 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	// would run past the end of it, so the assertions below catch a
 	// duplicate resume by its outcome as well as by its trace.
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"person","id":"%s"}}`, person.ID),
-		`{"final":{"summary":"archive executed after approval"}}`,
+		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
+		`{"final":{"summary":"enrich executed after approval"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
 	re.tick(t)
@@ -443,17 +451,19 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 		t.Errorf("redelivery appended %d trace steps — a second loop ran on one approval",
 			len(secondTrace)-len(firstTrace))
 	}
-	// The approved mutation happened exactly once.
-	var archives int
-	if err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM audit_log WHERE entity_type = 'person' AND entity_id = $1 AND action = 'archive'`,
-			ids.MustParse(person.ID)).Scan(&archives)
-	}); err != nil {
-		t.Fatal(err)
+	// The approved call was ADMITTED exactly once. The trace is the record of
+	// that: a second resume would append another step, and the count above
+	// would move. Read here by admission rather than by counting the effect's
+	// audit rows, because what the tool then does is its own business and a
+	// redelivery must be a no-op whatever that is.
+	admitted := 0
+	for _, step := range secondTrace {
+		if step.Admission != "staged" {
+			admitted++
+		}
 	}
-	if archives != 1 {
-		t.Errorf("the approved archive was applied %d times, want 1", archives)
+	if admitted != 1 {
+		t.Errorf("the approved call was admitted %d times, want 1: %+v", admitted, secondTrace)
 	}
 }
 
@@ -476,6 +486,9 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 		t.Fatalf("create person → %d", status)
 	}
 
+	// Still archive_record: this case is about the SWEEP's own allowlist
+	// refusing a verb its goal does not include, which has nothing to do with
+	// the tier that verb carries.
 	trigger := "overnight_at_risk_sweep:e2e-archive-refused"
 	re.brain.Script(
 		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"person","id":"%s"}}`, person.ID),
@@ -524,15 +537,15 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/people", apptest.AnyMap{
-		"full_name": "Authority Dies Parked",
+	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+		"display_name": "Authority Dies Parked",
 	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+		t.Fatalf("create organization → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-authority-died"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"person","id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"organization_id":"%s"}}`, person.ID),
 		`{"final":{"summary":"never reached"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)

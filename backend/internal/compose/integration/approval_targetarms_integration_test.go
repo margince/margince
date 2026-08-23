@@ -37,28 +37,33 @@ func TestConfirmFirstArchivesAreDecidableForEveryTargetArm(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	bearer := agentBearer(t, e, "target-arm agent")
 
+	// These four archive on the agent's own passport now: a passport carries
+	// the granting human's seat and row scope, and each is ordinary work its
+	// holder does unaided. What is still asserted is that the ROUTE is reachable
+	// for an agent and performs — the half that used to be hidden behind the
+	// approval.
 	t.Run("list", func(t *testing.T) {
 		id := createdID(t, e, "/v1/lists", apptest.AnyMap{"name": "Q3 Targets", "entity_type": "person"})
-		releaseStagedCall(t, e, bearer, "DELETE", "/v1/lists/"+id, nil, "list")
+		archivesOnItsOwnPassport(t, e, bearer, "/v1/lists/"+id)
 	})
 
 	t.Run("tag", func(t *testing.T) {
 		id := createdID(t, e, "/v1/tags", apptest.AnyMap{"name": "Champion"})
-		releaseStagedCall(t, e, bearer, "DELETE", "/v1/tags/"+id, nil, "tag")
+		archivesOnItsOwnPassport(t, e, bearer, "/v1/tags/"+id)
 	})
 
 	t.Run("saved_view", func(t *testing.T) {
 		id := createdID(t, e, "/v1/views", apptest.AnyMap{
 			"resource": "people", "name": "My people", "query": apptest.AnyMap{"columns": []any{"full_name"}},
 		})
-		releaseStagedCall(t, e, bearer, "DELETE", "/v1/views/"+id, nil, "saved_view")
+		archivesOnItsOwnPassport(t, e, bearer, "/v1/views/"+id)
 	})
 
 	t.Run("offer_template", func(t *testing.T) {
 		id := createdID(t, e, "/v1/offer-templates", apptest.AnyMap{
 			"name": "Standard DE", "layout": apptest.AnyMap{"logo_url": "https://example.test/logo.png"},
 		})
-		releaseStagedCall(t, e, bearer, "DELETE", "/v1/offer-templates/"+id, nil, "offer_template")
+		archivesOnItsOwnPassport(t, e, bearer, "/v1/offer-templates/"+id)
 	})
 
 	t.Run("webhook_subscription", func(t *testing.T) {
@@ -191,6 +196,41 @@ func createdID(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyMap
 //
 // The identical body is sent twice because the diff_hash binding is what makes an
 // approval authorize THIS call and no other.
+// archivesOnItsOwnPassport asserts the agent's archive PERFORMS rather than
+// staging — the shape every arm but webhook_subscription now takes.
+//
+// It asserts the success status and then re-reads the row, because "not 403" is
+// not the property. A 404 from a mistyped path, or a 500 from a seam that cannot
+// archive this type at all, both pass a refusal check while proving nothing —
+// and the arms this covers exist precisely because each is a DIFFERENT target
+// type the seam has to route.
+func archivesOnItsOwnPassport(t *testing.T, e *apptest.AppEnv, bearer map[string]string, path string) {
+	t.Helper()
+	if status := e.Call(t, "DELETE", path, nil, bearer, nil); status != http.StatusOK &&
+		status != http.StatusNoContent {
+		t.Fatalf("agent DELETE %s → %d, want the archive to perform — a passport archives what its "+
+			"holder could archive unaided", path, status)
+	}
+	var row struct {
+		ArchivedAt *string `json:"archived_at"`
+	}
+	// Not every arm HAS a read-by-id route — a tag is reached through its
+	// collection, and answers 405. Where the row cannot be re-read the archive's
+	// success status is all there is, which is still strictly more than the
+	// "not 403" this used to assert.
+	switch status := e.Call(t, "GET", path, nil, nil, &row); status {
+	case http.StatusOK:
+	case http.StatusNotFound, http.StatusMethodNotAllowed:
+		return
+	default:
+		t.Fatalf("re-reading %s after the archive → %d", path, status)
+	}
+	if row.ArchivedAt == nil {
+		t.Errorf("%s answered success but the row is still live — the call was admitted and "+
+			"performed nothing", path)
+	}
+}
+
 func releaseStagedCall(t *testing.T, e *apptest.AppEnv, bearer map[string]string, method, path string, body apptest.AnyMap, wantTargetType string) {
 	t.Helper()
 	var problem struct {

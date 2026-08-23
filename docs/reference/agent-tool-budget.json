@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 16970,
-    "median_tool_tokens": 280,
-    "mean_tool_tokens": 302
+    "tokens": 16996,
+    "median_tool_tokens": 281,
+    "mean_tool_tokens": 303
   },
   "agents": [
     {
@@ -74,7 +74,7 @@
     },
     {
       "name": "send_account_email",
-      "tokens": 546
+      "tokens": 545
     },
     {
       "name": "resolve_entities",
@@ -90,7 +90,7 @@
     },
     {
       "name": "send_email",
-      "tokens": 472
+      "tokens": 471
     },
     {
       "name": "log_activity",
@@ -102,7 +102,7 @@
     },
     {
       "name": "book_meeting",
-      "tokens": 432
+      "tokens": 431
     },
     {
       "name": "query_workspace",
@@ -113,12 +113,12 @@
       "tokens": 392
     },
     {
-      "name": "enrich",
-      "tokens": 388
+      "name": "create_record",
+      "tokens": 391
     },
     {
-      "name": "create_record",
-      "tokens": 370
+      "name": "enrich",
+      "tokens": 386
     },
     {
       "name": "search_context",
@@ -129,12 +129,8 @@
       "tokens": 333
     },
     {
-      "name": "preview_import",
-      "tokens": 328
-    },
-    {
       "name": "merge_records",
-      "tokens": 325
+      "tokens": 323
     },
     {
       "name": "draft_email",
@@ -146,11 +142,15 @@
     },
     {
       "name": "send_message",
-      "tokens": 315
+      "tokens": 314
     },
     {
       "name": "advance_project_phase",
-      "tokens": 311
+      "tokens": 310
+    },
+    {
+      "name": "relink_activity",
+      "tokens": 308
     },
     {
       "name": "draft_follow_ups_for",
@@ -162,19 +162,19 @@
     },
     {
       "name": "promote_lead",
-      "tokens": 303
+      "tokens": 301
+    },
+    {
+      "name": "preview_import",
+      "tokens": 294
     },
     {
       "name": "archive_record",
-      "tokens": 293
+      "tokens": 292
     },
     {
       "name": "catch_me_up_on",
       "tokens": 287
-    },
-    {
-      "name": "relink_activity",
-      "tokens": 286
     },
     {
       "name": "prepare_handoff",
@@ -201,12 +201,20 @@
       "tokens": 260
     },
     {
+      "name": "relink_activities",
+      "tokens": 237
+    },
+    {
       "name": "read_record",
       "tokens": 229
     },
     {
+      "name": "relink_thread",
+      "tokens": 228
+    },
+    {
       "name": "disqualify_lead",
-      "tokens": 222
+      "tokens": 221
     },
     {
       "name": "whats_slipping_this_week",
@@ -217,16 +225,8 @@
       "tokens": 215
     },
     {
-      "name": "relink_activities",
-      "tokens": 215
-    },
-    {
       "name": "read_brief",
       "tokens": 213
-    },
-    {
-      "name": "relink_thread",
-      "tokens": 207
     },
     {
       "name": "apply_tag",
@@ -266,7 +266,7 @@
     },
     {
       "name": "commit_import",
-      "tokens": 150
+      "tokens": 149
     },
     {
       "name": "list_colleagues",
@@ -277,12 +277,12 @@
       "tokens": 102
     },
     {
-      "name": "read_import_report",
-      "tokens": 89
-    },
-    {
       "name": "whoami",
       "tokens": 88
+    },
+    {
+      "name": "read_import_report",
+      "tokens": 80
     },
     {
       "name": "read_import_run",

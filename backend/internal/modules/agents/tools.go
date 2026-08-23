@@ -244,7 +244,8 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		OpenAPIOp: "createPerson/createOrganization/createDeal/createLead/createProject/createRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
 			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project","relationship"]},
-			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `}},
+			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}
@@ -270,19 +271,6 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		return nil, err
 	}
 	return readBack(ctx, t.p, ref)
-}
-
-// RecordTypeOf lets the contract's per-record-type tier floor see which record
-// this call creates (tierfloor.go).
-func (createRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
-
-// ServesRecordType reports the record types this verb can actually create — the
-// contract's own create bodies, which is the same vocabulary the schema
-// advertises. The floor reads it so a type this verb cannot create is never
-// tightened into an approval that could only ever fail.
-func (createRecord) ServesRecordType(recordType string) bool {
-	_, served := createShapes[datasource.EntityType(recordType)]
-	return served
 }
 
 // StageInfo puts a create the contract tightened to confirm-first in the inbox

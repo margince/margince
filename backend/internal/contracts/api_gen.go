@@ -22488,7 +22488,7 @@ type SignalEvidenceSourceType string
 
 // SignalIntroPath An actionable warm-intro path — names the route-in contact, the relationship we
 // have, and a concrete next move with a drafted message. Proposal only: the send is
-// the 🟡 confirm-first send tool, never this read.
+// the governed send tool, never this read.
 type SignalIntroPath struct {
 	// ContactId The route-in contact (the strongest live relationship at the resolved organization).
 	ContactId   openapi_types.UUID `json:"contact_id"`
@@ -36089,10 +36089,10 @@ type ServerInterface interface {
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
-	// Send a (possibly edited) email draft — 🟡 confirm-first / gated.
+	// Send a (possibly edited) email draft — runs directly, consent-gated.
 	// (POST /activities/{id}/send-email)
 	SendEmail(w http.ResponseWriter, r *http.Request, id Id, params SendEmailParams)
-	// Reply on a captured messaging-channel conversation — 🟡 confirm-first / gated.
+	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
 	// Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
@@ -36239,7 +36239,7 @@ type ServerInterface interface {
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
-	// Book a meeting at a chosen slot — 🟡 confirm-first / gated (the `book_meeting` MCP verb).
+	// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
@@ -36572,7 +36572,7 @@ type ServerInterface interface {
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
 	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
-	// Start a new email conversation from a record — 🟡 confirm-first / gated.
+	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams)
 	// Confirm and start a fleet-wide reindex.
@@ -37547,13 +37547,13 @@ func (_ Unimplemented) RelinkActivity(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Send a (possibly edited) email draft — 🟡 confirm-first / gated.
+// Send a (possibly edited) email draft — runs directly, consent-gated.
 // (POST /activities/{id}/send-email)
 func (_ Unimplemented) SendEmail(w http.ResponseWriter, r *http.Request, id Id, params SendEmailParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Reply on a captured messaging-channel conversation — 🟡 confirm-first / gated.
+// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 // (POST /activities/{id}/send-message)
 func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -37847,7 +37847,7 @@ func (_ Unimplemented) GetAvailability(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Book a meeting at a chosen slot — 🟡 confirm-first / gated (the `book_meeting` MCP verb).
+// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
 // (POST /bookings)
 func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -38513,7 +38513,7 @@ func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Start a new email conversation from a record — 🟡 confirm-first / gated.
+// Start a new email conversation from a record — runs directly, consent-gated.
 // (POST /emails)
 func (_ Unimplemented) SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams) {
 	w.WriteHeader(http.StatusNotImplemented)

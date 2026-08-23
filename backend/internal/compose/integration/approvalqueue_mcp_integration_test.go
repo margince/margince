@@ -81,21 +81,28 @@ func (q *queueEnv) mintPassport(t *testing.T, label string, scopes ...string) st
 	return minted.Token
 }
 
-// stageAnArchive refuses one 🟡 call and answers the proposal it left behind.
-func (q *queueEnv) stageAnArchive(t *testing.T, invoke func(tool, args string) (string, error), name string) (personID string, approvalID ids.UUID) {
+// stageAConfirmFirstCall refuses one 🟡 call and answers the proposal it left
+// behind.
+//
+// It stages an `enrich`, not an archive. A passport does what its holder could
+// do unaided, so archiving no longer asks a second time — while enrich stays
+// confirm-first for a reason that is not about authority at all: the MODEL
+// names the URL the server fetches. What the queue tests need is any verb that
+// still puts a call in front of a human, and this is it.
+func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args string) (string, error), name string) (orgID string, approvalID ids.UUID) {
 	t.Helper()
-	var person struct {
+	var org struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": name}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := q.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
 	}
-	_, err := invoke("archive_record", `{"record_type":"person","id":"`+person.ID+`"}`)
+	_, err := invoke("enrich", `{"organization_id":"`+org.ID+`"}`)
 	var staged *workflow.StagedApprovalError
 	if !errors.As(err, &staged) {
-		t.Fatalf("archive_record → %v, want a staged approval", err)
+		t.Fatalf("enrich → %v, want a staged approval", err)
 	}
-	return person.ID, staged.ApprovalID.UUID
+	return org.ID, staged.ApprovalID.UUID
 }
 
 type queueItem struct {
@@ -129,8 +136,8 @@ func answered[T any](t *testing.T, out string) T {
 // credential does not confirm its own proposal.
 func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.T) {
 	q := setupQueue(t)
-	invoke := q.invoker(t, q.mintPassport(t, "proposing agent", "read", "write"))
-	personID, approvalID := q.stageAnArchive(t, invoke, "Queue Subject")
+	invoke := q.invoker(t, q.mintPassport(t, "proposing agent", "read", "write", "enrich"))
+	orgID, approvalID := q.stageAConfirmFirstCall(t, invoke, "Queue Subject")
 
 	// SEE IT. The proposal the agent could not perform is in the queue it can
 	// read, named the way it was staged.
@@ -147,11 +154,11 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 			continue
 		}
 		found = true
-		if item.Kind != "archive_record" || item.Status != "pending" {
-			t.Errorf("the staged item reads %s/%s, want archive_record/pending", item.Kind, item.Status)
+		if item.Kind != "enrich" || item.Status != "pending" {
+			t.Errorf("the staged item reads %s/%s, want enrich/pending", item.Kind, item.Status)
 		}
-		if item.TargetType != "person" || item.TargetID != personID {
-			t.Errorf("the item points at %s/%s, want person/%s", item.TargetType, item.TargetID, personID)
+		if item.TargetType != "organization" || item.TargetID != orgID {
+			t.Errorf("the item points at %s/%s, want organization/%s", item.TargetType, item.TargetID, orgID)
 		}
 		if item.Summary == "" {
 			t.Error("the item carries no sentence a person could answer from")
@@ -195,7 +202,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 
 	// ANSWER IT on another of the same human's credentials, and the answer is
 	// the PERSON's: decided_by is the human who lent it, never the credential.
-	decider := q.invoker(t, q.mintPassport(t, "deciding agent", "read", "write"))
+	decider := q.invoker(t, q.mintPassport(t, "deciding agent", "read", "write", "enrich"))
 	if _, err = decider("decide_approval", answer); err != nil {
 		t.Fatalf("decide_approval → %v", err)
 	}
@@ -217,17 +224,14 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 	// REDEEM IT, on the credential that staged it: approving does not perform an
 	// agent's staged call, the agent re-issues it, and the approval fits only
 	// the caller it was staged by.
-	if _, err = invoke("archive_record",
-		`{"record_type":"person","id":"`+personID+`","approval_id":"`+approvalID.String()+`"}`); err != nil {
-		t.Fatalf("the released retry → %v", err)
-	}
-	var archived bool
-	if err := q.Owner.QueryRow(t.Context(),
-		`SELECT archived_at IS NOT NULL FROM person WHERE id = $1`, personID).Scan(&archived); err != nil {
-		t.Fatalf("reading the person back: %v", err)
-	}
-	if !archived {
-		t.Error("the released call did not perform — the loop closes on paper only")
+	// The retry gets PAST the gate on the approval the human granted, which is
+	// what closes this loop. Where enrich lands after that is the crawler's
+	// business — this composition binds no model path — so the distinction is
+	// "refused by the gate" versus "released and now the tool's own answer".
+	_, released := invoke("enrich",
+		`{"organization_id":"`+orgID+`","approval_id":"`+approvalID.String()+`"}`)
+	if errors.Is(released, apperrors.ErrRequiresApproval) || errors.Is(released, apperrors.ErrApprovalTokenInvalid) {
+		t.Fatalf("the released retry → %v — the approval did not release the call", released)
 	}
 }
 
@@ -236,7 +240,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 // human chose, and a decision spends write.
 func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 	q := setupQueue(t)
-	_, approvalID := q.stageAnArchive(t, q.invoker(t, q.mintPassport(t, "staging agent", "read", "write")), "Read Only Subject")
+	_, approvalID := q.stageAConfirmFirstCall(t, q.invoker(t, q.mintPassport(t, "staging agent", "read", "write", "enrich")), "Read Only Subject")
 
 	reader := q.invoker(t, q.mintPassport(t, "reading agent", "read"))
 	if _, err := reader("list_approvals", `{}`); err != nil {

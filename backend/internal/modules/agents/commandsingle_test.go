@@ -654,6 +654,60 @@ func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
 	}
 }
 
+// The same rule on the door that now EXECUTES it. book_meeting stopped staging
+// by default, and requireOwnCalendarOrAdmin lived only in the resolver's Guards
+// — which run inside StageSubject and nowhere else. The store does not re-ask:
+// defaultHost (compose/comms.go) takes whatever host it is handed. So without
+// this the verb would book onto a colleague's calendar for any passport holding
+// `send`.
+func TestBookingAnotherHostExecutesOnlyForAnAdmin(t *testing.T) {
+	self, host, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
+	tool := bookMeetingTool{
+		comms: &recordingComms{},
+		p:     oneRecord(datasource.EntityOrganization, org, `{}`, 1),
+	}
+	args := func(hostID *ids.UUID) json.RawMessage {
+		in := map[string]any{
+			"start": window.Format(time.RFC3339), "end": window.Add(30 * time.Minute).Format(time.RFC3339),
+			"subject": "Review",
+			"links":   []map[string]string{{"entity_type": "organization", "entity_id": org.String()}},
+		}
+		if hostID != nil {
+			in["host_user_id"] = hostID.String()
+		}
+		raw, err := json.Marshal(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+	as := func(roles []string) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + self.String(), UserID: self,
+			Permissions: principal.Permissions{RoleKeys: roles, RowScope: principal.RowScopeAll},
+		})
+	}
+	for _, c := range []struct {
+		name   string
+		ctx    context.Context
+		host   *ids.UUID
+		denied bool
+	}{
+		{"own calendar", as([]string{"management"}), &self, false},
+		{"no host named", as([]string{"rep"}), nil, false},
+		{"another host, admin", as([]string{"admin"}), &host, false},
+		{"another host, management", as([]string{"management"}), &host, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := tool.Handle(c.ctx, args(c.host))
+			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
+				t.Fatalf("Handle answered %v; want permission denied = %v", err, c.denied)
+			}
+		})
+	}
+}
+
 // A decision names no target record, and the reason is not that it has none: it
 // acts on the approval, which is the authority object itself. A staged row
 // pointing at one would be an authority object pointing at an authority object,
