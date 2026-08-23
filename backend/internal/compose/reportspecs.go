@@ -119,9 +119,15 @@ var prebuiltReports = map[string]reportSpec{
 			fieldOwnerID:        colOwnerID,
 			fieldOrganizationID: colOrganizationID,
 			fieldPartnerSourced: deals.PartnerSourcedSQL("t"),
-			fieldStalled:        deals.StalledSQL("t"),
-			fieldCurrency:       colCurrency,
-			fieldProjectID:      colProjectID,
+			// Narrowing to ONE partner, beside the boolean that asks whether
+			// there is one. The board's totals are read from this report with
+			// the deals screen's own filter dials, so a dial the screen offers
+			// and this report refuses answers 422 — and the board then falls
+			// back to counting loaded cards, which looks like a working total.
+			fieldPartnerOrgID: colPartnerOrgID,
+			fieldStalled:      deals.StalledSQL("t"),
+			fieldCurrency:     colCurrency,
+			fieldProjectID:    colProjectID,
 		},
 		filterScopes: projectFilterScope,
 		// partner_org_id points at an organization, which a normal deal read

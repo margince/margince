@@ -709,7 +709,39 @@ export function usePartnerOptions(
     },
     staleTime: 60_000,
   });
-  const named = new Map(orgs.map((org) => [org.id, org.display_name]));
+  // The names come from a read of the PARTNER companies rather than from
+  // whatever page of organizations the screen happens to hold.
+  //
+  // The caller's `orgs` is one capped page (50 on the deals screen), and
+  // intersecting the two dropped any partner whose company fell outside it —
+  // silently, and differently depending on which screen asked. That is
+  // survivable for a form picker, which injects the deal's own stored partner
+  // when it is missing; a FILTER has no such fallback, so a partner it cannot
+  // name is a partner nobody can narrow by.
+  const names = useQuery({
+    queryKey: ["partners", "names"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      // relationship_type=partner reads the same set from the other side, so
+      // the page is partner companies rather than the first N companies of
+      // any kind. The cap matches /partners' own.
+      const { data, error } = await api.GET("/organizations", {
+        params: { query: { relationship_type: "partner", limit: 200 } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data;
+    },
+  });
+  // Still the caller's page as a fallback while the keyed read is in flight,
+  // so the options do not blink empty on every mount.
+  const named = new Map<string, string>(
+    orgs.map((org) => [org.id, org.display_name]),
+  );
+  for (const org of names.data ?? []) {
+    named.set(org.id, org.display_name);
+  }
   return (partners.data ?? []).flatMap((partner) => {
     const label = named.get(partner.organization_id);
     // A partner whose organization the caller cannot read is left out rather
@@ -2087,7 +2119,12 @@ export function DealsScreen({
             // The options come from usePartnerOptions, so a partner whose
             // company this reader cannot open is not offered — picking it
             // would name a company the screen could not then show them.
-            ...(partnerOptions.length > 0
+            // Present whenever there are partners to pick OR one is already
+            // applied. A saved view can restore a partner_org_id after the
+            // programme was wound down or while the options are still in
+            // flight, and hiding the chip then would leave the list narrowed
+            // by a filter with no dial to see or clear it.
+            ...(partnerOptions.length > 0 || query.filters.partner_org_id
               ? [
                   {
                     key: "partner_org_id" as const,

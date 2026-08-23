@@ -2202,6 +2202,47 @@ describe("the partner filter", () => {
     );
   });
 
+  it("sends the partner to the board totals too, not only the deal list", async () => {
+    // The board's per-column totals come from the deals-by-stage report with
+    // the screen's own dials. A dial the screen offers and the report refuses
+    // answers 422, and the board then counts the cards it happens to hold —
+    // which looks exactly like a working total.
+    const bodies: unknown[] = [];
+    const d = deal({ id: "d1", name: "Fleet retrofit" });
+    vi.stubGlobal("fetch", async (request: Request) => {
+      if (request.url.includes("/partners")) {
+        return jsonResponse({
+          data: [{ organization_id: "o1", cert_status: "certified" }],
+          page: { next_cursor: null },
+        });
+      }
+      if (request.url.includes("/reports/deals-by-stage")) {
+        bodies.push(await request.clone().json());
+      }
+      return stubBackend([d], { single: d })(request);
+    });
+
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const menu = screen.getByRole("group", { name: "Filter" });
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Partner" }),
+    );
+    await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
+
+    await waitFor(() =>
+      expect(
+        bodies.some(
+          (b) =>
+            (b as { filters?: Record<string, unknown> }).filters
+              ?.partner_org_id === "o1",
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("offers no partner filter when the installation has no partners", async () => {
     const d = deal({ id: "d1", name: "Fleet retrofit" });
     vi.stubGlobal("fetch", (request: Request) => {
