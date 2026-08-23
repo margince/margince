@@ -290,6 +290,26 @@ export const de = {
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.outstanding": "Noch offen",
+  "commission.column.actions": "Entscheidung",
+  "commission.decide.withheld": "Nicht Ihre Entscheidung",
+  "commission.decide.approve": "Freigeben",
+  "commission.decide.pay": "Als ausgezahlt markieren",
+  "commission.decide.void": "Stornieren",
+  "commission.decide.approveConfirm":
+    "Mit der Freigabe halten Sie fest, dass diese Provision vereinbart ist. Ausgezahlt wird dadurch nichts — zahlen Sie in Ihrem Finanzsystem und markieren Sie es danach hier.",
+  "commission.decide.payConfirm":
+    "Markieren Sie erst als ausgezahlt, wenn Ihr Finanzsystem tatsächlich gezahlt hat. Margince hält die Tatsache fest und bewegt kein Geld.",
+  "commission.decide.voidConfirm":
+    "Eine Stornierung schreibt eine Gegenbuchung daneben. Nichts wird gelöscht, der ursprüngliche Eintrag bleibt lesbar.",
+  "commission.decide.reasonLabel": "Warum wird storniert?",
+  "commission.decide.reasonRequired":
+    "Eine Stornierung braucht einen Grund — damit lässt sie sich dem Partner später erklären.",
+  "commission.decide.approved": "Provision freigegeben",
+  "commission.decide.paid": "Provision als ausgezahlt markiert",
+  "commission.decide.voided": "Provision storniert",
+  "commission.decide.settledElsewhere":
+    "Ausgezahlt wird im Finanzsystem. Hier wird festgehalten, was dort passiert ist.",
   "partner.setup": "Zum Partner machen",
   "partner.edit": "Partner bearbeiten",
   "partner.none": "Noch kein Partner",

@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, DataTable, EmptyState } from "../design-system/atoms";
+import { useCanWrite } from "../app/capability";
+import { Badge, DataTable, EmptyState, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { StatStrip } from "../design-system/statstrip";
 import { formatMoney, INTL_LOCALE } from "../format/format";
-
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 
@@ -67,6 +69,38 @@ async function fetchPartnerCommissions(
 }
 
 /**
+ * outstandingByCurrency totals what is still OWED, per currency.
+ *
+ * Accrued and approved are both money this partner has not been paid; paid is
+ * settled and void is money that came back, so neither counts. Never summed
+ * ACROSS currencies — the schema's own summary row says why, and two currencies
+ * added together is a number that means nothing.
+ *
+ * Derived from the entries already on screen rather than from
+ * GET /commissions/summary: that endpoint answers for every partner at once and
+ * this panel is about one, so a second request would fetch the whole ledger to
+ * show a subset of what is already here — and the two could disagree while one
+ * of them was stale.
+ */
+export function outstandingByCurrency(
+  entries: CommissionEntry[],
+): Array<{ currency: string; amountMinor: number }> {
+  const totals = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.status !== "accrued" && entry.status !== "approved") {
+      continue;
+    }
+    totals.set(
+      entry.currency,
+      (totals.get(entry.currency) ?? 0) + entry.amount_minor,
+    );
+  }
+  return [...totals.entries()]
+    .map(([currency, amountMinor]) => ({ currency, amountMinor }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+}
+
+/**
  * PartnerCommissions lists what this partner earned, newest first.
  *
  * A reversal keeps its own row rather than being folded into the entry it
@@ -93,7 +127,12 @@ export function PartnerCommissions({
             </PanelBody>
           ) : (
             <PanelBody>
-              <CommissionLedger entries={entries} locale={locale} />
+              <OutstandingStrip entries={entries} locale={locale} />
+              <CommissionLedger
+                entries={entries}
+                locale={locale}
+                organizationId={organizationId}
+              />
             </PanelBody>
           )
         }
@@ -102,14 +141,68 @@ export function PartnerCommissions({
   );
 }
 
+/**
+ * OutstandingStrip is the one figure somebody running the programme opens this
+ * panel for: what is still owed.
+ *
+ * One slot per currency, because they are not addable. Nothing is drawn when
+ * everything is settled — a strip reading "0" is a slot spent saying there is
+ * nothing to say, and the ledger below already shows the entries are paid.
+ */
+function OutstandingStrip({
+  entries,
+  locale,
+}: Readonly<{ entries: CommissionEntry[]; locale: Locale }>) {
+  const t = useT();
+  const outstanding = outstandingByCurrency(entries);
+  if (outstanding.length === 0) {
+    return null;
+  }
+  return (
+    <div
+      data-testid="commission-outstanding"
+      style={{ marginBottom: "var(--space-4)" }}
+    >
+      <StatStrip>
+        {outstanding.map(({ currency, amountMinor }) => (
+          <StatCard
+            key={currency}
+            numeric
+            label={t("commission.outstanding")}
+            value={formatMoney(amountMinor, currency, locale)}
+            detail={t("commission.decide.settledElsewhere")}
+          />
+        ))}
+      </StatStrip>
+    </div>
+  );
+}
+
 function CommissionLedger({
   entries,
   locale,
+  organizationId,
 }: Readonly<{
   entries: CommissionEntry[];
   locale: Locale;
+  organizationId: string;
 }>) {
   const t = useT();
+  // The object grant decides whether the verbs are drawn at all. Without this
+  // a read-only seat sees Approve and Reverse on every row and learns from a
+  // 403 that they were never theirs — a control nobody may press is not a
+  // control, it is a promise the server breaks.
+  //
+  // WITHHELD, not absent: the column keeps its place and says the decision is
+  // not this reader's. Dropping it would leave a reader unable to tell "there
+  // is nothing to decide here" from "you may not decide it", which are
+  // opposite facts that make the same shape on screen.
+  //
+  // The object grant is the half a client can know. Row scope is the server's
+  // — a `read` share of the deal carries no authority over its partner's money
+  // (decide.go's write probe) — so a grant-holder can still be refused, and
+  // the dialog surfaces that refusal rather than pretending it cannot happen.
+  const canDecide = useCanWrite("commission", "update");
   return (
     <div data-testid="commission-ledger">
       <DataTable
@@ -153,6 +246,42 @@ function CommissionLedger({
                 {t(STATUS_LABELS[entry.status])}
               </Badge>
             ),
+          },
+          {
+            // Only what this row's state actually admits — decisionsFor
+            // mirrors the store's legalTransitions, so a control here is one
+            // the server will accept. A settled or reversed row offers
+            // nothing and renders an empty cell rather than a disabled verb:
+            // there is no precondition the reader could clear.
+            key: "decision",
+            header: t("commission.column.actions"),
+            render: (entry) => {
+              const decisions = decisionsFor(entry.status);
+              if (decisions.length === 0) {
+                // Terminal or settled: there is genuinely nothing to decide,
+                // and that is a different fact from being refused.
+                return null;
+              }
+              if (!canDecide) {
+                return (
+                  <span className="t-caption" data-testid="commission-withheld">
+                    {t("commission.decide.withheld")}
+                  </span>
+                );
+              }
+              return (
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  {decisions.map((decision) => (
+                    <CommissionDecision
+                      key={decision}
+                      entry={entry}
+                      decision={decision}
+                      organizationId={organizationId}
+                    />
+                  ))}
+                </div>
+              );
+            },
           },
         ]}
       />

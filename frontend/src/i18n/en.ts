@@ -304,6 +304,26 @@ export const en = {
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
   "commission.status.void": "Reversed",
+  "commission.outstanding": "Still owed",
+  "commission.column.actions": "Decision",
+  "commission.decide.withheld": "Not yours to decide",
+  "commission.decide.approve": "Approve",
+  "commission.decide.pay": "Mark as paid",
+  "commission.decide.void": "Reverse",
+  "commission.decide.approveConfirm":
+    "Approving records that this commission is agreed. It does not pay anything — settle the payment in your finance system, then mark it paid here.",
+  "commission.decide.payConfirm":
+    "Mark this as paid once your finance system has actually paid it. Margince records the fact; it does not move money.",
+  "commission.decide.voidConfirm":
+    "Reversing writes a cancelling row beside this one. Nothing is deleted, and the original stays readable.",
+  "commission.decide.reasonLabel": "Why is it reversed?",
+  "commission.decide.reasonRequired":
+    "A reversal needs a reason — it is what explains the entry to the partner later.",
+  "commission.decide.approved": "Commission approved",
+  "commission.decide.paid": "Commission marked as paid",
+  "commission.decide.voided": "Commission reversed",
+  "commission.decide.settledElsewhere":
+    "Paying happens in your finance system. This records what it did.",
   "partner.setup": "Make this a partner",
   "partner.edit": "Edit partner",
   "partner.none": "Not a partner yet",

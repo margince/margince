@@ -295,6 +295,26 @@ export const vi = {
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",
   "commission.status.void": "Đã đảo",
+  "commission.outstanding": "Còn nợ",
+  "commission.column.actions": "Quyết định",
+  "commission.decide.withheld": "Không thuộc quyền quyết định của bạn",
+  "commission.decide.approve": "Duyệt",
+  "commission.decide.pay": "Đánh dấu đã thanh toán",
+  "commission.decide.void": "Đảo",
+  "commission.decide.approveConfirm":
+    "Duyệt là ghi nhận rằng khoản hoa hồng này đã được thống nhất. Việc này không thanh toán gì — hãy thanh toán trong hệ thống tài chính rồi đánh dấu tại đây.",
+  "commission.decide.payConfirm":
+    "Chỉ đánh dấu đã thanh toán khi hệ thống tài chính thực sự đã trả. Margince ghi nhận sự việc, không chuyển tiền.",
+  "commission.decide.voidConfirm":
+    "Đảo sẽ ghi một dòng hủy bên cạnh dòng này. Không có gì bị xóa và bản gốc vẫn đọc được.",
+  "commission.decide.reasonLabel": "Vì sao đảo?",
+  "commission.decide.reasonRequired":
+    "Một khoản đảo cần có lý do — đó là điều giải thích được với đối tác sau này.",
+  "commission.decide.approved": "Đã duyệt hoa hồng",
+  "commission.decide.paid": "Đã đánh dấu hoa hồng là đã thanh toán",
+  "commission.decide.voided": "Đã đảo hoa hồng",
+  "commission.decide.settledElsewhere":
+    "Việc thanh toán diễn ra trong hệ thống tài chính. Ở đây chỉ ghi nhận điều đó.",
   "partner.setup": "Đặt làm đối tác",
   "partner.edit": "Sửa đối tác",
   "partner.none": "Chưa phải đối tác",
