@@ -225,6 +225,32 @@ expect fires ts "a defect beside that nested string" 'const s = `${label("a note
 # next one, and must not be joined to that file's first line.
 expect silent ts "a dangling continuation at end of file" 'const amountMinor ='
 
+# The contexts NEST, and a pair of counters cannot say so. `${`x`}` opens a
+# template, an interpolation and a second template; a flat "am I in a template"
+# flag was overwritten by the inner one and its contents read as code.
+expect silent ts "a nested template inside an interpolation" 'const s = `${`amountMinor / 100`}`;'
+expect fires ts "a defect past a nested template" 'const s = `${`x` + amountMinor / 100}`;'
+# A `case x:` or a bare label ends with a colon and does NOT continue — its body
+# is a separate statement, and joining it paired a `case valueMinor:` with an
+# unrelated `ratio * 100` in the arm below.
+expect silent ts "a case label over unrelated arithmetic" 'switch (k) {
+  case valueMinor:
+    widthPct = ratio * 100;
+}'
+expect silent ts "a default arm over unrelated arithmetic" 'switch (k) {
+  default:
+    widthPct = ratio * 100;
+}'
+expect fires ts "a case arm that IS a defect" 'switch (k) {
+  case "eur":
+    amountMinor = major * 100;
+}'
+# A quoted string cannot legally span a line, so it does not carry — carrying it
+# would blind the rest of the FILE over a typo, which is the one direction a
+# scanner must not fail in.
+expect fires ts "an unterminated quote does not blind the next line" 'const broken = "oops;
+const amountMinor = major * 100;'
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'
@@ -277,12 +303,15 @@ expect silent ts "the shape described in a TS comment" \
   '// Not `(valueMinor / 100).toFixed(2)` — the scale is the currency'"'"'s.'
 
 echo
-# A case whose own shell quoting is wrong prints an error to stderr and is
-# SKIPPED — and the suite went on to report OK over a case that never ran, which
-# is the failure this whole gate is about wearing the test harness's clothes.
-# The floor is the count at the time of writing; raise it when cases are added.
-if [[ $ran -lt 43 ]]; then
-  echo "FAIL: only $ran cases ran, so some were skipped before they planted anything"
+# A case whose own shell quoting is wrong prints an error and is SKIPPED, and
+# the suite would go on to report OK over a case that never planted anything.
+# The count is EXACT and not a floor: a floor lets probes disappear one at a
+# time until only the floor's worth is left, which is the same silent shrinkage
+# in slow motion. Derived from the file rather than typed, so adding a case
+# cannot leave a stale number behind.
+expected=$(grep -cE '^expect (fires|silent|unclosed) ' "$0")
+if [[ $ran -ne $expected ]]; then
+  echo "FAIL: $ran cases ran but $expected are written — some were skipped before they planted anything"
   exit 1
 fi
 if [[ $fails -eq 1 ]]; then

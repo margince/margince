@@ -186,8 +186,6 @@ expect fires "a defect after a raw string ending in a backslash" \
   'const winPath = `C:\\tmp\\`
 func probe(c string) bool { return c == "23505" }' \
   '23505'
- \
-  '23505'
 # SQL text inside a raw string compares against the code in SQL quotes, and
 # storekit is not reachable from a query string — so this stays silent, and did
 # before the state was carried across lines too. Pinned because carrying it is
@@ -262,10 +260,14 @@ expect unclosed "a file that ends inside an unclosed raw string" \
 
 echo
 # A case whose own shell quoting is wrong prints an error and is SKIPPED, and
-# the suite would go on to report OK over a case that never ran. Raise the floor
-# when cases are added.
-if [[ $ran -lt 25 ]]; then
-  echo "FAIL: only $ran cases ran, so some were skipped before they planted anything"
+# the suite would go on to report OK over a case that never planted anything.
+# The count is EXACT and not a floor: a floor lets probes disappear one at a
+# time until only the floor's worth is left, which is the same silent shrinkage
+# in slow motion. Derived from the file rather than typed, so adding a case
+# cannot leave a stale number behind.
+expected=$(grep -cE '^expect (fires|silent|unclosed) ' "$0")
+if [[ $ran -ne $expected ]]; then
+  echo "FAIL: $ran cases ran but $expected are written — some were skipped before they planted anything"
   exit 1
 fi
 if [[ $fails -eq 1 ]]; then

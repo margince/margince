@@ -10,7 +10,7 @@
 # would blind it completely, where money-scale must blank them or a line
 # describing the defect reads as the defect.
 
-FNR == 1 { closeFile(); INBLOCK = 0; RAW = 0 }
+FNR == 1 { closeFile() }
 END { closeFile() }
 {
   c = $0

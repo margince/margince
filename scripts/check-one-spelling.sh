@@ -44,15 +44,23 @@
 # already uses. scripts/test-check-one-spelling.sh proves each arm fires, each
 # arm's waiver works, and the named non-money lookalikes stay silent.
 set -euo pipefail
-# CDPATH turns a relative `cd` into a search, so `cd "$(dirname "$0")"` can land
-# in a directory that merely shares a name and the gate then cannot find its own
-# library. `-P` resolves symlinks too, so invoking the gate through one derives
-# the physical directory rather than the link's.
+# Resolve $0 through any symlinks BEFORE deriving the directory: `cd -P` on
+# `dirname "$0"` canonicalizes the LINK's directory, which is not where the
+# libraries are. `readlink -f` is GNU-only, so the loop is the portable form.
 CDPATH=
+self="$0"
+while [[ -L "$self" ]]; do
+  link="$(readlink -- "$self")"
+  case "$link" in
+    /*) self="$link" ;;
+     *) self="$(cd -P -- "$(dirname -- "$self")" && pwd)/$link" ;;
+  esac
+done
+SELF_DIR="$(cd -P -- "$(dirname -- "$self")" && pwd)"
 # Resolved BEFORE the cd, so they are found however the script is invoked.
-COMMENT_SCAN="$(cd -P -- "$(dirname -- "$0")" && pwd)/lib-commentscan.awk"
-STRIP_PROG="$(cd -P -- "$(dirname -- "$0")" && pwd)/one-spelling-strip.awk"
-cd "$(dirname "$0")/.."
+COMMENT_SCAN="$SELF_DIR/lib-commentscan.awk"
+STRIP_PROG="$SELF_DIR/one-spelling-strip.awk"
+cd "$SELF_DIR/.."
 for lib in "$COMMENT_SCAN" "$STRIP_PROG"; do
   [[ -f "$lib" ]] || { echo "FAIL: $lib is missing — this gate cannot read code without it"; exit 1; }
 done

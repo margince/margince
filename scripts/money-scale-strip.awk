@@ -16,7 +16,7 @@ function closes(s,  n, t) { t = s; n = gsub(/[)\]]/, "", t); return n }
 # from one file with a power of ten from another and invent a finding out of
 # two innocent files.
 function flush() { if (buf != "") print bufFile ":" start ":" buf; buf = ""; depth = 0; lines = 0 }
-FNR == 1 { closeFile(); flush(); INBLOCK = 0; RAW = 0 }
+FNR == 1 { closeFile(); flush() }
 {
   c = $0
   # ONE call per line, and it must come BEFORE any early `next` — the waived
@@ -78,6 +78,13 @@ FNR == 1 { closeFile(); flush(); INBLOCK = 0; RAW = 0 }
   # rejoin. A postfix `++`/`--` does NOT continue a statement — it ENDS one —
   # so it is excluded rather than caught by the bare `+`/`-` alternatives.
   if (trailing ~ /(\+\+|--)$/) { if (depth <= 0 || lines >= 6) flush(); next }
+  # A `case x:` or a bare label ends with a colon and does NOT continue — its
+  # body is a separate statement, and joining it paired a `case valueMinor:`
+  # with an unrelated `ratio * 100` in the arm below.
+  # `[^A-Za-z0-9_]` and not `\b`: POSIX ERE has no word boundary, and awk reads
+  # `\b` as a backspace — the guard matched nothing and the case label went on
+  # joining the arm below it.
+  if (t ~ /^(case|default)([^A-Za-z0-9_]|$)/) { if (depth <= 0 || lines >= 6) flush(); next }
   if (trailing ~ /(=|\+|-|\*|\/|%|:|&&|\|\|)$/ && lines < 6) next
   # Bounded at SIX lines. Four was the first bound and it missed the shape
   # this gate exists for, one line longer: biome wraps

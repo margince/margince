@@ -27,90 +27,76 @@
 #
 #   CMT    where a real line comment begins, 0 for none
 #   BLANK  the line with every string literal's CONTENTS replaced by spaces
-#   RAW    whether the NEXT line begins inside a backtick string
+#   STACK  the lexical contexts still open, for the NEXT line
 #
 # One function and not three, because scanLine and blankStrings used to be two
 # hand-written quote scanners over the same grammar — two implementations of one
 # reading, which is the defect this whole file exists to remove, reproduced
 # inside the fix for it. They disagreed: one learned that a backslash is literal
-# inside a Go raw string and the other did not, and only one tracked `${…}`.
-# Now there is one lexer and the disagreement cannot exist.
+# inside a Go raw string and the other had not, and only one tracked `${…}`.
 #
-# Cross-line state is carried because both of the constructs that need it span
-# lines. A Go raw string does, so a per-line scanner reads the CLOSING backtick
-# as an OPENING quote and swallows a real trailing comment as string content. A
-# TypeScript `${…}` does too, and its contents are EXECUTABLE — blanking them
-# hid the arithmetic the money gate exists to find.
+# STACK is a string, one character per open context, innermost last:
 #
-# INTERP is the brace depth inside a template interpolation, > 0 while the
-# scanner is in the executable part of one. It is Go-blind on purpose: Go's
-# backtick string is RAW and never interpolates, so `${amountMinor / 100}`
-# written inside one is prose, and treating it as code reported a comment
-# describing the old bug as the bug.
-function lexLine(s,   i, ch, quote, prev, interp, tmpl, out) {
-  RAWIN = RAW
+#   q  a double-quoted string      s  a single-quoted string
+#   t  a template / Go raw string  i  a brace inside an interpolation
+#
+# A stack and not a pair of counters, because the contexts NEST and a pair
+# cannot say so. `${`${minor}`}` opens a template, an interpolation, a second
+# template and a second interpolation; a flat "am I in a template" flag was
+# overwritten by the inner one and its contents were read as code, which
+# reported a nested string's prose as arithmetic.
+#
+# Only t and the i's beneath it carry to the next line, because only they
+# legally span one. A q or s left open at end of line is a syntax error, and
+# carrying it would blind the rest of the FILE over a typo — the one direction
+# a scanner must not fail in. TypeScript's backslash-continued string is the
+# exception and is honoured.
+function top(   n) { n = length(STACK); return n == 0 ? "" : substr(STACK, n, 1) }
+function push(c) { STACK = STACK c }
+function pop() { STACK = substr(STACK, 1, length(STACK) - 1) }
+
+function lexLine(s,   i, ch, nxt, prev, out, goFile, t) {
+  STACKIN = STACK
   CMT = 0; CMTKIND = ""
-  quote = RAW ? "`" : ""
-  interp = INTERP
-  # An interpolation carried in from an earlier line is BY DEFINITION inside a
-  # template, and `tmpl` is a local that does not survive the line. Without
-  # this, a `${…}` spanning lines never handed the scanner back to its string:
-  # the rest of the template read as code, its closing backtick opened a NEW
-  # string, and five real files in frontend/src ran off the end still inside
-  # one.
-  tmpl = (quote == "`") || interp > 0
   out = ""
+  goFile = (FILENAME ~ /\.go$/)
   for (i = 1; i <= length(s); i++) {
     ch = substr(s, i, 1)
+    nxt = substr(s, i + 1, 1)
+    t = top()
 
-    # Inside the executable half of a template interpolation, this is CODE:
-    # comments count, strings count, and the closing brace hands the scanner
-    # back to the string it came from.
-    if (interp > 0 && quote == "") {
-      if (ch == "{") { interp++; out = out ch; continue }
-      if (ch == "}") {
-        interp--
-        out = out ch
-        if (interp == 0 && tmpl) quote = "`"
-        continue
-      }
-      if (ch == "\"" || ch == "\x27") { quote = ch; out = out ch; continue }
-      if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "/") { CMT = i; CMTKIND = "//"; break }
-      if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "*") { CMT = i; CMTKIND = "/*"; break }
-      out = out ch
-      prev = ch
-      continue
-    }
-
-    if (quote != "") {
-      # A backslash escapes inside a quote — except inside a GO raw string,
-      # where it is an ordinary character. The two languages genuinely
-      # disagree: TypeScript's `a\`b` escapes the inner backtick, Go's `a\`
-      # is a complete two-character raw string. Treating Go's as an escape
-      # eats the closing backtick, and with the state carried across lines
-      # that does not merely mis-read one line — it leaves the scanner inside
-      # a string for the rest of the FILE, which is the failure direction
-      # that costs a gate everything.
-      if (ch == "\\" && !(quote == "`" && FILENAME ~ /\.go$/)) { out = out "  "; i++; continue }
-      if (ch == quote) { quote = ""; out = out ch; continue }
-      # `${…}` opens the executable half — in TypeScript only.
-      if (quote == "`" && !(FILENAME ~ /\.go$/) && ch == "$" && substr(s, i + 1, 1) == "{") {
-        quote = ""; interp = 1; tmpl = 1
-        out = out "${"; i++
-        continue
-      }
+    if (t == "q" || t == "s") {
+      if (ch == "\\") { out = out "  "; i++; continue }
+      if ((t == "q" && ch == "\"") || (t == "s" && ch == "\x27")) { pop(); out = out ch; continue }
       out = out " "
       continue
     }
 
-    if (ch == "\"" || ch == "\x27" || ch == "`") {
-      quote = ch
-      tmpl = (ch == "`")
-      out = out ch
+    if (t == "t") {
+      # A backslash escapes inside a template — but NOT inside a Go raw string,
+      # where it is an ordinary character. The two languages genuinely disagree:
+      # TypeScript's `a\`b` escapes the inner backtick, Go's `a\` is a complete
+      # two-character raw string. Treating Go's as an escape eats the closing
+      # backtick and leaves the scanner inside a string for the rest of the
+      # file.
+      if (ch == "\\" && !goFile) { out = out "  "; i++; continue }
+      if (ch == "`") { pop(); out = out ch; continue }
+      # Go's backtick string is RAW and never interpolates, so `${…}` inside one
+      # is prose; reading it as code reported a comment describing the old bug
+      # as the bug.
+      if (!goFile && ch == "$" && nxt == "{") { push("i"); out = out "${"; i++; continue }
+      out = out " "
       continue
     }
-    # An ESCAPED slash is not a comment opener. `u.replace(/^https?:\/\//,
-    # "")` is a TypeScript regex literal, and reading its `\/\/` as a comment
+
+    # Code: either the top level, or the executable half of an interpolation.
+    if (ch == "\"") { push("q"); out = out ch; continue }
+    if (ch == "\x27") { push("s"); out = out ch; continue }
+    if (ch == "`") { push("t"); out = out ch; continue }
+    if (t == "i" && ch == "{") { push("i"); out = out ch; continue }
+    if (t == "i" && ch == "}") { pop(); out = out ch; continue }
+    # An ESCAPED slash is not a comment opener. `u.replace(/^https?:\/\//, "")`
+    # is a TypeScript regex literal, and reading its `\/\/` as a comment
     # truncated the rest of the line — including, on the line that found this,
     # a real `amountMinor / 100` after it. Regex literals are not tracked as a
     # state of their own (that needs to know whether a `/` is division or a
@@ -120,43 +106,34 @@ function lexLine(s,   i, ch, quote, prev, interp, tmpl, out) {
     # There is no `prev != ":"` guard. It predated the quote scanning and was
     # meant to spare `https://`, but a scheme only ever appears inside a STRING
     # and the quote state already spares every one of the 1797 in this tree.
-    # Outside a string `://` does not occur in either language, so the guard
-    # could not fire — and where it could, on a `case x: //note`, it was wrong.
-    if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "/") { CMT = i; CMTKIND = "//"; break }
-    if (ch == "/" && prev != "\\" && substr(s, i + 1, 1) == "*") { CMT = i; CMTKIND = "/*"; break }
+    if (ch == "/" && prev != "\\" && nxt == "/") { CMT = i; CMTKIND = "//"; break }
+    if (ch == "/" && prev != "\\" && nxt == "*") { CMT = i; CMTKIND = "/*"; break }
     out = out ch
     prev = ch
   }
   # Everything from a comment onward is not code, so it is not blanked either —
-  # the caller decides whether to keep it, and CMT tells it where.
+  # the caller decides whether to keep it, and CMT says where it starts.
   if (CMT > 0) out = out substr(s, CMT)
   BLANK = out
-  # A comment cannot begin inside a STRING, so reaching one means no string
-  # carries to the next line. An INTERPOLATION is different: its contents are
-  # code, so a `//` is a real comment THERE and the interpolation is still open
-  # after it —
-  #
-  #   const s = `${x // a note
-  #   }`;
-  #
-  # Zeroing it here read the `}` on the next line as ordinary code and the
-  # backtick after it as a NEW template, which left the scanner inside a string
-  # for the rest of the file. The unclosed-file assertion caught that, which is
-  # what it is for.
-  RAW = (CMT > 0) ? 0 : (quote == "`")
-  INTERP = interp
+  # A q or s cannot legally span a line, so it does not carry — unless the line
+  # ends in the backslash TypeScript continues one with. An interpolation and
+  # the template around it DO carry, comment or not: a `//` inside `${…}` is a
+  # real comment and the interpolation is still open after it.
+  while ((top() == "q" || top() == "s") && s !~ /\\$/) pop()
 }
 
 # commentAt answers only the first half, for a caller holding one line in hand
 # rather than walking a file — including a caller re-scanning an already
 # stripped copy of the CURRENT line, which is why it resumes from the state the
 # line began in. It leaves the carried state exactly as it found it.
-function commentAt(s,   keepRaw, keepIn, keepInterp, keepCmt, keepBlank, at) {
-  keepRaw = RAW; keepIn = RAWIN; keepInterp = INTERP; keepCmt = CMT; keepBlank = BLANK
-  RAW = RAWIN
+function commentAt(s,   keepStack, keepIn, keepCmt, keepBlank, at) {
+  keepStack = STACK; keepIn = STACKIN; keepCmt = CMT; keepBlank = BLANK
+  # Resume from the contexts the line STARTED in — including an interpolation
+  # still open from an earlier line, which is where a waiver can legally sit.
+  STACK = STACKIN
   lexLine(s)
   at = CMT
-  RAW = keepRaw; RAWIN = keepIn; INTERP = keepInterp; CMT = keepCmt; BLANK = keepBlank
+  STACK = keepStack; STACKIN = keepIn; CMT = keepCmt; BLANK = keepBlank
   return at
 }
 
@@ -171,7 +148,7 @@ function blankStrings() {
 
 # codeOf returns the CODE on a line — every comment removed, string literals
 # left intact — and carries both cross-line states: INBLOCK for a `/* */` that
-# has not closed, RAW for a Go raw string that has not closed. An all-comment
+# has not closed, STACK for every string and interpolation that has not. An all-comment
 # line comes back as "".
 #
 # It is HERE rather than in each strip pass because both passes had written the
@@ -199,10 +176,10 @@ function codeOf(s,   rest, entry, guard) {
   if (INBLOCK) {
     if (match(s, /\*\//)) { INBLOCK = 0; s = substr(s, RSTART + RLENGTH) } else return ""
   }
-  entry = RAW
+  entry = STACK
   CODE = s
   for (guard = 0; guard < 100; guard++) {
-    RAW = entry
+    STACK = entry
     lexLine(CODE)
     if (CMT == 0) { CODEBLANK = BLANK; return CODE }
     if (CMTKIND == "//") {
@@ -237,10 +214,16 @@ function codeOf(s,   rest, entry, guard) {
 # the language never closes — stops being a silent hole and becomes a failure
 # that names the file.
 #
-# Call closeFile() at FNR == 1, BEFORE resetting the state, and again in END.
+# Call closeFile() at FNR == 1 and again in END. It owns the reset too, so a
+# context added later cannot be forgotten at a file boundary.
 function closeFile() {
-  if (SCANNED != "" && (RAW || INBLOCK)) print "commentscan-unclosed:" SCANNED
+  # STACK and not just the template flag: an interpolation left open leaks into
+  # the NEXT file exactly as a string does, and reporting the file as readable
+  # because only the outer context happened to be closed is the same lie in a
+  # narrower place.
+  if (SCANNED != "" && (STACK != "" || INBLOCK)) print "commentscan-unclosed:" SCANNED
   SCANNED = FILENAME
+  STACK = ""; INBLOCK = 0
 }
 
 # waived: the marker appears in a REAL comment on this line.
