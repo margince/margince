@@ -511,11 +511,10 @@ func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
 		"no-second":     "An identical step is a no-op rather than a second audit row.",
 		"one-truth":     "The source of the truncation is the provider, not this field.",
 		"is-every":      "Every read is checked, and each one is every bit as guarded as the last.",
-		// Counting, not duplication. "a retry is not two effects" was the first
-		// case here and it is a BAD near-miss — idempotence IS a claim of this
-		// family, so the shape was right to match it and the corpus was wrong
-		// to call it prose. A near-miss has to be a sentence that genuinely
-		// asserts nothing about uniqueness.
+		// Counting, not duplication. A near-miss has to assert nothing about
+		// uniqueness at all — "a retry is not two effects" would be a bad one,
+		// because idempotence IS a claim of this family and the shape is right
+		// to match it.
 		"never-twice": "The grace window is not two hours but three, measured from the last attempt.",
 		namedShape:    "Flush is every bit as ordered as Write, and neither is buffered.",
 	}
