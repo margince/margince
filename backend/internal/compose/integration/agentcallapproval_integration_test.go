@@ -23,7 +23,6 @@ package integration
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -36,15 +35,16 @@ import (
 )
 
 func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t *testing.T) {
+	// Driven through `enrich` rather than a send: what this proves is the
+	// APPROVAL mechanism — one row per refused call, single-use redemption —
+	// and that needs a verb that still stages. A passport no longer needs a
+	// second confirmation from the person who granted it, so the sends do not.
 	c := setupChannelSend(t)
-	invoke := c.sendMessageInvoker(t, c.mintPassport(t, []string{"read", "send"}))
+	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
+	org := c.enrichTarget(t)
 
-	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.activityID)
-	retry := func(approvalID string) string {
-		return fmt.Sprintf(
-			`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional","approval_id":%q}`,
-			c.activityID, approvalID)
-	}
+	args := enrichArgs(org)
+	retry := func(approvalID string) string { return enrichRetry(org, approvalID) }
 
 	first := c.stagedApproval(t, invoke, args)
 	if first.AlreadyApproved {
@@ -91,11 +91,14 @@ func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t 
 	}
 	c.assertApprovalCount(t, 1, "an identical call after the approval")
 
-	if _, err := invoke(retry(first.ApprovalID.String())); err != nil {
-		t.Fatalf("approved retry → %v, want it to reach Handle and send", err)
-	}
-	if n := c.outboundActivities(t); n != 1 {
-		t.Fatalf("%d outbound activities after the approved retry, want 1", n)
+	// The approved retry REACHES Handle, which is what this asserts. It then
+	// fails inside enrich for a reason that has nothing to do with the
+	// approval — no model path is configured in this deployment — and that
+	// refusal is the proof it got through: an unredeemed call never arrives at
+	// the tool at all, it is turned away by the gate with ErrRequiresApproval.
+	_, redeemed := invoke(retry(first.ApprovalID.String()))
+	if errors.Is(redeemed, apperrors.ErrRequiresApproval) || errors.Is(redeemed, apperrors.ErrApprovalTokenInvalid) {
+		t.Fatalf("approved retry → %v, want it past the gate and into the tool", redeemed)
 	}
 
 	// A SPENT decision is not standing authority. The identical call now needs a
@@ -108,9 +111,6 @@ func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t 
 		t.Fatal("a call whose approval was spent was told it is already approved")
 	}
 	c.assertApprovalCount(t, 2, "a call made after its approval was spent")
-	if n := c.outboundActivities(t); n != 1 {
-		t.Fatalf("%d outbound activities after re-staging, want still 1", n)
-	}
 }
 
 // stagedApproval invokes the tool and insists the answer is a 🟡 staging.
@@ -131,15 +131,23 @@ func (c *channelSendEnv) stagedApproval(t *testing.T, invoke func(string) (strin
 // The number IS the bug: four rows for one act is what a human saw in the inbox.
 func (c *channelSendEnv) assertApprovalCount(t *testing.T, want int, after string) {
 	t.Helper()
+	c.assertApprovalCountOf(t, "enrich", want, after)
+}
+
+// assertApprovalCountOf counts the rows staged for ONE verb. Named per verb
+// rather than counting the whole table: a test that stages an enrich must not
+// pass because some other call left a row behind.
+func (c *channelSendEnv) assertApprovalCountOf(t *testing.T, kind string, want int, after string) {
+	t.Helper()
 	var got int
 	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM approval WHERE kind = 'send_message'`).Scan(&got)
+			`SELECT count(*) FROM approval WHERE kind = $1`, kind).Scan(&got)
 	}); err != nil {
 		t.Fatalf("counting the staged approvals: %v", err)
 	}
 	if got != want {
-		t.Fatalf("%d send_message approvals after %s, want %d", got, after, want)
+		t.Fatalf("%d %s approvals after %s, want %d", got, kind, after, want)
 	}
 }
 
@@ -153,18 +161,19 @@ func (c *channelSendEnv) assertApprovalCount(t *testing.T, want int, after strin
 // a retry at any of them would strand the call permanently.
 func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t *testing.T) {
 	c := setupChannelSend(t)
-	invoke := c.sendMessageInvoker(t, c.mintPassport(t, []string{"read", "send"}))
-	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.activityID)
+	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
+	org := c.enrichTarget(t)
+	args := enrichArgs(org)
 
 	staged := c.stagedApproval(t, invoke, args)
 	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
-	// A human edits the anchor the approval is pinned to, which is ordinary inbox
-	// work on the very message the send answers.
-	if status := c.Call(t, "PATCH", "/v1/activities/"+c.activityID,
-		apptest.AnyMap{"subject": "Re: shipping window"}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human edit of the anchor → %d", status)
+	// A human edits the record the approval is pinned to, which is ordinary work
+	// on the very company the enrich would rewrite.
+	if status := c.Call(t, "PATCH", "/v1/organizations/"+org,
+		apptest.AnyMap{"industry": "logistics"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("human edit of the target → %d", status)
 	}
 
 	afterMove := c.stagedApproval(t, invoke, args)
@@ -192,15 +201,16 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 // principal can be built without one.
 func TestAnApprovalStagedByOnePassportIsNeverOfferedToAnother(t *testing.T) {
 	c := setupChannelSend(t)
-	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.activityID)
+	org := c.enrichTarget(t)
+	args := enrichArgs(org)
 
-	first := c.sendMessageInvoker(t, c.mintPassport(t, []string{"read", "send"}))
+	first := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
 	mine := c.stagedApproval(t, first, args)
 	if status := c.Call(t, "POST", "/v1/approvals/"+mine.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 
-	second := c.sendMessageInvoker(t, c.mintPassport(t, []string{"read", "send"}))
+	second := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
 	theirs := c.stagedApproval(t, second, args)
 	if theirs.AlreadyApproved {
 		t.Fatal("a second passport was told the call it is making is already approved")

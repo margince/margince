@@ -285,20 +285,39 @@ func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 // not perform it. The refusal has to happen before the message is staged — an
 // agent that could stage one has already sent it as far as the customer is
 // concerned.
-func TestSendMessageRequiresAnApprovalTokenForAnAgentCaller(t *testing.T) {
+// A send-scoped passport replies WITHOUT an approval token, and the reply goes.
+//
+// It used to be refused with approval_required. What changed is the tier, not
+// the gate: the passport carries the granting human's own seat and row scope,
+// and `send` is a cap that human chose to lend, so asking them to confirm again
+// made the agent surface weaker than the person behind it. What still refuses a
+// caller is the CAP — a passport never granted `send` cannot reach this at all,
+// which TestOutboundVerbsRequireAnOutboundCap holds.
+func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
 	c := setupChannelSend(t)
 
 	status, code, detail := c.sendReplyAs(t, []string{"read", "send"}, "transactional")
 
-	if status != http.StatusForbidden || code != "approval_required" {
-		t.Fatalf("agent reply with no approval token → %d %q, want 403 approval_required", status, code)
+	if status != http.StatusAccepted {
+		t.Fatalf("agent reply on a send-scoped passport → %d %q (%s), want 202", status, code, detail)
 	}
-	// The refusal names the staged approval and how to redeem it; without that
-	// the agent has been told "no" with no path to a yes.
-	if !strings.Contains(detail, "X-Approval-Token") {
-		t.Fatalf("refusal detail %q does not tell the agent how to redeem an approval", detail)
+	if n := c.stagedChannelDeliveries(t); n != 1 {
+		t.Fatalf("%d channel deliveries staged behind the accepted reply, want 1", n)
 	}
-	c.assertNoOutboundEffect(t, "a refused agent send")
+}
+
+// A passport its granting human never lent `send` is refused, and that is the
+// boundary that matters: the tier decides whether a person is asked twice, the
+// scope decides whether the act was delegable at all.
+func TestSendMessageRefusesAPassportWithoutTheSendCap(t *testing.T) {
+	c := setupChannelSend(t)
+
+	status, code, _ := c.sendReplyAs(t, []string{"read"}, "transactional")
+
+	if status == http.StatusAccepted {
+		t.Fatalf("a read-only passport sent a channel reply → %d %q", status, code)
+	}
+	c.assertNoOutboundEffect(t, "a send refused for want of the cap")
 }
 
 // The human's own action IS the approval (ADR-0055), so their reply carries no

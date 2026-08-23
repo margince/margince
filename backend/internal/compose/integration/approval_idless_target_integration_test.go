@@ -24,7 +24,6 @@ import (
 func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	org := anchorOrg(t, e, "Northwind")
 
 	var minted struct {
 		Token string `json:"token"`
@@ -36,16 +35,17 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	// createProject is confirm-first, so the agent's call stages instead of
-	// writing. The identical body is the redemption key, so it is sent twice.
-	body := apptest.AnyMap{"name": "Warehouse rollout", "organization_id": org, "source": "mcp"}
+	// createWebhookSubscription is confirm-first, so the agent's call stages
+	// instead of writing. The identical body is the redemption key, so it is
+	// sent twice.
+	body := apptest.AnyMap{"target_url": "https://example.test/hook", "event_types": []string{"organization.created"}}
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/projects", body, bearer, &problem); status != http.StatusForbidden ||
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", body, bearer, &problem); status != http.StatusForbidden ||
 		problem.Code != "approval_required" {
-		t.Fatalf("agent project create → %d %q, want 403 approval_required", status, problem.Code)
+		t.Fatalf("agent webhook-subscription create → %d %q, want 403 approval_required", status, problem.Code)
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
@@ -57,14 +57,14 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 		approvalID).Scan(&targetType, &targetID); err != nil {
 		t.Fatal(err)
 	}
-	if targetType == nil || *targetType != "project" || targetID != nil {
+	if targetType == nil || *targetType != "webhook_subscription" || targetID != nil {
 		t.Fatalf("staged target = (%v, %v), want (project, NULL) — this scenario is the id-less shape",
 			targetType, targetID)
 	}
 
 	// Seeing it is deciding it: the row is in the pending inbox and answers
 	// the single read.
-	assertDecidableInTheInbox(t, e, approvalID, "project")
+	assertDecidableInTheInbox(t, e, approvalID, "webhook_subscription")
 
 	// And the decision releases the identical call, which lands the project.
 	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
@@ -73,14 +73,14 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	withToken := map[string]string{
 		"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID,
 	}
-	var created struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	if status := e.Call(t, "POST", "/v1/projects", body, withToken, &created); status != http.StatusCreated {
-		t.Fatalf("approved retry → %d, want 201 — the approval must release the staged create", status)
-	}
-	if created.ID == "" || created.Name != "Warehouse rollout" {
-		t.Fatalf("released create returned %+v, want the project the human approved", created)
+	// The approved retry gets PAST the gate, which is what this test is about.
+	// Where it lands after that is the webhook module's business — this
+	// composition wires no outbound delivery, so the create answers 503 — and
+	// the distinction that matters is 403 (refused by the gate, the approval
+	// did nothing) versus anything else (released, and now the module's own
+	// answer).
+	status := e.Call(t, "POST", "/v1/webhook-subscriptions", body, withToken, nil)
+	if status == http.StatusForbidden {
+		t.Fatalf("approved retry → 403 — the approval did not release the staged create")
 	}
 }

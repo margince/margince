@@ -22,24 +22,24 @@ import (
 )
 
 // A confirm-first CREATE stages the record TYPE with NO target id — the row
-// does not exist yet, so there is nothing for an approval to pin. createProject
-// is the contract's per-record-type floor (#982) tightening a verb that is
-// auto-execute for every other type it serves.
+// does not exist yet, so there is nothing for an approval to pin.
+// createWebhookSubscription is the contract's per-record-type floor (#982)
+// tightening a verb that is auto-execute for every other type it serves — the
+// registration of outbound egress is configuration a credential must not widen,
+// which is why it kept the floor when the ordinary record writes lost theirs.
 func TestARestCreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	bearer := agentBearer(t, e, "create-staging agent")
 
-	orgID := createdID(t, e, "/v1/organizations", apptest.AnyMap{"display_name": "Tier floor anchor"})
-
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
-		"name": "Unapproved", "organization_id": orgID,
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
-		t.Fatalf("agent project create → %d %q, want 403 approval_required", status, problem.Code)
+		t.Fatalf("agent webhook-subscription create → %d %q, want 403 approval_required", status, problem.Code)
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
@@ -50,8 +50,8 @@ func TestARestCreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 		approvalID).Scan(&targetType, &targetID); err != nil {
 		t.Fatalf("reading the staged approval: %v", err)
 	}
-	if targetType != "project" {
-		t.Errorf("staged target_entity_type = %q, want \"project\"", targetType)
+	if targetType != "webhook_subscription" {
+		t.Errorf("staged target_entity_type = %q, want \"webhook_subscription\"", targetType)
 	}
 	if targetID != nil {
 		t.Errorf("staged target_entity_id = %v, want NULL — a create names no existing row an approval "+
