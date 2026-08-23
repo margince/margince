@@ -30,7 +30,9 @@ import {
   type SectionState,
   SurfaceState,
 } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatDayMonth } from "../format/format";
+import { RECORD_ZONE } from "../format/timezone";
+import { type Locale, useLocale, useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import {
   ProblemError,
@@ -673,7 +675,8 @@ function EmploymentRow({
   onRemove: () => void;
 }>) {
   const t = useT();
-  const detail = employmentDetail(employment, t);
+  const { locale } = useLocale();
+  const detail = employmentDetail(employment, t, locale);
   const ending =
     actions.end.isPending &&
     actions.end.variables?.relationship_id === employment.relationship_id;
@@ -923,10 +926,12 @@ function AddEmploymentModal({
 }
 
 // The date range only — role is now its own InlineText control above, so
-// repeating it here would be the same fact twice. The same day-month
-// convention personmemory.tsx's own `dayMonth` renders every other date on
-// this page with, so the two rail sections never disagree about what
-// "12 Jan" means.
+// repeating it here would be the same fact twice. Through `formatDayMonth`,
+// which is the same function every other date on this page goes through — an
+// earlier version of this comment claimed the two sections could not disagree
+// about what "12 Jan" means while each held its own private copy of the
+// rendering, and both read the browser's guessed locale rather than the
+// reader's chosen one.
 // An employment that has ENDED says so even when nobody recorded when it
 // began: a period is a nicety, but a former employer that reads like a current
 // one is a rep writing to the wrong company. Only a connection with neither
@@ -934,11 +939,20 @@ function AddEmploymentModal({
 function employmentDetail(
   employment: Employment,
   t: ReturnType<typeof useT>,
+  locale: Locale,
 ): string {
+  // The record's zone. These arrive as instants (`format: date-time`), but they
+  // are WRITTEN from a date picker, so what is stored is midnight on the day a
+  // human chose and the time carries no information. Rendered in a reader's own
+  // zone west of UTC that midnight falls on the previous day, and two
+  // colleagues would quote different start dates for one employment. The
+  // record's zone is never behind UTC, so it renders the day that was picked.
   const start = employment.started_at
-    ? dayMonth(employment.started_at)
+    ? formatDayMonth(employment.started_at, locale, RECORD_ZONE)
     : undefined;
-  const end = employment.ended_at ? dayMonth(employment.ended_at) : undefined;
+  const end = employment.ended_at
+    ? formatDayMonth(employment.ended_at, locale, RECORD_ZONE)
+    : undefined;
   if (start && end) {
     return `${start} – ${end}`;
   }
@@ -949,13 +963,6 @@ function employmentDetail(
     return `${start} – ${t("rel.current")}`;
   }
   return "";
-}
-
-function dayMonth(at: string): string {
-  return new Date(at).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
 }
 
 // --- Relationship pulse ----------------------------------------------------

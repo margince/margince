@@ -1,7 +1,8 @@
 import type { components } from "../api/schema";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { formatMoneyCompact } from "../format/format";
+import { formatDayMonth, formatMoneyCompact } from "../format/format";
+import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 
 // The relationship state strip (concept §5.3): six facts that change how a
@@ -61,7 +62,10 @@ export function PersonStrip({
       />
       <StatCard
         label={t("person.strip.nextMeeting")}
-        value={reading(nextMeeting(view, t), omitted.has("next_meeting"))}
+        value={reading(
+          nextMeeting(view, t, locale),
+          omitted.has("next_meeting"),
+        )}
       />
       <StatCard
         label={t("person.strip.consent")}
@@ -129,15 +133,19 @@ function openDeal(
   return formatMoneyCompact(deal.amount_minor, deal.currency, locale);
 }
 
-function nextMeeting(view: Person360, t: ReturnType<typeof useT>): string {
+function nextMeeting(
+  view: Person360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   const meeting = view.next_meeting;
   if (!meeting) {
     return t("person.strip.noMeeting");
   }
-  return new Date(meeting.starts_at).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
+  // The record's zone, which is what persontabs.tsx renders the same field in.
+  // Rendered in the reader's own instead, the strip and the tab beside it name
+  // different days for one meeting whenever the reader is not in that zone.
+  return formatDayMonth(meeting.starts_at, locale, RECORD_ZONE);
 }
 
 // The verdict word and its tone are read from the SERVER's verdict key, never

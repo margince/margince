@@ -5,7 +5,6 @@ import {
   type FormEvent,
   type ReactNode,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -15,7 +14,8 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
-import { useT } from "../i18n";
+import { formatNumber, INTL_LOCALE } from "../format/format";
+import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { normalizeUrl, skipReasonText } from "./onboarding";
 import "./onboarding-gate.css";
@@ -39,7 +39,7 @@ type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 type GateScan = Readonly<{
   read: CompanySiteRead;
   host: string;
-  locale: string;
+  locale: Locale;
 }>;
 type CompanySiteReadPage = components["schemas"]["CompanySiteReadPage"];
 type AiRunSummary = components["schemas"]["AiRunSummary"];
@@ -242,10 +242,6 @@ function GateColumn({
   children: ReactNode;
 }>) {
   const t = useT();
-  const counts = useMemo(
-    () => new Intl.NumberFormat(scan?.locale),
-    [scan?.locale],
-  );
   const settled = scan !== undefined && SETTLED.has(scan.read.status);
   const head: Readonly<{
     core: MarginceCoreState;
@@ -267,8 +263,11 @@ function GateColumn({
             : t("ob.scan.title", { host: scan.host }),
           sub: settled
             ? t("ob.scan.doneSub", {
-                facts: counts.format(scan.read.facts.length),
-                fields: counts.format(scan.read.profile_fields.length),
+                facts: formatNumber(scan.read.facts.length, scan.locale),
+                fields: formatNumber(
+                  scan.read.profile_fields.length,
+                  scan.locale,
+                ),
               })
             : t("ob.scan.sub"),
         };
@@ -369,9 +368,12 @@ function pageStatusWord(t: Translate, page: CompanySiteReadPage): string {
   return t("ob.scan.pageStatusFetched");
 }
 
-function costLine(t: Translate, runtime: AiRunSummary, locale: string): string {
-  const counts = new Intl.NumberFormat(locale);
-  const money = new Intl.NumberFormat(locale, {
+function costLine(t: Translate, runtime: AiRunSummary, locale: Locale): string {
+  // Not `formatMoney`: a read costs fractions of a cent and that renders a
+  // stored minor amount at its currency's ISO scale, so two decimals would
+  // round every honest disclosure here to zero. The LOCALE is still the
+  // reader's, from the one table.
+  const money = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency: runtime.currency,
     // A read costs fractions of a cent, and two decimals would round every
@@ -380,8 +382,8 @@ function costLine(t: Translate, runtime: AiRunSummary, locale: string): string {
     maximumFractionDigits: 4,
   });
   return t("ob.scan.costLine", {
-    calls: counts.format(runtime.call_attempts),
-    tokens: counts.format(runtime.tokens_in + runtime.tokens_out),
+    calls: formatNumber(runtime.call_attempts, locale),
+    tokens: formatNumber(runtime.tokens_in + runtime.tokens_out, locale),
     cost: money.format(runtime.estimated_cost_microusd / 1_000_000),
   });
 }
@@ -401,7 +403,7 @@ export function ReadTheatre({
 }: Readonly<{
   read: CompanySiteRead;
   host: string;
-  locale: string;
+  locale: Locale;
   configuredModel: string;
 }>) {
   return (
@@ -424,11 +426,10 @@ function TheatreTail({
   configuredModel,
 }: Readonly<{
   read: CompanySiteRead;
-  locale: string;
+  locale: Locale;
   configuredModel: string;
 }>) {
   const t = useT();
-  const counts = useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const settled = SETTLED.has(read.status);
   const phase = phaseKey(read);
   const runtime = read.ai_runtime;
@@ -493,17 +494,21 @@ function TheatreTail({
             )}
           </ul>
           <p className="ob-scan-ticker-total">
-            {t("ob.scan.pagesRead", { pages: counts.format(pagesRead) })}
+            {t("ob.scan.pagesRead", {
+              pages: formatNumber(pagesRead, locale),
+            })}
           </p>
         </div>
 
         <p className="ob-scan-counts">
           <span>
-            {t("ob.scan.pagesSkipped", { count: counts.format(skipped) })}
+            {t("ob.scan.pagesSkipped", {
+              count: formatNumber(skipped, locale),
+            })}
           </span>
           <span className="ob-scan-found">
             {t("ob.scan.factsSoFar", {
-              count: counts.format(read.facts.length),
+              count: formatNumber(read.facts.length, locale),
             })}
           </span>
           {settled ? null : <span>{t("ob.scan.stillReading")}</span>}

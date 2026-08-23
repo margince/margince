@@ -1,7 +1,8 @@
 import { FileText, Lightbulb, Quote } from "lucide-react";
 import type { components } from "../api/schema";
 import { Badge, Card } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import "./voice-dna.css";
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
@@ -130,6 +131,7 @@ export function parseVoiceInsights(
 function nextBestCopy(
   t: ReturnType<typeof useT>,
   data: VoiceInsightsData,
+  locale: Locale,
 ): string | null {
   switch (data.nextBestKey) {
     case "add_transcript":
@@ -138,7 +140,7 @@ function nextBestCopy(
       return t("voice.insights.next.addEmail");
     case "add_words":
       return t("voice.insights.next.addWords", {
-        count: (data.nextBestWords ?? 0).toLocaleString(),
+        count: formatNumber(data.nextBestWords ?? 0, locale),
       });
     case "at_target":
       return t("voice.insights.next.atTarget");
@@ -155,6 +157,7 @@ export function VoiceInsights({
   profileVersion,
 }: Readonly<{ data: VoiceInsightsData; profileVersion: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="vdna-insights">
       <div className="vdna-provenance t-small">
@@ -167,14 +170,21 @@ export function VoiceInsights({
         data.sources !== null ||
         data.meanSentence !== null) && (
         <div className="t-small">
+          {/* All three counts through the same formatter. A number handed to
+              `t` straight is interpolated with `String`, which groups nothing
+              and puts a decimal POINT where a German reader writes a comma — so
+              a mean sentence length of 12.5 reads "12.5" to every reader on a
+              line whose other two figures are localized. The three sit in one
+              sentence; two spellings inside it is the drift this whole change
+              is about. Issue 2463 carries the same defect app-wide. */}
           {data.words !== null &&
             t("voice.insights.statWords", {
-              count: data.words.toLocaleString(),
+              count: formatNumber(data.words, locale),
             })}
           {data.sources !== null &&
-            ` · ${t("voice.insights.statSources", { count: data.sources })}`}
+            ` · ${t("voice.insights.statSources", { count: formatNumber(data.sources, locale) })}`}
           {data.meanSentence !== null &&
-            ` · ${t("voice.insights.statSentence", { count: data.meanSentence })}`}
+            ` · ${t("voice.insights.statSentence", { count: formatNumber(data.meanSentence, locale) })}`}
         </div>
       )}
       {data.thinking && (
@@ -208,7 +218,7 @@ export function VoiceInsights({
       {(data.nextBestKey || data.nextBest) && (
         <div className="vdna-nextbest">
           <b>{t("voice.insights.nextBestLabel")}</b>{" "}
-          {nextBestCopy(t, data) ?? data.nextBest}
+          {nextBestCopy(t, data, locale) ?? data.nextBest}
         </div>
       )}
     </div>

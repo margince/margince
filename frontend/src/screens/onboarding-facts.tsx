@@ -3,7 +3,8 @@
 
 import { useMemo } from "react";
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useT } from "../i18n";
 import { confidenceLevel } from "./inbox";
 import { MAX_SELECTED_FACTS } from "./onboarding";
 import "./onboarding-facts.css";
@@ -91,10 +92,6 @@ export function useFactSelection(
   }, [facts, selectedKeys, onChange]);
 }
 
-function useCountFormat(locale: string): Intl.NumberFormat {
-  return useMemo(() => new Intl.NumberFormat(locale), [locale]);
-}
-
 // Highest confidence first, ties broken on the stable key so the default
 // selection does not reshuffle between renders of the same read.
 function byConfidence(a: CompanySiteReadFact, b: CompanySiteReadFact): number {
@@ -142,13 +139,14 @@ export function CapNotice({
   atCap,
   locale,
   live = true,
-}: Readonly<{ atCap: boolean; locale: string; live?: boolean }>) {
+}: Readonly<{ atCap: boolean; locale: Locale; live?: boolean }>) {
   const t = useT();
-  const counts = useCountFormat(locale);
   return (
     <p className="ob-facts-cap" role={live ? "status" : undefined}>
       {atCap
-        ? t("ob.facts.capReached", { max: counts.format(MAX_SELECTED_FACTS) })
+        ? t("ob.facts.capReached", {
+            max: formatNumber(MAX_SELECTED_FACTS, locale),
+          })
         : ""}
     </p>
   );

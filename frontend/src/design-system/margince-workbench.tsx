@@ -2,7 +2,8 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
+import { formatNumber, INTL_LOCALE } from "../format/format";
+import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar } from "./atoms";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
@@ -66,7 +67,7 @@ export function MarginceWorkbench({
    * caller has no summary to offer.
    */
   configuredSummary?: string;
-  locale: string;
+  locale: Locale;
   runtime?: AiRunSummary;
   runtimeLabels: WorkbenchRuntimeLabels;
   steps?: readonly WorkbenchStep[];
@@ -287,7 +288,7 @@ function AiRuntimeChip({
   runtime?: AiRunSummary;
   configured: string;
   labels: WorkbenchRuntimeLabels;
-  locale: string;
+  locale: Locale;
   /** Rail footer form: the compact token count rides beside the spend. */
   showTokens?: boolean;
 }>) {
@@ -397,7 +398,7 @@ function AiRuntimeChip({
         <strong>{spend}</strong>
         {showTokens && runtime && (
           <small className="mw-aistat-tok">
-            {new Intl.NumberFormat(locale, {
+            {new Intl.NumberFormat(INTL_LOCALE[locale], {
               notation: "compact",
               maximumFractionDigits: 1,
             }).format(runtime.tokens_in + runtime.tokens_out)}
@@ -426,9 +427,7 @@ function AiRuntimeChip({
             label={labels.tokens}
             value={
               runtime
-                ? new Intl.NumberFormat(locale).format(
-                    runtime.tokens_in + runtime.tokens_out,
-                  )
+                ? formatNumber(runtime.tokens_in + runtime.tokens_out, locale)
                 : labels.unavailable
             }
           />
@@ -436,7 +435,7 @@ function AiRuntimeChip({
             label={labels.latency}
             value={
               runtime
-                ? `${new Intl.NumberFormat(locale).format(runtime.latency_ms)} ms`
+                ? `${formatNumber(runtime.latency_ms, locale)} ms`
                 : labels.unavailable
             }
           />
@@ -486,8 +485,12 @@ function unique(values: string[]) {
   return values.filter((value, index) => values.indexOf(value) === index);
 }
 
-function formatMicroUSD(value: number, locale: string) {
-  return new Intl.NumberFormat(locale, {
+// Not `formatMoney`: that renders a stored minor amount at its currency's ISO
+// scale, and a read costs fractions of a cent — rounded to two decimals every
+// honest disclosure here reads $0.00. The LOCALE is still the reader's, taken
+// from the one table, because a German reader writes "0,0043 $".
+function formatMicroUSD(value: number, locale: Locale) {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: value > 0 && value < 10_000 ? 4 : 2,

@@ -346,6 +346,16 @@ export function count(value: unknown): string {
  * inlined whole and served to a third-party host. That is the reason the scale
  * lives in its own module rather than inside the formatters.
  *
+ * THE LOCALE IS THE HOST'S, DELIBERATELY, and this is the one rendering in the
+ * product that does not take the reader's chosen one. What is missing is not
+ * the MAPPING — importing `INTL_LOCALE` would cost almost nothing — it is the
+ * locale to look it up with: this document is inlined whole into a page the
+ * product does not own, with no LocaleProvider above it and no signed-in
+ * reader's choice reaching inside it, so there is nothing to index the table
+ * by. `undefined` is the honest remaining answer, and it is at least the locale
+ * the reader's own browser reports. `format/one-locale.test.ts` carries this
+ * file as a named exemption with this reason.
+ *
  * An amount that is not a finite number, or a currency Intl does not know,
  * renders as the em dash. Intl throws on an unknown currency code, and a view
  * that threw mid-render would leave the reader a blank panel.

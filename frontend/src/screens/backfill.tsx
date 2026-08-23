@@ -5,8 +5,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
-import { formatDuration, formatMoney } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { formatDuration, formatMoney, formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   ProblemError,
@@ -387,7 +387,7 @@ function EstimateCard({
     <div className="backfill-estimate">
       <p>
         {t("backfill.estimateMessages")}{" "}
-        <strong>~{preview.estimated_messages.toLocaleString()}</strong>
+        <strong>~{formatNumber(preview.estimated_messages, locale)}</strong>
       </p>
       {costMinor > 0 && (
         <p className="t-small">
@@ -429,16 +429,18 @@ function CaptureStat({
   value,
   label,
   icon: Icon,
+  locale,
 }: {
   value: number;
   label: string;
   icon: typeof Mail;
+  locale: Locale;
 }) {
   return (
     <div className="capture-stat">
       <Icon aria-hidden />
       <b key={value} className="capture-stat-value">
-        {value.toLocaleString()}
+        {formatNumber(value, locale)}
       </b>
       <span>{label}</span>
     </div>
@@ -457,6 +459,7 @@ function RunView({
   onCancel: () => void;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   const counts = run.counts;
   const scanned = counts?.messages_scanned ?? 0;
   const live = run.state === "running" || run.state === "queued";
@@ -497,6 +500,7 @@ function RunView({
             value={counts?.[stat.key] ?? 0}
             label={t(stat.label)}
             icon={stat.icon}
+            locale={locale}
           />
         ))}
       </div>
@@ -507,7 +511,7 @@ function RunView({
         agoMs={agoMs}
       />
       <p className="t-small capture-scanned">
-        {t("backfill.countScanned")} {scanned.toLocaleString()}
+        {t("backfill.countScanned")} {formatNumber(scanned, locale)}
       </p>
       {run.state === "error" && (
         <p className="t-small backfill-error">

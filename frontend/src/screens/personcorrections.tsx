@@ -5,7 +5,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { RECORD_ZONE } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 
 type Person360 = components["schemas"]["Person360"];
@@ -81,6 +83,7 @@ function EnrichedField({
   mayCorrect: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
   const queryClient = useQueryClient();
@@ -152,7 +155,9 @@ function EnrichedField({
       >
         {t("person.enriched.readFrom", {
           source: field.source,
-          when: new Date(field.captured_at).toLocaleDateString(),
+          // The record's zone: when the machine read this is a fact about the
+          // record, and the correction beside it is judged against that day.
+          when: formatDate(field.captured_at, locale, RECORD_ZONE),
         })}{" "}
         — “{field.evidence_snippet}”
       </p>
