@@ -129,8 +129,21 @@ func (t bookMeetingTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	if err := requireBookingLinks(args.Links); err != nil {
 		return nil, err
 	}
+	// Booking onto SOMEBODY ELSE'S calendar takes admin. This lived only in the
+	// resolver's Guards, which run inside StageSubject — enough while the verb
+	// always staged, and nothing at all now that it executes: defaultHost
+	// (compose/comms.go) takes whatever host it is handed without asking who
+	// the caller is.
+	if err := requireOwnCalendarOrAdmin(ctx, args.HostUserID); err != nil {
+		return nil, err
+	}
 	links, err := uniqueRecordLinks(args.Links)
 	if err != nil {
+		return nil, err
+	}
+	// And every link is read under the caller's row scope, the same reason:
+	// a booking must not be filed against a record the caller cannot see.
+	if _, err := readStageableLinks(ctx, t.p, links); err != nil {
 		return nil, err
 	}
 	args.Links = links
