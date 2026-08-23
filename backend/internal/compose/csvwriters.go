@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -130,15 +131,45 @@ const (
 	predictCreate predictedOutcome = iota
 	predictUpdate
 	predictUnchanged
+	// predictUnwritable is a row the commit will refuse. It is counted apart
+	// from the three outcomes above because a dry run that folds it into
+	// `created` promises work that cannot happen.
+	predictUnwritable
+	// predictCollides is a row naming a company the CRM ALREADY holds, found
+	// by the same PO-F-2 ladder the create path runs. The commit still lands
+	// it — and files a review pair — so this is a disclosure, not a refusal:
+	// the preview's job is to say a duplicate is coming while a human can
+	// still fix the file.
+	predictCollides
 )
 
 // Predict answers what Ensure would do, without writing.
+//
+// The unwritable check comes FIRST, before the identity lookup: a row the
+// store will refuse is refused whether it would have created or updated, and
+// discovering that only on the create branch would let the same bad value pass
+// silently on a re-import.
 func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedOutcome, error) {
+	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
+		return predictUnwritable, nil
+	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
 	if err != nil {
 		return predictCreate, err
 	}
 	if !found {
+		// Not a row a previous run of THIS importer landed — but the CRM may
+		// hold the company anyway, captured from mail, created by hand or
+		// seeded. The identity map cannot see any of those, so the create the
+		// engine is about to report gets the same dedupe read the create path
+		// itself performs.
+		collides, err := w.collidesWithExisting(ctx, row)
+		if err != nil {
+			return predictCreate, err
+		}
+		if collides {
+			return predictCollides, nil
+		}
 		return predictCreate, nil
 	}
 	current, err := w.read(ctx, id)
@@ -155,9 +186,51 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 	return predictUpdate, nil
 }
 
+// collidesWithExisting asks whether the CRM already holds the company this row
+// names, through the SAME ladder the create path runs (PO-F-2). It reads and
+// writes nothing.
+//
+// Only organizations: a lead's identity is its email, which the store's own
+// unique key already refuses, so there is no silent twin to warn about.
+//
+// A read-only transaction, and NOT DedupeOrganizationForCreate — that one takes
+// a write lock to serialize concurrent creates, which a preview has no business
+// holding. The answer can therefore go stale between the preview and the
+// commit; that is correct, because the commit runs the locking version and its
+// answer is the one that decides.
+func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row) (bool, error) {
+	if w.object != migration.ObjectOrganization {
+		return false, nil
+	}
+	fields := textFields(row.Fields)
+	candidate := people.OrganizationCandidate{
+		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
+		LegalName:   strings.TrimSpace(fields["legal_name"]),
+	}
+	if candidate.DisplayName == "" && candidate.LegalName == "" {
+		return false, nil
+	}
+	var match people.OrganizationMatch
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		match, err = people.DedupeOrganization(ctx, tx, candidate)
+		return err
+	}); err != nil {
+		return false, fmt.Errorf("import: checking %q against the companies already held: %w", candidate.DisplayName, err)
+	}
+	return match.Decision != people.DecisionNoMatch, nil
+}
+
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+	// The same refusal the dry run reported, so the two cannot disagree about
+	// this row. Without it the preview would disclose a skip and the commit
+	// would then fail on the store's own constraint instead — a different
+	// answer to the question a human already approved.
+	if reason := unwritableReason(object, textFields(row.Fields)); reason != "" {
+		return migration.EnsureResult{Skipped: true, SkipReason: reason}, nil
+	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
 	if err != nil {
 		return migration.EnsureResult{}, err

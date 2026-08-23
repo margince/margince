@@ -600,3 +600,96 @@ func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
 		t.Fatalf("a duplicate header → %d, want 422", status)
 	}
 }
+
+// What a CSV row does when a company of that name is ALREADY in the CRM, and
+// what an out-of-enum size_band does. Both were reported as import defects on
+// 2026-08-23 after a run through a chat host; this test is what settles each
+// against the running stack rather than against a reading of the code.
+func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
+	e := setupImportApp(t)
+
+	// The company arrives the way real ones do — created directly, NOT by a
+	// previous CSV run. That distinction is the whole test: the importer's
+	// identity map only remembers rows IT wrote, so a company captured from
+	// mail, a connector or a seed is invisible to it.
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent → %d, want 201", status)
+	}
+
+	// A spreadsheet naming that same company.
+	const second = "Company,Industry\nAkeneo,retail software\n"
+	profile2, _ := uploadCSV(t, e, "organization", second)
+	run2, _ := createRunWithMapping(t, e, "organization", profile2.SourceRef,
+		map[string]string{"Company": "display_name", "Industry": "industry"})
+
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run2.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	// The preview must SAY the company is already there. It does not refuse
+	// the row — the commit creates it and files a review pair, the same as a
+	// manual create — but "create 1" with nothing else said is what let a
+	// chat host report "no duplicates" to a user on 2026-08-23.
+	if len(report.Issues) == 0 {
+		t.Errorf("the preview reported %d create(s) and no issue for a row naming a company "+
+			"the CRM already holds; a human approving this is told nothing about the duplicate",
+			report.Disposition.Created)
+	}
+
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run2.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve 2 → %d, want 202", status)
+	}
+
+	named := 0
+	for _, o := range organizations(t, e).Data {
+		if o.DisplayName == "Akeneo" {
+			named++
+		}
+	}
+	// The duplicate IS created — that is the existing create-path policy, and
+	// changing it is a separate decision — but it must not be silent.
+	var pairs int
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'organization'`).Scan(&pairs)
+	}); err != nil {
+		t.Fatalf("counting dedupe pairs: %v", err)
+	}
+	if named != 2 || pairs != 1 {
+		t.Errorf("after importing a name the CRM already held: %d companies named Akeneo and %d review pair(s); "+
+			"want 2 and 1 — the row lands and the pair is filed for a human", named, pairs)
+	}
+
+	// size_band is a closed enum with a database CHECK constraint. A headcount
+	// column mapped onto it cannot be written, so the PREVIEW is the place to
+	// say so — a dry run that reports a clean create for a row the commit
+	// cannot land has told the user the opposite of what will happen.
+	const bands = "Company,Employees\nNordwind Logistik,240\n"
+	profile3, _ := uploadCSV(t, e, "organization", bands)
+	run3, status3 := createRunWithMapping(t, e, "organization", profile3.SourceRef,
+		map[string]string{"Company": "display_name", "Employees": "size_band"})
+
+	if status3 != http.StatusAccepted {
+		t.Fatalf("create run 3 → %d, want 202", status3)
+	}
+	var r3 importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run3.ID+"/report", nil, nil, &r3); status != http.StatusOK {
+		t.Fatalf("report 3 → %d, want 200", status)
+	}
+	if r3.Disposition.Created != 0 || r3.Disposition.Skipped != 1 || len(r3.Issues) != 1 {
+		t.Fatalf("a headcount mapped onto size_band previewed as created=%d skipped=%d issues=%d; "+
+			"want 0/1/1 — the CHECK constraint would refuse it, so the dry run must say so",
+			r3.Disposition.Created, r3.Disposition.Skipped, len(r3.Issues))
+	}
+
+	// And the commit must agree with the preview it showed.
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run3.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve 3 → %d, want 202", status)
+	}
+	for _, o := range organizations(t, e).Data {
+		if o.DisplayName == "Nordwind Logistik" {
+			t.Error("the commit landed a row the preview disclosed as skipped")
+		}
+	}
+}

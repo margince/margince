@@ -348,7 +348,7 @@ func readAllUpload(file multipart.File) ([]byte, error) {
 // WILL happen may not overstate it by the size of the customer's re-upload, so
 // each row is compared here exactly as the commit will compare it.
 func refinePrediction(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string, report migration.Report) (migration.Report, error) {
-	created, updated, unchanged, err := predictPages(ctx, source, writers, object)
+	p, err := predictPages(ctx, source, writers, object)
 	if err != nil {
 		return migration.Report{}, err
 	}
@@ -356,37 +356,72 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		if report.Objects[i].Object != object {
 			continue
 		}
-		report.Objects[i].WillCreate = created
-		report.Objects[i].WillUpdate = updated
-		report.Objects[i].Unchanged = unchanged
+		report.Objects[i].WillCreate = p.created
+		report.Objects[i].WillUpdate = p.updated
+		report.Objects[i].Unchanged = p.unchanged
+		report.Objects[i].Skipped = append(report.Objects[i].Skipped, p.skipped...)
 	}
 	return report, nil
 }
 
 // predictPages walks the source and tallies what the commit would do with each
 // row, page by page, the same way the engine will walk it.
-func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (created, updated, unchanged int, err error) {
+func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
 		if err != nil {
-			return 0, 0, 0, err
+			return prediction{}, err
 		}
 		for _, row := range rows {
 			outcome, err := writers.Predict(ctx, row)
 			if err != nil {
-				return 0, 0, 0, err
+				return prediction{}, err
 			}
 			switch outcome {
 			case predictCreate:
-				created++
+				p.created++
 			case predictUpdate:
-				updated++
+				p.updated++
 			case predictUnchanged:
-				unchanged++
+				p.unchanged++
+			case predictUnwritable:
+				// Disclosed as a skip rather than counted as a create: the
+				// commit will refuse this row, and the report exists to say so
+				// before a human approves it.
+				p.skipped = append(p.skipped, migration.SkippedRow{
+					ExternalID: row.ExternalID,
+					Reason:     unwritableReason(object, textFields(row.Fields)),
+				})
+			case predictCollides:
+				// Still a create — the commit lands it and files a review pair
+				// — but a human approving "create 3" deserves to know one of
+				// the three names a company already in the CRM.
+				p.created++
+				p.skipped = append(p.skipped, migration.SkippedRow{
+					ExternalID: row.ExternalID,
+					Reason:     collisionDisclosure,
+				})
 			}
 		}
 		if len(rows) < importPredictPage {
-			return created, updated, unchanged, nil
+			return p, nil
 		}
 	}
+}
+
+// collisionDisclosure is what the report says about a row naming a company the
+// CRM already holds. It is not a refusal: the commit creates the row and files
+// the pair on the dedupe review queue, exactly as a manual create would. The
+// disclosure exists so a person reading "create 3" before approving is not
+// surprised by a duplicate afterwards.
+const collisionDisclosure = "a company of this name is already in the CRM; " +
+	"importing this row creates a second one and files the pair for review"
+
+// prediction is what one walk of the source concluded: the three outcomes a
+// commit can have, plus the rows it will refuse outright.
+type prediction struct {
+	created   int
+	updated   int
+	unchanged int
+	skipped   []migration.SkippedRow
 }
