@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -1929,11 +1930,14 @@ describe("ComposeModal started from an account", () => {
     ).toBeTruthy();
   });
 
-  // A reply inherits its thread's project on its own (capture's stickiness
-  // rung), so the composer offers no picker for it — and used to say nothing
-  // either, which is why a rep pressing "Draft a reply" concluded projects were
-  // not wired at all. It says where the message is going now.
-  it("says which project a reply will be filed under", async () => {
+  // The composer's project control, on a reply. A reply inherits its thread's
+  // project on its own (capture's stickiness rung), and the composer suggests
+  // that project so the rep does not retype what is already true — but it is a
+  // SUGGESTION in a picker they can set to None, not a fact stated at them.
+  const replyBackend = (
+    links: { entity_type: string; entity_id: string }[],
+    projects: { project_id: string; name: string; key: string }[],
+  ) =>
     stubRoutes({
       "GET /activities/act-1": () =>
         jsonResponse({
@@ -1944,197 +1948,154 @@ describe("ComposeModal started from an account", () => {
           created_at: "2026-08-09T09:00:00Z",
           updated_at: "2026-08-09T09:00:00Z",
           version: 1,
-          links: [
-            { entity_type: "person", entity_id: "p-1" },
-            { entity_type: "project", entity_id: "pr-1" },
-          ],
+          links,
         }),
+      "GET /deals/d-1": () =>
+        jsonResponse({
+          id: "d-1",
+          name: "netcare",
+          organization_id: "o-1",
+          project_id: "pr-9",
+        }),
+      "GET /organizations/o-1/360": () =>
+        jsonResponse({
+          as_of: "2026-08-09T09:00:00Z",
+          organization: {
+            id: "o-1",
+            display_name: "netcare",
+            source: "manual",
+            captured_by: "human:u1",
+            created_at: "2026-08-01T00:00:00Z",
+            updated_at: "2026-08-01T00:00:00Z",
+          },
+          sections_omitted: [],
+          people: { data: [], page: { next_cursor: null } },
+          deals: { data: [], page: { next_cursor: null } },
+          projects: projects.map((one) => ({
+            ...one,
+            phase: "delivering",
+          })),
+        }),
+      "GET /projects/pr-9": () =>
+        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
       "GET /projects/pr-1": () =>
         jsonResponse({ id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" }),
     });
+
+  const openReply = async () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
-        entityId="p-1"
+        entityType="deal"
+        entityId="d-1"
         open
         onClose={vi.fn()}
       />,
     );
+    return () => screen.getByPlaceholderText("Subject") as HTMLInputElement;
+  };
 
-    expect(
-      await screen.findByText(/filed under ERP rollout Acme/),
-    ).toBeTruthy();
-    // It SAYS rather than offers: a picker here would file one message of a
-    // conversation away from the rest of it.
-    expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull();
-    // And no tickbox either. The send inherits the thread's links whatever
-    // this form says, so a box here would offer a choice that is not honoured
-    // — unticking it would remove the tag and file the reply anyway.
-    expect(screen.queryByLabelText("File under this project")).toBeNull();
-    // The subject is still stamped: the tag is what carries the project out to
-    // the customer's reply, and nothing above declined it.
-    await waitFor(() =>
-      expect(
-        (screen.getByPlaceholderText("Subject") as HTMLInputElement).value,
-      ).toBe("[ERP-27]"),
+  it("offers the company's projects and defaults to the thread's own", async () => {
+    replyBackend(
+      [
+        { entity_type: "deal", entity_id: "d-1" },
+        { entity_type: "project", entity_id: "pr-1" },
+      ],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
     );
+    const subject = await openReply();
+
+    const picker = await screen.findByLabelText("Project");
+    // The thread's own project is the default, not the deal's: a conversation
+    // already filed settled this.
+    await waitFor(() =>
+      expect(picker.textContent).toContain("ERP rollout Acme"),
+    );
+    // Both of the company's projects are on offer, plus None.
+    await userEvent.setup().click(picker);
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual([
+      "No project",
+      "ERP-27 · ERP rollout Acme",
+      "N2P-1 · Netcare 2 project",
+    ]);
+    await userEvent.setup().keyboard("{Escape}");
+    // And the tag is already in the subject — nothing explains it, because the
+    // field shows it.
+    await waitFor(() => expect(subject().value).toBe("[ERP-27]"));
   });
 
-  // A thread filed under no project has nothing to announce, and "filed under
-  // nothing" tells a reader less than silence.
-  it("says nothing when the reply's thread carries no project", async () => {
-    stubRoutes({
-      "GET /activities/act-1": () =>
-        jsonResponse({
-          id: "act-1",
-          kind: "email",
-          occurred_at: "2026-08-09T09:00:00Z",
-          source: "gmail",
-          created_at: "2026-08-09T09:00:00Z",
-          updated_at: "2026-08-09T09:00:00Z",
-          version: 1,
-          links: [{ entity_type: "person", entity_id: "p-1" }],
-        }),
-    });
-    render(
-      <ComposeModal
-        activityId="act-1"
-        entityType="person"
-        entityId="p-1"
-        open
-        onClose={vi.fn()}
-      />,
+  it("defaults to the deal's project when the thread names none", async () => {
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
     );
+    const subject = await openReply();
+
+    const picker = await screen.findByLabelText("Project");
+    await waitFor(() =>
+      expect(picker.textContent).toContain("Netcare 2 project"),
+    );
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+  });
+
+  it("takes the tag out when the rep picks None, and puts another one in", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
+    );
+    const subject = await openReply();
+    const picker = await screen.findByLabelText("Project");
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+    // `[` opens a key descriptor in user-event's parser, so the tag is typed
+    // through fireEvent rather than escaped into unreadability.
+    await user.clear(subject());
+    fireEvent.change(subject(), {
+      target: { value: "[N2P-1] Re: Angebot" },
+    });
+
+    await pickOption(user, picker, "No project");
+    await waitFor(() => expect(subject().value).toBe("Re: Angebot"));
+
+    // Choosing a different project stamps that one instead.
+    await pickOption(user, picker, "ERP-27 · ERP rollout Acme");
+    await waitFor(() => expect(subject().value).toBe("[ERP-27] Re: Angebot"));
+  });
+
+  it("offers nothing when the company reaches no live project", async () => {
+    replyBackend([{ entity_type: "deal", entity_id: "d-1" }], []);
+    const subject = await openReply();
 
     await screen.findByRole("button", { name: "Draft with AI" });
-    expect(screen.queryByText(/will be filed under/)).toBeNull();
-  });
-
-  // The case this behaviour was built for: a deal whose project was attached
-  // AFTER the conversation started, so the mail being answered names no
-  // project while the deal does.
-  it("falls back to the deal's project when the thread names none, and says why", async () => {
-    stubRoutes({
-      "GET /activities/act-1": () =>
-        jsonResponse({
-          id: "act-1",
-          kind: "email",
-          occurred_at: "2026-08-09T09:00:00Z",
-          source: "gmail",
-          created_at: "2026-08-09T09:00:00Z",
-          updated_at: "2026-08-09T09:00:00Z",
-          version: 1,
-          links: [{ entity_type: "deal", entity_id: "d-1" }],
-        }),
-      "GET /deals/d-1": () =>
-        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
-      "GET /projects/pr-9": () =>
-        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
-    });
-    render(
-      <ComposeModal
-        activityId="act-1"
-        entityType="deal"
-        entityId="d-1"
-        open
-        onClose={vi.fn()}
-      />,
-    );
-
-    // It names the project AND the reason, because the rep never put this
-    // project on this conversation.
-    expect(
-      await screen.findByText(/filed under Netcare 2 project, this deal/),
-    ).toBeTruthy();
-    // And the key lands in the subject, where the customer's reply carries it
-    // back to the same project.
-    await waitFor(() =>
-      expect(
-        (screen.getByPlaceholderText("Subject") as HTMLInputElement).value,
-      ).toBe("[N2P-1]"),
-    );
-    expect(screen.getByText(/\[N2P-1\] is added to the subject/)).toBeTruthy();
-  });
-
-  it("takes the tag back out of the subject when the rep declines the filing", async () => {
-    const user = userEvent.setup();
-    stubRoutes({
-      "GET /activities/act-1": () =>
-        jsonResponse({
-          id: "act-1",
-          kind: "email",
-          occurred_at: "2026-08-09T09:00:00Z",
-          source: "gmail",
-          created_at: "2026-08-09T09:00:00Z",
-          updated_at: "2026-08-09T09:00:00Z",
-          version: 1,
-          links: [{ entity_type: "deal", entity_id: "d-1" }],
-        }),
-      "GET /deals/d-1": () =>
-        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
-      "GET /projects/pr-9": () =>
-        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
-    });
-    render(
-      <ComposeModal
-        activityId="act-1"
-        entityType="deal"
-        entityId="d-1"
-        open
-        onClose={vi.fn()}
-      />,
-    );
-    const subject = () =>
-      screen.getByPlaceholderText("Subject") as HTMLInputElement;
-    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
-
-    await user.click(screen.getByLabelText("File under this project"));
-
-    // A tag promising a routing that will not happen is worse than no tag.
-    await waitFor(() => expect(subject().value).toBe(""));
-    expect(screen.queryByText(/is added to the subject/)).toBeNull();
+    // A list whose only entry is None asks a question with one answer.
+    expect(screen.queryByLabelText("Project")).toBeNull();
+    expect(subject().value).toBe("");
   });
 
   it("leaves a tag the rep deleted by hand deleted", async () => {
     const user = userEvent.setup();
-    stubRoutes({
-      "GET /activities/act-1": () =>
-        jsonResponse({
-          id: "act-1",
-          kind: "email",
-          occurred_at: "2026-08-09T09:00:00Z",
-          source: "gmail",
-          created_at: "2026-08-09T09:00:00Z",
-          updated_at: "2026-08-09T09:00:00Z",
-          version: 1,
-          links: [{ entity_type: "deal", entity_id: "d-1" }],
-        }),
-      "GET /deals/d-1": () =>
-        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
-      "GET /projects/pr-9": () =>
-        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
-    });
-    render(
-      <ComposeModal
-        activityId="act-1"
-        entityType="deal"
-        entityId="d-1"
-        open
-        onClose={vi.fn()}
-      />,
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
     );
-    const subject = () =>
-      screen.getByPlaceholderText("Subject") as HTMLInputElement;
+    const subject = await openReply();
     await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
 
-    // Deleting the tag is a second way to say "not this one". The composer
-    // must not put it back under the rep's cursor.
     await user.clear(subject());
     await user.type(subject(), "Re: ohne Tag");
 
     await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
-    // And it stays gone rather than reappearing on the next render.
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(subject().value).toBe("Re: ohne Tag");
   });

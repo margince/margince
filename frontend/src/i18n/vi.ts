@@ -2327,13 +2327,6 @@ export const vi = {
   "compose.multiRecipientWarning":
     "Mục đích này mang liên kết huỷ đăng ký, nên lượt gửi cho nhiều hơn một người nhận sẽ bị từ chối. Hãy gửi riêng cho từng người, không dùng Cc.",
   "compose.relinkTitle": "Liên kết lại hoạt động này",
-  "compose.filedUnder":
-    "Thư trả lời này sẽ được xếp vào {project}, giống phần còn lại của cuộc trò chuyện.",
-  "compose.filedUnderDeal":
-    "Sẽ được lưu vào {project}, dự án của giao dịch này.",
-  "compose.subjectTagged":
-    "{tag} được thêm vào tiêu đề để thư trả lời tự động vào đúng dự án.",
-  "compose.fileUnderProject": "Lưu vào dự án này",
   "compose.relinkTarget": "Tìm một người, tổ chức, deal, lead hay dự án",
   "compose.relinkReplace": "Chuyển hẳn thay vì liên kết thêm",
   "compose.relinkReplaceHint":

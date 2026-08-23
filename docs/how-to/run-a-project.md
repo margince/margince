@@ -124,66 +124,52 @@ see who already has access. A share never widens anything beyond this project.
 
 ### Sending
 
-Two composers, two behaviours.
+Every composer — a reply, and a message started from a company page — carries
+one control above the Subject field:
 
-**Replying (from a project, a deal or any timeline).** The composer works the
-filing out and tells you, above the Subject field:
+> **Project**  `NER-1 · Nordwind ERP rollout` ▾
 
-> ☑ **File under this project**
-> This will be filed under *Name*, this deal's project.
-> [KEY] is added to the subject so their reply files itself here.
+Open it and you get **No project**, then every live project the record's
+company reaches, as `KEY · Name`. That includes the projects the company works
+as a **partner** or a **subcontractor**, not only the ones it is the customer
+of.
 
-It derives the project the way the inbound ladder does, as far as it can: the
-thread's own project first — the line then reads *…like the rest of this
-conversation* — and the **deal's** project when the thread has none, which it
-can only offer when you are replying from a deal. Replying from a company or a
-contact has no deal to fall back on. If neither names a project, nothing is
-shown at all.
+**Choosing a project puts `[KEY]` at the front of the Subject.** Choosing **No
+project** takes it out. Switching to another project swaps the tag. There is no
+explanation printed beside it, because the Subject field shows the tag: edit or
+delete it like any other text, and it stays as you left it.
 
-The **Subject** field is stamped with `[KEY]`.
+**What it starts on.** The picker suggests, in this order:
 
-**The tickbox appears only when the project came from the DEAL.** There it is a
-real choice: nothing else is carrying that project, so unticking both drops the
-filing and removes the tag. Tick it again and the tag comes back in front of
-whatever you have typed. A tag you delete by hand stays deleted.
+1. the **thread's own project**, when the conversation is already filed;
+2. the **deal's project**, when you are replying from a deal that names one;
+3. the company's **only live project**, when it has exactly one and neither of
+   the above applies.
 
-**A thread already filed under a project gets no tickbox** — only the sentence
-and the tag. The reply inherits that project from the message it answers and no
-control on this form can undo it, so offering one would be offering a choice
-the send does not honour. To move a filed conversation, use **Relink** on its
-timeline row, which moves the whole thread rather than one message.
+Otherwise it starts on **No project**. A suggestion is a starting point, not a
+decision — set it to None or to a different project whenever the suggestion is
+wrong.
 
-If the subject already carries a **different** project's key, sending under this
-one removes it — two keys in a subject make the inbound rule ambiguous, so it
-files under neither. Be aware that the rule is shape-based, not a lookup: any
-bracketed word that *could* be a key goes, `[FYI]` included. Only a group that
-could never be one — `[2026]`, which is not letter-led — survives.
+Nothing is shown at all when the company reaches no live project: a list whose
+only entry is None asks a question with one answer.
 
-> **When the project came from the DEAL, the subject tag is the only thing
-> carrying it.** A reply inherits the links of the message it answers and can
-> add none of its own, so a reply on a thread the project never reached does
-> not put your sent copy on the project's timeline — the customer's tagged
-> answer is what brings the conversation in. A thread already filed does not
-> have this problem: its reply inherits the project link.
+**On a message started from a company page**, the choice does one extra job:
+**Draft with AI** then reads only what is filed under that project or under no
+project, and the **Based on:** line lists what it drew from.
+
+If the subject already carries a **different** project's key, choosing this one
+removes it — two keys in a subject make the inbound rule ambiguous, so it files
+under neither. The rule is shape-based rather than a lookup: any bracketed word
+that *could* be a key goes, `[FYI]` included. Only a group that could never be
+one — `[2026]`, which is not letter-led — survives.
+
+> **On a reply, the tag may be the only thing carrying the project.** A reply
+> inherits the record links of the message it answers and can add none of its
+> own, so a reply on a thread the project never reached does not put your sent
+> copy on the project's timeline — the customer's tagged answer is what brings
+> the conversation in. A thread already filed does not have this problem, and
+> neither does a message started from a company page, which sends the link.
 > Tracked as [issue #2422](https://github.com/margince/margince/issues/2422).
-
-**Writing to an account (company page → Write email).** A new conversation has
-no thread to inherit from, so this composer asks. Under **Draft to** — and
-under **Related to**, when the account has deals — is the **Project** picker:
-**No project**, then the account's live projects as `KEY · Name`. One live
-project is pre-selected; several start at **No project**. Closed projects are
-not offered.
-
-Picking one shows **Scoped to KEY** and does two things:
-
-1. **Draft with AI** reads only what is filed under that project or under no
-   project. Mail filed under another project on the same account is left out of
-   the draft and of its **Based on:** line.
-2. The sent message is **linked** to the project — this composer does send the
-   link — so it appears on the project's timeline straight away.
-
-You can also file without either control: put the key in square brackets in the
-subject — `[NER-1] kickoff agenda` — and the rule below does the rest.
 
 ### Receiving
 

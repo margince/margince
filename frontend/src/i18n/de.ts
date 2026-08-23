@@ -2352,13 +2352,6 @@ export const de = {
   "compose.multiRecipientWarning":
     "Dieser Zweck führt einen Abmeldelink mit sich; ein Versand an mehr als eine Adresse wird deshalb abgelehnt. Senden Sie einzeln, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
-  "compose.filedUnder":
-    "Diese Antwort wird unter {project} abgelegt, wie der Rest dieser Konversation.",
-  "compose.filedUnderDeal":
-    "Wird unter {project} abgelegt, dem Projekt dieses Deals.",
-  "compose.subjectTagged":
-    "{tag} wird dem Betreff hinzugefügt, damit die Antwort sich hier einordnet.",
-  "compose.fileUnderProject": "Unter diesem Projekt ablegen",
   "compose.relinkTarget":
     "Person, Organisation, Deal, Lead oder Projekt suchen",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",

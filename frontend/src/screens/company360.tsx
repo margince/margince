@@ -23,6 +23,7 @@ import {
   liveProjects,
   type PickableProject,
   ProjectPicker,
+  useClearVanishedChoice,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
 import { Select } from "../design-system/select";
@@ -2069,6 +2070,7 @@ export function AskSection({
   const [projectId, setProjectId] = useState("");
   const live = liveProjects(projects);
   useSoleProjectDefault(live, projectId, setProjectId);
+  useClearVanishedChoice(live, projectId, setProjectId);
   const ask = useMutation({
     // The project travels as the mutation variable beside the question, so
     // a stale closure cannot ask about a project the picker no longer shows.
