@@ -6145,6 +6145,26 @@ export const en = {
   // word the list, the page and the deal form's picker say about one.
   "nav.projects": "Projects",
   "unit.projects": "projects",
+  "companyProjects.title": "Projects",
+  "companyProjects.empty":
+    "A project is the body of work a deal is about. This company appears here once it is on one — as the client, a partner, or a subcontractor.",
+  "projectCompanies.title": "Companies",
+  "projectCompanies.empty":
+    "A project is work several companies do together — the client, and any partner or subcontractor delivering it.",
+  "projectCompanies.searchLabel": "Search companies by name",
+  "personProjects.title": "Projects",
+  "personProjects.empty":
+    "This contact appears here once they are on a delivery — as a sponsor, a contact, or whoever else is working it.",
+  "projectLinks.new": "New project",
+  "projectLinks.attach": "Attach project",
+  "projectLinks.move": "Move to another project",
+  "projectLinks.detach": "Detach",
+  "projectLinks.detachConfirm": "Detach it",
+  "projectLinks.detachTitle": "Detach this project?",
+  "projectLinks.detachBody":
+    "{name} stays as it is. Only its link to this record ends — nothing is deleted.",
+  "projectLinks.emptyTitle": "No projects yet",
+  "projectLinks.searchLabel": "Search projects by name or key",
   "project.name": "Project name",
   "project.keyMinted":
     "Margince gives each project a short key. Write [{key}] in an email subject and the mail is filed under this project.",

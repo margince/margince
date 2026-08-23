@@ -6025,6 +6025,26 @@ export const vi = {
   "sched.reload": "\u0110\u1ecdc l\u1ea1i",
   "nav.projects": "Dự án",
   "unit.projects": "dự án",
+  "companyProjects.title": "Dự án",
+  "companyProjects.empty":
+    "Dự án là khối công việc mà một thương vụ hướng tới. Công ty này xuất hiện ở đây khi tham gia một dự án — với vai trò khách hàng, đối tác hoặc nhà thầu phụ.",
+  "projectCompanies.title": "Công ty",
+  "projectCompanies.empty":
+    "Dự án là công việc nhiều công ty cùng làm — khách hàng, cùng mọi đối tác hoặc nhà thầu phụ tham gia.",
+  "projectCompanies.searchLabel": "Tìm công ty theo tên",
+  "personProjects.title": "Dự án",
+  "personProjects.empty":
+    "Liên hệ này xuất hiện ở đây khi tham gia một dự án — với vai trò người bảo trợ, đầu mối, hoặc bất kỳ ai đang thực hiện.",
+  "projectLinks.new": "Dự án mới",
+  "projectLinks.attach": "Liên kết dự án",
+  "projectLinks.move": "Chuyển sang dự án khác",
+  "projectLinks.detach": "Bỏ liên kết",
+  "projectLinks.detachConfirm": "Bỏ liên kết",
+  "projectLinks.detachTitle": "Bỏ liên kết dự án này?",
+  "projectLinks.detachBody":
+    "{name} vẫn giữ nguyên. Chỉ liên kết tới bản ghi này kết thúc — không có gì bị xóa.",
+  "projectLinks.emptyTitle": "Chưa có dự án nào",
+  "projectLinks.searchLabel": "Tìm dự án theo tên hoặc mã",
   "project.name": "Tên dự án",
   "project.keyMinted":
     "Margince cấp cho mỗi dự án một mã ngắn. Ghi [{key}] trong tiêu đề email thì thư được xếp vào dự án này.",

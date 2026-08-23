@@ -6078,6 +6078,26 @@ export const de = {
   "sched.reload": "Erneut lesen",
   "nav.projects": "Projekte",
   "unit.projects": "Projekte",
+  "companyProjects.title": "Projekte",
+  "companyProjects.empty":
+    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist — als Kunde, Partner oder Subunternehmer.",
+  "projectCompanies.title": "Unternehmen",
+  "projectCompanies.empty":
+    "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",
+  "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
+  "personProjects.title": "Projekte",
+  "personProjects.empty":
+    "Dieser Kontakt erscheint hier, sobald er an einer Lieferung beteiligt ist — als Sponsor, Ansprechpartner oder wer sonst daran arbeitet.",
+  "projectLinks.new": "Neues Projekt",
+  "projectLinks.attach": "Projekt verknüpfen",
+  "projectLinks.move": "Zu anderem Projekt verschieben",
+  "projectLinks.detach": "Verknüpfung lösen",
+  "projectLinks.detachConfirm": "Verknüpfung lösen",
+  "projectLinks.detachTitle": "Verknüpfung zu diesem Projekt lösen?",
+  "projectLinks.detachBody":
+    "{name} bleibt unverändert. Nur die Verknüpfung zu diesem Datensatz endet — es wird nichts gelöscht.",
+  "projectLinks.emptyTitle": "Noch keine Projekte",
+  "projectLinks.searchLabel": "Projekte nach Name oder Kürzel suchen",
   "project.name": "Projektname",
   "project.keyMinted":
     "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
