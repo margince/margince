@@ -180,6 +180,14 @@ func (h Handlers) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, fmt.Errorf("open deal room document %s: %w", documentID, err))
 		return
 	}
+	// Recorded once the bytes are in hand and BEFORE a single one is written,
+	// so the seller's Access panel never reports a download the object store
+	// refused, and a bookkeeping failure is still answerable as an error
+	// rather than as a truncated file.
+	if err := h.store.NoteDocumentDelivered(r.Context(), sess, documentIDOf(documentID)); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	contentType := "application/octet-stream"
 	if file.ContentType != nil && *file.ContentType != "" {
 		contentType = *file.ContentType

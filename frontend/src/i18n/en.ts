@@ -923,6 +923,7 @@ export const en = {
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
   "access.lastSeen": "last seen {when}",
+  "access.downloads": "Downloaded {count} document(s)",
   "access.linkRequested":
     "Asked for a new link {when}. Issue one and send it yourself.",
   "access.rowActions": "Actions for {name}",
@@ -4333,7 +4334,8 @@ export const en = {
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
   "room.docs.title": "Documents",
-  "room.docs.sub": "What the buyer can read, in four fixed groups.",
+  "room.docs.sub":
+    "What the buyer can read, with the conversation about each document under it.",
   "room.docs.empty": "No documents in the room yet.",
   "room.docs.fileLabel": "File from this deal",
   "room.docs.fileHint":
@@ -4348,17 +4350,26 @@ export const en = {
   "room.docs.group.security_privacy": "Security & Privacy",
   "room.docs.group.delivery_operations": "Delivery & Operations",
   "buyer.docs.title": "Documents",
-  "buyer.docs.sub": "What has been shared with you.",
+  "buyer.docs.sub":
+    "What has been shared with you, with the conversation about each document under it.",
   "buyer.docs.empty": "No documents yet.",
   "buyer.docs.download": "Download {title}",
   "buyer.docs.downloadFailed":
     "The download did not start. Try again, or ask your contact.",
-  "threads.title": "Conversation",
-  "threads.sub":
-    "Questions and answers between the two sides — live, no publish needed.",
+  "room.docs.unshared": "Not yet shared — publish to share",
+  "room.docs.changed": "Changed since last published",
+  "room.docs.shared": "Shared with the buyer",
+  "room.docs.ineligible": "Cannot be shared — the file left the deal",
+  "buyer.docs.downloadShort": "Download",
+  "buyer.poweredBy": "Powered by",
+  "buyer.poweredByMargince": "Powered by Margince",
+  "threads.roomTitle": "The room as a whole",
+  "threads.roomSub":
+    "Anything not about one document — live, no publish needed.",
+  "threads.aboutThis": "{count} thread(s) about this document",
+  "threads.askAbout": "Ask about this document",
+  "threads.cancel": "Cancel",
   "threads.empty": "Nothing said yet.",
-  "threads.about": "About: {title}",
-  "threads.room": "The room as a whole",
   "threads.requiredChange": "Change required",
   "threads.resolved": "Resolved",
   "threads.sideBuyer": "buyer",
@@ -4366,7 +4377,6 @@ export const en = {
   "threads.replyLabel": "Reply",
   "threads.reply": "Reply",
   "threads.resolve": "Resolve",
-  "threads.aboutLabel": "This is about",
   "threads.newLabel": "New thread",
   "threads.requireChangeLabel":
     "This requires a change before I can confirm the document",
@@ -4377,8 +4387,6 @@ export const en = {
   "buyer.decide.confirmed":
     "You confirmed this version. This is a working decision inside the room, not a signature.",
   "buyer.decide.requested": "You asked for changes to this version.",
-  "room.decisions.title": "Buyer decisions",
-  "room.decisions.empty": "No decisions yet.",
   "room.decisions.confirm_version": "confirmed the version",
   "room.decisions.request_changes": "asked for changes",
   "dealbrief.title": "Deal brief",

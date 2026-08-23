@@ -109,10 +109,8 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// opened minutes before a meeting, so a stored artifact would be the one
 	// thing it must not be. Same deterministic floor and the same
 	// generated_by honesty as the brief above.
-	s.meetingBriefHandlers = meetingbrief.NewHandlers(
-		meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now),
-		s.sorDispatch.isOverlay,
-	)
+	s.meetingBriefSvc = meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now)
+	s.meetingBriefHandlers = meetingbrief.NewHandlers(s.meetingBriefSvc, s.sorDispatch.isOverlay)
 	// The deal's next best action reads the deal and its timeline through
 	// their own gated stores and performs nothing; the click goes through the
 	// verb the answer names.

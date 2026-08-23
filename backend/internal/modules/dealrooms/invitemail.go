@@ -62,12 +62,21 @@ func (h Handlers) buyerLink(credential string) string {
 // The message names the room and nothing about the deal — its value, its stage,
 // its other participants. An invitation lands in a mailbox we do not control and
 // may be forwarded onward, so it carries only what a recipient needs to act on.
+//
+// It also tells them their activity in the room is visible to the people
+// managing it — which is the honest scope: the roster is read by anybody
+// holding deal_room read on the room, not by the inviter alone. The room records when they sign in and which documents they
+// take, and the person that is recorded about is told so before they do it —
+// in the invitation rather than on the room screen, so it reaches them before
+// the first act rather than at the moment of it.
 func (h Handlers) sendInvite(r *http.Request, issued IssuedInvitation) error {
 	body := "You have been given access to a Deal Room.\n\n" +
 		"Open it here:\n\n  " + h.buyerLink(issued.Credential) + "\n\n" +
 		"This link is personal to you and works once, until " +
 		issued.ExpiresAt.Format("2 January 2006") + ".\n" +
-		"If you were not expecting this, you can ignore this message."
+		"If you were not expecting this, you can ignore this message.\n\n" +
+		"When you use the room, the people managing it can see that you\n" +
+		"signed in and which documents you downloaded."
 
 	if err := h.inviteMailer.Send(r.Context(), string(issued.Participant.Email),
 		"You have been given access to a Deal Room", body); err != nil {

@@ -13654,6 +13654,15 @@ export interface components {
             scope?: components["schemas"]["ProjectScope"];
             /** @description The sections that had something to say, in ADR-0097 D5's fixed order. A section with no surviving sentence is absent, never present-and-empty: `risks` in particular is specified as omitted when empty, and the same rule reads honestly for every other. */
             sections: components["schemas"]["MeetingBriefSection"][];
+            /** @description What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at. */
+            omitted?: components["schemas"]["MeetingBriefOmission"][];
+        };
+        /** @description One source this reader may not see, and what that costs the brief. */
+        MeetingBriefOmission: {
+            /** @description `deal_room` today. A machine key, so a client can render its own wording. */
+            source: string;
+            /** @description One sentence a reader can act on, naming what is missing and why. */
+            reason: string;
         };
         /** @description One of the nine fixed sections, with its cited sentences. */
         MeetingBriefSection: {
@@ -20156,6 +20165,16 @@ export interface components {
              * @description When they last made a request. Null if they have never signed in.
              */
             last_seen_at?: string | null;
+            /**
+             * @description How many documents this person has taken out of the room, counting each
+             *     download. Absent until they take one.
+             *
+             *     A seller previewing their own room as a buyer is never counted: the panel
+             *     would otherwise report the buyer opening what the rep opened.
+             */
+            readonly download_count?: number | null;
+            /** @description The titles of the documents they downloaded, each named once. */
+            readonly documents_downloaded?: string[] | null;
             /**
              * @description Whether this person has ever exchanged a credential for a session.
              *

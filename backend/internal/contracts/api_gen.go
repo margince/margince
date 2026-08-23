@@ -15751,6 +15751,16 @@ type DealRoomParticipant struct {
 	// credential currently stands, which is what a revoked participant shows.
 	DeliveryState DealRoomDeliveryState `json:"delivery_state"`
 
+	// DocumentsDownloaded The titles of the documents they downloaded, each named once.
+	DocumentsDownloaded *[]string `json:"documents_downloaded,omitempty"`
+
+	// DownloadCount How many documents this person has taken out of the room, counting each
+	// download. Absent until they take one.
+	//
+	// A seller previewing their own room as a buyer is never counted: the panel
+	// would otherwise report the buyer opening what the rep opened.
+	DownloadCount *int `json:"download_count,omitempty"`
+
 	// Email Stored lowercase.
 	Email    openapi_types.Email `json:"email"`
 	FullName string              `json:"full_name"`
@@ -17424,6 +17434,9 @@ type MeetingBrief struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
+	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
+	Omitted *[]MeetingBriefOmission `json:"omitted,omitempty"`
+
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
 	// guessing. Present only when the request named a `project_id`.
@@ -17436,6 +17449,15 @@ type MeetingBrief struct {
 
 	// Sections The sections that had something to say, in ADR-0097 D5's fixed order. A section with no surviving sentence is absent, never present-and-empty: `risks` in particular is specified as omitted when empty, and the same rule reads honestly for every other.
 	Sections []MeetingBriefSection `json:"sections"`
+}
+
+// MeetingBriefOmission One source this reader may not see, and what that costs the brief.
+type MeetingBriefOmission struct {
+	// Reason One sentence a reader can act on, naming what is missing and why.
+	Reason string `json:"reason"`
+
+	// Source `deal_room` today. A machine key, so a client can render its own wording.
+	Source string `json:"source"`
 }
 
 // MeetingBriefSection One of the nine fixed sections, with its cited sentences.
@@ -31205,6 +31227,22 @@ func (a *DealRoomParticipant) UnmarshalJSON(b []byte) error {
 		delete(object, "delivery_state")
 	}
 
+	if raw, found := object["documents_downloaded"]; found {
+		err = json.Unmarshal(raw, &a.DocumentsDownloaded)
+		if err != nil {
+			return fmt.Errorf("error reading 'documents_downloaded': %w", err)
+		}
+		delete(object, "documents_downloaded")
+	}
+
+	if raw, found := object["download_count"]; found {
+		err = json.Unmarshal(raw, &a.DownloadCount)
+		if err != nil {
+			return fmt.Errorf("error reading 'download_count': %w", err)
+		}
+		delete(object, "download_count")
+	}
+
 	if raw, found := object["email"]; found {
 		err = json.Unmarshal(raw, &a.Email)
 		if err != nil {
@@ -31337,6 +31375,20 @@ func (a DealRoomParticipant) MarshalJSON() ([]byte, error) {
 	object["delivery_state"], err = json.Marshal(a.DeliveryState)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'delivery_state': %w", err)
+	}
+
+	if a.DocumentsDownloaded != nil {
+		object["documents_downloaded"], err = json.Marshal(a.DocumentsDownloaded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'documents_downloaded': %w", err)
+		}
+	}
+
+	if a.DownloadCount != nil {
+		object["download_count"], err = json.Marshal(a.DownloadCount)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'download_count': %w", err)
+		}
 	}
 
 	object["email"], err = json.Marshal(a.Email)

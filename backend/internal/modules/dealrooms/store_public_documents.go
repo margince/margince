@@ -132,3 +132,22 @@ func findPublished(docs []snapshotDocument, id ids.DealRoomDocumentID) (snapshot
 
 // Keep the contract id type in scope for the manifest's callers.
 var _ openapi_types.UUID
+
+// NoteDocumentDelivered records that a live buyer seat actually received one
+// document's bytes. The transport calls it AFTER the fetch succeeds — see the
+// file header for why that order is the whole point.
+//
+// A preview seat records nothing. An error is the caller's to log and swallow:
+// by the time this runs the buyer has their file, and failing the response over
+// a bookkeeping row would take away what they already legitimately fetched.
+func (s *Store) NoteDocumentDelivered(
+	ctx context.Context, sess Session, documentID ids.DealRoomDocumentID,
+) error {
+	if sess.Preview {
+		return nil
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return recordEngagement(ctx, tx, sess.RoomID, sess.ParticipantID,
+			&documentID, engagementDocumentDownloaded)
+	})
+}

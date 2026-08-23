@@ -29,8 +29,9 @@ import {
   useDealRoom,
 } from "./dealroom";
 import { buyerLink, DealRoomAccess, useParticipants } from "./dealroomaccess";
+import { changesKey, useRoomChanges } from "./dealroomchanges";
 import { DealRoomConversation } from "./dealroomconversation";
-import { DealRoomDocuments, useRoomDocuments } from "./dealroomdocuments";
+import { useRoomDocuments } from "./dealroomdocuments";
 import "./dealroompage.css";
 
 // The seller's Deal Room page: one place to decide who may enter, what they
@@ -55,26 +56,6 @@ const CHANGE_LABELS: Record<string, MessageKey> = {
   document_reordered: "publish.change.reordered",
   document_ineligible: "publish.change.ineligible",
 };
-
-export function changesKey(roomId: string) {
-  return ["deal-room-changes", roomId] as const;
-}
-
-export function useRoomChanges(roomId: string, enabled = true) {
-  return useQuery({
-    queryKey: changesKey(roomId),
-    enabled,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/changes", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
 
 export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
@@ -127,7 +108,6 @@ function RoomPage({
       <div className="roompage-grid">
         <div className="roompage-main">
           <RoomText room={room} refusal={refusal} />
-          <DealRoomDocuments room={room} state={null} refusal={refusal} />
           <DealRoomConversation room={room} refusal={refusal} />
         </div>
         <div className="roompage-side">

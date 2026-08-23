@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"github.com/gradionhq/margince/backend/internal/compose/briefs"
+	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/network"
 	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
@@ -323,6 +324,9 @@ type Server struct {
 	// reason org360Svc is: the relationship brief is assembled from THIS gated
 	// read rather than a second one that could drift from what the page shows.
 	person360Svc *person360.Service
+	// meetingBriefSvc is held so an option can bind its model lane after the
+	// handler sets are built.
+	meetingBriefSvc *meetingbrief.Service
 
 	// orgDossierSvc and orgGrowthFitSvc are the company view's other two
 	// generated surfaces. They are held for WithGrowthFit's sake: rebinding one

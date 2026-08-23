@@ -140,6 +140,25 @@ export function DealRoomAccess({
   );
 }
 
+// What this person has actually done in the room, under the line that says
+// whether they have been here. A seat that has taken nothing says nothing:
+// "0 documents" reads as a judgement about the buyer, and the honest state
+// early in a room's life is simply that there is nothing to report yet.
+function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
+  const t = useT();
+  const downloads = participant.download_count ?? 0;
+  if (downloads === 0) {
+    return null;
+  }
+  const titles = participant.documents_downloaded ?? [];
+  return (
+    <p className="t-small access-row-facts">
+      {t("access.downloads", { count: String(downloads) })}
+      {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
+    </p>
+  );
+}
+
 function ParticipantRow({
   room,
   participant,
@@ -176,6 +195,7 @@ function ParticipantRow({
             ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, RECORD_ZONE) })}`
             : ""}
         </p>
+        <ReadingSoFar participant={participant} />
         {participant.link_requested_at && !revoked ? (
           <p className="t-small access-row-request">
             <Link2 aria-hidden />

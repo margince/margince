@@ -143,6 +143,7 @@ var tableOwners = map[string]string{
 	"deal_room_thread":      "internal/modules/dealrooms",
 	"deal_room_comment":     "internal/modules/dealrooms",
 	"deal_room_decision":    "internal/modules/dealrooms",
+	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
 	"deal_forecast_history": "internal/modules/deals",
@@ -446,6 +447,9 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	// through the owning module's API would trade the atomicity that IS
 	// the guarantee for boundary hygiene.
 	"internal/modules/privacy:person":                       "erasure/retention anonymize the person row in place in the single erasure transaction (Art. 17)",
+	"internal/modules/privacy:deal_room_participant":        "erasure anonymizes the subject's Deal Room seat in place — the one named outside person stored without a person row — in the single erasure transaction",
+	"internal/modules/privacy:deal_room_session":            "erasure deletes the erased subject's live room credentials in the same transaction: access they did not consent to keep must not outlive the request",
+	"internal/modules/privacy:deal_room_engagement":         "erasure deletes the erased subject's room activity trail (when they signed in, what they took) in the same transaction",
 	"internal/modules/privacy:person_email":                 "erasure deletes the subject's email channel rows in the single erasure transaction",
 	"internal/modules/privacy:preference_token":             "erasure deletes the subject's preference-center token in the single erasure transaction — it is a live capability over their consent record on a session-less edge, and anonymize-in-place means 0048's ON DELETE CASCADE never fires, so an erased subject would keep accruing consent rows through the capability the erasure certifies destroyed",
 	"internal/modules/privacy:activity_participant":         "erasure nulls the subject's person and address arms on the interaction participants in the single erasure transaction — the address arm exists precisely for a party who never became a record, so it survives the person_email purge and would keep the erased address readable and re-matchable; the ROW is kept where other participants remain, because the other people in that conversation are not the subject",

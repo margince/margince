@@ -1377,8 +1377,23 @@ public.deal_room_document.room_id uuid NOT NULL gen=- def=-
 public.deal_room_document.source text NOT NULL gen=- def=-
 public.deal_room_document.title text NOT NULL gen=- def=-
 public.deal_room_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_room_document.uq_deal_room_document_in_room UNIQUE (id, room_id)
 public.deal_room_document.version bigint NOT NULL gen=- def=1
 public.deal_room_document_pkey CREATE UNIQUE INDEX deal_room_document_pkey ON public.deal_room_document USING btree (id)
+public.deal_room_engagement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_room_engagement.deal_room_engagement_document_fkey FOREIGN KEY (document_id, room_id) REFERENCES deal_room_document(id, room_id) ON DELETE RESTRICT
+public.deal_room_engagement.deal_room_engagement_document_matches_kind CHECK (((kind = 'document_downloaded'::text) = (document_id IS NOT NULL)))
+public.deal_room_engagement.deal_room_engagement_kind_check CHECK ((kind = ANY (ARRAY['signed_in'::text, 'document_downloaded'::text])))
+public.deal_room_engagement.deal_room_engagement_participant_fkey FOREIGN KEY (participant_id, room_id) REFERENCES deal_room_participant(id, room_id) ON DELETE CASCADE
+public.deal_room_engagement.deal_room_engagement_pkey PRIMARY KEY (id)
+public.deal_room_engagement.deal_room_engagement_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
+public.deal_room_engagement.document_id uuid gen=- def=-
+public.deal_room_engagement.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room_engagement.kind text NOT NULL gen=- def=-
+public.deal_room_engagement.occurred_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_room_engagement.participant_id uuid NOT NULL gen=- def=-
+public.deal_room_engagement.room_id uuid NOT NULL gen=- def=-
+public.deal_room_engagement_pkey CREATE UNIQUE INDEX deal_room_engagement_pkey ON public.deal_room_engagement USING btree (id)
 public.deal_room_invitation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room_invitation.attempt_no integer NOT NULL gen=- def=1
 public.deal_room_invitation.captured_by text NOT NULL gen=- def=-
@@ -2092,6 +2107,8 @@ public.incumbent_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
 public.incumbent_connection.status text NOT NULL gen=- def='active'::text
 public.incumbent_connection_pkey CREATE UNIQUE INDEX incumbent_connection_pkey ON public.incumbent_connection USING btree (id)
 public.incumbent_connection_singleton CREATE UNIQUE INDEX incumbent_connection_singleton ON public.incumbent_connection USING btree ((true))
+public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
+public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)
     FROM activity_link l
@@ -4009,6 +4026,7 @@ public.uq_commission_trigger_event CREATE UNIQUE INDEX uq_commission_trigger_eve
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
+public.uq_deal_room_document_in_room CREATE UNIQUE INDEX uq_deal_room_document_in_room ON public.deal_room_document USING btree (id, room_id)
 public.uq_deal_room_document_live CREATE UNIQUE INDEX uq_deal_room_document_live ON public.deal_room_document USING btree (room_id, attachment_id) WHERE (archived_at IS NULL)
 public.uq_deal_room_invitation_attempt CREATE UNIQUE INDEX uq_deal_room_invitation_attempt ON public.deal_room_invitation USING btree (participant_id, attempt_no)
 public.uq_deal_room_invitation_live CREATE UNIQUE INDEX uq_deal_room_invitation_live ON public.deal_room_invitation USING btree (participant_id) WHERE ((consumed_at IS NULL) AND (superseded_at IS NULL))
