@@ -38,6 +38,7 @@ import {
 } from "./common";
 import { useOrganization360 } from "./company360";
 import { useConsentPurposes } from "./consent";
+import { useEntityName } from "./entityref";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
@@ -288,6 +289,55 @@ async function draftFromActivity({
     throwProblem(error || { title: t("compose.actionFailed") });
   }
   return { available: true as const, draft: data };
+}
+
+// Where a REPLY will be filed, said rather than chosen.
+//
+// A reply inherits its thread's project on its own — capture's stickiness rung,
+// "a conversation is about one body of work" — so a picker here would offer a
+// choice the product has already made, and offer it wrongly: filing ONE message
+// of a conversation under a different project is the split that rule exists to
+// prevent.
+//
+// What was missing is not the choice but the SENTENCE. A rep pressed "Draft a
+// reply", saw no project anywhere, and concluded the feature was not there.
+// This says where the message is going, and points at the one control that can
+// change it — which moves the whole conversation, not one message of it.
+function ReplyFiling({ activityId }: Readonly<{ activityId: string }>) {
+  const t = useT();
+  const query = useQuery({
+    queryKey: ["activity", activityId, "filing"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/activities/{id}", {
+        params: { path: { id: activityId } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+  const projectId = (query.data?.links ?? []).find(
+    (link) => link.entity_type === "project",
+  )?.entity_id;
+  const { name } = useEntityName("project", projectId);
+  // Nothing is drawn while the read is in flight, and nothing when the thread
+  // is filed under no project: "this will be filed under nothing" is a sentence
+  // that tells a reader less than silence does, and the unfiled case is what
+  // the attribution ladder already asks about.
+  if (!projectId) {
+    return null;
+  }
+  // It SAYS, and does not offer to change: the control that moves a
+  // conversation is Relink, on the message's own row in the timeline, and it
+  // moves the whole thread. A second one here would be a second spelling of one
+  // action — and the shorter path to filing a single message away from its
+  // conversation, which is the split this line exists to make visible.
+  return (
+    <p className="t-caption">
+      {t("compose.filedUnder", { project: name ?? t("deal.projectUnnamed") })}
+    </p>
+  );
 }
 
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
@@ -1540,6 +1590,11 @@ export function ComposeModal({
     >
       <div className="compose-fields">
         {accountContext}
+        {/* A reply says where it is going. The picker above is for the
+            account-started message, which has no thread to inherit from. */}
+        {activityId && !isChannelReply && (
+          <ReplyFiling activityId={activityId} />
+        )}
         {/* AI drafting is mail-only — there is no draft-message endpoint, and
             a channel reply's recipient is resolved server-side, so neither
             the draft controls nor the To/Cc/Subject fields apply to it. */}

@@ -17,6 +17,7 @@ import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
+import { dealProjectFields } from "./dealproject";
 import { DealScreen, DealsScreen } from "./deals";
 import { project } from "./projects.fixtures";
 
@@ -412,5 +413,44 @@ describe("the deal page", () => {
     render(<DealScreen id="d1" />);
     await screen.findByRole("heading", { name: "Fleet retrofit" });
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+  });
+
+  // The bug Lars hit: many projects exist, and editing a deal offers only "New
+  // project…".
+  //
+  // The picker used to fetch EVERY project and filter on organization_id, which
+  // names a project's CUSTOMER. A deal on a company that is on the project as a
+  // PARTNER matched nothing, so the list came back empty on an installation
+  // full of projects.
+  //
+  // The edit form asks the server for its own company's projects now — the
+  // server matches ANY of a project's companies — and passes narrowedByServer,
+  // which is what stops the second filter from undoing the answer.
+  it("does not re-filter a list the server already narrowed to one company", () => {
+    const partnerProject = project({
+      id: "pr-1",
+      name: "Joint rollout",
+      // The CUSTOMER is a different company: this deal's company is on the
+      // project as a partner, which organization_id cannot say.
+      organization_id: "o-customer",
+    });
+    const t = (key: string) => key;
+
+    const narrowed = dealProjectFields(t, [partnerProject], undefined, true);
+    const asked = narrowed.find((field) => field.key === "project_id");
+    expect(
+      asked?.optionsFor?.({ organization_id: "o-partner" }).map((o) => o.label),
+    ).toContain("Joint rollout");
+
+    // And the create form, which has no company to ask about and narrows here,
+    // still keeps its own filter: it would otherwise offer every project in the
+    // installation under whichever company was picked.
+    const unnarrowed = dealProjectFields(t, [partnerProject]);
+    const client = unnarrowed.find((field) => field.key === "project_id");
+    expect(
+      client
+        ?.optionsFor?.({ organization_id: "o-partner" })
+        .map((o) => o.label),
+    ).not.toContain("Joint rollout");
   });
 });

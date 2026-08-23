@@ -1736,6 +1736,9 @@ export function DealsScreen({
 
   const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
 
+  // The picker asks the server for ONE company's projects, so the form's chosen
+  // company is what it is keyed on: a project is worked by several companies,
+  // and only the server can say which of them this one is on.
   const openProjects = useOpenProjects();
 
   const createDeal = async (values: Record<string, string>) => {
@@ -2736,7 +2739,11 @@ function DealBadges({
   // One fact refuses every write below, so it is named once. Undefined while
   // the deal is live, which is what leaves the verbs pressable.
   const refusedByArchive = deal.archived_at ? archivedReasonId : undefined;
-  const openProjects = useOpenProjects();
+  // This deal's company, so the picker offers the projects that company is on —
+  // as customer, partner or subcontractor. The server decides which; asking for
+  // every project and filtering here on organization_id would show only the
+  // ones it is the CUSTOMER of.
+  const openProjects = useOpenProjects(deal.organization_id ?? undefined);
   const projectById = useEntityName("project", deal.project_id);
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
@@ -2765,7 +2772,7 @@ function DealBadges({
           }),
           ...(masked.includes("project_id")
             ? []
-            : dealProjectFields(t, openProjects, currentProject)),
+            : dealProjectFields(t, openProjects, currentProject, true)),
           ...cf.formFields,
         ]}
         record={{ ...dealEditRecord(deal), ...cf.recordSlice(deal) }}

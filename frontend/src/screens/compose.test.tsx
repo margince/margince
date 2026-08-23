@@ -1928,4 +1928,75 @@ describe("ComposeModal started from an account", () => {
       await screen.findByRole("combobox", { name: /Project/ }),
     ).toBeTruthy();
   });
+
+  // A reply inherits its thread's project on its own (capture's stickiness
+  // rung), so the composer offers no picker for it — and used to say nothing
+  // either, which is why a rep pressing "Draft a reply" concluded projects were
+  // not wired at all. It says where the message is going now.
+  it("says which project a reply will be filed under", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links: [
+            { entity_type: "person", entity_id: "p-1" },
+            { entity_type: "project", entity_id: "pr-1" },
+          ],
+        }),
+      "GET /projects/pr-1": () =>
+        jsonResponse({ id: "pr-1", name: "ERP rollout Acme" }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/filed under ERP rollout Acme/),
+    ).toBeTruthy();
+    // It SAYS rather than offers: a picker here would file one message of a
+    // conversation away from the rest of it.
+    expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull();
+  });
+
+  // A thread filed under no project has nothing to announce, and "filed under
+  // nothing" tells a reader less than silence.
+  it("says nothing when the reply's thread carries no project", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links: [{ entity_type: "person", entity_id: "p-1" }],
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("button", { name: "Draft with AI" });
+    expect(screen.queryByText(/will be filed under/)).toBeNull();
+  });
 });
