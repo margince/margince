@@ -72,6 +72,16 @@ func TestAnAgentPrincipalCarriesExactlyItsGrantingHumansAuthority(t *testing.T) 
 	if got.SeatType != principal.SeatFull {
 		t.Errorf("agent seat = %s, want the human's %s", got.SeatType, principal.SeatFull)
 	}
+	// A read seat is the case that matters, and asserting only the full one
+	// would pass over a Principal() that minted SeatFull unconditionally:
+	// the licensing ceiling refuses a mutation before RBAC is consulted, so an
+	// agent that inherited the wrong seat would write where its human cannot.
+	readSeat := agent
+	readSeat.SeatType = string(principal.SeatRead)
+	if seat := readSeat.Principal().SeatType; seat != principal.SeatRead {
+		t.Errorf("an agent for a READ-seat human carries seat %s, want %s — the seat ceiling is the "+
+			"licensing half of `agent <= human` and is not inherited", seat, principal.SeatRead)
+	}
 	// DeepEqual on the WHOLE struct, not field by field: a field-by-field
 	// assertion passes over a field nobody has thought about yet, which is the
 	// case this test exists to catch.

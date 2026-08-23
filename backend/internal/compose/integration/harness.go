@@ -17,6 +17,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
@@ -192,28 +193,41 @@ func (e *Env) AgentCtx() context.Context {
 	})
 }
 
-// AgentFor binds the principal AgentIdentity.Principal() mints for a passport
-// granted by `human`: the human's own user id, teams, seat and merged policy,
-// carried under PrincipalAgent.
+// AgentFor binds the principal a passport granted by `human` presents: their own
+// user id, teams, seat and merged policy, carried under PrincipalAgent.
 //
-// It deliberately takes the SAME arguments As() takes, and builds the principal
-// the same way apart from Type and the passport fields. The invariant the agent
-// suites assert is that a human and their agent differ in Type and nothing
-// else — a helper that took its own permission fixture could make the pair
-// agree by construction, which would prove nothing about the product.
+// It calls identity.AgentIdentity.Principal() rather than assembling the struct,
+// because that method IS the thing under test in the agent suites. A
+// hand-written copy would keep agreeing with production only until the two
+// drifted, and the drift would look exactly like a passing test.
+//
+// The permission arguments are the SAME ones As() takes, so a human and their
+// agent differ in what Principal() decides and in nothing the caller chose. A
+// helper with its own permission fixture could make the pair agree by
+// construction, which would prove nothing about the product.
 //
 // AgentCtx and AgentCtxWithPassport are NOT this: they mint a synthetic agent
 // carrying no user, teams or permissions at all, for suites where the staging
-// path rather than the scope is what is under test. One of those would pass any
-// scope assertion vacuously.
-func (e *Env) AgentFor(human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
+// path rather than the scope is what is under test. Either would pass a scope
+// assertion vacuously.
+func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
+	t.Helper()
+	teamIDs := make([]ids.TeamID, 0, len(teams))
+	for _, team := range teams {
+		teamIDs = append(teamIDs, ids.From[ids.TeamKind](team))
+	}
+	agent := identity.AgentIdentity{
+		PassportID:  ids.New[ids.PassportKind](),
+		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		OnBehalfOf:  ids.From[ids.UserKind](human),
+		SeatType:    string(principal.SeatFull),
+		Scopes:      principal.ScopeSet{principal.ScopeRead: {}, principal.ScopeWrite: {}},
+		Teams:       teamIDs,
+		Permissions: perms,
+	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:" + human.String(),
-		UserID: human, OnBehalfOf: human, TeamIDs: teams,
-		SeatType: principal.SeatFull, Permissions: perms,
-	})
+	return principal.WithActor(ctx, agent.Principal())
 }
 
 // SeedPassport inserts a live passport for Rep1 and returns its id. Rows

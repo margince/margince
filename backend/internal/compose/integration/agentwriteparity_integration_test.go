@@ -156,30 +156,42 @@ func TestAnAgentWritesExactlyWhatItsHumanWrites(t *testing.T) {
 				t.Fatalf("sharing the %s with rep1 at write: %v", tc.table, err)
 			}
 
+			// The verdicts are asserted ABSOLUTELY, not merely against each
+			// other. A gate that refused everyone would keep the human and their
+			// agent in perfect agreement on every row, so a relative assertion
+			// would report the promise kept by a product that had stopped
+			// answering yes to anybody.
 			for _, row := range []struct {
-				name string
-				id   ids.UUID
+				name                       string
+				id                         ids.UUID
+				rep1, rep1Agent, rep3Agent writeVerdict
 			}{
-				{"owned by rep1", mine},
-				{"owned by rep3", theirs},
-				{"owned by rep3, shared to rep1 at write", sharedWithMe},
+				{"owned by rep1", mine, verdictAdmitted, verdictAdmitted, verdictDenied},
+				{"owned by rep3", theirs, verdictDenied, verdictDenied, verdictAdmitted},
+				{"owned by rep3, shared to rep1 at write", sharedWithMe,
+					verdictAdmitted, verdictAdmitted, verdictAdmitted},
 			} {
 				human := classifyWrite(tc.write(e.As(e.Rep1, rep1Team, tc.perms), e, row.id))
-				agent := classifyWrite(tc.write(e.AgentFor(e.Rep1, rep1Team, tc.perms), e, row.id))
-				stranger := classifyWrite(tc.write(e.AgentFor(e.Rep3, rep3Team, tc.perms), e, row.id))
+				agent := classifyWrite(tc.write(e.AgentFor(t, e.Rep1, rep1Team, tc.perms), e, row.id))
+				stranger := classifyWrite(tc.write(e.AgentFor(t, e.Rep3, rep3Team, tc.perms), e, row.id))
 
 				if human != agent {
 					t.Errorf("%s %s: the human was %s and their own agent was %s — an agent's write "+
 						"authority is its granting human's, and this pair has come apart",
 						tc.table, row.name, human, agent)
 				}
-				// rep3 owns two of the three rows, so the stranger's verdict is
-				// the mirror: where rep1 is admitted rep3 must not be, and the
-				// other way round. Equal verdicts on every row would mean the
-				// gate answers the same thing to everyone.
-				if stranger == human && row.id != sharedWithMe {
-					t.Errorf("%s %s: rep1 and an agent for rep3 both got %s — the gate is not "+
-						"distinguishing the two humans at all", tc.table, row.name, human)
+				for _, got := range []struct {
+					who       string
+					got, want writeVerdict
+				}{
+					{"rep1", human, row.rep1},
+					{"an agent for rep1", agent, row.rep1Agent},
+					{"an agent for rep3", stranger, row.rep3Agent},
+				} {
+					if got.got != got.want {
+						t.Errorf("%s %s: %s was %s, want %s",
+							tc.table, row.name, got.who, got.got, got.want)
+					}
 				}
 			}
 		})
@@ -195,7 +207,7 @@ func TestAnAgentForAStrangerIsRefusedOnEveryRecordType(t *testing.T) {
 	for _, tc := range parityCases(t, e) {
 		t.Run(tc.table, func(t *testing.T) {
 			theirs := tc.seed(t, e, &e.Rep1)
-			got := classifyWrite(tc.write(e.AgentFor(e.Rep3, []ids.UUID{e.Team2}, tc.perms), e, theirs))
+			got := classifyWrite(tc.write(e.AgentFor(t, e.Rep3, []ids.UUID{e.Team2}, tc.perms), e, theirs))
 			if got == verdictAdmitted {
 				t.Errorf("an agent acting for rep3 changed a %s owned by rep1 — the AI is not bounded "+
 					"by the human that granted it", tc.table)
