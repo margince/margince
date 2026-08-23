@@ -171,10 +171,16 @@ function findNativeControls(path: string, text: string): string[] {
   const at = (node: ts.Node) =>
     source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
 
-  // The boundary is whitespace, `/` or `>` — NOT "any non-alphanumeric". A
-  // hyphen is a legal element-name character, and `[^a-zA-Z0-9]` accepted it, so
-  // `<select-menu>`, `<option-item>` and `<optgroup-picker>` were reported as
-  // native controls. A custom element is the opposite of a native one.
+  // The boundary is ANY character that cannot continue an element name —
+  // anything outside letters, digits, `-`, `.` and `:`. Stated that way round
+  // because the alternative was tried twice and was wrong both times:
+  // `[^a-zA-Z0-9]` accepted a hyphen, so `<select-menu>`, `<option-item>` and
+  // `<optgroup-picker>` read as native controls when a custom element is the
+  // opposite of one; and an allow-list of `\s`, `/`, `>` was too tight the
+  // other way, dropping `/<select[^>]*>/` where regex syntax follows the name.
+  //
+  // Naming what CONTINUES an identifier is the grammar. Allow-listing what ends
+  // one is a guess about what comes next, and there is always another next.
   //
   // An intrinsic element is lowercase; the design-system component is `Select`,
   // capitalised, and the parser tells the two apart by kind rather than by a
