@@ -573,16 +573,19 @@ the short form:
    (integration tests live directly in `package compose` so unexported
    adapters are in scope). An unexpectedly uncovered new file usually
    means a test double stands where the real thing should.
-7. **One invariant broken in two languages is ONE item, not two.** When
-   the same rule is wrong in Go and in TypeScript, fixing one side alone
-   can be a REGRESSION rather than half a fix — a money scale wrong on
-   both sides of the wire cancels, the screen agrees with itself, and
-   making the server correct by itself prints a hundred times the price
-   on the offer a buyer signs. Find the other side before you fix this
-   one, land both in one change, and give the two suites one corpus to
-   read (`frontend/src/format/minorunits.ts` +
-   `backend/frontendminorunits_test.go`) rather than two tables that
-   agree today.
+7. **One invariant spelled on both sides of a wire is ONE item, not
+   two.** Most topics are implemented once — but where Go and TypeScript
+   each carry a spelling of the same rule, fixing one side alone can be
+   a REGRESSION rather than half a fix: a money scale wrong in both
+   directions cancels, the screen agrees with itself, and making the
+   server correct by itself prints a hundred times the price on the
+   offer a buyer signs. So check for the other side before you fix this
+   one, and land both in one change. Then make one side a DECLARED
+   mirror of the other, held by a gate that fails in BOTH directions —
+   `values.MinorUnitExceptions()` against
+   `frontend/src/format/minorunits.ts`, in
+   `backend/frontendminorunits_test.go` — rather than two tables that
+   only happen to agree today.
 8. **A census that can fail short has already failed.**
    Under-recognition is the one way a gate must not break: it reads a
    smaller tree and reports the same word for it, PASS, and there is no

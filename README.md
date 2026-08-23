@@ -415,20 +415,27 @@ because getting it wrong once was expensive:
    already builds, and an unexpectedly uncovered new file usually means a
    test double stands where the real thing should.
 
-7. **One invariant broken in two languages is one item, not two.** A
-   topic that reaches a screen is spelled twice, and two errors on
-   opposite sides of a wire can CANCEL — which makes each half look
-   correct in place and makes fixing one half a regression rather than
-   half a fix. The frontend wrote `Math.round(amount * 100)` for every
-   currency and the backend divided by 100 for every currency, so a
-   zero-decimal price was stored a hundredfold and displayed correctly:
-   the screen agreed with itself and only the record was wrong. Making
-   the server currency-aware on its own would have printed a hundred
-   times the price on an outbound offer. Land both sides in one change,
-   and give the two suites one case corpus with a drift gate over it
-   (`frontend/src/format/minorunits.ts` +
-   `backend/frontendminorunits_test.go`) rather than two tables that
-   happen to agree today.
+7. **One invariant spelled on both sides of a wire is one item, not
+   two.** Most topics are implemented once and merely rendered by the
+   other language; this rule is about the ones that are not. Where Go
+   and TypeScript each carry a spelling of the same rule, two errors can
+   CANCEL — which makes each half look correct in place, and makes
+   fixing one half a regression rather than half a fix. The frontend
+   wrote `Math.round(amount * 100)` for every currency and the backend
+   divided by 100 for every currency, so a zero-decimal price was stored
+   a hundredfold and displayed correctly: the screen agreed with itself
+   and only the record was wrong. Making the server currency-aware on
+   its own would have printed a hundred times the price on an outbound
+   offer. So check for the other side before you fix this one, and land
+   both in one change. Then declare which side is the MIRROR and gate it
+   in both directions — `values.MinorUnitExceptions()` against
+   `frontend/src/format/minorunits.ts`, in
+   `backend/frontendminorunits_test.go`, which fails on a code present
+   on one side only and on a digit count that differs. Two tables that
+   happen to agree today is the state this replaces; note that the gate
+   covers the shared TABLE, not the two suites' cases, and reads the
+   TypeScript with hand-written regexes — so it carries the caveat in
+   the next rule rather than escaping it.
 
 8. **A census that can fail short has already failed.** Every failure
    mode of a gate is loud except one: under-recognition. A gate that

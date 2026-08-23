@@ -129,7 +129,9 @@ catch.
 
 ## Find the other side before you fix this one
 
-When the same invariant is spelled in Go and in TypeScript, it is one item until
+Most topics in this tree are implemented once and merely rendered by the other
+language, and this section is not about those. It is about the ones where Go and
+TypeScript each carry a spelling of the same rule: those are one item until
 proven otherwise, and a per-language PR is what hides that.
 
 The case that taught it: the frontend wrote `Math.round(amount * 100)` for every
@@ -141,12 +143,26 @@ backend half alone would have uncancelled them and printed a hundred times the
 price on an outbound offer.
 
 So: when a sweep finds one invariant broken on both sides of a wire, land both
-sides in one change, and give the two test suites **one corpus** — a single
-case file tagged by language, read by both, with a drift gate over it
-(`frontend/src/format/minorunits.ts` + `backend/frontendminorunits_test.go`).
-What stays singular is the rule and the case corpus; only the parser differs,
-and neither parser is hand-written. Splitting a rule into "a Go test for Go and
-a text scan for TypeScript" is the defect wearing the fix's clothes.
+sides in one change. Then declare which side is the MIRROR and gate it in both
+directions. `backend/frontendminorunits_test.go` is the worked example: it reads
+`values.MinorUnitExceptions()` and the `MINOR_UNIT_EXCEPTIONS` literal in
+`frontend/src/format/minorunits.ts` and fails on a code present in one and not
+the other, and on a digit count that differs. What stays singular there is the
+TABLE, which is what the two sides exchange; the two suites keep their own
+cases, and a shared case corpus would be a further step nothing in this tree
+takes yet. Do not read more protection into it than that.
+
+That gate also shows the cost of the shape it is in. It reads TypeScript with
+hand-written regexes, and its own comments enumerate the holes that forced each
+one: a quoted `"MGA": 0` parsing as nothing, a comment mentioning a code keeping
+the gate green after the real entry was deleted. Every one of those is a hole
+`ts.createSourceFile` does not have — see *let a parser own the grammar* above.
+It is cited here for the direction it gates, not as the parser to copy.
+
+The opposite move is the one to refuse: splitting a rule into "a Go test for Go
+and a text scan for TypeScript" leaves one rule with two implementations that
+nothing forces to be edited together. What may differ between the two sides is
+the parser; never the rule.
 
 ## What this does not ask for
 

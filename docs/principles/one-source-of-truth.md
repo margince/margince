@@ -111,11 +111,12 @@ spelling: the domain word ("brief", "weighted", "anonymize"), the mechanism
 ("normalize", "Casefold", "ToLower"), and the artifact ("`_profile_field`",
 "system prompt", "Badge").
 
-**And grep the other language.** A topic that reaches a screen is spelled twice
-— once in Go and once in TypeScript — and the two halves are one topic, not two
-findings on two tiers. Two errors on opposite sides of a wire can CANCEL, which
-makes each half look correct in place and makes fixing one half a regression;
-the money-scale case is written up in
+**Then ask whether the other language carries a spelling of it too.** Usually it
+does not — one side computes and the other renders, which is the shape to want.
+But where both DO decide the same rule, the two halves are one topic rather than
+two findings on two tiers, because errors on opposite sides of a wire can CANCEL:
+each half looks correct in place, and fixing one half is a regression. The
+money-scale case is written up in
 [find the other side](derive-the-obligation.md#find-the-other-side-before-you-fix-this-one).
 
 ### 2. Count the writers of each table
