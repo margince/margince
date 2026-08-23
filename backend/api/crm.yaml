@@ -2468,11 +2468,18 @@ paths:
     put:
       tags: [Organizations, Partners]
       operationId: upsertPartner
-      x-mcp-tool: { verb: update_record, record_type: partner, tier: auto_execute, scope: write }
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Create/update the partner extension on an org (sets classification='partner').
       description: |
         Promotes an org to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
-        setting `classification='partner'`. Company identity is never duplicated. 🟢 admin write.
+        setting `classification='partner'`. Company identity is never duplicated. Admin write,
+        and a HUMAN one.
+
+        Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
+        commission ledger multiplies a won deal by, so this sets what a partner is paid on every
+        future deal. Reopening it to an agent is a deliberate act, and the tier is part of that
+        decision — a rate change is not an auto-execute shape.
       parameters:
         - $ref: '#/components/parameters/IfMatch'   # partner is versioned (data-model §4.3) — optimistic concurrency on update
       requestBody:
