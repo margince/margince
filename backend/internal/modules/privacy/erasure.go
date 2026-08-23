@@ -301,6 +301,16 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		WHERE id = $1`, nullColumnAssignments(personCustom)), personID, erasedName); err != nil {
 		return nil, err
 	}
+	// BEFORE the identifier rows go, and for the same reason the provider
+	// purge is: a Deal Room seat holds no person id and is resolved by
+	// address, which the delete below destroys.
+	seats, err := anonymizeDealRoomSeats(ctx, tx, emails)
+	if err != nil {
+		return nil, err
+	}
+	if err := purgeDealRoomSeatTraces(ctx, tx, seats); err != nil {
+		return nil, err
+	}
 	linkedInHandles, err := deleteSubjectIdentifierRows(ctx, tx, personID, emails)
 	if err != nil {
 		return nil, err
