@@ -393,12 +393,6 @@ var tableOwners = map[string]string{
 // keyed "module-dir:table". Every entry carries its rationale inline so the
 // gate is self-contained on a clean checkout.
 var crossStoreWrites = gatekit.Waive(map[string]string{
-	// One visit baseline per user per record, and a person is a record. A
-	// second table keyed the same way would be the same fact under a second
-	// name, and the two would answer "when did you last look at this?"
-	// differently the first time one write path changed.
-	"internal/compose/person360:user_record_view": "the person view's visit acknowledgement rides org360's table because since-last-visit is one fact per (user, record) — migration 0184 widened its entity_type CHECK to admit a person rather than adding a parallel table that would drift",
-
 	// people's merge/promotion relink rows across aggregates inside their
 	// single transaction — the primary aggregate owns the single-tx
 	// cross-aggregate write, because a merge that could half-commit its
