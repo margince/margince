@@ -539,27 +539,49 @@ describe("the native-control detector sees what it claims to", () => {
     });
   }
 
-  // The case that is actually owed, and it is not "the prefilter is right".
+  // Every element the rule declares is one the census can actually reach.
   //
-  // Both lists were individually correct while nothing bound them, so every
-  // test anybody would think to write passed. What has to be asserted is the
-  // DERIVATION: that a name added to the declared set reaches the prefilter
-  // without anybody remembering to edit a regex.
+  // Asserted through `findNativeControls` — the real entry point — rather than
+  // against the pre-filter directly, so it holds whatever stops a declared
+  // element being seen: the pre-filter, the parse, the boundary rule. A test of
+  // one component passes while the path through it is broken.
   //
-  // Written against the set rather than against a literal, so it cannot itself
-  // become a third copy.
-  it("derives its pre-filter from the declared set, so a fourth element is not invisible", () => {
+  // Keyed on the SET, so it is three assertions today and four the moment
+  // somebody adds a fourth, naming the new element without anybody remembering
+  // to write a case for it. That is the property worth having: the pre-filter
+  // was a hand-restated copy of this list, and the failure it produced was a
+  // file skipped before it was ever parsed — no finding, no error, and
+  // indistinguishable from a clean tree.
+  //
+  // What it does NOT do, stated because this file's standard is to say so:
+  // while the two lists agree it cannot detect that one is a restatement of the
+  // other. It goes red on the new element the instant the set grows.
+  it("can reach every element its own rule declares", () => {
     for (const tag of nativeControls) {
       expect(
-        prefilter.test(`const a = <${tag} />;`),
-        `the pre-filter does not admit a file spelling <${tag}>`,
-      ).toBe(true);
+        findNativeControls("probe.tsx", `const a = <${tag} />;`),
+        `<${tag}> is in the rule, but the census would never parse a file that only mentions it`,
+      ).not.toEqual([]);
     }
-    // And a name that is NOT in the set must not be admitted by the name arm —
-    // otherwise "derived" would be satisfied by a regex matching everything.
+  });
+
+  // The line between what is derived and what is hand-written, which is the
+  // whole of this fix and belongs here rather than only in the pull request:
+  // DERIVE what is a restatement of the rule, HAND-WRITE what is a property of
+  // the language.
+  //
+  // The names are the rule, so the pre-filter derives them. The backslash is
+  // not: it is a property of ESCAPES. `'<sel\u0065ct>'` holds no verbatim
+  // `select` in its raw text but cooks to one, and every escape begins with a
+  // backslash — so a file with neither a name nor a backslash cannot spell one.
+  // Deriving that arm from the set would be a second bug wearing the fix's
+  // clothes.
+  it("admits an escaped spelling, and does not admit an unrelated element", () => {
+    expect(
+      findNativeControls("probe.tsx", "const a = '<sel\\u0065ct>';"),
+    ).not.toEqual([]);
+    // Without this, "derived" would be satisfied by a pre-filter matching
+    // everything.
     expect(prefilter.test("const a = <div />;")).toBe(false);
-    // The backslash arm is separate and stays: an escape can spell any of the
-    // names without their letters appearing raw.
-    expect(prefilter.test("const a = '<sel\\u0065ct>';")).toBe(true);
   });
 });
