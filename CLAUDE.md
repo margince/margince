@@ -448,7 +448,7 @@ scope clauses in `platform/auth`): object denial →
 ## Reuse before you build (non-negotiable)
 
 A second implementation of one capability is not untidy — it is two answers to
-one question, and the two drift until they disagree in front of a user. Four
+one question, and the two drift until they disagree in front of a user. Five
 rules, each of them here because this tree has already paid for it.
 
 **1. Search the whole tree, not your directory.** Before adding a capability,
@@ -490,6 +490,17 @@ the eraser performs" — if no test fails when a second one appears, delete the
 claim or write the test. Nine of the ten claims counted in this tree were
 false. A false uniqueness claim is worse than silence: the next author greps,
 finds it, and stops looking.
+
+**5. A gate that hard-codes any part of its subject has become a second copy of
+it.** A census over consumer-mail domains that carries its own sample of them, a
+design gate that restates the element list it forbids, a parity test with a
+hand-maintained coverage map — each is the duplicate it was written to refuse,
+and it goes quietly short the day somebody extends the owner. Derive the gate's
+corpus from the owner it protects — `freemail.Domains()`, the contract, the tree
+— or say in the test why it cannot be. Every gate the duplication sweep produced
+was found, after shipping and by a reviewer, to have hard-coded part of its own
+subject; two reviewers independently named the domain sample that a
+consumer-mail gate kept inside the test forbidding second consumer-mail lists.
 
 **Two writers of one invariant either share a helper or say why they do not.**
 If you are adding the second, put the reason in the code beside it, not in the
@@ -596,4 +607,26 @@ the short form:
    (integration tests live directly in `package compose` so unexported
    adapters are in scope). An unexpectedly uncovered new file usually
    means a test double stands where the real thing should.
-
+7. **One invariant spelled on both sides of a wire is ONE item, not
+   two.** Most topics are implemented once — but where Go and TypeScript
+   each carry a spelling of the same rule, fixing one side alone can be
+   a REGRESSION rather than half a fix: a money scale wrong in both
+   directions cancels, the screen agrees with itself, and making the
+   server correct by itself prints a hundred times the price on the
+   offer a buyer signs. So check for the other side before you fix this
+   one, and land both in one change. Then make one side a DECLARED
+   mirror of the other, held by a gate that fails in BOTH directions —
+   `values.MinorUnitExceptions()` against
+   `frontend/src/format/minorunits.ts`, in
+   `backend/frontendminorunits_test.go` — rather than two tables that
+   only happen to agree today.
+8. **A census that can fail short has already failed.**
+   Under-recognition is the one way a gate must not break: it reads a
+   smaller tree and reports the same word for it, PASS, and there is no
+   failing assertion to notice. So — no prefilter, skip-list or file
+   shortcut in front of a scan unless you have MEASURED that it buys
+   something (parsing the whole tree is usually a couple of seconds, and
+   one shortcut here was slower than the parse it avoided); match
+   STATEMENTS, not lines, and bound the join; and once the gate is green,
+   ask what shape of the defect it CANNOT see and plant that case. Prefer
+   deleting a dimension to narrowing it a seventh time.

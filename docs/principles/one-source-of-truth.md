@@ -111,6 +111,14 @@ spelling: the domain word ("brief", "weighted", "anonymize"), the mechanism
 ("normalize", "Casefold", "ToLower"), and the artifact ("`_profile_field`",
 "system prompt", "Badge").
 
+**Then ask whether the other language carries a spelling of it too.** Usually it
+does not — one side computes and the other renders, which is the shape to want.
+But where both DO decide the same rule, the two halves are one topic rather than
+two findings on two tiers, because errors on opposite sides of a wire can CANCEL:
+each half looks correct in place, and fixing one half is a regression. The
+money-scale case is written up in
+[find the other side](derive-the-obligation.md#find-the-other-side-before-you-fix-this-one).
+
 ### 2. Count the writers of each table
 
 For a topic that ends in a row, the census is exact:
@@ -232,6 +240,37 @@ The house shape for a reuse gate, learned from `agenttoolparity_test.go` and
   fitness functions in this tree passed against the exact bug they described.
 - **Measure the before, not only the after.** A grep that returns zero after the
   fix proves nothing unless you know it returned N before.
+- **Derive the gate's own corpus too, not just its file list.** A gate that
+  hard-codes any slice of what it guards has become a second copy of it — and a
+  copy living inside a test is invisible to the author extending the owner. Ask
+  what your gate hard-codes before the first assertion.
+- **Plant the shape the gate cannot see, once it is green.** One mutation proves
+  it fires; the second finds the hole. The full method, and the failures behind
+  each clause, is in
+  [derive the obligation](derive-the-obligation.md#writing-a-gate-that-holds).
+
+### A gate is code, so it duplicates like code
+
+Two traps, both paid for here, both of them this principle's own subject wearing
+the fix's clothes:
+
+**Porting half a rule puts one rule in two homes.** Five of this tree's design
+gates scan TypeScript *and* CSS. Moving the TypeScript arm to an AST test and
+leaving the CSS arm in shell would leave one rule with two implementations that
+nothing forces to be edited together — which is the thing this page exists to
+refuse. Either both arms move or neither does; what stays singular is the rule
+and its case corpus, and only the parser may differ.
+
+**The SECOND gate of a kind is when to extract the shared traversal.** The first
+has nothing to compare against; by the third there are already three answers.
+Two source-scanning gates here each owned a copy of the extension walk and had
+already drifted before either was reviewed — they disagreed about which files a
+bundler resolves, four extensions against eight, so a unit was gated by one and
+invisible to the other for no reason either author chose. A walk is the worst
+place for a second answer: the gate with the narrower walk reads a smaller tree
+and reports the same word for it, PASS, and there is no failing assertion to
+notice. The one answer is now `frontend/scripts/lib/source-tree.ts`, with its
+test beside it rather than inside either caller.
 
 ## What this does not ask for
 
