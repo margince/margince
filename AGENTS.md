@@ -111,11 +111,19 @@ them went dead the day these sections moved, silently, because a renamed heading
 breaks an anchor without breaking a build. A page that names a rule in prose
 instead survives the rename.
 
-**Start at [STATUS.md](STATUS.md)** — open work and the session-pickup point.
-Read its *Open work, in one screen* index first and open only the sections that
-bear on your change; the file is not meant to be read end to end. Update it at
-the end of every working session, keeping it to open work: the narrative of what
-you did belongs in the commit and the PR, which is the durable record.
+**Open work lives in GitHub issues, and nowhere else.** There is no status file
+to read or update: `gh issue list` is the queue, and an issue is the only place a
+finding survives a session. Route as you work — an implementation decision is
+recorded in the commit and PR that makes the change, because git history is the
+record; a decision that binds future work is raised with the team so the record
+lands where the reasoning is kept; and anything found but **not** fixed in the
+current change becomes an issue in this repo. When to file is your call; filing
+nothing is not.
+
+A gap you leave in the code cites its issue at the site. "Recorded as open work
+elsewhere" is how a known gap becomes folklore — a comment naming a file nobody
+maintains ages into a reasonless waiver, which the review-loop rules count as a
+finding of its own.
 
 Route findings as you work. Implementation decisions are recorded in the commit
 and PR that makes the change — git history is the record. A decision that binds
@@ -126,65 +134,27 @@ call.
 
 ### Label every issue you file (three axes, no exceptions)
 
-An unlabeled issue is indistinguishable from an untriaged one, and that is the
-invariant the labels exist to protect: **unlabeled means nobody has looked at it
-yet.** File an issue without labels and you have quietly told the next reader a
-falsehood about your own finding. Every issue you open carries **exactly one
-`priority:` and exactly one `area:`**.
+**Exactly one `priority:` and exactly one `area:` on every issue you open**, a
+`status:` when it is not yet workable, and whatever provenance labels apply. The
+full taxonomy — what each priority means, the fifteen areas, when to use
+`status: needs-decision` — is
+[docs/reference/issue-labels.md](docs/reference/issue-labels.md).
 
-**Priority** is a claim about severity, never about your schedule. Do not demote
-a real defect because it is not this week's work — the milestone carries the
-schedule, the label carries the truth:
-
-| Label | It qualifies when |
-|---|---|
-| `priority: critical` | Data loss, a reachable security or privacy breach, `main`/CI red, or the product unusable on a default install. Drop other work. |
-| `priority: high` | A real user or operator hits it on a live path, or it blocks another workstream. |
-| `priority: normal` | A genuine defect that is narrow, guarded, or unreachable today; hygiene; test-lane work; polish. |
-| `priority: low` | A want, not a defect — or it needs a product decision before it is work at all. |
-
-The honest test for `critical` is not "how bad would this be" but "does this stop
-somebody else from working, or is somebody's data wrong right now". A flaky gate
-earns it not because it is severe but because a red run nobody trusts makes every
-other verdict unreadable.
-
-**Area** is where the fix lives, one only, so a filter never double-counts:
-`agents-mcp` · `ai-models` · `authz` · `capture` · `ci-tests` · `contract-api` ·
-`deals` · `extensions` · `finance` · `frontend` · `overlay` · `platform` ·
-`privacy` · `records` · `reports`. A doc that is wrong about a subsystem takes
-that subsystem's area, not a documentation area — it belongs next to the code it
-misleads about.
-
-**Status**, when it applies — these mark an issue that is not yet workable, and
-leaving them off puts unactionable work in somebody's queue:
-
-- `status: needs-decision` — unactionable until a human rules ("decide or decline X").
-- `status: needs-decision` also covers work that is blocked on a product ruling
-  rather than a technical one. Say what the options are and which you recommend;
-  an issue that only asks "what should we do?" gives the decider nothing to
-  decide from.
-
-**Provenance**, additive and independent of the three axes: `bug`,
-`enhancement`, `security`, `capability-gap` (a missing capability, not a defect),
-and `fast-track-debt` (shipped fast under time pressure with the gap recorded
-deliberately). These record *why the issue exists*, which is the one thing
-nobody can reconstruct later — prefer keeping them over tidying them away.
+The rule behind it, which is why this is not bookkeeping: **unlabeled means
+nobody has looked at it yet.** That is the one invariant the labels protect, so
+filing without them quietly tells the next reader something false about your own
+finding. Priority is severity, never your schedule — the milestone carries the
+schedule.
 
 **`security` is not a way to report a vulnerability.** This repo is public, and
-[SECURITY.md](SECURITY.md) is explicit that an exploitable weakness goes to a
-private GitHub Security Advisory, never a public issue or pull request, because
-a public report before a fix ships puts every deployment at risk. The label is
-for hardening and defence-in-depth work that carries no live exploit. The test
-is the one SECURITY.md itself implies: **if you can write the reproduction, it
-belongs in an advisory** — a cross-tenant read, a row-scope or RBAC escape, an
-agent-governance bypass, a forged or still-binding revoked credential, a
-mutation that skips the audit or outbox row, injection, SSRF.
+[SECURITY.md](SECURITY.md) routes an exploitable weakness to a private GitHub
+Security Advisory, never a public issue or PR. The label is for hardening with no
+live exploit. The test is the one SECURITY.md implies: **if you can write the
+reproduction, it belongs in an advisory.**
 
-Before filing, check whether a **parent tracker** already covers the finding
-(`gh issue list --label "area: <x>"`); if one does, attach yours as a sub-issue
-rather than adding a sibling to the pile. A tracker carries the highest priority
-among its children.
-
+Before filing, check whether a parent tracker already covers it
+(`gh issue list --label "area: <x>"`) and attach yours as a sub-issue rather than
+adding another sibling.
 ## Build / test / seed
 
 _The commands, their flags and what each gate actually runs:
@@ -280,93 +250,41 @@ a working note, or a screenshot, and leave it out:
 `/scratchpad/`), but the rule is yours to keep — a new debris path it doesn't
 yet list must still stay out, and be added to `.gitignore` when you spot it.
 
-## Layout (ADR-0054: the modules/platform/shared triad, three `cmd/<role>` binaries)
+## Layout (ADR-0054: the modules/platform/shared triad)
 
-The `backend/internal/{modules,platform,shared}` triad — the DAG is
-`shared → platform → modules → compose → cmd`, enforced three ways
-(depguard, go-arch-lint, `backend/arch_test.go` fitness tests):
+_What each directory owns, tier by tier:
+[docs/explanation/architecture.md](docs/explanation/architecture.md). Which
+module owns what — purpose, spine, tables, HTTP surface:
+[docs/reference/modules.md](docs/reference/modules.md). Read that to place a
+change rather than guessing from the package name._
 
-- `internal/shared/` — Tier-0 leaves, stdlib-only (test-enforced):
-  `kernel/{ids,events,provenance,principal}`, `apperrors` (the fixed
-  sentinel registry — extend it only alongside the error contract it
-  implements, never for one call site), and
-  `ports/{authz,datasource,mcp,connector,workflow,model,retrieval,extraction,fieldcatalog,jurisdiction}`
-  (the frozen seam interfaces + additive provider mechanics).
-- `internal/platform/` — technical plumbing, owns no domain:
-  `database` (pg pool + the `WithWorkspaceTx` GUC contract that binds every
-  tenant statement's workspace predicate) +
-  `database/storekit` (the ONE spelling of the audit+outbox write shape,
-  keyset cursors, version patches), `auth` (the ONE admission point:
-  `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
-  activity link-walk), `events` (outbox relay/subscriber/dedupe),
-  `dbmigrate`, `httperr` (RFC 7807 + wire helpers), `httpserver` (chassis).
-- `internal/modules/` — the bounded capabilities, flat by default per
-  ADR-0054 §3 (store + mapping + transport + provider in one package),
-  growing subpackages only when a named trigger fires (split for a reason,
-  never symmetry). **A module NEVER imports a sibling** — if capability A
-  needs B, compose injects the edge. A module writes only the tables it
-  owns, declared in its `doc.go` and gated by
-  `backend/tableownership_test.go`.
-  Which module owns what — purpose, spine shape, owned tables and HTTP
-  surface, plus the compose-owned tables and the notable subpackages — is
-  the table in [docs/reference/modules.md](docs/reference/modules.md). Read
-  it to place a change rather than guessing from the package name, and take
-  `internal/modules/` itself as the authority on which capabilities exist:
-  the catalog is editorial, so a directory it has not caught up with is
-  still a module.
+The DAG is `shared → platform → modules → compose → cmd`, enforced three ways
+(depguard, go-arch-lint, `backend/arch_test.go`). Four rules bind a diff:
 
-  Two sanctioned spine shapes, and ONLY two — don't invent a third:
-  **Handlers→Store** for CRUD modules (people, deals, activities, …:
-  the store owns the transactional write shape and the RBAC gate at its
-  entry points) and **Handlers→Service** for engine modules (approvals,
-  identity: a service owns the multi-step domain logic and drives the
-  SQL inside it).
-- `internal/compose/` — the composition layer every process role shares:
-  the contract HTTP surface (`Server` embeds every module's handler set and
-  asserts `crmcontracts.ServerInterface` itself — a contract operation with
-  no real handler fails that assertion at compile time, not a 501 at
-  runtime), the composite `datasource.SystemOfRecordProvider`, the MCP registry +
-  approvals adapter, and the cross-module integration suites (in
-  `compose/integration`, with the shared harness). Every cross-module
-  edge is injected HERE (identity's workspace seed ← deals; agents'
-  staging ← approvals). Cross-module ORCHESTRATION groups live in
-  subpackages under the same named-trigger growth policy (`compose/briefs`
-  is the pilot); a compose subpackage never durably owns a business
-  entity.
-- `internal/contracts/` — GENERATED from `backend/api/crm.yaml`. Never edit.
-- `backend/api/crm.yaml` — the authoritative OpenAPI 3.1 contract.
-- `backend/migrations/core|custom/` — the ADR-0017 namespaces.
-  `modules/<name>/custom/` + `migrations/custom/` — the fork-owned seam:
-  upstream never writes there (ADR-0054 §7).
-- `backend/tools/` — the codegen tool chain (contract-overlay,
-  gen-stubs, gen-agentpolicy); its own Go module so the generators'
-  dependencies stay out of the product module's go.mod.
-- `frontend/` — the Vite/React web UI: a standalone static build served
-  separately from the API binary (which serves `/v1` only — no embedded
-  SPA); `make frontend-check` / `make dev` exist at the repo root.
-  **Working in here? Read [frontend/AGENTS.md](frontend/AGENTS.md) first**, and
-  then the file it opens with:
-  **[frontend/src/design-system/README.md](frontend/src/design-system/README.md)
-  is the catalog of every control that already exists** — cards, buttons,
-  inputs, fields, badges, tables, menus, dialogs, empty states. Open it BEFORE
-  building anything visible. Every interactive control comes from
-  `frontend/src/design-system/`; a native `<select>` fails
-  `frontend/scripts/check-native-controls.sh`, but nothing automated can tell
-  that the component you just wrote already existed under another name, which is
-  how this tree has twice grown a second spelling of a card.
-- `extensions/<name>/` — the stable extension tier (ADR-0120): each unit
-  is its own Go module importing ONLY the marker-allowlisted
-  `backend/pkg/**` surface; presence under `extensions/` is the
-  enablement. The vanilla tree's own units are `de` (the German
-  jurisdiction pack — GoBD calendar-year retention floors), `notes`,
-  `relay-probe` (the provider-facing reference — capture, a merge-key
-  declaration and a transport) and `yogi` (one served 🟢/read agent tool —
-  the worked example of the governed-tool kind).
-  Read `extensions/` for the live list rather than trusting this sentence — a
-  list in prose goes stale the first time somebody adds a unit, and it reads
-  no differently when it has. `make composition` (run by every build lane)
-  generates the ignored `build/composition/` wiring; `composition/` at
-  the root is the committed vanilla stub so bare go commands resolve.
+1. **A module NEVER imports a sibling, and never `compose`** (ADR-0054 §3). If
+   capability A needs B, `compose` injects the edge as one named function. Your
+   own copy will always look cheaper.
+2. **A module writes only the tables it owns**, declared in its `doc.go` and
+   gated by `backend/tableownership_test.go`.
+3. **Two sanctioned spine shapes, and ONLY two** — *Handlers→Store* for CRUD
+   modules (the store owns the write shape and the RBAC gate at its entry
+   points), *Handlers→Service* for engine modules (a service owns the multi-step
+   logic and drives the SQL). Don't invent a third.
+4. **`internal/contracts/` and `*_gen.go` are generated** from
+   `backend/api/crm.yaml` — never hand-edit; the drift gate fails it.
+
+Working in `frontend/`? It has its own [AGENTS.md](frontend/AGENTS.md), and it
+opens with
+**[frontend/src/design-system/README.md](frontend/src/design-system/README.md) —
+the catalog of every control that already exists.** Open it BEFORE building
+anything visible: a native `<select>` fails
+`frontend/scripts/check-native-controls.sh`, but nothing automated can tell that
+the component you just wrote already existed under another name, which is how
+this tree has twice grown a second spelling of a card.
+
+`extensions/<name>/` is the stable extension tier (ADR-0120): each unit is its
+own Go module importing ONLY the marker-allowlisted `backend/pkg/**` surface, and
+presence under `extensions/` is the enablement.
 
 ## DO NOT TOUCH
 
@@ -430,66 +348,39 @@ scope clauses in `platform/auth`): object denial →
 
 ## Reuse before you build (non-negotiable)
 
-_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/one-source-of-truth.md](docs/principles/one-source-of-truth.md)._
+_The incident behind each rule, the six-probe scan for auditing a subsystem, and
+what to do with a finding:
+[docs/principles/one-source-of-truth.md](docs/principles/one-source-of-truth.md)._
 
 A second implementation of one capability is not untidy — it is two answers to
 one question, and the two drift until they disagree in front of a user. Five
 rules, each of them here because this tree has already paid for it.
 
-**1. Search the whole tree, not your directory.** Before adding a capability,
-grep its nouns across `backend/`, `frontend/src/` and `extensions/`. The
-duplicate is almost never in the package you are editing — that is precisely why
-it gets missed. The agent tool `prep_for_meeting` was written beside a working
-`compose/meetingbrief/` that a one-word grep would have found, and the two
-answered one question with different grounding rules until a seam was written.
+1. **Search the whole tree, not your directory.** Grep the capability's nouns
+   across `backend/`, `frontend/src/` and `extensions/` before adding it. The
+   duplicate is almost never in the package you are editing.
+2. **The tool surface and the web surface share ONE engine.** An MCP tool never
+   re-derives what an HTTP handler already computes; the binding is a
+   `compose/*seam*.go` file. **If no seam exists, write the seam** — do not write
+   a second assembler. A module may not import a sibling or `compose`
+   (ADR-0054 §3), so your own copy will always look cheaper and never be right.
+3. **Never hand-type a SQL placeholder.** Derive `$N` from the argument slice, or
+   use `storekit.InsertFragments`. Nothing here checks that a statement's column,
+   placeholder and argument counts agree. Only identifiers are ever formatted
+   into a statement, and only as a compile-time literal or a catalog name through
+   `pgx.Identifier.Sanitize` — never a string off a request body.
+4. **A comment may not claim to be the only implementation unless a test holds
+   it.** "the one spelling of X", "the only writer of Y" — if no test fails when
+   a second appears, delete the claim or write the test. Nine of the ten such
+   claims counted in this tree were false, and a false one is worse than silence:
+   the next author greps, finds it, and stops looking.
+5. **A gate that hard-codes any part of its subject has become a second copy of
+   it.** Derive the gate's corpus from the owner it protects, or say in the test
+   why you cannot.
 
-**2. The tool surface and the web surface share ONE engine.** An MCP tool never
-re-derives what an HTTP handler already computes. The binding is a
-`compose/*seam*.go` file, and the seams that exist each state the rule in their
-own words — `briefseam.go`: "one queue rather than two readings of it";
-`importseam.go`: "it delegates rather than reimplementing, and that is the whole
-design". **If no seam exists for the capability you need, write the seam** — do
-not write a second assembler. A module may not import a sibling or `compose`
-(ADR-0054 §3), so rolling your own will always look like the cheaper path; it is
-the wrong one, and this is the case where saying so out loud is the only thing
-that helps.
-
-**3. Never hand-type a SQL placeholder.** Derive `$N` from the argument slice —
-`args = append(args, v)` then `fmt.Sprintf("%s = $%d", col, len(args))`, as
-`deals/offer_lines.go` does — or use `storekit.InsertFragments`. Nothing in this
-repo checks that a statement's column count, placeholder count and argument
-count agree, so a hand-numbered statement is one careless sweep away from
-binding every column to the wrong value. That is not hypothetical: it shipped in
-`people/researchclaim.go`, and the accept path was dead for two days because no
-test executed the statement.
-
-The `%s` in that pattern is the COLUMN, and it carries its own rule: a compile-
-time literal, or a catalog name quoted with `pgx.Identifier.Sanitize` — the one
-spelling this repo uses (`storekit/customcolumns.go`). Never a string off a
-request body. Values are always `$N`; only identifiers are ever formatted, and
-an identifier a caller chose is an injection with a placeholder's manners.
-
-**4. A comment may not claim to be the only implementation unless a test holds
-it.** "the one spelling of X", "the only writer of Y", "the same anonymization
-the eraser performs" — if no test fails when a second one appears, delete the
-claim or write the test. Nine of the ten claims counted in this tree were
-false. A false uniqueness claim is worse than silence: the next author greps,
-finds it, and stops looking.
-
-**5. A gate that hard-codes any part of its subject has become a second copy of
-it.** A census over consumer-mail domains that carries its own sample of them, a
-design gate that restates the element list it forbids, a parity test with a
-hand-maintained coverage map — each is the duplicate it was written to refuse,
-and it goes quietly short the day somebody extends the owner. Derive the gate's
-corpus from the owner it protects — `freemail.Domains()`, the contract, the tree
-— or say in the test why it cannot be. Every gate the duplication sweep produced
-was found, after shipping and by a reviewer, to have hard-coded part of its own
-subject; two reviewers independently named the domain sample that a
-consumer-mail gate kept inside the test forbidding second consumer-mail lists.
-
-**Two writers of one invariant either share a helper or say why they do not.**
-If you are adding the second, put the reason in the code beside it, not in the
-pull request where the next reader will not see it.
+**Two writers of one invariant either share a helper or say why they do not.** If
+you are adding the second, put the reason in the code beside it, not in the pull
+request where the next reader will not see it.
 
 Catalogs to read before building anything they might already list:
 [docs/reference/modules.md](docs/reference/modules.md) for backend capabilities,

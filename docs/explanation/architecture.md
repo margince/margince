@@ -68,6 +68,101 @@ The DAG is enforced three ways, and deliberately mechanically: depguard
 the tree — a new module is enrolled in the rules the moment its
 directory exists, never by editing a list.
 
+## The tree, tier by tier
+
+What each directory owns, and the rule that goes with it. The DAG above says which
+way the dependencies point; this says what lives at each level.
+
+The `backend/internal/{modules,platform,shared}` triad — the DAG is
+`shared → platform → modules → compose → cmd`, enforced three ways
+(depguard, go-arch-lint, `backend/arch_test.go` fitness tests):
+
+- `internal/shared/` — Tier-0 leaves, stdlib-only (test-enforced):
+  `kernel/{ids,events,provenance,principal}`, `apperrors` (the fixed
+  sentinel registry — extend it only alongside the error contract it
+  implements, never for one call site), and
+  `ports/{authz,datasource,mcp,connector,workflow,model,retrieval,extraction,fieldcatalog,jurisdiction}`
+  (the frozen seam interfaces + additive provider mechanics).
+- `internal/platform/` — technical plumbing, owns no domain:
+  `database` (pg pool + the `WithWorkspaceTx` GUC contract that binds every
+  tenant statement's workspace predicate) +
+  `database/storekit` (the ONE spelling of the audit+outbox write shape,
+  keyset cursors, version patches), `auth` (the ONE admission point:
+  `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
+  activity link-walk), `events` (outbox relay/subscriber/dedupe),
+  `dbmigrate`, `httperr` (RFC 7807 + wire helpers), `httpserver` (chassis).
+- `internal/modules/` — the bounded capabilities, flat by default per
+  ADR-0054 §3 (store + mapping + transport + provider in one package),
+  growing subpackages only when a named trigger fires (split for a reason,
+  never symmetry). **A module NEVER imports a sibling** — if capability A
+  needs B, compose injects the edge. A module writes only the tables it
+  owns, declared in its `doc.go` and gated by
+  `backend/tableownership_test.go`.
+  Which module owns what — purpose, spine shape, owned tables and HTTP
+  surface, plus the compose-owned tables and the notable subpackages — is
+  the table in [docs/reference/modules.md](docs/reference/modules.md). Read
+  it to place a change rather than guessing from the package name, and take
+  `internal/modules/` itself as the authority on which capabilities exist:
+  the catalog is editorial, so a directory it has not caught up with is
+  still a module.
+
+  Two sanctioned spine shapes, and ONLY two — don't invent a third:
+  **Handlers→Store** for CRUD modules (people, deals, activities, …:
+  the store owns the transactional write shape and the RBAC gate at its
+  entry points) and **Handlers→Service** for engine modules (approvals,
+  identity: a service owns the multi-step domain logic and drives the
+  SQL inside it).
+- `internal/compose/` — the composition layer every process role shares:
+  the contract HTTP surface (`Server` embeds every module's handler set and
+  asserts `crmcontracts.ServerInterface` itself — a contract operation with
+  no real handler fails that assertion at compile time, not a 501 at
+  runtime), the composite `datasource.SystemOfRecordProvider`, the MCP registry +
+  approvals adapter, and the cross-module integration suites (in
+  `compose/integration`, with the shared harness). Every cross-module
+  edge is injected HERE (identity's workspace seed ← deals; agents'
+  staging ← approvals). Cross-module ORCHESTRATION groups live in
+  subpackages under the same named-trigger growth policy (`compose/briefs`
+  is the pilot); a compose subpackage never durably owns a business
+  entity.
+- `internal/contracts/` — GENERATED from `backend/api/crm.yaml`. Never edit.
+- `backend/api/crm.yaml` — the authoritative OpenAPI 3.1 contract.
+- `backend/migrations/core|custom/` — the ADR-0017 namespaces.
+  `modules/<name>/custom/` + `migrations/custom/` — the fork-owned seam:
+  upstream never writes there (ADR-0054 §7).
+- `backend/tools/` — the codegen tool chain (contract-overlay,
+  gen-stubs, gen-agentpolicy); its own Go module so the generators'
+  dependencies stay out of the product module's go.mod.
+- `frontend/` — the Vite/React web UI: a standalone static build served
+  separately from the API binary (which serves `/v1` only — no embedded
+  SPA); `make frontend-check` / `make dev` exist at the repo root.
+  **Working in here? Read [frontend/AGENTS.md](frontend/AGENTS.md) first**, and
+  then the file it opens with:
+  **[frontend/src/design-system/README.md](frontend/src/design-system/README.md)
+  is the catalog of every control that already exists** — cards, buttons,
+  inputs, fields, badges, tables, menus, dialogs, empty states. Open it BEFORE
+  building anything visible. Every interactive control comes from
+  `frontend/src/design-system/`; a native `<select>` fails
+  `frontend/scripts/check-native-controls.sh`, but nothing automated can tell
+  that the component you just wrote already existed under another name, which is
+  how this tree has twice grown a second spelling of a card.
+- `extensions/<name>/` — the stable extension tier (ADR-0120): each unit
+  is its own Go module importing ONLY the marker-allowlisted
+  `backend/pkg/**` surface; presence under `extensions/` is the
+  enablement. The vanilla tree's own units are `de` (the German
+  jurisdiction pack — GoBD calendar-year retention floors), `notes`,
+  `relay-probe` (the provider-facing reference — capture, a merge-key
+  declaration and a transport) and `yogi` (one served 🟢/read agent tool —
+  the worked example of the governed-tool kind).
+  Read `extensions/` for the live list rather than trusting this sentence — a
+  list in prose goes stale the first time somebody adds a unit, and it reads
+  no differently when it has. `make composition` (run by every build lane)
+  generates the ignored `build/composition/` wiring; `composition/` at
+  the root is the committed vanilla stub so bare go commands resolve.
+
+To place a new capability: add `internal/modules/<name>/` (flat), give it a
+`doc.go` with a "Tables owned" list, follow one spine shape, and wire any
+cross-module need as a `compose` adapter — never a sibling import.
+
 ## The two spine shapes
 
 Modules follow one of two sanctioned shapes — don't invent a third:

@@ -142,7 +142,7 @@ func (c *pageProgress) Observed(ctx context.Context, scanned, captured, skipped 
 // overcount. Closing the gap takes a ledger keyed on the created row's id,
 // idempotent under retry, with the counts derived from it rather than
 // accumulated; the number feeds a progress display and the cost estimator's
-// ratios. Recorded as open work in STATUS.md rather than papered over here.
+// ratios. Open in #2479 rather than papered over here.
 //
 // Unfenced on the run's liveness and on the connection's generation. The row
 // exists; a cancelled run and a rebound connection do not un-create it, and

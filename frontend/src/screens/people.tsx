@@ -453,7 +453,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
   return (
     <div className="wrap">
       <QueryGate query={personQuery}>
-        {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this 360 render was already at the ceiling; overlay support adds one necessary mode branch (write affordances are hidden over a read-only mirror). A PersonScreen split is tracked with the overlay SPA follow-up (STATUS.md). */}
+        {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this 360 render was already at the ceiling; overlay support adds one necessary mode branch (write affordances are hidden over a read-only mirror). A PersonScreen split is tracked in issue 2480. */}
         {(person) => (
           <RecordView
             name={person.full_name}

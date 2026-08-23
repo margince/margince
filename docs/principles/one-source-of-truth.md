@@ -190,6 +190,53 @@ makes it different. An undeclared N is the finding; a declared N is a decision
 somebody already made and wrote down. This is the probe that found `person_profile_field`'s five writers
 and `relationship`'s four.
 
+## The four rules, and what each one cost
+
+The rulebook states these as imperatives. Here is the incident behind each, since
+a rule whose price nobody remembers is a rule that gets argued away.
+
+**Search the whole tree, not your directory.** The duplicate is almost never in
+the package you are editing — that is precisely why it gets missed. The agent tool
+`prep_for_meeting` was written beside a working `compose/meetingbrief/` that a
+one-word grep would have found, and the two answered one question with different
+grounding rules until a seam was written. Grep the nouns across `backend/`,
+`frontend/src/` and `extensions/`, in three registers: the domain word, the
+mechanism, the artifact.
+
+**The tool surface and the web surface share ONE engine.** An MCP tool never
+re-derives what an HTTP handler already computes. The seams that exist state the
+rule in their own words — `compose/briefseam.go`: "one queue rather than two
+readings of it"; `compose/importseam.go`: "it delegates rather than
+reimplementing, and that is the whole design". If no seam exists for what you
+need, **write the seam**. A module may not import a sibling or `compose`
+(ADR-0054 §3), so rolling your own always looks like the cheaper path, and it is
+always the wrong one.
+
+**Never hand-type a SQL placeholder.** Derive `$N` from the argument slice —
+`args = append(args, v)` then `fmt.Sprintf("%s = $%d", col, len(args))`, as
+`deals/offer_lines.go` does — or use `storekit.InsertFragments`. Nothing in this
+repo checks that a statement's column count, placeholder count and argument count
+agree, so a hand-numbered statement is one careless sweep away from binding every
+column to the wrong value. It shipped in `people/researchclaim.go`, and the accept
+path was dead for two days because no test executed the statement.
+
+The `%s` there is the COLUMN, and it carries its own rule: a compile-time
+literal, or a catalog name quoted with `pgx.Identifier.Sanitize` — the one
+spelling this repo uses (`storekit/customcolumns.go`). Never a string off a
+request body. Values are always `$N`; only identifiers are ever formatted, and an
+identifier a caller chose is an injection with a placeholder's manners.
+
+**A gate that hard-codes any part of its subject has become a second copy of
+it.** A census over consumer-mail domains carrying its own sample of them, a
+design gate restating the element list it forbids, a parity test with a
+hand-maintained coverage map — each is the duplicate it was written to refuse, and
+it goes quietly short the day somebody extends the owner. Derive the gate's corpus
+from the owner it protects (`freemail.Domains()`, the contract, the tree) or say
+in the test why you cannot. Every gate the duplication sweep produced was found,
+after shipping and by a reviewer, to have hard-coded part of its own subject; two
+reviewers independently named the domain sample a consumer-mail gate kept inside
+the test forbidding second consumer-mail lists.
+
 ## What to do with a finding
 
 Four outcomes, in order of preference. Pick one explicitly — leaving it unnamed

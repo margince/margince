@@ -47,7 +47,7 @@ readable:
 | An implementation decision you made | the commit and the PR — git history is the record |
 | A decision that binds future work | raised with the team, where the reasoning is kept |
 | Something found but NOT fixed here | a GitHub issue in this repo, labelled on all three axes — **unless it is an exploitable weakness**, which goes to a private Security Advisory and never a public issue ([nothing here is private](nothing-here-is-private.md)) |
-| Open work / the session pickup point | [STATUS.md](../../STATUS.md), kept to open work only |
+| Open work / the session pickup point | GitHub issues, labelled per [issue-labels.md](../reference/issue-labels.md) |
 
 **No build-process residue in comments.** No review-ticket numbers, no fix
 narration, no "changed in response to". State the invariant so it stands alone.
