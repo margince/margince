@@ -12,22 +12,33 @@ import { LocaleProvider, storedLocale, useLocale } from "./index";
 
 const STORAGE_KEY = "margince.locale";
 
-function Probe() {
-  const { locale, setLocale } = useLocale();
+function Probe({ adopt }: Readonly<{ adopt?: string }>) {
+  const { locale, setLocale, adoptLocale } = useLocale();
   return (
     <>
       <span data-testid="locale">{locale}</span>
       <button type="button" onClick={() => setLocale("de")}>
         pick de
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          // The cast is the POINT: this value comes off the wire, where the
+          // compiler's guarantee ends. A server that widens the field, an older
+          // release's value or a regional tag arrives here as a plain string.
+          adoptLocale(adopt as Parameters<typeof adoptLocale>[0])
+        }
+      >
+        adopt
+      </button>
     </>
   );
 }
 
-const mount = (initial?: "en" | "de" | "vi") =>
+const mount = (initial?: "en" | "de" | "vi", adopt?: string) =>
   render(
     <LocaleProvider initial={initial}>
-      <Probe />
+      <Probe adopt={adopt} />
     </LocaleProvider>,
   );
 
@@ -41,10 +52,9 @@ afterEach(() => {
 
 describe("a locale a reader picked", () => {
   it("is read back by the next mount, which is what a reload is", async () => {
+    const user = userEvent.setup();
     mount();
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "pick de" }));
+    await user.click(screen.getByRole("button", { name: "pick de" }));
     expect(shown()).toBe("de");
     cleanup();
 
@@ -53,10 +63,9 @@ describe("a locale a reader picked", () => {
   });
 
   it("is the value that reaches storage, under a namespaced key", async () => {
+    const user = userEvent.setup();
     mount();
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "pick de" }));
+    await user.click(screen.getByRole("button", { name: "pick de" }));
     expect(localStorage.getItem(STORAGE_KEY)).toBe("de");
   });
 
@@ -92,5 +101,36 @@ describe("a locale nobody picked", () => {
 
   it("reads as absent when nothing is stored", () => {
     expect(storedLocale()).toBeNull();
+  });
+});
+
+// A locale the server reports that this release does not ship must cost the
+// reader their language and nothing else. It reached `catalogs` as a key they
+// had no entry for once (#2469): every lookup threw, including the error
+// boundary's own, so the whole application went blank rather than one section.
+describe("a locale the server reports but this release does not ship", () => {
+  it("falls back instead of reaching the catalogs, and never blanks the app", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(STORAGE_KEY, "de");
+    mount(undefined, "de-DE");
+
+    await user.click(screen.getByRole("button", { name: "adopt" }));
+
+    // "de", the reader's own pick on this machine — never "de-DE", which is
+    // not a key the catalogs have.
+    expect(shown()).toBe("de");
+  });
+
+  it("does not leave the previous account's language up after a sign-out", async () => {
+    // Nobody has picked on this machine, so detection decides — and the point
+    // is that an unusable answer resolves rather than being ignored, which
+    // would have kept whatever the last account was reading.
+    const user = userEvent.setup();
+    mount("de", "de-DE");
+
+    await user.click(screen.getByRole("button", { name: "adopt" }));
+
+    expect(shown()).not.toBe("de-DE");
+    expect(shown()).toBe("en");
   });
 });

@@ -216,11 +216,29 @@ export function LocaleProvider({
   const [adopted, setAdopted] = useState<Locale | undefined>(initial);
   const adoptLocale = useCallback(
     (next: Locale) => {
-      if (next === adopted) {
+      // Validated for the same reason the stored pick is: this value comes off
+      // the wire, and a locale we do not ship — an older release's, a regional
+      // tag, a server that widened the field — would otherwise reach `catalogs`
+      // as a key it has no entry for. Every lookup then throws, including the
+      // error boundary's own, so a single unknown string costs the reader the
+      // whole application rather than just their language.
+      // An unshipped value FALLS BACK rather than being ignored. Ignoring it
+      // would keep whatever is on screen, and after a sign-out the provider
+      // outlives the account — so the previous person's server-chosen language
+      // would stay up for the next one.
+      //
+      // It falls back to the SAME resolution the mount path uses: this
+      // machine's stored pick first, then detection. Detection alone would
+      // discard a choice the reader made here and is still entitled to; the
+      // stored value is only ever written by an explicit pick, never by a
+      // detected default, so preferring it cannot resurrect something nobody
+      // chose.
+      const usable = isLocale(next) ? next : (storedLocale() ?? detectLocale());
+      if (usable === adopted) {
         return;
       }
-      setAdopted(next);
-      setLocaleState(next);
+      setAdopted(usable);
+      setLocaleState(usable);
     },
     [adopted],
   );
