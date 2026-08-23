@@ -333,6 +333,10 @@ function judge(args: {
   const { file, shown, layer, specifiers, published, declared } = args;
   const where = (s: Specifier) =>
     `${shown}:${s.line}${s.inComment ? " (commented out, and an import somebody is about to uncomment)" : ""}`;
+  // Resolved ONCE. The layer does not change inside a judge call, and this is a
+  // realpath syscall — inside the flatMap it ran per specifier, across every
+  // import in every file of every unit.
+  const realLayer = throughLinks(layer);
 
   return specifiers.flatMap((s) => {
     if (s.text.startsWith(".")) {
@@ -342,8 +346,8 @@ function judge(args: {
       // merely starts with the layer's: extensions/foo/frontend-lib is not
       // inside extensions/foo/frontend, and nothing scans it, because a layer
       // is a directory named exactly `frontend`.
-      const real = throughLinks(layer);
-      const inside = resolved === real || resolved.startsWith(`${real}/`);
+      const inside =
+        resolved === realLayer || resolved.startsWith(`${realLayer}/`);
       return inside
         ? []
         : [
