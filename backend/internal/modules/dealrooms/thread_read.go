@@ -27,15 +27,11 @@ import (
 )
 
 const (
-	threadObject   = "deal_room_thread"
-	commentObject  = "deal_room_comment"
-	decisionObject = "deal_room_decision"
+	threadObject  = "deal_room_thread"
+	commentObject = "deal_room_comment"
 
 	threadOpen     = "open"
 	threadResolved = "resolved"
-
-	decisionRequestChanges = "request_changes"
-	decisionConfirmVersion = "confirm_version"
 )
 
 // authorColumns resolves a row's author to (side, name) in SQL, so every
@@ -160,45 +156,4 @@ func (s *Store) ListThreads(ctx context.Context, roomID ids.DealRoomID, document
 		return err
 	})
 	return out, err
-}
-
-// ListDecisions is the seller's read of what the buyer decided, newest first.
-func (s *Store) ListDecisions(ctx context.Context, roomID ids.DealRoomID) ([]crmcontracts.DealRoomDecision, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var out []crmcontracts.DealRoomDecision
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := readRoom(ctx, tx, roomID); err != nil {
-			return err
-		}
-		rows, err := tx.Query(ctx,
-			`SELECT d.id, d.room_id, d.document_id, d.attachment_id, d.participant_id, p.full_name, d.kind, d.note, d.created_at
-			   FROM deal_room_decision d JOIN deal_room_participant p ON p.id = d.participant_id
-			  WHERE d.room_id = $1 ORDER BY d.created_at DESC, d.id DESC`, roomID)
-		if err != nil {
-			return fmt.Errorf("list deal room decisions: %w", err)
-		}
-		defer rows.Close()
-		out = []crmcontracts.DealRoomDecision{}
-		for rows.Next() {
-			d, err := scanDecision(rows)
-			if err != nil {
-				return err
-			}
-			out = append(out, d)
-		}
-		return rows.Err()
-	})
-	return out, err
-}
-
-func scanDecision(row rowScanner) (crmcontracts.DealRoomDecision, error) {
-	var d crmcontracts.DealRoomDecision
-	var name string
-	if err := row.Scan(&d.Id, &d.RoomId, &d.DocumentId, &d.AttachmentId, &d.ParticipantId, &name, &d.Kind, &d.Note, &d.CreatedAt); err != nil {
-		return crmcontracts.DealRoomDecision{}, fmt.Errorf("scan deal room decision: %w", err)
-	}
-	d.ParticipantName = &name
-	return d, nil
 }

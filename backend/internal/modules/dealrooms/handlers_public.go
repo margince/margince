@@ -271,22 +271,3 @@ func (h Handlers) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, t
 	}
 	httperr.WriteJSON(w, http.StatusCreated, thread)
 }
-
-// DecideBuyerRoomDocument records the buyer's decision on a document version.
-func (h Handlers) DecideBuyerRoomDocument(w http.ResponseWriter, r *http.Request, documentID openapi_types.UUID) {
-	sess, ok := SessionFrom(r.Context())
-	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
-		return
-	}
-	var req crmcontracts.DecideBuyerRoomDocumentRequest
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	decision, err := h.store.DecideAsBuyer(r.Context(), sess, ids.UUID(documentID), req.Kind, req.Note)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusCreated, decision)
-}

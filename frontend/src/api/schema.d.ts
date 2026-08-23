@@ -3247,9 +3247,9 @@ export interface paths {
         put?: never;
         /**
          * Ask a question on a published document, or post a room-level update, as the buyer.
-         * @description Needs the `comment` or `reviewer` capability. A document thread may be
-         *     marked `required_change`, which blocks confirming that document's version
-         *     until the seller resolves it. Refused while the room is paused, closed or
+         * @description Needs the `comment` capability. A document thread may be
+         *     marked `required_change`, which is how the buyer says this document needs
+         *     work — it stays open until the seller resolves it. Refused while the room is paused, closed or
          *     expired.
          */
         post: operations["openBuyerRoomThread"];
@@ -3272,35 +3272,9 @@ export interface paths {
         put?: never;
         /**
          * Reply in a thread as the buyer.
-         * @description Needs the `comment` or `reviewer` capability. Refused on a resolved thread.
+         * @description Needs the `comment` capability. Refused on a resolved thread.
          */
         post: operations["replyBuyerRoomThread"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/public/rooms/documents/{documentId}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                documentId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ask for changes to, or confirm, the published version of a document.
-         * @description Needs the `reviewer` capability. `confirm_version` is refused with 422
-         *     `open_required_threads` while any required-change thread on the document is
-         *     open — the seller resolves those first. A confirmation is a working decision
-         *     inside the room, explicitly not a legal signature. Recorded against the exact
-         *     version the latest release names.
-         */
-        post: operations["decideBuyerRoomDocument"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7753,8 +7727,8 @@ export interface paths {
          *     closed, so this is never frozen along with the room's content.
          *
          *     Ends their live session immediately and retires any unconsumed credential. The
-         *     participant row survives, so their comments and decisions stay
-         *     attributed. Revoking twice is accepted and changes nothing further.
+         *     participant row survives, so their comments stay attributed. Revoking
+         *     twice is accepted and changes nothing further.
          */
         post: operations["revokeDealRoomParticipant"];
         delete?: never;
@@ -7894,31 +7868,11 @@ export interface paths {
         put?: never;
         /**
          * Close a thread — the seller's side saying the point is settled.
-         * @description Human-only: resolving a required-change thread is what unblocks the buyer's
-         *     confirmation of a document version, so a person stands behind it. Resolving
-         *     an already resolved thread answers 200 with the thread unchanged.
+         * @description Human-only: resolving a required-change thread is the seller answering the
+         *     buyer's objection, so a person stands behind it. Resolving an already
+         *     resolved thread answers 200 with the thread unchanged.
          */
         post: operations["resolveDealRoomThread"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deal-rooms/{id}/decisions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /** Every decision a buyer recorded on a document version, newest first. */
-        get: operations["listDealRoomDecisions"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18190,7 +18144,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_decision" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -20112,15 +20066,13 @@ export interface components {
          * @description What a participant may do in the room. Coarse and room-wide on purpose — a
          *     per-document permission matrix is a product nobody asked for.
          *
-         *     `view` reads. `comment` also writes comments and messages. `reviewer` also
-         *     confirms a document version, which is the only one that carries weight in a
-         *     negotiation, so it is granted deliberately and never by default.
+         *     `view` reads. `comment` also writes comments and messages.
          *
-         *     Typed as a plain string rather than an inline enum: `view`, `comment` and
-         *     `reviewer` would generate package-scope Go constants named `View`, `Comment`
-         *     and `Reviewer` in the shared contracts package, which collide with — and
-         *     silently rename — the constants of any other schema declaring the same value.
-         *     The closed set is stated here and held by the writer and the schema CHECK.
+         *     Typed as a plain string rather than an inline enum: `view` and `comment`
+         *     would generate package-scope Go constants named `View` and `Comment` in the
+         *     shared contracts package, which collide with — and silently rename — the
+         *     constants of any other schema declaring the same value. The closed set is
+         *     stated here and held by the writer and the schema CHECK.
          */
         DealRoomParticipantCapability: string;
         /**
@@ -20198,7 +20150,7 @@ export interface components {
             /**
              * Format: date-time
              * @description When their access was taken away. The row survives revocation so their
-             *     comments and decisions stay attributed to a name.
+             *     comments stay attributed to a name.
              */
             revoked_at?: string | null;
             source: string;
@@ -20399,7 +20351,7 @@ export interface components {
             document_id?: string | null;
             /** @description The first comment. */
             body: string;
-            /** @description Only with a document. Marks the thread as blocking confirmation until resolved. */
+            /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
             required_change?: boolean;
             /** @description Provenance. Defaults to `ui` on the public edge. */
             source?: string;
@@ -20407,36 +20359,6 @@ export interface components {
         PostDealRoomCommentRequest: {
             body: string;
             source?: string;
-        };
-        /** @description A buyer's decision about one document version. Insert-only; a later decision is a new row. */
-        DealRoomDecision: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            room_id: string;
-            /** Format: uuid */
-            document_id: string;
-            /**
-             * Format: uuid
-             * @description The exact version decided on.
-             */
-            attachment_id: string;
-            /** Format: uuid */
-            participant_id: string;
-            readonly participant_name?: string;
-            /** @description `request_changes` or `confirm_version`. */
-            kind: string;
-            note?: string | null;
-            /** Format: date-time */
-            created_at: string;
-        };
-        DealRoomDecisionListResponse: {
-            data: components["schemas"]["DealRoomDecision"][];
-        };
-        DecideBuyerRoomDocumentRequest: {
-            /** @description `request_changes` or `confirm_version`. */
-            kind: string;
-            note?: string | null;
         };
         DealRoomCredentialRequest: {
             /** @description The one-time credential from the invitation link's fragment. */
@@ -27086,44 +27008,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealRoomThread"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-            /** @description Rate-limited. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    decideBuyerRoomDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                documentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DecideBuyerRoomDocumentRequest"];
-            };
-        };
-        responses: {
-            /** @description The recorded decision. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomDecision"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -35129,32 +35013,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealRoomThread"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listDealRoomDecisions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The decisions. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomDecisionListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

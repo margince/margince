@@ -47,7 +47,6 @@ function Served({
     page: {},
   });
   client.setQueryData(["deal-room-threads", "room-1"], { data: [], page: {} });
-  client.setQueryData(["deal-room-decisions", "room-1"], { data: [] });
   return (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{children}</LocaleProvider>

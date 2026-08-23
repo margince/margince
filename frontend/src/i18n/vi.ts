@@ -852,9 +852,6 @@ export const vi = {
   "access.cap.viewHint": "Có thể đọc tài liệu và cuộc trao đổi.",
   "access.cap.comment": "Đọc và bình luận",
   "access.cap.commentHint": "Cũng có thể đặt câu hỏi và trả lời.",
-  "access.cap.reviewer": "Đọc và bình luận",
-  "access.cap.reviewerHint":
-    "Hiện giống như quyền bình luận. Giữ riêng để bước phê duyệt sau này có chỗ.",
   "access.state.invited": "đã mời",
   "access.state.active": "đã đăng nhập",
   "access.state.revoked": "đã thu hồi",
@@ -4261,6 +4258,7 @@ export const vi = {
   "threads.roomTitle": "Toàn bộ phòng",
   "threads.roomSub": "Mọi điều không thuộc về một tài liệu cụ thể.",
   "threads.aboutThis": "{count} chủ đề về tài liệu này",
+  "threads.aboutThisOne": "1 chủ đề về tài liệu này",
   "threads.askAbout": "Hỏi về tài liệu này",
   "threads.cancel": "Hủy",
   "threads.empty": "Chưa có trao đổi nào.",
@@ -4275,8 +4273,6 @@ export const vi = {
   "threads.requireChangeLabel": "Tài liệu này cần được sửa",
   "threads.open": "Đăng",
   "threads.readOnly": "Quyền truy cập của bạn chỉ đọc.",
-  "room.decisions.confirm_version": "đã xác nhận phiên bản",
-  "room.decisions.request_changes": "đã yêu cầu thay đổi",
   "dealbrief.title": "Tóm tắt giao dịch",
   "dealbrief.sub":
     "Giao dịch đang ở đâu, bằng những câu bạn có thể kiểm chứng.",

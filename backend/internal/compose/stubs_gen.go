@@ -563,10 +563,6 @@ func (stubs) CloseDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "CloseDealRoom")
 }
 
-func (stubs) ListDealRoomDecisions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "ListDealRoomDecisions")
-}
-
 func (stubs) ListDealRoomDocuments(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListDealRoomDocuments")
 }
@@ -1481,10 +1477,6 @@ func (stubs) OneClickUnsubscribe(w nethttp.ResponseWriter, r *nethttp.Request, t
 
 func (stubs) ListBuyerRoomDocuments(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListBuyerRoomDocuments")
-}
-
-func (stubs) DecideBuyerRoomDocument(w nethttp.ResponseWriter, r *nethttp.Request, documentId openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "DecideBuyerRoomDocument")
 }
 
 func (stubs) DownloadBuyerRoomDocument(w nethttp.ResponseWriter, r *nethttp.Request, documentId openapi_types.UUID) {
