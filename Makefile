@@ -255,10 +255,15 @@ ds-spacing:
 ## drawer clipped its own heading against the viewport edge.
 space-tokens:
 	frontend/scripts/check-space-tokens.sh
-## native-controls — no browser-drawn dropdown: `<select>`/`<option>` outside
-## design-system/select.tsx, which is the ONE select this product renders.
+## native-controls — no browser-drawn dropdown: `<select>`, `<option>` or
+## `<optgroup>` anywhere under frontend/src or extensions/*/frontend. It is a
+## vitest fitness function over the TypeScript AST now — see
+## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
+## with the rest of the suite. This target keeps its name for anyone who runs
+## the gate on its own.
 native-controls:
-	frontend/scripts/check-native-controls.sh
+	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		src/design-system/native-controls.test.ts
 ## ext-imports — a unit screen reaches the core only through the published
 ## surface (frontend/package.json's exports map) and npm only through what its
 ## own package declares. The frontend has no module boundary of its own, so
@@ -350,7 +355,6 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 	frontend/scripts/check-space-tokens.sh
-	frontend/scripts/check-native-controls.sh
 
 ## fe-drift — the TS type-drift gate on its own: regenerate from the contract
 ## and fail if the committed types moved.
