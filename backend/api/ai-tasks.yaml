@@ -43,6 +43,16 @@
 #                     (+ conditional, meaning "only when the caller requests
 #                     it"). Absent-by-accident must be a build error, never a
 #                     runtime one.
+#   agents            for a task with an agent_loop site: the scheduled agents it
+#                     runs, and the tools each one attaches. The tool listing
+#                     rides in EVERY step of a tool-fed window, so this list is
+#                     both what a run MAY call and what that run pays for in
+#                     prompt — and only the agent's own goal knows which tools
+#                     that is. It NARROWS and never grants: every call still
+#                     passes the same admission gate against the same passport.
+#                     Required and non-empty per agent, because an empty
+#                     allowlist is read downstream as "no narrowing" and would
+#                     silently hand the agent the whole catalog back.
 #   cost_unit         the ADR-0067/0068 unit rule BY NAME. The arithmetic
 #                     (observed-unit and denominator functions, the work-shape
 #                     floor) is behaviour and stays in code; naming the rule
@@ -190,6 +200,12 @@ tasks:
     status: shipped
     sites:
       - {name: loop, kind: agent_loop}
+    agents:
+      morning_brief:
+        tools: [catch_me_up_on, list_records, read_record]
+      overnight_at_risk_sweep:
+        tools: [at_risk_relationships, catch_me_up_on, list_records, log_activity,
+                read_record, review_commitments, whats_slipping_this_week]
     company_context: {scopes: [identity, positioning, sales, offer], token_budget: 1200}
     doc: "The Surface-B reason-act loop: a cumulative, tool-fed message window, not a request factory. ADR-0074 names it the open risk for fixture-driven certification — if it cannot be certified honestly the census needs a `not_certifiable` kind."
 

@@ -82,9 +82,9 @@ var prepareHandoffCopy = toolCopy{
 	Retain: "The project_id, and each gap's source field — the gaps are what a follow-up fills in.",
 }
 
-// Deliberately four short lines: the tool listing has a token ceiling
-// (TestTheToolListingLeavesTheRunRoomInTheWindow), and a page that assembles
-// nine sections has nine chances to describe itself at length.
+// Deliberately four short lines: an agent's tool listing has a token ceiling
+// (TestEachAgentsToolListingLeavesItsRunRoomInTheWindow), and a page that
+// assembles nine sections has nine chances to describe itself at length.
 var readProject360Copy = toolCopy{
 	Purpose: "Read one project's whole page: company, phase history with time per phase, deals, " +
 		"stakeholders, contracts, documents, open commitments, timeline, filing coverage, totals.",

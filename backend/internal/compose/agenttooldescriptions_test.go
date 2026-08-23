@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -257,36 +258,135 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 // read_project_360, the project page read under the same per-section gates
 // the HTTP route applies, and a read the surface owed because every one of
 // its parts was already agent-readable — it measured ~15,997 before the tool
-// and ~16,160 after it, against 16,000. The tool's copy is four short lines
-// and its output schema is the page; nothing else on the listing was trimmed
-// to make room, because the remaining prose is the prose the other tools
-// need. 17/24 of 24,000 is 17,000: the run keeps 7/24 of its window, and the
-// ~840 tokens of headroom this leaves is the room the next verb needs, not a
-// licence to stop counting. The honest next answer is still scope-filtering
-// or deferring schemas.
+// and ~16,160 after it, against 16,000.
+//
+// WHAT CHANGED ON 2026-08-23: the bound stopped being global (#2355).
+//
+// Every raise above was paid for the same way, and the pattern is the finding:
+// the whole catalog was measured because a run offered the whole catalog was a
+// legal configuration — Job.Tools empty read as no narrowing, so nothing said
+// otherwise. That is no longer true. Each scheduled agent declares its tools in
+// api/ai-tasks.yaml, compose refuses to assemble one that does not, and no file
+// outside two sanctioned ones may build a Job at all.
+//
+// So the fraction now bounds a DECLARED agent's listing, and the arithmetic it
+// was fighting is gone: the whole catalog is ~16,829 tokens, and the fattest
+// agent that actually runs is ~2,190. The bound is ~7.5x the worst real case.
+//
+// The fraction itself is deliberately UNCHANGED at 17/24. Re-tightening it in
+// the change that creates the room would spend the room before anyone can argue
+// for how — the same objection this comment has made twice already.
 const (
 	listingBudgetNumerator   = 17
 	listingBudgetDenominator = 24
 )
 
-// Every written description rides in every Surface-B prompt, and nothing in
-// the loop notices if they grow. The listing is measured by rendering it — the
-// runner's own renderer, not a second spelling of its format — and its tokens
-// are estimated by the ~4-bytes rule the window itself estimates with, so this
-// holds the real string against the real ceiling.
+// wholeCatalogBudgetNumerator/Denominator bound the WHOLE catalog, and this is
+// a floor rather than a budget — the distinction is the point.
 //
-// It measures the CORE catalog — see servedSurface for why it stops there, and
-// for the per-tool bound Register applies to extension tools in its place. The
-// headroom this reports is therefore the core surface's, not an installation's:
-// a tree that adds units has to do that arithmetic itself, which is what the
-// bound at the door makes survivable.
-func TestTheToolListingLeavesTheRunRoomInTheWindow(t *testing.T) {
-	tokens := len(runner.ToolListing(servedSurface(t).Specs())) / 4
-	if budget := runner.PromptTokenCeiling * listingBudgetNumerator / listingBudgetDenominator; tokens > budget {
-		t.Errorf("the tool listing is ~%d tokens of a %d-token window, past the %d it may take — "+
-			"the listing is never elided, so what grows here comes out of the run's own observations",
-			tokens, runner.PromptTokenCeiling, budget)
+// The certification lane really does offer all 56 tools: 21 of the 23
+// agent_loop corpus scenarios declare `tools: catalog`, resolved through
+// agentLoopCatalog(), each building a real window. If that stopped fitting,
+// NOTHING WOULD BREAK LOUDLY — window.bounded() elides the transcript only,
+// stops at two messages, and sends whatever remains, and the bound providers'
+// real contexts dwarf 24,000. The scenarios would keep passing while measuring
+// a prompt larger than this build's own stated envelope, and no test anywhere
+// would say so.
+//
+// That is what this holds: the lane's measured envelope, not its survival. A
+// certification turn is ONE turn — goal, grounding, one reply, no accumulating
+// transcript — so it does not need the 7/24 a forty-step run reserves. 7/8 of
+// 24,000 leaves 3,000 for those three, which is ample for a one-turn replay.
+//
+// No feature is expected to argue with this number. The per-agent bound above
+// is the one that rations anything.
+const (
+	wholeCatalogBudgetNumerator   = 7
+	wholeCatalogBudgetDenominator = 8
+)
+
+// Every written description rides in every step of the window of every agent
+// that attaches its tool, and nothing in the loop notices if they grow. Each
+// declared agent's listing is measured by rendering it — the runner's own
+// renderer, not a second spelling of its format — and its tokens are estimated
+// by the ~4-bytes rule the window itself estimates with, so this holds the real
+// string against the real ceiling.
+func TestEachAgentsToolListingLeavesItsRunRoomInTheWindow(t *testing.T) {
+	for _, spec := range mustScheduledAgents() {
+		if over := listingOverBudget(spec.Name, specsNamed(t, spec.Tools)); over != "" {
+			t.Error(over)
+		}
 	}
+}
+
+// listingOverBudget names what is wrong with an agent's listing, or "" when
+// nothing is. It is a function over one agent's specs rather than a loop body
+// so the refusal can be proved against a listing that breaks it — no shipped
+// agent is anywhere near the bound (the fattest is under a seventh of it), so a
+// gate written inline here would never once have been seen to fire.
+func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
+	budget := runner.PromptTokenCeiling * listingBudgetNumerator / listingBudgetDenominator
+	tokens := len(runner.ToolListing(specs)) / 4
+	if tokens <= budget {
+		return ""
+	}
+	return fmt.Sprintf(
+		"agent %q offers a tool listing of ~%d tokens against the %d it may take of a %d-token "+
+			"window — the listing is never elided, so what grows here comes out of the observations "+
+			"this run is reasoning over",
+		agent, tokens, budget, runner.PromptTokenCeiling)
+}
+
+// The bound is only worth having if it fires. The whole catalog is ~16,829
+// tokens and the budget is 17,000, so even every tool at once does not break it
+// — which is the change working, and also why the failing case has to be built
+// rather than borrowed.
+func TestTheAgentListingBudgetRefusesAListingThatWouldFillTheWindow(t *testing.T) {
+	all := servedSurface(t).Specs()
+	if over := listingOverBudget("an_agent_attaching_everything_twice", append(append([]mcp.ToolSpec{}, all...), all...)); over == "" {
+		t.Error("a listing of twice the whole catalog was reported as within budget, so this bound " +
+			"would not stop an agent from filling its own window")
+	}
+	if over := listingOverBudget("morning_brief", specsNamed(t, []string{"read_record"})); over != "" {
+		t.Errorf("a one-tool listing was reported over budget: %s", over)
+	}
+}
+
+// The whole catalog is not a run's listing, but it IS the certification lane's,
+// and the lane has no other statement of what it costs.
+func TestTheWholeCatalogStillFitsTheCertificationLanesWindow(t *testing.T) {
+	tokens := len(runner.ToolListing(servedSurface(t).Specs())) / 4
+	floor := runner.PromptTokenCeiling * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator
+	if tokens > floor {
+		t.Errorf("the whole catalog renders ~%d tokens against the %d this build's window allows it — "+
+			"21 of the agent_loop corpus scenarios offer exactly this surface, and nothing would fail "+
+			"loudly: the window elides its transcript and sends anyway, so those scenarios would go on "+
+			"passing while measuring a prompt larger than the envelope this build claims",
+			tokens, floor)
+	}
+}
+
+// specsNamed resolves an agent's declared tool names against the served
+// surface. A name with no tool behind it is TestEveryAgentSpecNamesRegisteredTools'
+// finding, not this one — but it must not silently shrink the listing measured
+// here, because a menu that is under budget only because a tool went missing is
+// the same number for the opposite reason.
+func specsNamed(t *testing.T, names []string) []mcp.ToolSpec {
+	t.Helper()
+	byName := map[string]mcp.ToolSpec{}
+	for _, spec := range servedSurface(t).Specs() {
+		byName[spec.Name] = spec
+	}
+	out := make([]mcp.ToolSpec, 0, len(names))
+	for _, name := range names {
+		spec, registered := byName[name]
+		if !registered {
+			t.Fatalf("agent tool %q resolves to no registered tool, so this measurement is of a "+
+				"listing the product never renders", name)
+		}
+		out = append(out, spec)
+	}
+	return out
 }
 
 // servedSurface is the core tool surface these rules are held against.

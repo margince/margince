@@ -6,7 +6,9 @@ live in somebody else's CRM. The governance *model* — passports, the autonomy
 tiers, the one admission gate — is explained in
 [explanation/authorization.md](../explanation/authorization.md) and
 [explanation/agent-surface.md](../explanation/agent-surface.md); this page is the
-inventory.
+inventory. What a tool COSTS an agent that attaches it — the listing rides in
+every step of a tool-fed window — is
+[agent-tool-budget.md](agent-tool-budget.md).
 
 ## How to read this page
 

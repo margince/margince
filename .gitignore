@@ -158,3 +158,21 @@ workspace/
 # same as the IDE state above.
 /.impeccable/
 /config/margince-setup-token
+
+# Compiled generator binaries. `go build` inside a tool directory drops one
+# beside the source, and it is machine debris the same way a build cache is.
+# The .exe half is Windows, where `go build` names the binary that way.
+/backend/tools/gen-aitasks/gen-aitasks
+/backend/tools/gen-aitasks/gen-aitasks.exe
+/backend/tools/gen-jobs/gen-jobs
+/backend/tools/gen-jobs/gen-jobs.exe
+/backend/tools/gen-stubs/gen-stubs
+/backend/tools/gen-stubs/gen-stubs.exe
+/backend/tools/gen-agentpolicy/gen-agentpolicy
+/backend/tools/gen-agentpolicy/gen-agentpolicy.exe
+/backend/tools/gen-recordfields/gen-recordfields
+/backend/tools/gen-recordfields/gen-recordfields.exe
+/backend/tools/gen-perfdoc/gen-perfdoc
+/backend/tools/gen-perfdoc/gen-perfdoc.exe
+/backend/tools/contract-overlay/contract-overlay
+/backend/tools/contract-overlay/contract-overlay.exe

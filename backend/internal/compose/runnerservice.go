@@ -43,8 +43,11 @@ type RunnerService struct {
 	retriever retrieval.Retriever
 	log       *slog.Logger
 	// specByName resolves a stored job's catalog entry. It defaults to
-	// runner.SpecByName — the catalog IS code and this does not make it
-	// configuration.
+	// ScheduledAgentSpecByName — the catalog IS code and this does not make it
+	// configuration. What that default adds is the declared allowlist: a
+	// resolver that returned the runner's bare entry would hand back empty
+	// Tools, which is read as no narrowing, and the run would be bounded by
+	// its passport alone.
 	//
 	// It is a seam because the integration lane needs a spec that can stage
 	// an approval, and no shipped agent has one: every tool both catalog
@@ -60,8 +63,12 @@ type RunnerService struct {
 type RunnerOption func(*RunnerService)
 
 // WithSpecResolver replaces the catalog lookup. ONLY the integration lane
-// passes it: production always resolves against runner.Catalog, and a
-// deployment cannot reach this.
+// passes it: production always resolves against ScheduledAgentSpecByName, and
+// a deployment cannot reach this.
+//
+// A resolver passed here OWNS the allowlist for every name it answers,
+// including the shipped agents. Fall back to ScheduledAgentSpecByName for
+// those rather than to the runner catalog, whose entries carry no tools.
 func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOption {
 	return func(s *RunnerService) { s.specByName = resolve }
 }
@@ -79,10 +86,15 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 		store:      runner.NewStore(InstallationDB(pool)),
 		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, resolveIncumbent, send), brain),
 		identity:   identity.NewService(pool),
-		specByName: runner.SpecByName,
+		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,
 		log:        log,
 	}
+	// Read the join HERE, before any option can replace the resolver and before
+	// a worker goroutine could be the first to touch it: a contract that
+	// disagrees with the catalog must refuse to start, not fail tick after tick
+	// inside River's panic recovery.
+	mustScheduledAgents()
 	for _, opt := range opts {
 		opt(svc)
 	}
@@ -113,7 +125,7 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// and the rail would silently never learn that the 06:00 brief was queued.
 	ctx = schedulerContext(ctx)
 	s.reapAbandonedRuns(ctx)
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		if due := spec.DueAt(now); !now.Before(due) {
 			// Cron-seeded jobs carry no passport yet: execution fails
 			// loudly rather than running with ambient authority.

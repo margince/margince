@@ -33,33 +33,39 @@ type AgentSpec struct {
 	// (ADR-0009 Decision 5). A name here the passport does not admit
 	// stays refused.
 	//
-	// Required and non-empty, held by TestEveryAgentSpecNamesRegisteredTools:
-	// an empty set is read as "no narrowing" at the Job seam, so a spec that
-	// loses its list quietly regains the whole catalog — and a misspelt verb
-	// is how an agent silently loses the one tool its goal depends on.
+	// Required and non-empty: an empty set is read as "no narrowing" at the
+	// Job seam, so a spec that loses its list quietly regains the whole
+	// catalog — and a misspelt verb is how an agent silently loses the one
+	// tool its goal depends on.
+	//
+	// IT IS NOT FILLED IN HERE. The value is declared in api/ai-tasks.yaml
+	// under agent_loop's agents{} and attached by compose, because the
+	// listing rides in every step of the window: the allowlist is a prompt
+	// COST as well as a boundary, and the contract is where this repo says
+	// what an AI task costs. A module may not import a sibling, so this
+	// package cannot read the declaration itself. Read a spec through
+	// compose's scheduledAgents(), never through Catalog() directly.
 	Tools []string
 }
 
 // Catalog is the V1 agent set (B-EP06.22): the Morning Brief and the
 // overnight at-risk sweep — the two judgment tasks Surface A and the
 // deterministic workflow path structurally cannot do.
+//
+// The entries carry NO Tools: that half is declared in api/ai-tasks.yaml and
+// joined on by compose's scheduledAgents(). A caller that ranges this directly
+// and builds a Job from it produces a run narrowed by its passport alone —
+// which is why no production path does.
 func Catalog() []AgentSpec {
 	return []AgentSpec{
 		{
 			Name: "morning_brief",
-			Goal: "Assemble the Morning Brief for this workspace: search for open deals, " +
+			Goal: "Assemble the Morning Brief for this workspace: enumerate open deals, " +
 				"read the ones with recent activity, and produce a ranked list (at most 7) of " +
 				"deals the team can win this week. For each: why it is on the list, what changed " +
 				"recently, and one recommended next move — every claim grounded in a record you " +
 				"actually read, citing its id. A quiet day yields a short list; never pad it.",
 			DueHourUTC: 6,
-			// Reads only. list_records is here AND search_records is not
-			// enough on its own: the goal enumerates OPEN deals, which is a
-			// status filter, and search_records takes text and a type.
-			Tools: []string{
-				"search_records", "list_records", "read_record",
-				"catch_me_up_on", "account_coverage", "whats_slipping_this_week",
-			},
 		},
 		{
 			Name: "overnight_at_risk_sweep",
@@ -68,17 +74,6 @@ func Catalog() []AgentSpec {
 				"per at-risk deal summarizing the risk and the evidence (cite the records you " +
 				"read). Do not advance stages, send anything, or archive anything.",
 			DueHourUTC: 2,
-			// The goal's last sentence is a prohibition the SCOPE model
-			// cannot express: this sweep needs log_activity, and the write
-			// scope that admits it also admits advance_deal, archive_record,
-			// merge_records and eight more. The sentence stays — it stops the
-			// model spending a step discovering the refusal — but this list
-			// is what makes it true.
-			Tools: []string{
-				"search_records", "list_records", "read_record",
-				"catch_me_up_on", "whats_slipping_this_week", "at_risk_relationships",
-				"log_activity",
-			},
 		},
 	}
 }
@@ -93,15 +88,4 @@ func (a AgentSpec) TriggerRef(day time.Time) string {
 func (a AgentSpec) DueAt(day time.Time) time.Time {
 	d := day.UTC()
 	return time.Date(d.Year(), d.Month(), d.Day(), a.DueHourUTC, 0, 0, 0, time.UTC)
-}
-
-// SpecByName resolves a stored job's spec; a job naming a spec the
-// catalog no longer carries fails its run loudly.
-func SpecByName(name string) (AgentSpec, bool) {
-	for _, spec := range Catalog() {
-		if spec.Name == name {
-			return spec, true
-		}
-	}
-	return AgentSpec{}, false
 }
