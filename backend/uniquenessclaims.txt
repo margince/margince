@@ -12,7 +12,14 @@
 #
 #     // Held by: TestSomethingHasOneWriter (backend/somethingwriters_test.go)
 #
-# THE NUMBER IS THE POINT, AND IT ONLY GOES DOWN. To remove a line: write the
+# WIDENING A SHAPE IS NOT ADDING AN ENTRY. If a detector shape learns to see a
+# wording it used to miss, it finds claims that were already here and this file
+# grows to hold them — regenerate it in the SAME commit as the shape change, and
+# say in the message how many lines that added. Every such line names a
+# declaration that already existed, which is what a reviewer checks. A file that
+# grows in a commit adding no shape is the case the gate refuses by itself.
+#
+# THE NUMBER IS THE POINT, AND IT OTHERWISE ONLY GOES DOWN. To remove a line: write the
 # test that fails when a second implementation appears and name it in the doc
 # comment, or delete the claim because it was never true. An entry that stops
 # describing an unheld claim FAILS the gate, so this file cannot rot beside the

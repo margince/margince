@@ -51,6 +51,19 @@ package backendarch
 //   - An entry that has stopped matching a real claim fails too, so the
 //     register tracks the tree rather than rotting beside it.
 //
+// CLOSED TO NEW CLAIMS, NOT TO A BETTER DETECTOR. Those are different things
+// and only one of them is the debt. A shape that learns to see a wording it
+// used to miss finds claims that were already here, and the register has to
+// grow to hold them — otherwise "closed" would mean the detector may never
+// improve, which is the opposite of the point.
+//
+// The two are told apart by the DIFF, not by this file: every line a widening
+// adds names a declaration that already existed, and a reviewer can see that at
+// a glance. So the procedure is to widen the shape and regenerate the register
+// in the SAME commit, and to say in the message how many lines that added and
+// why. A register growing in a commit that adds no shape is the case this gate
+// refuses on its own.
+//
 // The register is 646 lines with no reasons, and that is deliberate rather than
 // sloppy: a reason per entry would be 646 rationalisations written by somebody
 // who has not audited the claim, which is worse than an honest count of what is
