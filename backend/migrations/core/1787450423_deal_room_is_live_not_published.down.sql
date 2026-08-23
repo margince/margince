@@ -1,3 +1,10 @@
+-- Restores the release ledger's SHAPE, and the draft default.
+--
+-- The rooms promoted out of draft by the up migration are NOT sent back: after
+-- the rollback they read as live rooms nobody published, which is what they
+-- are. Demoting them would take a room away from buyers who have been reading
+-- it, which is the worse of the two wrong answers.
+--
 -- Restores the release ledger's SHAPE. It cannot restore the releases
 -- themselves: the snapshots were dropped, and no other row holds what a given
 -- release froze. A room rolled back this far reads as never published, which
@@ -5,6 +12,7 @@
 SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE deal_room ADD COLUMN IF NOT EXISTS published_at timestamptz;
+ALTER TABLE deal_room ALTER COLUMN state SET DEFAULT 'draft';
 
 CREATE TABLE IF NOT EXISTS deal_room_release (
     id uuid DEFAULT uuidv7() NOT NULL,

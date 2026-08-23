@@ -1318,7 +1318,7 @@ public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON
 public.deal_room.expires_at timestamp with time zone gen=- def=-
 public.deal_room.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_room.source text NOT NULL gen=- def=-
-public.deal_room.state text NOT NULL gen=- def='draft'::text
+public.deal_room.state text NOT NULL gen=- def='live'::text
 public.deal_room.steward_user_id uuid gen=- def=-
 public.deal_room.title text NOT NULL gen=- def=-
 public.deal_room.updated_at timestamp with time zone NOT NULL gen=- def=now()

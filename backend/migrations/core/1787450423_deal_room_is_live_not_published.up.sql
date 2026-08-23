@@ -24,6 +24,20 @@ DROP TABLE IF EXISTS deal_room_release;
 -- instant, and created_at already says when the room began.
 ALTER TABLE deal_room DROP COLUMN IF EXISTS published_at;
 
+-- Every room already sitting in draft becomes live.
+--
+-- Without this they are stranded: draft meant "the buyer sees nothing", and
+-- the publish that promoted a room out of it no longer exists — so a room left
+-- in draft would be permanently unreadable by the people invited to it, with
+-- no control anywhere to fix it. Promoting them is the honest repair: the
+-- seller who created the room did so to share it, and the invitation still
+-- decides who may read it.
+UPDATE deal_room SET state = 'live' WHERE state = 'draft';
+
+-- And nothing lands in draft again. The column keeps the value in its CHECK so
+-- an old audit image still reads, but no new row can carry it.
+ALTER TABLE deal_room ALTER COLUMN state SET DEFAULT 'live';
+
 -- The trigger function outlives its table when the table is dropped: nothing
 -- references it, and a reader of the schema would find a guard for a table
 -- that no longer exists.
