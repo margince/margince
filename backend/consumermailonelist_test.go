@@ -48,13 +48,10 @@ import (
 
 // The subject set comes from the OWNER, not from a sample.
 //
-// The first draft of this file carried a hand-written 25-domain catalog and a
-// comment claiming every entry was in the shipped dataset. Two reviewers named
-// the same thing at once, and they were right twice over: it was a SECOND
-// hand-maintained consumer-mail list inside the gate that exists to forbid
-// second consumer-mail lists, and it was incomplete — `[]string{"laposte.net",
-// "hotmail.fr"}` is a two-provider list the sample could not see, so the file
-// holding it was dropped before the census ever parsed it.
+// A hand-written sample of the providers would be a SECOND consumer-mail list
+// inside the gate that forbids second consumer-mail lists — and an incomplete
+// one, since a sample cannot hold 8,758 entries. `[]string{"laposte.net",
+// "hotmail.fr"}` is a real two-provider list that any plausible sample misses.
 //
 // Asking `platform/freemail` itself is exhaustive by construction (8,758
 // entries plus this repo's pins), and it cannot drift: the dataset is
@@ -68,30 +65,26 @@ var baselineDomains = sync.OnceValue(func() map[string]struct{} {
 	return set
 })
 
-// THERE IS NO FILE-SKIP SHORTCUT, and its absence is the most reviewed thing
-// about this test.
+// THERE IS NO FILE-SKIP SHORTCUT, and the absence is deliberate.
 //
-// One sat here: a cheap textual scan that decided which files were worth
-// parsing. It was found narrower than the census behind it SIX times, each
-// time by a reviewer and never by re-reading it — a double-quote pattern blind
-// to raw strings; a raw-text compare blind to `"gmail\x2ecom"`; a literal-only
-// read blind to `const b = a`; then blind to `"gmail" + ".com"`; then a
-// four-part cap blind to five fragments; then a literal-adjacency regex blind
-// to `"gmail" /* c */ + ".com"`. Every one dropped a file before anything
-// looked at it, which produces no finding and no error and is indistinguishable
-// from a clean tree.
+// The obvious optimisation is a cheap textual scan deciding which files are
+// worth parsing. It does not pay: parsing every file is 2.49s, and adding such
+// a scan made it 2.95s — the scan costs more than the parse it avoids. What
+// makes this census cheap is the map lookup below; an inner loop over all
+// 8,758 baseline domains, replaced by one hash probe, is the difference
+// between about a minute and a couple of seconds.
 //
-// It was deleted rather than fixed a seventh time, because MEASURING it ended
-// the argument: parsing every file is 2.49s and the shortcut made it 2.95s.
-// The shortcut cost more than the parse it avoided.
+// The correctness argument outlives the timing one. A textual scan must
+// recognise every spelling the AST reader does, and Go offers many: raw
+// backtick strings, escapes that cook to a name the source never spells,
+// constants aliasing constants, concatenation at any depth, constant
+// conversions, and a comment sitting between an operand and its operator. A
+// scan narrower than the reader in ANY of those drops a file before anything
+// looks at it — no finding, no error, indistinguishable from a clean tree.
+// The planted cases below name each spelling; each is a way to be wrong
+// silently.
 //
-// The saving I originally credited to it was real but came from somewhere else
-// — replacing an inner loop over all 8,758 baseline domains with a map lookup,
-// which is what took the sweep from ~54s to seconds. I attributed it to the
-// wrong half and then defended that half through six rounds of review.
-//
-// So: no shortcut, no dimension to be narrower along, and a faster test. If a
-// future reader is tempted to add one back, measure first.
+// If a shortcut ever looks necessary: measure first.
 
 // looksLikeADomain screens a string literal before the baseline is consulted.
 //
@@ -140,12 +133,10 @@ var freemailDomains = map[string]bool{
 			want: 1,
 		},
 		{
-			// The pair CodeRabbit named: both are in the shipped dataset and
-			// neither was in the sampled catalog this file used to carry, so a
-			// file holding exactly this was dropped by the file-skip shortcut that
-			// used to sit in front of this census, before
-			// census ever parsed it.
-			name: "two providers the old hand-written sample could not see",
+			// Two providers that share no prefix with the commoner ones, so a
+			// sampled catalog misses them and anything built from one is blind
+			// to a file spelling only these.
+			name: "two providers a sampled catalog would miss",
 			code: `package p
 var providers = []string{"laposte.net", "hotmail.fr"}`,
 			want: 1,
@@ -157,9 +148,8 @@ var providers = []string{"gmail.com", "outlook.com"}`,
 			want: 1,
 		},
 		{
-			// Found by a bot: de-duplicating a hand-written map through
-			// constants is the natural next spelling of this bug, and it puts
-			// only ONE string literal in the list.
+			// De-duplicating a hand-written map through constants puts only
+			// ONE string literal in the list itself.
 			name: "a list assembled from a named constant",
 			code: `package p
 const gmail = "gmail.com"
@@ -185,10 +175,9 @@ var providers = []string{"gmail" + ".com", "outlook" + ".com"}`,
 			want: 1,
 		},
 		{
-			// FIVE fragments. The shortcut's first draft joined runs of up to
-			// four and dropped this, which was a narrowing in a dimension the
-			// detector does not have — `stringValue` resolves `+` to whatever
-			// depth it is written at. A bigger number would only move the cliff.
+			// FIVE fragments, because `stringValue` resolves `+` to whatever
+			// depth it is written at: any bound on the count is a cliff, not a
+			// rule.
 			name: "a list spelling every provider in five fragments",
 			code: `package p
 var providers = []string{"g" + "m" + "a" + "il" + ".com", "out" + "l" + "o" + "ok" + ".com"}`,

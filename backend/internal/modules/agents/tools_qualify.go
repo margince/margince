@@ -131,12 +131,12 @@ func isBlank(s *string) bool { return s == nil || strings.TrimSpace(*s) == "" }
 // companyFromEmail derives a company name from a corporate mail address.
 //
 // Both halves are asked of `platform/freemail`, and neither is this file's to
-// answer. This tool used to carry a FIFTEEN-domain consumer-provider map
-// against the platform baseline's 8,758 plus the workspace's own administered
-// overlay, and to derive the name by cutting the domain at its first dot. The
-// two doors then disagreed in front of a user: the agent door created
-// companies called "Zoho" and "Yandex" from addresses the web door refuses to
-// derive anything from at all, and named "eu.docusign.net" as "Eu".
+// answer. The web door asks the same package the same two questions, and the
+// answers have to match: a list compiled in here would disagree with the
+// operator's own administered overlay, and a name derived by cutting the domain
+// at its first dot would call "eu.docusign.net" a company named "Eu". Either
+// way the two doors write different companies from one address, in front of a
+// user rather than in a log.
 //
 // A blank derivation is reported as a GAP rather than filled with a guess,
 // which is this tool's whole contract: a fill without evidence is a guess, and
