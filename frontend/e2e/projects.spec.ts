@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { MOCK_MINTED_KEY } from "./projectmock";
 import { mockApi } from "./seed";
 
 /**
@@ -37,7 +38,6 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.getByRole("button", { name: "Neues Projekt" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Projektname" }).fill("Brandt ERP");
-  await dialog.getByRole("textbox", { name: "Kürzel" }).fill("BRANDT-ERP");
   await choose(
     page,
     dialog.getByRole("combobox", { name: "Unternehmen" }),
@@ -48,6 +48,16 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // The create lands on the project's own page, born in Initiative with the
   // birth row in its history and nothing filed under it yet.
   await expect(page).toHaveURL(/#\/projects\/pr-new-1$/);
+  // The dialog never asked for a key — the server mints one — so the page must
+  // SHOW the key it was given. This is the half a create form could not prove
+  // once the field was removed: without it, a create that came back with no key
+  // at all would look exactly like a success.
+  // Scoped to the mono chip: the key also appears in the prose that explains
+  // what a key is for, and a bare text match would pass on the explanation
+  // alone — which renders whether or not the project actually got a key.
+  await expect(
+    page.locator(".t-mono").filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),
   ).toBeVisible();
