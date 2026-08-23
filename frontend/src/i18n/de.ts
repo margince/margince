@@ -2357,6 +2357,11 @@ export const de = {
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.filedUnder":
     "Diese Antwort wird unter {project} abgelegt, wie der Rest dieser Konversation.",
+  "compose.filedUnderDeal":
+    "Wird unter {project} abgelegt, dem Projekt dieses Deals.",
+  "compose.subjectTagged":
+    "{tag} wird dem Betreff hinzugefügt, damit die Antwort sich hier einordnet.",
+  "compose.fileUnderProject": "Unter diesem Projekt ablegen",
   "compose.relinkTarget": "Person, Organisation, Deal oder Lead suchen",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",
   "compose.relinkReplaceHint":

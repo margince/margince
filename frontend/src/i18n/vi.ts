@@ -2332,6 +2332,11 @@ export const vi = {
   "compose.relinkTitle": "Liên kết lại hoạt động này",
   "compose.filedUnder":
     "Thư trả lời này sẽ được xếp vào {project}, giống phần còn lại của cuộc trò chuyện.",
+  "compose.filedUnderDeal":
+    "Sẽ được lưu vào {project}, dự án của giao dịch này.",
+  "compose.subjectTagged":
+    "{tag} được thêm vào tiêu đề để thư trả lời tự động vào đúng dự án.",
+  "compose.fileUnderProject": "Lưu vào dự án này",
   "compose.relinkTarget": "Tìm một người, tổ chức, deal hay lead",
   "compose.relinkReplace": "Chuyển hẳn thay vì liên kết thêm",
   "compose.relinkReplaceHint":
