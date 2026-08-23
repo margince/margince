@@ -57,11 +57,13 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// different rows legitimately, and an audit trail over that would record
 	// reading rather than changing. Verified against the DDL, not the package
 	// name: user_record_view, suggestion_dismissal, person_moment_dismissal,
-	// org_brief, person_brief, org_dossier and org_growth_fit all key on user_id.
+	// org_brief, person_brief, deal_status_card, org_dossier and org_growth_fit all
+	// key on user_id.
 	"internal/compose/org360":      "user_record_view and suggestion_dismissal are per-reader: one person's last-seen cursor and one person's dismissals",
 	"internal/compose/person360":   "person_moment_dismissal, the same per-reader shape",
 	"internal/compose/orgbrief":    "org_brief is an assembly generated for one reader and never served to another",
 	"internal/compose/personbrief": "person_brief, the same",
+	"internal/compose/dealstatus":  "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
 	"internal/compose/orgdossier":  "org_dossier and org_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 
 	// Operational state whose DOMAIN writes are audited elsewhere.

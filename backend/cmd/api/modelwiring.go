@@ -131,7 +131,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// The person-side draft rides the same lane for the same reason: one
 		// drafting task, a different input shape.
 		compose.WithPersonDraft(modelPath.DraftReply),
-		compose.WithNextMoveWriter(modelPath.DealHealth),
+		compose.WithDealStatusWriter(modelPath.DealHealth, routingVersion),
 	}
 }
 

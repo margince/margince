@@ -18,7 +18,7 @@ const (
 	TaskCertJudge Task = "cert_judge"
 	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074.
 	TaskColdStart Task = "cold_start"
-	// TaskDealHealth is next_move — the deal card's one next step, proposed as a concrete task when no rule already names the move: the model reads the deal's own timeline (subjects, directions, bounded excerpts the CALLER may read — the facts are assembled under the caller's row scope) and writes the task's subject and the why. The verb never moves: the answer is always create_task, the deterministic rules (booked meeting, unanswered inbound, existing open task) run first, and a missing lane, an over-budget call or a reply the grounding filter refuses degrades to the deterministic fallback task with generated_by saying so.
+	// TaskDealHealth is deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever.
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
 	TaskDocumentExtract Task = "document_extract"
@@ -75,7 +75,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "95a58934674cb0122426d36ed42aad211d3cf822fa63e7c35d05a58bf80a3d61"
+const TaskContractHash = "544cfb6b68e9d4da931b0a60d438a4d83a05074d98fb1523af63af5390d6c827"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -257,7 +257,7 @@ var taskSites = map[Task][]Site{
 		{Name: "field_extract", Kind: "one_shot"},
 	},
 	TaskDealHealth: {
-		{Name: "next_move", Kind: "one_shot"},
+		{Name: "deal_status", Kind: "one_shot"},
 	},
 	TaskDocumentExtract: {
 		{Name: "fields", Kind: "one_shot"},

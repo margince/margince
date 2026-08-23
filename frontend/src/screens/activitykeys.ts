@@ -22,6 +22,10 @@ export function entityTimelineKeys(
   if (seed) {
     keys.push(seed);
   }
+  const derived = DERIVED_FROM_TIMELINE[entityType]?.(entityId);
+  if (derived) {
+    keys.push(derived);
+  }
   return keys;
 }
 
@@ -35,6 +39,47 @@ const TIMELINE_SEED_KEYS: Partial<
   organization: (id) => ORGANIZATION_360_KEY(id),
   person: (id) => ["person360", id],
   project: (id) => ["project", id, "360"],
+};
+
+// Reads WRITTEN FROM a record rather than showing it. The deal status card
+// says what the deal's own fields and its activity MEAN, so anything that
+// moves either leaves it describing a deal that has since changed — and unlike
+// a timeline visibly missing its newest row, a stale sentence reads as a
+// current judgement.
+//
+// It is derived from BOTH halves, which is why it has a helper of its own
+// below as well as a place here: logging an activity reaches it through the
+// timeline keys, and advancing a stage or editing the value reaches it through
+// dealRecordKeys. A card naming a stage the deal has left is the failure this
+// prevents.
+const DERIVED_FROM_TIMELINE: Partial<
+  Record<EntityKind, (entityId: string) => QueryKey>
+> = {
+  deal: (id) => DEAL_STATUS_KEY(id),
+};
+
+const DEAL_STATUS_KEY = (id: string): QueryKey => ["deal-status", id];
+
+// Which cached reads a write to the DEAL RECORD itself invalidates — a stage
+// advance, an amount, a close date. Spelled once here so a new writer picks up
+// the derived reads by using the helper rather than by remembering them.
+export function dealRecordKeys(dealId: string): QueryKey[] {
+  return [["deal", dealId], ...derivedRecordKeys("deal", dealId)];
+}
+
+// The reads written FROM a record, by the key its own page reads it under.
+// The generic edit form consults this, so an edit to any record kind reaches
+// whatever is derived from it without every form naming them.
+export function derivedRecordKeys(
+  recordKey: string,
+  recordId: string,
+): QueryKey[] {
+  const derived = DERIVED_FROM_RECORD[recordKey]?.(recordId);
+  return derived ? [derived] : [];
+}
+
+const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey> = {
+  deal: (id) => DEAL_STATUS_KEY(id),
 };
 
 // A task is also a row in the standing work queue, which is keyed per workspace

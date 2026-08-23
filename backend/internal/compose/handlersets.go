@@ -9,9 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
-	"github.com/gradionhq/margince/backend/internal/compose/dealbrief"
+	"github.com/gradionhq/margince/backend/internal/compose/dealstatus"
 	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
-	"github.com/gradionhq/margince/backend/internal/compose/nextaction"
 	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
@@ -79,8 +78,7 @@ type (
 	personBriefHandlers    = personbrief.Handlers
 	personResearchHandlers = personresearch.Handlers
 	meetingBriefHandlers   = meetingbrief.Handlers
-	nextActionHandlers     = nextaction.Handlers
-	dealBriefHandlers      = dealbrief.Handlers
+	dealStatusHandlers     = dealstatus.Handlers
 	orgBriefHandlers       = orgbrief.Handlers
 	orgDossierHandlers     = orgdossier.Handlers
 	accountDraftHandlers   = accountdraft.Handlers
@@ -111,16 +109,13 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// generated_by honesty as the brief above.
 	s.meetingBriefSvc = meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now)
 	s.meetingBriefHandlers = meetingbrief.NewHandlers(s.meetingBriefSvc, s.sorDispatch.isOverlay)
-	// The deal's next best action reads the deal and its timeline through
-	// their own gated stores and performs nothing; the click goes through the
-	// verb the answer names.
-	s.nextActionSvc = nextaction.NewService(s.dealsStore, activities.NewStore(InstallationDB(pool)), time.Now)
-	s.nextActionHandlers = nextaction.NewHandlers(s.nextActionSvc)
-	// The deal brief reads the same deal, its health, timeline and tasks,
-	// plus its Deal Room, all through their own gates, and writes nothing.
-	s.dealBriefHandlers = dealbrief.NewHandlers(
-		dealbrief.NewService(s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now),
-	)
+	// The deal's status card reads the deal, its health, timeline, tasks and
+	// Deal Room through their own gates. It performs nothing: the click goes
+	// through the verb the move names, and the only row it writes is its own
+	// per-reader cache entry.
+	s.dealStatusSvc = dealstatus.NewService(
+		pool, s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now)
+	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
 	// (ADR-0096 D4). Connecting one later is a provider implementation.

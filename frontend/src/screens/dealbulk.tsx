@@ -7,6 +7,7 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import { dealRecordKeys } from "./activitykeys";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 
@@ -122,6 +123,17 @@ export function DealBulkBar({
       // resend the very version that just conflicted. The run stays pending
       // — and the verbs disabled — until the list holds fresh versions.
       await queryClient.invalidateQueries({ queryKey: ["deals"] });
+      // Each row that actually moved carries reads derived from it — the deal
+      // status card says what its stage MEANS — and the list key does not
+      // reach them. A row that refused is unchanged and needs nothing.
+      for (const outcome of result) {
+        if (outcome.error !== undefined) {
+          continue;
+        }
+        for (const queryKey of dealRecordKeys(outcome.id)) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      }
       setOutcomes(result);
       onDone(result);
     },

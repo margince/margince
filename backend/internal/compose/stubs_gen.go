@@ -655,10 +655,6 @@ func (stubs) AdvanceDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "AdvanceDeal")
 }
 
-func (stubs) GetDealBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetDealBrief")
-}
-
 func (stubs) GetDealCoverage(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetDealCoverage")
 }
@@ -675,14 +671,6 @@ func (stubs) HideDealDocument(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "HideDealDocument")
 }
 
-func (stubs) GetDealHealth(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetDealHealth")
-}
-
-func (stubs) GetDealNextBestAction(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetDealNextBestAction")
-}
-
 func (stubs) ListDealOffers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealOffersParams) {
 	httperr.NotImplemented(w, r, "ListDealOffers")
 }
@@ -693,6 +681,10 @@ func (stubs) CreateOffer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 
 func (stubs) ListDealStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListDealStakeholders")
+}
+
+func (stubs) GetDealStatus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetDealStatusParams) {
+	httperr.NotImplemented(w, r, "GetDealStatus")
 }
 
 func (stubs) ListDedupeCandidates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDedupeCandidatesParams) {
