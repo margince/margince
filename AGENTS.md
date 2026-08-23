@@ -1,36 +1,85 @@
 # AGENTS.md — operating this repo
 
+**This file is the rulebook, and it is the only copy of it.** Every agent
+harness working here reads it: `AGENTS.md` is the convention Codex and the
+others look for, and Claude Code reaches it through a one-line `CLAUDE.md` that
+imports it. So a rule lands in one place and binds every harness, and there is
+no second file for it to be missing from.
+
+Do not reintroduce a second copy. Two files each carrying the full rules is the
+defect *Reuse before you build* below describes — two answers to one question,
+with nothing forcing them to be asked together — and a rulebook is a bad place
+to hold that shape while telling everybody else not to. Pinning a few sections
+byte-identical does not fix it either: the pinned ones stay level and the rest
+drift. `TestClaudeMdOnlyImportsTheRulebook` in `backend/rulebookdelegation_test.go`
+holds this.
+
+`cli/craft` feeds the **whole** nearest `AGENTS.md` into its gate prompt
+(`gate.Assembler.nearestAgents` walks up from the touched directories; this root
+file is the only one in the tree today), and `make check-craft-doc` asserts this
+file still carries a `## Craftsmanship` heading. So a rule that moves out of here
+— into `docs/`, or into a harness-specific file — stops reaching the gate. Keep
+the binding short form here and put the reasoning in
+[docs/principles/](docs/principles/README.md).
+
 Margince CRM implementation PoC (WP0 foundation + WP1 core spine). This is the
 repository the product is built in: the running Go software, its contract, its
 tests, and its documentation. There is no separate specification that outranks
 what is here.
 
-**What decides a question.** In order: the explicit current request from Lars or
-the team; then code, tests, migrations and `backend/api/crm.yaml`, which are what
-the product does today; then the guardrails (security, privacy, agent authority,
-auditability, contract compatibility, licensing, data durability) enforced by
-tests wherever possible; then [docs/](docs/). Retired material is history and
-never blocks work on its own. The reasoning behind a guardrail is kept by the
-team and is not in this repository — you never need it to work here, because the
-rule that binds a change is enforced by a gate and a refusing gate names what to
-do instead.
-[CLAUDE.md](CLAUDE.md#what-decides-a-question-here) has the long form.
+## What decides a question here
+
+When two sources disagree, this is the order. It replaces the older rule that a
+separate specification won every argument.
+
+1. **The explicit current request** from Lars or the team defines what to change.
+2. **Code, tests, migrations and `backend/api/crm.yaml`** define what the product
+   does today. They are the record of current behaviour, not a description of it.
+3. **Guardrails** — security, privacy and lawful processing, agent authority,
+   auditability, public contract compatibility, licensing, data durability.
+   These are enforced by tests and fitness functions wherever that is possible,
+   and the test is the thing to read: it states the obligation in a form that
+   fails when the obligation stops holding.
+4. **[docs/](docs/)** explains how the product is built and operated.
+5. **Retired material** is history. It never blocks work on its own.
+
+The reasoning behind a guardrail — why it was chosen and what it rules out — is
+kept by the team and is not part of this repository. A public contributor never
+needs it to work here: the rule that binds a change is enforced by a gate, and
+when a gate refuses something it names what to do instead. If you cannot tell
+why a rule exists and the answer would change your patch, ask in the issue
+rather than guessing.
 
 **Do not refuse or narrow ordinary product evolution because an older document
 describes a different choice.** Name the conflict and say what it costs. If the
 change touches a guardrail, say so in the pull request so the decision behind it
-is updated with the code. If the call is someone else's, say whose and open a
-`status: needs-decision` issue.
+is updated with the code — do not stop. If the call is genuinely someone else's
+to make, say whose and why, and open an issue labelled `status: needs-decision`.
 
-**This repository is public.** Never refer to a private repository, document, path
-or link — not in code, comments, tests, docs, issues, commit messages or PR
-bodies — and never include local machine paths or secrets.
+Product name **Margince** is locked; older documents say "Gradion CRM" — same
+product.
+
+## This repository is public
+
+Everything here is readable by anyone. Two obligations follow:
+
+- **Never refer to a private repository, document, path or link** — not in code,
+  comments, tests, docs, issues, commit messages or PR bodies. A public
+  contributor must be able to follow every instruction this repository gives
+  them. If a rule matters, write the rule out here rather than citing somewhere
+  they cannot reach.
+- **Never include local machine paths or secrets.**
+
 `TestPublicTreeCitesNothingPrivate` in `backend/publicreferences_test.go` catches
-the part of that a test can catch: private references in tracked source and prose
-files. Commit messages, PR bodies, secrets and machine paths are on you. A public contributor must be able to follow every instruction this repository
-gives them, so write a rule out here rather than citing somewhere they cannot
-reach. A decision number (`ADR-0054`) may appear as a label, but never cite it
-as though a reader could open it — state the rule itself.
+the part of this a test can catch: a private repository name, a `specs/` path or
+a `foundation#NNNN` reference in any tracked source or prose file. It does not
+read commit messages or PR bodies, and it has no pattern for a secret or a
+machine path — those stay your judgement, and the secret-scan gate is the only
+other net under them.
+
+A decision number (`ADR-0054`) may appear as a label, but never cite it as
+though a reader could open it — the records are not in this tree. Write the rule
+itself out here, where a public contributor can read it.
 
 **[docs/principles/](docs/principles/README.md) explains these rules** — six
 pages, one per principle, each naming the rulebook section it explains, the
@@ -50,47 +99,76 @@ six-probe scan for finding a capability that got built twice.
 **Start at [STATUS.md](STATUS.md)** — open work and the session-pickup point.
 Read its *Open work, in one screen* index first and open only the sections that
 bear on your change; the file is not meant to be read end to end. Update it at
-the end of every working session, keeping it to open work — the narrative of what
-you did belongs in the commit and the PR, which is the durable record. Route
-findings as you work: implementation decisions are recorded in the commit and PR
-that makes the change; a decision that binds future work is raised with the team
-so the record lands where the reasoning is kept; a finding you are NOT fixing now
-(bug, gap, follow-up task — engineer's call) becomes a GitHub issue in this
-repo.
+the end of every working session, keeping it to open work: the narrative of what
+you did belongs in the commit and the PR, which is the durable record.
 
-**Label every issue you file.** Unlabeled means untriaged, so an unlabeled
-issue lies about your own finding. Exactly one `priority:` and exactly one
-`area:`, always:
+Route findings as you work. Implementation decisions are recorded in the commit
+and PR that makes the change — git history is the record. A decision that binds
+future work is raised with the team, so the record lands where the reasoning is
+kept. Anything found but **not** fixed in the current change — a bug, a gap, a
+follow-up — becomes a GitHub issue in this repo. When to file is the engineer's
+call.
 
-- `priority: critical` — data loss, a reachable security/privacy breach,
-  `main`/CI red, or unusable on a default install. `high` — a real user or
-  operator hits it on a live path, or it blocks another workstream.
-  `normal` — real but narrow, guarded or latent; hygiene; polish.
-  `low` — a want, not a defect, or it needs a decision first.
-  Priority is severity, never schedule: a milestone carries the schedule, so
-  never demote a real defect because it is not this week's work.
-- `area:` (one, where the fix lives) — `agents-mcp` `ai-models` `authz`
-  `capture` `ci-tests` `contract-api` `deals` `extensions` `finance`
-  `frontend` `overlay` `platform` `privacy` `records` `reports`. A doc that is
-  wrong about a subsystem takes that subsystem's area.
-- `status: needs-decision` when a human must rule before it is workable — a
-  technical call or a product one. Say what the options are and which you
-  recommend; an issue that only asks "what should we do?" gives the decider
-  nothing to decide from.
-- Provenance, additive: `bug`, `enhancement`, `security`, `capability-gap`
-  (missing capability, not a defect), `fast-track-debt` (shipped fast, gap
-  recorded deliberately). These say why the issue exists — keep them.
+### Label every issue you file (three axes, no exceptions)
 
-**`security` is not a way to report a vulnerability.** This repo is public.
-Per [SECURITY.md](SECURITY.md) an exploitable weakness goes to a private
-GitHub Security Advisory, never a public issue or PR. The label is for
-hardening with no live exploit; if you can write the reproduction — a
-cross-tenant read, a row-scope/RBAC escape, an agent-governance bypass, a
-forged or still-binding revoked credential, a mutation skipping the audit or
-outbox row, injection, SSRF — it belongs in an advisory.
+An unlabeled issue is indistinguishable from an untriaged one, and that is the
+invariant the labels exist to protect: **unlabeled means nobody has looked at it
+yet.** File an issue without labels and you have quietly told the next reader a
+falsehood about your own finding. Every issue you open carries **exactly one
+`priority:` and exactly one `area:`**.
 
-Check for an existing parent tracker (`gh issue list --label "area: <x>"`)
-and attach yours as a sub-issue rather than adding another sibling.
+**Priority** is a claim about severity, never about your schedule. Do not demote
+a real defect because it is not this week's work — the milestone carries the
+schedule, the label carries the truth:
+
+| Label | It qualifies when |
+|---|---|
+| `priority: critical` | Data loss, a reachable security or privacy breach, `main`/CI red, or the product unusable on a default install. Drop other work. |
+| `priority: high` | A real user or operator hits it on a live path, or it blocks another workstream. |
+| `priority: normal` | A genuine defect that is narrow, guarded, or unreachable today; hygiene; test-lane work; polish. |
+| `priority: low` | A want, not a defect — or it needs a product decision before it is work at all. |
+
+The honest test for `critical` is not "how bad would this be" but "does this stop
+somebody else from working, or is somebody's data wrong right now". A flaky gate
+earns it not because it is severe but because a red run nobody trusts makes every
+other verdict unreadable.
+
+**Area** is where the fix lives, one only, so a filter never double-counts:
+`agents-mcp` · `ai-models` · `authz` · `capture` · `ci-tests` · `contract-api` ·
+`deals` · `extensions` · `finance` · `frontend` · `overlay` · `platform` ·
+`privacy` · `records` · `reports`. A doc that is wrong about a subsystem takes
+that subsystem's area, not a documentation area — it belongs next to the code it
+misleads about.
+
+**Status**, when it applies — these mark an issue that is not yet workable, and
+leaving them off puts unactionable work in somebody's queue:
+
+- `status: needs-decision` — unactionable until a human rules ("decide or decline X").
+- `status: needs-decision` also covers work that is blocked on a product ruling
+  rather than a technical one. Say what the options are and which you recommend;
+  an issue that only asks "what should we do?" gives the decider nothing to
+  decide from.
+
+**Provenance**, additive and independent of the three axes: `bug`,
+`enhancement`, `security`, `capability-gap` (a missing capability, not a defect),
+and `fast-track-debt` (shipped fast under time pressure with the gap recorded
+deliberately). These record *why the issue exists*, which is the one thing
+nobody can reconstruct later — prefer keeping them over tidying them away.
+
+**`security` is not a way to report a vulnerability.** This repo is public, and
+[SECURITY.md](SECURITY.md) is explicit that an exploitable weakness goes to a
+private GitHub Security Advisory, never a public issue or pull request, because
+a public report before a fix ships puts every deployment at risk. The label is
+for hardening and defence-in-depth work that carries no live exploit. The test
+is the one SECURITY.md itself implies: **if you can write the reproduction, it
+belongs in an advisory** — a cross-tenant read, a row-scope or RBAC escape, an
+agent-governance bypass, a forged or still-binding revoked credential, a
+mutation that skips the audit or outbox row, injection, SSRF.
+
+Before filing, check whether a **parent tracker** already covers the finding
+(`gh issue list --label "area: <x>"`); if one does, attach yours as a sub-issue
+rather than adding a sibling to the pile. A tracker carries the highest priority
+among its children.
 
 ## Build / test / seed
 
@@ -223,9 +301,15 @@ check monitoring. Read-only working-tree inspection (`git status`, `git diff`,
 3. **Local gates BEFORE pushing**: `make check` (the merge gate — build,
    vet, lint, arch-lint, unit tests, contract drift); add
    `make frontend-check` when `frontend/` changed. The pre-push hook
-   (installed once via `make hooks`) runs `craft static --strict` diff-scoped
-   on top — a BLOCKER or MAJOR finding stops the push; fix it, never bypass
-   the hook.
+   (installed once via `make hooks` — the **root** target, which sets
+   `core.hooksPath`) runs `craft static --strict` diff-scoped on top — a
+   BLOCKER or MAJOR finding stops the push; fix it, never bypass the hook.
+   When a push does change hand-written backend Go, the hook then also runs the
+   two sub-second whole-tree greps (`check-rls-store-path`,
+   `check-no-jurisdiction`), so an RLS-bypassing store statement or a
+   jurisdiction string in core fails locally rather than in CI. A push with no
+   qualifying backend Go changes exits before all three — a docs-only push runs
+   none of them.
 4. **Push the branch and open a PR** (`gh pr create`).
 5. **Watch the GitHub gates and fix red**: CI, DCO, CodeRabbit, and
    SonarCloud must all pass (`gh pr checks <n> --watch`). Fix failures
@@ -273,59 +357,20 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
   activity link-walk), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr` (RFC 7807 + wire helpers), `httpserver` (chassis).
-- `internal/modules/` — twenty-one bounded capabilities, flat by default per
+- `internal/modules/` — the bounded capabilities, flat by default per
   ADR-0054 §3 (store + mapping + transport + provider in one package),
-  growing subpackages only when a named trigger fires (split for a reason, never symmetry); a module NEVER
-  imports a sibling: `identity` (workspaces, users, sessions, passports;
-  RBAC policy docs ONLY in `identity/internal/policy`),
-  `people` (person, organization, lead + merge + promote —
-  cross-aggregate single-tx SQL ownership per the §9 single-tx exception), `deals`
-  (deal, pipeline/stage config, workspace seed, won/lost + FX freeze),
-  `activities` (the timeline: idempotent logging + polymorphic links),
-  `approvals` (the 🟡 confirm-first engine, ADR-0036: staged rows ARE
-  the authority object), `agents` (the governed tool
-  surface: registry, admission gate, the hosted HTTP transport and its
-  JSON-RPC dispatcher, the
-  Surface-B loop — reaches records only through the datasource seam),
-  `automation` (the closed 7×7 trigger/action catalog, ADR-0035: the
-  registry, the per-workspace standing automation store, and the
-  deterministic trigger runtime — event matcher and clock time-scan
-  converging on one path, gated at both author-time and match-time),
-  `ai` (the model runtime behind ports/model: BYOK cloud — native
-  anthropic/openai/gemini plus the generic openai_compatible wire —
-  local ollama/vllm, the offline fake; routing + budget +
-  secret-stripping, and the effective-dated `ai_model_rate` sheet the
-  read-side pricer prices calls against — `ai_call` stores tokens, never
-  a price), `search`
-  (row-scoped retrieval: FTS + pgvector/RRF hybrid + context graph),
-  `capture` (the ONE `connector.Sink`: normalized inbound capture,
-  idempotent on the source natural key), `consent` (per-purpose consent
-  + the default-deny outbound suppression gate + the DSR case queue),
-  `privacy` (the GDPR engines: Art. 17 erasure, Art. 15 SAR assembly,
-  the nightly retention evaluator — the ratified cross-store writer,
-  gated by `backend/tableownership_test.go`), `collections`
-  (lists — static and dynamic segments — and tags, visibility-probed),
-  `signals` (the consent-gated warm-room substrate: company-level
-  signals, the inspectable resolver, warm/cold join), `customfields`
-  (the governed add-field engine: the sole runtime `ALTER TABLE`
-  chokepoint; record stores read the `cf_*` columns via the
-  `fieldcatalog` seam), `quotas` (RD-T06 owner-XOR-team revenue
-  targets, human-set, workspace-shared config posture), `webhooks`
-  (outbound webhook subscriptions + owner-scoped delivery, E10), and `overlay` (the incumbent-CRM mirror: a second
-  `datasource.SystemOfRecordProvider` selected per-workspace by
-  `workspace.x_sor_mode`, serving mirror-backed reads behind the inner
-  `incumbent.Incumbent` seam — fail-closed visibility deny-join,
-  budget-metered force-fresh read-through, continuous sync (backfill +
-  reconcile poller), disconnect teardown, and the ADR-0071
-  overlay→native cutover; `Update`/`Archive` write back incumbent-first
-  and re-mirror the returned state, while
-  `Create`/`Merge`/`PromoteLead`/`AdvanceDeal` + RunReport are declared
-  `unsupported_by_sor`), `comms`
-  (outbound delivery machinery — the durable staging row, the
-  transmit-time gates, the provider dispatcher; the message itself is an
-  activity), `migration` (the shared importer engine behind the
-  overlay→native cutover: classification, a zero-write dry run, and a
-  checkpointed resumable run loop over injected source/writer seams).
+  growing subpackages only when a named trigger fires (split for a reason,
+  never symmetry). **A module NEVER imports a sibling** — if capability A
+  needs B, compose injects the edge. A module writes only the tables it
+  owns, declared in its `doc.go` and gated by
+  `backend/tableownership_test.go`.
+  Which module owns what — purpose, spine shape, owned tables and HTTP
+  surface, plus the compose-owned tables and the notable subpackages — is
+  the table in [docs/reference/modules.md](docs/reference/modules.md), one
+  row per directory under `internal/modules/` and gated against that listing
+  by `TestModuleCatalogCoversEveryModule`. Read it to place a change; don't
+  guess from the package name, and don't count the capabilities here — ask
+  the directory.
 
   Two sanctioned spine shapes, and ONLY two — don't invent a third:
   **Handlers→Store** for CRUD modules (people, deals, activities, …:
@@ -334,10 +379,10 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   identity: a service owns the multi-step domain logic and drives the
   SQL inside it).
 - `internal/compose/` — the composition layer every process role shares:
-  the contract HTTP surface (every module's handler set embeds directly
-  into `Server`, which asserts the full generated `ServerInterface` on
-  its own — a contract operation with no handler is a build break, not
-  a served 501), the composite `datasource.SystemOfRecordProvider`, the MCP registry +
+  the contract HTTP surface (`Server` embeds every module's handler set and
+  asserts `crmcontracts.ServerInterface` itself — a contract operation with
+  no real handler fails that assertion at compile time, not a 501 at
+  runtime), the composite `datasource.SystemOfRecordProvider`, the MCP registry +
   approvals adapter, and the cross-module integration suites (in
   `compose/integration`, with the shared harness). Every cross-module
   edge is injected HERE (identity's workspace seed ← deals; agents'
@@ -369,13 +414,14 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
 - `extensions/<name>/` — the stable extension tier (ADR-0120): each unit
   is its own Go module importing ONLY the marker-allowlisted
   `backend/pkg/**` surface; presence under `extensions/` is the
-  enablement. The vanilla tree ships four first-party units: `de` (the
-  German jurisdiction pack — GoBD calendar-year retention floors),
-  `notes`, `relay-probe` (the provider-facing reference — capture, a
-  merge-key declaration and a transport) and `yogi` (one served 🟢/read
-  agent tool — the worked example of the governed-tool kind).
+  enablement. The vanilla tree's own units are `de` (the German
+  jurisdiction pack — GoBD calendar-year retention floors), `notes`,
+  `relay-probe` (the provider-facing reference — capture, a merge-key
+  declaration and a transport) and `yogi` (one served 🟢/read agent tool —
+  the worked example of the governed-tool kind).
   Read `extensions/` for the live list rather than trusting this sentence — a
-  count in prose goes stale the first time somebody adds a unit. `make composition` (run by every build lane)
+  list in prose goes stale the first time somebody adds a unit, and it reads
+  no differently when it has. `make composition` (run by every build lane)
   generates the ignored `build/composition/` wiring; `composition/` at
   the root is the committed vanilla stub so bare go commands resolve.
 
@@ -387,11 +433,35 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   with a single baseline file (`0001`) whose internal order is a dependency
   order; a new migration goes after it, named for the unix second it was
   written, and updates `migrations/testdata/head_catalog.txt` in the same
-  commit.
+  commit. An applied
+  version never re-runs, so editing one changes what FRESH installations get
+  while every deployed database keeps the old behaviour: the two diverge
+  silently. Editing history without a second, additive half that reaches
+  already-deployed databases is how an installation ends up permanently missing
+  a backfill nobody can see is missing.
+
+  **Two authorized exceptions in this tree's history**, and both name the reason
+  they were safe rather than the fact that they happened:
+
+  1. The 2026-08 tenant-scope sweep edited applied migrations and shipped WITH
+     additive repair migrations, so every already-deployed database was reached.
+  2. The 2026-08-21 baseline consolidation replaced core's 318 migrations and
+     custom's 24 with one baseline file each. It carries NO repair half and
+     needs none, because at the time there was no production installation and
+     every database was rebuildable — and rather than reach a stale database it
+     STOPS one: the baseline reuses version `0001`, whose ledger row on such a
+     database names a migration that no longer exists, so
+     `dbmigrate.assertLedgerMatches` refuses and says `make dev-fresh`.
+
+  Neither exception generalizes. The second is available only while no
+  installation holds data somebody cannot rebuild, and it was checkable only
+  because `scripts/migration-baseline.sh verify` could prove the baseline builds
+  the schema the history built, byte for byte.
 - The `database.WithWorkspaceTx` GUC contract — every tenant query goes through
   it; there is no raw-pool path for tenant data. Core tenant isolation is a
   per-statement predicate bound by that contract and held by
-  `scripts/check-rls-store-path.sh`; core carries no row-level security at all.
+  `scripts/check-rls-store-path.sh`; core carries no row-level security at all
+  (a migration retired it, and the baseline has never declared a policy).
   Extension tables still carry FORCE RLS.
 - `internal/shared/apperrors` — the fixed sentinel registry; extend it only
   alongside the error contract it implements, never for one call site.
@@ -507,17 +577,19 @@ legibility is the product, not polish.
 `.githooks/pre-push` runs the deterministic arm — `craft static --strict` (the repo's
 `cli/craft` tool, ADR-0045) — over the Go files **this push changes vs
 `origin/main`** in `backend/`, `extensions/`, `fixtures/` and `desktop/` alike (a
-first-party extension unit and the desktop launcher both ship the same product). New/touched
-code must be clean. There is no pre-existing backlog to exempt: the whole tree was
-cleared to zero findings before this bar was armed. So write it right the first time
-— a swallowed error, a sleep in a test, a bare `any` in a signature, or an 81-line
-function you add will block your push.
+first-party extension unit and the desktop launcher both ship the same product). There is no pre-existing backlog to exempt: the whole tree was
+cleared to zero findings before this bar was armed, so the rule is simply that
+touched code is clean. Write it right the first time — a swallowed error, a sleep
+in a test, a bare `any` in a signature, or an 81-line function you add will block
+your push.
 - Install the hook once after cloning: **`make hooks`** (sets `core.hooksPath=.githooks`).
 - Full manual sweep of every hand-written Go tree (`backend/`, `extensions/`,
-  `fixtures/`, `desktop/`): **`make craft-static`** — green, and the CI
-  `craftsmanship` job runs the same bar as a required check.
-- `BLOCKER` and `MAJOR` findings both block; `MINOR` is advisory. The size ceilings are
-  80 CODE lines / 500 file lines for product code and 160 / 1000 for `*_test.go`.
+  `fixtures/`, `desktop/`): **`make craft-static`** — green, and the
+  CI `craftsmanship` job runs the same bar as a required check.
+- `BLOCKER` and `MAJOR` findings both block; `MINOR` is advisory. The size ceilings
+  are 80 CODE lines / 500 file lines for product code and 160 / 1000 for `*_test.go`
+  — a long scenario test that sets up, acts and asserts once is not the
+  god-function smell, but a suite still splits when it stops being navigable.
   A comment-only line is not length for the FUNCTION ceiling: it asks how much a
   reader must hold at once, and an explanation reduces that. The whole-tree file
   check in `scripts/check-go-file-length.sh` is a plain `wc -l` and counts every
