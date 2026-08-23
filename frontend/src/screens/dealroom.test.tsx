@@ -45,7 +45,6 @@ function room(state: string): DealRoom {
     version: 1,
     created_at: "2026-08-22T09:00:00Z",
     updated_at: "2026-08-22T09:00:00Z",
-    release_count: 0,
   } as DealRoom;
 }
 
@@ -96,11 +95,6 @@ function stubApi(rooms: DealRoom[], mayWrite = true): { calls: Request[] } {
     }
     if (path.endsWith("/participants")) {
       return Promise.resolve(jsonResponse({ data: [], page: {} }));
-    }
-    if (path.endsWith("/changes")) {
-      return Promise.resolve(
-        jsonResponse({ has_changes: false, release_no: null, changes: [] }),
-      );
     }
     return Promise.resolve(jsonResponse({ data: rooms, page: {} }));
   });

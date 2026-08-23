@@ -29,12 +29,10 @@ import (
 var ErrEventNamesNoDeal = errors.New("dealrooms: the event names no deal")
 
 // The event types a Deal Room publishes that a reader of the deal's timeline
-// cares about: what the two sides said, what a buyer decided, and what the
-// seller released.
+// cares about: what the two sides said, and what a buyer decided.
 const (
 	EventCommentPosted    = "deal_room.comment_posted"
 	EventDecisionRecorded = "deal_room.decision_recorded"
-	EventPublished        = "deal_room.published"
 )
 
 // CommentPosted is one comment as its consumers need it.
@@ -92,30 +90,6 @@ func DecodeDecisionRecorded(payload json.RawMessage) (DecisionRecorded, error) {
 	}
 	if out.DealID == ids.Nil {
 		return DecisionRecorded{}, ErrEventNamesNoDeal
-	}
-	return out, nil
-}
-
-// Published is one release of a room to its buyers.
-type Published struct {
-	DealID    ids.UUID
-	ReleaseNo int
-	ReleaseID *ids.UUID
-}
-
-// DecodePublished reads one publish payload off the bus.
-func DecodePublished(payload json.RawMessage) (Published, error) {
-	var wire crmcontracts.PublicEventDealRoomPublished
-	if err := json.Unmarshal(payload, &wire); err != nil {
-		return Published{}, fmt.Errorf("decode %s: %w", EventPublished, err)
-	}
-	out := Published{DealID: ids.UUID(wire.DealId), ReleaseNo: wire.ReleaseNo}
-	if wire.ReleaseId != nil {
-		rel := ids.UUID(*wire.ReleaseId)
-		out.ReleaseID = &rel
-	}
-	if out.DealID == ids.Nil {
-		return Published{}, ErrEventNamesNoDeal
 	}
 	return out, nil
 }

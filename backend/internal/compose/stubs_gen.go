@@ -559,10 +559,6 @@ func (stubs) UpdateDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "UpdateDealRoom")
 }
 
-func (stubs) GetDealRoomChanges(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetDealRoomChanges")
-}
-
 func (stubs) CloseDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "CloseDealRoom")
 }
@@ -617,14 +613,6 @@ func (stubs) PauseDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) PreviewDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "PreviewDealRoom")
-}
-
-func (stubs) PublishDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "PublishDealRoom")
-}
-
-func (stubs) ListDealRoomReleases(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealRoomReleasesParams) {
-	httperr.NotImplemented(w, r, "ListDealRoomReleases")
 }
 
 func (stubs) ResumeDealRoom(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

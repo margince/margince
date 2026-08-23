@@ -3170,7 +3170,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The room as its buyer sees it — the latest release, never the live deal.
+         * The room as its buyer sees it — the room itself, never the live deal.
          * @description What the session admits the caller to. `access` says whether content is
          *     served: `live` and `closed` carry the room (closed is read-only), `paused`
          *     and `expired` carry none — only the participant and whom to contact.
@@ -7434,8 +7434,9 @@ export interface paths {
         put?: never;
         /**
          * Open a Deal Room on a deal.
-         * @description Starts in `draft` — nothing is buyer-visible until a human publishes. At most
-         *     one active room per deal: a second create while the first is still in draft,
+         * @description Starts LIVE, and reaches nobody: the invitation is what decides who may read
+         *     a room, so a room nobody has been invited to is private without a second gate.
+         *     At most one active room per deal: a second create while the first is still
          *     building, ready, publishing, live or paused is rejected
          *     (409 `deal_room_already_open`). Archiving the first frees the deal for another.
          *
@@ -7474,7 +7475,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit a Deal Room's draft text (partial).
+         * Edit a Deal Room's title and welcome message (partial).
          * @description Edits the WORKING copy only. A live room keeps serving its last published
          *     release until a human publishes again, so changing the title or welcome text
          *     here never changes what a buyer is currently reading.
@@ -7483,40 +7484,6 @@ export interface paths {
          *     (publish/pause/resume/close), which are human-only for that reason.
          */
         patch: operations["updateDealRoom"];
-        trace?: never;
-    };
-    "/deal-rooms/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Publish the working copy as the next release.
-         * @description HUMAN-ONLY, and this is the governance boundary for the whole resource: an
-         *     agent may draft room text, but the act that puts words in front of a buyer
-         *     belongs to a person who can be named in the audit trail.
-         *
-         *     Copies every buyer-visible editorial value into an immutable release and moves
-         *     the room to `live`. Releases are numbered from 1 and never edited — publishing
-         *     again writes release N+1 rather than changing what release N said, so
-         *     "what did they see in August?" has an answer that does not depend on the
-         *     current state of the CRM.
-         *
-         *     Rejected with 409 `deal_room_not_publishable` from `closed`, `expired` or
-         *     `archived`. Publishing a `paused` room resumes it.
-         */
-        post: operations["publishDealRoom"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/deal-rooms/{id}/pause": {
@@ -7611,10 +7578,10 @@ export interface paths {
         get?: never;
         /**
          * Set or clear when buyer access lapses.
-         * @description HUMAN-ONLY, for the same reason publish is: this moves the moment an outside
-         *     party stops being able to read the deal's material, and extending it is a
-         *     decision somebody has to own. An agent may draft a room's text; it may not
-         *     widen the window in which a buyer can read it.
+         * @description HUMAN-ONLY: this moves the moment an outside party stops being able to read
+         *     the deal's material, and extending it is a decision somebody has to own. An
+         *     agent may open a room, which nobody can read yet; it may not widen the window
+         *     in which a buyer can read one.
          *
          *     Null clears the bound, leaving access open until the room is closed or
          *     archived. A past instant is accepted and takes effect immediately — that is
@@ -7950,57 +7917,6 @@ export interface paths {
         };
         /** Every decision a buyer recorded on a document version, newest first. */
         get: operations["listDealRoomDecisions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deal-rooms/{id}/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * What the buyer would see differently if the room were published now.
-         * @description The draft diffed against the latest release: the title or welcome text
-         *     changed, documents added, removed, retitled or regrouped, and documents that
-         *     are no longer eligible (archived, unlinked from the deal, or hidden from it)
-         *     and would drop out of the next release. A room never published reports every
-         *     document as added. This is what the Publish button is disabled on when empty.
-         */
-        get: operations["getDealRoomChanges"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deal-rooms/{id}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * List a room's published releases, newest first.
-         * @description The record of what this room showed a buyer over its life. Immutable and
-         *     insert-only — a release is never edited, so this list only grows.
-         */
-        get: operations["listDealRoomReleases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8747,8 +8663,8 @@ export interface paths {
          * Stop listing a captured file on this deal without touching the file.
          * @description A captured attachment belongs to its message: it stays on the activity and in
          *     the company library. Hiding only takes it off THIS deal's Files area. A file
-         *     already shared in the Deal Room stays in the room's draft, but drops out of the
-         *     next release and of the buyer's download.
+         *     already shared in a Deal Room keeps its entry there for the seller to remove,
+         *     but stops being listed or downloadable for the buyer at once.
          *
          *     Needs update on the deal, and the file must be in the deal's Files area for
          *     this caller; anything else answers 404. Idempotent.
@@ -18266,7 +18182,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_decision" | "deal_room_document" | "deal_room_participant" | "deal_room_release" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_decision" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -20080,13 +19996,16 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description Where the room stands. Only `live` serves a buyer; `draft`, `building`, `ready`
-         *     and `publishing` are seller-side assembly, and the last four are terminal or
-         *     suspended.
+         * @description Where the room stands. A room is created `live`, and `live` and `closed` are
+         *     the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+         *     retired: no writer produces them, and the enum keeps them so an old audit
+         *     image still reads.
          *
-         *     `closed` freezes content while KEEPING access — the buyer still reads what
-         *     they were shown. `expired` is access lapsing on its own. `archived` ends the
-         *     room outright and frees the deal for another.
+         *     `closed` stops the room taking new work while KEEPING access — the buyer goes
+         *     on reading it, and neither side adds a document or a comment. It is not a
+         *     frozen copy: what the buyer reads is the live room, so a file later removed
+         *     from the deal stops being served here too. `expired` is access lapsing on its
+         *     own. `archived` ends the room outright and frees the deal for another.
          * @enum {string}
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";
@@ -20121,15 +20040,8 @@ export interface components {
              * @description When buyer access lapses on its own. Extending is an explicit human act.
              */
             expires_at?: string | null;
-            /**
-             * Format: date-time
-             * @description When the room first went live. Unchanged by later releases.
-             */
-            published_at?: string | null;
             /** Format: date-time */
             closed_at?: string | null;
-            /** @description How many releases this room has published. 0 means no buyer has ever seen it. */
-            readonly release_count?: number;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -20164,8 +20076,8 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description Any subset; omit a field to leave it unchanged. Edits the working copy — a live
-         *     room keeps serving its last release until someone publishes.
+         * @description Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
+         *     reads the new wording on their next load, with nothing staged in between.
          *
          *     `expires_at` is deliberately NOT here: moving the moment a buyer loses access
          *     is a change to what an outside party can reach, so it has its own human-only
@@ -20187,45 +20099,6 @@ export interface components {
              *     something a caller asked for, never something an omitted key did.
              */
             expires_at: string | null;
-        };
-        PublishDealRoomRequest: {
-            /** @description Why this release exists, for the seller's own record. Not shown to the buyer. */
-            release_note?: string | null;
-        };
-        /**
-         * @description An immutable published snapshot. Every buyer-visible editorial value is COPIED
-         *     in at publish time, so a later edit to the room or the deal cannot change what
-         *     a buyer was shown. The database refuses updates to this row outright.
-         */
-        DealRoomRelease: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            room_id: string;
-            /** @description Monotonic per room, from 1. Gaps are not possible. */
-            release_no: number;
-            /**
-             * @description The frozen buyer projection — title, welcome text, steward and the document
-             *     manifest as they read at publish time. Comments and decisions are deliberately
-             *     absent: they are live collaboration state, not editorial content.
-             */
-            snapshot: {
-                [key: string]: unknown;
-            };
-            release_note?: string | null;
-            /**
-             * Format: uuid
-             * @description The human who published. Null once that user is deleted; the release stands.
-             */
-            published_by?: string | null;
-            /** Format: date-time */
-            published_at: string;
-            source: string;
-            readonly captured_by: string;
-            /** Format: date-time */
-            created_at: string;
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description What a participant may do in the room. Coarse and room-wide on purpose — a
@@ -20377,29 +20250,11 @@ export interface components {
              */
             delivered: boolean;
         };
-        DealRoomChanges: {
-            has_changes: boolean;
-            /** @description The release the draft was compared against; null when the room was never published. */
-            release_no?: number | null;
-            changes: components["schemas"]["DealRoomChange"][];
-        };
-        DealRoomChange: {
-            /** @description One of title_changed, welcome_changed, document_added, document_removed, document_retitled, document_regrouped, document_reordered, document_ineligible. A plain string for the reason DealRoomParticipantCapability gives. */
-            kind: string;
-            /** Format: uuid */
-            document_id?: string | null;
-            /** @description The document title the sentence names: current, or as last published. */
-            title?: string | null;
-        };
         DealRoomPreviewIssued: {
             /** @description The one-time `mdr_` credential. Shown once; the server keeps only its digest. */
             credential: string;
             /** Format: date-time */
             credential_expires_at: string;
-        };
-        DealRoomReleaseListResponse: {
-            data: components["schemas"]["DealRoomRelease"][];
-            page: components["schemas"]["PageInfo"];
         };
         /**
          * @description One of four fixed groups, as a machine key: `commercial`, `legal`,
@@ -20618,15 +20473,14 @@ export interface components {
             capability: components["schemas"]["DealRoomParticipantCapability"];
         };
         /**
-         * @description The latest release, and only that. Every field here was copied at publish
-         *     time; the live deal is never read on this path.
+         * @description What the buyer reads at the top of the room, as it stands now. A room is
+         *     live from creation, so there is no release between an edit and this: the
+         *     seller changes the wording and the buyer reads it on their next load.
+         *     The live DEAL is still never read on this path — only the room's own row.
          */
         BuyerRoomContent: {
             title: string;
             welcome_message?: string | null;
-            release_no: number;
-            /** Format: date-time */
-            released_at: string;
             /** @description The named person on the seller's side to contact. Null when the steward's seat is gone. */
             steward_name?: string | null;
             /** Format: date-time */
@@ -34601,7 +34455,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The new Deal Room, in draft. */
+            /** @description The new Deal Room, live and awaiting its first invitation. */
             201: {
                 headers: {
                     Location?: string;
@@ -34712,38 +34566,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealRoom"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    publishDealRoom: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PublishDealRoomRequest"];
-            };
-        };
-        responses: {
-            /** @description The release that was published. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomRelease"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -35325,72 +35147,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealRoomDecisionListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    getDealRoomChanges: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The pending changes. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomChanges"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listDealRoomReleases: {
-        parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A page of releases. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomReleaseListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

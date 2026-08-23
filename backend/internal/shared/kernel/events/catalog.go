@@ -242,13 +242,12 @@ var catalog = map[string]struct {
 	// A Deal Room rides the deal family stream for the same reason a contract
 	// does: it is the buyer-facing face of one deal, and a consumer following
 	// that deal's arc wants what the buyer was shown alongside what changed.
-	"deal_room.opened":    {dealStreamEntity, 1},
-	"deal_room.updated":   {dealStreamEntity, 1},
-	"deal_room.published": {dealStreamEntity, 1},
-	"deal_room.paused":    {dealStreamEntity, 1},
-	"deal_room.resumed":   {dealStreamEntity, 1},
-	"deal_room.closed":    {dealStreamEntity, 1},
-	"deal_room.archived":  {dealStreamEntity, 1},
+	"deal_room.opened":   {dealStreamEntity, 1},
+	"deal_room.updated":  {dealStreamEntity, 1},
+	"deal_room.paused":   {dealStreamEntity, 1},
+	"deal_room.resumed":  {dealStreamEntity, 1},
+	"deal_room.closed":   {dealStreamEntity, 1},
+	"deal_room.archived": {dealStreamEntity, 1},
 	// Access changes ride the same stream: who may read a deal's material is part
 	// of that deal's arc, and a consumer following it wants both.
 	"deal_room.participant_invited":             {dealStreamEntity, 1},

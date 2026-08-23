@@ -135,7 +135,6 @@ const (
 	DealRoomParticipantInvited            SubscribableEventType = "deal_room.participant_invited"
 	DealRoomParticipantRevoked            SubscribableEventType = "deal_room.participant_revoked"
 	DealRoomPaused                        SubscribableEventType = "deal_room.paused"
-	DealRoomPublished                     SubscribableEventType = "deal_room.published"
 	DealRoomResumed                       SubscribableEventType = "deal_room.resumed"
 	DealRoomThreadResolved                SubscribableEventType = "deal_room.thread_resolved"
 	DealRoomUpdated                       SubscribableEventType = "deal_room.updated"
@@ -268,8 +267,6 @@ func (e SubscribableEventType) Valid() bool {
 	case DealRoomParticipantRevoked:
 		return true
 	case DealRoomPaused:
-		return true
-	case DealRoomPublished:
 		return true
 	case DealRoomResumed:
 		return true
@@ -773,16 +770,6 @@ type PublicEventDealRoomPaused struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 }
 
-// PublicEventDealRoomPublished Payload for deal_room.published — a human published a release, fixing exactly
-// what the buyer now reads. Release 1 is the room going live for the first time.
-type PublicEventDealRoomPublished struct {
-	DealId    openapi_types.UUID  `json:"deal_id"`
-	ReleaseId *openapi_types.UUID `json:"release_id,omitempty"`
-
-	// ReleaseNo Monotonic per room, from 1.
-	ReleaseNo int `json:"release_no"`
-}
-
 // PublicEventDealRoomResumed Payload for deal_room.resumed — a paused room serves its existing release again.
 type PublicEventDealRoomResumed struct {
 	DealId openapi_types.UUID `json:"deal_id"`
@@ -795,9 +782,10 @@ type PublicEventDealRoomThreadResolved struct {
 	ThreadId   openapi_types.UUID  `json:"thread_id"`
 }
 
-// PublicEventDealRoomUpdated Payload for deal_room.updated — the room's WORKING copy changed. What the
-// buyer reads is unaffected: that is the last published release, and it stays
-// authoritative until somebody publishes again.
+// PublicEventDealRoomUpdated Payload for deal_room.updated — something a buyer reads changed: the
+// room's title or welcome message, or the documents in it. A room is live
+// from creation, so there is no staging step between this event and what
+// an invited buyer sees on their next read.
 type PublicEventDealRoomUpdated struct {
 	// ChangedFields Which editorial fields moved. Names only — the text itself is not published.
 	// Typed as a plain string rather than an inline enum: an inline enum here
@@ -1809,10 +1797,6 @@ func (PublicEventDealRoomPaused) EventType() string { return "deal_room.paused" 
 
 func (PublicEventDealRoomPaused) EntityType() string { return "deal_room" }
 
-func (PublicEventDealRoomPublished) EventType() string { return "deal_room.published" }
-
-func (PublicEventDealRoomPublished) EntityType() string { return "deal_room" }
-
 func (PublicEventDealRoomResumed) EventType() string { return "deal_room.resumed" }
 
 func (PublicEventDealRoomResumed) EntityType() string { return "deal_room" }
@@ -2116,7 +2100,6 @@ var PublicEventVersions = map[string]int{
 	"deal_room.participant_invited":             1,
 	"deal_room.participant_revoked":             1,
 	"deal_room.paused":                          1,
-	"deal_room.published":                       1,
 	"deal_room.resumed":                         1,
 	"deal_room.thread_resolved":                 1,
 	"deal_room.updated":                         1,

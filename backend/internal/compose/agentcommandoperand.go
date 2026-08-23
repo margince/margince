@@ -217,16 +217,14 @@ func createRoomItemCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, 
 	}), nil
 }
 
-// updateDealRoomDocumentCommand decodes PATCH
-// /v1/deal-rooms/{id}/documents/{documentId}. It is a roomItemPatch, which
-// binds to the ITEM rather than the routed {id}:
-// patchCommand would bind to the room, so the approval a human released would
-// name a different record than the one the call goes on to write — and the
-// item id it did carry would never be checked at all.
-var updateDealRoomDocumentCommand = roomItemPatch("documentId")
-
-// roomItemPatch is the decoder for a PATCH on one item under a room, keyed by
+// roomItemPatch is the decoder for a PATCH on one item under a parent, keyed by
 // the path parameter that names the item.
+//
+// No live route uses it: the Deal Room document patch that did is human-only
+// now. It stays because patchTargetParam stays — an approval must bind to the
+// record the released call WRITES, and on a sub-resource route that is the
+// item, not the routed parent. TestASubResourcePatchProbesTheRecordItWrites
+// drives it, so the mechanism is exercised rather than merely present.
 func roomItemPatch(param string) func(agentPolicy, restCommandDeps, *http.Request, []byte) (agents.GovernedCall, error) {
 	return func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
 		return roomItemPatchCommand(pol, deps, r, body, param)

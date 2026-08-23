@@ -45,15 +45,6 @@ type IssuedPreview struct {
 	ExpiresAt  time.Time
 }
 
-// errNoPreviewInDraft refuses a preview of a room that has never been
-// published: the buyer would see nothing, and a blank page teaches a rep that
-// the feature is broken rather than that the room is a draft.
-var errNoPreviewInDraft = &stateError{
-	code:    "deal_room_not_previewable",
-	current: stateDraft,
-	wanted:  "publish first; a buyer only ever sees a published release",
-}
-
 // PreviewRoom mints a credential for the caller's preview seat in the room,
 // creating the seat on first use and ending the caller's earlier preview
 // sessions.
@@ -86,10 +77,7 @@ func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedP
 		if err := ensureDealWritable(ctx, tx, room); err != nil {
 			return err
 		}
-		switch room.State {
-		case stateDraft:
-			return errNoPreviewInDraft
-		case stateArchived:
+		if room.State == stateArchived {
 			return notAdmitting(stateArchived)
 		}
 		seat, err := previewSeat(ctx, tx, roomID, by)

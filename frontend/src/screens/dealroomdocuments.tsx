@@ -160,10 +160,6 @@ function useAddDocument(roomId: string) {
       queryClient.invalidateQueries({
         queryKey: ["deal-room-documents", roomId],
       });
-      // The pending-changes list and the Publish button read the diff.
-      queryClient.invalidateQueries({
-        queryKey: ["deal-room-changes", roomId],
-      });
     },
   });
 }
@@ -194,10 +190,6 @@ export function useRemoveDocument(roomId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["deal-room-documents", roomId],
-      });
-      // The pending-changes list and the Publish button read the diff.
-      queryClient.invalidateQueries({
-        queryKey: ["deal-room-changes", roomId],
       });
     },
   });

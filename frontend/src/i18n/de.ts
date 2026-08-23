@@ -808,13 +808,12 @@ export const de = {
   "record.profile": "Profil",
   "record.context": "Kontext",
   "room.editorial":
-    "Änderungen an den Dokumenten erreichen den Käufer bei der nächsten Veröffentlichung. Kommentare wirken sofort.",
+    "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
   "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
   "room.finished":
     "Dieser Raum ist abgeschlossen, das Geteilte ist jetzt ein Protokoll.",
   "room.card.title": "Deal Room",
   "room.card.people": "{invited} eingeladen · {active} angemeldet",
-  "room.card.unpublished": "unveröffentlichte Änderungen",
   "room.card.lastSeen": "Zuletzt von einem Käufer gesehen: {when}",
   "room.card.open": "Deal Room öffnen",
   "room.create.sub":
@@ -840,56 +839,23 @@ export const de = {
   "roompage.setExpiryHint": "Der Zugang endet an diesem Tag.",
   "roompage.closeTitle": "Diesen Deal Room schließen?",
   "roompage.closeBody":
-    "Käufer lesen weiter, was veröffentlicht wurde. Danach werden keine Dokumente, Kommentare oder Entscheidungen mehr angenommen. Personen entfernen und Links ausstellen geht weiterhin.",
+    "Käufer lesen den Raum weiter. Danach wird kein Dokument, Kommentar oder Beschluss mehr angenommen. Sie können weiterhin Zugänge entziehen und Links ausstellen.",
   "roompage.expiryLabel": "Zugang endet am",
   "roompage.expiryHint": "Leer lassen für kein Enddatum.",
-  "roompage.banner.draft":
-    "Noch nicht veröffentlicht. Käufer sehen nichts, bis Sie veröffentlichen.",
   "roompage.banner.paused":
     "Pausiert. Käufer sehen eine Pausenseite, bis Sie fortsetzen.",
   "roompage.banner.closed":
-    "Geschlossen. Käufer können das Veröffentlichte weiter lesen; mehr wird nicht angenommen.",
+    "Geschlossen. Käufer können den Raum weiter lesen; mehr wird nicht angenommen.",
   "roompage.banner.expired":
     "Abgelaufen. Käufer-Links funktionieren nicht mehr.",
   "roompage.banner.archived": "Archiviert. Niemand kann diesen Raum betreten.",
   "roompage.banner.liveUntil": "Live. Der Zugang endet am {when}.",
   "roompage.text.title": "Titel und Begrüßung",
-  "roompage.text.sub":
-    "Was der Käufer zuerst liest. Erreicht ihn bei der nächsten Veröffentlichung.",
+  "roompage.text.sub": "Was der Käufer zuerst liest. Er sieht es sofort.",
   "roompage.text.titleLabel": "Titel des Raums",
   "roompage.text.welcomeLabel": "Begrüßungstext",
   "roompage.viewAsBuyer": "Als Käufer ansehen",
-  "roompage.previewDraft":
-    "Zuerst veröffentlichen — ein Käufer sieht immer nur eine veröffentlichte Fassung.",
   "roompage.previewArchived": "Ein archivierter Raum hat keine Vorschau.",
-  "roompage.publish": "Veröffentlichen",
-  "roompage.publishFinished":
-    "Dieser Raum ist abgeschlossen und nimmt keine Veröffentlichungen mehr an.",
-  "roompage.publishNothing":
-    "Seit der letzten Veröffentlichung hat sich nichts geändert.",
-  "roompage.publishChecking": "Prüfe, was sich geändert hat …",
-  "roompage.publishUnknown":
-    "Die Änderungen konnten nicht gelesen werden; laden Sie die Seite neu.",
-  "roompage.publishTitle": "Diese Änderungen für den Käufer veröffentlichen?",
-  "roompage.publishNoteLabel": "Notiz fürs Protokoll (optional)",
-  "publish.title": "Veröffentlichen",
-  "publish.sub":
-    "Was der Käufer anders sehen würde, und was bisher hinausging.",
-  "publish.pendingBadge": "Unveröffentlichte Änderungen",
-  "publish.noChanges":
-    "Seit der letzten Veröffentlichung hat sich nichts geändert.",
-  "publish.release": "Veröffentlichung {no}",
-  "publish.readers": "{count} Käufer haben sich angemeldet.",
-  "publish.change.title": "Der Titel wurde geändert.",
-  "publish.change.welcome": "Der Begrüßungstext wurde geändert.",
-  "publish.change.added": "Hinzugefügt: {title}",
-  "publish.change.removed": "Entfernt: {title}",
-  "publish.change.retitled": "Umbenannt: {title}",
-  "publish.change.regrouped": "In eine andere Gruppe verschoben: {title}",
-  "publish.change.reordered": "Umsortiert: {title}",
-  "publish.change.ineligible":
-    "Fällt heraus (am Deal ausgeblendet, entkoppelt oder gelöscht): {title}",
-  "publish.change.other": "Geändert: {title}",
   "access.title": "Zugang",
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
@@ -919,8 +885,6 @@ export const de = {
   "access.nameLabel": "Name",
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
-  "access.inviteBeforePublish":
-    "Dieser Raum wurde noch nie veröffentlicht. Wen Sie jetzt einladen, sieht eine leere Seite, bis Sie auf Veröffentlichen klicken.",
   "access.inviteNote":
     "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
   "access.issued.title": "Link für {name}",
@@ -2297,7 +2261,7 @@ export const de = {
     "Die Nachricht und ihr Anhang bleiben an der Aktivität und in der Bibliothek des Unternehmens. Nur dieser Deal führt sie nicht mehr auf.",
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
-    "Die Datei wird von diesem Deal entfernt. Eine Deal-Room-Veröffentlichung, die sie nennt, liefert sie weiter aus, bis der Raum erneut veröffentlicht wird.",
+    "Die Datei wird aus diesem Deal entfernt – und aus jedem Deal Room, der sie teilt.",
   "files.showHidden": "Ausgeblendete Dateien zeigen",
   "files.hideHidden": "Ausgeblendete verbergen",
   "docs.state.draft": "Entwurf",
@@ -4275,6 +4239,8 @@ export const de = {
     "Dieser Link ist nicht mehr gültig. Präferenz-Links laufen ab oder können widerrufen werden — frag in einer aktuellen E-Mail nach einem neuen.",
   "buyer.opening": "Ihr Deal Room wird geöffnet …",
   "buyer.deadTitle": "Dieser Link funktioniert nicht mehr",
+  "buyer.deadAskContact":
+    "Bitten Sie Ihren Ansprechpartner um einen neuen Link.",
   "buyer.linkDead":
     "Der Link wurde bereits geöffnet, ist abgelaufen oder durch einen neueren ersetzt worden. Fordern Sie unten einen neuen Link an.",
   "buyer.noLink":
@@ -4290,9 +4256,6 @@ export const de = {
   "buyer.expiredTitle": "Zugang beendet",
   "buyer.expiredBody":
     "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward} oder fordern Sie unten einen neuen Link an.",
-  "buyer.notYetTitle": "Noch nichts veröffentlicht",
-  "buyer.notYetBody":
-    "{steward} hat in diesem Raum noch nichts veröffentlicht. Schauen Sie bald wieder vorbei.",
   "buyer.eyebrow": "Ihr Deal Room",
   "buyer.contact": "Ihr Ansprechpartner: {steward}.",
   "buyer.closed":
@@ -4327,17 +4290,11 @@ export const de = {
   "buyer.docs.download": "{title} herunterladen",
   "buyer.docs.downloadFailed":
     "Der Download hat nicht begonnen. Versuchen Sie es erneut oder wenden Sie sich an Ihren Ansprechpartner.",
-  "room.docs.unshared": "Noch nicht geteilt – zum Teilen veröffentlichen",
-  "room.docs.changed": "Seit der letzten Veröffentlichung geändert",
-  "room.docs.shared": "Mit dem Käufer geteilt",
-  "room.docs.ineligible":
-    "Kann nicht geteilt werden – die Datei ist nicht mehr im Deal",
   "buyer.docs.downloadShort": "Herunterladen",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "Der Raum als Ganzes",
-  "threads.roomSub":
-    "Alles, was nicht ein einzelnes Dokument betrifft – live, ohne Veröffentlichung.",
+  "threads.roomSub": "Alles, was nicht ein einzelnes Dokument betrifft.",
   "threads.aboutThis": "{count} Thread(s) zu diesem Dokument",
   "threads.askAbout": "Zu diesem Dokument fragen",
   "threads.cancel": "Abbrechen",

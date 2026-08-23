@@ -8,8 +8,8 @@ package compose
 //
 // Without it the Deal Room is a second, separate record of the same
 // relationship. A rep reading the deal sees the mail and the meetings; the
-// buyer's questions, their decisions on the documents and the releases sent to
-// them live somewhere else entirely, and every reader of the timeline — the
+// buyer's questions and their decisions on the documents live somewhere else
+// entirely, and every reader of the timeline — the
 // deal brief, the meeting brief, a human scrolling it — is missing the half of
 // the conversation that happened in the room.
 //
@@ -98,8 +98,8 @@ type roomNoteText struct {
 // this consumer carries the event at all, which is a separate answer from a
 // decode failure: most of the deal stream is somebody else's traffic.
 //
-// The switch is the whole editorial decision. A comment, a decision and a
-// release are things that happened between the two sides; opening, pausing and renaming a room are the seller's own housekeeping
+// The switch is the whole editorial decision. A comment and a decision are
+// things that happened between the two sides; opening, pausing and renaming a room are the seller's own housekeeping
 // and would only crowd the timeline that has to stay readable.
 func roomNote(env events.Envelope) (roomNoteText, bool, error) {
 	switch env.Type {
@@ -115,12 +115,6 @@ func roomNote(env events.Envelope) (roomNoteText, bool, error) {
 			return roomNoteText{}, false, err
 		}
 		return decisionNote(decided), true, nil
-	case dealrooms.EventPublished:
-		released, err := dealrooms.DecodePublished(env.Payload)
-		if err != nil {
-			return roomNoteText{}, false, err
-		}
-		return publishNote(released), true, nil
 	}
 	return roomNoteText{}, false, nil
 }
@@ -163,15 +157,6 @@ func decisionNote(decided dealrooms.DecisionRecorded) roomNoteText {
 
 // roomDecisionConfirm is the payload's spelling of an accepted version.
 const roomDecisionConfirm = "confirm_version"
-
-// publishNote records what the seller released to the buyer.
-func publishNote(released dealrooms.Published) roomNoteText {
-	return roomNoteText{
-		deal:    released.DealID,
-		subject: fmt.Sprintf("Deal Room release %d published", released.ReleaseNo),
-		body:    "The buyer can now read the room as it stood at this moment.",
-	}
-}
 
 // write logs the note against the deal, keyed on the event so a replay returns
 // the note that is already there. The deal is known non-zero: the decoders

@@ -77,7 +77,7 @@ func inviteTx(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, in InviteIn
 	// A finished room admits nobody new. Its content can no longer change, so an
 	// invitation into it would hand somebody a link to a room that will never
 	// tell them anything further.
-	if !publishable(string(room.State)) {
+	if !acceptsContent(string(room.State)) {
 		return IssuedInvitation{}, notAdmitting(string(room.State))
 	}
 

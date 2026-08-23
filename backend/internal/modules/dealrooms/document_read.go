@@ -102,12 +102,6 @@ func documentRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]crmc
 	return documentRowsWhere(ctx, tx, roomID, "")
 }
 
-// publishableDocumentRows is what a release freezes: only entries whose file is
-// still in the deal's Files area.
-func publishableDocumentRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]crmcontracts.DealRoomDocument, error) {
-	return documentRowsWhere(ctx, tx, roomID, " AND "+inTheDealsFilesArea)
-}
-
 func documentRowsWhere(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, also string) ([]crmcontracts.DealRoomDocument, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

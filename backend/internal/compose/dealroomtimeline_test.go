@@ -27,7 +27,6 @@ import (
 type roomPayload interface {
 	crmcontracts.PublicEventDealRoomCommentPosted |
 		crmcontracts.PublicEventDealRoomDecisionRecorded |
-		crmcontracts.PublicEventDealRoomPublished |
 		struct{}
 }
 
@@ -124,26 +123,13 @@ func TestTheTwoBuyerDecisionsReadDifferently(t *testing.T) {
 	}
 }
 
-func TestAPublishNamesItsReleaseNumber(t *testing.T) {
-	note, carried, err := roomNote(roomEnvelope(t, dealrooms.EventPublished,
-		crmcontracts.PublicEventDealRoomPublished{
-			DealId:    openapi_types.UUID(ids.NewV7()),
-			ReleaseNo: 3,
-		}))
-	if err != nil || !carried {
-		t.Fatalf("routing a publish: carried=%v err=%v", carried, err)
-	}
-	if !strings.Contains(note.subject, "3") {
-		t.Errorf("subject %q does not name the release", note.subject)
-	}
-}
-
 func TestTheSellersOwnHousekeepingStaysOffTheTimeline(t *testing.T) {
 	// Opening, pausing and renaming a room are the seller's own acts on their
 	// own tool. A note for each would crowd out the entries a reader of the
 	// deal actually needs.
 	for _, eventType := range []string{
 		"deal_room.opened", "deal_room.updated", "deal_room.paused",
+		"deal_room.published",
 		"deal_room.resumed", "deal_room.closed", "deal_room.archived",
 		"deal_room.participant_invited", "deal_room.thread_resolved",
 	} {
@@ -162,10 +148,10 @@ func TestAPayloadNamingNoDealIsRefusedRatherThanFiledAgainstNothing(t *testing.T
 	// Every room event carries its deal. One that does not would otherwise
 	// decode to the zero UUID and write a note attached to nothing, which reads
 	// exactly like a room nobody used.
-	_, _, err := roomNote(roomEnvelope(t, dealrooms.EventPublished,
-		crmcontracts.PublicEventDealRoomPublished{ReleaseNo: 1}))
+	_, _, err := roomNote(roomEnvelope(t, dealrooms.EventDecisionRecorded,
+		crmcontracts.PublicEventDealRoomDecisionRecorded{Kind: "confirm_version"}))
 	if !errors.Is(err, dealrooms.ErrEventNamesNoDeal) {
-		t.Fatalf("a publish naming no deal answered %v, want ErrEventNamesNoDeal", err)
+		t.Fatalf("a decision naming no deal answered %v, want ErrEventNamesNoDeal", err)
 	}
 }
 

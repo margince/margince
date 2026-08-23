@@ -4,10 +4,6 @@
 package dealrooms
 
 import (
-	"encoding/json"
-	"errors"
-	"io"
-	"net/http"
 	"strings"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
@@ -210,24 +206,4 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 		out.NextCursor = &p.NextCursor
 	}
 	return out
-}
-
-// publishNote reads the optional release note. The body itself is optional, so
-// an absent one is not an error — but a malformed one is, because silently
-// discarding a note the caller wrote would lose their words without saying so.
-func publishNote(w http.ResponseWriter, r *http.Request) (*string, bool) {
-	var req crmcontracts.PublishDealRoomRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if errors.Is(err, io.EOF) {
-		return nil, true
-	}
-	if err != nil {
-		httperr.Write(w, r, &fieldError{
-			field: "release_note",
-			code:  "malformed_body",
-			msg:   "the publish body could not be read as JSON; send no body to publish without a note",
-		})
-		return nil, false
-	}
-	return req.ReleaseNote, true
 }

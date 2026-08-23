@@ -49,6 +49,5 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 // roomColumns is the projection every room read returns, in the order
 // scanRoom consumes it.
 const roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, r.state,
-	r.steward_user_id, r.expires_at, r.published_at, r.closed_at,
-	r.source, r.captured_by, r.version, r.created_at, r.updated_at, r.archived_at,
-	(SELECT count(*) FROM deal_room_release rel WHERE rel.room_id = r.id)`
+	r.steward_user_id, r.expires_at, r.closed_at,
+	r.source, r.captured_by, r.version, r.created_at, r.updated_at, r.archived_at`

@@ -44,7 +44,6 @@ const (
 	recordTypeDealRoomDecision    agentRecordType = "deal_room_decision"
 	recordTypeDealRoomDocument    agentRecordType = "deal_room_document"
 	recordTypeDealRoomParticipant agentRecordType = "deal_room_participant"
-	recordTypeDealRoomRelease     agentRecordType = "deal_room_release"
 	recordTypeDealRoomThread      agentRecordType = "deal_room_thread"
 	recordTypeImportRun           agentRecordType = "import_run"
 	recordTypeLead                agentRecordType = "lead"
@@ -196,7 +195,6 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/deal-rooms/{id}/decisions":                                  {Op: "listDealRoomDecisions", Access: "tool", Tool: "search_records", RecordType: "deal_room_decision", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-rooms/{id}/documents":                                  {Op: "listDealRoomDocuments", Access: "tool", Tool: "search_records", RecordType: "deal_room_document", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-rooms/{id}/participants":                               {Op: "listDealRoomParticipants", Access: "tool", Tool: "search_records", RecordType: "deal_room_participant", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/deal-rooms/{id}/releases":                                   {Op: "listDealRoomReleases", Access: "tool", Tool: "search_records", RecordType: "deal_room_release", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-rooms/{id}/threads":                                    {Op: "listDealRoomThreads", Access: "tool", Tool: "search_records", RecordType: "deal_room_thread", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals":                                                      {Op: "listDeals", Access: "tool", Tool: "list_records", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals/{id}":                                                 {Op: "getDeal", Access: "tool", Tool: "read_record", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
@@ -291,8 +289,8 @@ var agentPolicies = map[string]agentPolicy{
 	"PATCH /v1/custom-fields/{id}":                                       {Op: "renameCustomField", Access: "tool", Tool: "update_record", RecordType: "custom_field", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/custom-fields/{id}/options":                               {Op: "updateCustomFieldOptions", Access: "tool", Tool: "update_record", RecordType: "custom_field", Tier: "confirmation_required", Scope: "write"},
 	"PATCH /v1/data-subject-requests/{id}":                               {Op: "updateDataSubjectRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"PATCH /v1/deal-rooms/{id}":                                          {Op: "updateDealRoom", Access: "tool", Tool: "update_record", RecordType: "deal_room", Tier: "auto_execute", Scope: "write"},
-	"PATCH /v1/deal-rooms/{id}/documents/{documentId}":                   {Op: "updateDealRoomDocument", Access: "tool", Tool: "update_record", RecordType: "deal_room_document", Tier: "auto_execute", Scope: "write"},
+	"PATCH /v1/deal-rooms/{id}":                                          {Op: "updateDealRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PATCH /v1/deal-rooms/{id}/documents/{documentId}":                   {Op: "updateDealRoomDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/deal-rooms/{id}/participants/{participantId}":             {Op: "updateDealRoomParticipant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/deals/{id}":                                               {Op: "updateDeal", Access: "tool", Tool: "update_record", RecordType: "deal", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/installation/settings":                                    {Op: "updateInstallationSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -380,13 +378,12 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/data-subject-requests":                                     {Op: "createDataSubjectRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms":                                                {Op: "createDealRoom", Access: "tool", Tool: "create_record", RecordType: "deal_room", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/deal-rooms/{id}/close":                                     {Op: "closeDealRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/deal-rooms/{id}/documents":                                 {Op: "addDealRoomDocument", Access: "tool", Tool: "create_record", RecordType: "deal_room_document", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/deal-rooms/{id}/documents":                                 {Op: "addDealRoomDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/participants":                              {Op: "inviteDealRoomParticipant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/participants/{participantId}/resend":       {Op: "resendDealRoomInvitation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/participants/{participantId}/revoke":       {Op: "revokeDealRoomParticipant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/pause":                                     {Op: "pauseDealRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/preview":                                   {Op: "previewDealRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/deal-rooms/{id}/publish":                                   {Op: "publishDealRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/resume":                                    {Op: "resumeDealRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-rooms/{id}/threads":                                   {Op: "openDealRoomThread", Access: "tool", Tool: "create_record", RecordType: "deal_room_thread", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/deal-rooms/{id}/threads/{threadId}/comments":               {Op: "replyDealRoomThread", Access: "tool", Tool: "create_record", RecordType: "deal_room_comment", Tier: "auto_execute", Scope: "write"},
