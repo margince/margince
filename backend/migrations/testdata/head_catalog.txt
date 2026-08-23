@@ -1317,7 +1317,6 @@ public.deal_room.deal_room_steward_fkey FOREIGN KEY (steward_user_id) REFERENCES
 public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON public.deal_room FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.deal_room.expires_at timestamp with time zone gen=- def=-
 public.deal_room.id uuid NOT NULL gen=- def=uuidv7()
-public.deal_room.published_at timestamp with time zone gen=- def=-
 public.deal_room.source text NOT NULL gen=- def=-
 public.deal_room.state text NOT NULL gen=- def='draft'::text
 public.deal_room.steward_user_id uuid gen=- def=-
@@ -1441,39 +1440,6 @@ public.deal_room_participant.updated_at timestamp with time zone NOT NULL gen=- 
 public.deal_room_participant.uq_deal_room_participant_in_room UNIQUE (id, room_id)
 public.deal_room_participant_pkey CREATE UNIQUE INDEX deal_room_participant_pkey ON public.deal_room_participant USING btree (id)
 public.deal_room_pkey CREATE UNIQUE INDEX deal_room_pkey ON public.deal_room USING btree (id)
-public.deal_room_release acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.deal_room_release.captured_by text NOT NULL gen=- def=-
-public.deal_room_release.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_room_release.deal_room_release_frozen CREATE TRIGGER deal_room_release_frozen BEFORE DELETE OR UPDATE ON public.deal_room_release FOR EACH ROW EXECUTE FUNCTION deal_room_release_is_frozen()
-public.deal_room_release.deal_room_release_pkey PRIMARY KEY (id)
-public.deal_room_release.deal_room_release_published_by_fkey FOREIGN KEY (published_by) REFERENCES app_user(id) ON DELETE SET NULL
-public.deal_room_release.deal_room_release_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
-public.deal_room_release.deal_room_release_snapshot_is_object CHECK ((jsonb_typeof(snapshot) = 'object'::text))
-public.deal_room_release.id uuid NOT NULL gen=- def=uuidv7()
-public.deal_room_release.published_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_room_release.published_by uuid gen=- def=-
-public.deal_room_release.release_no integer NOT NULL gen=- def=-
-public.deal_room_release.release_note text gen=- def=-
-public.deal_room_release.room_id uuid NOT NULL gen=- def=-
-public.deal_room_release.snapshot jsonb NOT NULL gen=- def=-
-public.deal_room_release.source text NOT NULL gen=- def=-
-public.deal_room_release.uq_deal_room_release_no UNIQUE (room_id, release_no)
-public.deal_room_release_is_frozen() secdef=false cfg=- acl=- 
-BEGIN
-  IF TG_OP = 'UPDATE' THEN
-    RAISE EXCEPTION 'deal_room_release is immutable: publish a new release instead of editing release % of room %', OLD.release_no, OLD.room_id
-      USING ERRCODE = 'restrict_violation';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM deal_room r WHERE r.id = OLD.room_id) THEN
-    RAISE EXCEPTION 'deal_room_release is immutable: release % of room % goes only with its room', OLD.release_no, OLD.room_id
-      USING ERRCODE = 'restrict_violation';
-  END IF;
-
-  RETURN OLD;
-END;
-
-public.deal_room_release_pkey CREATE UNIQUE INDEX deal_room_release_pkey ON public.deal_room_release USING btree (id)
 public.deal_room_session acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room_session.captured_by text NOT NULL gen=- def=-
 public.deal_room_session.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4039,7 +4005,6 @@ public.uq_deal_room_invitation_token CREATE UNIQUE INDEX uq_deal_room_invitation
 public.uq_deal_room_participant_email CREATE UNIQUE INDEX uq_deal_room_participant_email ON public.deal_room_participant USING btree (room_id, email) WHERE ((revoked_at IS NULL) AND (NOT preview))
 public.uq_deal_room_participant_in_room CREATE UNIQUE INDEX uq_deal_room_participant_in_room ON public.deal_room_participant USING btree (id, room_id)
 public.uq_deal_room_preview_per_rep CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview)
-public.uq_deal_room_release_no CREATE UNIQUE INDEX uq_deal_room_release_no ON public.deal_room_release USING btree (room_id, release_no)
 public.uq_deal_room_session_token CREATE UNIQUE INDEX uq_deal_room_session_token ON public.deal_room_session USING btree (token_hash)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_person_id, left_org_id, left_lead_id), COALESCE(right_person_id, right_org_id, right_lead_id))
 public.uq_import_run CREATE UNIQUE INDEX uq_import_run ON public.import_run USING btree (id)

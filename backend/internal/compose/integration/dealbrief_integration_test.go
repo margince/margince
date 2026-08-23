@@ -18,7 +18,7 @@ import (
 func TestTheDealBriefNamesTheRoomAndHidesADealTheCallerCannotSee(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 	var roomRow apptest.AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)

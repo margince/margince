@@ -63,10 +63,6 @@ func TestAnAgentMayNotMoveWhatABuyerCanReach(t *testing.T) {
 		act  string
 		call func() error
 	}{
-		{"publish a release to the buyer", func() error {
-			_, err := store.PublishRoom(ctx, roomID, nil)
-			return err
-		}},
 		{"pause the buyer's access", func() error {
 			_, err := store.PauseRoom(ctx, roomID)
 			return err

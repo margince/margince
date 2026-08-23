@@ -33,7 +33,9 @@ type buyerRoom struct {
 	email      string
 }
 
-func openPublishedRoom(t *testing.T, e *apptest.AppEnv) buyerRoom {
+// openRoomWithABuyer creates a room and invites one buyer into it. There is no
+// publish step: a room is live from creation, and the invitation is the gate.
+func openRoomWithABuyer(t *testing.T, e *apptest.AppEnv) buyerRoom {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.CreateOpenDeal(t, e, stages)
@@ -45,11 +47,6 @@ func openPublishedRoom(t *testing.T, e *apptest.AppEnv) buyerRoom {
 		t.Fatalf("create room = %d %v", status, room)
 	}
 	roomID, _ := room["id"].(string)
-
-	var release apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/publish", apptest.AnyMap{}, nil, &release); status != http.StatusCreated {
-		t.Fatalf("publish = %d %v", status, release)
-	}
 
 	var issued apptest.AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/participants", apptest.AnyMap{
@@ -71,7 +68,7 @@ func bearer(token string) map[string]string {
 func TestABuyerEntersTheRoomReadsTheReleaseAndSpeaks(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 
 	var peek apptest.AnyMap
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/peek", apptest.AnyMap{"credential": room.credential}, nil, &peek); status != http.StatusOK || peek["exchangeable"] != true {
@@ -105,19 +102,20 @@ func TestABuyerEntersTheRoomReadsTheReleaseAndSpeaks(t *testing.T) {
 		t.Fatalf("participant = %v", participant)
 	}
 
-	// The release is what the buyer reads: a rename after publish changes nothing.
+	// The room IS what the buyer reads: a rename reaches them on their next
+	// read, with no second act by the seller.
 	var patched apptest.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/deal-rooms/"+room.roomID, apptest.AnyMap{"title": "Renamed after publish"}, nil, &patched); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/deal-rooms/"+room.roomID, apptest.AnyMap{"title": "Renamed live"}, nil, &patched); status != http.StatusOK {
 		t.Fatalf("patch = %d %v", status, patched)
 	}
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/me", nil, bearer(token), &me); status != http.StatusOK {
 		t.Fatalf("me after rename = %d", status)
 	}
-	if content, _ := me["room"].(map[string]any); content["title"] != "Acme rollout" {
-		t.Fatalf("buyer saw an unpublished rename: %v", content["title"])
+	if content, _ := me["room"].(map[string]any); content["title"] != "Renamed live" {
+		t.Fatalf("the rename did not reach the buyer: %v", content["title"])
 	}
 
-	// The buyer speaks: a room-level thread, live, no publish needed.
+	// The buyer speaks: a room-level thread.
 	var opened apptest.AnyMap
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", apptest.AnyMap{"body": "When does the pilot start?"}, bearer(token), &opened); status != http.StatusCreated {
 		t.Fatalf("open thread = %d %v", status, opened)
@@ -173,7 +171,7 @@ func TestABuyerEntersTheRoomReadsTheReleaseAndSpeaks(t *testing.T) {
 func TestEveryDeadCredentialReadsAlikeAndARoomSessionHoldsNoCRMAuthority(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 
 	// Pause BEFORE the exchange: a valid credential for a paused room still
 	// exchanges, so the anonymous edge cannot say whether a room is paused.
@@ -266,7 +264,7 @@ func uploadDealFile(t *testing.T, e *apptest.AppEnv, dealID, filename string, da
 func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 	var roomRow apptest.AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)
@@ -295,28 +293,14 @@ func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 	}
 	token, _ := session["session_token"].(string)
 
-	// Not yet published: the buyer sees nothing, and the file is not served.
-	var before apptest.AnyMap
-	if status := publicCall(t, e, "GET", "/v1/public/rooms/documents", nil, bearer(token), &before); status != http.StatusOK {
-		t.Fatalf("documents = %d", status)
-	}
-	if list, _ := before["data"].([]any); len(list) != 0 {
-		t.Fatalf("an unpublished document reached the buyer: %v", list)
-	}
-	if status := publicCall(t, e, "GET", "/v1/public/rooms/documents/"+docID+"/file", nil, bearer(token), nil); status != http.StatusNotFound {
-		t.Fatalf("unpublished download = %d, want 404", status)
-	}
-
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/publish", apptest.AnyMap{}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("publish = %d", status)
-	}
+	// A document added to the room is shared: no second act by the seller.
 	var after apptest.AnyMap
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/documents", nil, bearer(token), &after); status != http.StatusOK {
 		t.Fatalf("documents = %d", status)
 	}
 	list, _ := after["data"].([]any)
 	if len(list) != 1 {
-		t.Fatalf("published documents = %v, want one", list)
+		t.Fatalf("the added document did not reach the buyer: %v", list)
 	}
 	first, _ := list[0].(map[string]any)
 	if first["title"] != "Data processing agreement" || first["group_key"] != "legal" || first["filename"] != "DPA_v7.pdf" {
@@ -338,8 +322,8 @@ func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 		t.Fatalf("download = %d %q %q", resp.StatusCode, bytes, resp.Header.Get("Content-Disposition"))
 	}
 
-	// The file archived on the deal: the release still names it, but the bytes
-	// are no longer the deal's to hand out.
+	// The file archived on the deal: the room entry survives for the seller to
+	// remove, but the bytes are no longer the deal's to hand out.
 	if status := e.Call(t, "DELETE", "/v1/attachments/"+attachmentID, nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("archive attachment = %d", status)
 	}
@@ -347,30 +331,21 @@ func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 		t.Fatalf("download of an archived file = %d, want 404", status)
 	}
 
-	// Removed after publish: the release still names it, so the buyer still
-	// reads it until the next publish — and then it is gone.
+	// Removed from the room: gone for the buyer on their next read.
 	if status := e.Call(t, "DELETE", "/v1/deal-rooms/"+room.roomID+"/documents/"+docID, nil, map[string]string{"If-Match": fmt.Sprint(doc["version"])}, nil); status != http.StatusOK {
 		t.Fatalf("remove = %d", status)
-	}
-	var still apptest.AnyMap
-	publicCall(t, e, "GET", "/v1/public/rooms/documents", nil, bearer(token), &still)
-	if list, _ := still["data"].([]any); len(list) != 1 {
-		t.Fatalf("a removal reached the buyer before a publish: %v", list)
-	}
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/publish", apptest.AnyMap{}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("republish = %d", status)
 	}
 	var gone apptest.AnyMap
 	publicCall(t, e, "GET", "/v1/public/rooms/documents", nil, bearer(token), &gone)
 	if list, _ := gone["data"].([]any); len(list) != 0 {
-		t.Fatalf("a removed document survived the republish: %v", list)
+		t.Fatalf("a removed document still reaches the buyer: %v", list)
 	}
 }
 
 func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 	var roomRow apptest.AnyMap
 	e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow)
 	dealID, _ := roomRow["deal_id"].(string)
@@ -380,9 +355,6 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
 	}, nil, &doc)
 	docID, _ := doc["id"].(string)
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/publish", apptest.AnyMap{}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("publish = %d", status)
-	}
 
 	// Laura may comment; Rita may decide.
 	var session apptest.AnyMap
@@ -470,16 +442,20 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 		t.Fatalf("decisions = %v, want none recorded", list)
 	}
 
-	// A thread on a document the seller has not published stays the seller's.
-	hidden := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", []byte("secret"))
-	var hiddenDoc apptest.AnyMap
-	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", apptest.AnyMap{"attachment_id": hidden, "group_key": "commercial", "source": "ui"}, nil, &hiddenDoc)
-	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", apptest.AnyMap{"document_id": hiddenDoc["id"], "body": "internal note on pricing", "source": "ui"}, nil, nil)
+	// A thread follows its document out of the room. Removing the document is
+	// how a seller takes something back — and the conversation about it goes
+	// with it, rather than hanging in the buyer's list pointing at nothing.
+	withdrawn := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", []byte("secret"))
+	var withdrawnDoc apptest.AnyMap
+	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", apptest.AnyMap{"attachment_id": withdrawn, "group_key": "commercial", "source": "ui"}, nil, &withdrawnDoc)
+	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", apptest.AnyMap{"document_id": withdrawnDoc["id"], "body": "note on pricing", "source": "ui"}, nil, nil)
+	e.Call(t, "DELETE", "/v1/deal-rooms/"+room.roomID+"/documents/"+withdrawnDoc["id"].(string), nil,
+		map[string]string{"If-Match": fmt.Sprint(withdrawnDoc["version"])}, nil)
 	var visible apptest.AnyMap
 	publicCall(t, e, "GET", "/v1/public/rooms/threads", nil, bearer(laura), &visible)
 	for _, th := range visible["data"].([]any) {
-		if m, _ := th.(map[string]any); m["document_id"] == hiddenDoc["id"] {
-			t.Fatalf("a thread on an unpublished document reached the buyer: %v", m)
+		if m, _ := th.(map[string]any); m["document_id"] == withdrawnDoc["id"] {
+			t.Fatalf("a thread on a withdrawn document still reaches the buyer: %v", m)
 		}
 	}
 

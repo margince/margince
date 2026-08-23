@@ -34,15 +34,15 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 	}
 	var out []crmcontracts.DealRoomThread
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		docs, err := publishedDocuments(ctx, tx, sess.RoomID, time.Now())
+		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
 		if err != nil {
 			return err
 		}
-		published := map[openapi_types.UUID]bool{}
+		visible := map[openapi_types.UUID]bool{}
 		for _, d := range docs {
-			published[d.ID] = true
+			visible[d.Id] = true
 		}
-		if documentID != nil && !published[openapi_types.UUID(*documentID)] {
+		if documentID != nil && !visible[openapi_types.UUID(*documentID)] {
 			out = []crmcontracts.DealRoomThread{}
 			return nil
 		}
@@ -52,7 +52,7 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 		}
 		out = make([]crmcontracts.DealRoomThread, 0, len(all))
 		for _, th := range all {
-			if th.DocumentId == nil || published[*th.DocumentId] {
+			if th.DocumentId == nil || visible[*th.DocumentId] {
 				out = append(out, th)
 			}
 		}
@@ -105,19 +105,19 @@ var errNotReviewer = &fieldError{
 	msg:   "only a reviewer can decide on a document; ask your contact to make you one",
 }
 
-// publishedDocumentVersion is the attachment the latest release names for a
-// document — what a buyer's thread or decision is about. A document the buyer
-// cannot see is absent.
-func publishedDocumentVersion(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentID ids.UUID) (ids.UUID, error) {
-	docs, err := publishedDocuments(ctx, tx, roomID, time.Now())
+// buyerVisibleDocument is the attachment behind a document the buyer can see —
+// what their thread is about. A document they cannot see is absent, which is
+// the same answer an id that never existed gets.
+func buyerVisibleDocument(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentID ids.UUID) (ids.UUID, error) {
+	docs, err := visibleDocuments(ctx, tx, roomID, time.Now())
 	if err != nil {
 		return ids.Nil, err
 	}
-	published, ok := findPublished(docs, ids.From[ids.DealRoomDocumentKind](documentID))
+	wanted, ok := findVisible(docs, ids.From[ids.DealRoomDocumentKind](documentID))
 	if !ok {
 		return ids.Nil, apperrors.ErrNotFound
 	}
-	return ids.UUID(published.AttachmentID), nil
+	return wanted.AttachmentID, nil
 }
 
 // OpenBuyerThread opens a thread as the buyer. A document thread is about a
@@ -133,7 +133,7 @@ func (s *Store) OpenBuyerThread(ctx context.Context, sess Session, in OpenThread
 			return err
 		}
 		if in.DocumentID != nil {
-			if _, err := publishedDocumentVersion(ctx, tx, sess.RoomID, *in.DocumentID); err != nil {
+			if _, err := buyerVisibleDocument(ctx, tx, sess.RoomID, *in.DocumentID); err != nil {
 				return err
 			}
 		}

@@ -22,7 +22,7 @@ import (
 func TestASellerPreviewsTheRoomAsABuyerAndCanChangeNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 
 	var issued apptest.AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/preview", nil, nil, &issued); status != http.StatusCreated {
@@ -96,28 +96,46 @@ func TestASellerPreviewsTheRoomAsABuyerAndCanChangeNothing(t *testing.T) {
 	}
 }
 
-func TestARoomNeverPublishedCannotBePreviewed(t *testing.T) {
+// A room can be previewed the moment it exists, because it is live the moment
+// it exists. Previewing used to be refused until a publish, which was the same
+// gate that showed an invited buyer an empty page.
+func TestAFreshRoomIsLiveAndCanBePreviewedAtOnce(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.CreateOpenDeal(t, e, stages)
 	var room apptest.AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", apptest.AnyMap{
-		"deal_id": dealID, "title": "Draft", "source": "ui",
+		"deal_id": dealID, "title": "Fresh", "welcome_message": "Welcome.", "source": "ui",
 	}, nil, &room); status != http.StatusCreated {
 		t.Fatalf("create room = %d %v", status, room)
 	}
+	if room["state"] != "live" {
+		t.Fatalf("a new room is %v, want live", room["state"])
+	}
 	roomID, _ := room["id"].(string)
-	var refused apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/preview", nil, nil, &refused); status != http.StatusUnprocessableEntity || refused["code"] != "deal_room_not_previewable" {
-		t.Fatalf("preview of a draft = %d %v, want 422 deal_room_not_previewable", status, refused)
+	var issued apptest.AnyMap
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/preview", nil, nil, &issued); status != http.StatusCreated {
+		t.Fatalf("preview of a fresh room = %d %v, want it issued", status, issued)
+	}
+	// And it shows the room, not an empty page.
+	credential, _ := issued["credential"].(string)
+	var session apptest.AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": credential}, nil, &session); status != http.StatusOK {
+		t.Fatalf("exchange = %d %v", status, session)
+	}
+	var me apptest.AnyMap
+	publicCall(t, e, "GET", "/v1/public/rooms/me", nil, bearer(session["session_token"].(string)), &me)
+	content, _ := me["room"].(map[string]any)
+	if content == nil || content["welcome_message"] != "Welcome." {
+		t.Fatalf("a fresh room previewed as %v, want its own welcome", me["room"])
 	}
 }
 
 func TestADeactivatedSellersPreviewEndsWithTheirSeat(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 	var issued apptest.AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/preview", nil, nil, &issued); status != http.StatusCreated {
 		t.Fatalf("preview = %d %v", status, issued)

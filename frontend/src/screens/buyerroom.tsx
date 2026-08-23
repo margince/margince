@@ -694,10 +694,13 @@ function RoomView({
     );
   }
   if (!view.room) {
+    // A seat that resolves always has a room to read: the server withholds
+    // content only in the paused and expired states, both handled above. This
+    // is the impossible branch, and it says so rather than rendering a blank.
     return (
-      <Panel title={t("buyer.notYetTitle")}>
+      <Panel title={t("buyer.deadTitle")}>
         <PanelBody>
-          <p>{t("buyer.notYetBody", { steward })}</p>
+          <p>{t("buyer.deadAskContact")}</p>
         </PanelBody>
       </Panel>
     );

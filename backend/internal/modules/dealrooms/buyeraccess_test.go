@@ -10,9 +10,6 @@ package dealrooms
 import (
 	"testing"
 	"time"
-
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestBuyerAccessFollowsTheRoomStateAndTheExpiryClock(t *testing.T) {
@@ -50,24 +47,6 @@ func TestBuyerAccessFollowsTheRoomStateAndTheExpiryClock(t *testing.T) {
 		t.Fatal("a paused or expired room must serve no content")
 	}
 	if !servesContent(accessLive) || !servesContent(accessClosed) {
-		t.Fatal("a live or closed room serves its release")
-	}
-}
-
-func TestAnOldReleaseCarryingKeysTheSnapshotNoLongerHasStillDecodes(t *testing.T) {
-	// Releases once froze a shared to-do list under a "tasks" key. The key is
-	// gone from the struct; a release that carries it must still decode, and
-	// what it froze there is simply not served again.
-	old, err := decodeSnapshot([]byte(`{"title":"Acme","deal_id":"` + ids.NewV7().String() +
-		`","released_at":"2026-08-01T00:00:00Z","tasks":[{"id":"` + ids.NewV7().String() + `","side":"buyer","title":"Sign","position":1}]}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if old.Title != "Acme" || old.Documents != nil {
-		t.Fatalf("old release decoded as %+v", old)
-	}
-	empty := snapshotOf(crmcontracts.DealRoom{Title: "Acme"}, nil)
-	if empty.Documents == nil {
-		t.Fatal("a release with no documents must carry an empty list, not a missing key")
+		t.Fatal("a live or closed room serves its content")
 	}
 }

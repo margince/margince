@@ -11337,44 +11337,6 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
-  /deal-rooms/{id}/publish:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    post:
-      tags: [Deals]
-      operationId: publishDealRoom
-      summary: Publish the working copy as the next release.
-      description: |
-        HUMAN-ONLY, and this is the governance boundary for the whole resource: an
-        agent may draft room text, but the act that puts words in front of a buyer
-        belongs to a person who can be named in the audit trail.
-
-        Copies every buyer-visible editorial value into an immutable release and moves
-        the room to `live`. Releases are numbered from 1 and never edited — publishing
-        again writes release N+1 rather than changing what release N said, so
-        "what did they see in August?" has an answer that does not depend on the
-        current state of the CRM.
-
-        Rejected with 409 `deal_room_not_publishable` from `closed`, `expired` or
-        `archived`. Publishing a `paused` room resumes it.
-      x-agent-access: human-only
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PublishDealRoomRequest' }
-      responses:
-        '201':
-          description: The release that was published.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealRoomRelease' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
   /deal-rooms/{id}/pause:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -11908,53 +11870,6 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /deal-rooms/{id}/changes:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Deals]
-      operationId: getDealRoomChanges
-      summary: What the buyer would see differently if the room were published now.
-      description: |
-        The draft diffed against the latest release: the title or welcome text
-        changed, documents added, removed, retitled or regrouped, and documents that
-        are no longer eligible (archived, unlinked from the deal, or hidden from it)
-        and would drop out of the next release. A room never published reports every
-        document as added. This is what the Publish button is disabled on when empty.
-      responses:
-        '200':
-          description: The pending changes.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealRoomChanges' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /deal-rooms/{id}/releases:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Deals]
-      operationId: listDealRoomReleases
-      summary: List a room's published releases, newest first.
-      description: |
-        The record of what this room showed a buyer over its life. Immutable and
-        insert-only — a release is never edited, so this list only grows.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_release, tier: auto_execute, scope: read }
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: A page of releases.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealRoomReleaseListResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
   # -------------------------- offer templates ---------------------------
   # Branded, workspace-governed DE/EN PDF layouts for offers (B-E03.22/WP7,
   # data-model §12.6). Admin/ops config surface, like pipeline/product rate-
@@ -26916,15 +26831,7 @@ components:
           type: [string, 'null']
           format: date-time
           description: When buyer access lapses on its own. Extending is an explicit human act.
-        published_at:
-          type: [string, 'null']
-          format: date-time
-          description: When the room first went live. Unchanged by later releases.
         closed_at: { type: [string, 'null'], format: date-time }
-        release_count:
-          type: integer
-          readOnly: true
-          description: How many releases this room has published. 0 means no buyer has ever seen it.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied. }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -26985,47 +26892,6 @@ components:
             the field is required rather than optional — clearing an expiry must be
             something a caller asked for, never something an omitted key did.
       additionalProperties: false
-
-    PublishDealRoomRequest:
-      type: object
-      properties:
-        release_note:
-          type: [string, 'null']
-          description: Why this release exists, for the seller's own record. Not shown to the buyer.
-      additionalProperties: false
-
-    DealRoomRelease:
-      type: object
-      description: |
-        An immutable published snapshot. Every buyer-visible editorial value is COPIED
-        in at publish time, so a later edit to the room or the deal cannot change what
-        a buyer was shown. The database refuses updates to this row outright.
-      required: [id, room_id, release_no, snapshot, published_at, source, captured_by, created_at]
-      properties:
-        id: { type: string, format: uuid }
-        room_id: { type: string, format: uuid }
-        release_no:
-          type: integer
-          minimum: 1
-          description: Monotonic per room, from 1. Gaps are not possible.
-        snapshot:
-          type: object
-          description: |
-            The frozen buyer projection — title, welcome text, steward and the document
-            manifest as they read at publish time. Comments and decisions are deliberately
-            absent: they are live collaboration state, not editorial content.
-          additionalProperties: true
-        release_note: { type: [string, 'null'] }
-        published_by:
-          type: [string, 'null']
-          format: uuid
-          description: The human who published. Null once that user is deleted; the release stands.
-        published_at: { type: string, format: date-time }
-        source: { type: string }
-        captured_by: { type: string, readOnly: true }
-        created_at: { type: string, format: date-time }
-      additionalProperties: true
-      x-extension: true
 
     DealRoomParticipantCapability:
       description: |
@@ -27188,32 +27054,6 @@ components:
             link itself rather than being told the invitation failed.
       additionalProperties: false
 
-    DealRoomChanges:
-      type: object
-      required: [has_changes, changes]
-      properties:
-        has_changes: { type: boolean }
-        release_no:
-          type: [integer, 'null']
-          description: The release the draft was compared against; null when the room was never published.
-        changes:
-          type: array
-          items: { $ref: '#/components/schemas/DealRoomChange' }
-
-    DealRoomChange:
-      type: object
-      required: [kind]
-      properties:
-        kind:
-          type: string
-          description: >-
-            One of title_changed, welcome_changed, document_added, document_removed,
-            document_retitled, document_regrouped, document_reordered,
-            document_ineligible. A plain string
-            for the reason DealRoomParticipantCapability gives.
-        document_id: { type: [string, 'null'], format: uuid }
-        title: { type: [string, 'null'], description: 'The document title the sentence names: current, or as last published.' }
-
     DealRoomPreviewIssued:
       type: object
       required: [credential, credential_expires_at]
@@ -27222,13 +27062,6 @@ components:
           type: string
           description: The one-time `mdr_` credential. Shown once; the server keeps only its digest.
         credential_expires_at: { type: string, format: date-time }
-
-    DealRoomReleaseListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/DealRoomRelease' } }
-        page: { $ref: '#/components/schemas/PageInfo' }
 
     DealRoomDocumentGroup:
       type: string

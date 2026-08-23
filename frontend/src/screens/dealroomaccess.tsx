@@ -400,9 +400,6 @@ function InviteDialog({
             }))}
           />
           <p className="t-small">{t("access.inviteNote")}</p>
-          {room.published_at ? null : (
-            <Callout tone="warn">{t("access.inviteBeforePublish")}</Callout>
-          )}
         </div>
       )}
     </ConfirmModal>

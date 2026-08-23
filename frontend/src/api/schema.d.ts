@@ -7485,40 +7485,6 @@ export interface paths {
         patch: operations["updateDealRoom"];
         trace?: never;
     };
-    "/deal-rooms/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Publish the working copy as the next release.
-         * @description HUMAN-ONLY, and this is the governance boundary for the whole resource: an
-         *     agent may draft room text, but the act that puts words in front of a buyer
-         *     belongs to a person who can be named in the audit trail.
-         *
-         *     Copies every buyer-visible editorial value into an immutable release and moves
-         *     the room to `live`. Releases are numbered from 1 and never edited — publishing
-         *     again writes release N+1 rather than changing what release N said, so
-         *     "what did they see in August?" has an answer that does not depend on the
-         *     current state of the CRM.
-         *
-         *     Rejected with 409 `deal_room_not_publishable` from `closed`, `expired` or
-         *     `archived`. Publishing a `paused` room resumes it.
-         */
-        post: operations["publishDealRoom"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/deal-rooms/{id}/pause": {
         parameters: {
             query?: never;
@@ -7950,57 +7916,6 @@ export interface paths {
         };
         /** Every decision a buyer recorded on a document version, newest first. */
         get: operations["listDealRoomDecisions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deal-rooms/{id}/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * What the buyer would see differently if the room were published now.
-         * @description The draft diffed against the latest release: the title or welcome text
-         *     changed, documents added, removed, retitled or regrouped, and documents that
-         *     are no longer eligible (archived, unlinked from the deal, or hidden from it)
-         *     and would drop out of the next release. A room never published reports every
-         *     document as added. This is what the Publish button is disabled on when empty.
-         */
-        get: operations["getDealRoomChanges"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deal-rooms/{id}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * List a room's published releases, newest first.
-         * @description The record of what this room showed a buyer over its life. Immutable and
-         *     insert-only — a release is never edited, so this list only grows.
-         */
-        get: operations["listDealRoomReleases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20121,15 +20036,8 @@ export interface components {
              * @description When buyer access lapses on its own. Extending is an explicit human act.
              */
             expires_at?: string | null;
-            /**
-             * Format: date-time
-             * @description When the room first went live. Unchanged by later releases.
-             */
-            published_at?: string | null;
             /** Format: date-time */
             closed_at?: string | null;
-            /** @description How many releases this room has published. 0 means no buyer has ever seen it. */
-            readonly release_count?: number;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -20187,45 +20095,6 @@ export interface components {
              *     something a caller asked for, never something an omitted key did.
              */
             expires_at: string | null;
-        };
-        PublishDealRoomRequest: {
-            /** @description Why this release exists, for the seller's own record. Not shown to the buyer. */
-            release_note?: string | null;
-        };
-        /**
-         * @description An immutable published snapshot. Every buyer-visible editorial value is COPIED
-         *     in at publish time, so a later edit to the room or the deal cannot change what
-         *     a buyer was shown. The database refuses updates to this row outright.
-         */
-        DealRoomRelease: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            room_id: string;
-            /** @description Monotonic per room, from 1. Gaps are not possible. */
-            release_no: number;
-            /**
-             * @description The frozen buyer projection — title, welcome text, steward and the document
-             *     manifest as they read at publish time. Comments and decisions are deliberately
-             *     absent: they are live collaboration state, not editorial content.
-             */
-            snapshot: {
-                [key: string]: unknown;
-            };
-            release_note?: string | null;
-            /**
-             * Format: uuid
-             * @description The human who published. Null once that user is deleted; the release stands.
-             */
-            published_by?: string | null;
-            /** Format: date-time */
-            published_at: string;
-            source: string;
-            readonly captured_by: string;
-            /** Format: date-time */
-            created_at: string;
-        } & {
-            [key: string]: unknown;
         };
         /**
          * @description What a participant may do in the room. Coarse and room-wide on purpose — a
@@ -20377,29 +20246,11 @@ export interface components {
              */
             delivered: boolean;
         };
-        DealRoomChanges: {
-            has_changes: boolean;
-            /** @description The release the draft was compared against; null when the room was never published. */
-            release_no?: number | null;
-            changes: components["schemas"]["DealRoomChange"][];
-        };
-        DealRoomChange: {
-            /** @description One of title_changed, welcome_changed, document_added, document_removed, document_retitled, document_regrouped, document_reordered, document_ineligible. A plain string for the reason DealRoomParticipantCapability gives. */
-            kind: string;
-            /** Format: uuid */
-            document_id?: string | null;
-            /** @description The document title the sentence names: current, or as last published. */
-            title?: string | null;
-        };
         DealRoomPreviewIssued: {
             /** @description The one-time `mdr_` credential. Shown once; the server keeps only its digest. */
             credential: string;
             /** Format: date-time */
             credential_expires_at: string;
-        };
-        DealRoomReleaseListResponse: {
-            data: components["schemas"]["DealRoomRelease"][];
-            page: components["schemas"]["PageInfo"];
         };
         /**
          * @description One of four fixed groups, as a machine key: `commercial`, `legal`,
@@ -34721,38 +34572,6 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    publishDealRoom: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PublishDealRoomRequest"];
-            };
-        };
-        responses: {
-            /** @description The release that was published. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomRelease"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
     pauseDealRoom: {
         parameters: {
             query?: never;
@@ -35325,72 +35144,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealRoomDecisionListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    getDealRoomChanges: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The pending changes. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomChanges"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listDealRoomReleases: {
-        parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A page of releases. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealRoomReleaseListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

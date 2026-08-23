@@ -47,6 +47,18 @@ func cleanTitle(title string) (string, error) {
 	return trimmed, nil
 }
 
+// acceptsContent names the states a room still takes work in. The three it
+// refuses are the ones where the room is a record rather than a workplace: a
+// closed, expired or archived room takes no new document and no new comment,
+// from either side.
+func acceptsContent(state string) bool {
+	switch state {
+	case "closed", "expired", "archived":
+		return false
+	}
+	return true
+}
+
 // openRoomForContent returns the room a content write is about to land in,
 // with its state settled under a lock.
 //
@@ -71,7 +83,7 @@ func openRoomForContent(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (
 	if err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	if !publishable(string(room.State)) {
+	if !acceptsContent(string(room.State)) {
 		return crmcontracts.DealRoom{}, notContentEditable(string(room.State))
 	}
 	return room, nil

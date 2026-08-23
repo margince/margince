@@ -89,12 +89,12 @@ func TestPublishIsRefusedOnlyWhereABuyerIsDoneReceiving(t *testing.T) {
 		want, judged := verdicts[state]
 		if !judged {
 			t.Errorf("the contract declares state %q and this test has no verdict for it — "+
-				"decide whether a buyer may still receive a release in that state", state)
+				"decide whether the room still takes work in that state", state)
 			continue
 		}
 		t.Run(state, func(t *testing.T) {
-			if got := publishable(state); got != want {
-				t.Errorf("publishable(%q) = %v, want %v", state, got, want)
+			if got := acceptsContent(state); got != want {
+				t.Errorf("acceptsContent(%q) = %v, want %v", state, got, want)
 			}
 		})
 	}

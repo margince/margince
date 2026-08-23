@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Eye, Pause, Play, Send, Square } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ExternalLink, Pause, Play, Square } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -16,11 +16,10 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateAbbrev } from "../format/format";
 import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import {
   FINISHED_STATES,
@@ -28,8 +27,7 @@ import {
   STATE_LABELS,
   useDealRoom,
 } from "./dealroom";
-import { buyerLink, DealRoomAccess, useParticipants } from "./dealroomaccess";
-import { changesKey, useRoomChanges } from "./dealroomchanges";
+import { buyerLink, DealRoomAccess } from "./dealroomaccess";
 import { DealRoomConversation } from "./dealroomconversation";
 import "./dealroompage.css";
 
@@ -37,24 +35,11 @@ import "./dealroompage.css";
 // read, when it goes out, and to hold the conversation. Reached from the deal
 // page; the deal page keeps only a card that points here.
 //
-// Publish is the one verb that reaches a buyer. It is disabled with the reason
-// when there is nothing to publish, and the list of pending changes above it
-// is computed by the server from the frozen release, so the button and the
-// list can never disagree.
+// Everything on this page is live. A document added is shared, a title changed
+// is read: the invitation is the only gate, and the seller does not press a
+// second button to reach the buyer they already invited.
 
 type DealRoom = components["schemas"]["DealRoom"];
-type DealRoomChange = components["schemas"]["DealRoomChange"];
-
-const CHANGE_LABELS: Record<string, MessageKey> = {
-  title_changed: "publish.change.title",
-  welcome_changed: "publish.change.welcome",
-  document_added: "publish.change.added",
-  document_removed: "publish.change.removed",
-  document_retitled: "publish.change.retitled",
-  document_regrouped: "publish.change.regrouped",
-  document_reordered: "publish.change.reordered",
-  document_ineligible: "publish.change.ineligible",
-};
 
 export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
@@ -98,7 +83,6 @@ function RoomPage({
           <Badge>{t(STATE_LABELS[room.state])}</Badge>
           {mayWrite ? <ViewAsBuyerButton room={room} /> : null}
           {mayWrite ? <LifecycleMenu room={room} /> : null}
-          {mayWrite ? <PublishButton room={room} /> : null}
         </div>
       </header>
       <StateBanner room={room} />
@@ -109,7 +93,6 @@ function RoomPage({
         </div>
         <div className="roompage-side">
           <DealRoomAccess room={room} mayManage={mayWrite} />
-          <PublishPanel room={room} />
         </div>
       </div>
     </div>
@@ -139,11 +122,7 @@ function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
     },
   });
   const reason =
-    room.state === "draft"
-      ? t("roompage.previewDraft")
-      : room.state === "archived"
-        ? t("roompage.previewArchived")
-        : undefined;
+    room.state === "archived" ? t("roompage.previewArchived") : undefined;
   return (
     <>
       <Button
@@ -169,8 +148,6 @@ function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const { locale } = useLocale();
   switch (room.state) {
-    case "draft":
-      return <Callout tone="info">{t("roompage.banner.draft")}</Callout>;
     case "paused":
       return <Callout tone="warn">{t("roompage.banner.paused")}</Callout>;
     case "closed":
@@ -190,24 +167,18 @@ function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
   }
 }
 
-function useRoomVerb(roomId: string, dealId: string) {
+function useRoomVerb(dealId: string) {
   const t = useT();
   const queryClient = useQueryClient();
   return {
     t,
     refresh: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["deal-rooms", dealId] }),
-        queryClient.invalidateQueries({ queryKey: changesKey(roomId) }),
-        queryClient.invalidateQueries({
-          queryKey: ["deal-room-releases", roomId],
-        }),
-      ]),
+      queryClient.invalidateQueries({ queryKey: ["deal-rooms", dealId] }),
   };
 }
 
 function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
-  const { t, refresh } = useRoomVerb(room.id, room.deal_id);
+  const { t, refresh } = useRoomVerb(room.deal_id);
   const [expiring, setExpiring] = useState(false);
   const [closing, setClosing] = useState(false);
   const move = useMutation({
@@ -300,7 +271,7 @@ function ExpiryDialog({
   open,
   onClose,
 }: Readonly<{ room: DealRoom; open: boolean; onClose: () => void }>) {
-  const { t, refresh } = useRoomVerb(room.id, room.deal_id);
+  const { t, refresh } = useRoomVerb(room.deal_id);
   const [date, setDate] = useState(
     room.expires_at ? room.expires_at.slice(0, 10) : "",
   );
@@ -358,7 +329,7 @@ function RoomText({
   room,
   refusal,
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
-  const { t, refresh } = useRoomVerb(room.id, room.deal_id);
+  const { t, refresh } = useRoomVerb(room.deal_id);
   const [title, setTitle] = useState(room.title);
   const [welcome, setWelcome] = useState(room.welcome_message ?? "");
   const save = useMutation({
@@ -433,151 +404,6 @@ function RoomText({
             </div>
           )}
         </div>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function PublishButton({ room }: Readonly<{ room: DealRoom }>) {
-  const { t, refresh } = useRoomVerb(room.id, room.deal_id);
-  const changes = useRoomChanges(room.id);
-  const [confirming, setConfirming] = useState(false);
-  const [note, setNote] = useState("");
-  const publish = useMutation({
-    mutationFn: async (releaseNote: string) => {
-      const { error } = await api.POST("/deal-rooms/{id}/publish", {
-        params: { path: { id: room.id } },
-        body: releaseNote === "" ? {} : { release_note: releaseNote },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-    },
-    onSuccess: () => {
-      refresh();
-      setConfirming(false);
-      setNote("");
-    },
-  });
-  const finished = FINISHED_STATES.has(room.state);
-  // Enabled only once the server has said there IS something to publish: a
-  // click before that answer, or after a failed one, would go out unreviewed.
-  const reason = finished
-    ? t("roompage.publishFinished")
-    : changes.isPending
-      ? t("roompage.publishChecking")
-      : changes.isError
-        ? t("roompage.publishUnknown")
-        : !changes.data?.has_changes
-          ? t("roompage.publishNothing")
-          : undefined;
-  return (
-    <>
-      <Button
-        variant="primary"
-        reason={reason}
-        onClick={() => setConfirming(true)}
-      >
-        <Send aria-hidden />
-        {t("roompage.publish")}
-      </Button>
-      <ConfirmModal
-        open={confirming}
-        onClose={() => setConfirming(false)}
-        title={t("roompage.publishTitle")}
-        confirmLabel={t("roompage.publish")}
-        pending={publish.isPending}
-        error={publish.isError ? problemMessageOf(publish.error, t) : null}
-        onConfirm={() => publish.mutate(note.trim())}
-      >
-        <ChangeList changes={changes.data?.changes ?? []} />
-        <Field label={t("roompage.publishNoteLabel")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          )}
-        </Field>
-      </ConfirmModal>
-    </>
-  );
-}
-
-function ChangeList({ changes }: Readonly<{ changes: DealRoomChange[] }>) {
-  const t = useT();
-  if (changes.length === 0) {
-    return <p className="t-small">{t("publish.noChanges")}</p>;
-  }
-  return (
-    <ul className="roompage-changes">
-      {changes.map((c, i) => (
-        <li key={`${c.kind}-${c.document_id ?? i}`}>
-          {t(CHANGE_LABELS[c.kind] ?? "publish.change.other", {
-            title: c.title ?? "",
-          })}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function PublishPanel({ room }: Readonly<{ room: DealRoom }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const changes = useRoomChanges(room.id);
-  const releases = useQuery({
-    queryKey: ["deal-room-releases", room.id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/releases", {
-        params: { path: { id: room.id }, query: { limit: 10 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-  const participants = useParticipants(room.id);
-  const active = (participants.data?.data ?? []).filter(
-    (p) => !p.revoked_at && p.has_signed_in,
-  ).length;
-  return (
-    <Panel
-      title={t("publish.title")}
-      sub={t("publish.sub")}
-      titleAction={
-        changes.data?.has_changes ? (
-          <Badge>{t("publish.pendingBadge")}</Badge>
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        <QueryStates query={changes} pendingLines={2}>
-          <ChangeList changes={changes.data?.changes ?? []} />
-        </QueryStates>
-      </PanelBody>
-      <QueryStates query={releases} pendingLines={1}>
-        {(releases.data?.data ?? []).map((rel) => (
-          <PanelRow key={rel.id}>
-            <p>
-              {t("publish.release", { no: String(rel.release_no) })}
-              <span className="t-small">
-                {" "}
-                · {formatDateAbbrev(rel.published_at, locale, RECORD_ZONE)}
-              </span>
-            </p>
-            {rel.release_note ? (
-              <p className="t-small">{rel.release_note}</p>
-            ) : null}
-          </PanelRow>
-        ))}
-      </QueryStates>
-      <PanelBody>
-        <p className="t-small">
-          <Eye aria-hidden /> {t("publish.readers", { count: String(active) })}
-        </p>
       </PanelBody>
     </Panel>
   );

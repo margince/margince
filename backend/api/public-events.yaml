@@ -46,7 +46,6 @@ components:
         - contract.archived
         - deal_room.opened
         - deal_room.updated
-        - deal_room.published
         - deal_room.paused
         - deal_room.resumed
         - deal_room.closed
@@ -406,29 +405,6 @@ components:
             `resent` — a fresh credential was issued on request.
             `address_corrected` — the address changed, so the link already sent was
             retired; no new credential exists until somebody resends.
-      additionalProperties: false
-
-    PublicEventDealRoomPublished:
-      type: object
-      x-event-type: deal_room.published
-      x-entity-type: deal_room
-      x-version: 1
-      description: |
-        Payload for deal_room.published — a human published a release, fixing exactly
-        what the buyer now reads. Release 1 is the room going live for the first time.
-      required:
-        - deal_id
-        - release_no
-      properties:
-        deal_id:
-          type: string
-          format: uuid
-        release_no:
-          type: integer
-          description: Monotonic per room, from 1.
-        release_id:
-          type: string
-          format: uuid
       additionalProperties: false
 
     PublicEventDealRoomPaused:

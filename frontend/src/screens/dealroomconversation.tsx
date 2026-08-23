@@ -2,10 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
-import { useRoomChanges } from "./dealroomchanges";
 import {
   AddDocument,
   DOCUMENT_GROUPS,
@@ -20,66 +19,7 @@ import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 
 type DealRoom = components["schemas"]["DealRoom"];
 type DealRoomDocument = components["schemas"]["DealRoomDocument"];
-type DealRoomChange = components["schemas"]["DealRoomChange"];
 type DealRoomDecision = components["schemas"]["DealRoomDecision"];
-
-// What the buyer has of this document, read off the unpublished change list:
-// a document the next release would add is not yet with the buyer; one it
-// would retitle or regroup is with them in an older form; a document the
-// list does not name is with them as it is. A room never published has
-// shared nothing.
-function shareState(
-  doc: DealRoomDocument,
-  room: DealRoom,
-  changes: ChangeReading,
-): "unshared" | "changed" | "shared" | "ineligible" | "unknown" {
-  // A badge is a claim about what the buyer has. While the change list is
-  // being re-read, or after a read that failed, this side does not know — and
-  // saying "Shared with the buyer" off a list that is one mutation stale is
-  // the one wrong answer here, because it is the answer that stops a seller
-  // publishing.
-  if (!changes.list || changes.stale) {
-    return "unknown";
-  }
-  if (!room.published_at) {
-    return "unshared";
-  }
-  const mine = changes.list.filter((c) => c.document_id === doc.id);
-  if (mine.some((c) => c.kind === "document_added")) {
-    return "unshared";
-  }
-  // A document the publish would drop has never reached the buyer and never
-  // will in this state, so it is not "changed since last published".
-  if (mine.some((c) => c.kind === "document_ineligible")) {
-    return "ineligible";
-  }
-  return mine.length > 0 ? "changed" : "shared";
-}
-
-// What this side knows of the unpublished change list right now: the list
-// itself, and whether the reading behind it can still be trusted.
-type ChangeReading = Readonly<{
-  list: readonly DealRoomChange[] | undefined;
-  stale: boolean;
-}>;
-
-function ShareBadge({
-  state,
-}: Readonly<{ state: ReturnType<typeof shareState> }>) {
-  const t = useT();
-  switch (state) {
-    case "unshared":
-      return <Badge tone="warn">{t("room.docs.unshared")}</Badge>;
-    case "changed":
-      return <Badge tone="warn">{t("room.docs.changed")}</Badge>;
-    case "shared":
-      return <Badge tone="success">{t("room.docs.shared")}</Badge>;
-    case "ineligible":
-      return <Badge tone="danger">{t("room.docs.ineligible")}</Badge>;
-    default:
-      return null;
-  }
-}
 
 function RemoveButton({
   room,
@@ -152,7 +92,6 @@ export function DealRoomConversation({
     },
   });
   const docs = useRoomDocuments(room.id);
-  const changes = useRoomChanges(room.id);
   const decisions = useRoomDecisions(room.id);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["deal-room-threads", room.id] });
@@ -214,16 +153,11 @@ export function DealRoomConversation({
   // A decisions read that failed is not "no decisions": a card would then say
   // nothing where a buyer had asked for changes. The panel says so instead.
   const decided = decisions.data?.data ?? [];
-  const reading: ChangeReading = {
-    list: changes.data?.changes,
-    stale: changes.isFetching || changes.isError,
-  };
   const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => ({
     id: doc.id,
     groupKey: doc.group_key,
     title: doc.title,
     meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
-    status: <ShareBadge state={shareState(doc, room, reading)} />,
     actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
     note: (
       <DecisionNote

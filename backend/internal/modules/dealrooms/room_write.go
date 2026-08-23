@@ -79,10 +79,13 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 
 	id := ids.New[ids.DealRoomKind]()
 	_, err = tx.Exec(ctx,
+		// A room is LIVE from creation. There is no publish step to promote it
+		// out of draft any more: the invitation is what decides who reads it,
+		// and a room nobody has been invited to is already private.
 		`INSERT INTO deal_room (id, deal_id, title, welcome_message, steward_user_id,
-		                        expires_at, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		id, in.DealID, in.Title, in.WelcomeMessage, stewardArg, in.ExpiresAt, in.Source, by)
+		                        expires_at, state, source, captured_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		id, in.DealID, in.Title, in.WelcomeMessage, stewardArg, in.ExpiresAt, stateLive, in.Source, by)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.DealRoom{}, errRoomAlreadyOpen
@@ -94,7 +97,7 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", roomObject, id.UUID, nil,
-		map[string]any{"deal_id": in.DealID.UUID, columnTitle: in.Title, "state": stateDraft})
+		map[string]any{"deal_id": in.DealID.UUID, columnTitle: in.Title, "state": stateLive})
 	if err != nil {
 		return crmcontracts.DealRoom{}, fmt.Errorf("audit deal room create: %w", err)
 	}
@@ -170,7 +173,7 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		// buyer anyway — publishable() refuses these three states — so allowing
 		// the write would only leave a draft that silently goes nowhere, which
 		// reads to the rep as though it had been saved for later publication.
-		if !publishable(string(current.State)) {
+		if !acceptsContent(string(current.State)) {
 			return notEditable(string(current.State))
 		}
 		p := buildRoomPatch(current, in)

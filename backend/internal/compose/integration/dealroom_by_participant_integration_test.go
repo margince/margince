@@ -18,7 +18,7 @@ import (
 func TestRoomsAreListedByTheAddressThatHoldsASeat(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 
 	byEmail := func(email string) int {
 		var page apptest.AnyMap
