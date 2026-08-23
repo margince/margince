@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 151.5 KB |
+| Tool catalog | 151.6 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39564 |
+| Approx. wire tokens | 39581 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,7 +30,7 @@ budget in `agenttooldescriptions_test.go`.
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
-| Input schemas | 33.0 KB | 21% | Yes, every step |
+| Input schemas | 33.1 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
 | **Description + input schema** | **67.8 KB** | **44%** | **the recurring cost** |
 
@@ -107,7 +107,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 2.9 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 6.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes |  | 2.7 KB |
+| [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
@@ -9626,7 +9626,7 @@ Find people, organizations, deals, leads and projects when you know roughly what
       "type": "integer"
     },
     "q": {
-      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched.",
+      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own.",
       "type": "string"
     },
     "record_type": {

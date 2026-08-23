@@ -121,7 +121,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		// tools claiming one operation family between them.
 		OpenAPIOp: "search",
 		InputSchema: schema(`{"type":"object","properties":{
-			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched."},
+			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
 			"record_type":{"type":"string","enum":["person","organization","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},

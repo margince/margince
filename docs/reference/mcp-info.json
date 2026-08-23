@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 155149,
+    "tool_catalog_bytes": 155218,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39564,
+    "approx_wire_tokens_total": 39581,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
       "description_bytes": 35597,
-      "input_schema_bytes": 33793,
+      "input_schema_bytes": 33862,
       "output_schema_bytes": 73721,
-      "description_plus_input_schema_bytes": 69390
+      "description_plus_input_schema_bytes": 69459
     }
   },
   "tools": {
@@ -8919,7 +8919,7 @@
               "type": "integer"
             },
             "q": {
-              "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched.",
+              "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own.",
               "type": "string"
             },
             "record_type": {
