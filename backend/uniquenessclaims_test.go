@@ -38,7 +38,7 @@ package backendarch
 // than about comments specifically.
 //
 // THIS GATE DOES NOT AUDIT THE CLAIMS. It cannot: whether a claim is true is a
-// question about the whole tree, and there are 641 of them. What it does is
+// question about the whole tree, and there are 649 of them. What it does is
 // make the class stop GROWING, which is the half a test can hold:
 //
 //   - A claim that names its gate is held. `Held by: TestName (path)` in the
@@ -50,8 +50,8 @@ package backendarch
 //   - An entry that has stopped matching a real claim fails too, so the
 //     register tracks the tree rather than rotting beside it.
 //
-// The register is 638 lines with no reasons, and that is deliberate rather than
-// sloppy: a reason per entry would be 638 rationalisations written by somebody
+// The register is 646 lines with no reasons, and that is deliberate rather than
+// sloppy: a reason per entry would be 646 rationalisations written by somebody
 // who has not audited the claim, which is worse than an honest count of what is
 // unaudited. The number is the point. It is meant to go down.
 
@@ -100,8 +100,23 @@ var claimShapes = map[string]*regexp.Regexp{
 	"is-every":      regexp.MustCompile(`\b(?:is|are) EVERY\b`),
 	// `is-every-named` has no entry here: it is built per declaration, from the
 	// declaration's own name. See namedExhaustiveness.
-	"never-twice": regexp.MustCompile(`(?i)\b(?:never|not) (?:duplicated|respelled|re-?implemented|spelled twice|written twice|copied|two)\b`),
+	// The bare `two` alternative is deliberately NOT here. It matched any
+	// counting sentence — "the grace window is not two hours but three" — and a
+	// shape that reads a quantity as a uniqueness claim puts innocent prose in a
+	// closed register, which teaches people to write worse comments rather than
+	// fewer false claims.
+	//
+	// Measured cost: about twenty `not two <noun>` sites, most of them real
+	// claims ("not two independent", "not two sites", "not two readings"), are
+	// invisible to this gate. That is the same trade the file makes above for
+	// "the one place" and "the only way", and it is stated for the same reason:
+	// a blind spot a reader can see is worth more than a shape they turn off.
+	"never-twice": regexp.MustCompile(`(?i)\b(?:never|not) (?:duplicated|respelled|re-?implemented|spelled twice|written twice|copied)\b`),
 }
+
+// namedShape is what a finding attributed to the derived shape is called. One
+// spelling, because it is used by the record below and by both corpus arms.
+const namedShape = "is-every-named"
 
 // namedExhaustiveness matches the claim form the emphatic `is EVERY` shape
 // above cannot reach without swallowing ordinary English: a doc comment saying
@@ -123,14 +138,42 @@ var claimShapes = map[string]*regexp.Regexp{
 // lower-case, so a gate without this arm would be blind to the very claim its
 // own docblock cites.
 func namedExhaustiveness(decl string) *regexp.Regexp {
+	// The BARE name, with both the kind prefix ("func ", "method ") and any
+	// receiver qualifier stripped: a doc comment on `func (s *Service)
+	// readProfileFields` opens with `readProfileFields`, not with
+	// `Service.readProfileFields`. Keying the label by receiver (which the
+	// register needs, so two `Close` methods stay apart) silently broke this
+	// lookup and the claim disappeared from the sweep — a shape that stops
+	// matching a whole KIND of declaration while still matching others keeps
+	// every arm green, because the arms ask whether a shape matches ANYTHING.
 	name := decl
-	if index := strings.LastIndex(decl, " "); index >= 0 {
-		name = decl[index+1:]
+	if index := strings.LastIndex(name, " "); index >= 0 {
+		name = name[index+1:]
+	}
+	if index := strings.LastIndex(name, "."); index >= 0 {
+		name = name[index+1:]
 	}
 	if name == "" || name == "block" {
 		return nil
 	}
-	return regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\b`)
+	return regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\s+(\w+)`)
+}
+
+// intensifier reports whether "every <word>" is an English idiom rather than a
+// set assertion.
+//
+// "Flush is every bit as ordered as Write" documents a comparison and claims
+// nothing about a set, and the register is closed — so without this, an author
+// writing that innocent sentence has to delete it or invent a gate for it,
+// which is how a census teaches people to write worse comments. Two words,
+// named as the idioms they are; Go's regexp has no negative lookahead, so the
+// exclusion is a check on the captured word rather than a hole in the pattern.
+func intensifier(word string) bool {
+	switch strings.ToLower(word) {
+	case "bit", "inch":
+		return true
+	}
+	return false
 }
 
 // heldBy is the binding a claim carries to say which test holds it. Free text
@@ -146,10 +189,20 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 // The PATH is required and checked. A bare test name would be a claim about a
 // name, and this whole file exists because a claim nobody checks is worth less
 // than nothing.
-var heldBy = regexp.MustCompile(`Held by:\s*(Test[A-Za-z0-9_]*)\s*\(([^)]+)\)`)
+//
+// The name must continue with an UPPERCASE letter or an underscore, which is
+// what `go test` itself requires of a test function. `Testhelperghost` is a
+// legal Go identifier and a legal thing to write, and `go test` will never run
+// it — so a claim could name a "gate" that compiles, exists, and can never
+// execute. The signature is checked too, below.
+var heldBy = regexp.MustCompile(`Held by:\s*(Test[A-Z_][A-Za-z0-9_]*)\s*\(([^)]+)\)`)
 
 // goTestFunc finds the declarations a `Held by:` may name.
-var goTestFunc = regexp.MustCompile(`(?m)^func (Test[A-Za-z0-9_]*)\(`)
+// A test `go test` will RUN: the uppercase continuation it requires of the
+// name, and the `*testing.T` parameter it requires of the signature. A no-arg
+// `func Testhelperghost() {}` satisfies neither and was accepted by the first
+// spelling of this — a gate that can never run is not a gate.
+var goTestFunc = regexp.MustCompile(`(?m)^func (Test[A-Z_][A-Za-z0-9_]*)\([a-zA-Z_][a-zA-Z0-9_]* \*testing\.T\)`)
 
 // claimedTrees are the hand-written Go trees this rule covers. The backend
 // module is one tree, not all of them: extensions/, fixtures/, cli/ and
@@ -184,7 +237,7 @@ var claimedTrees = []claimedTree{
 // claim is one uniqueness assertion: where it is, what it sits on, and the
 // words that make it a claim.
 type claim struct {
-	path   string // slash-normalised, relative to the repo root
+	path   string // slash-normalised, relative to the module the root names
 	decl   string // "func Foo", "var bar", "type Baz", "package qux"
 	shape  string // which claimShapes entry matched
 	phrase string // the matched words, for the failure message
@@ -218,16 +271,33 @@ func findClaims(root string) ([]claim, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			// node_modules holds a unit's installed dependency tree, and
-			// internal/contracts is generated from the OpenAPI document.
-			// Neither is hand-written, so neither can carry a claim somebody
-			// chose to make.
-			if name := entry.Name(); name == "node_modules" || name == "testdata" || name == "contracts" {
+			// node_modules holds a unit's installed dependency tree and
+			// testdata holds fixtures; neither is hand-written, so neither can
+			// carry a claim somebody chose to make.
+			if entry.Name() == "node_modules" || entry.Name() == "testdata" {
+				return fs.SkipDir
+			}
+			// The GENERATED contract package, by PATH. Matching the directory
+			// NAME skipped `internal/modules/contracts/` too — a hand-written
+			// product module — so a claim written anywhere in the contracts CRM
+			// module needed no gate at all. A skip list keyed on a bare name is
+			// a skip list that does not know what it is skipping.
+			if filepath.ToSlash(path) == "internal/contracts" {
 				return fs.SkipDir
 			}
 			return nil
 		}
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
+			return nil
+		}
+		if filepath.Base(path) == gateFile {
+			// This file spells out the very phrases it hunts for, so a sweep
+			// that read it would register its own prose as debt — and it did:
+			// the sentence "the `is EVERY` shape above" put
+			// `func namedExhaustiveness` in the register for a claim it does
+			// not make. A gate describing its own subject cannot also be
+			// judged by it. `format/zone-by-purpose.test.ts` skips itself for
+			// the same reason and says so in the same words.
 			return nil
 		}
 		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
@@ -249,8 +319,10 @@ func findClaims(root string) ([]claim, error) {
 				patterns[name] = pattern
 			}
 			if named := namedExhaustiveness(decl); named != nil {
-				shapes = append(shapes, "is-every-named")
-				patterns["is-every-named"] = named
+				if match := named.FindStringSubmatch(text); match != nil && !intensifier(match[1]) {
+					shapes = append(shapes, namedShape)
+					patterns[namedShape] = named
+				}
 			}
 			for _, shape := range shapes {
 				phrase := patterns[shape].FindString(text)
@@ -275,7 +347,7 @@ func findClaims(root string) ([]claim, error) {
 		for _, decl := range file.Decls {
 			switch node := decl.(type) {
 			case *ast.FuncDecl:
-				record(node.Doc, "func "+node.Name.Name)
+				record(node.Doc, funcLabel(node))
 			case *ast.GenDecl:
 				recordGenDecl(node, record)
 			}
@@ -283,6 +355,82 @@ func findClaims(root string) ([]claim, error) {
 		return nil
 	})
 	return found, err
+}
+
+// recordFields reports a claim written on a struct field or an interface
+// method, keyed by the type it belongs to so two fields called `ID` on
+// different types stay apart.
+func recordFields(spec *ast.TypeSpec, owner string, record func(*ast.CommentGroup, string)) {
+	var list *ast.FieldList
+	switch node := spec.Type.(type) {
+	case *ast.StructType:
+		list = node.Fields
+	case *ast.InterfaceType:
+		list = node.Methods
+	default:
+		return
+	}
+	if list == nil {
+		return
+	}
+	for _, field := range list.List {
+		for _, fieldName := range field.Names {
+			record(field.Doc, owner+"."+fieldName.Name)
+		}
+		if len(field.Names) == 0 {
+			// An embedded field carries no name of its own; key it by the type
+			// it embeds so it is still distinguishable.
+			record(field.Doc, owner+".<embedded "+genericReceiverName(field.Type)+">")
+		}
+	}
+}
+
+// funcLabel names a function or a method uniquely within its file.
+//
+// The RECEIVER is part of the name, because dropping it collided: `A.Close` and
+// `B.Close` in one file both keyed as `func Close`, so registering one claim
+// silently ratified the other — and, worse, a NEW claim on the second method
+// inherited the first's register entry and passed a gate whose whole promise is
+// that new claims cannot. A register whose key is not unique has holes exactly
+// where a file is busiest.
+func funcLabel(node *ast.FuncDecl) string {
+	if node.Recv == nil || len(node.Recv.List) == 0 {
+		return "func " + node.Name.Name
+	}
+	// rbacgate_test.go's `receiverName`, shared rather than respelled — this
+	// package already answers "which type is this method on" once, and a second
+	// answer to that is the thing this file exists to refuse.
+	//
+	// It returns "" for a GENERIC receiver (`*Entry[T]`), which it never had to
+	// unwrap. Twenty-eight methods in this tree have one, and keying them all
+	// as one name would rebuild the collision this label was written to remove,
+	// so they are named from the source expression here. Widening the shared
+	// helper instead would change which buckets the RBAC census reads, which is
+	// that gate's verdict to re-verify rather than this change's.
+	owner := receiverName(node)
+	if owner == "" {
+		owner = genericReceiverName(node.Recv.List[0].Type)
+	}
+	return "method " + owner + "." + node.Name.Name
+}
+
+// genericReceiverName unwraps a receiver the shared helper does not: pointer
+// and type arguments stripped, so `*Entry[T]` reads `Entry`.
+func genericReceiverName(expr ast.Expr) string {
+	for {
+		switch node := expr.(type) {
+		case *ast.StarExpr:
+			expr = node.X
+		case *ast.IndexExpr:
+			expr = node.X
+		case *ast.IndexListExpr:
+			expr = node.X
+		case *ast.Ident:
+			return node.Name
+		default:
+			return "?"
+		}
+	}
 }
 
 // recordGenDecl reports the claim on a const/var/type declaration, whether the
@@ -304,13 +452,21 @@ func recordGenDecl(node *ast.GenDecl, record func(*ast.CommentGroup, string)) {
 		return "", false
 	}
 	for _, spec := range node.Specs {
-		if label, ok := name(spec); ok {
-			switch s := spec.(type) {
-			case *ast.TypeSpec:
-				record(s.Doc, label)
-			case *ast.ValueSpec:
-				record(s.Doc, label)
-			}
+		label, ok := name(spec)
+		if !ok {
+			continue
+		}
+		switch s := spec.(type) {
+		case *ast.TypeSpec:
+			record(s.Doc, label)
+			// A struct field's or an interface method's doc comment IS a doc
+			// comment on a declaration, and a claim written on one escaped
+			// entirely — `Addresses is EVERY address this record names` sat in
+			// a field doc and no arm ever saw it. The enclosing type's Doc does
+			// not contain a field's, so the walk has to go in.
+			recordFields(s, label, record)
+		case *ast.ValueSpec:
+			record(s.Doc, label)
 		}
 	}
 	if len(node.Specs) == 1 {
@@ -319,7 +475,18 @@ func recordGenDecl(node *ast.GenDecl, record func(*ast.CommentGroup, string)) {
 			return
 		}
 	}
-	record(node.Doc, node.Tok.String()+" block")
+	// A multi-spec block is named by its FIRST declared name, not by the bare
+	// word "block". Two `const ( … )` blocks in one file both keyed as
+	// `const block`, so the second one's claim rode the first's register entry
+	// — a new, unheld claim passing the gate that exists to refuse exactly
+	// that. Measured before the fix: seven claims aliasing into three lines.
+	label := node.Tok.String() + " block"
+	if len(node.Specs) > 0 {
+		if first, ok := name(node.Specs[0]); ok {
+			label = node.Tok.String() + " block at " + first
+		}
+	}
+	record(node.Doc, label)
 }
 
 // sortedShapes gives the shapes a stable order, so a claim matching two of them
@@ -353,6 +520,11 @@ func allClaims(t *testing.T) []claim {
 	sort.Slice(all, func(i, j int) bool { return all[i].key() < all[j].key() })
 	return all
 }
+
+// gateFile is this file, skipped by the sweep below. Named rather than derived
+// from the runtime, because runtime.Caller inside a walk is a worse kind of
+// clever than a constant a reader can check against the file they are in.
+const gateFile = "uniquenessclaims_test.go"
 
 const registerPath = "uniquenessclaims.txt"
 
@@ -462,7 +634,7 @@ func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
 				c.path, c.line, c.decl, c.held)
 			continue
 		}
-		if !slicesContainsSuffix(files, c.heldIn) {
+		if !namesTheFile(files, c.heldIn) {
 			t.Errorf("%s:%d %s names %s in %s; that test is declared in %s",
 				c.path, c.line, c.decl, c.held, c.heldIn, strings.Join(files, ", "))
 		}
@@ -476,11 +648,20 @@ func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
 	}
 }
 
-func slicesContainsSuffix(paths []string, want string) bool {
+// namesTheFile reports whether one of `paths` is the file the binding named.
+//
+// A PATH-SEGMENT suffix, not a string suffix. A bare `strings.HasSuffix`
+// matched inside a FILENAME: `Held by: TestX (claims_test.go)` bound against
+// `uniquenessclaims_test.go`, a file that does not exist, and `currency_test.go`
+// bound against `employmentcurrency_test.go`. A binding that resolves to a file
+// nobody named is worse than no binding, because it reads as checked.
+func namesTheFile(paths []string, want string) bool {
 	want = strings.TrimPrefix(filepath.ToSlash(want), "./")
 	for _, path := range paths {
-		if strings.HasSuffix(path, want) || strings.HasSuffix("backend/"+path, want) {
-			return true
+		for _, candidate := range []string{path, "backend/" + path} {
+			if candidate == want || strings.HasSuffix(candidate, "/"+want) {
+				return true
+			}
 		}
 	}
 	return false
@@ -531,58 +712,114 @@ func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
 	}
 }
 
-// TestTheDetectorMatchesRealClaimsAndLeavesProseAlone is the arm that makes the
-// hand-written shape list honest.
+// TestEveryShapeEarnsItsPlaceInTheRealTree is the positive half, and it is
+// DERIVED — the corpus is the tree.
 //
-// Every entry in `claimShapes` is proven against a sentence taken VERBATIM from
-// this tree, so a shape cannot be added speculatively and cannot quietly stop
-// matching. And every near-miss is proven not to match, so a shape cannot be
-// widened until it swallows ordinary English — which is the failure that turns
-// a census into noise and gets it deleted.
-func TestTheDetectorMatchesRealClaimsAndLeavesProseAlone(t *testing.T) {
-	claimCorpus := map[string]string{
-		"one-of-a-kind": "values.NewMoney is the ONE spelling of a valid ISO-4217 code in this product.",
-		"only-noun":     "companyform.go is the only writer a human drives, and it re-states all four obligations.",
-		"cannot-drift":  "report.go and orgrollup.go compute the same weighted value and cannot drift apart.",
-		"once":          "The rule is spelled once here rather than twice, for exactly two callers.",
-		"no-second":     "signalTone is exported so there is no second mapping that could drift.",
-		"one-truth":     "backend/api/crm.yaml is the single source of truth for the wire shape.",
-		"is-every":      "catalogFilterNames is EVERY key a plan's `filters` object may carry.",
-		"never-twice":   "The precondition is never duplicated: ifMatch is the one call that sets it.",
+// It was a list of sentences typed into this file and described as "taken
+// verbatim from this tree". A reviewer grepped them: most were invented.
+// `companyform.go` does not exist. `signalTone` does not exist. The `is EVERY`
+// case was a real sentence with its `every` upper-cased so the case-sensitive
+// pattern would match it. So the file that exists to refuse unbacked claims
+// opened with one — which is the whole failure mode, committed in its own
+// docblock, and a hand-typed corpus is how it happens: nothing keeps the copy
+// and the original in step.
+//
+// Now every shape must be attributed at least one claim by the SWEEP. A shape
+// matching nothing in the real tree fails, and there is nothing to fabricate:
+// the evidence is whatever the walk found this morning.
+func TestEveryShapeEarnsItsPlaceInTheRealTree(t *testing.T) {
+	claims := allClaims(t)
+	perShape := map[string]string{}
+	for _, c := range claims {
+		if _, seen := perShape[c.shape]; !seen {
+			perShape[c.shape] = fmt.Sprintf("%s:%d %q", c.path, c.line, c.phrase)
+		}
 	}
-	for shape, sentence := range claimCorpus {
-		pattern, ok := claimShapes[shape]
-		if !ok {
-			t.Errorf("the corpus names shape %q, which claimShapes does not carry — one of the two is stale", shape)
+	want := append(sortedShapes(), namedShape)
+	for _, shape := range want {
+		example, found := perShape[shape]
+		if !found {
+			t.Errorf("shape %q matches nothing in the tree — a detector matching nothing "+
+				"reports a clean tree, so either the shape is dead and should be deleted or "+
+				"the claims it was written for have been reworded past it", shape)
 			continue
 		}
-		if !pattern.MatchString(sentence) {
-			t.Errorf("shape %q no longer matches the real claim it was written for:\n\t%s", shape, sentence)
+		t.Logf("%-16s %s", shape, example)
+	}
+	// The derived shape reads the DECLARATION's name, so it has to be shown
+	// working on both spellings of a declaration that has one. Keying the label
+	// by receiver — which the register needs, so two `Close` methods stay apart
+	// — silently stopped it matching every METHOD in the tree, and every arm
+	// above stayed green: they ask whether a shape matches anything, and its
+	// plain-function claims still did. Twenty-four claims were invisible,
+	// including `readProfileFields`, which is the example the docblock argues
+	// the whole rule from.
+	kinds := map[string]bool{}
+	for _, c := range claims {
+		if c.shape == namedShape {
+			kinds[strings.SplitN(c.decl, " ", 2)[0]] = true
 		}
 	}
-	for shape := range claimShapes {
-		if _, ok := claimCorpus[shape]; !ok {
-			t.Errorf("shape %q has no corpus case — a shape nobody proved is a shape that may match "+
-				"nothing, and a detector matching nothing reports a clean tree", shape)
+	for _, kind := range []string{"func", "method"} {
+		if !kinds[kind] {
+			t.Errorf("the derived shape matches no claim on a %s declaration — it reads the "+
+				"declaration's own name, so a label change can stop it seeing a whole KIND "+
+				"while the arms above stay green", kind)
 		}
 	}
-	// Ordinary English that must NOT read as a claim. Each of these is a real
-	// sentence shape from this tree; a detector that reported them would be
-	// switched off within a week, which is the way a census actually dies.
-	prose := []string{
-		"That is the only way to ask the DATABASE whether it refuses a duplicate scope.",
-		"The ledger is the only place a version and its name are recorded together.",
-		"One type with one branch rather than two authorities: a mailbox is one human's.",
-		"An identical step is a no-op rather than a second audit row.",
-		"The one path a reader takes through this screen starts at the header.",
-		"There is only one thing to remember about the cursor.",
-		"Every read is checked, and each one is every bit as guarded as the last.",
+
+	// And the walk that supplies that evidence has to have read something.
+	if len(claims) < 100 {
+		t.Errorf("the sweep found only %d claims, so every arm above is vouching for a "+
+			"tree it barely read", len(claims))
+	}
+}
+
+// TestNoShapeReadsOrdinaryProseAsAClaim is the negative half, and it covers
+// EVERY shape including the derived one.
+//
+// The first version covered four of nine: `cannot-drift`, `once`, `one-truth`
+// and `never-twice` had no near-miss at all, so any of them could have been
+// widened arbitrarily and this arm would have stayed green. A negative corpus
+// with holes is a negative corpus that permits exactly the widening it exists
+// to refuse.
+func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
+	// One sentence per shape, each written to graze the shape it is paired
+	// with — the pairing is asserted below, so a case cannot quietly stop
+	// being a near-miss of anything.
+	prose := map[string]string{
+		"one-of-a-kind": "The ledger is the only place a version and its name are recorded together.",
+		"only-noun":     "This is the only way to ask the database whether it refuses a duplicate scope.",
+		"cannot-drift":  "Two readers cannot both be right here, so the second one waits.",
+		"once":          "The reader is shown the figure once they have opened the disclosure.",
+		"no-second":     "An identical step is a no-op rather than a second audit row.",
+		"one-truth":     "The source of the truncation is the provider, not this field.",
+		"is-every":      "Every read is checked, and each one is every bit as guarded as the last.",
+		// Counting, not duplication. "a retry is not two effects" was the first
+		// case here and it is a BAD near-miss — idempotence IS a claim of this
+		// family, so the shape was right to match it and the corpus was wrong
+		// to call it prose. A near-miss has to be a sentence that genuinely
+		// asserts nothing about uniqueness.
+		"never-twice": "The grace window is not two hours but three, measured from the last attempt.",
+		namedShape:    "Flush is every bit as ordered as Write, and neither is buffered.",
 	}
 	for _, sentence := range prose {
 		for shape, pattern := range claimShapes {
 			if phrase := pattern.FindString(sentence); phrase != "" {
 				t.Errorf("shape %q reads ordinary prose as a claim (%q in):\n\t%s", shape, phrase, sentence)
 			}
+		}
+		if named := namedExhaustiveness("func Flush"); named != nil {
+			if match := named.FindStringSubmatch(sentence); match != nil && !intensifier(match[1]) {
+				t.Errorf("the derived shape reads ordinary prose as a claim (%q in):\n\t%s", match[0], sentence)
+			}
+		}
+	}
+	// Every shape has a case, so widening one cannot go unnoticed.
+	for _, shape := range append(sortedShapes(), namedShape) {
+		if _, ok := prose[shape]; !ok {
+			t.Errorf("shape %q has no near-miss case — it could be widened into ordinary "+
+				"English and this arm would stay green", shape)
 		}
 	}
 }
