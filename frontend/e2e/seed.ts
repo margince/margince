@@ -832,7 +832,10 @@ export async function mockApi(
           ...me.user,
           id: "u1",
           email: "lars@brandt.example",
-          locale: "de-DE",
+          // "de", not "de-DE": the contract declares this field as en | de | vi,
+          // and the catalogs are keyed by exactly those. A regional tag here is
+          // a key the catalogs have no entry for.
+          locale: "de",
         },
         system_of_record: { mode: sorMode },
       });
