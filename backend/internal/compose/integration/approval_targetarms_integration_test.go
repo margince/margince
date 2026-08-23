@@ -196,12 +196,38 @@ func createdID(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyMap
 //
 // The identical body is sent twice because the diff_hash binding is what makes an
 // approval authorize THIS call and no other.
-// archivesOnItsOwnPassport asserts the agent's archive performs rather than
+// archivesOnItsOwnPassport asserts the agent's archive PERFORMS rather than
 // staging — the shape every arm but webhook_subscription now takes.
+//
+// It asserts the success status and then re-reads the row, because "not 403" is
+// not the property. A 404 from a mistyped path, or a 500 from a seam that cannot
+// archive this type at all, both pass a refusal check while proving nothing —
+// and the arms this covers exist precisely because each is a DIFFERENT target
+// type the seam has to route.
 func archivesOnItsOwnPassport(t *testing.T, e *apptest.AppEnv, bearer map[string]string, path string) {
 	t.Helper()
-	if status := e.Call(t, "DELETE", path, nil, bearer, nil); status == http.StatusForbidden {
-		t.Fatalf("agent DELETE %s → 403 — a passport archives what its holder could archive unaided", path)
+	if status := e.Call(t, "DELETE", path, nil, bearer, nil); status != http.StatusOK &&
+		status != http.StatusNoContent {
+		t.Fatalf("agent DELETE %s → %d, want the archive to perform — a passport archives what its "+
+			"holder could archive unaided", path, status)
+	}
+	var row struct {
+		ArchivedAt *string `json:"archived_at"`
+	}
+	// Not every arm HAS a read-by-id route — a tag is reached through its
+	// collection, and answers 405. Where the row cannot be re-read the archive's
+	// success status is all there is, which is still strictly more than the
+	// "not 403" this used to assert.
+	switch status := e.Call(t, "GET", path, nil, nil, &row); status {
+	case http.StatusOK:
+	case http.StatusNotFound, http.StatusMethodNotAllowed:
+		return
+	default:
+		t.Fatalf("re-reading %s after the archive → %d", path, status)
+	}
+	if row.ArchivedAt == nil {
+		t.Errorf("%s answered success but the row is still live — the call was admitted and "+
+			"performed nothing", path)
 	}
 }
 

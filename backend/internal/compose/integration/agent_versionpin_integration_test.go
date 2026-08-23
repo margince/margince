@@ -33,36 +33,8 @@ func TestAnAgentDraftsPricesAndArchivesAnOfferOnItsOwnPassport(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.Slug = "offers-pin"
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Pin", "pin@fable.test", "Admin")
-	dealID := offerFixture(t, e)
-
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
-		// The version-pin race this test proves happens inside archive_record's
-		// approval, so the passport must be able to spend `write` to get there.
-		"label": "pin agent", "scopes": []string{"read", "write"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
-
-	var offer struct {
-		ID        string `json:"id"`
-		Version   int64  `json:"version"`
-		LineItems []struct {
-			ID string `json:"id"`
-		} `json:"line_items"`
-	}
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
-		"currency": "EUR", "source": "mcp",
-		"line_items": []apptest.AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
-	}, bearer, &offer); status != http.StatusCreated {
-		t.Fatalf("agent offer draft → %d", status)
-	}
-	if len(offer.LineItems) != 1 {
-		t.Fatalf("draft carries %d line items, want 1", len(offer.LineItems))
-	}
+	_, token, offer := seedOfferForPin(t, e)
+	bearer := map[string]string{"Authorization": "Bearer " + token}
 
 	// The agent prices the terms, then archives — neither asks a human.
 	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+offer.LineItems[0].ID, apptest.AnyMap{
@@ -83,4 +55,48 @@ func TestAnAgentDraftsPricesAndArchivesAnOfferOnItsOwnPassport(t *testing.T) {
 	if !archived {
 		t.Error("the offer is still live after the agent archived it")
 	}
+}
+
+// pinOffer is the drafted offer both tests act on: its id, its version, and the
+// one line item whose price the rewrite moves.
+type pinOffer struct {
+	ID        string `json:"id"`
+	Version   int64  `json:"version"`
+	LineItems []struct {
+		ID string `json:"id"`
+	} `json:"line_items"`
+}
+
+// seedOfferForPin mints a write-scoped passport and drafts one offer through it,
+// answering the deal, the passport token and the offer. Both tests need exactly
+// this and differ only in what they do next.
+func seedOfferForPin(t *testing.T, e *apptest.AppEnv) (string, string, pinOffer) {
+	t.Helper()
+	dealID := offerFixture(t, e)
+
+	var minted struct {
+		Token string `json:"token"`
+	}
+	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+		// The version-pin race happens inside archive_record's approval, so the
+		// passport must be able to spend `write` to get there.
+		"label": "pin agent", "scopes": []string{"read", "write"},
+	}, nil, &minted); status != http.StatusCreated {
+		t.Fatalf("issue passport → %d", status)
+	}
+	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
+
+	var offer pinOffer
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+		"currency": "EUR", "source": "mcp",
+		"line_items": []apptest.AnyMap{
+			{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0},
+		},
+	}, bearer, &offer); status != http.StatusCreated {
+		t.Fatalf("agent offer draft → %d", status)
+	}
+	if len(offer.LineItems) != 1 {
+		t.Fatalf("draft carries %d line items, want 1", len(offer.LineItems))
+	}
+	return dealID, minted.Token, offer
 }

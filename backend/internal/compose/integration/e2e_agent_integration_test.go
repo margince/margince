@@ -141,9 +141,20 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 
 	// The archive PERFORMS now: a passport carries the granting human's seat
 	// and row scope, and archiving a person is ordinary work its holder does
-	// unaided.
-	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, bearer, nil); status == 403 {
-		t.Fatal("agent archive → 403 — a passport archives what its holder could archive unaided")
+	// unaided. Read back rather than trusting the status, because "not 403" is
+	// satisfied by a 404 or a 500 too, and what this line claims is that the
+	// person is archived.
+	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, bearer, nil); status != 200 {
+		t.Fatalf("agent archive → %d, want 200 — a passport archives what its holder could "+
+			"archive unaided", status)
+	}
+	var archived bool
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT archived_at IS NOT NULL FROM person WHERE id = $1`, created.ID).Scan(&archived); err != nil {
+		t.Fatalf("reading the person back: %v", err)
+	}
+	if !archived {
+		t.Error("the archive answered 200 and the person is still live")
 	}
 
 	// 🟡 still exists, on the routes whose destination the credential-holder did
@@ -158,6 +169,11 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "approval_required" {
 		t.Fatalf("🟡 REST mutation → %d %q, want 403 approval_required", status, problem.Code)
+	}
+	// The staged call must not have executed. Without this the 403 alone proves
+	// only that the gate answered, not that it answered BEFORE the effect.
+	if n := countWebhookSubscriptions(t, e); n != 0 {
+		t.Fatalf("%d webhook subscription(s) exist behind an unapproved create, want 0", n)
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
@@ -236,4 +252,15 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "X"}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat update → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}
+}
+
+// countWebhookSubscriptions is what a staged create did or did not write.
+func countWebhookSubscriptions(t *testing.T, e *apptest.AppEnv) int {
+	t.Helper()
+	var n int
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT count(*) FROM webhook_subscription`).Scan(&n); err != nil {
+		t.Fatalf("counting webhook subscriptions: %v", err)
+	}
+	return n
 }

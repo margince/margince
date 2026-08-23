@@ -29,6 +29,9 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -38,8 +41,11 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
 )
 
 // accountSendBody is the one call this suite makes, so the human's send and the
@@ -175,6 +181,177 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 	if info.Summary == "" {
 		t.Error("the staged subject has no summary; an inbox would show a human nothing to decide")
 	}
+}
+
+// The whole confirm-first loop for an account-started send, under a workspace
+// tier floor, against real Postgres.
+//
+// This test used to drive the REST door, because the contract declared
+// sendAccountEmail confirm-first and every agent call staged. ADR-0055 made the
+// verb execute directly, and the REST door reads its tier from the generated
+// policy table — so there is no longer a way for a test to floor that door
+// without editing the contract, which is what an INSTALLATION does rather than
+// what a test can do. The MCP door takes its floor as a registry option, so the
+// loop is exercised here instead.
+//
+// It is worth keeping in some form, because five properties live nowhere else
+// and none of them is about which door the call came through:
+//
+//   - nothing leaves before a human decides;
+//   - approving AUTHORIZES and does not itself send;
+//   - the approved retry delivers exactly one message;
+//   - that message is filed under the organization the call named, which is what
+//     an account-started send has instead of an anchor;
+//   - the approval is single-use, so a replay sends nothing more.
+//
+// Deleting them with the REST test was the mistake this restores. The generic
+// half of the mechanism — one row per refused call, single-use redemption, one
+// passport's approval never offered to another — is also covered by
+// agentcallapproval_integration_test.go on `enrich`; what is only here is what
+// happens to a SEND.
+func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
+	a := setupAccountSend(t)
+	token := a.mintAccountSendPassport(t)
+	args, err := json.Marshal(map[string]any{
+		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
+		"body": "Good morning.", "consent_purpose": "transactional",
+		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	invoke := a.flooredAccountSendInvoker(t, token)
+
+	_, err = invoke(string(args))
+	if !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Fatalf("a floored account send answered %v, want the confirm-first refusal", err)
+	}
+	if n := a.deliveryCount(t); n != 0 {
+		t.Fatalf("%d deliveries staged behind an unapproved agent send, want 0 — nothing may leave", n)
+	}
+	approvalID := ExtractStagedApprovalID(t, err.Error())
+
+	// The staged SHAPE, which is what makes the row decidable at all: the type
+	// the effect will write, and no row for a scope probe to resolve, because
+	// this send answers no message.
+	var targetType, targetID *string
+	if err := a.Owner.QueryRow(t.Context(),
+		`SELECT target_entity_type, target_entity_id FROM approval WHERE id = $1`,
+		approvalID).Scan(&targetType, &targetID); err != nil {
+		t.Fatal(err)
+	}
+	if targetType == nil || *targetType != "activity" || targetID != nil {
+		t.Fatalf("staged target = %v/%v, want activity with no id", targetType, targetID)
+	}
+
+	// A human sees it and releases it. Both halves matter: an approval the
+	// inbox cannot show is one nobody can act on, whatever the decision
+	// endpoint would have accepted.
+	if !a.inboxShows(t, approvalID) {
+		t.Fatal("the staged send is not in the approvals inbox; nobody could ever release it")
+	}
+	if status := a.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve",
+		apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("human approve → %d", status)
+	}
+	if n := a.deliveryCount(t); n != 0 {
+		t.Fatalf("%d deliveries staged by the approval itself, want 0 — approving authorizes, it does not send", n)
+	}
+
+	// The identical call, now carrying the released approval. Identical is the
+	// requirement, not the style: the diff hash binds the approval to this
+	// exact message.
+	retry, err := json.Marshal(map[string]any{
+		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
+		"body": "Good morning.", "consent_purpose": "transactional",
+		"links":       []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
+		"approval_id": approvalID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := invoke(string(retry)); err != nil {
+		t.Fatalf("approved retry answered %v, want the send to go", err)
+	}
+	if n := a.deliveryCount(t); n != 1 {
+		t.Fatalf("%d deliveries after the approved retry, want exactly 1", n)
+	}
+	if n := a.linkedActivities(t); n != 1 {
+		t.Fatalf("%d outbound activities filed under the named organization, want 1 — the links are what "+
+			"an account-started send has instead of an anchor", n)
+	}
+
+	// Single-use: the same approval cannot send a second message.
+	if _, err := invoke(string(retry)); err == nil {
+		t.Fatal("a consumed approval sent a second message; redemption must be single-use")
+	}
+	if n := a.deliveryCount(t); n != 1 {
+		t.Fatalf("%d deliveries after replaying a consumed approval, want still 1", n)
+	}
+}
+
+// flooredAccountSendInvoker calls send_account_email through a registry with a
+// tier floor on it — the composition an installation gets when it declares the
+// verb confirm-first.
+func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken string) func(string) (string, error) {
+	t.Helper()
+	ApplyRiverSchema(t)
+	inserter, err := jobs.NewInserter(a.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	registry := compose.NewRegistry(a.Pool, compose.SendPath{
+		Delivery: compose.NewDeliveryStager(a.Pool, inserter),
+	})
+	// After construction, for the reason composedRegistryFlooring states: the
+	// composition appends its own contract floor to any option it is passed.
+	agents.WithTierFloor(func(tool, _ string) (mcp.RiskTier, bool) {
+		if tool != "send_account_email" {
+			return mcp.TierAutoExecute, false
+		}
+		return mcp.TierConfirmationRequired, true
+	})(registry)
+
+	authSvc := identity.NewService(a.Pool)
+	return func(args string) (string, error) {
+		wsID, err := authSvc.InstallationWorkspace(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := principal.WithWorkspaceID(context.Background(), wsID.UUID)
+		agent, err := authSvc.AuthenticateAgent(ctx, agentToken)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
+		out, invokeErr := registry.Invoke(ctx, "send_account_email", json.RawMessage(args))
+		return string(out), invokeErr
+	}
+}
+
+// inboxShows reports whether the acting human's approvals inbox lists the row —
+// the read path targetVisible governs, asked over HTTP rather than in SQL so
+// the answer is the one a person would actually get.
+func (a *accountSendEnv) inboxShows(t *testing.T, approvalID string) bool {
+	t.Helper()
+	var page struct {
+		Data []struct {
+			ID   string `json:"id"`
+			Kind string `json:"kind"`
+		} `json:"data"`
+	}
+	if status := a.Call(t, "GET", "/v1/approvals?status=pending", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("list approvals → %d", status)
+	}
+	for _, row := range page.Data {
+		if row.ID == approvalID {
+			if row.Kind != "send_account_email" {
+				t.Errorf("inbox row kind = %q, want send_account_email", row.Kind)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // accountSendStageInfo asks the tool for the subject it WOULD stage, on the
