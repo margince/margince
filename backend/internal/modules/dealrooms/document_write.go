@@ -16,6 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
@@ -34,9 +36,17 @@ type AddDocumentInput struct {
 	Source   string
 }
 
-// AddDocument puts an attachment of the deal in front of the buyer.
+// AddDocument puts an attachment of the deal in front of the buyer — at once,
+// with no publish in between.
+//
+// Human-only, for the reason UpdateRoom states: handing a file to an outside
+// party is a disclosure, and a disclosure is a person's act. Removing one is
+// already human-only, and adding is the half that matters more.
 func (s *Store) AddDocument(ctx context.Context, roomID ids.DealRoomID, in AddDocumentInput) (crmcontracts.DealRoomDocument, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionCreate); err != nil {
+		return crmcontracts.DealRoomDocument{}, err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -75,9 +85,13 @@ func addDocumentTx(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, in Add
 		}
 		return crmcontracts.DealRoomDocument{}, fmt.Errorf("insert deal room document: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "create", documentObject, id.UUID, nil,
-		map[string]any{fieldRoomID: roomID.UUID, fieldAttachmentID: in.AttachmentID, "group_key": in.GroupKey, columnTitle: title}); err != nil {
+	auditID, err := storekit.Audit(ctx, tx, "create", documentObject, id.UUID, nil,
+		map[string]any{fieldRoomID: roomID.UUID, fieldAttachmentID: in.AttachmentID, "group_key": in.GroupKey, columnTitle: title})
+	if err != nil {
 		return crmcontracts.DealRoomDocument{}, fmt.Errorf("audit deal room document add: %w", err)
+	}
+	if err := emitRoomChanged(ctx, tx, roomID, room.DealId, auditID, "documents"); err != nil {
+		return crmcontracts.DealRoomDocument{}, err
 	}
 	return readDocument(ctx, tx, roomID, id)
 }
@@ -139,14 +153,19 @@ type UpdateDocumentInput struct {
 	IfVersion *int64
 }
 
-// UpdateDocument renames, regroups or reorders a document.
+// UpdateDocument renames, regroups or reorders a document. The buyer reads the
+// new title at once, so it is a person's act like the add.
 func (s *Store) UpdateDocument(ctx context.Context, roomID ids.DealRoomID, id ids.DealRoomDocumentID, in UpdateDocumentInput) (crmcontracts.DealRoomDocument, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return crmcontracts.DealRoomDocument{}, err
+	}
 	var out crmcontracts.DealRoomDocument
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := openRoomForContent(ctx, tx, roomID); err != nil {
+		room, err := openRoomForContent(ctx, tx, roomID)
+		if err != nil {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, documentObject, id.UUID, storekit.LiveOnly); err != nil {
@@ -170,8 +189,12 @@ func (s *Store) UpdateDocument(ctx context.Context, roomID ids.DealRoomID, id id
 			if err := p.ApplyGuarded(ctx, tx, documentObject, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			if _, err := storekit.Audit(ctx, tx, "update", documentObject, id.UUID, p.Before(), p.After()); err != nil {
+			auditID, err := storekit.Audit(ctx, tx, "update", documentObject, id.UUID, p.Before(), p.After())
+			if err != nil {
 				return fmt.Errorf("audit deal room document update: %w", err)
+			}
+			if err := emitRoomChanged(ctx, tx, roomID, room.DealId, auditID, "documents"); err != nil {
+				return err
 			}
 		}
 		out, err = readDocument(ctx, tx, roomID, id)
@@ -192,7 +215,8 @@ func (s *Store) RemoveDocument(ctx context.Context, roomID ids.DealRoomID, id id
 	}
 	var out crmcontracts.DealRoomDocument
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := openRoomForContent(ctx, tx, roomID); err != nil {
+		room, err := openRoomForContent(ctx, tx, roomID)
+		if err != nil {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, documentObject, id.UUID, storekit.LiveOnly); err != nil {
@@ -207,12 +231,33 @@ func (s *Store) RemoveDocument(ctx context.Context, roomID ids.DealRoomID, id id
 		if err := p.ApplyGuarded(ctx, tx, documentObject, id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("remove deal room document: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "archive", documentObject, id.UUID,
-			map[string]any{columnTitle: current.Title, fieldAttachmentID: current.AttachmentId}, p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "archive", documentObject, id.UUID,
+			map[string]any{columnTitle: current.Title, fieldAttachmentID: current.AttachmentId}, p.After())
+		if err != nil {
 			return fmt.Errorf("audit deal room document remove: %w", err)
+		}
+		if err := emitRoomChanged(ctx, tx, roomID, room.DealId, auditID, "documents"); err != nil {
+			return err
 		}
 		out, err = readArchivedDocument(ctx, tx, roomID, id)
 		return err
 	})
 	return out, err
+}
+
+// emitRoomChanged announces that something an invited buyer reads has moved.
+//
+// A document add, retitle or removal reaches the buyer on their next read, so
+// it is exactly the fact deal_room.updated already carries for the room's own
+// wording — one event for "what the buyer sees is different now", rather than
+// three document-shaped types saying the same thing to the same subscribers.
+func emitRoomChanged(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, dealID openapi_types.UUID, auditID ids.UUID, field string) error {
+	changed := crmcontracts.PublicEventDealRoomUpdated{
+		DealId:        dealID,
+		ChangedFields: []string{field},
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, roomID.UUID, changed); err != nil {
+		return fmt.Errorf("emit deal_room.updated: %w", err)
+	}
+	return nil
 }

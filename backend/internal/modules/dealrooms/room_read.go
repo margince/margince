@@ -88,18 +88,17 @@ type rowScanner interface {
 
 func scanRoom(row rowScanner) (crmcontracts.DealRoom, error) {
 	var (
-		out          crmcontracts.DealRoom
-		id, dealID   ids.UUID
-		steward      *ids.UUID
-		capturedBy   string
-		version      int64
-		releaseCount int
-		state        string
+		out        crmcontracts.DealRoom
+		id, dealID ids.UUID
+		steward    *ids.UUID
+		capturedBy string
+		version    int64
+		state      string
 	)
 	if err := row.Scan(&id, &dealID, &out.Title, &out.WelcomeMessage, &state,
-		&steward, &out.ExpiresAt, &out.PublishedAt, &out.ClosedAt,
-		&out.Source, &capturedBy, &version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt,
-		&releaseCount); err != nil {
+		&steward, &out.ExpiresAt, &out.ClosedAt,
+		&out.Source, &capturedBy, &version, &out.CreatedAt, &out.UpdatedAt,
+		&out.ArchivedAt); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	out.Id = openapi_types.UUID(id)
@@ -107,7 +106,6 @@ func scanRoom(row rowScanner) (crmcontracts.DealRoom, error) {
 	out.State = crmcontracts.DealRoomState(state)
 	out.CapturedBy = &capturedBy
 	out.Version = &version
-	out.ReleaseCount = &releaseCount
 	if steward != nil {
 		u := openapi_types.UUID(*steward)
 		out.StewardUserId = &u

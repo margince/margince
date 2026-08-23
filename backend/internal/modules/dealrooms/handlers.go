@@ -121,20 +121,6 @@ func (h Handlers) ArchiveDealRoom(w http.ResponseWriter, r *http.Request, id crm
 	httperr.WriteJSON(w, http.StatusOK, room)
 }
 
-// PublishDealRoom freezes the working copy as the next release.
-func (h Handlers) PublishDealRoom(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	note, ok := publishNote(w, r)
-	if !ok {
-		return
-	}
-	release, err := h.store.PublishRoom(r.Context(), pathID(id), note)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusCreated, release)
-}
-
 // PauseDealRoom refuses buyer reads while credentials stay valid.
 func (h Handlers) PauseDealRoom(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	h.writeMove(w, r, h.store.PauseRoom, id)
@@ -179,27 +165,4 @@ func (h Handlers) SetDealRoomExpiry(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, room)
-}
-
-// ListDealRoomReleases pages what this room has shown a buyer over its life.
-func (h Handlers) ListDealRoomReleases(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListDealRoomReleasesParams) {
-	releases, page, err := h.store.ListReleases(r.Context(), pathID(id), limitArg(params.Limit), cursorArg(params.Cursor))
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomReleaseListResponse{
-		Data: releases,
-		Page: pageInfo(page),
-	})
-}
-
-// GetDealRoomChanges serves what a publish would change.
-func (h Handlers) GetDealRoomChanges(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	changes, err := h.store.Changes(r.Context(), pathID(id))
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, changes)
 }

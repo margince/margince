@@ -195,16 +195,6 @@ func (DealRoomKind) kind() string { return "deal_room" }
 // DealRoomID names one deal_room row — the buyer-facing projection of a deal.
 type DealRoomID = ID[DealRoomKind]
 
-// DealRoomReleaseKind is the release entity tag. Declared out-of-line for the
-// reason given above OfferTemplateKind.
-type DealRoomReleaseKind struct{}
-
-func (DealRoomReleaseKind) kind() string { return "deal_room_release" }
-
-// DealRoomReleaseID names one deal_room_release row — one immutable record of
-// what a buyer was shown.
-type DealRoomReleaseID = ID[DealRoomReleaseKind]
-
 // DealRoomParticipantKind is the room-participant entity tag. Declared
 // out-of-line for the reason given above OfferTemplateKind.
 type DealRoomParticipantKind struct{}

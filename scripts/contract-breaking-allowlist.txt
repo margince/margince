@@ -17,3 +17,4 @@ c2f615a69958f0c645c6907d8c44283497b1c9f8 f0618d3ff41aa3fd2949ed4cb7c6f2329e991d7
 a019622d248461265b2df0e473e5e132842aa64d 049e5eaf3ce1b9eb6c906ab677864ab347085ff8 ratified-1520-custom-field-object-enum-is-the-engine-allowlist-activity-was-never-served
 1f9fca14ce63500d4096127000981cbe3503db64 6d78949c129b52c7caf594410bb4249ae4e6f124 ratified-a-project-key-is-minted-by-the-server-not-chosen-by-a-caller
 88b8e4c19de07fd7bd576b58752704c8713f7e08 77f4eb252830a8b0e07b0b1f5e6794a1ed3276c9 ratified-a-project-is-worked-by-several-companies-not-owned-by-one
+ebba6a86f90624338680763bbae9cbeb0397637c 0d6f0de48c8ab32e50ffa70dde5befc602c91826 ratified-a-deal-room-is-live-from-creation-the-invitation-is-the-gate

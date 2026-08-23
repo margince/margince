@@ -2370,9 +2370,12 @@ function CompanyRecordBody({
         projects={liveProjects(view?.projects)}
       />
       {/* The deliveries this company is part of — as the client, a partner or a
-          subcontractor. It sits with Deals and Tasks because all three answer
-          "what is in flight with this account". */}
-      {!overlay && (
+          subcontractor. On the OVERVIEW tab with Deals and Tasks, because all
+          three answer "what is in flight with this account" and a section on
+          every tab is a section nobody can locate: it appeared under Documents
+          and Profile, where it means nothing, and a reader scanning Overview
+          did not read it as belonging there. */}
+      {!overlay && tab === "overview" && (
         <CompanyProjects
           organizationId={org.id}
           projects={view?.projects}

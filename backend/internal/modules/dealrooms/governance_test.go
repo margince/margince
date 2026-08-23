@@ -12,10 +12,11 @@ package dealrooms
 // lands, would pass the transport gate by never meeting it. So the rule is
 // asserted here, against the store, where a new caller cannot route around it.
 //
-// The division: shaping a DRAFT is auto-execute, because an agent writing a
-// better welcome paragraph changes nothing an outside party can read. Anything
-// that moves what a buyer can reach — publishing text to them, suspending or
-// ending their access, or widening the window they hold — is a person's.
+// The division: OPENING a room is auto-execute, because a room nobody has been
+// invited to is readable by nobody. Everything an outside party can then reach
+// — the wording, the documents, who holds a seat, how long they hold it — is a
+// person's. A room is live from creation, so there is no longer a draft an
+// agent could shape unseen.
 
 import (
 	"context"
@@ -63,10 +64,6 @@ func TestAnAgentMayNotMoveWhatABuyerCanReach(t *testing.T) {
 		act  string
 		call func() error
 	}{
-		{"publish a release to the buyer", func() error {
-			_, err := store.PublishRoom(ctx, roomID, nil)
-			return err
-		}},
 		{"pause the buyer's access", func() error {
 			_, err := store.PauseRoom(ctx, roomID)
 			return err
@@ -125,11 +122,16 @@ func TestAnAgentMayNotMoveWhatABuyerCanReach(t *testing.T) {
 	}
 }
 
-func TestAnAgentMayStillShapeADraft(t *testing.T) {
+func TestAnAgentMayStillOpenARoomNobodyIsInYet(t *testing.T) {
 	// The other half, and the one that makes the test above mean something. If
 	// the store refused every agent write, the refusals above would prove only
 	// that agents cannot touch Deal Rooms at all — which is not the rule, and
 	// would hide a guard that had stopped discriminating.
+	//
+	// Opening a room is the write that stayed auto-execute, and the reason is
+	// the one the whole division now rests on: a room nobody has been invited
+	// to is readable by nobody. The moment an outside party can read it — the
+	// wording, the documents, who holds a seat — it is a person's act.
 	//
 	// A nil store panics once the call gets past the authority checks, so
 	// reaching the database IS the pass condition here: it says the agent was
@@ -143,11 +145,13 @@ func TestAnAgentMayStillShapeADraft(t *testing.T) {
 				got = nil // reached the store: admitted, which is the point
 			}
 		}()
-		_, err := store.UpdateRoom(ctx, ids.From[ids.DealRoomKind](ids.NewV7()), UpdateRoomInput{})
+		_, err := store.CreateRoom(ctx, CreateRoomInput{
+			DealID: ids.From[ids.DealKind](ids.NewV7()), Title: "Acme", Source: "agent",
+		})
 		return err
 	}()
 
 	if errors.Is(admitted, apperrors.ErrPermissionDenied) {
-		t.Error("an agent was refused a draft edit; shaping unpublished text is auto-execute by design")
+		t.Error("an agent was refused a room nobody can read yet; opening one is auto-execute by design")
 	}
 }

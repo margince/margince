@@ -155,7 +155,7 @@ func room(f facts) []sentence {
 	}
 	r := f.room
 	lines := []sentence{{
-		Text:     fmt.Sprintf("Deal Room %q is %s%s.", r.Title, r.State, releases(r)),
+		Text:     fmt.Sprintf("Deal Room %q is %s.", r.Title, r.State),
 		Evidence: dealCite(f),
 	}}
 	openBuyer := 0
@@ -187,13 +187,6 @@ func room(f facts) []sentence {
 		})
 	}
 	return lines
-}
-
-func releases(r *crmcontracts.DealRoom) string {
-	if r.ReleaseCount == nil || *r.ReleaseCount == 0 {
-		return ", never published"
-	}
-	return fmt.Sprintf(", published %d time(s)", *r.ReleaseCount)
 }
 
 func decisionVerb(kind string) string {

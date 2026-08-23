@@ -15,54 +15,81 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// publishedDocuments reads the room's standing and the manifest a buyer may
-// see. Empty — not refused — while the room serves no content.
-func publishedDocuments(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, now time.Time) ([]snapshotDocument, error) {
+// buyerDocument is one document as the buyer's side needs it: what to show,
+// plus the attachment the bytes come from.
+type buyerDocument struct {
+	crmcontracts.BuyerRoomDocument
+	AttachmentID ids.UUID
+}
+
+// visibleDocuments reads the documents a buyer may see RIGHT NOW.
+//
+// Live rows, not a frozen manifest. A document the seller adds is shared the
+// moment it is added and gone the moment it is removed, which is what a rep
+// already believes when they press "Add to room" — the release cycle in
+// between was a second gate behind the invitation, and its only visible effect
+// was a buyer with a valid link reading an empty page.
+//
+// The audience rule (inTheDealsFilesArea) is what keeps this honest: a file
+// archived, unlinked from the deal, or hidden from it stops being readable
+// here even though its room entry survives for the seller to remove.
+func visibleDocuments(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, now time.Time) ([]buyerDocument, error) {
 	st, err := readStanding(ctx, tx, roomID)
 	if err != nil {
 		return nil, err
 	}
-	if !servesContent(st.access(now)) || st.snapshot == nil {
-		return []snapshotDocument{}, nil
+	if !servesContent(st.access(now)) {
+		return []buyerDocument{}, nil
 	}
-	snap, err := decodeSnapshot(st.snapshot)
+	rows, err := tx.Query(ctx, `
+		SELECT d.id, d.attachment_id, d.group_key, d.title, d.position,
+		       a.filename, a.content_type, a.byte_size
+		  FROM `+documentFrom+`
+		 WHERE d.room_id = $1 AND d.archived_at IS NULL AND `+inTheDealsFilesArea+`
+		 ORDER BY d.group_key, d.position, d.id`, roomID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read the room's documents: %w", err)
 	}
-	return snap.Documents, nil
+	defer rows.Close()
+	out := []buyerDocument{}
+	for rows.Next() {
+		var doc buyerDocument
+		var group string
+		if err := rows.Scan(&doc.Id, &doc.AttachmentID, &group, &doc.Title, &doc.Position,
+			&doc.Filename, &doc.ContentType, &doc.ByteSize); err != nil {
+			return nil, fmt.Errorf("scan a room document: %w", err)
+		}
+		doc.GroupKey = crmcontracts.DealRoomDocumentGroup(group)
+		out = append(out, doc)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read the room's documents: %w", err)
+	}
+	return out, nil
 }
 
-func buyerDocuments(docs []snapshotDocument) []crmcontracts.BuyerRoomDocument {
+func buyerDocuments(docs []buyerDocument) []crmcontracts.BuyerRoomDocument {
 	out := make([]crmcontracts.BuyerRoomDocument, 0, len(docs))
 	for _, d := range docs {
-		out = append(out, crmcontracts.BuyerRoomDocument{
-			Id:          d.ID,
-			GroupKey:    crmcontracts.DealRoomDocumentGroup(d.GroupKey),
-			Title:       d.Title,
-			Position:    d.Position,
-			Filename:    d.Filename,
-			ContentType: d.ContentType,
-			ByteSize:    d.ByteSize,
-		})
+		out = append(out, d.BuyerRoomDocument)
 	}
 	return out
 }
 
-// BuyerDocuments lists the published manifest.
+// BuyerDocuments lists what the buyer may read now.
 func (s *Store) BuyerDocuments(ctx context.Context, sess Session) ([]crmcontracts.BuyerRoomDocument, error) {
 	if sess.ID == ids.Nil {
 		return nil, apperrors.ErrPermissionDenied
 	}
 	var out []crmcontracts.BuyerRoomDocument
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		docs, err := publishedDocuments(ctx, tx, sess.RoomID, time.Now())
+		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
 		if err != nil {
 			return err
 		}
@@ -72,8 +99,8 @@ func (s *Store) BuyerDocuments(ctx context.Context, sess Session) ([]crmcontract
 	return out, err
 }
 
-// BuyerDocumentFile is what a download needs: the file facts the release
-// froze and the locator the attachment row holds now.
+// BuyerDocumentFile is what a download needs: the file's own facts and the
+// locator the attachment row holds now.
 type BuyerDocumentFile struct {
 	Filename    string
 	ContentType *string
@@ -81,65 +108,58 @@ type BuyerDocumentFile struct {
 	StorageKey  string
 }
 
-// BuyerDocumentLocator resolves one published document to its object.
+// BuyerDocumentLocator resolves one of the room's documents to its object.
 //
-// Two predicates, both mandatory: the document must be in the latest release
-// of the session's room (the manifest), and the attachment it names must still
-// be reachable through a document row OF THAT ROOM. The second is what keeps
-// a forged id in the manifest from reaching a file: the manifest says which
-// version, the row says which room.
+// The lookup is the same one the list runs, so a buyer can only fetch bytes
+// for something the list would have shown them: the document belongs to the
+// session's room, its entry is live, and its file is still in the deal's Files
+// area. A document removed from the room, or a file hidden from the deal, is
+// simply not found — which is the same answer an id that never existed gets.
 func (s *Store) BuyerDocumentLocator(ctx context.Context, sess Session, documentID ids.DealRoomDocumentID) (BuyerDocumentFile, error) {
 	if sess.ID == ids.Nil {
 		return BuyerDocumentFile{}, apperrors.ErrPermissionDenied
 	}
 	var out BuyerDocumentFile
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		docs, err := publishedDocuments(ctx, tx, sess.RoomID, time.Now())
+		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
 		if err != nil {
 			return err
 		}
-		published, ok := findPublished(docs, documentID)
+		wanted, ok := findVisible(docs, documentID)
 		if !ok {
 			return apperrors.ErrNotFound
 		}
-		// A release names a version; the bytes are served only while that file
-		// is still in the deal's Files area (inTheDealsFilesArea, the publish
-		// predicate).
 		err = tx.QueryRow(ctx,
 			`SELECT a.storage_key FROM `+documentFrom+`
 			  WHERE d.id = $1 AND d.room_id = $2 AND d.attachment_id = $3 AND `+inTheDealsFilesArea,
-			documentID, sess.RoomID, published.AttachmentID).Scan(&out.StorageKey)
+			documentID, sess.RoomID, wanted.AttachmentID).Scan(&out.StorageKey)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
 			return fmt.Errorf("locate deal room document: %w", err)
 		}
-		out.Filename, out.ContentType, out.ByteSize = published.Filename, published.ContentType, published.ByteSize
+		out.Filename, out.ContentType, out.ByteSize = wanted.Filename, wanted.ContentType, wanted.ByteSize
 		return nil
 	})
 	return out, err
 }
 
-func findPublished(docs []snapshotDocument, id ids.DealRoomDocumentID) (snapshotDocument, bool) {
+func findVisible(docs []buyerDocument, id ids.DealRoomDocumentID) (buyerDocument, bool) {
 	for _, d := range docs {
-		if ids.UUID(d.ID) == id.UUID {
+		if ids.UUID(d.Id) == id.UUID {
 			return d, true
 		}
 	}
-	return snapshotDocument{}, false
+	return buyerDocument{}, false
 }
 
-// Keep the contract id type in scope for the manifest's callers.
-var _ openapi_types.UUID
-
 // NoteDocumentDelivered records that a live buyer seat actually received one
-// document's bytes. The transport calls it AFTER the fetch succeeds — see the
-// file header for why that order is the whole point.
+// document's bytes. The transport calls it AFTER the fetch succeeds.
 //
-// A preview seat records nothing. An error is the caller's to log and swallow:
-// by the time this runs the buyer has their file, and failing the response over
-// a bookkeeping row would take away what they already legitimately fetched.
+// A preview seat records nothing: a seller looking at their own room as a
+// buyer would drives exactly the buyer's code paths, and recording that would
+// report the buyer opening documents the rep opened.
 func (s *Store) NoteDocumentDelivered(
 	ctx context.Context, sess Session, documentID ids.DealRoomDocumentID,
 ) error {

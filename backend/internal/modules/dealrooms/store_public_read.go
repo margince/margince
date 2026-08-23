@@ -32,27 +32,32 @@ const (
 )
 
 // roomStanding is the one room read the buyer edge performs: state and expiry
-// for access, the steward's name for the contact line, and the latest release
-// for everything else.
+// for access, the steward's name for the contact line, and the wording the
+// buyer reads at the top of the page.
+//
+// It reads the ROOM, not a frozen copy of it. A Deal Room is a place two sides
+// work in, not a document that goes to press: what the seller changes, the
+// buyer sees. The invitation is the gate — nobody without a seat reads
+// anything — and a second gate that staged the title and the welcome message
+// bought nothing except a buyer holding a valid link and looking at an empty
+// page because the rep had not pressed a button they did not know about.
 type roomStanding struct {
 	state       string
 	expiresAt   *time.Time
 	closedAt    *time.Time
 	stewardName *string
-	releaseNo   *int
-	snapshot    []byte
+	title       string
+	welcome     *string
 }
 
 func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomStanding, error) {
 	var st roomStanding
 	err := tx.QueryRow(ctx,
-		`SELECT r.state, r.expires_at, r.closed_at, u.display_name, rel.release_no, rel.snapshot
+		`SELECT r.state, r.expires_at, r.closed_at, u.display_name, r.title, r.welcome_message
 		   FROM deal_room r
 		   LEFT JOIN app_user u ON u.id = r.steward_user_id
-		   LEFT JOIN LATERAL (SELECT release_no, snapshot FROM deal_room_release
-		                       WHERE room_id = r.id ORDER BY release_no DESC LIMIT 1) rel ON true
 		  WHERE r.id = $1 AND r.archived_at IS NULL`,
-		roomID).Scan(&st.state, &st.expiresAt, &st.closedAt, &st.stewardName, &st.releaseNo, &st.snapshot)
+		roomID).Scan(&st.state, &st.expiresAt, &st.closedAt, &st.stewardName, &st.title, &st.welcome)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return roomStanding{}, apperrors.ErrNotFound
 	}
@@ -80,7 +85,8 @@ func (st roomStanding) access(now time.Time) string {
 	return accessLive
 }
 
-// servesContent says whether the release is shown at all in this access state.
+// servesContent says whether the room's content is shown at all in this
+// access state.
 func servesContent(access string) bool {
 	return access == accessLive || access == accessClosed
 }
@@ -107,18 +113,12 @@ func (s *Store) BuyerView(ctx context.Context, sess Session) (crmcontracts.Buyer
 			preview := true
 			out.Preview = &preview
 		}
-		if !servesContent(string(out.Access)) || st.snapshot == nil {
+		if !servesContent(string(out.Access)) {
 			return nil
 		}
-		snap, err := decodeSnapshot(st.snapshot)
-		if err != nil {
-			return err
-		}
 		out.Room = &crmcontracts.BuyerRoomContent{
-			Title:          snap.Title,
-			WelcomeMessage: snap.WelcomeMessage,
-			ReleaseNo:      *st.releaseNo,
-			ReleasedAt:     snap.ReleasedAt,
+			Title:          st.title,
+			WelcomeMessage: st.welcome,
 			StewardName:    st.stewardName,
 			ClosedAt:       st.closedAt,
 		}

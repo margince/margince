@@ -130,9 +130,19 @@ type ObjectReport struct {
 	Updated     int    `json:"updated"`
 	// Unchanged counts rows already landed under their provenance that
 	// this attempt did not rewrite (a resumed run's replayed page).
-	Unchanged   int          `json:"unchanged,omitempty"`
-	Skipped     []SkippedRow `json:"skipped,omitempty"`
-	Disclosures []string     `json:"disclosures,omitempty"`
+	Unchanged int          `json:"unchanged,omitempty"`
+	Skipped   []SkippedRow `json:"skipped,omitempty"`
+	// Collisions are rows that WILL land and also name a record the estate
+	// already holds. They are NOT skips: each is counted in Created, and the
+	// disposition's four counts must keep summing to the rows read. The
+	// warning exists so a person approving "create 3" is not surprised by a
+	// duplicate afterwards.
+	Collisions []SkippedRow `json:"collisions,omitempty"`
+	// Duplicates counts rows naming a record the estate already holds. It
+	// overlaps the other counts by design — each duplicate is also in Created
+	// or in Skipped — so it is never added to them.
+	Duplicates  int      `json:"duplicates,omitempty"`
+	Disclosures []string `json:"disclosures,omitempty"`
 }
 
 // Report is the run (or dry-run) outcome: per-object dispositions plus
@@ -421,6 +431,8 @@ func (r Report) mergedWith(next Report) Report {
 		// the same frozen snapshot, so the later read stands.
 		into.MirrorCount = or.MirrorCount
 		into.Skipped = append(into.Skipped, or.Skipped...)
+		into.Collisions = append(into.Collisions, or.Collisions...)
+		into.Duplicates += or.Duplicates
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
 	}
 	return out

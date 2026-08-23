@@ -795,14 +795,12 @@ export const vi = {
   "co.routeIn.band.unknown": "có ghi nhận liên hệ, chưa rõ nhịp",
   "record.profile": "Hồ sơ",
   "record.context": "Bối cảnh",
-  "room.editorial":
-    "Thay đổi về tài liệu sẽ đến với người mua ở lần công bố tiếp theo. Bình luận có hiệu lực ngay.",
+  "room.editorial": "Tài liệu bạn thêm được chia sẻ ngay, bình luận cũng vậy.",
   "room.readOnly": "Bạn có thể xem phòng này nhưng không thể thay đổi.",
   "room.finished":
     "Phòng này đã kết thúc, những gì đã chia sẻ giờ là hồ sơ lưu.",
   "room.card.title": "Deal Room",
   "room.card.people": "{invited} được mời · {active} đã đăng nhập",
-  "room.card.unpublished": "thay đổi chưa công bố",
   "room.card.lastSeen": "Người mua xem lần cuối: {when}",
   "room.card.open": "Mở Deal Room",
   "room.create.sub":
@@ -828,54 +826,24 @@ export const vi = {
   "roompage.setExpiryHint": "Quyền truy cập dừng vào ngày đó.",
   "roompage.closeTitle": "Đóng Deal Room này?",
   "roompage.closeBody":
-    "Người mua vẫn đọc được những gì đã công bố. Sau đó không nhận thêm tài liệu, bình luận hay quyết định. Bạn vẫn có thể thu hồi người và cấp liên kết.",
+    "Người mua vẫn đọc được phòng. Sau đó không nhận thêm tài liệu, bình luận hay quyết định. Bạn vẫn có thể thu hồi quyền và cấp liên kết.",
   "roompage.expiryLabel": "Quyền truy cập kết thúc vào",
   "roompage.expiryHint": "Để trống nếu không có ngày kết thúc.",
-  "roompage.banner.draft":
-    "Chưa công bố. Người mua không thấy gì cho đến khi bạn công bố.",
   "roompage.banner.paused":
     "Đã tạm dừng. Người mua thấy trang tạm dừng cho đến khi bạn tiếp tục.",
   "roompage.banner.closed":
-    "Đã đóng. Người mua vẫn đọc được những gì đã công bố; không nhận thêm gì.",
+    "Đã đóng. Người mua vẫn đọc được phòng; không nhận thêm gì nữa.",
   "roompage.banner.expired":
     "Đã hết hạn. Liên kết của người mua không còn hoạt động.",
   "roompage.banner.archived": "Đã lưu trữ. Không ai vào được phòng này.",
   "roompage.banner.liveUntil":
     "Đang hoạt động. Quyền truy cập kết thúc vào {when}.",
   "roompage.text.title": "Tiêu đề và lời chào",
-  "roompage.text.sub":
-    "Điều người mua đọc đầu tiên. Đến với họ ở lần công bố tiếp theo.",
+  "roompage.text.sub": "Điều người mua đọc đầu tiên. Họ thấy ngay.",
   "roompage.text.titleLabel": "Tiêu đề phòng",
   "roompage.text.welcomeLabel": "Lời chào",
   "roompage.viewAsBuyer": "Xem như người mua",
-  "roompage.previewDraft":
-    "Hãy công bố trước — người mua chỉ thấy bản đã công bố.",
   "roompage.previewArchived": "Phòng đã lưu trữ không có gì để xem trước.",
-  "roompage.publish": "Công bố",
-  "roompage.publishFinished":
-    "Phòng này đã kết thúc và không nhận thêm bản phát hành.",
-  "roompage.publishNothing": "Không có gì thay đổi kể từ bản phát hành trước.",
-  "roompage.publishChecking": "Đang kiểm tra thay đổi…",
-  "roompage.publishUnknown": "Không đọc được thay đổi; hãy tải lại trang.",
-  "roompage.publishTitle": "Công bố những thay đổi này cho người mua?",
-  "roompage.publishNoteLabel": "Ghi chú lưu hồ sơ (tùy chọn)",
-  "publish.title": "Công bố",
-  "publish.sub":
-    "Người mua sẽ thấy gì khác đi, và những gì đã gửi đi cho đến nay.",
-  "publish.pendingBadge": "Thay đổi chưa công bố",
-  "publish.noChanges": "Không có gì thay đổi kể từ bản phát hành trước.",
-  "publish.release": "Bản phát hành {no}",
-  "publish.readers": "{count} người mua đã đăng nhập.",
-  "publish.change.title": "Tiêu đề đã thay đổi.",
-  "publish.change.welcome": "Lời chào đã thay đổi.",
-  "publish.change.added": "Đã thêm: {title}",
-  "publish.change.removed": "Đã gỡ: {title}",
-  "publish.change.retitled": "Đã đổi tên: {title}",
-  "publish.change.regrouped": "Đã chuyển nhóm: {title}",
-  "publish.change.reordered": "Đã sắp xếp lại: {title}",
-  "publish.change.ineligible":
-    "Sẽ bị loại (đã ẩn, bỏ liên kết hoặc xóa trên giao dịch): {title}",
-  "publish.change.other": "Đã thay đổi: {title}",
   "access.title": "Quyền truy cập",
   "access.sub": "Ai được vào, và mỗi người được làm gì.",
   "access.invite": "Mời",
@@ -905,8 +873,6 @@ export const vi = {
   "access.nameLabel": "Tên",
   "access.emailLabel": "Địa chỉ email",
   "access.capabilityLegend": "Họ được làm gì?",
-  "access.inviteBeforePublish":
-    "Phòng này chưa từng được xuất bản, nên người bạn mời sẽ thấy một trang trống cho đến khi bạn bấm Xuất bản.",
   "access.inviteNote":
     "Bạn sẽ nhận được liên kết để sao chép. Nếu đã cấu hình gửi thư, liên kết cũng được gửi cho họ.",
   "access.issued.title": "Liên kết cho {name}",
@@ -2270,7 +2236,7 @@ export const vi = {
     "Tin nhắn và tệp đính kèm vẫn ở trên hoạt động và trong thư viện của công ty. Chỉ giao dịch này không còn liệt kê nó.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
-    "Tệp bị gỡ khỏi giao dịch này. Bản phát hành Deal Room đã nêu tên tệp vẫn cung cấp nó cho đến khi phòng được công bố lại.",
+    "Tệp bị gỡ khỏi giao dịch này, và khỏi mọi Deal Room đang chia sẻ nó.",
   "files.showHidden": "Hiện các tệp đã ẩn",
   "files.hideHidden": "Ẩn các tệp đã ẩn",
   "docs.state.draft": "Bản nháp",
@@ -4238,6 +4204,7 @@ export const vi = {
     "Liên kết này không còn hiệu lực. Liên kết tuỳ chọn sẽ hết hạn và có thể bị thu hồi — hãy lấy một liên kết mới từ bất kỳ email gần đây nào.",
   "buyer.opening": "Đang mở Deal Room của bạn…",
   "buyer.deadTitle": "Liên kết này không còn hoạt động",
+  "buyer.deadAskContact": "Hãy hỏi người liên hệ của bạn để lấy liên kết mới.",
   "buyer.linkDead":
     "Liên kết bạn dùng đã được mở, đã hết hạn hoặc đã được thay bằng liên kết mới hơn. Hãy yêu cầu liên kết mới bên dưới.",
   "buyer.noLink":
@@ -4253,9 +4220,6 @@ export const vi = {
   "buyer.expiredTitle": "Quyền truy cập đã kết thúc",
   "buyer.expiredBody":
     "Quyền truy cập phòng này đã hết hạn. Hãy liên hệ {steward} hoặc yêu cầu liên kết mới bên dưới.",
-  "buyer.notYetTitle": "Chưa có gì được công bố",
-  "buyer.notYetBody":
-    "{steward} chưa công bố gì trong phòng này. Hãy quay lại sau.",
   "buyer.eyebrow": "Phòng giao dịch (Deal Room)",
   "buyer.contact": "Người liên hệ của bạn: {steward}.",
   "buyer.closed": "Phòng này đã đóng; những gì đã chia sẻ giờ là bản ghi.",
@@ -4289,16 +4253,11 @@ export const vi = {
   "buyer.docs.download": "Tải xuống {title}",
   "buyer.docs.downloadFailed":
     "Tải xuống chưa bắt đầu. Hãy thử lại hoặc liên hệ người liên hệ của bạn.",
-  "room.docs.unshared": "Chưa chia sẻ — xuất bản để chia sẻ",
-  "room.docs.changed": "Đã thay đổi kể từ lần xuất bản trước",
-  "room.docs.shared": "Đã chia sẻ với người mua",
-  "room.docs.ineligible": "Không thể chia sẻ — tệp đã rời khỏi giao dịch",
   "buyer.docs.downloadShort": "Tải xuống",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "Toàn bộ phòng",
-  "threads.roomSub":
-    "Mọi điều không thuộc về một tài liệu cụ thể — trực tiếp, không cần xuất bản.",
+  "threads.roomSub": "Mọi điều không thuộc về một tài liệu cụ thể.",
   "threads.aboutThis": "{count} chủ đề về tài liệu này",
   "threads.askAbout": "Hỏi về tài liệu này",
   "threads.cancel": "Hủy",
@@ -6110,8 +6069,6 @@ export const vi = {
   "project.rollups.lastActivity": "Hoạt động gần nhất",
   "project.rollups.never": "chưa có gì",
   "project.rollups.activityCount": "Hoạt động",
-  "project.coverage":
-    "{attributed} đã gán · {awaiting} chờ quyết định · {nearby} ở người và thương vụ của dự án này chưa gán",
   "project.history.title": "Lịch sử giai đoạn",
   "project.history.empty": "Chưa ghi nhận thay đổi giai đoạn nào.",
   "project.history.current": "hiện tại",

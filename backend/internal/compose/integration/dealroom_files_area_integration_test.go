@@ -88,7 +88,7 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 	var roomRow apptest.AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)
@@ -111,9 +111,6 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 		t.Fatalf("add emailed file to the room = %d %v", status, doc)
 	}
 	docID, _ := doc["id"].(string)
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/publish", apptest.AnyMap{}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("publish = %d", status)
-	}
 
 	var session apptest.AnyMap
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": room.credential}, nil, &session); status != http.StatusOK {
@@ -139,9 +136,6 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 	if list, _ := sellerDocs["data"].([]any); len(list) != 1 {
 		t.Fatalf("the seller's list dropped the hidden entry (%v); only the seller can remove it", list)
 	}
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/publish", apptest.AnyMap{}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("republish = %d", status)
-	}
 	var buyerDocs apptest.AnyMap
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/documents", nil, bearer(token), &buyerDocs); status != http.StatusOK {
 		t.Fatalf("buyer documents = %d", status)
@@ -155,7 +149,7 @@ func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
-	room := openPublishedRoom(t, e)
+	room := openRoomWithABuyer(t, e)
 	var roomRow apptest.AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)

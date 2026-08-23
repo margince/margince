@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 151.6 KB |
+| Tool catalog | 152.2 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39593 |
+| Approx. wire tokens | 39730 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,10 +29,10 @@ budget in `agenttooldescriptions_test.go`.
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
-| Input schemas | 33.1 KB | 21% | Yes, every step |
+| Descriptions (incl. governance clause) | 35.0 KB | 23% | Yes, every step |
+| Input schemas | 33.3 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **67.9 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **68.4 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -88,14 +88,14 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 2.2 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 2.7 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.5 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 3.5 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 2.8 KB |
-| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.5 KB |
+| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.6 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.3 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
@@ -5629,7 +5629,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. create_record for one record you already know. run_id. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates` and still created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates`. Give the user both numbers before committing — "100 companies, 94 already here" is their decision, not yours. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -5657,6 +5657,14 @@ Bring a spreadsheet in: send the CSV as text and this checks every row against t
       "enum": [
         "organization",
         "lead"
+      ],
+      "type": "string"
+    },
+    "on_duplicate": {
+      "description": "A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way.",
+      "enum": [
+        "create",
+        "skip"
       ],
       "type": "string"
     }
@@ -6969,7 +6977,7 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+What an import will do, or did: rows created, updated, failed, unusable, and how many are already here (`duplicates`). These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -7003,6 +7011,9 @@ What an import will do, or did: rows created, updated, failed, unusable. These c
             "disposition": {
               "properties": {
                 "created": {
+                  "type": "integer"
+                },
+                "duplicates": {
                   "type": "integer"
                 },
                 "skipped": {

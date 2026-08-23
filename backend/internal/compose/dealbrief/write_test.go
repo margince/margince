@@ -25,7 +25,6 @@ func TestTheBriefStatesWhatIsOnTheRecordAndCitesIt(t *testing.T) {
 	meeting := "Kick-off"
 	booked := crmcontracts.ActivityMeetingStatusBooked
 	dealID := openapi_types.UUID(ids.NewV7())
-	releases := 2
 	reviewer := "Laura Kern"
 	f := facts{
 		now: now,
@@ -39,7 +38,7 @@ func TestTheBriefStatesWhatIsOnTheRecordAndCitesIt(t *testing.T) {
 			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Subject: &subject, OccurredAt: now.Add(-3 * 24 * time.Hour)},
 		},
 		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Send the SOW"}},
-		room:      &crmcontracts.DealRoom{Title: "Acme room", State: "live", ReleaseCount: &releases},
+		room:      &crmcontracts.DealRoom{Title: "Acme room", State: "live"},
 		threads: []crmcontracts.DealRoomThread{{State: "open", Comments: []crmcontracts.DealRoomComment{
 			{Author: crmcontracts.DealRoomAuthor{Side: "buyer"}},
 		}}},
@@ -61,7 +60,7 @@ func TestTheBriefStatesWhatIsOnTheRecordAndCitesIt(t *testing.T) {
 		sectionStanding: {"Acme rollout is open at 12000.00 EUR", "expected to close 2 Sep 2026", "Health reads 80 of 100", "3 days in the current stage"},
 		sectionActivity: {"Last activity: Re: MSA, 3 days ago", "Next meeting: Kick-off"},
 		sectionOpen:     {"1 open task, starting with \"Send the SOW\""},
-		sectionRoom:     {"\"Acme room\" is live, published 2 time(s)", "1 thread from the buyer waiting", "Laura Kern confirmed a document, yesterday"},
+		sectionRoom:     {"\"Acme room\" is live", "1 thread from the buyer waiting", "Laura Kern confirmed a document, yesterday"},
 	}
 	for kind, parts := range want {
 		for _, part := range parts {

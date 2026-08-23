@@ -85,9 +85,19 @@ export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
 export function ProjectKeyChip({
   projectKey,
 }: Readonly<{ projectKey: string }>) {
+  const t = useT();
   return (
     <Chip icon={Hash}>
-      <span className="t-mono">{projectKey}</span>
+      {/* What the key is FOR, on the chip rather than as a line of its own.
+        A reader learns it once by hovering the code they are already looking
+        at; a permanent sentence under the title pays every day for a lesson
+        taught once, which is what it was doing. */}
+      <span
+        className="t-mono"
+        title={t("project.keyMinted", { key: projectKey })}
+      >
+        {projectKey}
+      </span>
     </Chip>
   );
 }

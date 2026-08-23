@@ -4819,6 +4819,24 @@ func (e ImportObject) Valid() bool {
 	}
 }
 
+// Defines values for ImportOnDuplicate.
+const (
+	Create ImportOnDuplicate = "create"
+	Skip   ImportOnDuplicate = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportOnDuplicate enum.
+func (e ImportOnDuplicate) Valid() bool {
+	switch e {
+	case Create:
+		return true
+	case Skip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportRunConnector.
 const (
 	ImportRunConnectorBundle     ImportRunConnector = "bundle"
@@ -13080,12 +13098,12 @@ type BriefSnoozeRequest struct {
 // would collide with the lifecycle's.
 type BuyerRoomAccess = string
 
-// BuyerRoomContent The latest release, and only that. Every field here was copied at publish
-// time; the live deal is never read on this path.
+// BuyerRoomContent What the buyer reads at the top of the room, as it stands now. A room is
+// live from creation, so there is no release between an edit and this: the
+// seller changes the wording and the buyer reads it on their next load.
+// The live DEAL is still never read on this path — only the room's own row.
 type BuyerRoomContent struct {
-	ClosedAt   *time.Time `json:"closed_at,omitempty"`
-	ReleaseNo  int        `json:"release_no"`
-	ReleasedAt time.Time  `json:"released_at"`
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
 
 	// StewardName The named person on the seller's side to contact. Null when the steward's seat is gone.
 	StewardName    *string `json:"steward_name,omitempty"`
@@ -14754,6 +14772,22 @@ type CreateImportRunRequest struct {
 	// past the qualification step by the choice of an enum value.
 	Object ImportObject `json:"object"`
 
+	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
+	// by the same dedupe ladder every create path runs, not by this
+	// importer's own memory of what it once wrote.
+	//
+	// `create` is the historical behaviour and stays the default: the row
+	// lands and the pair goes on the dedupe review queue, exactly as a manual
+	// create does. That is right for one company typed by a human and wrong
+	// for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+	//
+	// `skip` leaves the incumbent alone and reports the row as skipped.
+	//
+	// The DRY RUN counts duplicates either way, so a person is told "100
+	// companies, 94 duplicates" before deciding — which is the whole reason
+	// the count is separate from `created`.
+	OnDuplicate *ImportOnDuplicate `json:"on_duplicate,omitempty"`
+
 	// SourceKey The source column holding the row's stable id, written to the row's
 	// provenance so a re-uploaded file updates rather than duplicates
 	// (IEM-AC-9) and an undo can find what one run created (S-E15.4c).
@@ -15534,21 +15568,18 @@ type DealRoom struct {
 	// ExpiresAt When buyer access lapses on its own. Extending is an explicit human act.
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
+	Source    string             `json:"source"`
 
-	// PublishedAt When the room first went live. Unchanged by later releases.
-	PublishedAt *time.Time `json:"published_at,omitempty"`
-
-	// ReleaseCount How many releases this room has published. 0 means no buyer has ever seen it.
-	ReleaseCount *int   `json:"release_count,omitempty"`
-	Source       string `json:"source"`
-
-	// State Where the room stands. Only `live` serves a buyer; `draft`, `building`, `ready`
-	// and `publishing` are seller-side assembly, and the last four are terminal or
-	// suspended.
+	// State Where the room stands. A room is created `live`, and `live` and `closed` are
+	// the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+	// retired: no writer produces them, and the enum keeps them so an old audit
+	// image still reads.
 	//
-	// `closed` freezes content while KEEPING access — the buyer still reads what
-	// they were shown. `expired` is access lapsing on its own. `archived` ends the
-	// room outright and frees the deal for another.
+	// `closed` stops the room taking new work while KEEPING access — the buyer goes
+	// on reading it, and neither side adds a document or a comment. It is not a
+	// frozen copy: what the buyer reads is the live room, so a file later removed
+	// from the deal stops being served here too. `expired` is access lapsing on its
+	// own. `archived` ends the room outright and frees the deal for another.
 	State DealRoomState `json:"state"`
 
 	// StewardUserId The named human a buyer is pointed at for help. Defaults to the deal's owner
@@ -15576,26 +15607,6 @@ type DealRoomAuthor struct {
 
 	// Side `seller` or `buyer`.
 	Side string `json:"side"`
-}
-
-// DealRoomChange defines model for DealRoomChange.
-type DealRoomChange struct {
-	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
-
-	// Kind One of title_changed, welcome_changed, document_added, document_removed, document_retitled, document_regrouped, document_reordered, document_ineligible. A plain string for the reason DealRoomParticipantCapability gives.
-	Kind string `json:"kind"`
-
-	// Title The document title the sentence names: current, or as last published.
-	Title *string `json:"title,omitempty"`
-}
-
-// DealRoomChanges defines model for DealRoomChanges.
-type DealRoomChanges struct {
-	Changes    []DealRoomChange `json:"changes"`
-	HasChanges bool             `json:"has_changes"`
-
-	// ReleaseNo The release the draft was compared against; null when the room was never published.
-	ReleaseNo *int `json:"release_no,omitempty"`
 }
 
 // DealRoomComment defines model for DealRoomComment.
@@ -15837,37 +15848,6 @@ type DealRoomPreviewIssued struct {
 	CredentialExpiresAt time.Time `json:"credential_expires_at"`
 }
 
-// DealRoomRelease An immutable published snapshot. Every buyer-visible editorial value is COPIED
-// in at publish time, so a later edit to the room or the deal cannot change what
-// a buyer was shown. The database refuses updates to this row outright.
-type DealRoomRelease struct {
-	CapturedBy  *string            `json:"captured_by,omitempty"`
-	CreatedAt   time.Time          `json:"created_at"`
-	Id          openapi_types.UUID `json:"id"`
-	PublishedAt time.Time          `json:"published_at"`
-
-	// PublishedBy The human who published. Null once that user is deleted; the release stands.
-	PublishedBy *openapi_types.UUID `json:"published_by,omitempty"`
-
-	// ReleaseNo Monotonic per room, from 1. Gaps are not possible.
-	ReleaseNo   int                `json:"release_no"`
-	ReleaseNote *string            `json:"release_note,omitempty"`
-	RoomId      openapi_types.UUID `json:"room_id"`
-
-	// Snapshot The frozen buyer projection — title, welcome text, steward and the document
-	// manifest as they read at publish time. Comments and decisions are deliberately
-	// absent: they are live collaboration state, not editorial content.
-	Snapshot             map[string]interface{} `json:"snapshot"`
-	Source               string                 `json:"source"`
-	AdditionalProperties map[string]interface{} `json:"-"`
-}
-
-// DealRoomReleaseListResponse defines model for DealRoomReleaseListResponse.
-type DealRoomReleaseListResponse struct {
-	Data []DealRoomRelease `json:"data"`
-	Page PageInfo          `json:"page"`
-}
-
 // DealRoomSessionIssued defines model for DealRoomSessionIssued.
 type DealRoomSessionIssued struct {
 	// ExpiresAt Absolute expiry. The buyer exchanges a fresh link after it.
@@ -15877,13 +15857,16 @@ type DealRoomSessionIssued struct {
 	SessionToken string `json:"session_token"`
 }
 
-// DealRoomState Where the room stands. Only `live` serves a buyer; `draft`, `building`, `ready`
-// and `publishing` are seller-side assembly, and the last four are terminal or
-// suspended.
+// DealRoomState Where the room stands. A room is created `live`, and `live` and `closed` are
+// the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+// retired: no writer produces them, and the enum keeps them so an old audit
+// image still reads.
 //
-// `closed` freezes content while KEEPING access — the buyer still reads what
-// they were shown. `expired` is access lapsing on its own. `archived` ends the
-// room outright and frees the deal for another.
+// `closed` stops the room taking new work while KEEPING access — the buyer goes
+// on reading it, and neither side adds a document or a comment. It is not a
+// frozen copy: what the buyer reads is the live room, so a file later removed
+// from the deal stops being served here too. `expired` is access lapsing on its
+// own. `archived` ends the room outright and frees the deal for another.
 type DealRoomState string
 
 // DealRoomThread One thread of the room's conversation, with its comments. Served to both
@@ -16489,6 +16472,22 @@ type ImportColumn struct {
 // past the qualification step by the choice of an enum value.
 type ImportObject string
 
+// ImportOnDuplicate What to do with a row naming a record the estate ALREADY holds — found
+// by the same dedupe ladder every create path runs, not by this
+// importer's own memory of what it once wrote.
+//
+// `create` is the historical behaviour and stays the default: the row
+// lands and the pair goes on the dedupe review queue, exactly as a manual
+// create does. That is right for one company typed by a human and wrong
+// for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+//
+// `skip` leaves the incumbent alone and reports the row as skipped.
+//
+// The DRY RUN counts duplicates either way, so a person is told "100
+// companies, 94 duplicates" before deciding — which is the whole reason
+// the count is separate from `created`.
+type ImportOnDuplicate string
+
 // ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
 type ImportRowIssue struct {
 	// Column The offending column, when one is to blame.
@@ -16541,7 +16540,15 @@ type ImportRunConnector string
 // ImportRunDisposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 type ImportRunDisposition struct {
 	Created int `json:"created"`
-	Skipped int `json:"skipped"`
+
+	// Duplicates Rows naming a record the estate already holds. NOT a fifth outcome
+	// and never added to the other four — each duplicate is already
+	// counted in `created` (it lands and files a review pair) or in
+	// `skipped` (when the run asked for `on_duplicate: skip`). It is the
+	// number a human needs before approving: "100 companies, 94 of them
+	// already here" is a different decision from "100 new companies".
+	Duplicates *int `json:"duplicates,omitempty"`
+	Skipped    int  `json:"skipped"`
 
 	// Unchanged Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail.
 	Unchanged int `json:"unchanged"`
@@ -21289,12 +21296,6 @@ type ProviderSpend struct {
 	Months []ProviderMonthlySpend `json:"months"`
 }
 
-// PublishDealRoomRequest defines model for PublishDealRoomRequest.
-type PublishDealRoomRequest struct {
-	// ReleaseNote Why this release exists, for the seller's own record. Not shown to the buyer.
-	ReleaseNote *string `json:"release_note,omitempty"`
-}
-
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.
 type PutOnboardingStateRequest struct {
 	// CompanyDraft Partial human-editable company input retained while the wizard is unfinished. Every field
@@ -22965,8 +22966,8 @@ type UpdateDealRoomParticipantRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. Edits the working copy — a live
-// room keeps serving its last release until someone publishes.
+// UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
+// reads the new wording on their next load, with nothing staged in between.
 //
 // `expires_at` is deliberately NOT here: moving the moment a buyer loses access
 // is a change to what an outside party can reach, so it has its own human-only
@@ -24847,22 +24848,6 @@ type SetDealRoomExpiryParams struct {
 type ListDealRoomParticipantsParams struct {
 	// ActiveOnly Only participants whose access has not been revoked.
 	ActiveOnly *bool `form:"active_only,omitempty" json:"active_only,omitempty"`
-}
-
-// ListDealRoomReleasesParams defines parameters for ListDealRoomReleases.
-type ListDealRoomReleasesParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListDealRoomThreadsParams defines parameters for ListDealRoomThreads.
@@ -28064,9 +28049,6 @@ type InviteDealRoomParticipantJSONRequestBody = InviteDealRoomParticipantRequest
 // UpdateDealRoomParticipantJSONRequestBody defines body for UpdateDealRoomParticipant for application/json ContentType.
 type UpdateDealRoomParticipantJSONRequestBody = UpdateDealRoomParticipantRequest
 
-// PublishDealRoomJSONRequestBody defines body for PublishDealRoom for application/json ContentType.
-type PublishDealRoomJSONRequestBody = PublishDealRoomRequest
-
 // OpenDealRoomThreadJSONRequestBody defines body for OpenDealRoomThread for application/json ContentType.
 type OpenDealRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 
@@ -30801,22 +30783,6 @@ func (a *DealRoom) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
-	if raw, found := object["published_at"]; found {
-		err = json.Unmarshal(raw, &a.PublishedAt)
-		if err != nil {
-			return fmt.Errorf("error reading 'published_at': %w", err)
-		}
-		delete(object, "published_at")
-	}
-
-	if raw, found := object["release_count"]; found {
-		err = json.Unmarshal(raw, &a.ReleaseCount)
-		if err != nil {
-			return fmt.Errorf("error reading 'release_count': %w", err)
-		}
-		delete(object, "release_count")
-	}
-
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -30931,20 +30897,6 @@ func (a DealRoom) MarshalJSON() ([]byte, error) {
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
-	}
-
-	if a.PublishedAt != nil {
-		object["published_at"], err = json.Marshal(a.PublishedAt)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'published_at': %w", err)
-		}
-	}
-
-	if a.ReleaseCount != nil {
-		object["release_count"], err = json.Marshal(a.ReleaseCount)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'release_count': %w", err)
-		}
 	}
 
 	object["source"], err = json.Marshal(a.Source)
@@ -31545,195 +31497,6 @@ func (a DealRoomParticipant) MarshalJSON() ([]byte, error) {
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
-	}
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for DealRoomRelease. Returns the specified
-// element and whether it was found
-func (a DealRoomRelease) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for DealRoomRelease
-func (a *DealRoomRelease) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for DealRoomRelease to handle AdditionalProperties
-func (a *DealRoomRelease) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["captured_by"]; found {
-		err = json.Unmarshal(raw, &a.CapturedBy)
-		if err != nil {
-			return fmt.Errorf("error reading 'captured_by': %w", err)
-		}
-		delete(object, "captured_by")
-	}
-
-	if raw, found := object["created_at"]; found {
-		err = json.Unmarshal(raw, &a.CreatedAt)
-		if err != nil {
-			return fmt.Errorf("error reading 'created_at': %w", err)
-		}
-		delete(object, "created_at")
-	}
-
-	if raw, found := object["id"]; found {
-		err = json.Unmarshal(raw, &a.Id)
-		if err != nil {
-			return fmt.Errorf("error reading 'id': %w", err)
-		}
-		delete(object, "id")
-	}
-
-	if raw, found := object["published_at"]; found {
-		err = json.Unmarshal(raw, &a.PublishedAt)
-		if err != nil {
-			return fmt.Errorf("error reading 'published_at': %w", err)
-		}
-		delete(object, "published_at")
-	}
-
-	if raw, found := object["published_by"]; found {
-		err = json.Unmarshal(raw, &a.PublishedBy)
-		if err != nil {
-			return fmt.Errorf("error reading 'published_by': %w", err)
-		}
-		delete(object, "published_by")
-	}
-
-	if raw, found := object["release_no"]; found {
-		err = json.Unmarshal(raw, &a.ReleaseNo)
-		if err != nil {
-			return fmt.Errorf("error reading 'release_no': %w", err)
-		}
-		delete(object, "release_no")
-	}
-
-	if raw, found := object["release_note"]; found {
-		err = json.Unmarshal(raw, &a.ReleaseNote)
-		if err != nil {
-			return fmt.Errorf("error reading 'release_note': %w", err)
-		}
-		delete(object, "release_note")
-	}
-
-	if raw, found := object["room_id"]; found {
-		err = json.Unmarshal(raw, &a.RoomId)
-		if err != nil {
-			return fmt.Errorf("error reading 'room_id': %w", err)
-		}
-		delete(object, "room_id")
-	}
-
-	if raw, found := object["snapshot"]; found {
-		err = json.Unmarshal(raw, &a.Snapshot)
-		if err != nil {
-			return fmt.Errorf("error reading 'snapshot': %w", err)
-		}
-		delete(object, "snapshot")
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &a.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-		delete(object, "source")
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for DealRoomRelease to handle AdditionalProperties
-func (a DealRoomRelease) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	object["captured_by"], err = json.Marshal(a.CapturedBy)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
-	}
-
-	object["created_at"], err = json.Marshal(a.CreatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
-	}
-
-	object["id"], err = json.Marshal(a.Id)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'id': %w", err)
-	}
-
-	object["published_at"], err = json.Marshal(a.PublishedAt)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'published_at': %w", err)
-	}
-
-	if a.PublishedBy != nil {
-		object["published_by"], err = json.Marshal(a.PublishedBy)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'published_by': %w", err)
-		}
-	}
-
-	object["release_no"], err = json.Marshal(a.ReleaseNo)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'release_no': %w", err)
-	}
-
-	if a.ReleaseNote != nil {
-		object["release_note"], err = json.Marshal(a.ReleaseNote)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'release_note': %w", err)
-		}
-	}
-
-	object["room_id"], err = json.Marshal(a.RoomId)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'room_id': %w", err)
-	}
-
-	if a.Snapshot != nil {
-		object["snapshot"], err = json.Marshal(a.Snapshot)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'snapshot': %w", err)
-		}
-	}
-
-	object["source"], err = json.Marshal(a.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -36721,12 +36484,9 @@ type ServerInterface interface {
 	// Get a Deal Room by id.
 	// (GET /deal-rooms/{id})
 	GetDealRoom(w http.ResponseWriter, r *http.Request, id Id)
-	// Edit a Deal Room's draft text (partial).
+	// Edit a Deal Room's title and welcome message (partial).
 	// (PATCH /deal-rooms/{id})
 	UpdateDealRoom(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealRoomParams)
-	// What the buyer would see differently if the room were published now.
-	// (GET /deal-rooms/{id}/changes)
-	GetDealRoomChanges(w http.ResponseWriter, r *http.Request, id Id)
 	// Freeze the room's content, keeping buyer access.
 	// (POST /deal-rooms/{id}/close)
 	CloseDealRoom(w http.ResponseWriter, r *http.Request, id Id)
@@ -36769,12 +36529,6 @@ type ServerInterface interface {
 	// See the room as a buyer would — a real buyer session, minted for the caller.
 	// (POST /deal-rooms/{id}/preview)
 	PreviewDealRoom(w http.ResponseWriter, r *http.Request, id Id)
-	// Publish the working copy as the next release.
-	// (POST /deal-rooms/{id}/publish)
-	PublishDealRoom(w http.ResponseWriter, r *http.Request, id Id)
-	// List a room's published releases, newest first.
-	// (GET /deal-rooms/{id}/releases)
-	ListDealRoomReleases(w http.ResponseWriter, r *http.Request, id Id, params ListDealRoomReleasesParams)
 	// Resume a paused Deal Room.
 	// (POST /deal-rooms/{id}/resume)
 	ResumeDealRoom(w http.ResponseWriter, r *http.Request, id Id)
@@ -37438,7 +37192,7 @@ type ServerInterface interface {
 	// Ask for a fresh Deal Room link by email (anonymous, always 202).
 	// (POST /public/rooms/link-request)
 	RequestDealRoomLink(w http.ResponseWriter, r *http.Request)
-	// The room as its buyer sees it — the latest release, never the live deal.
+	// The room as its buyer sees it — the room itself, never the live deal.
 	// (GET /public/rooms/me)
 	GetBuyerRoom(w http.ResponseWriter, r *http.Request)
 	// Whether a Deal Room credential can still be exchanged (anonymous).
@@ -38557,15 +38311,9 @@ func (_ Unimplemented) GetDealRoom(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit a Deal Room's draft text (partial).
+// Edit a Deal Room's title and welcome message (partial).
 // (PATCH /deal-rooms/{id})
 func (_ Unimplemented) UpdateDealRoom(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealRoomParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What the buyer would see differently if the room were published now.
-// (GET /deal-rooms/{id}/changes)
-func (_ Unimplemented) GetDealRoomChanges(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -38650,18 +38398,6 @@ func (_ Unimplemented) PauseDealRoom(w http.ResponseWriter, r *http.Request, id 
 // See the room as a buyer would — a real buyer session, minted for the caller.
 // (POST /deal-rooms/{id}/preview)
 func (_ Unimplemented) PreviewDealRoom(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Publish the working copy as the next release.
-// (POST /deal-rooms/{id}/publish)
-func (_ Unimplemented) PublishDealRoom(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List a room's published releases, newest first.
-// (GET /deal-rooms/{id}/releases)
-func (_ Unimplemented) ListDealRoomReleases(w http.ResponseWriter, r *http.Request, id Id, params ListDealRoomReleasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -39991,7 +39727,7 @@ func (_ Unimplemented) RequestDealRoomLink(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The room as its buyer sees it — the latest release, never the live deal.
+// The room as its buyer sees it — the room itself, never the live deal.
 // (GET /public/rooms/me)
 func (_ Unimplemented) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -46182,40 +45918,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// GetDealRoomChanges operation middleware
-func (siw *ServerInterfaceWrapper) GetDealRoomChanges(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealRoomChanges(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // CloseDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.Request) {
 
@@ -46814,103 +46516,6 @@ func (siw *ServerInterfaceWrapper) PreviewDealRoom(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewDealRoom(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// PublishDealRoom operation middleware
-func (siw *ServerInterfaceWrapper) PublishDealRoom(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PublishDealRoom(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListDealRoomReleases operation middleware
-func (siw *ServerInterfaceWrapper) ListDealRoomReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListDealRoomReleasesParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListDealRoomReleases(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -62678,9 +62283,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/deal-rooms/{id}", wrapper.UpdateDealRoom)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deal-rooms/{id}/changes", wrapper.GetDealRoomChanges)
-	})
-	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-rooms/{id}/close", wrapper.CloseDealRoom)
 	})
 	r.Group(func(r chi.Router) {
@@ -62721,12 +62323,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-rooms/{id}/preview", wrapper.PreviewDealRoom)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/deal-rooms/{id}/publish", wrapper.PublishDealRoom)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deal-rooms/{id}/releases", wrapper.ListDealRoomReleases)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-rooms/{id}/resume", wrapper.ResumeDealRoom)

@@ -852,12 +852,11 @@ export const en = {
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
   "room.editorial":
-    "Changes to the documents reach the buyer at the next publish. Comments are immediate.",
+    "A document you add is shared straight away, and comments are immediate.",
   "room.readOnly": "You can read this room but not change it.",
   "room.finished": "This room is finished, so what it shared is now a record.",
   "room.card.title": "Deal Room",
   "room.card.people": "{invited} invited · {active} signed in",
-  "room.card.unpublished": "unpublished changes",
   "room.card.lastSeen": "Last seen by a buyer: {when}",
   "room.card.open": "Open the Deal Room",
   "room.create.sub":
@@ -882,53 +881,22 @@ export const en = {
   "roompage.setExpiryHint": "Access stops on that day.",
   "roompage.closeTitle": "Close this Deal Room?",
   "roompage.closeBody":
-    "Buyers keep reading what was published. No document, comment or decision is accepted afterwards. You can still revoke people and issue links.",
+    "Buyers keep reading the room. No document, comment or decision is accepted afterwards. You can still revoke people and issue links.",
   "roompage.expiryLabel": "Access ends on",
   "roompage.expiryHint": "Leave empty for no end date.",
-  "roompage.banner.draft":
-    "Not published yet. Buyers see nothing until you publish.",
   "roompage.banner.paused":
     "Paused. Buyers see a paused page until you resume.",
   "roompage.banner.closed":
-    "Closed. Buyers can still read what was published; nothing more is accepted.",
+    "Closed. Buyers can still read the room; nothing more is accepted.",
   "roompage.banner.expired": "Expired. Buyer links no longer work.",
   "roompage.banner.archived": "Archived. Nobody can enter this room.",
   "roompage.banner.liveUntil": "Live. Access ends on {when}.",
   "roompage.text.title": "Title and welcome",
-  "roompage.text.sub":
-    "What the buyer reads first. Reaches them at the next publish.",
+  "roompage.text.sub": "What the buyer reads first. They see it straight away.",
   "roompage.text.titleLabel": "Room title",
   "roompage.text.welcomeLabel": "Welcome message",
   "roompage.viewAsBuyer": "View as buyer",
-  "roompage.previewDraft":
-    "Publish first — a buyer only ever sees a published release.",
   "roompage.previewArchived": "An archived room has nothing to preview.",
-  "roompage.publish": "Publish",
-  "roompage.publishFinished":
-    "This room is finished and takes no more releases.",
-  "roompage.publishNothing": "Nothing has changed since the last release.",
-  "roompage.publishChecking": "Checking what has changed…",
-  "roompage.publishUnknown":
-    "Could not read what has changed; reload the page.",
-  "roompage.publishTitle": "Publish these changes to the buyer?",
-  "roompage.publishNoteLabel": "Note for the record (optional)",
-  "publish.title": "Publish",
-  "publish.sub":
-    "What the buyer would see differently, and what has gone out so far.",
-  "publish.pendingBadge": "Unpublished changes",
-  "publish.noChanges": "Nothing has changed since the last release.",
-  "publish.release": "Release {no}",
-  "publish.readers": "{count} buyer(s) have signed in.",
-  "publish.change.title": "The title changed.",
-  "publish.change.welcome": "The welcome message changed.",
-  "publish.change.added": "Added: {title}",
-  "publish.change.removed": "Removed: {title}",
-  "publish.change.retitled": "Renamed: {title}",
-  "publish.change.regrouped": "Moved to another group: {title}",
-  "publish.change.reordered": "Reordered: {title}",
-  "publish.change.ineligible":
-    "Will drop out (hidden, unlinked or deleted on the deal): {title}",
-  "publish.change.other": "Changed: {title}",
   "access.title": "Access",
   "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",
@@ -958,8 +926,6 @@ export const en = {
   "access.nameLabel": "Name",
   "access.emailLabel": "Email",
   "access.capabilityLegend": "What may they do?",
-  "access.inviteBeforePublish":
-    "This room has never been published, so whoever you invite will see an empty page until you press Publish.",
   "access.inviteNote":
     "You will get the link to copy. If a mail relay is configured it is also sent to them.",
   "access.issued.title": "Link for {name}",
@@ -2314,7 +2280,7 @@ export const en = {
     "The message and its attachment stay on the activity and in the company library. Only this deal stops listing it.",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
-    "The file is removed from this deal. A Deal Room release that names it keeps serving it until the room is published again.",
+    "The file is removed from this deal, and from any Deal Room sharing it.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide the hidden files",
   "docs.state.draft": "Draft",
@@ -4330,6 +4296,7 @@ export const en = {
     "This link is no longer valid. Preference links expire and can be withdrawn — ask for a fresh one from any recent email.",
   "buyer.opening": "Opening your Deal Room…",
   "buyer.deadTitle": "This link no longer works",
+  "buyer.deadAskContact": "Ask your contact for a fresh link.",
   "buyer.linkDead":
     "The link you used has already been opened, has lapsed, or was replaced by a newer one. Ask for a fresh link below.",
   "buyer.noLink":
@@ -4345,9 +4312,6 @@ export const en = {
   "buyer.expiredTitle": "Access has ended",
   "buyer.expiredBody":
     "Access to this room has lapsed. Contact {steward}, or ask for a fresh link below.",
-  "buyer.notYetTitle": "Nothing published yet",
-  "buyer.notYetBody":
-    "{steward} has not published anything to this room yet. Check back soon.",
   "buyer.eyebrow": "Deal Room",
   "buyer.contact": "Your contact: {steward}.",
   "buyer.closed": "This room is closed; what it shared is a record now.",
@@ -4381,16 +4345,11 @@ export const en = {
   "buyer.docs.download": "Download {title}",
   "buyer.docs.downloadFailed":
     "The download did not start. Try again, or ask your contact.",
-  "room.docs.unshared": "Not yet shared — publish to share",
-  "room.docs.changed": "Changed since last published",
-  "room.docs.shared": "Shared with the buyer",
-  "room.docs.ineligible": "Cannot be shared — the file left the deal",
   "buyer.docs.downloadShort": "Download",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "The room as a whole",
-  "threads.roomSub":
-    "Anything not about one document — live, no publish needed.",
+  "threads.roomSub": "Anything not about one document.",
   "threads.aboutThis": "{count} thread(s) about this document",
   "threads.askAbout": "Ask about this document",
   "threads.cancel": "Cancel",
@@ -6230,8 +6189,6 @@ export const en = {
   "project.rollups.lastActivity": "Last activity",
   "project.rollups.never": "nothing yet",
   "project.rollups.activityCount": "Activities",
-  "project.coverage":
-    "{attributed} attributed · {awaiting} awaiting a decision · {nearby} on this project's people and deals not attributed",
   "project.history.title": "Phase history",
   "project.history.empty": "No phase change recorded yet.",
   "project.history.current": "current",

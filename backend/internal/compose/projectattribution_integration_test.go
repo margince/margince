@@ -83,15 +83,6 @@ func seedAttributionAccount(t *testing.T, e *integration.Env) attributionAccount
 				"organization": {Create: true, Read: true},
 				"project":      {Read: true},
 				"deal":         {Read: true},
-				// The candidate set is reached THROUGH the project's company
-				// edge, so naming a project is an edge read. A real connector
-				// carries the mailbox owner's RBAC verbatim (extingress.go
-				// copies rbac.Permissions onto it), and every seeded rep role
-				// grants relationship — see integration.RepPerms. Leaving it
-				// out modelled a connector production does not issue, and this
-				// suite passed only while attribution reached projects without
-				// the edge.
-				"relationship": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

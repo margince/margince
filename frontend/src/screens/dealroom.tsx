@@ -24,7 +24,6 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { useParticipants } from "./dealroomaccess";
-import { useRoomChanges } from "./dealroomchanges";
 
 type DealRoom = components["schemas"]["DealRoom"];
 type DealRoomState = components["schemas"]["DealRoomState"];
@@ -78,7 +77,6 @@ export function DealRoomAside({
 function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const participants = useParticipants(room.id);
-  const changes = useRoomChanges(room.id, !FINISHED_STATES.has(room.state));
   const rows = participants.data?.data ?? [];
   const invited = rows.filter((p) => !p.revoked_at).length;
   const active = rows.filter((p) => !p.revoked_at && p.has_signed_in).length;
@@ -99,7 +97,6 @@ function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
             invited: String(invited),
             active: String(active),
           })}
-          {changes.data?.has_changes ? ` · ${t("room.card.unpublished")}` : ""}
         </p>
         {lastSeen ? (
           <p className="t-small">

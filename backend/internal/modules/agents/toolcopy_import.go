@@ -11,9 +11,12 @@ package agents
 var previewImportCopy = toolCopy{
 	Purpose: "Bring a spreadsheet in: send the CSV as text and this checks every row " +
 		"against the workspace and reports what importing it would do.",
-	Limits:  "Writes nothing. People arrive as leads, so `object` is lead or organization.",
+	Limits: "Writes nothing. People arrive as leads, so `object` is lead or organization. " +
+		"A row naming a company already here is counted in `duplicates` and still created " +
+		"unless on_duplicate is skip.",
 	Instead: "create_record for one record you already know.",
-	Retain:  "run_id.",
+	Retain: "run_id, and `duplicates`. Give the user both numbers before committing — " +
+		"\"100 companies, 94 already here\" is their decision, not yours.",
 }
 
 var readImportRunCopy = toolCopy{
@@ -22,8 +25,9 @@ var readImportRunCopy = toolCopy{
 }
 
 var readImportReportCopy = toolCopy{
-	Purpose: "What an import will do, or did: rows created, updated, failed, unusable.",
-	Limits:  "These counts are what a person approves. Same shape before and after.",
+	Purpose: "What an import will do, or did: rows created, updated, failed, unusable, " +
+		"and how many are already here (`duplicates`).",
+	Limits: "These counts are what a person approves. Same shape before and after.",
 }
 
 var commitImportCopy = toolCopy{
