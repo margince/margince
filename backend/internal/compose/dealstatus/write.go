@@ -131,8 +131,8 @@ func activityEvidence(a crmcontracts.Activity) crmcontracts.OrganizationBriefEvi
 }
 
 // foldWritten puts the lane's words on the floor's card. The MOVE keeps the
-// floor's verb and arguments — the model explains the move and supplies the
-// words to open with, it never chooses one.
+// floor's verb and arguments — the model explains the move, it never chooses
+// one.
 func foldWritten(
 	floor crmcontracts.DealStatusCard, w WrittenStatus, f facts, mv crmcontracts.DealStatusCardMove,
 ) crmcontracts.DealStatusCard {
@@ -171,7 +171,14 @@ func verdictOf(w WrittenStatus, f facts) *crmcontracts.DealStatusCardVerdict {
 	}
 }
 
-// writtenMove keeps the rules' verb and arguments and takes only the words.
+// writtenMove keeps the rules' verb and arguments and takes only the reason.
+//
+// The model does not draft the words to SEND. That is a drafting surface, and
+// this repo has one — compose/draftrules, imported by every surface that
+// writes to a counterparty, with a parity test holding them identical. A line
+// written here would be a fifth surface outside that block: no sender, no
+// recipient, no register, and none of the rules the others learned the hard
+// way. The reader drafts through the composer, which has them.
 func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus) *crmcontracts.DealStatusCardMove {
 	if mv.Action == ActionNone {
 		return nil
@@ -179,10 +186,6 @@ func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus) *crmcontra
 	written := mv
 	if w.MoveReason != "" {
 		written.Reason = w.MoveReason
-	}
-	if w.Opening != "" {
-		opening := w.Opening
-		written.Opening = &opening
 	}
 	return &written
 }

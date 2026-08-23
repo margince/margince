@@ -53,7 +53,7 @@ type Completer interface {
 const statusSystem = `You brief a colleague on one sales deal, from a JSON summary of the deal, its timeline, its open tasks and its buyer conversation in a CRM.
 
 Return ONLY a JSON object with these keys:
-{"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":"...","opening":"..."}
+{"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":"..."}
 Each of "story", "blocker", "buyer" and "verdict.because" is a list of {"text":"...","evidence":["<id>", ...]}.
 
 "story" — what happened and where it leaves things, in the order it happened. Two to four sentences. Start with the thing a reader who has forgotten this deal most needs to know. Name people, dates and what was actually said.
@@ -61,7 +61,6 @@ Each of "story", "blocker", "buyer" and "verdict.because" is a list of {"text":"
 "buyer" — what the buyer wants, read from what they have actually said: what they are optimising for, what they asked for, what they have NOT objected to. One or two sentences. Return an empty list when they have said too little to read honestly. Never guess at a motive the summary does not support.
 "verdict" — your honest call. "standing" is exactly one of: live (moving, with a next step both sides expect), drifting (nothing wrong, nothing happening, it dies of neglect if nobody acts), blocked (something specific is in the way, and you named it in "blocker"), cold (a long silence after real engagement — treat as lost unless something changes). "because" is one or two sentences saying what the call rests on. Be willing to say a deal is cold. A briefing that never delivers bad news is not read twice.
 "move_reason" — one sentence on why the recommended move is the right one now. The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it.
-"opening" — the actual line to open with, ready to send or say. One or two sentences in the language the buyer writes in. Write it as the seller, to the buyer, by name. Leave it empty when the move needs no words.
 
 Every sentence in "story", "blocker", "buyer" and "verdict.because" lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text", in "move_reason" or in "opening".
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
@@ -223,7 +222,6 @@ type WrittenStatus struct {
 	Buyer      []WrittenLine
 	Verdict    WrittenVerdict
 	MoveReason string
-	Opening    string
 }
 
 // WrittenVerdict is the call and what it rests on. An empty Standing means the
@@ -284,7 +282,6 @@ type replyShape struct {
 		Because  []replyLine `json:"because"`
 	} `json:"verdict"`
 	MoveReason string `json:"move_reason"`
-	Opening    string `json:"opening"`
 }
 
 // keepSections runs the grounding filter over every cited section. Each may
@@ -318,14 +315,13 @@ func keepSections(parsed replyShape, known, citable map[string]bool) (WrittenSta
 	return out, nil
 }
 
-// keepFreeText holds the two fields that carry no citations of their own: the
-// move's reason, and the line the reader will actually send.
+// keepFreeText holds the one field that carries no citations of its own: the
+// move's reason.
 //
-// Neither is cited, and that is deliberate rather than an oversight. A reason
-// explains a move the RULES chose from records, and an opening is words for
-// the reader to say — citing a record inside a sentence addressed to the buyer
-// would put a footnote in an email. Both are still bounded and still refused
-// when they spell an id.
+// It is uncited deliberately. The reason explains a move the RULES chose from
+// records, so what it rests on is the move's own evidence rather than a
+// citation of its own. It is still bounded and still refused when it spells an
+// id.
 func keepFreeText(out *WrittenStatus, parsed replyShape, known map[string]bool) error {
 	reason := strings.TrimSpace(parsed.MoveReason)
 	if len([]rune(reason)) > maxMoveReason {
@@ -334,14 +330,7 @@ func keepFreeText(out *WrittenStatus, parsed replyShape, known map[string]bool) 
 	if err := refuseIDsInReaderText(reason, known); err != nil {
 		return fmt.Errorf("move reason: %w", err)
 	}
-	opening := strings.TrimSpace(parsed.Opening)
-	if len([]rune(opening)) > maxOpeningLen {
-		return errors.New("deal status reply's opening line exceeds the card's bounds")
-	}
-	if err := refuseIDsInReaderText(opening, known); err != nil {
-		return fmt.Errorf("opening: %w", err)
-	}
-	out.MoveReason, out.Opening = reason, opening
+	out.MoveReason = reason
 	return nil
 }
 

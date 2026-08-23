@@ -20371,14 +20371,6 @@ components:
       properties:
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
-        opening:
-          type: string
-          description: |
-            The line to actually open with — the sentence that restarts the
-            conversation, ready to say or send. Absent when the move needs no
-            words (reading a brief) or when the records do not support putting
-            words in the reader's mouth. A rep who has to invent the opener
-            themselves has been told what to do, not helped to do it.
         arguments:
           type: object
           additionalProperties: true

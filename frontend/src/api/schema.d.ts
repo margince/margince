@@ -14132,14 +14132,6 @@ export interface components {
             action: string;
             /** @description One sentence saying why this move and not another. */
             reason: string;
-            /**
-             * @description The line to actually open with — the sentence that restarts the
-             *     conversation, ready to say or send. Absent when the move needs no
-             *     words (reading a brief) or when the records do not support putting
-             *     words in the reader's mouth. A rep who has to invent the opener
-             *     themselves has been told what to do, not helped to do it.
-             */
-            opening?: string;
             /** @description `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
             arguments?: {
                 [key: string]: unknown;

@@ -15912,13 +15912,6 @@ type DealStatusCardMove struct {
 	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
 	Evidence  []DealNextBestActionEvidence `json:"evidence"`
 
-	// Opening The line to actually open with — the sentence that restarts the
-	// conversation, ready to say or send. Absent when the move needs no
-	// words (reading a brief) or when the records do not support putting
-	// words in the reader's mouth. A rep who has to invent the opener
-	// themselves has been told what to do, not helped to do it.
-	Opening *string `json:"opening,omitempty"`
-
 	// Reason One sentence saying why this move and not another.
 	Reason string `json:"reason"`
 }

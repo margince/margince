@@ -28,7 +28,6 @@ type draft struct {
 	standing   string
 	because    []map[string]any
 	moveReason string
-	opening    string
 }
 
 func reply(d draft) string {
@@ -41,7 +40,6 @@ func reply(d draft) string {
 			"because":  d.because,
 		},
 		"move_reason": d.moveReason,
-		"opening":     d.opening,
 	})
 	if err != nil {
 		panic(err)
@@ -62,7 +60,6 @@ func TestAGroundedReplyIsKept(t *testing.T) {
 		standing:   "drifting",
 		because:    []map[string]any{line("The last contact was the call, and nobody followed it.", "act-1")},
 		moveReason: "Sending it is what the call promised.",
-		opening:    "Hallo Frau Berger, hier ist das Angebot, das wir am Telefon besprochen haben.",
 	}), in)
 	if err != nil {
 		t.Fatalf("a grounded reply was refused: %v", err)
@@ -81,9 +78,6 @@ func TestAGroundedReplyIsKept(t *testing.T) {
 	}
 	if got.MoveReason != "Sending it is what the call promised." {
 		t.Fatalf("move reason = %q", got.MoveReason)
-	}
-	if !strings.HasPrefix(got.Opening, "Hallo Frau Berger") {
-		t.Fatalf("opening = %q, want the line the reply carried", got.Opening)
 	}
 }
 
@@ -224,10 +218,11 @@ func TestAnUnrecognisedVerdictIsDroppedAndTheRestOfTheCardSurvives(t *testing.T)
 	}
 }
 
-func TestAVerdictRestingOnNothingIsNotShown(t *testing.T) {
+func TestAnUncitedVerdictReasonIsDropped(t *testing.T) {
 	in := inputWithTimeline()
-	// A call with no reasoning is an opinion the reader cannot argue with, so
-	// the filter keeps the word and the card refuses to render it.
+	// The filter treats a verdict reason like any other sentence: uncited, it
+	// goes. What the CARD then does with a call left resting on nothing is the
+	// fold's business, and fold_test.go holds that half.
 	got, err := ParseStatus(reply(draft{
 		story:    []map[string]any{line("The offer went out after the call.", "act-1")},
 		standing: "cold",
@@ -238,34 +233,6 @@ func TestAVerdictRestingOnNothingIsNotShown(t *testing.T) {
 	}
 	if len(got.Verdict.Because) != 0 {
 		t.Fatalf("verdict because = %+v, want the uncited reason dropped", got.Verdict.Because)
-	}
-	if verdictOf(got, facts{}) != nil {
-		t.Fatal("a verdict resting on nothing reached the card")
-	}
-}
-
-func TestAnOversizedOpeningIsRefused(t *testing.T) {
-	in := inputWithTimeline()
-	// The opening is a line the reader sends as it stands. One past the bound
-	// is a draft mail in a briefing box, and the deterministic card is better
-	// than a card the reader has to edit before it is usable.
-	if _, err := ParseStatus(reply(draft{
-		story:   []map[string]any{line("The offer went out after the call.", "act-1")},
-		opening: strings.Repeat("x", maxOpeningLen+1),
-	}), in); err == nil {
-		t.Fatal("an opening past the card's bounds was kept")
-	}
-}
-
-func TestAnOpeningThatSpellsARecordIDIsRefused(t *testing.T) {
-	in := inputWithTimeline()
-	// The opening is addressed to the BUYER. A record id in it is a leak of
-	// this workspace's internals into a line somebody sends outside it.
-	if _, err := ParseStatus(reply(draft{
-		story:   []map[string]any{line("The offer went out after the call.", "act-1")},
-		opening: "Hallo, ich komme auf act-1 zurück.",
-	}), in); err == nil {
-		t.Fatal("an opening naming a record id was kept")
 	}
 }
 

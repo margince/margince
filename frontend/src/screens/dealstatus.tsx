@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ListChecks,
-  Mail,
-  MessageSquareQuote,
-  RefreshCw,
-  Sparkles,
-} from "lucide-react";
+import { ListChecks, Mail, RefreshCw, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -221,14 +215,6 @@ function Move({
     <PanelBody>
       <p className="t-caption">{t("deal360.next")}</p>
       <p className="deal360-move-reason">{move.reason}</p>
-      {move.opening ? (
-        // The words themselves, set apart from the reasoning: a reader who has
-        // decided to act wants the line, not the argument for it again.
-        <blockquote className="deal360-opening">
-          <MessageSquareQuote aria-hidden />
-          <span>{move.opening}</span>
-        </blockquote>
-      ) : null}
       <MoveButton dealId={dealId} move={move} />
       {move.evidence.length > 0 ? (
         <ul className="deal360-evidence t-small">

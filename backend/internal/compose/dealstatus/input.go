@@ -22,7 +22,7 @@ import (
 // promptVersion changes whenever the prompt or the projection changes, so a
 // card written by the old wording is rewritten rather than served forever. It
 // is part of the fingerprint for exactly that reason.
-const promptVersion = "deal-status-1"
+const promptVersion = "deal-status-2"
 
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,

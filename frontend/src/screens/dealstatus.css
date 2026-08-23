@@ -42,17 +42,6 @@
   margin: 0 0 var(--space-3);
 }
 
-/* The line to send, set apart from the reasoning for it. */
-.deal360-opening {
-  display: flex;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-3);
-  padding: var(--space-3);
-  border-left: 2px solid var(--accent);
-  background: var(--bgElevated);
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
-}
-
 .deal360-evidence {
   margin: var(--space-3) 0 0;
   padding-left: var(--space-4);
