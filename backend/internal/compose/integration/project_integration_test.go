@@ -912,7 +912,7 @@ func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
 }
 
 // A project created without a requested owner belongs to its creator — the
-// same birth default person, organization, lead and deal already apply. The
+// same birth default person, organization and deal already apply. The
 // stake is the New-deal form's "New project…" flow: write authority reads an
 // unowned row as nobody's to change, so an ownerless project could never be
 // attached to a deal by the very rep who had just created it.
