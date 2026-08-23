@@ -74,17 +74,22 @@ func handScaled(file *ast.File) []string {
 	// A bare `MinorUnitDigits(...)` is values' own call only inside values. In
 	// any other package it names something else entirely, and reporting it
 	// sends somebody to disprove a finding.
-	if file.Name != nil && file.Name.Name == "values" {
+	//
+	// `asksValues` gates the ARITHMETIC arm only. The renderer arm is keyed on
+	// the parameter and never asks values anything — that is the whole reason
+	// it can see the fourth copy — so short-circuiting the file here would
+	// re-blind the census to exactly the shape the arm was added for.
+	insideValues := file.Name != nil && file.Name.Name == "values"
+	if insideValues {
 		valuesQualifier = ""
-	} else if valuesQualifier == "" {
-		return nil
 	}
+	asksValues := insideValues || valuesQualifier != ""
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
 			continue
 		}
-		if asksForDigits(fn, valuesQualifier) && buildsAPowerOfTen(fn, mathAs(file)) {
+		if asksValues && asksForDigits(fn, valuesQualifier) && buildsAPowerOfTen(fn, importAlias(file, "math")) {
 			found = append(found, fn.Name.Name)
 			continue
 		}
@@ -186,8 +191,20 @@ func digitParamName(fn *ast.FuncDecl) string {
 // reports the wrong subject is worse than one that reports none: somebody has
 // to go and disprove it.
 func importedAs(file *ast.File) string {
+	return importAlias(file, "github.com/gradionhq/margince/backend/"+valuesOwner)
+}
+
+// importAlias returns the local name an import path is bound to in this file,
+// or "" if the file does not import it. A DOT import returns "" too, for the
+// reason importedAs states.
+//
+// One resolver and not one per package: two functions that both iterate
+// file.Imports, trim the quoted path and fall back to the last segment are two
+// answers to one question, which is the thing this PR is about. They had
+// already diverged on the dot-import case by the time it was pointed out.
+func importAlias(file *ast.File, path string) string {
 	for _, spec := range file.Imports {
-		if strings.Trim(spec.Path.Value, `"`) != "github.com/gradionhq/margince/backend/"+valuesOwner {
+		if strings.Trim(spec.Path.Value, `"`) != path {
 			continue
 		}
 		if spec.Name != nil {
@@ -196,22 +213,10 @@ func importedAs(file *ast.File) string {
 			}
 			return spec.Name.Name
 		}
-		return "values"
-	}
-	return ""
-}
-
-// mathAs returns the local name the math package is bound to, or "" if this
-// file does not import it.
-func mathAs(file *ast.File) string {
-	for _, spec := range file.Imports {
-		if strings.Trim(spec.Path.Value, `"`) != "math" {
-			continue
+		if i := strings.LastIndex(path, "/"); i >= 0 {
+			return path[i+1:]
 		}
-		if spec.Name != nil {
-			return spec.Name.Name
-		}
-		return "math"
+		return path
 	}
 	return ""
 }
@@ -538,6 +543,16 @@ func scaleOf(c legacy.Code) int64 {
 	// The digit count must reach the RENDER, not merely sit in the signature.
 	// A package that does not import values and declares its OWN
 	// MinorUnitDigits is not calling values'.
+	// The renderer arm does not ask values anything — it is keyed on the
+	// parameter — so a file that does not import values must still be judged by
+	// it. Short-circuiting the whole file on "does not import values" re-blinded
+	// the census to the one shape that arm exists for.
+	{"a renderer in a file that does not import values", true, "noimport", `
+func minorToDecimalString(minor int64, exponent int) string {
+	s := strconv.FormatInt(minor, 10)
+	point := len(s) - exponent
+	return s[:point] + "." + s[point:]
+}`},
 	{"another package's own unqualified MinorUnitDigits", false, "noimport", `
 func scaleOf(currency string) int64 {
 	scale := int64(1)
