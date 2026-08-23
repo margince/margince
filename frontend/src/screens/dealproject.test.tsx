@@ -436,7 +436,13 @@ describe("the deal page", () => {
     });
     const t = (key: string) => key;
 
-    const narrowed = dealProjectFields(t, [partnerProject], undefined, true);
+    const narrowed = dealProjectFields(
+      t,
+      [partnerProject],
+      undefined,
+      true,
+      "o-partner",
+    );
     const asked = narrowed.find((field) => field.key === "project_id");
     expect(
       asked?.optionsFor?.({ organization_id: "o-partner" }).map((o) => o.label),
@@ -452,5 +458,38 @@ describe("the deal page", () => {
         ?.optionsFor?.({ organization_id: "o-partner" })
         .map((o) => o.label),
     ).not.toContain("Joint rollout");
+  });
+
+  it("offers nothing once the form names a company the list was not read for", () => {
+    const partnerProject = project({
+      id: "pr-1",
+      name: "Joint rollout",
+      organization_id: "o-customer",
+    });
+    const t = (key: string) => key;
+    // The list was read for o-partner; the reader has since changed the form's
+    // company to o-other. Nothing on a project row says whether o-other is on
+    // this project, so the only honest answer is none — offering the old
+    // company's projects is what lets a save carry a pairing the server
+    // refuses (deal_project_same_org, 422).
+    const fields = dealProjectFields(
+      t,
+      [partnerProject],
+      { id: "pr-1", label: "Joint rollout" },
+      true,
+      "o-partner",
+    );
+    const asked = fields.find((field) => field.key === "project_id");
+    const labels = asked
+      ?.optionsFor?.({ organization_id: "o-other" })
+      .map((o) => o.label);
+    expect(labels).not.toContain("Joint rollout");
+    // The current-project fallback is withdrawn too, so `submittedValues`
+    // blanks it rather than carrying it into the new company.
+    expect(labels).toEqual(["deal.projectNew"]);
+
+    // Same list, same company it was read for: still offered.
+    const same = asked?.optionsFor?.({ organization_id: "o-partner" });
+    expect(same?.map((o) => o.label)).toContain("Joint rollout");
   });
 });

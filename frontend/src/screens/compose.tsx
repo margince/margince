@@ -169,6 +169,11 @@ export function RelinkModal({
       for (const queryKey of entityTimelineKeys(entityType, entityId)) {
         queryClient.invalidateQueries({ queryKey });
       }
+      // A relink is exactly the write that changes where a reply files, and the
+      // composer's filing line reads the activity to say so. Without this the
+      // line keeps naming the project the activity was moved AWAY from, which
+      // is a wrong answer to the one question it exists to answer.
+      queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
       onClose();
     },
   });
@@ -321,11 +326,20 @@ function ReplyFiling({ activityId }: Readonly<{ activityId: string }>) {
     (link) => link.entity_type === "project",
   )?.entity_id;
   const { name } = useEntityName("project", projectId);
-  // Nothing is drawn while the read is in flight, and nothing when the thread
-  // is filed under no project: "this will be filed under nothing" is a sentence
-  // that tells a reader less than silence does, and the unfiled case is what
-  // the attribution ladder already asks about.
-  if (!projectId) {
+  // This line makes a claim about where a send will land, so it is drawn only
+  // when both reads have actually answered. A failed or pending read looks
+  // exactly like "no project" from here, and silence is the honest rendering of
+  // both: "this will be filed under nothing" tells a reader less than nothing
+  // does, and naming a project the read never returned would be worse — the
+  // caption would assert a filing that is not the one the server will perform.
+  if (query.isPending || query.isError || !projectId) {
+    return null;
+  }
+  // The link is there but its name is not — pending, refused, or blank; the
+  // three are one case here. Same rule: say nothing rather than name the
+  // project "Unnamed project", which reads as a fact about the project instead
+  // of a gap in what this component managed to read.
+  if (!name) {
     return null;
   }
   // It SAYS, and does not offer to change: the control that moves a
@@ -334,9 +348,7 @@ function ReplyFiling({ activityId }: Readonly<{ activityId: string }>) {
   // action — and the shorter path to filing a single message away from its
   // conversation, which is the split this line exists to make visible.
   return (
-    <p className="t-caption">
-      {t("compose.filedUnder", { project: name ?? t("deal.projectUnnamed") })}
-    </p>
+    <p className="t-caption">{t("compose.filedUnder", { project: name })}</p>
   );
 }
 

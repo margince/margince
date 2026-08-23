@@ -48,6 +48,28 @@ export const NEW_PROJECT = "__new_project__";
 // projects and filtered them, so an installation with more than 200 offered an
 // empty picker to whichever company sorted last.
 export function useOpenProjects(organizationId?: string): Project[] {
+  return useProjectPage(organizationId, true);
+}
+
+/**
+ * The live projects of ONE company, asked of the server, and NOTHING when there
+ * is no company to ask about.
+ *
+ * The difference from `useOpenProjects` is which question is being asked. "What
+ * projects exist" has an answer without a company, and the create form pages
+ * them and narrows on the anchor itself. "What may THIS deal take" does not: a
+ * deal with no company shares a company with no project, so answering with the
+ * whole installation offers pairings the server refuses
+ * (deal_project_same_org, 422). A caller acting on one deal uses this.
+ */
+export function useProjectsOfCompany(organizationId?: string): Project[] {
+  return useProjectPage(organizationId, Boolean(organizationId));
+}
+
+function useProjectPage(
+  organizationId: string | undefined,
+  enabled: boolean,
+): Project[] {
   const projects = useQuery({
     queryKey: ["projects", "open", organizationId ?? "all"],
     queryFn: async () => {
@@ -64,6 +86,7 @@ export function useOpenProjects(organizationId?: string): Project[] {
       }
       return data.data;
     },
+    enabled,
     staleTime: 60_000,
   });
   return (projects.data ?? []).filter((project) => project.phase !== "closed");
@@ -93,6 +116,12 @@ export function dealProjectFields(
   // for the create form, and the honest fix is a per-company read once the form
   // can report which company is chosen.
   narrowedByServer = false,
+  // The company `projects` was read for, when the server narrowed it. The form
+  // can change its company while the list stands, and the list is keyed on the
+  // company the record HAD; comparing the two lets the picker go empty rather
+  // than offer the old company's projects under the new one, which the server
+  // refuses (deal_project_same_org, 422).
+  narrowedFor?: string,
 ): CreateField[] {
   return [
     {
@@ -104,9 +133,17 @@ export function dealProjectFields(
         if (!company) {
           return [];
         }
-        const reachable = narrowedByServer
-          ? projects
-          : projects.filter((project) => project.organization_id === company);
+        // A list the server narrowed is trustworthy only for the company it
+        // was narrowed FOR. Once the form names a different one, this page
+        // answers the wrong question and the honest answer is none: a list row
+        // names only a project's anchor company, so nothing here can tell
+        // which of the new company's projects belong.
+        const stale = narrowedByServer && narrowedFor !== company;
+        const reachable = stale
+          ? []
+          : narrowedByServer
+            ? projects
+            : projects.filter((project) => project.organization_id === company);
         // The NAME alone. The key belongs where a reader needs to recognise it
         // — a subject line, the project's own chip — and a picker of one
         // company's projects is already unambiguous without it.
@@ -115,7 +152,16 @@ export function dealProjectFields(
           label: project.name,
         }));
         return [
-          ...(current && !options.some((option) => option.value === current.id)
+          // The project the deal already names, kept on the list so the edit
+          // form shows the value it has. NOT when the form has moved to
+          // another company: that project belongs to the one it left, and
+          // keeping it offered is what lets a save carry the old pairing into
+          // the new company. Dropping it here is what withdraws it —
+          // `submittedValues` blanks a dependent value the options no longer
+          // offer.
+          ...(current &&
+          !stale &&
+          !options.some((option) => option.value === current.id)
             ? [{ value: current.id, label: current.label }]
             : []),
           ...options,
@@ -200,7 +246,7 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   // customer, a partner or a subcontractor — so there is nothing left to filter
   // here. Comparing organization_id would drop every project the company works
   // as anything but the customer.
-  const candidates = useOpenProjects(deal.organization_id ?? undefined);
+  const candidates = useProjectsOfCompany(deal.organization_id ?? undefined);
   const attach = useMutation({
     mutationFn: async (input: {
       dealId: string;
