@@ -177,7 +177,7 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		`UPDATE "user_record_view" SET last_viewed_at = $1`,
 		`INSERT INTO "public"."user_record_view" (user_id) VALUES ($1)`,
 		// A three-part name, and whitespace around the separator. Both are
-		// valid Postgres and both were silent false negatives.
+		// valid Postgres, so both are writes the census must see.
 		"INSERT INTO tenant1.public.user_record_view (user_id) VALUES ($1)",
 		`UPDATE "tenant1"."public"."user_record_view" SET last_viewed_at = $1`,
 		"INSERT INTO public . user_record_view (user_id) VALUES ($1)",
