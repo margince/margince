@@ -4315,7 +4315,8 @@ export const de = {
     "Wo der Deal steht, was ihn kosten kann, was als Nächstes zu tun ist.",
   "dealstatus.risk": "Was den Deal kosten kann",
   "dealstatus.rewrite": "Neu schreiben",
-  "dealstatus.unreadable": "Diese Karte konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
+  "dealstatus.unreadable":
+    "Diese Karte konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
   "dealstatus.createTask": "Aufgabe anlegen",
   "dealstatus.draftReply": "Antwort entwerfen",
   "dealstatus.openBrief": "Meeting-Briefing öffnen",

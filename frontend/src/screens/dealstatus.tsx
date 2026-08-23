@@ -113,10 +113,7 @@ function StatusBody({
   return (
     <>
       <PanelBody>
-        <SentenceList
-          sentences={card.standing.sentences}
-          onOpenRecord={open}
-        />
+        <SentenceList sentences={card.standing.sentences} onOpenRecord={open} />
       </PanelBody>
       {card.risk ? (
         <PanelBody>
@@ -124,10 +121,7 @@ function StatusBody({
             <AlertTriangle aria-hidden />
             {t("dealstatus.risk")}
           </p>
-          <SentenceList
-            sentences={card.risk.sentences}
-            onOpenRecord={open}
-          />
+          <SentenceList sentences={card.risk.sentences} onOpenRecord={open} />
         </PanelBody>
       ) : null}
       {card.next ? (

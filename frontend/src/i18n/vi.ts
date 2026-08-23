@@ -4278,7 +4278,8 @@ export const vi = {
     "Giao dịch đang ở đâu, điều gì có thể làm mất nó, việc cần làm tiếp theo.",
   "dealstatus.risk": "Điều có thể làm mất giao dịch",
   "dealstatus.rewrite": "Viết lại",
-  "dealstatus.unreadable": "Không đọc được thẻ này. Hãy tải lại trang hoặc viết lại.",
+  "dealstatus.unreadable":
+    "Không đọc được thẻ này. Hãy tải lại trang hoặc viết lại.",
   "dealstatus.createTask": "Thêm việc này",
   "dealstatus.draftReply": "Soạn thư trả lời",
   "dealstatus.openBrief": "Mở bản tóm tắt cuộc họp",
