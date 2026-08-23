@@ -87,6 +87,13 @@ func jobConstructionForms(file *ast.File) []token.Pos {
 	return at
 }
 
+// The walk covers backend/ AND THAT IS THE WHOLE REACH, which is worth saying
+// because "the tree" would be an overclaim. runner lives under
+// backend/internal/, so Go's internal rule puts it out of reach of anything
+// outside backend/ — extensions/ and fixtures/ are separate modules that may
+// import only the marker-allowlisted backend/pkg/** surface, and neither can
+// name runner.Job at all. A file that could build one is a file inside this
+// walk, by the language rather than by this gate's diligence.
 func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 	root := filepath.Join("..", "..")
 	var offenders []string
