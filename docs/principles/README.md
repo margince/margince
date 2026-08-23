@@ -26,11 +26,9 @@ or the other, and say which.
 The rulebook sections stay where they are. `cli/craft` feeds the **whole**
 nearest `AGENTS.md` into its gate prompt, so a rule moved out of that file stops
 reaching the gate — these pages carry the reasoning and the method, the rulebook
-carries the binding short form. Four of those sections
-(*The write shape*, *Reuse before you build*, *License headers*,
-*Rules learned from the review loop*) must additionally stay byte-identical in
-both rulebooks; `TestSharedRulebookSectionsAreIdenticalInBothDocs` fails when
-they drift.
+carries the binding short form. There is one rulebook, at the root, and the
+`CLAUDE.md` beside it holds nothing but an `@AGENTS.md` import, so a rule has one
+home and no copy to drift from.
 
 ## Adding a principle
 

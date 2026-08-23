@@ -45,39 +45,57 @@ const moduleCatalog = "../docs/reference/modules.md"
 // caught the sibling four lines up and not that one. A gate that reads less
 // than the prose does reports the same word for it either way, which is the
 // failure this file exists to refuse.
-func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
-	// Number words up to the low thirties, which is the range a count of
-	// modules, extension units, principle pages or compose-owned tables can
-	// plausibly land in. A tally that outgrows this list is one that has
-	// already gone wrong twice, so the ceiling is not the interesting
-	// direction. Digits are deliberately not matched: a version, a port, an
-	// ADR number and a line ceiling are all legitimately numerals, and the
-	// prose tallies this rule is about are all written as words.
-	//
-	// The floor is ten because below it the rule stops being one. Running this
-	// against one..nine over the current tree returns twenty findings and
-	// almost all of them are correct prose — "one Go module", "three ways",
-	// "Two sanctioned spine shapes, and ONLY two", "in one package". A closed
-	// set stated as a number is a rule; a population stated as a number is a
-	// bug; and at those magnitudes nothing mechanical separates them. Above
-	// ten, a closed set that small is vanishingly rare and a population is the
-	// likely reading.
-	numberWord := regexp.MustCompile(`(?i)\b(?:twenty|thirty)(?:[ -](?:one|two|three|four|five|six|seven|eight|nine))?\b|` +
-		`\b(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b`)
-	// The nouns whose population is a directory listing or a gated map away,
-	// and so must never be quoted as a word.
-	//
-	// This list is hand-written, which makes it a slice of this gate's own
-	// subject and so the thing *Reuse before you build* rule 5 warns about.
-	// It is not derived because the derivation does not exist: "a noun whose
-	// population the tree can be asked for" is a judgement, not a query — no
-	// listing distinguishes the modules (countable, and it went wrong) from
-	// the spine shapes (a closed set of two, deliberately stated as two). So
-	// it will be short, and the honest consequence is that a tally over a
-	// noun not named here passes. Add the noun when you meet one; do not
-	// mistake a green run here for proof that no tally is stale.
-	countable := regexp.MustCompile(`(?i)bounded capabilit|module|extension unit|first-party unit|principle page|table`)
+// Number words up to the low thirties, which is the range a count of
+// modules, extension units, principle pages or compose-owned tables can
+// plausibly land in. A tally that outgrows this list is one that has
+// already gone wrong twice, so the ceiling is not the interesting
+// direction. Digits are deliberately not matched: a version, a port, an
+// ADR number and a line ceiling are all legitimately numerals, and the
+// prose tallies this rule is about are all written as words.
+//
+// The floor is ten because below it the rule stops being one. Running this
+// against one..nine over the current tree returns twenty findings and
+// almost all of them are correct prose — "one Go module", "three ways",
+// "Two sanctioned spine shapes, and ONLY two", "in one package". A closed
+// set stated as a number is a rule; a population stated as a number is a
+// bug; and at those magnitudes nothing mechanical separates them. Above
+// ten, a closed set that small is vanishingly rare and a population is the
+// likely reading.
+var numberWord = regexp.MustCompile(`(?i)\b(?:twenty|thirty)(?:[ -](?:one|two|three|four|five|six|seven|eight|nine))?\b|` +
+	`\b(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b`)
 
+// The nouns whose population is a directory listing or a gated map away,
+// and so must never be quoted as a word.
+//
+// This list is hand-written, which makes it a slice of this gate's own
+// subject and so the thing *Reuse before you build* rule 5 warns about.
+// It is not derived because the derivation does not exist: "a noun whose
+// population the tree can be asked for" is a judgement, not a query — no
+// listing distinguishes the modules (countable, and it went wrong) from
+// the spine shapes (a closed set of two, deliberately stated as two). So
+// it will be short, and the honest consequence is that a tally over a
+// noun not named here passes. Add the noun when you meet one; do not
+// mistake a green run here for proof that no tally is stale.
+var countable = regexp.MustCompile(`(?i)\b(?:bounded capabilit\w*|modules?|extension units?|first-party units?|principle pages?|tables?)\b`)
+
+// tallyHits reports whether a file's prose spells out a tally of a countable
+// noun. One implementation: the gate below runs it over the real rulebooks, and
+// the markdown table tests run it over fixtures. A test that restated the scan
+// would be a second copy of the rule it is checking.
+func tallyHits(path string) bool {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	for _, para := range prose(string(raw)) {
+		if numberWord.MatchString(para.text) && countable.MatchString(para.text) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
 	for _, path := range rulebookProse(t) {
 		// Every path here comes from the walk or is the catalog the rulebook
 		// sends a reader to, so all of them exist. An unreadable one is a
@@ -106,7 +124,15 @@ type prosePara struct {
 	text string
 }
 
-var listItem = regexp.MustCompile(`^(?:[-*]\s|\d+\.\s)`)
+// listItem matches the markers a markdown list actually uses: `-`, `*`, `+`,
+// and an ordered item with either a dot or a bracket. Missing a marker joins
+// two unrelated items into one paragraph, which can fuse a number from one
+// into a claim about the other.
+// fenceMarker matches a fence opener or closer, including one that follows a
+// list marker on the same line.
+var fenceMarker = regexp.MustCompile("^(?:[-*+]\\s+|\\d+[.)]\\s+)?```")
+
+var listItem = regexp.MustCompile(`^(?:[-*+]\s|\d+[.)]\s)`)
 
 // prose splits markdown into paragraphs: it joins the lines of one wrapped
 // block so a tally and the noun it counts are read together, and starts a new
@@ -131,12 +157,25 @@ func prose(src string) []prosePara {
 	}
 	for i, line := range strings.Split(src, "\n") {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") {
+		// A fence may be indented, and may open inside a list item
+		// (`- ```text`). Matching the trimmed line alone misses the second,
+		// and a missed opener leaves the CLOSING fence to toggle the flag the
+		// wrong way — after which real code is read as prose and real prose is
+		// skipped, both silently.
+		if fenceMarker.MatchString(trimmed) {
 			flush()
 			inFence = !inFence
 			continue
 		}
 		if inFence {
+			continue
+		}
+		// An indented block (four spaces, or a tab) is code too. It carries no
+		// claim, and scanning it can only produce a finding about an example.
+		// Only at the START of a block, though: markdown allows a wrapped
+		// paragraph's later lines to be indented, and dropping those would
+		// split one sentence into two.
+		if indented(line) && len(buf) == 0 {
 			continue
 		}
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") ||
@@ -170,4 +209,67 @@ func rulebookProse(t *testing.T) []string {
 		out = append(out, filepath.Join(dir, "AGENTS.md"))
 	}
 	return out
+}
+
+// indented reports whether a line opens an indented code block — four spaces or
+// a tab, which markdown reads as code rather than prose.
+func indented(line string) bool {
+	return strings.HasPrefix(line, "    ") || strings.HasPrefix(line, "\t")
+}
+
+// The tally gate is a markdown parser, and a parser's defects are all of the
+// same kind: it reads less than the document does, or more. Each case here is
+// one that got through, and each fails in a direction worth naming — a missed
+// tally (the gate agrees with a stale number) or a false one (the gate refuses
+// correct prose, which is how a gate gets switched off).
+func TestTheTallyGateReadsMarkdownCorrectly(t *testing.T) {
+	tests := []struct {
+		name    string
+		md      string
+		wantHit bool
+		why     string
+	}{{
+		name:    "a tally split across a wrap",
+		md:      "surface for all twenty-one, plus\nthe compose-owned tables",
+		wantHit: true,
+		why:     "the number and its noun are on different lines; a line-at-a-time scan misses it",
+	}, {
+		name:    "two unrelated ordered items with a bracket marker",
+		md:      "1) there are nineteen of them\n2) the module boundary is enforced",
+		wantHit: false,
+		why:     "`1)` is a list marker, so these are separate items and neither makes the claim",
+	}, {
+		name:    "a fenced block that opens inside a list item",
+		md:      "- ```text\n  twenty modules\n  ```",
+		wantHit: false,
+		why:     "the fence opens after a list marker; missing it reads the code as prose",
+	}, {
+		name:    "an indented code block",
+		md:      "Run it:\n\n    twenty modules listed\n",
+		wantHit: false,
+		why:     "four-space indent is code, and an example is not a claim",
+	}, {
+		name:    "a countable noun inside a longer word",
+		md:      "Twenty stable release notes changed.",
+		wantHit: false,
+		why:     "`stable` is not `table`; without word boundaries the gate refuses correct prose",
+	}, {
+		name:    "a real tally on one line",
+		md:      "The twenty modules under internal/modules.",
+		wantHit: true,
+		why:     "the case the gate exists for",
+	}}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "AGENTS.md")
+			if err := os.WriteFile(path, []byte(tc.md), 0o600); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+			if got := tallyHits(path); got != tc.wantHit {
+				t.Errorf("hit=%v want=%v — %s\n--- input ---\n%s", got, tc.wantHit, tc.why, tc.md)
+			}
+		})
+	}
 }
