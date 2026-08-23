@@ -117,8 +117,24 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the
 	// remainder can never name coworkers the caller may not read.
+	//
+	// It counts the DEDUPLICATED set, and that is load-bearing rather than
+	// tidy. A window function is evaluated before DISTINCT, so counting the
+	// join's rows over-reports whenever one coworker matches twice — and this
+	// query became able to produce that the moment it started asking
+	// EmploymentIsCurrentSQL instead of `ended_at IS NULL`. The unique index
+	// uq_rel_employment covers `(person_id, organization_id) WHERE ended_at IS
+	// NULL`, so the old predicate could not match one person twice; a
+	// future-dated row is outside that index, and a person with both a live row
+	// and a notice-period row at one account now joins once for each.
+	//
+	// row_number() rather than a subquery, because org360's readEmployment
+	// already dedups this exact shape that way and two spellings of one fix is
+	// how the next reader learns the wrong one.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT p.id, p.full_name, p.title, count(*) OVER () AS total
+		WITH coworkers AS (
+		SELECT p.id, p.full_name, p.title,
+		       row_number() OVER (PARTITION BY p.id ORDER BY colleague.id) AS edge_rank
 		  FROM relationship theirs
 		  JOIN relationship colleague
 		    ON colleague.organization_id = theirs.organization_id
@@ -133,7 +149,10 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 		   AND p.id <> $%d
 		   AND (%s)
 		   AND (%s)
-		 ORDER BY p.full_name, p.id
+		)
+		SELECT id, full_name, title, count(*) OVER () AS total
+		  FROM coworkers WHERE edge_rank = 1
+		 ORDER BY full_name, id
 		 LIMIT $%d`, personPos, personPos, edgeBound, scope, limitPos), args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("network: reading who else works at a contact's company: %w", err)

@@ -49,9 +49,9 @@ import (
 //
 // EmploymentIsCurrentSQL lives in modules/people, and a module never imports a
 // sibling (ADR-0054 §3). compose may reach it and does; people's own files
-// reach it directly; three sibling modules cannot — four statements across
-// activities, projects and signals — and the predicate would have to move tier
-// before they could. That is an architecture decision with an
+// reach it directly; three sibling modules cannot — FIVE statements across
+// activities, projects and signals, since resolver.go carries two — and the
+// predicate would have to move tier before they could. That is an architecture decision with an
 // owner, so it is an issue rather than a change smuggled into this one — margince/margince#2360.
 //
 // Each entry is a FILE and not the whole module, so a new statement in one of
@@ -67,7 +67,7 @@ var blockedByTheModuleDAG = gatekit.Waive(map[string]string{
 const (
 	employmentHelper = "EmploymentIsCurrentSQL"
 	primaryHelper    = "CurrentPrimaryEmploymentSQL"
-	employmentIssue  = "four statements in three sibling modules are ratified separately: a module may not import people (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
+	employmentIssue  = "five statements in three sibling modules are ratified separately: a module may not import people (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
 )
 
 // employmentKind matches a statement that has scoped itself to employments.
@@ -140,27 +140,88 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		strings.Join(findings, "\n  "), employmentHelper, employmentIssue)
 }
 
-// employmentStatements returns the SQL literals in a declaration that have
+// employmentStatements returns the SQL statements in a declaration that have
 // scoped themselves to employments.
 //
-// Per DECLARATION and not per file: a file may hold one query about
-// employments and another about deal stakeholders, and asking whether both
-// shapes appear somewhere in the same file reports a pairing nobody wrote.
+// A statement, not a literal. A query that calls the helper is written as
+//
+//	`… WHERE r.kind = 'employment' AND ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` AND …`
+//
+// which the parser gives as three separate nodes, so judging each *ast.BasicLit
+// on its own splits the question in half: the piece naming the employment kind
+// no longer contains the `ended_at` test, and the gate passes over it.
+//
+// That is not a theoretical gap — it is the shape EVERY site adopted in this
+// change now has, so the gate could not have caught a regression at any of
+// them. Verified by reintroducing a bare `ended_at IS NULL` as a concatenated
+// fragment: the gate reported ok.
+//
+// A concatenation is therefore flattened first. A call contributes its function
+// NAME, which is what makes the helper exemption real rather than dead: the
+// helper is called from Go, so its name never appears inside a SQL literal, and
+// an exemption looking for it there could never fire.
+//
+// Per DECLARATION and not per file: a file may hold one query about employments
+// and another about deal stakeholders, and asking whether both shapes appear
+// somewhere in the same file reports a pairing nobody wrote.
 func employmentStatements(decl ast.Decl) []string {
 	var out []string
+	seen := map[ast.Node]bool{}
 	ast.Inspect(decl, func(n ast.Node) bool {
-		lit, ok := n.(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING {
-			return true
+		if seen[n] {
+			return false
 		}
-		text := lit.Value
-		if !employmentKind.MatchString(text) {
+		text, ok := flattenSQL(n, seen)
+		if !ok || !employmentKind.MatchString(text) {
 			return true
 		}
 		out = append(out, text)
 		return true
 	})
 	return out
+}
+
+// flattenSQL renders a string expression as the text it builds, marking every
+// node it consumed so an inner piece is not judged again on its own.
+//
+// A CallExpr becomes its function name and an unknown expression becomes a
+// space: this gate asks whether a statement decides employment currency by
+// hand, and the runtime VALUE of an interpolated fragment is not something a
+// parser can know. Rendering the name is enough to see that the one definition
+// was reached.
+func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
+	switch v := n.(type) {
+	case *ast.BasicLit:
+		if v.Kind != token.STRING {
+			return "", false
+		}
+		seen[n] = true
+		return strings.Trim(v.Value, "`\""), true
+	case *ast.BinaryExpr:
+		if v.Op != token.ADD {
+			return "", false
+		}
+		left, lok := flattenSQL(v.X, seen)
+		right, rok := flattenSQL(v.Y, seen)
+		if !lok && !rok {
+			return "", false
+		}
+		seen[n] = true
+		return left + right, true
+	case *ast.CallExpr:
+		seen[n] = true
+		switch f := v.Fun.(type) {
+		case *ast.Ident:
+			return " " + f.Name + " ", true
+		case *ast.SelectorExpr:
+			return " " + f.Sel.Name + " ", true
+		}
+		return " ", true
+	case ast.Expr:
+		seen[n] = true
+		return " ", true
+	}
+	return "", false
 }
 
 // firstEmploymentLine returns the line of the statement that names the

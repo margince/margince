@@ -46,7 +46,7 @@ import "github.com/gradionhq/margince/backend/internal/platform/database/storeki
 // those compared against a Go clock in the same statement as a half that used
 // Postgres', so one query asked its two questions on two different days.
 //
-// The gate cannot reach four statements in activities, projects and signals: a
+// The gate cannot reach five statements in activities, projects and signals: a
 // module never imports a sibling (ADR-0054 §3), so those cannot call this at
 // all until the predicate moves tier. They are ratified by name in the gate,
 // with that reason, rather than left looking clean.
