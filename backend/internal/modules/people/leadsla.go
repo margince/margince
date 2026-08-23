@@ -166,6 +166,13 @@ func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {
 }
 
 func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) error {
+	// The SLA sweep runs as an unbounded system principal, for whom this probe
+	// returns nil without a query. It is here so that the day a human-facing
+	// caller reaches this write — an operator forcing a breach, a retry surface —
+	// it arrives already scoped rather than silently unguarded.
+	if err := auth.EnsureWritableLive(ctx, tx, "lead", b.LeadID.UUID); err != nil {
+		return err
+	}
 	// The row is already locked by the scan's SELECT ... FOR UPDATE; the
 	// predicate is the CAS that keeps the mark at-most-once regardless.
 	tag, err := tx.Exec(ctx,
@@ -206,6 +213,12 @@ func (s *Store) RecordLeadFirstResponse(ctx context.Context, leadID ids.LeadID, 
 	}
 	set := false
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// The outbox subscriber that drives this is unbounded, so the probe is a
+		// no-op today; it is here so the write carries its own scope the day a
+		// human-facing caller stamps a first response.
+		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+			return err
+		}
 		lock, err := storekit.LockRow(ctx, tx, "lead", leadID.UUID, storekit.LiveOnly)
 		if err != nil {
 			return err
