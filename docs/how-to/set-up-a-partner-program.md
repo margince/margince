@@ -115,19 +115,32 @@ partners so filtering stays useful.
 
 Agents can READ partners directly. `partner` is a record type the generic tools accept, so
 `read_record` returns one partner's terms — tier, certification, relationship stage — and
-`search_records` lists them, narrowed by `partner_role` or `cert_status`. Two things to know
-about the shape:
+`search_records(record_type="partner")` returns the partner list. Three things to know about
+the shape:
 
 - **A partner is addressed by its ORGANIZATION's id.** The partner row is that company's terms,
   not a separate record, so you pass the company id you already have.
 - **A partner has no text search, and an untyped sweep skips it.** Every word you would search
   for lives on the organization, so searching without naming a type finds the company once
   rather than twice. Name `record_type=partner` to reach the terms.
+- **The role and certification dials are not on the tool surface yet.** `GET /partners` narrows
+  by `partner_role` and `cert_status`, and the store binds both, but `list_records` — the tool
+  that carries filters — does not serve `partner`, so an agent gets the whole list and filters
+  it itself. Tracked as a follow-up.
 
-Partners are **read-only to an agent**: creating or changing partner state stays a human action,
-so no tool writes a tier or a certification. A deal's partner and what that partner did for it
-are both readable and writable, through the deal's own `partner_org_id` and `partner_attribution`
-fields — settable when an agent creates a deal and when it updates one.
+**The generic tools only READ a partner.** `partner` is not one of the record types
+`update_record` accepts, so an agent working through those tools cannot set a tier or a
+certification.
+
+That is a statement about the generic tools, not a guarantee that no agent can ever write partner
+state. `PUT /organizations/{id}/partner` carries a write annotation, and a passport is a REST
+credential as well as an MCP one — so an agent holding a passport with the `partner` object grant
+can reach that route directly. If you want partner terms to be human-only, the object grant is
+what decides it, not the tool vocabulary.
+
+A deal's partner and what that partner did for it are both readable and writable, through the
+deal's own `partner_org_id` and `partner_attribution` fields — settable when an agent creates a
+deal and when it updates one.
 
 ## Changing the value lists themselves
 
