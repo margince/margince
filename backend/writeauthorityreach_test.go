@@ -63,17 +63,23 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// record — a second person or company for the same human — which is worse
 	// for Rep A than the write it would have prevented.
 	"internal/modules/people:EnsureCounterparty":    "capture resolving the person and company a captured message is about, and attaching it. The row it lands on is frequently a colleague's, by design: refusing would not protect that record, it would create a duplicate of it alongside. What this may write to an incumbent is bounded instead — a name fills only where the column is still empty, and a header carrying an impersonation tell teaches an existing record nothing",
-	"internal/modules/people:ApplySignatureFields":  "the signature enricher's fill-only-empty write, driven by the capture sweep off evidence the message itself carried. Every column is guarded by an IS NULL predicate, so a value a human entered is never replaced, and the same duplicate-forking argument as EnsureCounterparty applies to the record it lands on",
+	"internal/modules/people:ApplySignatureFields":  "the signature enricher's fill-only-empty write, driven by the capture sweep off evidence the message itself carried. Each column is guarded by an IS NULL predicate, so a value a human entered is never replaced, and the same duplicate-forking argument as EnsureCounterparty applies to the record it lands on. The write carries no archived_at predicate of its own, which is a separate defect from the one this waiver is about and is filed rather than fixed here",
 	"internal/modules/people:ApplyColdStartProfile": "the cold-start accept path, which runs as a system principal after a human approved the proposal. The authority question was asked at DECIDE time, where the approvals engine takes auth.EnsureWritableLive on the target row; asking it again here under a principal that has no human behind it would test nothing",
 	"internal/modules/people:applyColdStartTx":      "the same accept path's transactional half, reached only from ApplyColdStartProfile",
 	"internal/modules/people:writeOrgColumn":        "the cold-start writer's per-column half, reached only from applyColdStartTx and bounded by the same accepted proposal",
 	"internal/modules/people:EnsureCounterpartyTx":  "capture's resolution running inside the caller's transaction, reached only from EnsureCounterparty",
 	"internal/modules/people:ensurePerson":          "the person half of that same capture resolution",
-	"internal/modules/people:fillMissingPersonName": "capture's name fill on an incumbent: every column carries its own IS NULL predicate, so a name a human entered is never replaced and a re-run converges instead of flapping. Reached only from ensurePerson",
+	"internal/modules/people:fillMissingPersonName": "capture's name fill on an incumbent, reached only from ensurePerson. The write predicate is first_name IS NULL AND last_name IS NULL, so it only ever completes a record nobody has split into parts; full_name moves with them, and only where it still equals one of the two parts alone — a record displaying `Lars` while its columns say Lars Jankowfsky. A full_name a human typed that differs from both parts is left alone. It is a completion, not an overwrite, which is why the row it lands on being a colleague's is not the disclosure a probe would prevent",
 	"internal/modules/people:applySignatureField":   "the signature enricher's per-field half, reached only from ApplySignatureFields and guarded by the same IS NULL predicates",
 	"internal/modules/people:touchPerson":           "stamps updated_at on a person a LinkedIn match just resolved, so the row's own change is visible to anything reading it. Reached only from the apply path, which is a system principal driving an accepted match",
 
 	// Merges and sweeps whose authority is taken once, at the top.
+	"internal/modules/deals:recordPhaseTransition":             "one project phase move, written for two callers whose authority is taken differently: AdvanceProject probes the project itself, and the won-deal delivery start took it on the DEAL — ensureProjectAttachable demands write authority over the project at the moment a deal is bound to one, which is the act that later authorizes advancing its phase. That is a real gate this walk cannot see, because it ran in a different function on a different record",
+	"internal/modules/people:applyEvidenceFields":              "the company evidence writer, reached from the cold-start accept path (waived above, and gated at decide time) and from Enrich, which takes auth.EnsureWritable on the same organization before calling it",
+	"internal/modules/people:applyEvidenceFieldsWithOverwrite": "the same writer's overwrite spelling, reached from the same two paths plus the site-read confirmation, which resolves the company through the accepted proposal it is applying",
+
+	"internal/modules/people:recomputeUnderOverrideTx": "the sticky-override branch of recomputeLeadScoreTx, reached from nowhere else. Its four callers each take the row probe before they get here — RecomputeLeadScore, both manual-signal paths and UpdateLead — and the probe belongs at those entry points rather than in a branch, because an archived lead is a silent no-op to the workflow lane and a 404 to a human",
+
 	"internal/modules/people:absorbOrgReferences":    "the organization merge's cascade: it re-points the deals, projects and child companies that NAMED the absorbed company at the survivor. The merge itself takes write authority on BOTH organizations through mergePair before anything moves, and the rows re-pointed here are not the ones being decided about — refusing to re-point a deal the caller cannot write would leave it pointing at a company that no longer exists",
 	"internal/modules/people:RouteLead":              "routing assigns an ownerless lead to a chosen rep, and an ownerless row is nobody's to write by construction (the write arm renders no owner_id IS NULL branch) — auth.EnsureWritable here could only ever refuse. It self-guards instead: a lead that already has an owner returns already_owned before anything is written, so routing can never overwrite a human's assignment. The claim-then-write primitive this shape wants is storekit.ClaimOwnership, which takes the claimant as `me` and so does not fit an assignment to a third party",
 	"internal/modules/deals:sweepWorkspace":          "the close-date sweep's inner pass, reached only from SweepWorkspace",
@@ -245,14 +251,19 @@ func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
 	}
 }
 
-// guardedCallersOf names the functions whose write is already answered for by a
-// caller: some function in the package that writes a shareable record, reaches a
-// write-authority probe, and calls this one. The probe then runs before this
-// write, so the helper is covered rather than exempt.
+// guardedCallersOf names the functions whose write is already answered for: EVERY
+// caller of them in the package writes a shareable record and reaches a
+// write-authority probe. The probe then runs before this write on every path
+// that reaches it, so the helper is covered rather than exempt.
 //
-// A helper called only from UNGUARDED callers stays in the census, which is the
-// point — otherwise a whole chain could go unprobed with every link pointing at
-// the next as its excuse.
+// It has to be every caller, not any. Suppressing on one guarded caller is how a
+// helper reached by a probed wrapper AND by an unprobed path reads as safe: the
+// wrapper answers for the write, and the other path walks straight past it.
+// PromoteOrgNameTx was exactly that shape — its wrapper took the probe while
+// compose called the Tx form directly on both of its real paths.
+//
+// A helper with any caller that does NOT write, or does not reach a probe, stays
+// in the census, which is the point.
 func guardedCallersOf(byReceiver map[string]map[string]*writeAuthorityFn,
 	tables map[string]bool, vocab map[string]bool,
 ) map[string]bool {
@@ -262,21 +273,27 @@ func guardedCallersOf(byReceiver map[string]map[string]*writeAuthorityFn,
 			known[name] = true
 		}
 	}
-	covered := map[string]bool{}
+	callers, guardedBy := map[string]int{}, map[string]int{}
 	for recv := range byReceiver {
 		visible := visibleWriteAuthorityFns(byReceiver, recv)
 		for name, info := range visible {
-			if len(writtenTablesUnder(visible, name, tables, map[string]bool{})) == 0 {
-				continue
-			}
-			if !reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{}) {
-				continue
-			}
+			writes := len(writtenTablesUnder(visible, name, tables, map[string]bool{})) > 0
+			probed := writes && reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{})
 			for callee := range info.calls {
-				if known[callee] && callee != name {
-					covered[callee] = true
+				if !known[callee] || callee == name {
+					continue
+				}
+				callers[callee]++
+				if probed {
+					guardedBy[callee]++
 				}
 			}
+		}
+	}
+	covered := map[string]bool{}
+	for name, total := range callers {
+		if total > 0 && guardedBy[name] == total {
+			covered[name] = true
 		}
 	}
 	return covered

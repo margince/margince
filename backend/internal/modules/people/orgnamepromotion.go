@@ -366,11 +366,6 @@ func loadDossierOrgNames(ctx context.Context, tx pgx.Tx, orgIDs []ids.Organizati
 func (s *Store) PromoteOrgName(ctx context.Context, orgID ids.OrganizationID, name, corroboration string) (bool, error) {
 	var promoted bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// A no-op for the sweep's unbounded principal, and the scope this write
-		// needs the day a human promotes a name by hand.
-		if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
-			return err
-		}
 		var err error
 		promoted, err = s.PromoteOrgNameTx(ctx, tx, orgID, name, corroboration)
 		return err
@@ -389,6 +384,14 @@ func (s *Store) PromoteOrgName(ctx context.Context, orgID ids.OrganizationID, na
 // inbox is the stronger source winning, which is the rule working, not a
 // failure to report.
 func (s *Store) PromoteOrgNameTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, name, corroboration string) (bool, error) {
+	// The probe sits HERE and not on the wrapper above, because compose reaches
+	// this function directly on both of its real paths — the sweep and the
+	// accept executor. A gate on the wrapper would guard the spelling nobody
+	// production uses, which is the same as no gate while looking like one.
+	// It is a no-op for those unbounded principals today.
+	if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
+		return false, err
+	}
 	// The name lock comes before the row lock, the one order every path that
 	// takes both uses (UpdateOrganization says why): otherwise
 	// this sweep and a human's rename of the same company can each hold what

@@ -355,9 +355,30 @@ func shareableTables(t *testing.T) map[string]bool {
 func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[string]map[string]*writeAuthorityFn {
 	t.Helper()
 	pkgs := map[string]map[string]map[string]*writeAuthorityFn{}
-	for _, src := range tierFiles(t, modulesDir) {
+	files := tierFiles(t, modulesDir)
+	// One pass for the constants first. Probe resolution stays FILE-scoped — a
+	// probe and the const it names sit together — but the write census must be
+	// package-scoped: deals/project_update.go patches a table named by a const
+	// declared in project.go, and a file-scoped lookup drops that writer out of
+	// the census entirely while the gate reports a clean tree.
+	dirConsts := map[string]map[string]string{}
+	for _, src := range files {
+		dir := filepath.ToSlash(filepath.Dir(src.Path))
+		if dirConsts[dir] == nil {
+			dirConsts[dir] = map[string]string{}
+		}
+		for name, value := range packageStringConsts(src) {
+			dirConsts[dir][name] = value
+		}
+	}
+	for _, src := range files {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
 		consts := packageStringConsts(src)
+		for name, value := range dirConsts[dir] {
+			if _, local := consts[name]; !local {
+				consts[name] = value
+			}
+		}
 		if pkgs[dir] == nil {
 			pkgs[dir] = map[string]map[string]*writeAuthorityFn{}
 		}

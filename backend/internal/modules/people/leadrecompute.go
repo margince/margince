@@ -36,6 +36,15 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		// The LIVE spelling because this entry point is documented for a live
+		// lead, and because it is the one caller of the shared recompute that
+		// has taken no row probe of its own — the manual-signal paths and
+		// UpdateLead each probe before they reach it. Putting it in the shared
+		// function instead would have turned an archived lead from a silent
+		// no-op into a 404 for all four.
+		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+			return err
+		}
 		return recomputeLeadScoreTx(ctx, tx, leadID, now, false)
 	})
 }
@@ -51,11 +60,6 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 // Commercial Judgement override triggered — the single case where an
 // unmoved score still has to be recorded (see below).
 func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, clearedOverride bool) error {
-	// A no-op for the workflow's unbounded principal, and the scope this write
-	// would need the day anything human-facing recomputes a score.
-	if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
-		return err
-	}
 	var title, source, overrideReason *string
 	var currentScore int
 	var currentComputed *int
