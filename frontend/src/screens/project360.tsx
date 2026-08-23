@@ -25,7 +25,7 @@ import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
 import { ProjectCompanies } from "./projectcompanies";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
-import { CoverageLine, RollupsStrip } from "./projectreadings";
+import { RollupsStrip } from "./projectreadings";
 import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
 import {
   mapProjectUpdate,
@@ -113,15 +113,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       band={
         <div className="project-band">
-          {/* The key is not a form field any more — the server mints it — so
-            this line is where a reader learns what it is FOR. Without it the
-            chip is a code beside a name and nothing says that writing it in a
-            subject files the mail here. */}
-          {project.key && (
-            <p className="t-caption">
-              {t("project.keyMinted", { key: project.key })}
-            </p>
-          )}
           {project.archived_at && (
             <p id={archivedReasonId} className="t-caption">
               {t("project.archivedReadOnly")}
@@ -134,14 +125,16 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             onMove={setMoveTo}
           />
           <RollupsStrip view={view} />
-          <CoverageLine view={view} />
         </div>
       }
+      // WHO is on this work comes first, then the paperwork. The rail used to
+      // open with the phase history — a log of moves the stepper above already
+      // shows the current state of — so a reader scanning for "whose project is
+      // this" read a changelog first. The three record-keeping cards below
+      // answer questions a reader comes looking for on purpose; the two above
+      // answer the one they arrive with.
       rail={
         <div className="project-rail">
-          <PhaseHistoryCard view={view} />
-          {/* Who is working this together, above the people on it: the reader
-              asking "whose project is this" is asking about companies first. */}
           <ProjectCompanies
             projectId={project.id}
             companies={project.organizations}
@@ -150,6 +143,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <StakeholdersCard view={view} />
           <ProjectContractsCard view={view} />
           <ProjectDocumentsCard view={view} />
+          <PhaseHistoryCard view={view} />
         </div>
       }
       railLabel={t("project.railLabel")}

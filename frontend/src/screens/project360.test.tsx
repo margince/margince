@@ -42,7 +42,7 @@ function render(ui: ReactNode) {
 }
 
 describe("ProjectScreen", () => {
-  it("renders the header, the stepper, the rollups, the coverage line and the sections", async () => {
+  it("renders the header, the stepper, the rollups and the sections", async () => {
     projectsBackend({
       view: project360({
         deals: {
@@ -83,9 +83,10 @@ describe("ProjectScreen", () => {
     expect(within(rollups).getByText("€4,500.00")).toBeTruthy();
     expect(within(rollups).getByText("4")).toBeTruthy();
     expect(within(rollups).getByText("142")).toBeTruthy();
-    expect(screen.getByTestId("project-coverage").textContent).toBe(
-      "142 attributed · 8 awaiting a decision · 23 on this project's people and deals not attributed",
-    );
+    // No coverage line: three numbers about how well the FILING SYSTEM has
+    // done its job are the machine's bookkeeping, not a reading of the work,
+    // and they were the first thing a reader met under the title.
+    expect(screen.queryByTestId("project-coverage")).toBeNull();
 
     // The sections: a linked deal row, a seated person with their role, the
     // phase history with its duration, and honest empty states elsewhere.
@@ -160,15 +161,16 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
     const withheld = screen.getAllByText("Hidden — your role cannot read this");
-    // The contracts card, the rollups plate, the coverage line, the company
-    // in the subtitle and the timeline: five withheld sections, five
-    // sentences, no empty state standing in for any of them.
-    expect(withheld).toHaveLength(5);
+    // The contracts card, the rollups plate, the company in the subtitle and
+    // the timeline: four withheld sections, four sentences, no empty state
+    // standing in for any of them. The coverage line is gone from the page, so
+    // it withholds nothing.
+    expect(withheld).toHaveLength(4);
     expect(
       screen.queryByText(/No agreement is filed under this project/),
     ).toBeNull();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
-    expect(screen.getByTestId("project-coverage-withheld")).toBeTruthy();
+    expect(screen.queryByTestId("project-coverage-withheld")).toBeNull();
     expect(screen.getByTestId("project-company-withheld")).toBeTruthy();
     expect(screen.queryByText("Brandt Automotive")).toBeNull();
     expect(
