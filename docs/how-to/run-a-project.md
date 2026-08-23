@@ -30,7 +30,8 @@ company, phase, owner, last activity.
 
 - **All / In delivery / A–Z** at the top switch between every project, the ones
   in the **Delivering** phase, and an alphabetical listing.
-- **Phase** narrows by phase (**All phases** or one of the four).
+- **Filter** opens the filter bar; its **Phase** chip narrows to one phase
+  (**All phases** or one of the four).
 - **Search** matches names and keys.
 - **Show archived** includes archived projects, marked **Archived**.
 - **New project** opens the create form: **Project name**, **Company**

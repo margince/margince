@@ -66,8 +66,8 @@ proposal", the project exists.
 2. Fill in **Deal name** (`Nordwind ERP licences and rollout`) and **Value**
    (`180000`).
 3. Pick the **Company** — *Nordwind Logistik*. Until you do, the **Project**
-   field offers nothing but **New project…**: which projects you may file this
-   deal under is a question about its company, and there is no company yet.
+   field is disabled: which projects this deal may be filed under is a question
+   about its company, and there is no company yet.
 4. Open **Project** and choose **New project…**. One more field appears:
    **Project name**.
 5. Enter the project name — `Nordwind ERP rollout`. Give it a different name
