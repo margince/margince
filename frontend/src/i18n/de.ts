@@ -4279,7 +4279,8 @@ export const de = {
   "buyer.stewardUnknown": "Ihr Ansprechpartner",
   "buyer.signOut": "Abmelden",
   "room.docs.title": "Dokumente",
-  "room.docs.sub": "Was der Käufer lesen kann, in vier festen Gruppen.",
+  "room.docs.sub":
+    "Was der Käufer lesen kann, mit dem Gespräch zu jedem Dokument darunter.",
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
@@ -4294,17 +4295,25 @@ export const de = {
   "room.docs.group.security_privacy": "Sicherheit & Datenschutz",
   "room.docs.group.delivery_operations": "Lieferung & Betrieb",
   "buyer.docs.title": "Dokumente",
-  "buyer.docs.sub": "Was mit Ihnen geteilt wurde.",
+  "buyer.docs.sub":
+    "Was mit Ihnen geteilt wurde, mit dem Gespräch zu jedem Dokument darunter.",
   "buyer.docs.empty": "Noch keine Dokumente.",
   "buyer.docs.download": "{title} herunterladen",
   "buyer.docs.downloadFailed":
     "Der Download hat nicht begonnen. Versuchen Sie es erneut oder wenden Sie sich an Ihren Ansprechpartner.",
-  "threads.title": "Gespräch",
-  "threads.sub":
-    "Fragen und Antworten zwischen beiden Seiten — live, ohne Veröffentlichung.",
+  "room.docs.unshared": "Noch nicht geteilt – zum Teilen veröffentlichen",
+  "room.docs.changed": "Seit der letzten Veröffentlichung geändert",
+  "room.docs.shared": "Mit dem Käufer geteilt",
+  "buyer.docs.downloadShort": "Herunterladen",
+  "buyer.poweredBy": "Powered by",
+  "buyer.poweredByMargince": "Powered by Margince",
+  "threads.roomTitle": "Der Raum als Ganzes",
+  "threads.roomSub":
+    "Alles, was nicht ein einzelnes Dokument betrifft – live, ohne Veröffentlichung.",
+  "threads.aboutThis": "{count} Thread(s) zu diesem Dokument",
+  "threads.askAbout": "Zu diesem Dokument fragen",
+  "threads.cancel": "Abbrechen",
   "threads.empty": "Noch nichts gesagt.",
-  "threads.about": "Betrifft: {title}",
-  "threads.room": "Den Raum insgesamt",
   "threads.requiredChange": "Änderung nötig",
   "threads.resolved": "Erledigt",
   "threads.sideBuyer": "Käufer",
@@ -4312,7 +4321,6 @@ export const de = {
   "threads.replyLabel": "Antwort",
   "threads.reply": "Antworten",
   "threads.resolve": "Erledigen",
-  "threads.aboutLabel": "Es geht um",
   "threads.newLabel": "Neuer Thread",
   "threads.requireChangeLabel":
     "Das muss geändert werden, bevor ich das Dokument bestätigen kann",
@@ -4324,8 +4332,6 @@ export const de = {
     "Sie haben diese Version bestätigt. Das ist eine Arbeitsentscheidung im Raum, keine Unterschrift.",
   "buyer.decide.requested":
     "Sie haben Änderungen an dieser Version angefordert.",
-  "room.decisions.title": "Entscheidungen des Käufers",
-  "room.decisions.empty": "Noch keine Entscheidungen.",
   "room.decisions.confirm_version": "hat die Version bestätigt",
   "room.decisions.request_changes": "hat Änderungen angefordert",
   "dealbrief.title": "Deal-Briefing",

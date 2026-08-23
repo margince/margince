@@ -4241,7 +4241,8 @@ export const vi = {
   "buyer.stewardUnknown": "người liên hệ của bạn",
   "buyer.signOut": "Đăng xuất",
   "room.docs.title": "Tài liệu",
-  "room.docs.sub": "Những gì bên mua có thể đọc, trong bốn nhóm cố định.",
+  "room.docs.sub":
+    "Những gì người mua có thể đọc, kèm cuộc trao đổi về từng tài liệu bên dưới.",
   "room.docs.empty": "Chưa có tài liệu nào trong phòng.",
   "room.docs.fileLabel": "Tệp từ giao dịch này",
   "room.docs.fileHint":
@@ -4256,16 +4257,25 @@ export const vi = {
   "room.docs.group.security_privacy": "Bảo mật & Quyền riêng tư",
   "room.docs.group.delivery_operations": "Triển khai & Vận hành",
   "buyer.docs.title": "Tài liệu",
-  "buyer.docs.sub": "Những gì đã được chia sẻ với bạn.",
+  "buyer.docs.sub":
+    "Những gì đã được chia sẻ với bạn, kèm cuộc trao đổi về từng tài liệu bên dưới.",
   "buyer.docs.empty": "Chưa có tài liệu.",
   "buyer.docs.download": "Tải xuống {title}",
   "buyer.docs.downloadFailed":
     "Tải xuống chưa bắt đầu. Hãy thử lại hoặc liên hệ người liên hệ của bạn.",
-  "threads.title": "Trao đổi",
-  "threads.sub": "Hỏi đáp giữa hai bên — trực tiếp, không cần công bố.",
+  "room.docs.unshared": "Chưa chia sẻ — xuất bản để chia sẻ",
+  "room.docs.changed": "Đã thay đổi kể từ lần xuất bản trước",
+  "room.docs.shared": "Đã chia sẻ với người mua",
+  "buyer.docs.downloadShort": "Tải xuống",
+  "buyer.poweredBy": "Powered by",
+  "buyer.poweredByMargince": "Powered by Margince",
+  "threads.roomTitle": "Toàn bộ phòng",
+  "threads.roomSub":
+    "Mọi điều không thuộc về một tài liệu cụ thể — trực tiếp, không cần xuất bản.",
+  "threads.aboutThis": "{count} chủ đề về tài liệu này",
+  "threads.askAbout": "Hỏi về tài liệu này",
+  "threads.cancel": "Hủy",
   "threads.empty": "Chưa có trao đổi nào.",
-  "threads.about": "Về: {title}",
-  "threads.room": "Toàn bộ phòng",
   "threads.requiredChange": "Cần thay đổi",
   "threads.resolved": "Đã giải quyết",
   "threads.sideBuyer": "bên mua",
@@ -4273,7 +4283,6 @@ export const vi = {
   "threads.replyLabel": "Trả lời",
   "threads.reply": "Trả lời",
   "threads.resolve": "Giải quyết",
-  "threads.aboutLabel": "Nội dung về",
   "threads.newLabel": "Chủ đề mới",
   "threads.requireChangeLabel":
     "Cần thay đổi trước khi tôi có thể xác nhận tài liệu",
@@ -4284,8 +4293,6 @@ export const vi = {
   "buyer.decide.confirmed":
     "Bạn đã xác nhận phiên bản này. Đây là quyết định làm việc trong phòng, không phải chữ ký.",
   "buyer.decide.requested": "Bạn đã yêu cầu thay đổi phiên bản này.",
-  "room.decisions.title": "Quyết định của bên mua",
-  "room.decisions.empty": "Chưa có quyết định.",
   "room.decisions.confirm_version": "đã xác nhận phiên bản",
   "room.decisions.request_changes": "đã yêu cầu thay đổi",
   "dealbrief.title": "Tóm tắt giao dịch",

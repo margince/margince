@@ -9,9 +9,10 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { Wordmark } from "./auth";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
-import { ThreadPanel } from "./dealroomthreads";
+import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside person ever
@@ -209,7 +210,23 @@ function BuyerFrame({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="buyer-page">
       <div className="buyer-column">{children}</div>
+      <PoweredBy />
     </div>
+  );
+}
+
+// The one thing on the buyer's page that is ours rather than the seller's:
+// the product's mark, in the corner, saying what is serving the room.
+function PoweredBy() {
+  const t = useT();
+  return (
+    <span className="buyer-powered">
+      <span className="t-small">{t("buyer.poweredBy")}</span>
+      <Wordmark
+        alt={t("buyer.poweredByMargince")}
+        className="buyer-powered-mark"
+      />
+    </span>
   );
 }
 
@@ -358,19 +375,9 @@ function RoomBody({
   );
 }
 
-type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
-
-function BuyerDocuments({
-  token,
-  onSessionLost,
-  reviewer,
-  live,
-}: Readonly<{
-  token: string;
-  onSessionLost: () => void;
-  reviewer: boolean;
-  live: boolean;
-}>) {
+// The buyer's documents query, shared by the board and the decision verbs so
+// one request serves both.
+function useBuyerDocuments(token: string, onSessionLost: () => void) {
   const t = useT();
   const docs = useQuery({
     queryKey: ["buyer-room-documents", token],
@@ -395,50 +402,14 @@ function BuyerDocuments({
       onSessionLost();
     }
   }, [lost, onSessionLost]);
-  return (
-    <Panel title={t("buyer.docs.title")} sub={t("buyer.docs.sub")}>
-      <QueryStates query={docs} pendingLines={3}>
-        {docs.data ? (
-          docs.data.data.length === 0 ? (
-            <PanelBody>
-              <EmptyState>
-                <p className="t-small">{t("buyer.docs.empty")}</p>
-              </EmptyState>
-            </PanelBody>
-          ) : (
-            DOCUMENT_GROUPS.map((group) => {
-              const inGroup = docs.data.data.filter(
-                (d) => d.group_key === group.key,
-              );
-              if (inGroup.length === 0) {
-                return null;
-              }
-              return (
-                <PanelBody key={group.key}>
-                  <Eyebrow as="h3">{t(group.labelKey)}</Eyebrow>
-                  {inGroup.map((doc) => (
-                    <BuyerDocumentRow
-                      key={doc.id}
-                      token={token}
-                      doc={doc}
-                      mayDecide={reviewer && live}
-                      onSessionLost={onSessionLost}
-                    />
-                  ))}
-                </PanelBody>
-              );
-            })
-          )
-        ) : null}
-      </QueryStates>
-    </Panel>
-  );
+  return docs;
 }
 
-// The download carries the Bearer, which a plain link cannot, so it is a
-// fetch whose bytes are handed to the browser as an object URL. The credential
-// never lands in a URL this way either.
-function BuyerDocumentRow({
+type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
+
+// The buyer's verbs on one document: download it, and — a reviewer on a live
+// room — confirm the version or ask for changes.
+function BuyerDocumentVerbs({
   token,
   doc,
   mayDecide,
@@ -499,11 +470,7 @@ function BuyerDocumentRow({
     },
   });
   return (
-    <div className="room-doc buyer-docs-group">
-      <div>
-        <p>{doc.title}</p>
-        <p className="t-small">{doc.filename}</p>
-      </div>
+    <div className="buyer-decide">
       <Button
         small
         aria-label={t("buyer.docs.download", { title: doc.title })}
@@ -513,70 +480,70 @@ function BuyerDocumentRow({
         }
       >
         <Download aria-hidden />
+        {t("buyer.docs.downloadShort")}
       </Button>
+      {mayDecide && decide.isSuccess ? (
+        <p className="t-small">
+          {t(
+            decide.data?.kind === "confirm_version"
+              ? "buyer.decide.confirmed"
+              : "buyer.decide.requested",
+          )}
+        </p>
+      ) : null}
+      {mayDecide && !decide.isSuccess ? (
+        <>
+          <Button
+            small
+            variant="ghost"
+            pending={decide.isPending}
+            onClick={() =>
+              decide.mutate({ documentId: doc.id, kind: "request_changes" })
+            }
+          >
+            {t("buyer.decide.requestChanges")}
+          </Button>
+          <Button
+            small
+            variant="primary"
+            pending={decide.isPending}
+            onClick={() =>
+              decide.mutate({ documentId: doc.id, kind: "confirm_version" })
+            }
+          >
+            {t("buyer.decide.confirm")}
+          </Button>
+        </>
+      ) : null}
       {download.isError ? (
         <p className="t-small t-danger">{download.error.message}</p>
       ) : null}
-      {mayDecide ? (
-        <div className="buyer-decide">
-          {decide.isSuccess ? (
-            <p className="t-small">
-              {t(
-                decide.data?.kind === "confirm_version"
-                  ? "buyer.decide.confirmed"
-                  : "buyer.decide.requested",
-              )}
-            </p>
-          ) : (
-            <>
-              <Button
-                small
-                variant="ghost"
-                pending={decide.isPending}
-                onClick={() =>
-                  decide.mutate({ documentId: doc.id, kind: "request_changes" })
-                }
-              >
-                {t("buyer.decide.requestChanges")}
-              </Button>
-              <Button
-                small
-                variant="primary"
-                pending={decide.isPending}
-                onClick={() =>
-                  decide.mutate({ documentId: doc.id, kind: "confirm_version" })
-                }
-              >
-                {t("buyer.decide.confirm")}
-              </Button>
-            </>
-          )}
-          {decide.isError ? (
-            <p className="t-small t-danger">
-              {problemMessageOf(decide.error, t)}
-            </p>
-          ) : null}
-        </div>
+      {decide.isError ? (
+        <p className="t-small t-danger">{problemMessageOf(decide.error, t)}</p>
       ) : null}
     </div>
   );
 }
 
-function BuyerConversation({
+// The buyer's board: the shared documents, each with the threads about it,
+// and the room-wide conversation. The verbs are the buyer's — download,
+// decide, open, reply — and never resolve.
+function BuyerBoard({
   token,
   onSessionLost,
   mayWrite,
-  documents,
+  mayDecide,
   refusal,
 }: Readonly<{
   token: string;
   onSessionLost: () => void;
   mayWrite: boolean;
-  documents: readonly { id: string; title: string }[];
+  mayDecide: boolean;
   refusal: string | undefined;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const docs = useBuyerDocuments(token, onSessionLost);
   const threads = useQuery({
     queryKey: ["buyer-room-threads", token],
     retry: false,
@@ -646,68 +613,46 @@ function BuyerConversation({
     onError: retireOnRefusal(onSessionLost),
     onSuccess: refresh,
   });
-  const titles = Object.fromEntries(documents.map((d) => [d.id, d.title]));
-  return (
-    <QueryStates query={threads} pendingLines={3}>
-      {threads.data ? (
-        <ThreadPanel
-          threads={threads.data.data}
-          documentTitles={titles}
-          verbs={{
-            documents,
-            mayRequireChange: true,
-            refusal,
-            open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
-            reply: mayWrite
-              ? (threadId, body) => reply.mutateAsync({ threadId, body })
-              : undefined,
-          }}
-        />
-      ) : null}
-    </QueryStates>
-  );
-}
-
-// The conversation needs the published document titles to label a thread;
-// they come from the same query the documents panel runs, so React Query
-// serves both from one request.
-function BuyerConversationWithDocuments({
-  token,
-  onSessionLost,
-  mayWrite,
-  refusal,
-}: Readonly<{
-  token: string;
-  onSessionLost: () => void;
-  mayWrite: boolean;
-  refusal: string | undefined;
-}>) {
-  const t = useT();
-  const docs = useQuery({
-    queryKey: ["buyer-room-documents", token],
-    retry: false,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/public/rooms/documents", {
-        ...bearer(token),
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
-  const documents = (docs.data?.data ?? []).map((d) => ({
-    id: d.id,
-    title: d.title,
+  const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => ({
+    id: doc.id,
+    groupKey: doc.group_key,
+    title: doc.title,
+    meta: doc.filename,
+    actions: (
+      <BuyerDocumentVerbs
+        token={token}
+        doc={doc}
+        mayDecide={mayDecide}
+        onSessionLost={onSessionLost}
+      />
+    ),
   }));
   return (
-    <BuyerConversation
-      token={token}
-      onSessionLost={onSessionLost}
-      mayWrite={mayWrite}
-      documents={documents}
-      refusal={refusal}
-    />
+    <QueryStates query={docs} pendingLines={3}>
+      <QueryStates query={threads} pendingLines={3}>
+        {docs.data && threads.data ? (
+          <DocumentBoard
+            title={t("buyer.docs.title")}
+            sub={t("buyer.docs.sub")}
+            groups={DOCUMENT_GROUPS.map((g) => ({
+              key: g.key,
+              label: t(g.labelKey),
+            }))}
+            documents={documents}
+            threads={threads.data.data}
+            empty={t("buyer.docs.empty")}
+            verbs={{
+              mayRequireChange: true,
+              refusal,
+              open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
+              reply: mayWrite
+                ? (threadId, body) => reply.mutateAsync({ threadId, body })
+                : undefined,
+            }}
+          />
+        ) : null}
+      </QueryStates>
+    </QueryStates>
   );
 }
 
@@ -795,17 +740,14 @@ function RoomView({
           {view.access === "closed" ? ` ${t("buyer.closedNote")}` : ""}
         </p>
       </header>
-      <BuyerDocuments
-        token={token}
-        onSessionLost={onSessionLost}
-        reviewer={view.participant.capability === "reviewer"}
-        live={view.access === "live"}
-      />
-      <BuyerConversationWithDocuments
+      <BuyerBoard
         token={token}
         onSessionLost={onSessionLost}
         mayWrite={
           view.access === "live" && view.participant.capability !== "view"
+        }
+        mayDecide={
+          view.participant.capability === "reviewer" && view.access === "live"
         }
         refusal={conversationRefusal(view, t)}
       />
