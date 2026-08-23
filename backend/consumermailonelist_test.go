@@ -160,6 +160,25 @@ var providers = []string{"gmail" + ".com", "outlook" + ".com"}`,
 			want: 1,
 		},
 		{
+			// FIVE fragments. The prefilter's first draft joined runs of up to
+			// four and dropped this, which was a narrowing in a dimension the
+			// detector does not have — `stringValue` resolves `+` to whatever
+			// depth it is written at. A bigger number would only move the cliff.
+			name: "a list spelling every provider in five fragments",
+			code: `package p
+var providers = []string{"g" + "m" + "a" + "il" + ".com", "out" + "l" + "o" + "ok" + ".com"}`,
+			want: 1,
+		},
+		{
+			// `string(x)` on a string constant is the identity, not a call this
+			// gate has to run.
+			name: "a constant string conversion",
+			code: `package p
+const gmail = string("gmail.com")
+var providers = []string{gmail, string("outlook.com")}`,
+			want: 1,
+		},
+		{
 			name: "concatenation in parentheses, and across three parts",
 			code: `package p
 var providers = []string{("gmail" + ".com"), "out" + "look" + ".com"}`,
@@ -299,23 +318,32 @@ func namesAnyProvider(code string) bool {
 		}
 		values = append(values, value)
 	}
-	// Each token, and then each RUN of consecutive tokens joined — because
-	// `"gmail" + ".com"` spells a provider that neither fragment does, and a
-	// shortcut reading fragments would drop a file whose every domain is
-	// written that way. The window is bounded: a domain is a handful of pieces,
-	// not an arbitrary expression, and the census behind this is what decides.
-	const maxParts = 4
-	for i := range values {
-		joined := ""
-		for j := i; j < len(values) && j < i+maxParts; j++ {
-			joined += values[j]
-			if looksLikeADomain(joined) {
-				return true
-			}
+	// Each token on its own, and then — if the file concatenates string
+	// literals at all — the file is admitted regardless.
+	//
+	// The first draft joined runs of consecutive tokens up to FOUR parts. That
+	// bound was itself a narrowing, and in a dimension the detector does not
+	// have: `stringValue` resolves `+` to whatever depth it is written at, so a
+	// list spelling every provider in five fragments produced no window that
+	// matched and the file was dropped. Choosing a bigger number would only
+	// move the cliff.
+	//
+	// So the shortcut stops guessing at this point and defers. A file that
+	// concatenates literals MIGHT spell a provider its fragments do not, the
+	// census behind this is the thing that can actually decide, and the cost of
+	// being wrong in this direction is one parse.
+	for _, value := range values {
+		if looksLikeADomain(value) {
+			return true
 		}
 	}
-	return false
+	return concatenatesLiterals.MatchString(code)
 }
+
+// A string literal with a `+` on either side of it: the syntax of a Go string
+// constant expression, which is the only way a name can be spelled by pieces
+// that are individually not one.
+var concatenatesLiterals = regexp.MustCompile("(\"|`)\\s*\\+|\\+\\s*(\"|`)")
 
 // consumerMailListsInSource reports `<file>:<line> (<n> providers)` for every
 // composite literal in one source file naming two or more DISTINCT providers.
@@ -416,6 +444,17 @@ func stringValue(node ast.Node, constants map[string]string) (string, bool) {
 		return value, known
 	case *ast.ParenExpr:
 		return stringValue(n.X, constants)
+	case *ast.CallExpr:
+		// `string("gmail.com")` is a constant conversion, not a function call
+		// this gate has to run — it is the identity on a string constant. Only
+		// the builtin spelled `string` with exactly one argument qualifies; a
+		// package-qualified or shadowed name is a different thing and is not
+		// followed.
+		name, ok := n.Fun.(*ast.Ident)
+		if !ok || name.Name != "string" || len(n.Args) != 1 {
+			return "", false
+		}
+		return stringValue(n.Args[0], constants)
 	case *ast.BinaryExpr:
 		if n.Op != token.ADD {
 			return "", false
