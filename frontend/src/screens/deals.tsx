@@ -60,7 +60,7 @@ import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { dealWinKeys } from "./activitykeys";
+import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { ArchiveAction } from "./archive";
 import {
@@ -1469,7 +1469,9 @@ function useAdvanceDeal(toast: Toast) {
         queryClient.setQueryData(["deal", input.dealId], deal);
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
-      queryClient.invalidateQueries({ queryKey: ["deal", input.dealId] });
+      for (const queryKey of dealRecordKeys(input.dealId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       // A win moves the deal's project into delivery in the same server
       // write, so the project page and list are stale the moment this
       // returns. Without this a reader who follows the project chip within
@@ -2606,7 +2608,9 @@ function ReopenAction({
     },
     onSuccess: () => {
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
+      for (const queryKey of dealRecordKeys(dealId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
     },
   });

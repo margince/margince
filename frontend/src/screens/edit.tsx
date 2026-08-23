@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import type { Route } from "../app/router";
 import { Button, Modal } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { derivedRecordKeys } from "./activitykeys";
 import {
   isVersionSkew,
   ProblemError,
@@ -64,6 +65,13 @@ export function useUpdateRecord<Updated extends { id: string }>({
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       queryClient.invalidateQueries({ queryKey: [recordKey, updated.id] });
+      // A read WRITTEN FROM this record rather than showing it goes stale on
+      // the same write, and says something confident while it does. Derived
+      // rather than listed here, so a new one is picked up by every edit form
+      // at once.
+      for (const queryKey of derivedRecordKeys(recordKey, updated.id)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       onDone();
     },
   });

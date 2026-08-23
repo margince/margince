@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dealWinKeys, entityTimelineKeys, taskWriteKeys } from "./activitykeys";
+import {
+  dealRecordKeys,
+  dealWinKeys,
+  derivedRecordKeys,
+  entityTimelineKeys,
+  taskWriteKeys,
+} from "./activitykeys";
 
 // The company, contact and project pages draw the timeline's first page from
 // their composite 360 read and fetch nothing under the per-record activities
@@ -61,5 +67,25 @@ describe("which reads a timeline write has to invalidate", () => {
       ["projects"],
     ]);
     expect(dealWinKeys(undefined)).toEqual([["projects"]]);
+  });
+});
+
+describe("which reads a write to the record itself invalidates", () => {
+  it("reaches the deal status card, which is written from the deal's own fields", () => {
+    // The card names what the stage and the value MEAN. Advancing a stage
+    // without this leaves it describing a stage the deal has left, stated with
+    // the confidence of a current reading.
+    expect(dealRecordKeys("d1")).toEqual([
+      ["deal", "d1"],
+      ["deal-status", "d1"],
+    ]);
+  });
+
+  it("reaches the same card from the generic edit form, by record kind", () => {
+    expect(derivedRecordKeys("deal", "d1")).toEqual([["deal-status", "d1"]]);
+  });
+
+  it("names nothing for a record kind with no derived read", () => {
+    expect(derivedRecordKeys("person", "p1")).toEqual([]);
   });
 });
