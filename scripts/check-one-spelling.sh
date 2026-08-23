@@ -50,12 +50,11 @@ set -euo pipefail
 #
 # It cannot be sourced from a library: finding the library needs the answer this
 # block produces. Invoked through a symlink, `dirname "$0"` is the link's
-# directory, which holds no library — tried, and it fails exactly there.
+# directory, which holds no library.
 #
-# So the copies stay, and scripts/test-selfdir-identical.sh asserts they are
-# BYTE-IDENTICAL. Two copies that cannot drift are a different thing from two
-# copies: the array refactor that fixed the visited-path set had to be made
-# twice by hand, and nothing would have noticed if only one had landed.
+# scripts/test-selfdir-identical.sh asserts the two copies are BYTE-IDENTICAL,
+# and that assertion is what makes the duplication safe rather than merely
+# explained. Edit one, edit both.
 # Resolve $0 through any symlinks BEFORE deriving the directory: `cd -P` on
 # `dirname "$0"` canonicalizes the LINK's directory, which is not where the
 # libraries are. `readlink -f` is GNU-only, so the loop is the portable form.

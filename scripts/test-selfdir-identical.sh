@@ -5,14 +5,21 @@
 #
 # So it is duplicated deliberately, and this asserts the two copies are the SAME
 # — which is what makes deliberate duplication safe rather than merely
-# explained. The array refactor that fixed the visited-path set had to be made
-# twice, by hand, and nothing would have noticed if only one had landed.
+# explained. An edit to one copy that is not made to the other is a gate whose
+# two halves resolve their own location differently, and nothing else in the
+# tree would notice.
 set -uo pipefail
+# CDPATH= : with one set, `cd` prints the directory it chose, and the printed
+# path lands in the substitution instead of the intended one.
+CDPATH=
 cd "$(cd -P -- "$(dirname -- "$0")" && pwd)/.."
 
-# The block runs from the marker comment to the line that sets SELF_DIR.
+# From the note that explains WHY it is duplicated, down to the line that sets
+# SELF_DIR. The note is inside the compared span on purpose: an explanation that
+# can drift while the code stays identical is how one copy comes to be described
+# correctly and the other not.
 extract() {
-  awk '/^# Resolve \$0 through any symlinks BEFORE deriving the directory/ { on = 1 }
+  awk '/^# THE ONE PLACE IN THIS PAIR THAT IS DUPLICATED ON PURPOSE/ { on = 1 }
        on { print }
        /^SELF_DIR=/ { if (on) exit }' "$1"
 }
