@@ -4368,7 +4368,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Apply a tag to an entity (person/org/deal/lead). */
+        /** Apply a tag to an entity (person/org/deal/lead/project). */
         post: operations["applyTag"];
         /**
          * Take one tag off one entity, leaving the tag itself in place.

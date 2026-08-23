@@ -20,7 +20,10 @@ type stubTags struct {
 	vocabulary       []Tag
 	listedArchived   *bool
 	capped           bool
+	taggable         []string
 }
+
+func (s stubTags) TaggableTypes() []string { return s.taggable }
 
 func (s stubTags) ListTags(_ context.Context, includeArchived bool) ([]Tag, bool, error) {
 	if s.listedArchived != nil {

@@ -37402,7 +37402,7 @@ type ServerInterface interface {
 	// Take one tag off one entity, leaving the tag itself in place.
 	// (DELETE /tags/{id}/apply)
 	RemoveTag(w http.ResponseWriter, r *http.Request, id Id)
-	// Apply a tag to an entity (person/org/deal/lead).
+	// Apply a tag to an entity (person/org/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Create a task — a commitment with an owner, on the records it is about.
@@ -40090,7 +40090,7 @@ func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Apply a tag to an entity (person/org/deal/lead).
+// Apply a tag to an entity (person/org/deal/lead/project).
 // (POST /tags/{id}/apply)
 func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
