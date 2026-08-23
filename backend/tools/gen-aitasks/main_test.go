@@ -559,6 +559,14 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 			wantErr:  "declares no tools",
 		},
 		{
+			// The absent-by-accident case. Left to the runtime it surfaces as a
+			// panic when the service reads the join at construction.
+			name: "a shipped agent_loop task declaring no agents at all",
+			contract: strings.Replace(agentContract,
+				"    agents:\n      morning_brief:\n        tools: [list_records, read_record]\n      overnight_sweep:\n        tools: [list_records, log_activity]\n", "", 1),
+			wantErr: "declares no agents",
+		},
+		{
 			// Only an agent_loop site runs a tool-fed window, so an allowlist
 			// on any other task describes a surface that is never assembled.
 			name: "agents on a task with no agent_loop site",

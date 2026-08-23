@@ -49,6 +49,16 @@ func (a *agentDef) UnmarshalYAML(node *yaml.Node) error {
 // splitting the check would mean two half-answers to one question.
 func validateAgents(task string, def taskDef) error {
 	if len(def.Agents) == 0 {
+		// A tool-fed task with no agents declared is the absent-by-accident
+		// case, and it must fail HERE. Left to the runtime it surfaces as a
+		// panic when the service reads the join at construction — a build
+		// defect discovered at boot, which is the shape ADR-0074 asks every
+		// field in this contract to avoid.
+		if declaresAnAgentLoopSite(def) && def.Status == statusShipped {
+			return fmt.Errorf(
+				"task %q ships an agent_loop site but declares no agents — every scheduled agent needs its "+
+					"tool allowlist here, or its run is narrowed by its passport alone", task)
+		}
 		return nil
 	}
 	if !declaresAnAgentLoopSite(def) {

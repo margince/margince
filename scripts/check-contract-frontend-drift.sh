@@ -2,8 +2,8 @@
 # check-contract-frontend-drift.sh — the frontend's generated types are part of
 # the contract, so the BACKEND gate has to notice when they are stale.
 #
-# Editing backend/api/crm.yaml requires three regenerations. `make check-backend`
-# used to enforce one:
+# Editing a contract under backend/api/ requires four regenerations. `make
+# check-backend` used to enforce one:
 #
 #   make gen        → internal/contracts, compose stubs, agentpolicy, recordshapes
 #                     — enforced by the backend `drift` gate

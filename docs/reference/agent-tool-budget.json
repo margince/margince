@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 56,
     "tokens": 16841,
-    "median_tool_tokens": 275,
+    "median_tool_tokens": 274,
     "mean_tool_tokens": 300
   },
   "agents": [

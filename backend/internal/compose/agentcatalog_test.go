@@ -47,7 +47,7 @@ func TestTheScheduledCatalogIsTotalAgainstTheContract(t *testing.T) {
 }
 
 // The one that matters for production. RunnerService takes its specByName
-// default from agentSpecByName, and executeJob builds the Job from whatever it
+// default from ScheduledAgentSpecByName, and executeJob builds the Job from whatever it
 // returns — so if THIS resolver hands back a spec with no Tools, every
 // scheduled run is narrowed by its passport alone and nothing looks wrong.
 func TestTheDefaultResolverCarriesEachAgentsDeclaredAllowlist(t *testing.T) {
@@ -64,6 +64,31 @@ func TestTheDefaultResolverCarriesEachAgentsDeclaredAllowlist(t *testing.T) {
 	}
 	if _, known := ScheduledAgentSpecByName("an_agent_no_release_ever_shipped"); known {
 		t.Error("the default resolver claims to know an agent the catalog does not schedule")
+	}
+}
+
+// The join is read once for the process, so what the resolver hands out must
+// not be the cache itself: one caller appending to its own allowlist would
+// otherwise widen — or reorder — the allowlist every later job runs under, and
+// nothing about the call site would look wrong.
+func TestTheResolverHandsOutItsOwnCopyOfTheAllowlist(t *testing.T) {
+	const agent = "morning_brief"
+	first, known := ScheduledAgentSpecByName(agent)
+	if !known {
+		t.Fatalf("%s is not scheduled", agent)
+	}
+	if len(first.Tools) == 0 {
+		t.Fatalf("%s resolves with no tools", agent)
+	}
+	before := slices.Clone(first.Tools)
+	first.Tools[0] = "a_tool_a_caller_wrote_over_the_cache"
+	first.Tools = append(first.Tools, "and_one_it_appended")
+
+	second, _ := ScheduledAgentSpecByName(agent)
+	if !slices.Equal(second.Tools, before) {
+		t.Errorf("after one caller mutated its own copy, the next resolution returned %v instead of %v — "+
+			"the resolver is handing out the process-wide cache, so a narrowing can be widened by accident",
+			second.Tools, before)
 	}
 }
 

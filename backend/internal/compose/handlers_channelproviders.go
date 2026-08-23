@@ -141,13 +141,15 @@ func publishedChannelProviders(registered []string, sending map[string]connector
 // them nothing, and the whole-catalog measurement has thousands of tokens of
 // room besides.
 //
-// The field stays dropped anyway, and now for its own reason rather than a
-// borrowed one: an agent staging a channel message with files learns the bounds
-// the way it already does, by having the delivery parked with a reason that
-// names them, and a carriage object it never reads is prompt spent on nothing.
-// That is a smaller claim than the budget was, and it is the honest one. Adding
-// the field back is a question about what an agent should know, answerable on
-// its own merits — see #1985, whose budget premise this supersedes.
+// The field stays dropped anyway, and the honest reason is smaller than the
+// budget was: NO SCHEDULED AGENT ATTACHES A CHANNEL TOOL, so today nothing on
+// this surface would read the field. The parked-delivery path that teaches an
+// agent the bounds is the REST and human send path, not one either shipped
+// agent can reach.
+//
+// So this is currently a question about a capability nobody exercises. Adding
+// the field back is answerable on its own merits the moment an agent attaches a
+// channel tool — see #1985, whose budget premise this supersedes.
 //
 // IT ALSO DROPS `capture_sources`, for the same reason and with the same shape
 // of consequence: a passport reading REST resolves a unit's `ext:` provenance and

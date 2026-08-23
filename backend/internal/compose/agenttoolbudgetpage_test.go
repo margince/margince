@@ -3,9 +3,10 @@
 
 package compose
 
-// The reader's half of docs/reference/agent-tool-budget.*. It renders from the
-// JSON payload beside it and never re-derives anything, so the page cannot
-// disagree with the data it claims to show.
+// The reader's half of docs/reference/agent-tool-budget.*. Every FIGURE it
+// prints comes from the JSON payload beside it — it re-shapes that payload for
+// reading (indexing the wrong-reach rows by name, counting a slice) but derives
+// no number of its own, so the page cannot disagree with the data it shows.
 
 import (
 	"fmt"
@@ -75,8 +76,13 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("temptation weight almost in half.\n\n")
 	fmt.Fprintf(&p, "**Temptation weight** sums, over an agent's tools, how many of the %d certification\n", b.Corpus.Scenarios)
 	fmt.Fprintf(&p, "scenarios name that tool as the WRONG reach. %d of those scenarios offer the model the\n", b.Corpus.OfferingCatalog)
-	p.WriteString("whole catalog and score which tool it picks, so this is measured mis-selection rather\n")
-	p.WriteString("than an opinion about which tools look alike.\n\n")
+	p.WriteString("whole catalog and score which tool it picks, so the confusions it names were chosen\n")
+	p.WriteString("against the real surface rather than guessed.\n\n")
+	p.WriteString("**It is a rubric-mention heuristic, not an observed error rate.** The count is\n")
+	p.WriteString("registered tool names appearing in a scenario's rubric prose, minus that scenario's\n")
+	p.WriteString("own expected step. A weight of 5 does not mean a model went wrong five times; it\n")
+	p.WriteString("means five scenario rubrics name a tool on this menu as the reach to avoid. The\n")
+	p.WriteString("measurement that would replace it is sampling real runs for chosen-vs-wanted.\n\n")
 	p.WriteString("**Two limits, both real.** A scenario's near-misses live only in its `rubric:` free\n")
 	p.WriteString("text, so the count is read by matching registered tool names in that prose minus the\n")
 	p.WriteString("scenario's own answer — which over-counts, because a rubric quotes the right tool's\n")
@@ -97,6 +103,10 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("## What each tool costs, largest first\n\n")
 	fmt.Fprintf(&p, "Median %d tokens, mean %d, across %d served tools.\n\n",
 		b.Catalog.Median, b.Catalog.Mean, b.Catalog.Tools)
+	p.WriteString("**These do not sum to the catalog total.** Each row is one tool rendered alone and\n")
+	p.WriteString("divided by four, so every row carries its own rounding; the catalog figure divides\n")
+	p.WriteString("the whole rendered listing once. Read a row as what that tool costs a menu, not as\n")
+	p.WriteString("a term in an addition.\n\n")
 	p.WriteString("| Tool | Tokens | Named as the wrong reach in |\n|---|---:|---:|\n")
 	reach := map[string]int{}
 	for _, r := range b.WrongReach {
@@ -105,7 +115,10 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	for _, row := range b.ToolCost {
 		named := "—"
 		if n := reach[row.Name]; n > 0 {
-			named = fmt.Sprintf("%d scenarios", n)
+			named = fmt.Sprintf("%d scenario", n)
+			if n > 1 {
+				named += "s"
+			}
 		}
 		fmt.Fprintf(&p, "| `%s` | %d | %s |\n", row.Name, row.Tokens, named)
 	}

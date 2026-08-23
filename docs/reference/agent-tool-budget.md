@@ -97,8 +97,14 @@ temptation weight almost in half.
 
 **Temptation weight** sums, over an agent's tools, how many of the 23 certification
 scenarios name that tool as the WRONG reach. 21 of those scenarios offer the model the
-whole catalog and score which tool it picks, so this is measured mis-selection rather
-than an opinion about which tools look alike.
+whole catalog and score which tool it picks, so the confusions it names were chosen
+against the real surface rather than guessed.
+
+**It is a rubric-mention heuristic, not an observed error rate.** The count is
+registered tool names appearing in a scenario's rubric prose, minus that scenario's
+own expected step. A weight of 5 does not mean a model went wrong five times; it
+means five scenario rubrics name a tool on this menu as the reach to avoid. The
+measurement that would replace it is sampling real runs for chosen-vs-wanted.
 
 **Two limits, both real.** A scenario's near-misses live only in its `rubric:` free
 text, so the count is read by matching registered tool names in that prose minus the
@@ -112,7 +118,12 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 275 tokens, mean 300, across 56 served tools.
+Median 274 tokens, mean 300, across 56 served tools.
+
+**These do not sum to the catalog total.** Each row is one tool rendered alone and
+divided by four, so every row carries its own rounding; the catalog figure divides
+the whole rendered listing once. Read a row as what that tool costs a menu, not as
+a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
@@ -121,15 +132,15 @@ Median 275 tokens, mean 300, across 56 served tools.
 | `send_account_email` | 546 | — |
 | `resolve_entities` | 513 | — |
 | `list_records` | 475 | — |
-| `advance_deal` | 474 | 1 scenarios |
-| `send_email` | 472 | 1 scenarios |
-| `log_activity` | 448 | 1 scenarios |
+| `advance_deal` | 474 | 1 scenario |
+| `send_email` | 472 | 1 scenario |
+| `log_activity` | 448 | 1 scenario |
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 432 | — |
 | `query_workspace` | 402 | 3 scenarios |
 | `search_records` | 392 | 6 scenarios |
 | `enrich` | 388 | — |
-| `create_record` | 370 | 1 scenarios |
+| `create_record` | 370 | 1 scenario |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 325 | — |
@@ -143,7 +154,7 @@ Median 275 tokens, mean 300, across 56 served tools.
 | `archive_record` | 293 | — |
 | `catch_me_up_on` | 287 | 3 scenarios |
 | `relink_activity` | 286 | — |
-| `prepare_handoff` | 275 | 1 scenarios |
+| `prepare_handoff` | 275 | 1 scenario |
 | `list_approvals` | 274 | — |
 | `check_availability` | 270 | — |
 | `decide_approval_bundle` | 266 | — |

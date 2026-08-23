@@ -112,6 +112,12 @@ var mustScheduledAgents = sync.OnceValue(func() []runner.AgentSpec {
 func ScheduledAgentSpecByName(name string) (runner.AgentSpec, bool) {
 	for _, spec := range mustScheduledAgents() {
 		if spec.Name == name {
+			// Clone, because the join is read ONCE for the process: every
+			// caller would otherwise share one backing array, and a single
+			// append or index write would change the allowlist every later job
+			// runs under. A boundary that hands out its own cache is the
+			// quietest way for a narrowing to stop narrowing.
+			spec.Tools = slices.Clone(spec.Tools)
 			return spec, true
 		}
 	}

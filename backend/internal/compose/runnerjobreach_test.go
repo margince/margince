@@ -50,6 +50,10 @@ var buildsAJobLegitimately = gatekit.Waive(map[string]string{
 // that knew only the composite literal would be evaded by three of these while
 // reporting the tree clean, which is worse than not having it.
 //
+// The struct-field form is here because the certification lane already uses it
+// (`certcase_agentloop.go` holds a `job runner.Job`), and a Job reached through
+// a zero-valued field carries empty Tools exactly like one built with a literal.
+//
 // It matches on the `runner.Job` spelling, so an import alias (`import r
 // ".../runner"` then `r.Job{}`) walks past it. That is a known limit, shared
 // with the older gate in agentspectools_test.go, and it is left rather than
@@ -70,6 +74,10 @@ func jobConstructionForms(file *ast.File) []token.Pos {
 			}
 		case *ast.ValueSpec: // var job runner.Job
 			if node.Type != nil && isRunnerJob(node.Type) {
+				at = append(at, node.Pos())
+			}
+		case *ast.Field: // a struct field or embedded runner.Job, consumed as its zero value
+			if isRunnerJob(node.Type) {
 				at = append(at, node.Pos())
 			}
 		case *ast.FuncDecl: // func ...() runner.Job
@@ -178,6 +186,10 @@ func f() { var j runner.Job; _ = j }`},
 		{"a helper returning one", `package p
 import "x/runner"
 func f() runner.Job { panic("") }`},
+		{"a struct field consumed as its zero value", `package p
+import "x/runner"
+type holder struct{ job runner.Job }
+func f() runner.Job { return holder{}.job }`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			parsed, err := parser.ParseFile(token.NewFileSet(), "x.go", tc.src, 0)
