@@ -225,8 +225,14 @@ export function LocaleProvider({
       // An unshipped value FALLS BACK rather than being ignored. Ignoring it
       // would keep whatever is on screen, and after a sign-out the provider
       // outlives the account — so the previous person's server-chosen language
-      // would stay up for the next one. Detection is what "no usable answer
-      // from the server" already means everywhere else in this file.
+      // would stay up for the next one.
+      //
+      // It falls back to the SAME resolution the mount path uses: this
+      // machine's stored pick first, then detection. Detection alone would
+      // discard a choice the reader made here and is still entitled to; the
+      // stored value is only ever written by an explicit pick, never by a
+      // detected default, so preferring it cannot resurrect something nobody
+      // chose.
       const usable = isLocale(next) ? next : (storedLocale() ?? detectLocale());
       if (usable === adopted) {
         return;
