@@ -273,19 +273,6 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	return readBack(ctx, t.p, ref)
 }
 
-// RecordTypeOf lets the contract's per-record-type tier floor see which record
-// this call creates (tierfloor.go).
-func (createRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
-
-// ServesRecordType reports the record types this verb can actually create — the
-// contract's own create bodies, which is the same vocabulary the schema
-// advertises. The floor reads it so a type this verb cannot create is never
-// tightened into an approval that could only ever fail.
-func (createRecord) ServesRecordType(recordType string) bool {
-	_, served := createShapes[datasource.EntityType(recordType)]
-	return served
-}
-
 // StageInfo puts a create the contract tightened to confirm-first in the inbox
 // instead of dead-ending it (#982).
 //
@@ -406,17 +393,6 @@ type advanceDeal struct {
 	p      datasource.SystemOfRecordProvider
 	stages StageResolver
 }
-
-// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
-// see the note in tierfloor.go for why a single-record-type verb states it here.
-//
-// This verb resolves its tier dynamically, and a floor is not the same lever: the
-// resolver RAISES a particular call on that call's own facts, where the floor
-// tightens EVERY call of the verb for a record type. An installation that wants
-// the whole verb confirmed cannot get there by waiting for the resolver to agree.
-func (advanceDeal) RecordTypeOf(json.RawMessage) string { return "deal" }
-
-func (advanceDeal) ServesRecordType(recordType string) bool { return recordType == "deal" }
 
 func (t advanceDeal) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{

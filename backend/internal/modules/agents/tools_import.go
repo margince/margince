@@ -286,12 +286,6 @@ func (t readImportReport) Handle(ctx context.Context, in json.RawMessage) (json.
 
 type commitImport struct{ imports Imports }
 
-// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
-// see the note in tierfloor.go for why a single-record-type verb states it here.
-func (commitImport) RecordTypeOf(json.RawMessage) string { return "import_run" }
-
-func (commitImport) ServesRecordType(recordType string) bool { return recordType == "import_run" }
-
 func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,

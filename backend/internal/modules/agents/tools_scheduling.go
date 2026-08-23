@@ -67,12 +67,6 @@ type bookMeetingTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
-// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
-// see the note in tierfloor.go for why a single-record-type verb states it here.
-func (bookMeetingTool) RecordTypeOf(json.RawMessage) string { return "activity" }
-
-func (bookMeetingTool) ServesRecordType(recordType string) bool { return recordType == "activity" }
-
 func (t bookMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "book_meeting", Title: "Book a meeting", Version: toolVersionV1,

@@ -232,12 +232,6 @@ type sendEmailTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
-// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
-// see the note in tierfloor.go for why a single-record-type verb states it here.
-func (sendEmailTool) RecordTypeOf(json.RawMessage) string { return "activity" }
-
-func (sendEmailTool) ServesRecordType(recordType string) bool { return recordType == "activity" }
-
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
@@ -319,12 +313,6 @@ type sendMessageTool struct {
 	comms Comms
 	p     datasource.SystemOfRecordProvider
 }
-
-// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
-// see the note in tierfloor.go for why a single-record-type verb states it here.
-func (sendMessageTool) RecordTypeOf(json.RawMessage) string { return "activity" }
-
-func (sendMessageTool) ServesRecordType(recordType string) bool { return recordType == "activity" }
 
 func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
