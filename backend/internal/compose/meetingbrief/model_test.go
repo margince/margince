@@ -65,11 +65,11 @@ func TestARepliedBriefIsAttributedToTheModel(t *testing.T) {
 	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model for a reply that survived the filter", by)
 	}
-	if len(sections) != 1 || sections[0].Kind != crmcontracts.MeetingBriefSectionKindGoal {
-		t.Fatalf("sections = %+v, want the one goal section", sections)
-	}
-	if sections[0].Sentences[0].Text != "Get them to name a date." {
-		t.Errorf("the model's sentence was rewritten: %q", sections[0].Sentences[0].Text)
+	// The goal is the model's; the rest is the floor's, restored because the
+	// reply did not answer those sections.
+	goal := sectionOfKind(sections, crmcontracts.MeetingBriefSectionKindGoal)
+	if len(goal.Sentences) != 1 || goal.Sentences[0].Text != "Get them to name a date." {
+		t.Fatalf("the goal section = %+v, want the model's one line", goal.Sentences)
 	}
 }
 
@@ -112,9 +112,17 @@ func TestAJudgementIsRefusedInASectionThatMayOnlyStateFacts(t *testing.T) {
 		{"kind":"risks","sentences":[{"text":"They are stalling.","nature":"assessment",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
 	sections, _ := Write(context.Background(), lane, in)
+	// The section itself survives — the floor's own attendee lines are
+	// restored when the model's are refused. What must not survive is the
+	// model's judgement inside it.
 	for _, section := range sections {
-		if section.Kind == crmcontracts.MeetingBriefSectionKindAttendees {
-			t.Error("a judgement was allowed into attendees, which may only state facts")
+		if section.Kind != crmcontracts.MeetingBriefSectionKindAttendees {
+			continue
+		}
+		for _, line := range section.Sentences {
+			if line.Text == "They are stalling." {
+				t.Error("a judgement was allowed into attendees, which may only state facts")
+			}
 		}
 	}
 }
@@ -173,6 +181,34 @@ func TestTheReadersLanguageComesFromTheRequestAndFallsBackToEnglish(t *testing.T
 		}
 		if got := languageOf(r); got != want {
 			t.Errorf("Accept-Language %q read as %q, want %q", header, got, want)
+		}
+	}
+}
+
+// A model that answers one section must not silently take the others off the
+// page. It may change how the brief READS; it may not change what it COVERS.
+func TestASparseReplyKeepsTheFloorsCoverage(t *testing.T) {
+	in := fullInput()
+	floor := Deterministic(in)
+	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
+		{"text":"Get them to name a date.","nature":"recommendation",
+		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
+	sections, by := Write(context.Background(), lane, in)
+	if by != crmcontracts.Model {
+		t.Fatalf("generated_by = %v, want model", by)
+	}
+	for _, want := range floor {
+		if len(want.Sentences) == 0 {
+			continue
+		}
+		found := false
+		for _, got := range sections {
+			if got.Kind == want.Kind && len(got.Sentences) > 0 {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("the model's sparse reply dropped the %q section the floor had", want.Kind)
 		}
 	}
 }

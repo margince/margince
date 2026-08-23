@@ -98,7 +98,50 @@ func Write(ctx context.Context, lane Completer, in Input) ([]Section, crmcontrac
 		// tells them which of the two they are reading.
 		return floor, crmcontracts.Deterministic
 	}
-	return written, crmcontracts.Model
+	// A rewrite that dropped a section the floor had is not a rewrite, it is a
+	// shorter brief: a model returning one harmless sentence would otherwise
+	// take a revised offer or an open risk off the page and look like it
+	// worked. Anything the reply left out is restored from the floor, so the
+	// model can change how the brief READS and never what it COVERS.
+	return withFloorCoverage(written, floor), crmcontracts.Model
+}
+
+// withFloorCoverage puts back any section the model did not answer.
+func withFloorCoverage(written, floor []Section) []Section {
+	answered := map[crmcontracts.MeetingBriefSectionKind]bool{}
+	for _, section := range written {
+		answered[section.Kind] = true
+	}
+	merged := make([]Section, 0, len(floor)+len(written))
+	for _, kind := range specSequence {
+		switch {
+		case answered[kind]:
+			merged = append(merged, sectionOfKind(written, kind))
+		default:
+			if from, ok := floorSection(floor, kind); ok {
+				merged = append(merged, from)
+			}
+		}
+	}
+	return merged
+}
+
+func sectionOfKind(sections []Section, kind crmcontracts.MeetingBriefSectionKind) Section {
+	for _, section := range sections {
+		if section.Kind == kind {
+			return section
+		}
+	}
+	return Section{Kind: kind}
+}
+
+func floorSection(floor []Section, kind crmcontracts.MeetingBriefSectionKind) (Section, bool) {
+	for _, section := range floor {
+		if section.Kind == kind && len(section.Sentences) > 0 {
+			return section, true
+		}
+	}
+	return Section{}, false
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input) ([]Section, error) {
