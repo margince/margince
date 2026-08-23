@@ -295,9 +295,9 @@ var domainCreateRepPerms = principal.Permissions{
 // and the domain half was untested: every existing case asserted the id IS
 // carried, so removing the visibility gate broke nothing.
 //
-// It is one test for four doors now that they share `claimedDomainOwner` —
-// creating a company, editing its domains, and saving its profile website all
-// reach the same probe, and each used to be able to drift on its own.
+// One test for four doors, because they share `claimedDomainOwner`: creating a
+// company, editing its domains, and saving its profile website all reach the
+// same probe, so the rule is held in one place for all of them.
 func TestDuplicateDomain409DoesNotDiscloseAnOrgOutOfScope(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()

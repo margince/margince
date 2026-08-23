@@ -18,10 +18,10 @@ package backendarch
 // and no failing test — the client simply receives an id it was not entitled
 // to, in a field that is supposed to be sometimes-absent.
 //
-// The question is also asked from doors that look unrelated: creating a
-// company, editing its domains, and saving its profile website are three
-// surfaces, and the third answered a bare conflict sentinel — the same
-// collision, reported without the one fact that makes it actionable.
+// The question is asked from doors that look unrelated — creating a company,
+// editing its domains, saving its profile website — and each must answer the
+// same collision the same way. A door that reports it without naming the
+// holder leaves the reader nothing to act on.
 
 import (
 	"go/ast"
