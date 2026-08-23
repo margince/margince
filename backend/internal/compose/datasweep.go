@@ -264,12 +264,25 @@ func (h dataResetHandlers) clearOutbox(ctx context.Context) error {
 	})
 }
 
-// vaultRefColumn is the one spelling every table uses for a keyvault
-// handle (connector_connection, channel_connection, incumbent_connection).
-// Deriving the collection from the catalog on this name rather than listing
-// those three means a connection table added later is covered the day its
-// column exists, which a hand-kept list would not be.
-const vaultRefColumn = "credential_ref"
+// credentialHandleSuffix is how a column that holds a keyvault handle is
+// spelled in this schema — `credential_ref` on the connection tables,
+// `vault_ref` on extension_secret, `signing_secret_ref` on
+// webhook_subscription.
+//
+// A SUFFIX and not a name, because the name was wrong. This used to be the
+// single string "credential_ref", above a comment calling it "the one spelling
+// every table uses". There were three, so extension_secret's and
+// webhook_subscription's ciphertext was never collected and outlived every
+// reset — resident and unreachable, which is the exact failure
+// collectWorkspaceSecretRefs' comment says it exists to prevent.
+//
+// The suffix over-matches on purpose: thirteen distinct `_ref` column names
+// exist in this schema and only three are handles. Over-matching costs nothing
+// because the VAULT decides — a candidate value is collected only if
+// vault_secret holds it, so an `evidence_ref` or a `pdf_asset_ref` contributes
+// nothing. Under-matching is what cost something, and it is the direction a
+// derivation like this must not fail in.
+const credentialHandleSuffix = "_ref"
 
 // collectWorkspaceSecretRefs reads every sealed-credential handle in the
 // installation, BEFORE the sweep deletes the rows that name them.
@@ -280,67 +293,83 @@ const vaultRefColumn = "credential_ref"
 // reset that did not collect these first would leave the ciphertext resident
 // and unreachable forever — credential material outliving the wipe that was
 // supposed to clear it.
+//
+// The join to vault_secret is what makes the wide column match safe, and it is
+// also what makes the collection EXACT: a handle is a value the vault holds,
+// which is the vault's own answer rather than this file's guess about naming.
 func collectWorkspaceSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
-	tables, err := tablesWithVaultRef(ctx, tx)
+	columns, err := credentialHandleColumns(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
 	var refs []string
-	for _, t := range tables {
+	for _, c := range columns {
+		table, column := pgx.Identifier{c.table}.Sanitize(), pgx.Identifier{c.column}.Sanitize()
 		rows, err := tx.Query(ctx,
-			`SELECT `+pgx.Identifier{vaultRefColumn}.Sanitize()+
-				` FROM `+pgx.Identifier{t}.Sanitize()+
-				` WHERE `+pgx.Identifier{vaultRefColumn}.Sanitize()+` IS NOT NULL`)
+			`SELECT h.`+column+` FROM `+table+` h
+			 JOIN vault_secret v ON v.ref = h.`+column+`
+			 WHERE h.`+column+` IS NOT NULL`)
 		if err != nil {
-			return nil, fmt.Errorf("data reset: reading credential handles from %s: %w", t, err)
+			return nil, fmt.Errorf("data reset: reading credential handles from %s.%s: %w", c.table, c.column, err)
 		}
 		for rows.Next() {
 			var ref string
 			if err := rows.Scan(&ref); err != nil {
 				rows.Close()
-				return nil, fmt.Errorf("data reset: reading a credential handle from %s: %w", t, err)
+				return nil, fmt.Errorf("data reset: reading a credential handle from %s.%s: %w", c.table, c.column, err)
 			}
 			refs = append(refs, ref)
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("data reset: reading credential handles from %s: %w", t, err)
+			return nil, fmt.Errorf("data reset: reading credential handles from %s.%s: %w", c.table, c.column, err)
 		}
 	}
 	return refs, nil
 }
 
-// tablesWithVaultRef lists the tables holding a credential handle, derived from
-// the catalog for the same reason resetTargetTables is: a new one enrols itself.
+// handleColumn is one place a keyvault handle can be written down.
+type handleColumn struct{ table, column string }
+
+// credentialHandleColumns lists them, derived from the catalog for the same
+// reason resetTargetTables is: a new one enrols itself.
 //
-// Holding the COLUMN is the whole test. It used to also require a workspace_id,
-// which was the same set only while every connection table had one — and phase
-// D (ADR-0091 §8) is removing it table by table, so each connection table that
-// dropped it silently stopped being collected and left its sealed credential
-// resident after a reset. That is the same failure resetTargetTables already
-// had for the same reason, and it is why neither derivation may ask about a
-// column that is on its way out.
-func tablesWithVaultRef(ctx context.Context, tx pgx.Tx) ([]string, error) {
+// It asks only about the column, not about a workspace_id. It used to also
+// require one, which was the same set only while every connection table had
+// one — and phase D (ADR-0091 §8) is removing it table by table, so each
+// connection table that dropped it silently stopped being collected and left
+// its sealed credential resident after a reset. That is the same failure
+// resetTargetTables already had for the same reason, and it is why neither
+// derivation may ask about a column that is on its way out.
+//
+// vault_secret itself is excluded: its `ref` IS the handle rather than a
+// reference to one, and joining the table to itself would collect every secret
+// in the installation whether or not anything still points at it.
+func credentialHandleColumns(ctx context.Context, tx pgx.Tx) ([]handleColumn, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT c.relname
+		SELECT c.relname, a.attname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
 		JOIN pg_attribute a ON a.attrelid = c.oid
+		JOIN pg_type t ON t.oid = a.atttypid
 		WHERE n.nspname = 'public'
 		  AND c.relkind = 'r'
-		  AND a.attname = $1 AND a.attnum > 0 AND NOT a.attisdropped
-		ORDER BY c.relname`, vaultRefColumn)
+		  AND c.relname <> 'vault_secret'
+		  AND a.attname LIKE $1
+		  AND t.typname IN ('text', 'varchar')
+		  AND a.attnum > 0 AND NOT a.attisdropped
+		ORDER BY c.relname, a.attname`, "%"+credentialHandleSuffix)
 	if err != nil {
-		return nil, fmt.Errorf("data reset: listing tables holding a credential handle: %w", err)
+		return nil, fmt.Errorf("data reset: listing columns that can hold a credential handle: %w", err)
 	}
 	defer rows.Close()
-	var out []string
+	var out []handleColumn
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
+		var c handleColumn
+		if err := rows.Scan(&c.table, &c.column); err != nil {
+			return nil, fmt.Errorf("data reset: listing columns that can hold a credential handle: %w", err)
 		}
-		out = append(out, name)
+		out = append(out, c)
 	}
 	return out, rows.Err()
 }
