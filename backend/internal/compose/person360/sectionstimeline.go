@@ -314,6 +314,11 @@ func profileFieldClaimPath(field string) string { return "profile_field:" + fiel
 // reader — the 360 section and the standalone sidecar endpoint both come
 // through here.
 //
+// Held by: TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger
+// (backend/profilefieldreaders_test.go) — it censuses every statement that
+// serves a value from that table and requires each to overlay the verdict, so a
+// second render path fails rather than quietly serving the overridden claim.
+//
 // That matters because the human's verdict is folded in below. A corrected
 // value rendered without its marker reads as the machine's assertion, which is
 // exactly the claim the human overrode, so consulting the ledger cannot be one
