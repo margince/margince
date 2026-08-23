@@ -52,6 +52,55 @@ func parseOrgDomains(domains []OrgDomainInput) error {
 	return nil
 }
 
+// claimedDomainOwner is the ONE reading of "somebody else already holds this
+// domain", and the one place the disclosure rule for it lives.
+//
+// `self` is the org allowed to keep its own claim; the zero value means none,
+// which is what a CREATE wants. It returns nil when the domain is free or
+// already this org's.
+//
+// THE DISCLOSURE IS THE POINT. A domain maps to at most one org (data-model
+// §4.2), so answering "taken" reveals that some organization exists with that
+// domain — and naming WHICH one reveals a record the caller may not be allowed
+// to read. So `ExistingID` is filled only when `auth.VisibleTo` says the caller
+// could have read that row anyway; otherwise the 409 stands without it. A
+// second copy of an existence-hiding rule is where a leak appears, because
+// nothing fails when one copy stops asking.
+//
+// Held by: TestEveryDomainClaimAnswersThroughOneProbe (backend/domainclaimprobe_test.go)
+// — it censuses every statement in the tree that reads organization_domain to
+// decide whether a domain is taken, and fails on a second one.
+// It returns the typed error itself rather than a (value, error) pair: `nil,
+// nil` for "free" is an invalid value beside a nil error, and the callers all
+// want the same thing — return it if there is one.
+func claimedDomainOwner(
+	ctx context.Context,
+	tx pgx.Tx,
+	self ids.OrganizationID,
+	domain string,
+) error {
+	var existing ids.OrganizationID
+	err := tx.QueryRow(ctx,
+		`SELECT organization_id FROM organization_domain
+		  WHERE domain = lower($1) AND archived_at IS NULL`,
+		domain).Scan(&existing)
+	if errors.Is(err, pgx.ErrNoRows) || existing == self {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("probe domain dedupe: %w", err)
+	}
+	dup := &DuplicateDomainError{Domain: domain}
+	visible, verr := auth.VisibleTo(ctx, tx, "organization", existing.UUID)
+	if verr != nil {
+		return verr
+	}
+	if visible {
+		dup.ExistingID = existing
+	}
+	return dup
+}
+
 // ensureOrgDomainsUnclaimed answers the domain dedupe probe with the
 // contract's 409, disclosing the existing org id only when the caller
 // could read that row (a domain maps to at most one org per workspace,
@@ -72,27 +121,10 @@ func ensureOrgDomainsUnclaimed(ctx context.Context, tx pgx.Tx, domains []OrgDoma
 		if err := admitClaimedDomainTx(ctx, tx, d.Domain); err != nil {
 			return err
 		}
-		var existing ids.OrganizationID
-		err := tx.QueryRow(ctx,
-			`SELECT organization_id FROM organization_domain
-			  WHERE domain = lower($1) AND archived_at IS NULL
-			    `,
-			d.Domain).Scan(&existing)
-		if errors.Is(err, pgx.ErrNoRows) {
-			continue
+		// No `self`: a company being CREATED holds no claim to keep.
+		if err := claimedDomainOwner(ctx, tx, ids.OrganizationID{}, d.Domain); err != nil {
+			return err
 		}
-		if err != nil {
-			return fmt.Errorf("probe domain dedupe: %w", err)
-		}
-		dup := &DuplicateDomainError{Domain: d.Domain}
-		visible, verr := auth.VisibleTo(ctx, tx, "organization", existing.UUID)
-		if verr != nil {
-			return verr
-		}
-		if visible {
-			dup.ExistingID = existing
-		}
-		return dup
 	}
 	return nil
 }
@@ -124,27 +156,9 @@ func insertOrgDomains(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 // disclosed under the same visibility gate as the create-path probe.
 func ensureOrgDomainsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids.OrganizationID, domains []OrgDomainInput) error {
 	for _, d := range domains {
-		var existing ids.OrganizationID
-		err := tx.QueryRow(ctx,
-			`SELECT organization_id FROM organization_domain
-			  WHERE domain = lower($1) AND archived_at IS NULL
-			    `,
-			d.Domain).Scan(&existing)
-		if errors.Is(err, pgx.ErrNoRows) || existing == self {
-			continue
+		if err := claimedDomainOwner(ctx, tx, self, d.Domain); err != nil {
+			return err
 		}
-		if err != nil {
-			return fmt.Errorf("probe domain dedupe: %w", err)
-		}
-		dup := &DuplicateDomainError{Domain: d.Domain}
-		visible, verr := auth.VisibleTo(ctx, tx, "organization", existing.UUID)
-		if verr != nil {
-			return verr
-		}
-		if visible {
-			dup.ExistingID = existing
-		}
-		return dup
 	}
 	return nil
 }
