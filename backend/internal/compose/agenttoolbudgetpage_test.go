@@ -3,10 +3,15 @@
 
 package compose
 
-// The reader's half of docs/reference/agent-tool-budget.*. Every FIGURE it
-// prints comes from the JSON payload beside it — it re-shapes that payload for
-// reading (indexing the wrong-reach rows by name, counting a slice) but derives
-// no number of its own, so the page cannot disagree with the data it shows.
+// The reader's half of docs/reference/agent-tool-budget.*.
+//
+// Every per-agent FIGURE it prints is read from the JSON payload beside it,
+// including the derived ones — `percent_of_ceiling` is taken rather than
+// recomputed, so the two artifacts cannot say different things about the same
+// agent. What the page still computes for itself is presentational: the
+// catalog's share of the window, and how much of the window is left once a
+// menu is subtracted. Those exist only here and have no payload field to
+// disagree with.
 
 import (
 	"fmt"
@@ -36,8 +41,8 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("| Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |\n")
 	p.WriteString("|---|---:|---:|---:|---:|---:|---:|\n")
 	for _, a := range b.Agents {
-		fmt.Fprintf(&p, "| `%s` | %d | %d | %s | %d | %d | %d |\n",
-			a.Name, len(a.Tools), a.Tokens, percentOf(a.Tokens, b.PromptCeiling),
+		fmt.Fprintf(&p, "| `%s` | %d | %d | %d%% | %d | %d | %d |\n",
+			a.Name, len(a.Tools), a.Tokens, a.PercentOf,
 			a.Headroom, len(a.Dangling), a.Temptation)
 	}
 	fmt.Fprintf(&p, "| _whole served catalog, for scale_ | %d | %d | %s | — | — | — |\n\n",

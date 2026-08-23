@@ -76,9 +76,19 @@ func jobConstructionForms(file *ast.File) []token.Pos {
 			if node.Type != nil && isRunnerJob(node.Type) {
 				at = append(at, node.Pos())
 			}
-		case *ast.Field: // a struct field or embedded runner.Job, consumed as its zero value
-			if isRunnerJob(node.Type) {
-				at = append(at, node.Pos())
+		case *ast.StructType: // a struct FIELD holding a runner.Job, consumed as its zero value
+			// Walked from the StructType rather than matching *ast.Field,
+			// because a FieldList is also how the AST spells parameters,
+			// results, receivers and interface methods — so a bare Field case
+			// would report `func f(job runner.Job)` as building one, and would
+			// double-count every function that returns one.
+			if node.Fields == nil {
+				return true
+			}
+			for _, field := range node.Fields.List {
+				if isRunnerJob(field.Type) {
+					at = append(at, field.Pos())
+				}
 			}
 		case *ast.FuncDecl: // func ...() runner.Job
 			if node.Type.Results == nil {
@@ -186,10 +196,12 @@ func f() { var j runner.Job; _ = j }`},
 		{"a helper returning one", `package p
 import "x/runner"
 func f() runner.Job { panic("") }`},
+		// No function here returns or takes a runner.Job, so ONLY the struct
+		// field can trigger detection: remove that case and this fails.
 		{"a struct field consumed as its zero value", `package p
 import "x/runner"
 type holder struct{ job runner.Job }
-func f() runner.Job { return holder{}.job }`},
+func f() { _ = holder{}.job }`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			parsed, err := parser.ParseFile(token.NewFileSet(), "x.go", tc.src, 0)
@@ -201,10 +213,26 @@ func f() runner.Job { return holder{}.job }`},
 			}
 		})
 	}
+	// A parameter and a result are Field nodes too, and neither BUILDS a Job —
+	// the caller supplies one. A scan that counted them would report files
+	// that merely pass a Job through as construction sites.
+	passesOneThrough := `package p
+import "x/runner"
+type iface interface{ take(j runner.Job) }
+func f(job runner.Job) { _ = job }`
+	parsed, err := parser.ParseFile(token.NewFileSet(), "x.go", passesOneThrough, 0)
+	if err != nil {
+		t.Fatalf("parsing the fixture: %v", err)
+	}
+	if got := len(jobConstructionForms(parsed)); got != 0 {
+		t.Errorf("the scan reported %d constructions in a file that only PASSES a Job — a parameter, "+
+			"a result and an interface method are all Field nodes, and none of them builds one", got)
+	}
+
 	unrelated := `package p
 import "x/runner"
 func f() { _ = runner.Result{}; var q int; _ = q }`
-	parsed, err := parser.ParseFile(token.NewFileSet(), "x.go", unrelated, 0)
+	parsed, err = parser.ParseFile(token.NewFileSet(), "x.go", unrelated, 0)
 	if err != nil {
 		t.Fatalf("parsing the fixture: %v", err)
 	}

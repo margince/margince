@@ -2,8 +2,8 @@
 # check-contract-frontend-drift.sh — the frontend's generated types are part of
 # the contract, so the BACKEND gate has to notice when they are stale.
 #
-# Editing a contract under backend/api/ requires four regenerations. `make
-# check-backend` used to enforce one:
+# Editing backend/api/crm.yaml requires three regenerations. `make check-backend`
+# used to enforce one:
 #
 #   make gen        → internal/contracts, compose stubs, agentpolicy, recordshapes
 #                     — enforced by the backend `drift` gate
@@ -11,6 +11,11 @@
 #                     — enforced ONLY by the frontend lane's fe-drift leg
 #   -update-mcp-info → the published MCP surface docs
 #                     — enforced by a unit test in check-backend
+#
+# A DIFFERENT contract, backend/api/ai-tasks.yaml, has its own published
+# artifact and its own regeneration — listed here only so the two are not
+# confused, since this leg does NOT check it:
+#
 #   -update-agent-tool-budget → docs/reference/agent-tool-budget.{json,md}, what
 #                     each scheduled agent's tool listing costs its window
 #                     — enforced by a unit test in check-backend, same shape
