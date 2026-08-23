@@ -79,6 +79,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -691,6 +692,98 @@ func namesTheFile(paths []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// TestADeclarationsKeyIsUniqueWithinItsFile holds the labelling directly,
+// because the tree does not.
+//
+// The register key is what makes an entry ratify ONE claim, and three
+// declaration kinds can collide on a careless label: two methods named the same
+// on different receivers, two multi-spec blocks, two package-qualified embedded
+// fields. Nothing in the tree today carries an embedded-field claim, so the
+// sweep exercises none of that branch — delete it and every other arm stays
+// green while the collision returns. A guard the tree happens not to reach is a
+// guard with no test.
+func TestADeclarationsKeyIsUniqueWithinItsFile(t *testing.T) {
+	const source = `package probe
+
+type Reader interface{ Read() }
+
+// A is the only reader in this probe.
+type A struct {
+	// A.ID is the one spelling of a probe handle.
+	ID string
+	io.Reader
+	fmt.Stringer
+}
+
+type B struct{}
+
+// Close is the only writer on A.
+func (a *A) Close() {}
+
+// Close is the only writer on B.
+func (b *B) Close() {}
+
+// Get is the only reader on a generic store.
+func (s *Store[T]) Get() {}
+
+// left is the one spelling of the left probe.
+const (
+	left  = 1
+	right = 2
+)
+
+// up is the one spelling of the up probe.
+const (
+	up   = 3
+	down = 4
+)
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parsing the probe: %v", err)
+	}
+	var labels []string
+	record := func(doc *ast.CommentGroup, decl string) {
+		if doc != nil {
+			labels = append(labels, decl)
+		}
+	}
+	for _, decl := range file.Decls {
+		switch node := decl.(type) {
+		case *ast.FuncDecl:
+			record(node.Doc, funcLabel(node))
+		case *ast.GenDecl:
+			recordGenDecl(node, record)
+		}
+	}
+	sort.Strings(labels)
+	// Every label distinct, and each naming what it is about. Two methods on
+	// different receivers, two blocks in one file, and two package-qualified
+	// embedded fields are the three ways a careless key collides.
+	want := []string{
+		"const block at const left",
+		"const block at const up",
+		"method A.Close",
+		"method B.Close",
+		"method Store.Get",
+		"type A",
+		"type A.ID",
+	}
+	if !slices.Equal(labels, want) {
+		t.Errorf("labels = %q, want %q", labels, want)
+	}
+	// The embedded fields carry no doc in the probe above, so they are named
+	// here directly: unqualified, both would key as `?` and one register entry
+	// would authorise a claim on the other.
+	embedded := []string{
+		genericReceiverName(&ast.SelectorExpr{X: ast.NewIdent("io"), Sel: ast.NewIdent("Reader")}),
+		genericReceiverName(&ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Stringer")}),
+	}
+	if !slices.Equal(embedded, []string{"io.Reader", "fmt.Stringer"}) {
+		t.Errorf("embedded names = %q, want package-qualified and distinct", embedded)
+	}
 }
 
 func TestABindingDoesNotOpenTheDocCommentItSitsIn(t *testing.T) {
