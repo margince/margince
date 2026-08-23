@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../i18n";
+import { problemMessageOf } from "../screens/common";
 import { BusyMark, TextInput } from "./atoms";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
@@ -63,9 +64,12 @@ export function InlineChoice({
   // rarely what a human should see: a lifecycle is a badge, an owner is a name
   // the caller has to resolve.
   render: (value: string) => ReactNode;
-  // Returns nothing on success and throws on failure; the thrown message is
-  // what the reader is shown. Version conflicts, validation and permission
-  // refusals all arrive here as the server's own sentence.
+  // Returns nothing on success and THROWS on failure. Version conflicts,
+  // validation and permission refusals all arrive here; what the reader is
+  // shown is `problemMessageOf`'s reading of the throw, not its text. A
+  // ProblemError's own detail is written by `httperr` from `err.Error()`, so
+  // for a permission refusal it is the RBAC object and verb — the shape of the
+  // authority model, which is not copy and never reaches a screen.
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
@@ -171,7 +175,7 @@ export function InlineChoice({
       // The draft survives: `pending` still holds what they chose, and the
       // control stays open on it. A save that fails must not also lose the
       // answer the user gave.
-      setFailure(err instanceof Error ? err.message : String(err));
+      setFailure(problemMessageOf(err, t));
     } finally {
       setSaving(false);
     }
@@ -265,8 +269,9 @@ export function InlineText({
   maxLength?: number;
   canEdit: boolean;
   readOnlyReason?: string;
-  // Returns nothing on success and throws on failure; the thrown message is
-  // what the reader is shown.
+  // Returns nothing on success and throws on failure. What the reader is shown
+  // is `problemMessageOf`'s reading of the throw, on the same terms as
+  // InlineChoice above.
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
@@ -381,7 +386,7 @@ export function InlineText({
       // The draft survives and the input stays mounted right where the
       // reader left it — pulling focus back after a failed blur-commit would
       // be a second surprise on top of the refusal.
-      setFailure(err instanceof Error ? err.message : String(err));
+      setFailure(problemMessageOf(err, t));
     } finally {
       setSaving(false);
     }

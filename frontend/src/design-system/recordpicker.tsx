@@ -1,5 +1,7 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
+import { problemMessageOf } from "../screens/common";
 import { Button, SearchField } from "./atoms";
 
 // The shared debounced search→candidate-list→pick pattern: this used to live
@@ -28,7 +30,10 @@ export function RecordPicker({
   disabled = false,
 }: Readonly<{
   // Doubles as the search field's placeholder and aria-label — the caller
-  // supplies already-translated copy, so this component never owns i18n.
+  // supplies already-translated copy, because only the caller knows WHICH
+  // records are being searched. Copy about the search ITSELF — the line a
+  // failed lookup puts on screen — is this component's own state and is
+  // written here, in the reader's language.
   label: string;
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
   onPick: (candidate: RecordPickerCandidate) => void;
@@ -39,9 +44,16 @@ export function RecordPicker({
   // see if the write comes back refused.
   disabled?: boolean;
 }>) {
+  const t = useT();
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<RecordPickerCandidate[]>([]);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  // The FAILURE is held, not the sentence it becomes. A search runs inside a
+  // debounced effect, and `useT` hands back a fresh closure on every render, so
+  // a translator captured in that effect would either put it in the dependency
+  // array — re-firing the request on every render — or read a stale locale.
+  // Translating where it is rendered has neither problem, and a locale change
+  // re-words a refusal already on screen.
+  const [searchFailure, setSearchFailure] = useState<unknown>(null);
 
   // A NEW search space empties the list, at once.
   //
@@ -70,14 +82,14 @@ export function RecordPicker({
   if (searchSpace !== searchTargets) {
     setSearchSpace(() => searchTargets);
     setCandidates([]);
-    setSearchError(null);
+    setSearchFailure(null);
   }
 
   useEffect(() => {
     const query = term.trim();
     if (!query) {
       setCandidates([]);
-      setSearchError(null);
+      setSearchFailure(null);
       return;
     }
     let cancelled = false;
@@ -86,14 +98,12 @@ export function RecordPicker({
         const results = await searchTargets(query);
         if (!cancelled) {
           setCandidates(results);
-          setSearchError(null);
+          setSearchFailure(null);
         }
       } catch (error) {
         if (!cancelled) {
           setCandidates([]);
-          setSearchError(
-            error instanceof Error ? error.message : "request failed",
-          );
+          setSearchFailure(error);
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -118,9 +128,9 @@ export function RecordPicker({
         disabled={disabled}
         onChange={(event) => setTerm(event.target.value)}
       />
-      {searchError && (
+      {searchFailure !== null && (
         <p className="t-caption" style={{ color: "var(--danger)" }}>
-          {searchError}
+          {problemMessageOf(searchFailure, t)}
         </p>
       )}
       {/* The current selection stays visible on its own line, independent of

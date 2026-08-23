@@ -798,7 +798,10 @@ function LeadLifecycle({
       // is read from the record the mutation is about, not from render state,
       // so a lead that went terminal while this page was open is refused too.
       if (lead.archived_at) {
-        throw new Error("a terminal lead takes no writes");
+        // Catalog copy in a problem body, on the same terms as every other
+        // refusal this screen shows: "a terminal lead takes no writes" is a
+        // sentence for whoever reads this file, not for whoever is refused.
+        throwProblem({ detail: t("lead.terminalReadOnly") });
       }
       const { data, error } = await api.PATCH("/leads/{id}", {
         params: { path: { id }, ...ifMatch(requireVersion(lead.version)) },

@@ -17,6 +17,7 @@ import { type ReactNode, useRef, useState } from "react";
 
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf } from "../screens/common";
 import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Panel, PanelBody, PanelRow } from "./panel";
@@ -162,7 +163,7 @@ export function ProjectLinks({
     } catch (error) {
       // The dialog stays open carrying the refusal: a write the server refused
       // is the one moment the reader most needs to see what they asked for.
-      setRefusal(error instanceof Error ? error.message : String(error));
+      setRefusal(problemMessageOf(error, t));
     } finally {
       setBusy(false);
     }

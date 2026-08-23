@@ -11,6 +11,7 @@ import {
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { problemMessageOf } from "./common";
 import "./dealroomthreads.css";
 
 // The document board, drawn once for both sides. A thread is about one
@@ -231,7 +232,7 @@ function ThreadRow({
         setReply("");
       }
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : String(failure));
+      setError(problemMessageOf(failure, t));
     } finally {
       setPending(null);
     }
@@ -371,7 +372,7 @@ function ThreadComposer({
         setOpenForm(false);
       }
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : String(failure));
+      setError(problemMessageOf(failure, t));
     } finally {
       setPending(false);
     }

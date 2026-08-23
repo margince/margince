@@ -32,7 +32,12 @@ import {
 } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
-import { problemMessageOf, throwProblem, useSorMode } from "./common";
+import {
+  ProblemError,
+  problemMessageOf,
+  throwProblem,
+  useSorMode,
+} from "./common";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
 import { consentWord } from "./personstrip";
@@ -322,7 +327,7 @@ function EmailRow({ person }: Readonly<{ person: Person }>) {
         placeholder={t("field.unset")}
         canEdit={false}
         readOnlyReason={reason}
-        onSave={() => Promise.reject(new Error(reason))}
+        onSave={() => Promise.reject(new ProblemError({ detail: reason }))}
       />
     </FieldRow>
   );
@@ -339,7 +344,7 @@ function PhoneRow({ person }: Readonly<{ person: Person }>) {
         placeholder={t("field.unset")}
         canEdit={false}
         readOnlyReason={reason}
-        onSave={() => Promise.reject(new Error(reason))}
+        onSave={() => Promise.reject(new ProblemError({ detail: reason }))}
       />
     </FieldRow>
   );
