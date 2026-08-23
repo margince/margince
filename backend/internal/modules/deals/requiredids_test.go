@@ -19,10 +19,10 @@ package deals
 // functions, so one check here answers both surfaces.
 //
 // Scope, stated exactly, because the first version of this file claimed more than
-// it delivered: the FIELDS are derived from each contract type, but the two types
-// are named here by hand. So a required id added to either body upstream fails
-// here until the mapping validates it — and a required id on any OTHER contract
-// body is not covered.
+// it delivered: the FIELDS are derived from each contract type, but the types
+// themselves are named here by hand. So a required id added to one of these
+// bodies upstream fails here until the mapping validates it — and a required id
+// on any OTHER contract body is not covered.
 //
 // That gap is real and it is enumerated rather than hidden:
 // backend/requiredbodyids_test.go walks internal/contracts for every request body
@@ -114,19 +114,6 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 			},
 		},
 		{
-			name:  "CreateProjectRequest",
-			shape: reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-			call: func(t *testing.T, body []byte) error {
-				t.Helper()
-				var req crmcontracts.CreateProjectRequest
-				if err := json.Unmarshal(body, &req); err != nil {
-					t.Fatalf("probe body does not decode: %v", err)
-				}
-				_, err := projectCreateInput(req)
-				return err
-			},
-		},
-		{
 			// advance_deal is guarded on the MCP side at Registry.Invoke, so this
 			// mapping is what keeps REST from answering a bare 404 for the
 			// identical mistake.
@@ -139,19 +126,6 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
 				_, err := advanceDealInput(req, nil)
-				return err
-			},
-		},
-		{
-			name:  "TransferProjectOwnershipRequest",
-			shape: reflect.TypeFor[crmcontracts.TransferProjectOwnershipRequest](),
-			call: func(t *testing.T, body []byte) error {
-				t.Helper()
-				var req crmcontracts.TransferProjectOwnershipRequest
-				if err := json.Unmarshal(body, &req); err != nil {
-					t.Fatalf("probe body does not decode: %v", err)
-				}
-				_, err := projectTransferInput(req)
 				return err
 			},
 		},

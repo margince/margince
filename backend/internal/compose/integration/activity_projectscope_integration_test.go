@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -66,7 +66,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
 
 	newProject := func(name, key string) ids.ProjectID {
-		p, err := e.Deals.CreateProject(admin, deals.CreateProjectInput{
+		p, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
 			Name: name, Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
 		})
 		if err != nil {

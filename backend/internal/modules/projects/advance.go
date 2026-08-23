@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The one phase-transition verb. It exists as its own path — rather than a
 // settable column on update — so the row change, the history row and the
@@ -48,13 +48,13 @@ func (s *Store) AdvanceProjectPhase(ctx context.Context, id ids.ProjectID, in Ad
 	if in.ToPhase == PhaseClosed && (in.Reason == nil || *in.Reason == "") {
 		return crmcontracts.Project{}, &ClosedReasonRequiredError{}
 	}
-	active, err := s.activeColumnsFor(ctx, projectObject)
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
 
 	var out crmcontracts.Project
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
 // This file is the write direction of the HubSpot mapping-as-contract
@@ -203,7 +203,13 @@ func mapWriteDeal(fields map[string]any, forUpdate bool) (writeMapping, error) {
 		return writeMapping{}, err
 	}
 	if ok && currency != "" {
-		props["amount"] = minorToDecimalString(minor, overlay.ISO4217MinorUnitExponent(currency))
+		// values.MajorUnits is the one renderer of a minor-unit integer as a
+		// currency-decimal string, and HubSpot's `amount` property wants exactly
+		// that shape (exponent 0 → no point; 2 → "10.00"; 3 → "1.500"), never a
+		// blanket ÷100. This used to be a second implementation here; the two
+		// agreed on all 272 amount×currency pairs they were compared over,
+		// which is precisely how long a second copy stays harmless.
+		props["amount"] = values.MajorUnits(minor, currency)
 	}
 	return writeMapping{ObjectClass: objectClassDeals, Props: props}, nil
 }
@@ -371,32 +377,4 @@ func rfc3339ToMillis(v any) (string, bool, error) {
 		return "", false, fmt.Errorf("overlay: write timestamp %q is not RFC3339: %w", s, err)
 	}
 	return strconv.FormatInt(ts.UnixMilli(), 10), true, nil
-}
-
-// minorToDecimalString is the inverse of decimalStringToMinor: it renders an
-// integer minor-unit amount back to the currency-decimal string HubSpot's
-// `amount` property expects, placing the decimal point by the ISO-4217
-// minor-unit exponent (exponent 0 → no point; 2 → "10.00"; 3 → "1.500"), never
-// a blanket ÷100.
-func minorToDecimalString(minor int64, exponent int) string {
-	// FormatInt renders the full magnitude of any int64 — including
-	// math.MinInt64, whose positive is not int64-representable — so the decimal
-	// point is inserted into the digit string with no int64→uint64 conversion
-	// to reason about.
-	s := strconv.FormatInt(minor, 10)
-	neg := strings.HasPrefix(s, "-")
-	if neg {
-		s = s[1:]
-	}
-	if exponent > 0 {
-		for len(s) <= exponent {
-			s = "0" + s
-		}
-		point := len(s) - exponent
-		s = s[:point] + "." + s[point:]
-	}
-	if neg {
-		s = "-" + s
-	}
-	return s
 }

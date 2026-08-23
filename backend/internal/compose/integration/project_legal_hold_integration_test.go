@@ -27,8 +27,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -42,7 +42,7 @@ func seedProjectHoldFixture(t *testing.T, e *Env) projectHoldFixture {
 	t.Helper()
 	org := e.SeedOrg(t, "Acme GmbH", nil)
 	create := func(name, key string) ids.UUID {
-		p, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
+		p, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 			Name: name, Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
 		})
 		if err != nil {

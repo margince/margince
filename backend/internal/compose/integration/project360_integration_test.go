@@ -32,6 +32,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -74,7 +75,7 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	org := e.SeedOrg(t, "Acme", &e.Rep1)
 	project := seedProject(admin, t, e, "ERP rollout", strPtr("ERP-27"), org, &e.Rep1).ID
 	other := seedProject(admin, t, e, "Datacentre migration", strPtr("DC-4"), org, &e.Rep1).ID
-	if _, err := e.Deals.AdvanceProjectPhase(admin, project, deals.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(admin, project, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
 
@@ -129,7 +130,7 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 }
 
 func project360Service(e *Env, now time.Time) *project360.Service {
-	return project360.NewService(e.Pool, e.Deals, e.People, e.Contracts, e.Activities, func() time.Time { return now })
+	return project360.NewService(e.Pool, e.Deals, e.Projects, e.People, e.Contracts, e.Activities, func() time.Time { return now })
 }
 
 func TestProject360AssemblesEverySectionFromTheRealWriters(t *testing.T) {
@@ -159,8 +160,8 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 		t.Fatal("phase_history absent for a rep holding the project grant")
 	}
 	rows := page.PhaseHistory.Data
-	if len(rows) != 2 || rows[0].FromPhase != nil || rows[0].ToPhase != deals.PhaseInitiative ||
-		rows[1].FromPhase == nil || *rows[1].FromPhase != deals.PhaseInitiative || rows[1].ToPhase != "pursuing" {
+	if len(rows) != 2 || rows[0].FromPhase != nil || rows[0].ToPhase != projects.PhaseInitiative ||
+		rows[1].FromPhase == nil || *rows[1].FromPhase != projects.PhaseInitiative || rows[1].ToPhase != "pursuing" {
 		t.Fatalf("phase_history.data = %+v, want the birth row then initiative→pursuing", rows)
 	}
 	if rows[1].ChangedBy.DisplayName == nil || *rows[1].ChangedBy.DisplayName == "" {
@@ -170,7 +171,7 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 	wantInitiative := int64(rows[1].ChangedAt.Sub(rows[0].ChangedAt) / time.Second)
 	wantPursuing := int64(now.Sub(rows[1].ChangedAt) / time.Second)
 	if len(durations) != 2 ||
-		durations[0].Phase != deals.PhaseInitiative || durations[0].Seconds != wantInitiative || durations[0].Current ||
+		durations[0].Phase != projects.PhaseInitiative || durations[0].Seconds != wantInitiative || durations[0].Current ||
 		durations[1].Phase != "pursuing" || durations[1].Seconds != wantPursuing || !durations[1].Current {
 		t.Errorf("phase_durations = %+v, want initiative=%ds then pursuing=%ds (current)", durations, wantInitiative, wantPursuing)
 	}
@@ -270,7 +271,7 @@ func TestProject360RefusesACallerWithNoSightOfTheProject(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("assemble on an id that names nothing → %v, want ErrNotFound", err)
 	}
-	if _, err := e.Deals.ArchiveProject(e.Admin(), f.project, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), f.project, nil); err != nil {
 		t.Fatalf("archive the project: %v", err)
 	}
 	_, err = svc.Assemble(ctx, f.project)

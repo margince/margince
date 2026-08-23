@@ -39,6 +39,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/overlay"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/quotas"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
@@ -55,6 +56,7 @@ type (
 	pipelineTraceHandlers  = pipelinetrace.Handlers
 	peopleHandlers         = people.Handlers
 	dealsHandlers          = deals.Handlers
+	projectsHandlers       = projects.Handlers
 	contractsHandlers      = contracts.Handlers
 	dealroomsHandlers      = dealrooms.Handlers
 	commissionsHandlers    = commissions.Handlers
@@ -92,7 +94,7 @@ type (
 // same overlay refusal. Its own function so the composition root reads as a
 // list of what is wired rather than how each piece is built.
 func (s *Server) wirePerson360(pool *pgxpool.Pool) {
-	s.person360Svc = person360.NewService(pool, s.peopleStore, s.dealsStore, consent.NewStore(InstallationDB(pool)), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
+	s.person360Svc = person360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
 	s.person360Handlers = person360.NewHandlers(s.person360Svc, s.sorDispatch.isOverlay)
 	// The relationship brief is assembled from the SAME composite read the page
 	// serves, so the two cannot disagree about what this caller may see. No
@@ -148,6 +150,7 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 	svc := project360.NewService(
 		pool,
 		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
+		ProjectsStore(pool),
 		s.peopleStore,
 		contracts.NewStore(InstallationDB(pool)),
 		activities.NewStore(InstallationDB(pool)),

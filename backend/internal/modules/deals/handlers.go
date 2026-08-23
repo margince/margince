@@ -107,9 +107,6 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	if writeOfferTemplateConflict(w, r, err) {
 		return
 	}
-	if writeProjectErr(w, r, err) {
-		return
-	}
 	// Defense-in-depth net: a CHECK constraint is a business rule, so a
 	// breach that slipped past the per-path validations still answers a
 	// typed 422 — never an opaque 500. The constraint's NAME stays out of

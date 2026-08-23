@@ -11,6 +11,7 @@ package compose
 
 import (
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -148,18 +149,18 @@ func projectCommitmentsSpec() reportSpec {
 }
 
 // projectsGoneQuietSpec lists the projects in flight that nothing has been
-// filed against for `days` days (default deals.DefaultProjectQuietDays). The
+// filed against for `days` days (default projects.DefaultProjectQuietDays). The
 // project_gone_quiet signal is raised off the SAME predicate
-// (deals.ProjectQuietSQL), so the report and the signal never disagree about
+// (projects.ProjectQuietSQL), so the report and the signal never disagree about
 // which projects are quiet.
 func projectsGoneQuietSpec() reportSpec {
 	dimensions := projectRowDimensions()
 	dimensions[fieldLastActivityAt] = colLastActivity
-	dimensions[fieldQuietSince] = deals.ProjectQuietAnchorSQL("t")
+	dimensions[fieldQuietSince] = projects.ProjectQuietAnchorSQL("t")
 	return reportSpec{
 		entity:     datasource.EntityProject,
 		table:      tableProject,
-		baseWhere:  whereArchivedNull + " AND " + deals.ProjectInFlightSQL("t"),
+		baseWhere:  whereArchivedNull + " AND " + projects.ProjectInFlightSQL("t"),
 		basePlain:  "live projects being pursued or delivered that nothing has been filed against for at least `days` days (a project with no activity at all is measured from its creation)",
 		dimensions: dimensions,
 		measures:   map[string]string{},
@@ -170,8 +171,8 @@ func projectsGoneQuietSpec() reportSpec {
 		},
 		thresholds: map[string]reportThreshold{
 			fieldDays: {
-				clause:       func(pos int) string { return deals.ProjectQuietSQL("t", "now()", pos) },
-				defaultValue: deals.DefaultProjectQuietDays,
+				clause:       func(pos int) string { return projects.ProjectQuietSQL("t", "now()", pos) },
+				defaultValue: projects.DefaultProjectQuietDays,
 			},
 		},
 		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
@@ -179,7 +180,7 @@ func projectsGoneQuietSpec() reportSpec {
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "projects"},
 		},
-		orderBy: "min(" + deals.ProjectQuietAnchorSQL("t") + ")",
+		orderBy: "min(" + projects.ProjectQuietAnchorSQL("t") + ")",
 		notes:   "`days` is a whole number of days of silence, default 30; quiet_since is when the silence began",
 	}
 }

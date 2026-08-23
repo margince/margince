@@ -22,8 +22,8 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,12 +85,12 @@ func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID) (json
 	return json.Marshal(out)
 }
 
-type projectPhaseAdvancer struct{ store *deals.Store }
+type projectPhaseAdvancer struct{ store *projects.Store }
 
 func (p projectPhaseAdvancer) AdvanceProjectPhase(
 	ctx context.Context, id ids.UUID, toPhase string, reason *string, ifVersion *int64,
 ) (json.RawMessage, error) {
-	out, err := p.store.AdvanceProjectPhase(ctx, ids.From[ids.ProjectKind](id), deals.AdvanceProjectPhaseInput{
+	out, err := p.store.AdvanceProjectPhase(ctx, ids.From[ids.ProjectKind](id), projects.AdvanceProjectPhaseInput{
 		ToPhase:   toPhase,
 		Reason:    reason,
 		IfVersion: ifVersion,
@@ -152,5 +152,5 @@ func (c companyEnricher) EnrichCompany(
 func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, projectPhaseAdvancer) {
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
 		leadDisqualifier{store: people.NewStore(InstallationDB(pool))},
-		projectPhaseAdvancer{store: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+		projectPhaseAdvancer{store: ProjectsStore(pool)}
 }

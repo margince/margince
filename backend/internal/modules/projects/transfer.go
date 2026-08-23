@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The bulk owner handover: every live project one user owns moves to another
 // user in one transaction. It is updateProject.owner_id applied N times, and
@@ -68,7 +68,7 @@ func (s *Store) TransferProjectOwnership(ctx context.Context, in TransferProject
 		return 0, &SameOwnerError{}
 	}
 	moved := 0
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
 			return err
 		}

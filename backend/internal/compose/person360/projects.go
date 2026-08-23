@@ -19,7 +19,7 @@ func (s *Service) projectsSection(ctx context.Context, tx pgx.Tx, personID ids.P
 	if err := requireRead(ctx, "project"); err != nil {
 		return err
 	}
-	projects, err := s.deals.ListProjectsForPersonTx(ctx, tx, personID)
+	projects, err := s.projects.ListProjectsForPersonTx(ctx, tx, personID)
 	if err != nil {
 		return err
 	}

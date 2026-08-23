@@ -81,6 +81,13 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	// and TestSessionScopedStoreNeverConsultsTheSeatGates (dealrooms) hold the
 	// shape; the three anonymous operations are bounded by the credential digest
 	// itself, which is the authentication.
+	// Tx opens a transaction and runs the caller's function in it. It reads no
+	// row and writes none, so there is nothing here for a gate to admit or
+	// refuse: the gate belongs to the statements the caller then runs, and every
+	// one of them takes its own. Exported only because storekit's list helper
+	// takes the transaction opener rather than a database handle of its own.
+	"internal/modules/deals:Tx":                               "opens a transaction and runs the caller's function in it; reads and writes nothing itself, and every statement inside takes its own gate",
+	"internal/modules/projects:Tx":                            "opens a transaction and runs the caller's function in it; reads and writes nothing itself, and every statement inside takes its own gate",
 	"internal/modules/dealrooms:PeekCredential":               "anonymous by design: answers only whether a credential digest is exchangeable, one EXISTS over the invitation joined to its live participant and unarchived room; no row leaves the call",
 	"internal/modules/dealrooms:ExchangeCredential":           "the authentication itself: consumes the credential in one UPDATE whose WHERE is the exchangeable predicate, so the row it writes is the one the presented secret names; the session it opens is attributed to that participant",
 	"internal/modules/dealrooms:ResolveSession":               "the session lookup every buyer request runs: one SELECT keyed on the token digest, joined to the participant on (id, room_id); it is what BINDS the buyer's authority, so there is no earlier gate for it to take",
@@ -296,9 +303,6 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	"internal/modules/people:SignatureCandidates":             "enrich-backlog read driven by the worker sweep under the workspace GUC, no human principal (ADR-0063 §2.9); reads only connector-created rows still missing both fields",
 	"internal/modules/people:MarkSignatureRead":               "the same sweep's read cursor: it records WHICH mail the model was already shown for a person, so the pass stops paying for the same empty signature nightly — a bookkeeping row with no record data, written under the workspace GUC with no human principal to admit",
 	"internal/modules/people:OrgNameCandidates":               "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named organizations and the signature evidence naming them",
-	"internal/modules/people:PromoteOrgName":                  "the sweep's own write, gated by CORROBORATION rather than by a principal: a CAS on name_source='domain' that a human edit or a dossier name structurally beats, and the uncorroborated case never reaches it — it stages a 🟡 proposal whose decision IS the RBAC gate (organization:update)",
-	"internal/modules/people:SetOrganizationLifecycleTx":      "the same CAS on the caller's transaction, called by the lifecycle_change accept executor AFTER the approvals service admitted the deciding human against the organization:update grant and the target's row scope",
-	"internal/modules/people:PromoteOrgNameTx":                "the same CAS on the caller's transaction, called by the org_name_promotion accept executor AFTER the approvals service admitted the deciding human against the organization:update grant and the target's row scope",
 	"internal/modules/people:ApplySignatureFields":            "evidence-gated fill-only-empty write driven by the worker sweep under the workspace GUC (§2.9): NULL-predicate CAS on title, first-phone-only insert, PO-DDL-12 evidence rows — a human's answer is structurally untouchable (GATE-AI-4)",
 	"internal/modules/privacy:EvaluateInstallation":           "the retention pass: its one production caller is the privacy-retention River worker (compose/jobs_privacyretention.go), which builds a PrincipalSystem actor onto the context before the call, so no human principal exists here to admit. Gating it on one would be wrong rather than merely redundant — a retention obligation outlives any seat, and an installation whose reviewer lost access must still age out the data it promised to",
 

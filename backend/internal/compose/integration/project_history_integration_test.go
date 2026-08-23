@@ -13,8 +13,8 @@ package integration
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,7 +29,7 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 		Objects:  map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},
 		RowScope: principal.RowScopeOwn,
 	})
-	if _, err := e.Deals.AdvanceProjectPhase(mover, p.ID, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhasePursuing}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(mover, p.ID, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhasePursuing}); err != nil {
 		t.Fatalf("advance project: %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	if move.ActorID != "human:"+e.Rep1.String() {
 		t.Errorf("the move is attributed to %q, want the rep who made it (human:%s)", move.ActorID, e.Rep1)
 	}
-	if move.Before["phase"] != deals.PhaseInitiative || move.After["phase"] != deals.PhasePursuing {
+	if move.Before["phase"] != projects.PhaseInitiative || move.After["phase"] != projects.PhasePursuing {
 		t.Errorf("phase images = %v → %v, want initiative → pursuing", move.Before["phase"], move.After["phase"])
 	}
 	if move.OccurredAt.IsZero() {
@@ -77,7 +77,7 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 		t.Fatalf("phase field history has %d entries, want exactly the one move: %+v", len(fields.Entries), fields.Entries)
 	}
 	if got := fields.Entries[0]; got.OldValue == nil || got.NewValue == nil ||
-		*got.OldValue != deals.PhaseInitiative || *got.NewValue != deals.PhasePursuing {
+		*got.OldValue != projects.PhaseInitiative || *got.NewValue != projects.PhasePursuing {
 		t.Errorf("phase diff = %v → %v, want initiative → pursuing", got.OldValue, got.NewValue)
 	}
 }

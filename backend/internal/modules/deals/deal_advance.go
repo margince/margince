@@ -78,7 +78,7 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	}
 
 	var out crmcontracts.Deal
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, "deal", id.UUID); err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 			// stageTransitionPatch sets the column only when it differs from
 			// what the deal already had, so its presence IS the transition.
 			if _, becameWon := p.After()["status"]; becameWon {
-				if err := startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
+				if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
 					return fmt.Errorf("start delivery on the won deal's project: %w", err)
 				}
 			}

@@ -326,7 +326,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
   activity link-walk), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr` (RFC 7807 + wire helpers), `httpserver` (chassis).
-- `internal/modules/` — twenty bounded capabilities, flat by default per
+- `internal/modules/` — twenty-one bounded capabilities, flat by default per
   ADR-0054 §3 (store + mapping + transport + provider in one package),
   growing subpackages only when a named trigger fires (split for a reason,
   never symmetry). **A module NEVER imports a sibling** — if capability A
@@ -334,7 +334,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   owns, declared in its `doc.go` and gated by
   `backend/tableownership_test.go`.
   Which module owns what — purpose, spine shape, owned tables, and HTTP
-  surface for all twenty, plus the compose-owned tables and the notable
+  surface for all twenty-one, plus the compose-owned tables and the notable
   subpackages — is the table in
   [docs/reference/modules.md](docs/reference/modules.md). Read it to place a
   change; don't guess from the package name.

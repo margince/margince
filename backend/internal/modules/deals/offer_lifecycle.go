@@ -50,7 +50,7 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -180,7 +180,7 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -291,7 +291,7 @@ func (s *Store) RejectOffer(ctx context.Context, id ids.OfferID, reason *string,
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -348,7 +348,7 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 	}
 
 	var out crmcontracts.Offer
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		wsID := storekit.MustWorkspace(ctx)
 		current, lock, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {

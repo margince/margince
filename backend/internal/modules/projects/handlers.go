@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The project transport: wire concerns only — decode, map to a store
 // input, map the store's typed errors onto the codes the contract names.
@@ -212,7 +212,7 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 func projectName(raw string) (string, error) {
 	name := strings.TrimSpace(raw)
 	if name == "" {
-		return "", &RequiredFieldError{Field: dealNameColumn}
+		return "", &RequiredFieldError{Field: projectNameField}
 	}
 	return name, nil
 }

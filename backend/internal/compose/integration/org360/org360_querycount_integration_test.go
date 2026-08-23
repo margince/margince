@@ -32,6 +32,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -100,8 +101,10 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 
 	tracer := &countingTracer{}
 	pool := tracedPool(t, tracer)
-	svc := org360svc.NewService(pool, people.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))), deals.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)), installseam.Deals()), approvals.NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))),
-		func() time.Time { return org360Clock })
+	traced := database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))
+	svc := org360svc.NewService(pool, people.NewStore(traced),
+		deals.NewStore(traced, installseam.Deals()), projects.NewStore(traced),
+		approvals.NewService(traced), func() time.Time { return org360Clock })
 	ctx := e.Admin()
 
 	before := tracer.total()

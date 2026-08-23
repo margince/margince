@@ -337,9 +337,9 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// the person and to the organization it joins; there is no relationship.*
 	// type, and inventing one would make every consumer of the anchor subscribe
 	// to a second name to learn that their record moved.
-	"deal.updated <- internal/modules/people":    "a relationship anchored on a deal moved, so the deal changed",
-	"project.updated <- internal/modules/people": "a relationship anchored on a project moved, so the project changed — the same anchor rule",
-	"project.updated <- internal/modules/deals":  "the record's own module: deals owns project",
+	"deal.updated <- internal/modules/people":      "a relationship anchored on a deal moved, so the deal changed",
+	"project.updated <- internal/modules/people":   "a relationship anchored on a project moved, so the project changed — the same anchor rule",
+	"project.updated <- internal/modules/projects": "the record's own module: projects owns project",
 
 	// Structure 3 — capture announces what it captured, as the RECORD's event.
 	// The capture path creates real leads and real activities, so the type is

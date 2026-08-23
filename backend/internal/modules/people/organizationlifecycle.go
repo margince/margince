@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -41,6 +42,13 @@ func (s *Store) SetOrganizationLifecycleTx(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, from, to string,
 ) (bool, error) {
 	if err := checkLifecycle(to); err != nil {
+		return false, err
+	}
+	// The approval executor that drives this is a system principal, for whom the
+	// probe is a no-op; the human's authority over the row was already taken at
+	// decide time. Stated here so the write carries its own scope rather than
+	// depending on every future caller having taken it somewhere else.
+	if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
 		return false, err
 	}
 	var current string

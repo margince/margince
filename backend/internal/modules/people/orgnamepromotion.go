@@ -37,6 +37,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -383,6 +384,14 @@ func (s *Store) PromoteOrgName(ctx context.Context, orgID ids.OrganizationID, na
 // inbox is the stronger source winning, which is the rule working, not a
 // failure to report.
 func (s *Store) PromoteOrgNameTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, name, corroboration string) (bool, error) {
+	// The probe sits HERE and not on the wrapper above, because compose reaches
+	// this function directly on both of its real paths — the sweep and the
+	// accept executor. A gate on the wrapper would guard the spelling nobody
+	// production uses, which is the same as no gate while looking like one.
+	// It is a no-op for those unbounded principals today.
+	if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
+		return false, err
+	}
 	// The name lock comes before the row lock, the one order every path that
 	// takes both uses (UpdateOrganization says why): otherwise
 	// this sweep and a human's rename of the same company can each hold what

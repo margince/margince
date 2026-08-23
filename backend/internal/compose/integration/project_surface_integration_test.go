@@ -25,8 +25,8 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -35,7 +35,7 @@ import (
 )
 
 func orgSurfaceService(e *Env) *org360.Service {
-	return org360.NewService(e.Pool, e.People, e.Deals, approvals.NewService(e.DB()),
+	return org360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
 }
 
@@ -72,7 +72,7 @@ func employAtAccount(t *testing.T, e *Env, f scopeFixture) {
 func TestOrganization360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.erp, deals.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.erp, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
 		t.Fatalf("advancing the ERP project: %v", err)
 	}
 
@@ -254,7 +254,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Fatalf("draft scoped to the account's own project: %v", err)
 	}
 	elsewhere := e.SeedOrg(t, "Other GmbH", &e.Rep1)
-	foreign, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
+	foreign, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Foreign work", OrganizationID: orgIDOf(elsewhere), Source: "manual",
 	})
 	if err != nil {

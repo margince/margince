@@ -23,6 +23,17 @@ type DealRoom = components["schemas"]["DealRoom"];
 
 // The rooms a contact holds a seat in, keyed on the whole address list so a
 // revoke anywhere refreshes it.
+//
+// The bare sort is deliberate and must stay bare: this is a CACHE KEY, not a
+// list a person reads. Default string sort is lexicographic by UTF-16 code
+// unit — deterministic and identical on every machine, which is the whole
+// requirement for a key. localeCompare is locale-DEPENDENT, so the same
+// addresses would key differently under different locales and a revoke would
+// refresh a cache entry nobody is looking at. Sonar's S2871 asks for
+// localeCompare here: it flags a bare sort on strings because code-unit order
+// is not human alphabetical order — "Ä" after "Z", "a" after "Z". That is a
+// real concern for a list somebody READS and no concern at all for a key
+// nobody reads, where identical-everywhere is the only property that matters.
 export function roomsOfKey(emails: readonly string[]) {
   return ["deal-rooms-of", [...emails].sort().join(",")] as const;
 }

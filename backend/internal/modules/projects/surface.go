@@ -6,7 +6,7 @@
 // summaries for a record page, not a paging list — the full list with its
 // cursor vocabulary stays ListProjects.
 
-package deals
+package projects
 
 import (
 	"context"

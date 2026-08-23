@@ -26,7 +26,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/capture/imap"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/telegram"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
@@ -215,7 +214,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// The uncertain rung's two seams (projectattribution.go): the live
 		// projects the message reaches, and the engine that asks a human.
 		WithProjectAttribution(withCandidateSeams(capture.ProjectAttribution{
-			Keys:  deals.NewStore(InstallationDB(pool), DealsInstallation()),
+			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
 		}, pool)).
 		// The 24-hour trace's payload posture. It rides the Sink because the

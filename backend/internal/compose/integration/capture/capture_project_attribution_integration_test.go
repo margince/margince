@@ -22,25 +22,27 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
-// projectSeeder is the deals store plus the context its writes run under —
-// carried together because every fixture here needs both, and a test that
-// passed them separately could pass a mismatched pair.
+// projectSeeder is the project and deal stores plus the context their writes
+// run under — carried together because every fixture here needs them, and a
+// test that passed them separately could pass a mismatched set.
 type projectSeeder struct {
-	store *deals.Store
-	ctx   context.Context
-	orgID ids.UUID
+	store    *deals.Store
+	projects *projects.Store
+	ctx      context.Context
+	orgID    ids.UUID
 	// The pipeline a seeded deal is born on. Scaffolding rather than subject:
 	// nothing in the ladder reads a stage, and a deal cannot exist without one.
 	pipelineID ids.PipelineID
 	stageID    ids.StageID
 }
 
-// newProjectSeeder wires the REAL deals store over the test pool, with a
+// newProjectSeeder wires the REAL project and deal stores over the test pool, with a
 // principal that may create the records the ladder later reads. The
 // installation's anchor company is reused as the projects' anchor: the harness
 // already created it the way cold start does, and inventing a second one here
@@ -80,6 +82,7 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 	}
 	return projectSeeder{
 		store:      deals.NewStore(e.DB(), compose.DealsInstallation()),
+		projects:   projects.NewStore(e.DB()),
 		ctx:        ctx,
 		orgID:      orgID,
 		pipelineID: ids.From[ids.PipelineKind](pipelineID),
@@ -90,7 +93,7 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 // project creates one live project through the store that owns the table.
 func (s projectSeeder) project(t *testing.T, name, key string) ids.UUID {
 	t.Helper()
-	created, err := s.store.CreateProject(s.ctx, deals.CreateProjectInput{
+	created, err := s.projects.CreateProject(s.ctx, projects.CreateProjectInput{
 		Name:           name,
 		Key:            &key,
 		OrganizationID: ids.From[ids.OrganizationKind](s.orgID),
@@ -106,7 +109,7 @@ func (s projectSeeder) project(t *testing.T, name, key string) ids.UUID {
 // the ladder then meets is the one a real archive leaves behind.
 func (s projectSeeder) archiveProject(t *testing.T, projectID ids.UUID) {
 	t.Helper()
-	if _, err := s.store.ArchiveProject(s.ctx, ids.From[ids.ProjectKind](projectID), nil); err != nil {
+	if _, err := s.projects.ArchiveProject(s.ctx, ids.From[ids.ProjectKind](projectID), nil); err != nil {
 		t.Fatalf("archiving project %s: %v", projectID, err)
 	}
 }

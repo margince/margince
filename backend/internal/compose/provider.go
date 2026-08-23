@@ -20,6 +20,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/customfields"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -34,6 +35,7 @@ import (
 type Provider struct {
 	people     *people.Provider
 	deals      *deals.Provider
+	projects   *projects.Provider
 	activities *activities.Provider
 	reports    *reportEngine
 }
@@ -54,6 +56,7 @@ func NewProviderFor(db *database.DB) *Provider {
 		// MCP surface's record verbs carry cf_* values too.
 		people:     people.NewProvider(db).WithFieldCatalog(customfields.NewService(pool, nil)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
+		projects:   projects.NewProvider(db).WithFieldCatalog(customfields.NewService(pool, nil)),
 		activities: activities.NewProvider(InstallationDB(pool)),
 		reports:    newReportEngine(pool),
 	}
@@ -83,8 +86,10 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.people.Read(ctx, ref)
-	case datasource.EntityDeal, datasource.EntityProject:
+	case datasource.EntityDeal:
 		return p.deals.Read(ctx, ref)
+	case datasource.EntityProject:
+		return p.projects.Read(ctx, ref)
 	case datasource.EntityActivity:
 		return p.activities.Read(ctx, ref)
 	default:
@@ -104,8 +109,10 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead:
 		return p.people.ListFilters(t)
-	case datasource.EntityDeal, datasource.EntityProject:
+	case datasource.EntityDeal:
 		return p.deals.ListFilters(t)
+	case datasource.EntityProject:
+		return p.projects.ListFilters(t)
 	default:
 		return nil
 	}
@@ -193,8 +200,10 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	switch t {
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead:
 		records, next, _, err = p.people.SearchEntity(ctx, t, text, limit, inner, filters)
-	case datasource.EntityDeal, datasource.EntityProject:
+	case datasource.EntityDeal:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityProject:
+		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, filters)
 	default:
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}
@@ -296,8 +305,10 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.people.Create(ctx, in)
-	case datasource.EntityDeal, datasource.EntityProject:
+	case datasource.EntityDeal:
 		return p.deals.Create(ctx, in)
+	case datasource.EntityProject:
+		return p.projects.Create(ctx, in)
 	case datasource.EntityActivity:
 		return p.activities.Create(ctx, in)
 	default:
@@ -310,8 +321,10 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.people.Update(ctx, in)
-	case datasource.EntityDeal, datasource.EntityProject:
+	case datasource.EntityDeal:
 		return p.deals.Update(ctx, in)
+	case datasource.EntityProject:
+		return p.projects.Update(ctx, in)
 	case datasource.EntityActivity:
 		return p.activities.Update(ctx, in)
 	default:
@@ -336,8 +349,10 @@ func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchive
 	switch t {
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityRelationship:
 		return p.people
-	case datasource.EntityDeal, datasource.EntityProject:
+	case datasource.EntityDeal:
 		return p.deals
+	case datasource.EntityProject:
+		return p.projects
 	case datasource.EntityActivity:
 		return p.activities
 	default:
@@ -351,7 +366,7 @@ func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchive
 // list and the switch above from disagreeing.
 func (p *Provider) ArchivableTypes(ctx context.Context) ([]datasource.EntityType, error) {
 	var out []datasource.EntityType
-	for _, module := range []datasource.RecordArchiverV2{p.people, p.deals, p.activities} {
+	for _, module := range []datasource.RecordArchiverV2{p.people, p.deals, p.projects, p.activities} {
 		types, err := module.ArchivableTypes(ctx)
 		if err != nil {
 			return nil, err

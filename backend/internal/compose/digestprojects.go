@@ -6,7 +6,7 @@ package compose
 // The morning digest's projects section, answered for the capture module
 // (capture.DigestProjectsSource). It lives here because the three reads span
 // the deals module's tables and rules — the phase ladder's history, the tasks
-// filed under a project, and the quiet rule (deals.ProjectQuietSQL) the
+// filed under a project, and the quiet rule (projects.ProjectQuietSQL) the
 // projects-gone-quiet report and the project_gone_quiet signal already share
 // — and a module never imports a sibling.
 
@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -133,20 +133,20 @@ func digestNewCommitments(ctx context.Context, tx pgx.Tx, since time.Time) ([]ca
 // digestQuietProjects lists the projects the quiet rule fires on at `now`,
 // through the predicate the report and the signal use, quietest first.
 func digestQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]capture.DigestProjectQuiet, error) {
-	args := []any{now, deals.DefaultProjectQuietDays}
+	args := []any{now, projects.DefaultProjectQuietDays}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	scope, err := projectScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.name, p.key, p.phase, p.owner_id, `+deals.ProjectQuietAnchorSQL("p")+`
+		SELECT p.id, p.name, p.key, p.phase, p.owner_id, `+projects.ProjectQuietAnchorSQL("p")+`
 		  FROM project p
 		 WHERE p.archived_at IS NULL
-		   AND `+deals.ProjectInFlightSQL("p")+`
-		   AND `+deals.ProjectQuietSQL("p", "$1", 2)+`
+		   AND `+projects.ProjectInFlightSQL("p")+`
+		   AND `+projects.ProjectQuietSQL("p", "$1", 2)+`
 		   AND `+scope+`
-		 ORDER BY `+deals.ProjectQuietAnchorSQL("p")+`, p.id`,
+		 ORDER BY `+projects.ProjectQuietAnchorSQL("p")+`, p.id`,
 		args...)
 	if err != nil {
 		return nil, fmt.Errorf("digest quiet projects: %w", err)

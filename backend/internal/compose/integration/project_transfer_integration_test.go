@@ -14,9 +14,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -26,7 +26,7 @@ import (
 // admin — the harness's unbounded seat, so the read itself never filters.
 func projectOwner(t *testing.T, e *Env, id ids.ProjectID) *ids.UUID {
 	t.Helper()
-	p, err := e.Deals.GetProject(e.Admin(), id, storekit.IncludeArchived)
+	p, err := e.Projects.GetProject(e.Admin(), id, storekit.IncludeArchived)
 	if err != nil {
 		t.Fatalf("read project %s: %v", id, err)
 	}
@@ -55,11 +55,11 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 	second := seedProject(e.Admin(), t, e, "Warehouse rollout", strPtr("WHR"), org, &e.Rep1)
 	retired := seedProject(e.Admin(), t, e, "Old intranet", strPtr("INTRA"), org, &e.Rep1)
 	foreign := seedProject(e.Admin(), t, e, "Rep3's project", strPtr("R3"), org, &e.Rep3)
-	if _, err := e.Deals.ArchiveProject(e.Admin(), retired.ID, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), retired.ID, nil); err != nil {
 		t.Fatalf("archive project: %v", err)
 	}
 
-	moved, err := e.Deals.TransferProjectOwnership(e.Admin(), deals.TransferProjectOwnershipInput{
+	moved, err := e.Projects.TransferProjectOwnership(e.Admin(), projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](e.Rep1), ToOwnerID: ids.From[ids.UserKind](e.Rep2),
 	})
 	if err != nil {
@@ -133,7 +133,7 @@ func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) 
 		Objects:  map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},
 		RowScope: principal.RowScopeTeam,
 	})
-	moved, err := e.Deals.TransferProjectOwnership(rep, deals.TransferProjectOwnershipInput{
+	moved, err := e.Projects.TransferProjectOwnership(rep, projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](e.Rep3), ToOwnerID: ids.From[ids.UserKind](e.Rep2),
 	})
 	if err != nil {
@@ -163,16 +163,16 @@ func TestTransferProjectOwnershipRefusesAReceiverWhoCannotOwn(t *testing.T) {
 		t.Fatalf("deactivate Rep3: %v", err)
 	}
 
-	var notActive *deals.OwnerNotActiveError
-	_, err := e.Deals.TransferProjectOwnership(e.Admin(), deals.TransferProjectOwnershipInput{
+	var notActive *projects.OwnerNotActiveError
+	_, err := e.Projects.TransferProjectOwnership(e.Admin(), projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](e.Rep1), ToOwnerID: ids.From[ids.UserKind](e.Rep3),
 	})
 	if !errors.As(err, &notActive) {
 		t.Errorf("transfer to a deactivated user → %v, want OwnerNotActiveError", err)
 	}
 
-	var sameOwner *deals.SameOwnerError
-	_, err = e.Deals.TransferProjectOwnership(e.Admin(), deals.TransferProjectOwnershipInput{
+	var sameOwner *projects.SameOwnerError
+	_, err = e.Projects.TransferProjectOwnership(e.Admin(), projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](e.Rep1), ToOwnerID: ids.From[ids.UserKind](e.Rep1),
 	})
 	if !errors.As(err, &sameOwner) {

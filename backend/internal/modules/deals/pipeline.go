@@ -42,7 +42,7 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 		return crmcontracts.Pipeline{}, err
 	}
 	var out crmcontracts.Pipeline
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = createPipelineTx(ctx, tx, in)
 		return err
 	})
@@ -107,7 +107,7 @@ func (s *Store) GetPipeline(ctx context.Context, id ids.PipelineID) (crmcontract
 		return crmcontracts.Pipeline{}, err
 	}
 	var out crmcontracts.Pipeline
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = readPipeline(ctx, tx, id)
 		return err
 	})
@@ -136,7 +136,7 @@ func (s *Store) ListPipelines(ctx context.Context, archived storekit.ArchivedFil
 		archivedFilter = liveRowsClause
 	}
 	var out []crmcontracts.Pipeline
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT id FROM pipeline WHERE `+whereSeed+archivedFilter+` ORDER BY position, created_at`)
 		if err != nil {
@@ -177,7 +177,7 @@ func (s *Store) DefaultPipeline(ctx context.Context) (crmcontracts.Pipeline, err
 		return crmcontracts.Pipeline{}, err
 	}
 	var out crmcontracts.Pipeline
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var id ids.PipelineID
 		err := tx.QueryRow(ctx,
 			`SELECT id FROM pipeline WHERE is_default AND archived_at IS NULL`).Scan(&id)
@@ -317,7 +317,7 @@ func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open
 // a property of the TARGET STAGE's configuration, never of the request
 // arguments (a renamed "Won" column still resolves 🟡).
 func (s *Store) StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error) {
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
 			`SELECT semantic, pipeline_id FROM stage WHERE id = $1 AND archived_at IS NULL`,
 			stageID).Scan(&semantic, &pipelineID)
