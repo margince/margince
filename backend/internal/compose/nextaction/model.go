@@ -116,7 +116,7 @@ func dealIn(d crmcontracts.Deal) DealIn {
 		out.Amount = fmt.Sprintf("%d %s (minor units)", *d.AmountMinor, *d.Currency)
 	}
 	if d.ExpectedCloseDate != nil {
-		out.ExpectedClose = d.ExpectedCloseDate.Time.Format("2006-01-02")
+		out.ExpectedClose = d.ExpectedCloseDate.Format("2006-01-02")
 	}
 	return out
 }
