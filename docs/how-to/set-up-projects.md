@@ -23,10 +23,15 @@ filed where the delivery team will look. Everything filed under it — mail,
 notes, tasks, contracts, documents, stakeholders — shows on one page, and the
 page carries the project's whole phase history with the reason for every move.
 
-**A project is worked by several companies.** One is its customer; the others
-are the partners and subcontractors delivering it. A project keeps at least one
-company at all times, and each company on it carries a role — **Customer**,
-**Partner** or **Subcontractor**.
+**A project is worked by several companies.** Typically one is its customer and
+the others are the partners and subcontractors delivering it. Each company on
+the project carries a role — **Customer**, **Partner** or **Subcontractor** —
+and a project keeps at least one company at all times.
+
+The roles are a description, not a constraint: nothing stops two companies both
+holding **Customer**, or none of them holding it. Where the product needs a
+single customer — the company shown in the project list's column — it takes the
+first one holding that role.
 
 A deal has at most one project, and the deal's company must be **one of the
 companies on that project** — in any role. A partner's deal on a project it
@@ -97,8 +102,9 @@ back.
 
 ### The rules the product enforces
 
-- **Every live project has one.** There is no such thing as a project without a
-  key, and no way to create one.
+- **Every project created through the product has one**, and there is no way to
+  create one without. The field is nullable in the schema, so a row from before
+  minting existed could still carry none; nothing you create today will.
 - **Unique among live projects**, compared case-insensitively: `ner-1` and
   `NER-1` are the same key.
 - **Read-only** on create and on update.
@@ -125,10 +131,13 @@ project and create it again under a better name — which also frees the old key
 
 The key only files their mail when it is in the subject, and the surest way to
 get it there is to let them reply to a message that already carries it.
-Margince puts the key in the subject of what you send from a deal or a project
-(see [run-a-project.md](run-a-project.md#sending)), and most mail clients keep
-it on the reply. One line in the kickoff mail — *please keep `[NER-1]` in the
-subject* — covers the rest.
+Margince stamps the key into the subject when you **reply** from a deal or a
+project (see [run-a-project.md](run-a-project.md#sending)); the account-started
+composer on a company page files by link instead and does not touch the
+subject, so type the key yourself when you start a conversation there. Mail
+clients generally keep the subject on a reply, but nothing guarantees it — one
+line in the kickoff mail, *please keep `[NER-1]` in the subject*, covers the
+case where somebody rewrites it.
 
 ## When to create a project
 
@@ -157,20 +166,22 @@ reason.
 
 ## Putting companies and people on a project
 
-The same section appears on four pages, with the same two verbs, so the flow is
-learned once:
+The same section appears on three pages, with the same two verbs, so the flow
+is learned once:
 
 | Page | Section | What it attaches |
 |---|---|---|
 | A project | **Companies** | companies onto this project |
 | A company | **Projects** | this company onto a project |
 | A contact | **Projects** | this person onto a project |
-| A deal | *(a chip, not a section)* | see below |
+
+A deal is the exception, and deliberately so — see below.
 
 **To attach**, press **Attach project** (or **Attach company** on a project
-page), search, pick, choose the role under **As**, and confirm. The role list
-opens on **Partner** rather than Customer, because a project already has its
-customer by the time you are adding anyone.
+page), choose the role under **As**, then search and pick. **Picking is what
+attaches** — there is no separate confirm — so set the role first. The role
+list opens on **Partner** rather than Customer, because a project already has
+its customer by the time you are adding anyone.
 
 **To detach**, press **Detach** on the row. The dialog is explicit that nothing
 is destroyed: *{name} stays as it is. Only its link to this record ends —
@@ -187,8 +198,9 @@ attach it again with the new role.
   before taking this one off.* A project belonging to nobody has no customer to
   bill and no timeline that means anything.
 - **A company that still has deals here.** *This company still has N deal(s) on
-  the project; move or close them before taking the company off.* Otherwise the
-  deals would be left pointing at a project their company is no longer on.
+  the project; move or close them before taking the company off.* The count is
+  of deals that still exist, so winning or losing one does not clear it: point
+  the deal at another project, or archive it.
 
 **A deal is different** and deliberately so: a deal carries at most **one**
 project, so it names it as a field on the deal form and shows it as a chip on

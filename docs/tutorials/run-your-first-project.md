@@ -13,8 +13,8 @@ In Margince you can:
 - **Start a project while the deal is still being pursued**, so the early
   conversations are already filed where the delivery team will look for them.
 - **Have Margince give it a key** such as `NER-1`, and every email whose subject
-  carries `[NER-1]` is filed under it automatically — including the ones you
-  send, which carry the key without you typing it.
+  carries `[NER-1]` is filed under it automatically — including the replies you
+  send from the deal or the project, which carry the key without you typing it.
 - **Win the deal and watch the project move into delivery** by itself.
 - **Write email from inside the project**, with the AI reading only what
   belongs to it.
@@ -52,8 +52,8 @@ empty state:
 > A project is the body of work a deal is about. It starts during the deal,
 > in the initiative phase, and outlives close-won: once the deal is won,
 > delivery is tracked here.
-> Give a project a key and any email whose subject carries [KEY] is filed
-> under it automatically.
+> Every project gets a short key. Any email whose subject carries it in
+> brackets is filed under that project automatically.
 
 That paragraph is the whole model. The rest of this page is it in practice.
 
@@ -186,6 +186,8 @@ Two limits on this automatic move are worth knowing now:
 
 Delivery runs for months. The project page is where it is tracked:
 
+- **Companies** (first on the right) lists every company working this project
+  and what each one is to it. More on this below.
 - **Deals** lists every deal on this project, won and open, with its value.
   **New deal** here starts another deal on the same project and company.
 - **Open commitments** lists open tasks filed under the project, soonest due
@@ -197,6 +199,40 @@ Delivery runs for months. The project page is where it is tracked:
   row above it (**Activity kind**, **Search this timeline**, **From**, **To**)
   narrows it; the **Activities / Changes / All** switch shows the mail, the
   record's own field and phase changes, or both.
+
+### Nordwind brings in a partner
+
+Two months in, Nordwind subcontracts the warehouse integration to
+*DACHPartner GmbH*. The project is no longer one company's work, and Margince
+does not make you pretend otherwise.
+
+1. On the project page, in **Companies**, press **Attach company**.
+2. Under **As**, leave **Partner** — the list opens here rather than on
+   Customer, because the project already has its customer. **Set the role
+   before you pick the company**, because picking is what attaches it.
+3. Search for *DACHPartner GmbH* and pick it from the results. The dialog
+   closes and the company is on the project.
+
+The Companies card now shows both: *Nordwind Logistik — Customer* and
+*DACHPartner GmbH — Partner*.
+
+What this buys you: a deal on **DACHPartner** can now be filed under this
+project. A deal may name any project one of its companies is on, whatever role
+that company holds, so the partner's own commercial work sits on the same body
+of work as the customer's.
+
+Two things Margince will refuse, both with the reason on screen:
+
+- **Taking off the last company.** *A project keeps at least one company; add
+  another before taking this one off.*
+- **Taking off a company that still has deals here.** *This company still has 1
+  deal(s) on the project; move or close them before taking the company off.*
+  Note that winning or losing a deal does not clear this — the count is of
+  deals that still exist. Point them at another project, or archive them.
+
+Attaching a company that is already on the project **changes its role** rather
+than adding it twice — which is how you promote DACHPartner from subcontractor
+to partner later.
 
 When go-live is signed off:
 
@@ -241,10 +277,13 @@ and said so, in this order:
 
 1. **The thread's own project**, if the conversation is already filed. Then the
    first line reads *…like the rest of this conversation* instead.
-2. **The deal's project**, when the thread carries none. This is the ordinary
-   case for a conversation that started before the project was attached, and
-   the line names the reason — *this deal's project* — because you never put
-   that project on this conversation and deserve to be told where it came from.
+2. **The deal's project**, when the thread carries none — and only when you are
+   replying from a **deal**. This is the ordinary case for a conversation that
+   started before the project was attached, and the line names the reason —
+   *this deal's project* — because you never put that project on this
+   conversation and deserve to be told where it came from. Replying from a
+   company or a contact page has no deal to fall back on, so only rung 1
+   applies there.
 
 If neither names a project, **nothing appears at all**: no line, no tickbox, no
 tag. A message that belongs to no project is the common case and says so by
@@ -255,19 +294,26 @@ back out of the Subject — the tag would otherwise promise a routing that will
 not happen. Tick it again and the tag returns, in front of whatever you have
 since typed. You can also just delete the tag yourself; it stays deleted.
 
+One thing unticking does **not** do: if the conversation was already filed
+under a project, the reply still lands on that project, because a reply
+inherits the links of the message it answers. Unticking takes off the tag and
+the claim, not the filing. Moving a filed conversation is **Relink**, which
+moves all of it at once.
+
 > **The tag is doing real work, not decoration.** Your customer's mail client
 > keeps `[NER-1]` in the subject when they reply. Margince reads it back on the
 > way in and files their answer under the project — even if the mail thread is
 > broken by a forward, a new subject, or a colleague brought in on a fresh
 > message. This is what makes the filing survive leaving your installation.
 
-One limit, stated plainly: **on a reply, the tag is the only thing carrying the
-project.** The reply itself is filed under whatever the message you are
-answering was filed under, because the send inherits its links. So the copy of
-your own reply may not appear on the project's timeline until the customer
-answers and their tagged reply comes back. This is
+One limit, stated plainly: **when the project came from the deal, the tag is
+the only thing carrying it.** A reply is filed under whatever the message you
+are answering was filed under, and it cannot add a link of its own. So on a
+conversation the project never reached, your sent copy does not appear on the
+project's timeline — the customer's tagged answer is what brings the whole
+thread in. A conversation already filed does not have this problem. This is
 [issue #2422](https://github.com/margince/margince/issues/2422); the
-account-started composer below does not have this limitation.
+account-started composer below does not have it either.
 
 ### Writing to an account from the company page
 
@@ -295,8 +341,9 @@ Choosing one shows **Scoped to NER-1** beneath it, and that does two things:
 If the subject already carries **another** project's key, sending under this
 project removes it. Two keys in one subject make the inbound rule ambiguous —
 it files under neither — so leaving both would silently break the filing you
-just asked for. Bracketed text that could not be a key, like `[FYI]`, is left
-alone.
+just asked for. The rule goes by SHAPE rather than by looking each one up, so
+any bracketed word that could be a key is removed — `[FYI]` included. Only a
+group that could never be one, like `[2026]`, survives.
 
 > **Filing an email under a project is permanent for retention.** Under the
 > German pack an email filed under a project counts as business

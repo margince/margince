@@ -106,9 +106,10 @@ is **not** editable: it was minted from the name at creation and stays as it
 is, even if you rename the project. **Owner** offers *Me*, *Unassign*, and —
 when somebody else owns it — *Keep current owner*.
 
-The project's **customer** company cannot be changed after creation, but the
-companies working the project can: attach and detach them in the **Companies**
-section on the project page.
+The **Companies** section on the project page is where the company set is
+changed — attach, re-role and detach. The anchor `organization_id` the list
+column shows is not editable on this form, but which company holds the
+**Customer** role is: attach it again under a different role.
 
 **Archive project** asks for confirmation: *Archiving removes this project
 from the live list and frees its key. This cannot be undone from the UI.* The
@@ -132,24 +133,36 @@ filing out and tells you, above the Subject field:
 > This will be filed under *Name*, this deal's project.
 > [KEY] is added to the subject so their reply files itself here.
 
-It derives the project in the same order the inbound ladder uses: the thread's
-own project first — the line then reads *…like the rest of this conversation* —
-and the **deal's** project when the thread has none. If neither names one,
-nothing is shown at all.
+It derives the project the way the inbound ladder does, as far as it can: the
+thread's own project first — the line then reads *…like the rest of this
+conversation* — and the **deal's** project when the thread has none, which it
+can only offer when you are replying from a deal. Replying from a company or a
+contact has no deal to fall back on. If neither names a project, nothing is
+shown at all.
 
 The **Subject** field is stamped with `[KEY]`. Untick the box and both lines go
 and the tag is removed; tick it again and the tag comes back in front of
 whatever you have typed. A tag you delete by hand stays deleted.
 
+**What unticking does depends on where the project came from.** On the deal
+fallback it genuinely declines the filing: nothing else was carrying it. On a
+thread already filed under a project, the reply **still inherits that project
+link** from the message it answers — unticking removes the tag and the claim,
+not the filing. To move a filed conversation, use **Relink**, which moves the
+whole thread.
+
 If the subject already carries a **different** project's key, sending under this
 one removes it — two keys in a subject make the inbound rule ambiguous, so it
-files under neither. Bracketed text that could not be a key (`[FYI]`) is left
-alone.
+files under neither. Be aware that the rule is shape-based, not a lookup: any
+bracketed word that *could* be a key goes, `[FYI]` included. Only a group that
+could never be one — `[2026]`, which is not letter-led — survives.
 
-> **On a reply, the subject tag is the only thing carrying the project.** The
-> reply itself inherits the links of the message it answers, because the reply
-> endpoint takes none of its own. So your sent copy may not appear on the
-> project's timeline until the customer's tagged reply comes back and is filed.
+> **When the project came from the DEAL, the subject tag is the only thing
+> carrying it.** A reply inherits the links of the message it answers and can
+> add none of its own, so a reply on a thread the project never reached does
+> not put your sent copy on the project's timeline — the customer's tagged
+> answer is what brings the conversation in. A thread already filed does not
+> have this problem: its reply inherits the project link.
 > Tracked as [issue #2422](https://github.com/margince/margince/issues/2422).
 
 **Writing to an account (company page → Write email).** A new conversation has
@@ -187,7 +200,8 @@ or let the next message in the thread carry the filing.
    thread cannot inherit from a Telegram conversation, which stops a forged
    `References` header from filing mail onto a chat the sender was never in.
    Siblings under legal hold or archived settle nothing, and where siblings
-   disagree the most recently filed one wins.
+   disagree the most recent **message** wins — by when it was sent or received,
+   not by when somebody filed it.
 2. **The deal.** A message linked to a deal is filed under the deal's project.
    Two deals on the message rolling up to two *different* projects cancel out,
    the same way two keys do.
@@ -198,8 +212,11 @@ or let the next message in the thread carry the filing.
    different keys in one subject cancel out: the message says nothing reliable
    and is not filed.
 4. **An offer to a person.** When none of the above answers, Margince does not
-   file the message. It stages an approval — **File under a project** — in
-   **Approvals**, and a person confirms or declines. Confirm files the message exactly as a manual
+   file the message — and it only *asks* when it has something worth asking
+   about: exactly one live project the message could plausibly belong to, or
+   one that stands out among several. Then it stages an approval — **File under
+   a project** — in **Approvals**, and a person confirms or declines. With
+   nothing to offer it stays quiet, which is the common case. Confirm files the message exactly as a manual
    relink would; decline means the same message-and-project pairing is not
    offered again. An offer nobody answers expires, and the next message in the
    thread opens a fresh one.
@@ -242,7 +259,9 @@ exact or confirmed by a person.
 
 ## Reports
 
-Three project reports live in **Reports**:
+Three project reports are built and answer over the API
+(`GET /reports/{report}`), but the **Reports** screen does not offer them yet —
+it lists the deal reports and quotas only:
 
 - **Projects by phase** — how many projects sit in each phase, and their won
   and open deal value.
