@@ -77,10 +77,16 @@ var uncachedPrompts = gatekit.Waive(map[string]string{
 	"internal/compose/orgbrief:askSystem": "Ask answers are not cached (orgbrief.Service.Ask says so and explains why: a question is asked once and read once). Binding the ask prompt to the BRIEF's key would rewrite every cached brief for a change that cannot affect one.",
 })
 
-// promptSurfaceFiles walks the prompt surfaces and hands each parsed product file to
-// visit, keyed by its directory.
-func promptSurfaceFiles(t *testing.T, visit func(dir string, file *ast.File)) {
+// promptSurfaceFiles returns the product files of each prompt surface, grouped
+// by package directory.
+//
+// Grouped rather than visited one at a time because Go constants are
+// package-scoped: a prompt lives in `write.go` while the version that caches its
+// output lives in `input.go`, and a census that resolved names file by file
+// would not see across that.
+func promptSurfaceFiles(t *testing.T) map[string][]*ast.File {
 	t.Helper()
+	byDir := map[string][]*ast.File{}
 	fset := token.NewFileSet()
 	for _, root := range promptSurfaceRoots {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -101,13 +107,15 @@ func promptSurfaceFiles(t *testing.T, visit func(dir string, file *ast.File)) {
 			if parseErr != nil {
 				return parseErr
 			}
-			visit(filepath.ToSlash(filepath.Dir(path)), file)
+			dir := filepath.ToSlash(filepath.Dir(path))
+			byDir[dir] = append(byDir[dir], file)
 			return nil
 		})
 		if err != nil {
 			t.Fatalf("walking %s: %v", root, err)
 		}
 	}
+	return byDir
 }
 
 // declaredPrompts returns, per package directory, the prompt constants it
@@ -115,27 +123,30 @@ func promptSurfaceFiles(t *testing.T, visit func(dir string, file *ast.File)) {
 func declaredPrompts(t *testing.T) map[string][]string {
 	t.Helper()
 	prompts := map[string][]string{}
-	promptSurfaceFiles(t, func(dir string, file *ast.File) {
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok || len(value.Names) == 0 || len(value.Values) == 0 {
+	for dir, files := range promptSurfaceFiles(t) {
+		consts := stringConstants(files)
+		for _, file := range files {
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.CONST {
 					continue
 				}
-				text, ok := stringValue(value.Values[0], nil)
-				if !ok || len(text) < promptFloor {
-					continue
-				}
-				if promptConstantName.MatchString(value.Names[0].Name) {
-					prompts[dir] = append(prompts[dir], value.Names[0].Name)
+				for _, spec := range gen.Specs {
+					value, ok := spec.(*ast.ValueSpec)
+					if !ok || len(value.Names) == 0 || len(value.Values) == 0 {
+						continue
+					}
+					text, ok := stringValue(value.Values[0], consts)
+					if !ok || len(text) < promptFloor {
+						continue
+					}
+					if promptConstantName.MatchString(value.Names[0].Name) {
+						prompts[dir] = append(prompts[dir], value.Names[0].Name)
+					}
 				}
 			}
 		}
-	})
+	}
 	return prompts
 }
 
@@ -148,26 +159,29 @@ func declaredPrompts(t *testing.T) map[string][]string {
 func handTypedPromptVersions(t *testing.T) map[string]bool {
 	t.Helper()
 	out := map[string]bool{}
-	promptSurfaceFiles(t, func(dir string, file *ast.File) {
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok || len(value.Names) == 0 || len(value.Values) == 0 {
+	for dir, files := range promptSurfaceFiles(t) {
+		consts := stringConstants(files)
+		for _, file := range files {
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
 					continue
 				}
-				if !strings.Contains(strings.ToLower(value.Names[0].Name), "promptversion") {
-					continue
-				}
-				if _, literal := stringValue(value.Values[0], nil); literal {
-					out[dir] = true
+				for _, spec := range gen.Specs {
+					value, ok := spec.(*ast.ValueSpec)
+					if !ok || len(value.Names) == 0 || len(value.Values) == 0 {
+						continue
+					}
+					if !strings.Contains(strings.ToLower(value.Names[0].Name), "promptversion") {
+						continue
+					}
+					if _, resolved := stringValue(value.Values[0], consts); resolved {
+						out[dir] = true
+					}
 				}
 			}
 		}
-	})
+	}
 	return out
 }
 
@@ -176,27 +190,29 @@ func handTypedPromptVersions(t *testing.T) map[string]bool {
 func digestedBuilders(t *testing.T) map[string][]string {
 	t.Helper()
 	out := map[string][]string{}
-	promptSurfaceFiles(t, func(dir string, file *ast.File) {
-		ast.Inspect(file, func(node ast.Node) bool {
-			call, ok := node.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || sel.Sel.Name != "PromptDigest" {
-				return true
-			}
-			if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "ai" {
-				return true
-			}
-			for _, arg := range call.Args {
-				if ident, ok := arg.(*ast.Ident); ok {
-					out[dir] = append(out[dir], ident.Name)
+	for dir, files := range promptSurfaceFiles(t) {
+		for _, file := range files {
+			ast.Inspect(file, func(node ast.Node) bool {
+				call, ok := node.(*ast.CallExpr)
+				if !ok {
+					return true
 				}
-			}
-			return true
-		})
-	})
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "PromptDigest" {
+					return true
+				}
+				if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "ai" {
+					return true
+				}
+				for _, arg := range call.Args {
+					if ident, ok := arg.(*ast.Ident); ok {
+						out[dir] = append(out[dir], ident.Name)
+					}
+				}
+				return true
+			})
+		}
+	}
 	return out
 }
 
@@ -209,27 +225,27 @@ func digestedBuilders(t *testing.T) map[string][]string {
 func promptsReachedByDigest(t *testing.T, builders map[string][]string) map[string]map[string]bool {
 	t.Helper()
 	reached := map[string]map[string]bool{}
-	promptSurfaceFiles(t, func(dir string, file *ast.File) {
+	for dir, files := range promptSurfaceFiles(t) {
 		wanted := builders[dir]
 		if len(wanted) == 0 {
-			return
+			continue
 		}
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || !slices.Contains(wanted, fn.Name.Name) {
-				continue
-			}
-			if reached[dir] == nil {
-				reached[dir] = map[string]bool{}
-			}
-			ast.Inspect(fn.Body, func(node ast.Node) bool {
-				if ident, ok := node.(*ast.Ident); ok {
-					reached[dir][ident.Name] = true
+		reached[dir] = map[string]bool{}
+		for _, file := range files {
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Body == nil || !slices.Contains(wanted, fn.Name.Name) {
+					continue
 				}
-				return true
-			})
+				ast.Inspect(fn.Body, func(node ast.Node) bool {
+					if ident, ok := node.(*ast.Ident); ok {
+						reached[dir][ident.Name] = true
+					}
+					return true
+				})
+			}
 		}
-	})
+	}
 	return reached
 }
 
