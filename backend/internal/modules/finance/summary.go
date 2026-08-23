@@ -201,7 +201,7 @@ func (s *Store) fillFigures(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, conn connection,
 	out *crmcontracts.OrganizationFinanceSummary,
 ) error {
-	invoices, currency, err := readInvoices(ctx, tx, orgID, conn.id)
+	invoices, err := readInvoices(ctx, tx, orgID, conn.id)
 	if err != nil {
 		return err
 	}
@@ -210,6 +210,19 @@ func (s *Store) fillFigures(
 		// "€0 open" — we have simply never billed them. The figures stay
 		// absent and the card says the state.
 		return nil
+	}
+	// The figures below are base-currency BY CONTRACT — every one of them is an
+	// `*MinorBase`, converted per invoice at the rate frozen on that invoice's
+	// own issue date. So the label they wear is the installation's base
+	// currency, whatever mix of currencies the account was billed in.
+	//
+	// It used to be the issued currency, which existed only when the account
+	// billed in exactly one; a customer invoiced in EUR and CHF got no label,
+	// and no label meant no figure at all. The amounts had already converted —
+	// the only thing missing was the word for what they had converted to.
+	currency, err := s.baseCurrency(ctx, tx)
+	if err != nil {
+		return err
 	}
 	now := s.now()
 	if net := NetInvoicedOver(invoices, now); !net.RateUnavailable {
@@ -352,22 +365,20 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 }
 
 // readInvoices loads the account's mirrored invoices in the shape the formulas
-// read, and reports the currency they are stated in.
+// read.
 //
-// The base-currency conversion is deliberately NOT done here. Every invoice
-// carries the rate frozen at its own issue date (DM-FX-4), and an invoice
-// whose issue date had no effective rate is marked rather than skipped — the
-// formulas refuse the whole figure on one of those (FIN-AC-6), which they can
-// only do if the row reaches them.
+// Every amount it returns is already base-currency: each invoice converts at
+// the rate frozen on its own issue date (DM-FX-4), and an invoice whose issue
+// date had no effective rate is MARKED rather than skipped — the formulas
+// refuse the whole figure on one of those (FIN-AC-6), which they can only do if
+// the row reaches them.
 //
-// `currency` is the issued currency when the account bills in exactly one, and
-// empty otherwise. A mixed-currency account has no single label for a total,
-// and the formulas' own conversion is what produces one — until the rate sheet
-// is wired through, a summary with no single currency reports no money figure
-// rather than a sum wearing the wrong symbol.
+// It reports no currency of its own. The issued currency is a property of each
+// invoice, not of the account, and a caller labelling a converted total needs
+// the currency it converted TO — which is the installation's base currency.
 func readInvoices(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, connectionID ids.UUID,
-) ([]Invoice, string, error) {
+) ([]Invoice, error) {
 	// The amounts are converted HERE, at each invoice's own frozen rate
 	// (FIN-PARAM-7/DM-FX-4), because the formulas' fields are base-currency by
 	// contract. An invoice with no rate keeps its issued amounts and is marked
@@ -378,7 +389,7 @@ func readInvoices(
 	// rounding down turns a hundred invoices into a total that is quietly
 	// short.
 	rows, err := tx.Query(ctx, `
-		SELECT status, issued_at, due_at, fully_paid_at, currency,
+		SELECT status, issued_at, due_at, fully_paid_at,
 		       round(net_minor * coalesce(fx_rate_to_base, 1))::bigint,
 		       round(credited_minor * coalesce(fx_rate_to_base, 1))::bigint,
 		       round(open_minor * coalesce(fx_rate_to_base, 1))::bigint,
@@ -388,35 +399,21 @@ func readInvoices(
 		 WHERE organization_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at ASC, id ASC`, orgID, connectionID)
 	if err != nil {
-		return nil, "", fmt.Errorf("read invoices: %w", err)
+		return nil, fmt.Errorf("read invoices: %w", err)
 	}
 	defer rows.Close()
 	var out []Invoice
-	currencies := map[string]bool{}
 	for rows.Next() {
-		var (
-			inv      Invoice
-			currency string
-		)
+		var inv Invoice
 		if err := rows.Scan(&inv.Status, &inv.IssuedOn, &inv.DueOn, &inv.FullyPaidAt,
-			&currency, &inv.NetMinorBase, &inv.CreditedMinorBase, &inv.OpenMinorBase,
+			&inv.NetMinorBase, &inv.CreditedMinorBase, &inv.OpenMinorBase,
 			&inv.CreditsInvoice, &inv.Disputed, &inv.RateMissing); err != nil {
-			return nil, "", fmt.Errorf("scan invoice: %w", err)
+			return nil, fmt.Errorf("scan invoice: %w", err)
 		}
-		currencies[currency] = true
 		out = append(out, inv)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", fmt.Errorf("read invoices: %w", err)
+		return nil, fmt.Errorf("read invoices: %w", err)
 	}
-	if len(currencies) != 1 {
-		// Zero currencies means no invoices; more than one means no single
-		// label. Both leave the money figures absent, which is the honest
-		// answer either way.
-		return out, "", nil
-	}
-	for currency := range currencies {
-		return out, currency, nil
-	}
-	return out, "", nil
+	return out, nil
 }
