@@ -12,6 +12,14 @@
 #   -update-mcp-info → the published MCP surface docs
 #                     — enforced by a unit test in check-backend
 #
+# A DIFFERENT contract, backend/api/ai-tasks.yaml, has its own published
+# artifact and its own regeneration — listed here only so the two are not
+# confused, since this leg does NOT check it:
+#
+#   -update-agent-tool-budget → docs/reference/agent-tool-budget.{json,md}, what
+#                     each scheduled agent's tool listing costs its window
+#                     — enforced by a unit test in check-backend, same shape
+#
 # `make gen` has no frontend reference at all, and a backend-only author has no
 # reason to run the lane that would catch the second. So a contract change could
 # go green through the whole backend gate and strand the frontend types — which

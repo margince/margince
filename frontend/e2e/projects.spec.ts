@@ -155,8 +155,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // moment ago; reload so the page reads the relinked state afresh.
   await page.goto("/#/projects/pr-new-1");
   await page.reload();
+  // The timeline row IS the proof the relink landed. The coverage strip that
+  // used to be asserted here — "{attributed} zugeordnet · {awaiting} warten
+  // auf Entscheidung · …" — was removed by #2408 so the page answers one
+  // question, and project360.test.tsx now asserts its absence twice. An e2e
+  // assertion on copy the product deliberately dropped tests nothing about the
+  // relink and fails for a reason that has nothing to do with it.
   await expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible();
-  await expect(page.getByText(/^1 zugeordnet ·/)).toBeVisible();
 
   // 6. Advance by hand: a non-closing move takes an optional reason and
   // lands in the history with it.

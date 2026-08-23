@@ -131,18 +131,28 @@ func publishedChannelProviders(registered []string, sending map[string]connector
 // same shaping function — two surfaces answering one question two ways is
 // exactly the drift this arc has spent its budget removing.
 //
-// THE ONE FIELD IT DELIBERATELY DROPS is `attachments`, and the reason is a
-// budget rather than a decision about what an agent should know. The core tool
-// listing rides in every Surface-B prompt and is already within a few hundred
-// tokens of the ceiling TestTheToolListingLeavesTheRunRoomInTheWindow holds it
-// to; the carriage object plus the copy that would explain it takes the listing
-// past that ceiling, which comes out of the run's own observations. So an agent
-// staging a channel message with files still learns the bounds the way it does
-// today — by having the delivery parked with a reason that names them. Widening
-// the tool surface needs the listing's budget looked at first (issue #1985).
+// THE ONE FIELD IT DELIBERATELY DROPS is `attachments`, and the reason WAS a
+// budget: the core listing rode in every Surface-B prompt and sat a few hundred
+// tokens under a ceiling measured across the whole catalog, so the carriage
+// object plus the copy explaining it would have pushed the listing past it.
 //
-// IT ALSO DROPS `capture_sources`, on the same budget and with the same shape of
-// consequence: a passport reading REST resolves a unit's `ext:` provenance and
+// THAT GROUND IS GONE (#2355). The listing is now bounded per declared agent,
+// and neither shipped agent attaches a channel tool at all — the field costs
+// them nothing, and the whole-catalog measurement has thousands of tokens of
+// room besides.
+//
+// The field stays dropped anyway, and the honest reason is smaller than the
+// budget was: NO SCHEDULED AGENT ATTACHES A CHANNEL TOOL, so today nothing on
+// this surface would read the field. The parked-delivery path that teaches an
+// agent the bounds is the REST and human send path, not one either shipped
+// agent can reach.
+//
+// So this is currently a question about a capability nobody exercises. Adding
+// the field back is answerable on its own merits the moment an agent attaches a
+// channel tool — see #1985, whose budget premise this supersedes.
+//
+// IT ALSO DROPS `capture_sources`, for the same reason and with the same shape
+// of consequence: a passport reading REST resolves a unit's `ext:` provenance and
 // the same passport's tool listing does not. Nothing is governed differently by
 // it — both surfaces are the one read-scope operation, and an id nothing resolves
 // falls back to itself — so what an agent loses is a display string, not an

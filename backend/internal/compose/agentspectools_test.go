@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -31,7 +30,7 @@ func TestEveryAgentSpecNamesRegisteredTools(t *testing.T) {
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
 		registered[spec.Name] = true
 	}
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		if len(spec.Tools) == 0 {
 			t.Errorf("agent %q names no tools — an empty allowlist is read as NO narrowing, "+
 				"which hands this goal every verb its passport admits", spec.Name)
@@ -142,7 +141,7 @@ func TestTheShippedAgentsAreNarrowerThanTheirScopesAllow(t *testing.T) {
 	for _, spec := range specs {
 		byName[spec.Name] = string(spec.RequiredScope)
 	}
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		needed := map[string]bool{}
 		for _, name := range spec.Tools {
 			needed[byName[name]] = true
@@ -191,7 +190,7 @@ func TestEveryScheduledAgentsToolsAreAutoExecute(t *testing.T) {
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
 		tiers[spec.Name] = spec.Tier
 	}
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		for _, name := range spec.Tools {
 			tier, registered := tiers[name]
 			if !registered {

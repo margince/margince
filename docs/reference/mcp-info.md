@@ -22,7 +22,8 @@ receives it. This page is rendered from that file.
 Those are the WIRE bytes: they carry each tool's output schema and the governance
 clause the transport appends. The Surface-B listing a run re-sends every step is
 smaller — name, description and input schema only — and is held against its own
-budget in `agenttooldescriptions_test.go`.
+budget in `agenttooldescriptions_test.go`. What that listing costs each SCHEDULED
+agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 ### What the tool catalog is made of
 

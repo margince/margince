@@ -75,7 +75,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "0a761a53469c64ccb7cd21bc8919fdaedcb6181642e4aeccffd3fb0383da061b"
+const TaskContractHash = "f14023a33138c094bb0b911d3a905f482702ce40ab757aed94227f8fbd2d4d96"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -307,6 +307,29 @@ var taskSites = map[Task][]Site{
 // SitesFor returns the task's declared sites in contract order. A
 // planned task returns none.
 func SitesFor(t Task) []Site { return taskSites[t] }
+
+// Agent is one scheduled agent of a tool-fed task, and Tools is what it
+// attaches. The listing rides in EVERY step of that agent's window, so
+// this list is both what the run may call and what it pays for in prompt.
+//
+// It NARROWS and never grants: every call still passes the same admission
+// gate against the same passport. A name here the passport does not admit
+// stays refused.
+type Agent struct {
+	Name  string
+	Tools []string
+}
+
+var taskAgents = map[Task][]Agent{
+	TaskAgentLoop: {
+		{Name: "morning_brief", Tools: []string{"catch_me_up_on", "list_records", "read_record"}},
+		{Name: "overnight_at_risk_sweep", Tools: []string{"at_risk_relationships", "catch_me_up_on", "list_records", "log_activity", "read_record", "review_commitments", "whats_slipping_this_week"}},
+	},
+}
+
+// AgentsFor returns the task's declared agents in sorted name order. A
+// task that schedules none returns none.
+func AgentsFor(t Task) []Agent { return taskAgents[t] }
 
 // noPayloadTasks are the tasks whose content must NEVER reach
 // ai_call_payload, whatever the deployment's capture posture says. The

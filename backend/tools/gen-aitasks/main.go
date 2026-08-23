@@ -179,15 +179,16 @@ type embedDef struct {
 // cost-unit rule name), and an optional doc string carried through
 // to the generated constant's comment.
 type taskDef struct {
-	Ladder            []string           `yaml:"ladder"`
-	ExecutionMode     string             `yaml:"execution_mode"`
-	OnBudgetExhausted string             `yaml:"on_budget_exhausted"`
-	Status            string             `yaml:"status"`
-	Sites             []siteDef          `yaml:"sites"`
-	NoPayload         bool               `yaml:"no_payload"`
-	CompanyContext    *companyContextDef `yaml:"company_context"`
-	CostUnit          string             `yaml:"cost_unit"`
-	Doc               string             `yaml:"doc"`
+	Ladder            []string            `yaml:"ladder"`
+	ExecutionMode     string              `yaml:"execution_mode"`
+	OnBudgetExhausted string              `yaml:"on_budget_exhausted"`
+	Status            string              `yaml:"status"`
+	Sites             []siteDef           `yaml:"sites"`
+	Agents            map[string]agentDef `yaml:"agents"`
+	NoPayload         bool                `yaml:"no_payload"`
+	CompanyContext    *companyContextDef  `yaml:"company_context"`
+	CostUnit          string              `yaml:"cost_unit"`
+	Doc               string              `yaml:"doc"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -323,6 +324,9 @@ func (c contract) validate() error {
 			if !siteKinds[s.Kind] {
 				return fmt.Errorf("task %q: site %q has unknown kind %q", name, s.Name, s.Kind)
 			}
+		}
+		if err := validateAgents(name, def); err != nil {
+			return err
 		}
 		if err := def.CompanyContext.validate(name); err != nil {
 			return err
