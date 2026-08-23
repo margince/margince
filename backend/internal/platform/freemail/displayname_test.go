@@ -25,6 +25,11 @@ func TestDisplayNameNamesTheCompanyOrNothingAtAll(t *testing.T) {
 		// one that would be recorded as somebody's employer.
 		{"co.uk", "co.uk"},
 		{"com", "com"},
+		// An IDN suffix comes back in Unicode too. The early return for a bare
+		// suffix once skipped the decode, so "рф" came back as "xn--p1ai" —
+		// transport shown where a name belongs.
+		{"рф", "рф"},
+		{"xn--p1ai", "рф"},
 
 		// Punycode is TRANSPORT. normalize folds a Unicode domain to its xn--
 		// form because that is what a mail header carries; titling that form

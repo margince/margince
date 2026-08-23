@@ -51,6 +51,12 @@ func DisplayName(domain string) string {
 	// and "com" are on the ICANN list and are nobody's company; "internal" and
 	// "localhostonly" are not.
 	if suffix, icann := publicsuffix.PublicSuffix(normalized); icann && suffix == normalized {
+		// Decoded on the way out like every other return: an IDN suffix is
+		// normalized to punycode on the way in, and handing back "xn--p1ai"
+		// where the input said "рф" shows transport where a name belongs.
+		if unicodeSuffix, err := idna.ToUnicode(normalized); err == nil {
+			return unicodeSuffix
+		}
 		return normalized
 	}
 	label := RegistrableLabel(normalized)

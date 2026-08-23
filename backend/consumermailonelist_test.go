@@ -142,6 +142,19 @@ var providers = []string{gmail, "outlook.com"}`,
 			want: 1,
 		},
 		{
+			name: "a raw-string list, which the prefilter regex once dropped",
+			code: "package p\nvar providers = []string{`gmail.com`, `outlook.com`}",
+			want: 1,
+		},
+		{
+			name: "a CHAIN of constants, where one indirection hid the list",
+			code: `package p
+const gmailBase = "gmail.com"
+const gmail = gmailBase
+var providers = []string{gmail, "outlook.com"}`,
+			want: 1,
+		},
+		{
 			name: "providers as VALUES rather than keys",
 			code: `package p
 var byRegion = map[string]string{"de": "gmx.de", "fr": "gmail.com"}`,
@@ -221,15 +234,23 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 // a real list gets dropped before anything looks at it — which is exactly what
 // the sampled version did to `laposte.net`.
 //
-// It reads the file's own quoted tokens and asks the set about each, rather
+// It reads the file's own string tokens and asks the set about each, rather
 // than asking the file about each of 8,758 domains: same answer, and it turns
 // a whole-tree sweep from a minute into a second.
-var quotedToken = regexp.MustCompile(`"([^"\n]{3,255})"`)
+//
+// BOTH string forms, because Go has two and the detector below reads both:
+// `strconv.Unquote` accepts a raw backtick literal, so a prefilter matching
+// only double quotes would drop the file before the census ever parsed it —
+// which is precisely the "narrower than the detector" failure this file exists
+// to describe, reappearing in the shortcut meant to make it cheap.
+var stringToken = regexp.MustCompile("\"([^\"\n]{3,255})\"|`([^`]{3,255})`")
 
 func namesAnyProvider(code string) bool {
-	for _, match := range quotedToken.FindAllStringSubmatch(code, -1) {
-		if looksLikeADomain(match[1]) {
-			return true
+	for _, match := range stringToken.FindAllStringSubmatch(code, -1) {
+		for _, group := range match[1:] {
+			if group != "" && looksLikeADomain(group) {
+				return true
+			}
 		}
 	}
 	return false
@@ -253,26 +274,37 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 	// Same file only. A constant imported from elsewhere would need the type
 	// checker, and a list assembled across package boundaries is not a shape
 	// anything here writes.
+	//
+	// Resolved to a FIXED POINT, because `const a = "gmail.com"` and
+	// `const b = a` chain: a single pass sees only the literal, and `b` — the
+	// name the list actually uses — stays unknown. One indirection is enough to
+	// hide a list, so the loop runs until nothing new is learned.
 	constants := map[string]string{}
-	ast.Inspect(file, func(n ast.Node) bool {
-		spec, ok := n.(*ast.ValueSpec)
-		if !ok {
+	for {
+		learned := false
+		ast.Inspect(file, func(n ast.Node) bool {
+			spec, ok := n.(*ast.ValueSpec)
+			if !ok {
+				return true
+			}
+			for i, name := range spec.Names {
+				if i >= len(spec.Values) {
+					continue
+				}
+				if _, known := constants[name.Name]; known {
+					continue
+				}
+				if value, ok := stringValue(spec.Values[i], constants); ok {
+					constants[name.Name] = value
+					learned = true
+				}
+			}
 			return true
+		})
+		if !learned {
+			break
 		}
-		for i, name := range spec.Names {
-			if i >= len(spec.Values) {
-				continue
-			}
-			basic, ok := spec.Values[i].(*ast.BasicLit)
-			if !ok || basic.Kind != token.STRING {
-				continue
-			}
-			if value, err := strconv.Unquote(basic.Value); err == nil {
-				constants[name.Name] = value
-			}
-		}
-		return true
-	})
+	}
 
 	var found []string
 	ast.Inspect(file, func(n ast.Node) bool {
