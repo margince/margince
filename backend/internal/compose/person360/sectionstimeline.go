@@ -310,6 +310,11 @@ func (s *Service) profileFieldsSection(ctx context.Context, tx pgx.Tx, personID 
 // would silently lose every correction.
 func profileFieldClaimPath(field string) string { return "profile_field:" + field }
 
+// Held by: TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger
+// (backend/profilefieldreaders_test.go) — it censuses every statement that
+// serves a value from that table and requires each to overlay the verdict, so a
+// second render path fails rather than quietly serving the overridden claim.
+//
 // readProfileFields is every read of person_profile_field that RENDERS it to a
 // reader — the 360 section and the standalone sidecar endpoint both come
 // through here.

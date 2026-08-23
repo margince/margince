@@ -11,6 +11,10 @@ package people
 import "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 
 // EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs".
+//
+// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/employmentcurrency_test.go)
+// — it reads every hand-written Go source outside this file for a hand-spelled
+// `ended_at` currency test, so a second definition fails rather than drifting.
 // `date` is the
 // end-date expression at the call site: a column on a read, the incoming value
 // on a create, the patched-or-existing one on an update.
@@ -58,6 +62,10 @@ func EmploymentIsCurrentSQL(date string) string {
 // the flag AND the employment still being theirs. Spelled once so a new reader
 // cannot trust the flag alone, which is what let somebody go on counting at a
 // company after their last day had passed.
+//
+// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/employmentcurrency_test.go)
+// — the same census: a reader that pairs the flag with its own date test is a
+// second definition and fails there.
 //
 // READERS, not every mention of the column. The uniqueness guards must stay
 // date-BLIND and deliberately do — `employmentedge.go`, `domaintriageresolve.go`
