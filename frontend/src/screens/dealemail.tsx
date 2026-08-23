@@ -23,9 +23,7 @@ import { useT } from "../i18n";
 import { ComposeModal } from "./compose";
 import { useDealStatusCard } from "./dealstatus";
 
-export function DealEmailAside({
-  dealId,
-}: Readonly<{ dealId: string; dealName: string }>) {
+export function DealEmailAside({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
   const [composing, setComposing] = useState(false);
   const status = useDealStatusCard(dealId);

@@ -119,6 +119,13 @@ type StatusInput struct {
 	// never replaces it, which is why it rides in the summary rather than
 	// being something the reply may set.
 	RecommendedMove string `json:"recommended_move"`
+	// ReplyTo is the mail an answer is owed on, and it rides here for the
+	// FINGERPRINT rather than for the prompt. It is read from the whole
+	// timeline window while this summary carries only the newest rows, so a
+	// deal with enough non-mail rows above the mail could otherwise change
+	// which message is owed an answer without changing the key — and the card
+	// would keep saying "Send an email" while somebody waits.
+	ReplyTo string `json:"reply_to,omitempty"`
 }
 
 // DealIn is the deal as the prompt sees it. No stage NAME: the facts carry

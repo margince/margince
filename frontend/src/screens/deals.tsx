@@ -3465,11 +3465,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 overlay ? undefined : (
                   <>
                     <DealRoomAside dealId={id} dealName={deal.name} />
-                    <DealEmailAside dealId={id} dealName={deal.name} />
+                    <DealEmailAside dealId={id} />
                   </>
                 )
               }
-              asideLabel={t("room.card.title")}
             >
               <DealLead dealId={id} overlay={overlay} />
               <div style={{ marginBottom: 16 }}>
