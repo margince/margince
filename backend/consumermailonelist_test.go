@@ -142,6 +142,15 @@ var providers = []string{gmail, "outlook.com"}`,
 			want: 1,
 		},
 		{
+			// The escape dimension: the detector unquotes, so it counts this —
+			// and a prefilter comparing the RAW captured text dropped the file
+			// before anything parsed it.
+			name: "providers written with escapes, which unquote to the real names",
+			code: `package p
+var providers = []string{"gmail\x2ecom", "outlook\u002ecom"}`,
+			want: 1,
+		},
+		{
 			name: "a raw-string list, which the prefilter regex once dropped",
 			code: "package p\nvar providers = []string{`gmail.com`, `outlook.com`}",
 			want: 1,
@@ -238,19 +247,33 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 // than asking the file about each of 8,758 domains: same answer, and it turns
 // a whole-tree sweep from a minute into a second.
 //
-// BOTH string forms, because Go has two and the detector below reads both:
-// `strconv.Unquote` accepts a raw backtick literal, so a prefilter matching
-// only double quotes would drop the file before the census ever parsed it —
-// which is precisely the "narrower than the detector" failure this file exists
-// to describe, reappearing in the shortcut meant to make it cheap.
-var stringToken = regexp.MustCompile("\"([^\"\n]{3,255})\"|`([^`]{3,255})`")
+// The shortcut must be at least as BROAD as the detector in every dimension the
+// detector reads, and there are two:
+//
+//   - the STRING FORM. Go has two, and `strconv.Unquote` accepts both, so a
+//     pattern matching only double quotes drops a file spelling
+//     "`gmail.com`" before anything parses it.
+//   - the ESCAPE. `"gmail\x2ecom"` unquotes to `gmail.com` — the detector
+//     counts it, and a prefilter testing the RAW captured text does not. So the
+//     token is unquoted here too, by the same function, rather than compared as
+//     written.
+//
+// Both were wrong in the first draft, in the same direction, which is the
+// failure this whole file describes: a shortcut narrower than the thing it
+// feeds reports nothing and looks exactly like a clean tree.
+var stringToken = regexp.MustCompile("\"(?:[^\"\\\n]|\\\\.)*\"|`[^`]*`")
 
 func namesAnyProvider(code string) bool {
-	for _, match := range stringToken.FindAllStringSubmatch(code, -1) {
-		for _, group := range match[1:] {
-			if group != "" && looksLikeADomain(group) {
-				return true
-			}
+	for _, token := range stringToken.FindAllString(code, -1) {
+		value, err := strconv.Unquote(token)
+		if err != nil {
+			// Unparseable as a literal: admit the file rather than drop it. A
+			// prefilter that guesses wrong must guess toward PARSING, since the
+			// census behind it is the thing that decides.
+			return true
+		}
+		if looksLikeADomain(value) {
+			return true
 		}
 	}
 	return false
