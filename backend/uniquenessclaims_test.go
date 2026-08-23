@@ -271,7 +271,9 @@ type Reader interface{ Read() }
 type A struct {
 	// A.ID is the one spelling of a probe handle.
 	ID string
+	// io.Reader here is the one reader this probe embeds.
 	io.Reader
+	// fmt.Stringer here is the one stringer this probe embeds.
 	fmt.Stringer
 }
 
@@ -327,21 +329,17 @@ const (
 		"method B.Close",
 		"method Store.Get",
 		"type A",
+		"type A.<embedded fmt.Stringer>",
+		"type A.<embedded io.Reader>",
 		"type A.ID",
 	}
 	if !slices.Equal(labels, want) {
 		t.Errorf("labels = %q, want %q", labels, want)
 	}
-	// The embedded fields carry no doc in the probe above, so they are named
-	// here directly: unqualified, both would key as `?` and one register entry
-	// would authorise a claim on the other.
-	embedded := []string{
-		genericReceiverName(&ast.SelectorExpr{X: ast.NewIdent("io"), Sel: ast.NewIdent("Reader")}),
-		genericReceiverName(&ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Stringer")}),
-	}
-	if !slices.Equal(embedded, []string{"io.Reader", "fmt.Stringer"}) {
-		t.Errorf("embedded names = %q, want package-qualified and distinct", embedded)
-	}
+	// The embedded labels above come through `recordFields`' embedded branch on
+	// the real walk, which is what makes them evidence: asserting
+	// `genericReceiverName` alone would leave that branch unreached, so losing
+	// the owner scope or the `<embedded …>` shape would keep this green.
 }
 
 func TestABindingDoesNotOpenTheDocCommentItSitsIn(t *testing.T) {
