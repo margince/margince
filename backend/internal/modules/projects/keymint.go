@@ -37,11 +37,42 @@ import (
 // a hyphen plus digits, so the stem stops well short of the ceiling.
 const keyStemMaxLen = 8
 
+// projectKeyField is the body field a caller may no longer send, named once so
+// the refusal and the check that raises it cannot drift apart.
+const projectKeyField = "key"
+
 // keyMintAttempts bounds the retry loop. Each attempt asks for the next free
-// number for one stem, so a second attempt is only needed when another
-// transaction took that number in between. Three is generous for a race that
-// needs two projects with the same stem created in the same instant.
-const keyMintAttempts = 3
+// number for one stem, so an attempt is only spent when ANOTHER transaction
+// committed that number in between — a race that needs two creates of the same
+// stem in the same instant. The bound exists so a bug cannot spin forever; it
+// is set well above the number of simultaneous creates of one stem any human
+// workflow produces, because exhausting it means a 500 for a caller who did
+// nothing wrong.
+const keyMintAttempts = 12
+
+// keySuffixCeiling is the largest number this generator will mint, and the
+// largest it will read back out of an existing key.
+//
+// It is here because the suffix is read with a cast to a Postgres int: a key
+// the OLD contract allowed a caller to choose ("AB-9999999999") would overflow
+// that cast and fail every create of a project whose name gives the stem AB.
+// Numbers above the ceiling are ignored rather than read, so such a key blocks
+// its own number and nothing else.
+const keySuffixCeiling = 100000
+
+// keyInsertLockTimeout bounds how long ONE insert attempt waits on the unique
+// index before giving the number up.
+//
+// Without it a create can wait indefinitely: another transaction that inserted
+// the same candidate and has not committed holds the index entry, and the
+// waiter holds its pool connection for as long as that lasts. Enough of those
+// and the pool is gone — for a key nobody chose. With the bound, the wait
+// becomes a lost race, which the loop already knows how to answer: take the
+// next number.
+//
+// A compile-time literal because a GUC value that could come from a request is
+// a GUC value a request can set to "0".
+const keyInsertLockTimeout = "750ms"
 
 // keyFallbackStem is what a name with no usable letters becomes — a name in a
 // script this transliteration does not cover, or one made entirely of
@@ -118,26 +149,46 @@ func keyStem(name string) string {
 // hidden project leaves this function — only the next free integer does.
 func mintProjectKey(ctx context.Context, tx pgx.Tx, name string, taken map[string]bool) (string, error) {
 	stem := keyStem(name)
-	var highest *int32
-	if err := tx.QueryRow(ctx,
-		`SELECT max((substring(key from '^'||$1||'-([0-9]+)$'))::int)
+	// Case-INSENSITIVE, because uq_project_key indexes lower(key): a live key
+	// spelled "ab-3" blocks "AB-3", so a case-sensitive read would hand back a
+	// number the index then refuses. Keys the old contract let callers choose
+	// are exactly where that mismatch lives.
+	//
+	// The suffix is capped before the cast: a key with a number larger than a
+	// Postgres int would otherwise abort this statement, and with it every
+	// create of a project whose name gives this stem.
+	rows, err := tx.Query(ctx,
+		`SELECT substring(lower(key) from '^'||lower($1)||'-([0-9]{1,6})$')::int
 		   FROM project
-		  WHERE key ~ ('^'||$1||'-[0-9]+$') AND archived_at IS NULL`,
-		stem).Scan(&highest); err != nil {
-		return "", fmt.Errorf("read the highest key in use for %q: %w", stem, err)
+		  WHERE lower(key) ~ ('^'||lower($1)||'-[0-9]{1,6}$') AND archived_at IS NULL`,
+		stem)
+	if err != nil {
+		return "", fmt.Errorf("read the numbers in use for key stem %q: %w", stem, err)
 	}
-	next := 1
-	if highest != nil {
-		next = int(*highest) + 1
+	inUse := map[int]bool{}
+	for rows.Next() {
+		var n int
+		if err := rows.Scan(&n); err != nil {
+			rows.Close()
+			return "", fmt.Errorf("read one key number for stem %q: %w", stem, err)
+		}
+		inUse[n] = true
 	}
-	// taken carries the keys this same transaction already minted but has not
-	// inserted yet, which the statement above cannot see.
-	for ; ; next++ {
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("read the numbers in use for key stem %q: %w", stem, err)
+	}
+	// The LOWEST free number rather than max+1, so a number an archived project
+	// gave back is reused instead of leaving a permanent hole. The keys this
+	// same transaction already minted but has not inserted are in `taken`,
+	// which the statement above cannot see.
+	for next := 1; next <= keySuffixCeiling; next++ {
 		candidate := fmt.Sprintf("%s-%d", stem, next)
-		if !taken[candidate] {
+		if !inUse[next] && !taken[candidate] {
 			return candidate, nil
 		}
 	}
+	return "", fmt.Errorf("every key number up to %d is in use for the stem %q", keySuffixCeiling, stem)
 }
 
 // insertProjectRow writes the project with a minted key, retrying when another
@@ -192,6 +243,16 @@ func insertOnce(
 	sp, err := tx.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("open the project-insert savepoint: %w", err)
+	}
+	// Set INSIDE the savepoint, so a rollback takes the setting with it and the
+	// writes that follow this one keep whatever bound their caller chose. The
+	// audit and outbox rows want to WAIT for an unrelated lock rather than
+	// abandon a create over one.
+	if _, err := sp.Exec(ctx, `SELECT set_config('lock_timeout', $1, true)`, keyInsertLockTimeout); err != nil {
+		if rbErr := sp.Rollback(ctx); rbErr != nil {
+			return false, fmt.Errorf("roll the project-insert savepoint back after %v: %w", err, rbErr)
+		}
+		return false, fmt.Errorf("bound the project-insert lock wait: %w", err)
 	}
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
 		id, in.Name, key, in.OrganizationID, in.OwnerID,

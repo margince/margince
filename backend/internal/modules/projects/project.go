@@ -221,8 +221,13 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 // never chose the key, so losing the race means the mint loop tries the next
 // number rather than reporting a conflict.
 func keyRaceLost(err error) bool {
-	constraint, ok := storekit.UniqueViolation(err)
-	return ok && constraint == "uq_project_key"
+	if constraint, ok := storekit.UniqueViolation(err); ok {
+		return constraint == "uq_project_key"
+	}
+	// A lock timeout on the insert is the SAME race seen from the other side:
+	// the holder of this key has not committed yet, so waiting longer would only
+	// hold a pool connection to learn what the next number already answers.
+	return storekit.IsLockTimeout(err)
 }
 
 // submittedDateField names the date input a request carried, preferring the

@@ -186,6 +186,9 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 	if err := requireBodyID("organization_id", req.OrganizationId); err != nil {
 		return CreateProjectInput{}, err
 	}
+	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
+		return CreateProjectInput{}, err
+	}
 	in := CreateProjectInput{
 		Name:           name,
 		OrganizationID: pathID[ids.OrganizationKind](req.OrganizationId),
@@ -226,6 +229,9 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 		}
 		req.Name = &name
 	}
+	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
+		return UpdateProjectInput{}, err
+	}
 	in := UpdateProjectInput{
 		Name:         req.Name,
 		Description:  req.Description,
@@ -243,4 +249,20 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 		in.EndedAt = &req.EndedAt.Time
 	}
 	return in, nil
+}
+
+// refuseCallerChosenKey answers 422 to a body that still carries a `key`.
+//
+// The field left the contract when the server took over minting, and both
+// bodies accept additionalProperties for custom fields — so without this a
+// client that sends `{"key": "NEW"}` gets a 200 and no key change, and believes
+// it renamed the project. Being told is the only outcome that is not a lie: the
+// key is not theirs to set, and a silent drop hides that from the one caller who
+// needs to know it.
+func refuseCallerChosenKey(extra map[string]any) error {
+	if _, sent := extra[projectKeyField]; !sent {
+		return nil
+	}
+	return httperr.Validation(projectKeyField, "read_only",
+		"a project's key is assigned by the server from its name and cannot be set or changed")
 }

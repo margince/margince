@@ -872,3 +872,41 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 		})
 	}
 }
+
+// The minted number is the LOWEST free one for its stem, and "free" is decided
+// the way the uniqueness index decides it: case-insensitively, over live rows
+// only. Both halves have bitten before — a case-sensitive read hands back a
+// number the index then refuses, and max+1 leaves a permanent hole where an
+// archived project gave its number back.
+func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
+	e := Setup(t)
+	org := e.SeedOrg(t, "Stemmed GmbH", nil)
+
+	first := seedProject(e.Admin(), t, e, "Warehouse rollout", org, nil)
+	second := seedProject(e.Admin(), t, e, "Warehouse refresh", org, nil)
+	if k := mintedKey(e.Admin(), t, e, first.ID); k != "WR-1" {
+		t.Fatalf("first minted key = %q, want WR-1", k)
+	}
+	if k := mintedKey(e.Admin(), t, e, second.ID); k != "WR-2" {
+		t.Fatalf("second minted key = %q, want WR-2", k)
+	}
+
+	// Archiving frees WR-1, so the next project with this stem takes it back
+	// rather than starting above the highest number ever used.
+	if _, err := e.Projects.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	third := seedProject(e.Admin(), t, e, "Warehouse rebuild", org, nil)
+	if k := mintedKey(e.Admin(), t, e, third.ID); k != "WR-1" {
+		t.Errorf("after archiving WR-1 the next project minted %q, want WR-1 reused", k)
+	}
+
+	// A key spelled in lower case still blocks its number: uq_project_key
+	// indexes lower(key), so a case-sensitive read would mint a key the index
+	// refuses and turn a create into a 500.
+	e.WsExec(t, `UPDATE project SET key = 'wr-9' WHERE id = $1`, second.ID)
+	fourth := seedProject(e.Admin(), t, e, "Warehouse revamp", org, nil)
+	if k := mintedKey(e.Admin(), t, e, fourth.ID); strings.EqualFold(k, "wr-9") {
+		t.Errorf("minted %q over a live lower-cased key; the index would refuse it", k)
+	}
+}

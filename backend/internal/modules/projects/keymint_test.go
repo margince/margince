@@ -5,6 +5,7 @@ package projects
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -50,5 +51,25 @@ func TestEveryMintedKeyFitsTheColumnsShape(t *testing.T) {
 		if !keyShape.MatchString(key) {
 			t.Errorf("the key minted for %q is %q, which project_key_shape refuses", name, key)
 		}
+	}
+}
+
+// A body that still carries a key must be TOLD, not quietly obeyed by dropping
+// it: both project bodies accept additionalProperties for custom fields, so a
+// silent drop would answer 200 to a client that believes it renamed the key.
+func TestABodyStillCarryingAKeyIsRefused(t *testing.T) {
+	t.Parallel()
+	if err := refuseCallerChosenKey(nil); err != nil {
+		t.Fatalf("a body with no extra fields was refused: %v", err)
+	}
+	if err := refuseCallerChosenKey(map[string]any{"cf_region": "EMEA"}); err != nil {
+		t.Fatalf("a body with an ordinary custom field was refused: %v", err)
+	}
+	err := refuseCallerChosenKey(map[string]any{"key": "MINE"})
+	if err == nil {
+		t.Fatal("a body naming a key was accepted; the caller would believe it set one")
+	}
+	if !strings.Contains(err.Error(), "cannot be set") {
+		t.Errorf("the refusal does not say the key is not the caller's to set: %v", err)
 	}
 }

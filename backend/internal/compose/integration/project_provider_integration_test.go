@@ -42,23 +42,38 @@ func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
-// A key an agent sends is NOT the key the project gets. The create body carries
-// custom fields (additionalProperties), so a stray `key` lands there and is
-// dropped like any other name the catalog does not know — what matters is that
-// it never becomes the project's subject-line matcher, because an agent that
-// could choose one could file every bracketed mention of a word onto a record.
+// An agent that names a key is REFUSED, not quietly obeyed with a different
+// key. The create body carries custom fields, so a stray `key` would otherwise
+// land in that bag and be dropped in silence — and an agent told its create
+// succeeded would believe it chose the matcher that files a company's mail.
+//
+// The refusal is what stops that: a key an agent could choose is a key it could
+// point at every bracketed mention of a common word.
 func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
 	org := e.SeedOrg(t, "Minted GmbH", nil)
 
-	created, err := p.Create(ctx, datasource.CreateInput{
+	_, err := p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields: map[string]any{
 			"name": "Warehouse rollout", "organization_id": org.String(), "key": "MINE",
 		},
 		Source: "agent",
+	})
+	if err == nil {
+		t.Fatal("the seam accepted a key the caller named; the agent would believe it chose the matcher")
+	}
+	if !strings.Contains(err.Error(), "cannot be set") {
+		t.Errorf("the refusal does not say the key is not the caller's to set: %v", err)
+	}
+
+	// And the ordinary create still mints one from the NAME.
+	created, err := p.Create(ctx, datasource.CreateInput{
+		EntityType: datasource.EntityProject,
+		Fields:     map[string]any{"name": "Warehouse rollout", "organization_id": org.String()},
+		Source:     "agent",
 	})
 	if err != nil {
 		t.Fatalf("create through the seam: %v", err)
@@ -67,14 +82,8 @@ func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Key == nil {
-		t.Fatal("the project carries no key; the server mints one for every project")
-	}
-	if *got.Key == "MINE" {
-		t.Fatalf("the agent's key %q became the project's matcher", *got.Key)
-	}
-	if !strings.HasPrefix(*got.Key, "WR-") {
-		t.Errorf("minted key %q does not carry the stem the NAME gives", *got.Key)
+	if got.Key == nil || !strings.HasPrefix(*got.Key, "WR-") {
+		t.Errorf("minted key %v does not carry the stem the name gives", got.Key)
 	}
 }
 
