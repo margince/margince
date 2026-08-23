@@ -60,13 +60,23 @@ const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
 //	"public"."user_record_view"      quoted, in any combination
 //	UPDATE ONLY user_record_view     the inheritance-scoped form
 //
-// The repeated qualifier does not cost the word boundary that keeps the
-// near-neighbour `user_record_view_archive` out: `_` is a word character, so
-// `user_record_view\b` cannot match the longer name. Both qualified and bare
-// spellings of that table are planted as must-MISS for the same reason.
+// The NAME's end is a delimiter, not `\b`. `$` and `.` are legal in a Postgres
+// identifier and are not word characters, so a boundary alone matched
+// `user_record_view$archive` and `"user_record_view.extra"` — different tables,
+// reported as this one. The unquoted branch requires a character that cannot
+// continue an identifier; the quoted branch requires the closing quote.
+//
+// And the quoted branch is case-SENSITIVE while the rest is not, because that
+// is Postgres: an unquoted `USER_RECORD_VIEW` folds to this table, a quoted
+// `"USER_RECORD_VIEW"` is a different one. Go's regexp has no lookahead, so the
+// distinction is two branches rather than a negation.
+//
+// None of it costs the near-neighbour: `user_record_view_archive` continues
+// with `_`, which the unquoted branch refuses. Its bare, qualified and ONLY
+// forms are all planted as must-MISS.
 var writesViewBaseline = regexp.MustCompile(
 	`(?is)(INSERT\s+INTO|UPDATE(?:\s+ONLY)?)\s+` +
-		`(?:"?[\w$]+"?\s*\.\s*)*"?user_record_view\b`)
+		`(?:"?[\w$]+"?\s*\.\s*)*(?:(?-i:"user_record_view")|user_record_view(?:[^\w$"]|$))`)
 
 // TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
 // comment names.
@@ -184,6 +194,8 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		// UPDATE ONLY: inheritance-scoped, and it rewinds just as hard.
 		"UPDATE ONLY user_record_view SET last_viewed_at = $1",
 		"UPDATE ONLY public.user_record_view SET last_viewed_at = $1",
+		// The statement may simply END after the name.
+		"UPDATE user_record_view",
 	}
 	for _, statement := range caught {
 		if !writesViewBaseline.MatchString(statement) {
@@ -202,6 +214,13 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		"INSERT INTO public.user_record_view_archive (user_id) VALUES ($1)",
 		"INSERT INTO tenant1.public.user_record_view_archive (user_id) VALUES ($1)",
 		"UPDATE ONLY user_record_view_archive SET last_viewed_at = $1",
+		// `$` and `.` are legal in a Postgres identifier and are not word
+		// characters, so a `\b` alone reported both of these as this table.
+		"INSERT INTO user_record_view$archive (user_id) VALUES ($1)",
+		`INSERT INTO "user_record_view.extra" (user_id) VALUES ($1)`,
+		// A QUOTED identifier is case-sensitive in Postgres, so this names a
+		// different table than the one the gate protects.
+		`INSERT INTO "USER_RECORD_VIEW" (user_id) VALUES ($1)`,
 	}
 	for _, statement := range missed {
 		if writesViewBaseline.MatchString(statement) {
