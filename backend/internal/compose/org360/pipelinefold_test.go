@@ -10,6 +10,7 @@ package org360
 // carry beside it.
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -25,17 +26,16 @@ func day(t *testing.T, value string) time.Time {
 	return parsed
 }
 
-// deal builds one scanned row the way the DEAL WRITER leaves it: an amount in
-// the deal's own currency, and — for an open deal — no frozen conversion rate,
-// because the rate freezes on close. A foreign-currency open deal therefore
-// carries a nil valueBase, which is exactly what the database returns.
+// deal builds one scanned row the way the READ leaves it: an amount in the
+// deal's own currency, and — for a foreign-currency deal — the converted figure
+// beside the date of the rate that produced it. A nil rateDate is the row the
+// database returns when the installation holds no usable rate for the pair, and
+// it carries no converted figure either.
 func deal(amount *int64, currency string, rateDate *time.Time) openRow {
 	row := openRow{
 		id: ids.NewV7(), name: "Deal", baseCcy: "EUR",
 		amountMinor: amount, currency: &currency, rateDate: rateDate,
 	}
-	// A closed-and-reopened deal is the only open row that carries a frozen
-	// rate, and the generated column follows the rate.
 	if amount != nil && currency != "EUR" && rateDate != nil {
 		converted := *amount
 		row.valueBase = &converted
@@ -184,5 +184,31 @@ func TestAPipelineWithNoExpectedCloseNamesNoDate(t *testing.T) {
 
 	if out.NextCloseOn != nil {
 		t.Fatalf("NextCloseOn = %v, want nil — no deal here names a close date", out.NextCloseOn)
+	}
+}
+
+// A sum that wraps past int64 is a plausible-looking wrong number, and a
+// plausible wrong number about money is worse than no number.
+//
+// Each conversion is bounded on its own — Postgres refuses a round() that will
+// not fit a bigint — so the only place a total can wrap is the addition here,
+// which is why the guard is on the fold rather than on the query.
+func TestADealThatWouldOverflowTheTotalIsCountedAndLeftOutOfIt(t *testing.T) {
+	huge := int64(math.MaxInt64 - 100)
+	out := foldPipeline([]openRow{
+		deal(amount(huge), "EUR", nil),
+		deal(amount(1_000), "EUR", nil),
+	})
+	if out.ValueMinorBase != huge {
+		t.Errorf("total = %d, want %d — the second deal must not wrap the sum", out.ValueMinorBase, huge)
+	}
+	if out.OpenCount != 2 {
+		t.Errorf("open_count = %d, want 2 — a deal left out of the total is still in the pipeline", out.OpenCount)
+	}
+	// priced_count is what tells the reader the figure covers part of the
+	// pipeline. Counting the dropped deal as priced would claim the total
+	// includes it.
+	if out.Priced != 1 {
+		t.Errorf("priced = %d, want 1 — the figure covers one of the two deals and must say so", out.Priced)
 	}
 }

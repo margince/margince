@@ -115,8 +115,10 @@ type pipeline struct {
 	// nil when none of them names one.
 	NextCloseOn *time.Time
 	// Converted counts the deals that needed a rate to enter the sum, and
-	// FXAsOf is the OLDEST rate date among them — each deal freezes its rate on
-	// its own date, so that is the furthest back any part of the figure reaches.
+	// FXAsOf is the OLDEST rate date among them. Each deal converts at the
+	// latest rate on or before the read's as-of day, and installations do not
+	// hold every currency's rate for every day, so the dates behind one total
+	// can differ — this is the furthest back any part of the figure reaches.
 	// Without both, the total is a cross-currency sum with no conversion source
 	// behind it, which is what plan §4.2 forbids showing.
 	Converted int
@@ -135,9 +137,10 @@ type pipeline struct {
 // every number it reports: a count capped at the fetch is one a rep cannot tell
 // from a real one, a digest over a fetched page leaves a dismissal in force when
 // a deal outside it changes, and a stalled list cut before dismissals are
-// applied shrinks by one each time the rep judges a row. It reads seven narrow
-// values per open deal of one account — six columns through the organization_id
-// index, plus a count served by idx_dsh_deal.
+// applied shrinks by one each time the rep judges a row. It reads one narrow row
+// per open deal of one account — columns through the organization_id index, a
+// count served by idx_dsh_deal, and one rate lookup served by
+// idx_fx_rate_lookup.
 //
 // The stall flag is folded with deals.IsStalled — the same call that stamps the
 // wire flag — rather than filtered in SQL. The deals module's SQL spelling of the
@@ -160,26 +163,25 @@ func openPipeline(
 	// instant.
 	basePos := arg(baseCcy)
 	asOfPos := arg(now.UTC().Format(time.DateOnly))
-	// An OPEN deal has no frozen rate — the rate freezes on close
-	// (deals.deal_advance), so amount_minor_base is null until then. It is
-	// converted here at the latest rate on or before the as-of day, which is
-	// what lets the page price a pipeline held in more than one currency.
+	// An OPEN deal has no frozen rate. The rate freezes on close
+	// (deals.deal_advance), and this query reads only open deals
+	// (openDealsWhere), so `amount_minor_base` is null on every row it returns
+	// and `fx_rate_date` names nothing that has been applied to anything: the
+	// schema constrains the two together only for a CLOSED deal
+	// (deal_closed_fx), so a stored date here can outlive the rate beside it.
+	// Neither stored column is read.
 	//
-	// The stored rate still wins where there is one: a deal that has frozen
-	// its rate reports the figure it froze, so nothing already converted is
-	// re-priced by a read. Only the open, unfrozen, foreign-currency case
-	// reaches the lateral join.
-	//
-	// rate_date comes back beside the amount because the fold needs it: a
-	// converted total carries the OLDEST rate date behind it, and a figure
-	// with no date to name is refused rather than counted (plan §4.2).
+	// The amount is converted at the latest rate on or before the as-of day,
+	// and its own rate_date comes back with it. They are ONE answer and must
+	// stay one: a date coalesced from somewhere else could name a day whose
+	// rate is not the rate the figure was computed at, which is the unlabelled
+	// cross-currency total in a more convincing disguise (plan §4.2).
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, d.wait_until,
 		       (SELECT count(*) FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.from_stage_id IS DISTINCT FROM h.to_stage_id),
 		       d.amount_minor,
-		       coalesce(d.amount_minor_base,
-		                round(d.amount_minor * live.rate)::bigint),
+		       round(d.amount_minor * live.rate)::bigint,
 		       -- Cast both DATE columns to timestamps: pgx decodes a bare date
 		       -- (OID 1082) into its own Date type, not into time.Time, and the
 		       -- scan below fails at runtime rather than at compile time. Only
@@ -187,13 +189,12 @@ func openPipeline(
 		       -- here rather than left to the driver.
 		       d.expected_close_date::timestamptz,
 		       d.currency,
-		       coalesce(d.fx_rate_date, live.rate_date)::timestamptz
+		       live.rate_date::timestamptz
 		FROM deal d
 		LEFT JOIN LATERAL (
 			SELECT r.rate, r.rate_date
 			  FROM fx_rate r
-			 WHERE d.amount_minor_base IS NULL
-			   AND d.currency IS DISTINCT FROM %s
+			 WHERE d.currency IS DISTINCT FROM %s
 			   AND r.from_currency = d.currency
 			   AND r.to_currency = %s
 			   AND r.rate_date <= %s::date

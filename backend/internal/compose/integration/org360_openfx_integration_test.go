@@ -127,27 +127,80 @@ func TestAnOpenDealInACurrencyWithNoRateStaysCountedAndUnpriced(t *testing.T) {
 	}
 }
 
-func TestAClosedDealKeepsTheRateItFroze(t *testing.T) {
+func TestTheLatestRateOnOrBeforeTheAsOfDayIsTheOneUsed(t *testing.T) {
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	org := ids.NewV7()
 	e.WsExec(t, `INSERT INTO organization (id, display_name, lifecycle, source, captured_by)
-		VALUES ($1, 'Frozen Rate GmbH', 'customer', 'manual', 'human:test')`, org)
+		VALUES ($1, 'Rate Ladder GmbH', 'customer', 'manual', 'human:test')`, org)
+	seedOpenFXDeal(t, e, st, org, 20_000, "USD")
 
-	// A deal that froze at 0.8 while the rate sheet now says 0.5. A READ must
-	// not re-price it: the figure it closed at is the figure it closed at, and
-	// re-converting history on every page load is exactly what freezing exists
-	// to prevent.
-	closedAt := time.Date(2020, 6, 1, 12, 0, 0, 0, time.UTC)
-	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, fx_rate_date,
-		         pipeline_id, stage_id, organization_id, status, closed_at, source, captured_by)
-		VALUES ($1, 'Frozen Deal', 20000, 'USD', 0.8, $2::date, $3, $4, $5, 'won', $6, 'manual', 'human:test')`,
-		ids.NewV7(), closedAt, st.pipeline, st.open, org, closedAt)
+	// Three rates: an older one, the one that should win, and one dated AFTER
+	// the read's as-of day. Picking the newest row outright would take the
+	// future rate; picking the oldest would take 0.7. Only "the latest on or
+	// before the as-of day" gives 0.9, and only a ladder like this can tell the
+	// three apart.
+	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date) VALUES
+		('USD', 'EUR', 0.7, DATE '2020-01-01'),
+		('USD', 'EUR', 0.9, DATE '2020-06-01'),
+		('USD', 'EUR', 0.2, DATE '2099-01-01')`)
+
+	page, err := orgSurfaceService(e).Assemble(e.Admin(), orgIDOf(org))
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	got := page.StateStrip.Commercial
+	if got.OpenPipelineMinorBase == nil {
+		t.Fatal("open_pipeline_minor_base is absent; the USD deal did not convert")
+	}
+	if *got.OpenPipelineMinorBase != 18_000 {
+		t.Errorf("open_pipeline_minor_base = %d, want 18000 (200.00 USD at 0.9) — 14000 means the oldest rate won, 4000 means a future rate did",
+			*got.OpenPipelineMinorBase)
+	}
+	// The date reported is the date of the rate actually applied, not some
+	// other rate's day: a figure whose as-of names a rate it was not computed
+	// at is the unlabelled cross-currency total wearing a label.
+	if got.FxAsOf == nil {
+		t.Fatal("no fx_as_of on a converted total")
+	}
+	if want := "2020-06-01"; got.FxAsOf.Format(time.DateOnly) != want {
+		t.Errorf("fx_as_of = %s, want %s — the date must name the rate the amount was computed at",
+			got.FxAsOf.Format(time.DateOnly), want)
+	}
+}
+
+func TestAStaleRateDateOnAnOpenDealDoesNotBecomeTheAsOf(t *testing.T) {
+	e := Setup(t)
+	st := seedOpenFXPipeline(t, e)
+	org := ids.NewV7()
+	e.WsExec(t, `INSERT INTO organization (id, display_name, lifecycle, source, captured_by)
+		VALUES ($1, 'Stale Date GmbH', 'customer', 'manual', 'human:test')`, org)
+
+	// An open deal may carry fx_rate_date with no fx_rate_to_base beside it —
+	// the schema constrains the pair only for a CLOSED deal (deal_closed_fx).
+	// That stored date describes no rate that has been applied to anything, so
+	// reporting it as the as-of would name a day whose rate is not the rate the
+	// figure was computed at.
+	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_date,
+		         pipeline_id, stage_id, organization_id, status, source, captured_by)
+		VALUES ($1, 'Stale Date Deal', 20000, 'USD', DATE '2019-01-01', $2, $3, $4, 'open', 'manual', 'human:test')`,
+		ids.NewV7(), st.pipeline, st.open, org)
 	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
-		VALUES ('USD', 'EUR', 0.5, DATE '2020-02-01')`)
+		VALUES ('USD', 'EUR', 0.9, DATE '2020-06-01')`)
 
-	stored := e.WsCount(t, `SELECT amount_minor_base FROM deal WHERE organization_id = $1`, org)
-	if stored != 16_000 {
-		t.Errorf("the closed deal's stored base amount = %d, want 16000 (200.00 USD at the 0.8 it froze) — a later rate must not reach it", stored)
+	page, err := orgSurfaceService(e).Assemble(e.Admin(), orgIDOf(org))
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	got := page.StateStrip.Commercial
+	if got.OpenPipelineMinorBase == nil || *got.OpenPipelineMinorBase != 18_000 {
+		t.Fatalf("open_pipeline_minor_base = %v, want 18000 — the live rate is what priced it", got.OpenPipelineMinorBase)
+	}
+	if got.FxAsOf == nil {
+		t.Fatal("no fx_as_of on a converted total")
+	}
+	if want := "2020-06-01"; got.FxAsOf.Format(time.DateOnly) != want {
+		t.Errorf("fx_as_of = %s, want %s — the deal's own stale fx_rate_date describes no applied rate and must not be reported",
+			got.FxAsOf.Format(time.DateOnly), want)
 	}
 }

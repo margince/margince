@@ -12813,7 +12813,7 @@ export interface components {
                 converted_count: number;
                 /**
                  * Format: date
-                 * @description The OLDEST rate date among the converted deals: each freezes its rate on its own issue date, so this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
+                 * @description The OLDEST rate date among the converted deals. An open deal has frozen no rate — that happens on close — so each converts at the latest rate stored on or before this read's day, and an installation does not hold every currency's rate for every day: the dates behind one total can differ, and this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
                  */
                 fx_as_of?: string | null;
                 /** @description The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the workspace's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is. */
