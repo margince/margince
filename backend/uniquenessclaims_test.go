@@ -27,6 +27,16 @@ package backendarch
 // None of those was found by a gate. Every one was found by a human re-reading
 // a file for some other reason, months later.
 //
+// The class is broader than prose, and the sharpest example is one rung more
+// concrete: an e2e spec asserted the relink search box reads "Person,
+// Organisation, Deal, Lead oder Projekt suchen". Projects joined the searchable
+// kinds, the string grew a fifth, and nothing derived either the sentence or
+// the spec's copy of it from the set they both describe. It surfaced five
+// merges later, in an unrelated lane. That is the same defect wearing a
+// literal's clothes instead of a comment's — a claim about a set, with no
+// deriver — which is why the rule below is about claims nothing holds rather
+// than about comments specifically.
+//
 // THIS GATE DOES NOT AUDIT THE CLAIMS. It cannot: whether a claim is true is a
 // question about the whole tree, and there are 641 of them. What it does is
 // make the class stop GROWING, which is the half a test can hold:
