@@ -472,33 +472,33 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 		t.Errorf("a prompt assembled with `+` is not read whole: %q", joined)
 	}
 	// The tree really does hold the constants the rule is written for, so the
-	// naming it keys on is the tree's rather than an invention.
+	// naming it keys on is the tree's rather than an invention — and it does NOT
+	// count a provenance label that ends in the same word, which would fire on a
+	// package whose hand-typed version is legitimate.
+	//
+	// Both maps come from ONE walk. Parsing the whole prompt surface twice to
+	// answer two questions about the same declarations is the cost this gate pays
+	// on every `make check-backend`.
 	found := map[string]bool{}
+	namedLikeAPrompt := map[string]bool{}
 	for _, pkg := range promptSurfacePackages(t) {
 		for _, name := range declaredPrompts(pkg) {
 			found[name] = true
 		}
-	}
-	for _, want := range []string{"briefSystem", "dossierSystem", "growthFitSystem"} {
-		if !found[want] {
-			t.Errorf("the census no longer finds %s — the naming rule has drifted from the tree", want)
-		}
-	}
-	// And it does NOT count a provenance label that ends in the same word, which
-	// would fire on a package whose hand-typed version is legitimate.
-	//
-	// Each label is asserted to EXIST before it is asserted to be excluded. A
-	// name that has been renamed away is absent from `found` for the wrong
-	// reason, and the check would go on passing while proving nothing about the
-	// floor it exists to test.
-	namedLikeAPrompt := map[string]bool{}
-	for _, pkg := range promptSurfacePackages(t) {
 		eachDeclaredString(pkg, isConst, func(name string, value ast.Expr) {
 			if _, isString := stringValue(value, pkg.consts); isString && promptConstantName.MatchString(name) {
 				namedLikeAPrompt[name] = true
 			}
 		}, func(string) {})
 	}
+	for _, want := range []string{"briefSystem", "dossierSystem", "growthFitSystem"} {
+		if !found[want] {
+			t.Errorf("the census no longer finds %s — the naming rule has drifted from the tree", want)
+		}
+	}
+	// Each label is asserted to EXIST before it is asserted to be excluded. A name
+	// renamed away is absent from `found` for the wrong reason, and the check would
+	// go on passing while proving nothing about the floor it exists to test.
 	for _, label := range []string{"trustSystem", "roleSystem", "actorTypeSystem", "transcriptSourceSystem"} {
 		if !namedLikeAPrompt[label] {
 			t.Errorf("%s is gone from the tree, so it no longer tests that the floor excludes a "+
