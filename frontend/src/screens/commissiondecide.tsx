@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
@@ -10,7 +10,12 @@ import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import {
+  isVersionSkew,
+  ProblemError,
+  problemMessageOf,
+  throwProblem,
+} from "./common";
 
 // Moving one commission entry through the ledger's lifecycle.
 //
@@ -122,6 +127,10 @@ export function CommissionDecision({
   const queryClient = useQueryClient();
   const headingId = useId();
   const [open, setOpen] = useState(false);
+  // Where focus goes when the dialog closes. On success the row re-renders
+  // into its new status and the verb that opened this is gone, so without a
+  // named target a keyboard reader is dropped to the top of the document.
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [reason, setReason] = useState("");
   // Only shown after a submit is attempted: a required-field message that
   // appears while the reader is still typing is telling them off for not
@@ -134,14 +143,25 @@ export function CommissionDecision({
 
   const mutation = useMutation({
     mutationFn: () => decide(entry, decision, reason.trim()),
+    onError: (err) => {
+      // A 409 means somebody else moved this entry while the dialog was open,
+      // so the version in hand is stale and pressing again resends it. Refetch
+      // so the retry carries the version the server now holds, and say what
+      // happened rather than showing the server's own "apply commission
+      // decision: version skew".
+      if (err instanceof ProblemError && isVersionSkew(err.problem)) {
+        queryClient.invalidateQueries({
+          queryKey: ["partner-commissions", organizationId],
+        });
+      }
+    },
     onSuccess: () => {
+      // One key, because the outstanding figure above the ledger is derived
+      // from these same rows rather than fetched separately — invalidating a
+      // second key nothing reads would be a line that looks like caution and
+      // does nothing.
       queryClient.invalidateQueries({
         queryKey: ["partner-commissions", organizationId],
-      });
-      // The liability figure on the same page is derived from these rows, so
-      // it goes stale the moment one moves.
-      queryClient.invalidateQueries({
-        queryKey: ["commission-summary", organizationId],
       });
       setOpen(false);
       setReason("");
@@ -161,6 +181,7 @@ export function CommissionDecision({
   return (
     <>
       <Button
+        ref={triggerRef}
         small
         variant={decision === "void" ? "danger" : "primary"}
         onClick={() => setOpen(true)}
@@ -168,7 +189,25 @@ export function CommissionDecision({
       >
         {t(copy.label)}
       </Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={headingId}>
+      <Modal
+        open={open}
+        // A write in flight refuses the dismissal too, not only the Cancel
+        // button. Escape and the backdrop reach past a disabled button, and
+        // closing here would hide the dialog without cancelling the POST —
+        // leaving the row's other verb clickable and two conflicting
+        // decisions racing. If-Match stops both committing; which one wins
+        // would be luck.
+        onClose={() => {
+          if (!mutation.isPending) {
+            setOpen(false);
+          }
+        }}
+        labelledBy={headingId}
+        // On success the row re-renders into its new status and the verb that
+        // opened this is gone, so a keyboard reader would be dropped to the
+        // top of the document without a named target.
+        returnFocusTo={() => triggerRef.current}
+      >
         <h2
           id={headingId}
           className="t-h2"
@@ -209,7 +248,10 @@ export function CommissionDecision({
             role="alert"
             style={{ color: "var(--danger)" }}
           >
-            {problemMessageOf(mutation.error, t)}
+            {mutation.error instanceof ProblemError &&
+            isVersionSkew(mutation.error.problem)
+              ? t("edit.versionSkew")
+              : problemMessageOf(mutation.error, t)}
           </p>
         )}
         <div className="actions">

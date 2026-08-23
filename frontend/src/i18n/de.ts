@@ -292,6 +292,7 @@ export const de = {
   "commission.status.void": "Storniert",
   "commission.outstanding": "Noch offen",
   "commission.column.actions": "Entscheidung",
+  "commission.decide.withheld": "Nicht Ihre Entscheidung",
   "commission.decide.approve": "Freigeben",
   "commission.decide.pay": "Als ausgezahlt markieren",
   "commission.decide.void": "Stornieren",

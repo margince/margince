@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { Badge, DataTable, EmptyState, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
 import { formatMoney, INTL_LOCALE } from "../format/format";
-
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
@@ -188,6 +188,21 @@ function CommissionLedger({
   organizationId: string;
 }>) {
   const t = useT();
+  // The object grant decides whether the verbs are drawn at all. Without this
+  // a read-only seat sees Approve and Reverse on every row and learns from a
+  // 403 that they were never theirs — a control nobody may press is not a
+  // control, it is a promise the server breaks.
+  //
+  // WITHHELD, not absent: the column keeps its place and says the decision is
+  // not this reader's. Dropping it would leave a reader unable to tell "there
+  // is nothing to decide here" from "you may not decide it", which are
+  // opposite facts that make the same shape on screen.
+  //
+  // The object grant is the half a client can know. Row scope is the server's
+  // — a `read` share of the deal carries no authority over its partner's money
+  // (decide.go's write probe) — so a grant-holder can still be refused, and
+  // the dialog surfaces that refusal rather than pretending it cannot happen.
+  const canDecide = useCanWrite("commission", "update");
   return (
     <div data-testid="commission-ledger">
       <DataTable
@@ -240,18 +255,33 @@ function CommissionLedger({
             // there is no precondition the reader could clear.
             key: "decision",
             header: t("commission.column.actions"),
-            render: (entry) => (
-              <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                {decisionsFor(entry.status).map((decision) => (
-                  <CommissionDecision
-                    key={decision}
-                    entry={entry}
-                    decision={decision}
-                    organizationId={organizationId}
-                  />
-                ))}
-              </div>
-            ),
+            render: (entry) => {
+              const decisions = decisionsFor(entry.status);
+              if (decisions.length === 0) {
+                // Terminal or settled: there is genuinely nothing to decide,
+                // and that is a different fact from being refused.
+                return null;
+              }
+              if (!canDecide) {
+                return (
+                  <span className="t-caption" data-testid="commission-withheld">
+                    {t("commission.decide.withheld")}
+                  </span>
+                );
+              }
+              return (
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  {decisions.map((decision) => (
+                    <CommissionDecision
+                      key={decision}
+                      entry={entry}
+                      decision={decision}
+                      organizationId={organizationId}
+                    />
+                  ))}
+                </div>
+              );
+            },
           },
         ]}
       />

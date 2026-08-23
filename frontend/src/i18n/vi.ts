@@ -297,6 +297,7 @@ export const vi = {
   "commission.status.void": "Đã đảo",
   "commission.outstanding": "Còn nợ",
   "commission.column.actions": "Quyết định",
+  "commission.decide.withheld": "Không thuộc quyền quyết định của bạn",
   "commission.decide.approve": "Duyệt",
   "commission.decide.pay": "Đánh dấu đã thanh toán",
   "commission.decide.void": "Đảo",

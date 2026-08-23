@@ -41,13 +41,40 @@ function render(ui: ReactNode) {
   );
 }
 
-function stubCommissions(entries: unknown[]) {
+// The principal the decision controls ask about. `useCanWrite` folds two
+// questions — does this role hold the grant, and is this a full seat — so a
+// double answering only one of them would let a control through that the real
+// page refuses.
+function me(mayDecide: boolean) {
+  return {
+    user: { id: "u1" },
+    authorization: {
+      seat_type: mayDecide ? "full" : "read_only",
+      objects: {
+        commission: {
+          create: false,
+          read: true,
+          update: mayDecide,
+          delete: false,
+        },
+      },
+    },
+  };
+}
+
+// Routes /me separately from the ledger: answering both from one payload is
+// how a capability check ends up reading a commission page and silently
+// deciding nobody may do anything.
+function stubCommissions(entries: unknown[], mayDecide = true) {
   const urls: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
       urls.push(request.url);
-      return new Response(JSON.stringify({ data: entries, page: {} }), {
+      const body = new URL(request.url).pathname.endsWith("/me")
+        ? me(mayDecide)
+        : { data: entries, page: {} };
+      return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -239,6 +266,9 @@ describe("deciding a commission entry", () => {
 
     render(<PartnerCommissions organizationId="o-1" />);
     await screen.findByTestId("commission-ledger");
+    // The seat snapshot is its own query, so the verbs appear a tick after
+    // the rows do.
+    await screen.findByTestId("commission-approve");
 
     expect(screen.getByTestId("commission-approve")).toBeTruthy();
     expect(screen.getByTestId("commission-void")).toBeTruthy();
@@ -261,6 +291,7 @@ describe("deciding a commission entry", () => {
 
     render(<PartnerCommissions organizationId="o-1" />);
     await screen.findByTestId("commission-ledger");
+    await screen.findByTestId("commission-approve");
     const before = urls.length;
     await act(async () => {
       screen.getByTestId("commission-approve").click();
@@ -316,5 +347,34 @@ describe("the outstanding figure", () => {
     const strip = await screen.findByTestId("commission-outstanding");
 
     expect(strip.textContent).toContain("€200.00");
+  });
+});
+
+// A permission denial is WITHHELD, not absent (design-system README, "Absent,
+// disabled, or withheld — decided by CAUSE"). An empty cell and a refused one
+// make the same shape on screen and mean opposite things: nothing to decide
+// here, versus not yours to decide.
+describe("a reader who may not decide", () => {
+  it("is told the decision is withheld rather than shown controls that 403", async () => {
+    stubCommissions([accrued], false);
+
+    render(<PartnerCommissions organizationId="o-1" />);
+    await screen.findByTestId("commission-ledger");
+    await screen.findByTestId("commission-withheld");
+
+    // The verbs are gone, and something stands in their place saying why.
+    expect(screen.queryByTestId("commission-approve")).toBeNull();
+    expect(screen.queryByTestId("commission-void")).toBeNull();
+  });
+
+  it("gets an empty cell on a row with nothing to decide, not a withheld note", async () => {
+    // Void is terminal for everybody, so the reason this cell is empty is the
+    // entry's state and not the reader's grant.
+    stubCommissions([{ ...accrued, status: "void" }], false);
+
+    render(<PartnerCommissions organizationId="o-1" />);
+    await screen.findByTestId("commission-ledger");
+
+    expect(screen.queryByTestId("commission-withheld")).toBeNull();
   });
 });

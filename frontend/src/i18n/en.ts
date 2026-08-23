@@ -306,6 +306,7 @@ export const en = {
   "commission.status.void": "Reversed",
   "commission.outstanding": "Still owed",
   "commission.column.actions": "Decision",
+  "commission.decide.withheld": "Not yours to decide",
   "commission.decide.approve": "Approve",
   "commission.decide.pay": "Mark as paid",
   "commission.decide.void": "Reverse",
