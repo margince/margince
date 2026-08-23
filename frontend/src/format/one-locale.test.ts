@@ -219,10 +219,13 @@ type Finding = Readonly<{ file: string; line: number; text: string }>;
  * TypeScript program, and it is asked once per file rather than per call.
  */
 function importsTheMapping(parsed: ts.SourceFile): boolean {
-  if (bindsTheNameLocally(parsed)) {
-    return false;
-  }
-  return parsed.statements.some((statement) => {
+  // The import scan first, and the shadowing walk only for the files that pass
+  // it. The scan reads top-level statements; the walk descends every node in
+  // the file, and the overwhelming majority of the ~900 swept files never
+  // mention the mapping at all — so asking the expensive question first spends
+  // a whole-file walk to learn nothing about them. Same answer either order:
+  // both must hold, and neither has a side effect.
+  const imported = parsed.statements.some((statement) => {
     if (
       !ts.isImportDeclaration(statement) ||
       !ts.isStringLiteral(statement.moduleSpecifier) ||
@@ -237,6 +240,7 @@ function importsTheMapping(parsed: ts.SourceFile): boolean {
       bindings.elements.some((element) => element.name.text === "INTL_LOCALE")
     );
   });
+  return imported && !bindsTheNameLocally(parsed);
 }
 
 /**
