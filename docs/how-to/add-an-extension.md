@@ -360,7 +360,7 @@ Four rules, each refused at generation because each fails somewhere worse otherw
 **Import the core only through `@margince/frontend/<subpath>`** — `design-system`, `api`, `app`, as
 published by `frontend/package.json`'s `exports` map. That map is this side's
 `//margince:extension-surface`: the Go tier gets its boundary from the compiler, a bundler gives none,
-so `frontend/scripts/check-ext-imports.sh` is the boundary. It refuses a relative path escaping your
+so `frontend/scripts/ext-imports.test.ts` is the boundary. It refuses a relative path escaping your
 unit, an unpublished subpath, and any bare specifier your own `package.json` does not declare —
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
 
