@@ -27,8 +27,8 @@ package backendarch
 // This is a census of ZERO, and that is the hard kind to write honestly. A gate
 // asserting a shape is absent passes identically when the shape is absent and
 // when the detector is broken, so the census below is worth nothing without
-// TestTheHandScaledDetectorSeesWhatItClaimsTo beneath it — which plants each of
-// the four shapes that actually shipped, plus the lookalikes that must NOT be
+// TestTheHandScaledDetectorSeesWhatItClaimsTo beneath it — which plants all
+// four shapes that actually shipped, plus the lookalikes that must NOT be
 // findings, and reads the detector's answer directly.
 
 import (
@@ -48,17 +48,20 @@ const (
 	scaleAdvice = "values.MinorUnitScale (the multiplier), values.MajorUnits (the decimal string) or values.WholeMajorUnits (the truncated integer)"
 )
 
-// handScaled names the functions in a file that ask for a minor-unit digit
-// count and then build a power of ten from it.
+// handScaled names the functions in a file that do values' job with a
+// currency's minor-unit digit count instead of asking values to do it.
 //
-// Two shapes, because both are reachable. The loop —
+// Two arms, because the four copies came in two shapes. The ARITHMETIC arm
+// catches a function that asks for the digit count and then builds the power
+// of ten — the loop —
 //
 //	scale := int64(1)
 //	for i := 0; i < digits; i++ { scale *= 10 }
 //
-// which is what three of the four copies wrote, and a direct math.Pow10, which
-// nothing writes here today but is the obvious next spelling and costs one line
-// to refuse now rather than after it appears.
+// which is what three of the four copies wrote, plus a direct math.Pow10,
+// which nothing writes here today but is the obvious next spelling. The
+// RENDERER arm catches the fourth, which built no power of ten at all and was
+// therefore invisible to the first — see rendersADecimalPoint.
 //
 // It judges per FUNCTION, not per file. A file may hold a renderer that asks
 // the table and a separate helper that scales something unrelated by ten;
@@ -74,9 +77,78 @@ func handScaled(file *ast.File) []string {
 		}
 		if asksForDigits(fn) && buildsAPowerOfTen(fn) {
 			found = append(found, fn.Name.Name)
+			continue
+		}
+		if rendersADecimalPoint(fn) {
+			found = append(found, fn.Name.Name)
 		}
 	}
 	return found
+}
+
+// rendersADecimalPoint reports whether the declaration is a second
+// values.MajorUnits: it takes a minor-unit digit count as a parameter and
+// splices a decimal point into a formatted integer.
+//
+// It is a separate arm because the fourth copy was not a loop at all. It built
+// the string by hand —
+//
+//	s := strconv.FormatInt(minor, 10)
+//	point := len(s) - exponent
+//	s = s[:point] + "." + s[point:]
+//
+// — and it was found only because deleting it made an exported wrapper dead.
+// The arithmetic arm cannot see it: it computes no power of ten. Without this,
+// the comment beside its call site claiming values.MajorUnits is the one
+// renderer would be a uniqueness claim with nothing holding it, which is the
+// one thing this repo's rulebook says a comment may not be.
+//
+// Keyed on the PARAMETER and not on a call, because a renderer is handed the
+// count rather than asking for it — that is what made it invisible to a census
+// that looked for the asking.
+func rendersADecimalPoint(fn *ast.FuncDecl) bool {
+	if !takesADigitCount(fn) {
+		return false
+	}
+	point, formats := false, false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		switch v := n.(type) {
+		case *ast.BasicLit:
+			if v.Kind == token.STRING && (v.Value == `"."` || strings.Contains(v.Value, `.%0`)) {
+				point = true
+			}
+		case *ast.SelectorExpr:
+			switch v.Sel.Name {
+			case "FormatInt", "Itoa", "Sprintf", "Sprint":
+				formats = true
+			}
+		}
+		return true
+	})
+	return point && formats
+}
+
+// takesADigitCount reports whether the declaration receives a minor-unit digit
+// count by parameter. The names are the ones this tree has actually used for
+// it; a renderer that calls the parameter something else is out of reach, and
+// the census says so rather than implying otherwise.
+func takesADigitCount(fn *ast.FuncDecl) bool {
+	if fn.Type.Params == nil {
+		return false
+	}
+	for _, field := range fn.Type.Params.List {
+		ident, ok := field.Type.(*ast.Ident)
+		if !ok || ident.Name != "int" {
+			continue
+		}
+		for _, name := range field.Names {
+			switch name.Name {
+			case "digits", "exponent", "decimals", "minorUnits":
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // asksForDigits reports whether the declaration calls MinorUnitDigits, however
@@ -196,11 +268,11 @@ func TestNobodyBuildsAMinorUnitScaleByHand(t *testing.T) {
 	if len(findings) == 0 {
 		return
 	}
-	t.Errorf("these functions ask values for a currency's minor-unit digit count and then build the "+
-		"power of ten themselves:\n  %s\n\nvalues already owns that step — use %s. Four copies of this "+
-		"arithmetic existed and agreed over 272 amount-by-currency pairs, which is how long a second copy "+
-		"stays harmless: until the commit that corrects one currency's digit count reaches only the "+
-		"callers somebody remembered.", strings.Join(findings, "\n  "), scaleAdvice)
+	t.Errorf("these functions take a currency's minor-unit digit count and do values' job with it — "+
+		"building the power of ten, or rendering the decimal string:\n  %s\n\nvalues already owns both "+
+		"steps: %s. Four copies existed and agreed over 272 amount-by-currency pairs, which is how long "+
+		"a second copy stays harmless: until the commit that corrects one currency's digit count reaches "+
+		"only the callers somebody remembered.", strings.Join(findings, "\n  "), scaleAdvice)
 }
 
 // TestTheHandScaledDetectorSeesWhatItClaimsTo is the half that makes the census
@@ -247,6 +319,33 @@ func scaleOf(currency string) int64 {
 	}
 	return scale
 }`},
+		// The fourth copy, verbatim as it stood in overlay/hubspot before this
+		// change. It builds no power of ten, so the arithmetic arm cannot see
+		// it — and it was found only because deleting it made an exported
+		// wrapper dead, which is not a way of finding things.
+		{"the string-splice renderer that shipped in hubspot", true, `
+func minorToDecimalString(minor int64, exponent int) string {
+	s := strconv.FormatInt(minor, 10)
+	neg := strings.HasPrefix(s, "-")
+	if neg {
+		s = s[1:]
+	}
+	if exponent > 0 {
+		for len(s) <= exponent {
+			s = "0" + s
+		}
+		point := len(s) - exponent
+		s = s[:point] + "." + s[point:]
+	}
+	if neg {
+		s = "-" + s
+	}
+	return s
+}`},
+		{"the same renderer written with Sprintf", true, `
+func render(minor int64, digits int) string {
+	return fmt.Sprintf("%d.%0*d", minor/100, digits, minor%100)
+}`},
 		{"math.Pow10, the next spelling nobody has written yet", true, `
 func scaleOf(currency string) float64 {
 	return math.Pow10(values.MinorUnitDigits(currency))
@@ -286,6 +385,17 @@ func decimate(n int64) int64 {
 func majorOf(currency string, amountMinor int64) int64 {
 	_ = values.MinorUnitDigits(currency)
 	return amountMinor / 100
+}`},
+		{"a function taking a digit count that renders nothing", false, `
+func padTo(s string, digits int) string {
+	for len(s) < digits {
+		s = "0" + s
+	}
+	return s
+}`},
+		{"a decimal point with no digit count in sight", false, `
+func label(name string) string {
+	return fmt.Sprintf("%s.%s", name, "eur")
 }`},
 		{"the two halves in DIFFERENT functions of one file", false, `
 func decimalsFor(currency string) int { return values.MinorUnitDigits(currency) }

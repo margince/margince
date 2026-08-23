@@ -112,7 +112,6 @@ func validDecimal(s string, lo, hi float64) (string, float64, bool) {
 	return s, v, true
 }
 
-// currencyMinorDigits is the ISO 4217 decimal-places exception table.
 // priceEvidencedInSnippet is the conversation-price rung's evidence
 // check (OFFER-AC-14): the price the model claims the customer discussed
 // must actually appear in what it cited, not merely ride along with some
