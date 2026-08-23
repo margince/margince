@@ -25,10 +25,13 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // assemblyVersion identifies the assembly RULES in the fingerprint, and is the
@@ -41,7 +44,17 @@ const assemblyVersion = "dossier-assembly-v1"
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so editing that wording bumps it whether or not anybody remembers
 // to.
-var promptVersion = ai.PromptDigest(dossierSystemFor)
+//
+// Digested at ONE fixed language rather than the installation's, the same way
+// dealstatus does it. The language rides the fingerprint as its own component,
+// so folding it in here would say the same thing twice — and this is a
+// package-level var computed at init, where no installation's setting is
+// readable at all. What it has to capture is the WORDING, which English
+// captures completely: a reword moves the digest whichever language the prompt
+// is later asked for.
+var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
+	return dossierSystemFor(fence, string(textlang.English))
+})
 
 // storedVersion is the payload SHAPE this build writes and can read. A row
 // written by an older shape unmarshals cleanly into a newer envelope with its
@@ -144,7 +157,8 @@ func (s *Service) Get(ctx context.Context, orgID ids.OrganizationID, force bool)
 	if err != nil {
 		return zero, err
 	}
-	fingerprint, err := Fingerprint(in, s.routingVersion)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
 	if err != nil {
 		return zero, err
 	}
@@ -157,7 +171,7 @@ func (s *Service) Get(ctx context.Context, orgID ids.OrganizationID, force bool)
 		return cached.wire(orgID, s.now().UTC()), nil
 	}
 
-	sections, by, laneFailed := WriteDossier(ctx, s.lane, in)
+	sections, by, laneFailed := WriteDossier(ctx, s.lane, in, lang)
 	if laneFailed && found && cached.usable(fingerprint) {
 		// The floor is a real answer, but it is a plainer one than the model
 		// already wrote for these same facts. A transient outage must not
@@ -223,14 +237,19 @@ var knownNature = map[string]bool{
 // Fingerprint covers everything that could change the content: the assembled
 // factual input, the prompt version and the model routing version
 // (DOSS-PARAM-5).
-func Fingerprint(in Input, routingVersion string) (string, error) {
+// The LANGUAGE is a component of its own, beside the derived prompt version. A
+// dossier is written in it, so an installation that switches language must
+// rewrite every dossier — and nothing else about the company has moved, so
+// every other component of this key is identical. Without it the setting would
+// appear to do nothing until some unrelated fact changed.
+func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 	// json.Marshal orders struct fields by declaration, so the same input
 	// hashes the same way across processes — a map would not.
 	encoded, err := json.Marshal(in)
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the dossier input: %w", err)
 	}
-	sum := sha256.Sum256([]byte(assemblyVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
+	sum := sha256.Sum256([]byte(assemblyVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
 

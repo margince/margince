@@ -37,6 +37,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -172,7 +173,11 @@ type growthFitCase struct {
 // Run issues the one request this site sends, through the production writer's
 // own request builder.
 func (c *growthFitCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := orgdossier.GrowthFitRequest(c.in)
+	// English, pinned, rather than the installation's base language: a
+	// certification record grades a fixed corpus, and a score that moved with a
+	// settings row would not be comparable between two installations. The rule
+	// is PRESENT for the same reason — production sends one.
+	req := orgdossier.GrowthFitRequest(c.in, string(textlang.English))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

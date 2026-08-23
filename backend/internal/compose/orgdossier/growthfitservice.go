@@ -28,8 +28,11 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // growthFitAssemblyVersion identifies the assembly RULES in the fingerprint —
@@ -47,7 +50,17 @@ const growthFitAssemblyVersion = "growth-fit-assembly-v2"
 // fingerprints, and folding both prompts into one would rewrite every cached
 // dossier whenever the growth-fit wording moved, and every cached assessment
 // whenever the dossier's did.
-var growthFitPromptVersion = ai.PromptDigest(growthFitSystemFor)
+//
+// Digested at ONE fixed language rather than the installation's, the same way
+// dealstatus does it. The language rides the fingerprint as its own component,
+// so folding it in here would say the same thing twice — and this is a
+// package-level var computed at init, where no installation's setting is
+// readable at all. What it has to capture is the WORDING, which English
+// captures completely: a reword moves the digest whichever language the prompt
+// is later asked for.
+var growthFitPromptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
+	return growthFitSystemFor(fence, string(textlang.English))
+})
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
 // v2 adds the sub-scores (DOSS-AC-17): a v1 payload has none, and serving one
@@ -136,7 +149,8 @@ func (s *GrowthFitService) Get(ctx context.Context, orgID ids.OrganizationID, fo
 	if err != nil {
 		return zero, err
 	}
-	fingerprint, err := growthFitFingerprint(in, s.routingVersion, offering)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	fingerprint, err := growthFitFingerprint(in, s.routingVersion, offering, lang)
 	if err != nil {
 		return zero, err
 	}
@@ -150,7 +164,7 @@ func (s *GrowthFitService) Get(ctx context.Context, orgID ids.OrganizationID, fo
 		return cached.wire(orgID), nil
 	}
 
-	assessed, by, laneFailed := WriteGrowthFit(ctx, s.lane, in, offering.Confirmed, utc)
+	assessed, by, laneFailed := WriteGrowthFit(ctx, s.lane, in, offering.Confirmed, utc, lang)
 	if laneFailed && cached.mayStandIn(found, fingerprint, utc()) {
 		// A lane that failed must not be able to DESTROY an assessment. The
 		// degraded answer is an abstention, and writing it over a real band
@@ -226,14 +240,17 @@ func (g storedGrowthFit) mayStandIn(found bool, fingerprint string, now time.Tim
 // product, a different ideal customer — changes every company's fit while
 // `confirmed` stays true throughout. A key blind to either keeps serving bands
 // measured against an offering this workspace no longer has.
-func growthFitFingerprint(in Input, routingVersion string, offering Offering) (string, error) {
+// The LANGUAGE is a component of its own, beside the derived prompt version: the
+// assessment is written in it, and nothing else about the company moves when an
+// installation changes language.
+func growthFitFingerprint(in Input, routingVersion string, offering Offering, lang string) (string, error) {
 	encoded, err := json.Marshal(in)
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the growth-fit input: %w", err)
 	}
-	sum := sha256.Sum256(fmt.Appendf(nil, "%s\x00%s\x00%s\x00%t\x00%s\x00%s",
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s\x00%s\x00%s\x00%t\x00%s\x00%s\x00%s",
 		growthFitAssemblyVersion, growthFitPromptVersion, routingVersion,
-		offering.Confirmed, offering.Fingerprint, encoded))
+		offering.Confirmed, offering.Fingerprint, lang, encoded))
 	return hex.EncodeToString(sum[:]), nil
 }
 

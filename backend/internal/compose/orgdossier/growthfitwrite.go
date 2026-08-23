@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -54,18 +55,19 @@ Never invent a fact. If the summary does not say it, you may still ASSESS it, bu
 Write one claim per sentence, plainly.`
 
 // growthFitSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func growthFitSystemFor(fence promptfence.Fence) string {
-	return growthFitSystem + "\n" + fence.Rule("company summary")
+//
+// The assessment is filed on the company and read by whoever opens it, so it
+// takes the installation's shared language.
+func growthFitSystemFor(fence promptfence.Fence, lang string) string {
+	return growthFitSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
 }
 
 // GrowthFitRequest builds the one-shot call. Exported so the AI cert case
 // measures the request production actually sends rather than a copy of it.
-//
-//promptlang:exempt DEFERRED, not exempt on the merits: the growth fit is cached against growthFitFingerprint, so the language has to enter that key with the rule or a language change serves the old assessment indefinitely. That fingerprint is being rewritten concurrently to derive its prompt version from the prompt text; the two edits belong in one change rather than as a conflict.
-func GrowthFitRequest(in Input) model.Request {
+func GrowthFitRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:   growthFitSystemFor(fence),
+		System:   growthFitSystemFor(fence, lang),
 		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		// Our own offering is what makes this a FIT rather than a description,
 		// so it is requested unconditionally — a growth fit written without it
@@ -155,13 +157,13 @@ func keepSubScores(
 // down sees "here is what I would need to know" rather than a band nobody
 // stands behind — and `generated_by` says which of the two they are reading.
 func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
-	selfConfirmed bool, now nowFunc,
+	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, crmcontracts.WrittenBy, bool) {
 	if lane == nil {
 		return Assess(in, crmcontracts.GrowthFitBandUnknown, selfConfirmed, AbstainedNoWriter, now()),
 			crmcontracts.Deterministic, false
 	}
-	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now)
+	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now, lang)
 	if err != nil {
 		// The declared degrade posture (on_budget_exhausted: degrade), not a
 		// swallowed error. A lane that is unavailable, over budget, or
@@ -186,9 +188,9 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 }
 
 func assessWithModel(ctx context.Context, lane Completer, in Input,
-	selfConfirmed bool, now nowFunc,
+	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, error) {
-	resp, err := lane.Complete(ctx, GrowthFitRequest(in))
+	resp, err := lane.Complete(ctx, GrowthFitRequest(in, lang))
 	if err != nil {
 		return Assessment{}, err
 	}
