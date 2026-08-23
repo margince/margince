@@ -64,6 +64,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 			return identity.InstallationBootstrap{
 				OrganizationName: cfg.Organization.Name,
 				BaseCurrency:     cfg.Organization.BaseCurrency,
+				BaseLanguage:     cfg.Organization.BaseLanguage,
 				Timezone:         cfg.Organization.Timezone,
 				AdminEmail:       b.Email,
 				AdminName:        b.DisplayName,

@@ -96,14 +96,14 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 	}
 	// A read grant is not a write grant.
 	newName := "Renamed GmbH"
-	if _, err := store.UpdateInstallation(rep, &newName, nil, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.UpdateInstallation(rep, identity.InstallationPatch{Name: &newName}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("write with only a read grant returned %v, want ErrPermissionDenied", err)
 	}
 
 	before := installationAuditCount(t, e)
 
 	// A real change commits the row and its audit entry together.
-	updated, err := store.UpdateInstallation(admin, &newName, nil, nil)
+	updated, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &newName})
 	if err != nil {
 		t.Fatalf("renaming the installation: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 
 	// Re-asserting the same value is a no-op: no second audit row. An
 	// idempotent PATCH must not litter the ledger.
-	if _, err := store.UpdateInstallation(admin, &newName, nil, nil); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &newName}); err != nil {
 		t.Fatalf("re-asserting the same name: %v", err)
 	}
 	if n := installationAuditCount(t, e); n != before+1 {
@@ -139,17 +139,17 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	blank := "   "
-	if _, err := store.UpdateInstallation(admin, &blank, nil, nil); err == nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &blank}); err == nil {
 		t.Error("a whitespace-only organization name was accepted")
 	}
 
 	notAZone := "Mars/Olympus_Mons"
-	if _, err := store.UpdateInstallation(admin, nil, &notAZone, nil); err == nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Timezone: &notAZone}); err == nil {
 		t.Error("a zone name this server's tzdata does not know was accepted")
 	}
 
 	notACurrency := "EURO"
-	_, err := store.UpdateInstallation(admin, nil, nil, &notACurrency)
+	_, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &notACurrency})
 	if err == nil {
 		t.Error("a four-letter base currency was accepted")
 	}
@@ -180,7 +180,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// Changeable first — this is the case ADR-0085 §7 exists to serve: an
 	// installation that chose wrong in configuration and noticed in week one.
 	chf := "CHF"
-	if _, err := store.UpdateInstallation(admin, nil, nil, &chf); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &chf}); err != nil {
 		t.Fatalf("the base currency was refused before any deal converted: %v", err)
 	}
 
@@ -235,7 +235,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 
 	// And the write is refused, as a field fault naming the setting.
 	usd := "USD"
-	_, err = store.UpdateInstallation(admin, nil, nil, &usd)
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &usd})
 	if err == nil {
 		t.Fatal("the base currency was changed after deals had converted against it")
 	}
@@ -251,7 +251,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// Everything else on the surface still changes — the freeze is scoped to
 	// the one value whose history is at stake.
 	name := "Still Renamable GmbH"
-	if _, err := store.UpdateInstallation(admin, &name, nil, nil); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &name}); err != nil {
 		t.Errorf("the freeze on one setting blocked another: %v", err)
 	}
 }
@@ -302,7 +302,7 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 		t.Fatal("a sent offer holds a rate against this base, and the surface still reports it changeable")
 	}
 	usd := "USD"
-	if _, err := store.UpdateInstallation(admin, nil, nil, &usd); err == nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &usd}); err == nil {
 		t.Fatal("the base currency changed out from under a sent offer's frozen rate")
 	}
 }
@@ -325,7 +325,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 		VALUES ($1, 'USD', $2, 0.9150000000, current_date)`, base.BaseCurrency)
 
 	chf := "CHF"
-	_, err = store.UpdateInstallation(admin, nil, nil, &chf)
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &chf})
 	if err == nil {
 		t.Fatal("the base moved while the sheet was still priced against the old one")
 	}
@@ -345,7 +345,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 
 	// Re-asserting the base already in force is not a change, so a priced sheet
 	// does not break an idempotent patch.
-	if _, err := store.UpdateInstallation(admin, nil, nil, &base.BaseCurrency); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &base.BaseCurrency}); err != nil {
 		t.Fatalf("re-setting the base already in force: %v", err)
 	}
 }

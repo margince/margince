@@ -4975,6 +4975,27 @@ func (e IngestVoiceCorpusSourceRequestRegister) Valid() bool {
 	}
 }
 
+// Defines values for InstallationSettingsBaseLanguage.
+const (
+	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
+	InstallationSettingsBaseLanguageEn InstallationSettingsBaseLanguage = "en"
+	InstallationSettingsBaseLanguageVi InstallationSettingsBaseLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsBaseLanguage enum.
+func (e InstallationSettingsBaseLanguage) Valid() bool {
+	switch e {
+	case InstallationSettingsBaseLanguageDe:
+		return true
+	case InstallationSettingsBaseLanguageEn:
+		return true
+	case InstallationSettingsBaseLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InviteUserRequestRole.
 const (
 	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
@@ -9415,6 +9436,27 @@ func (e UpdateDealRequestStatus) Valid() bool {
 	case UpdateDealRequestStatusOpen:
 		return true
 	case UpdateDealRequestStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateInstallationSettingsRequestBaseLanguage.
+const (
+	UpdateInstallationSettingsRequestBaseLanguageDe UpdateInstallationSettingsRequestBaseLanguage = "de"
+	UpdateInstallationSettingsRequestBaseLanguageEn UpdateInstallationSettingsRequestBaseLanguage = "en"
+	UpdateInstallationSettingsRequestBaseLanguageVi UpdateInstallationSettingsRequestBaseLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestBaseLanguage enum.
+func (e UpdateInstallationSettingsRequestBaseLanguage) Valid() bool {
+	switch e {
+	case UpdateInstallationSettingsRequestBaseLanguageDe:
+		return true
+	case UpdateInstallationSettingsRequestBaseLanguageEn:
+		return true
+	case UpdateInstallationSettingsRequestBaseLanguageVi:
 		return true
 	default:
 		return false
@@ -16679,13 +16721,23 @@ type InstallationSettings struct {
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
-	// BaseCurrencyLocked True once a deal has frozen a conversion rate against the base currency, after
-	// which it can no longer be changed (ADR-0085 §7).
+	// BaseCurrencyLocked True once a conversion rate has been frozen against the base currency — by a closed
+	// deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+	// rate sheet — after which it can no longer be changed (ADR-0085 §7).
 	BaseCurrencyLocked bool `json:"base_currency_locked"`
 
-	// BaseCurrencyLockedReason Why the currency is locked, naming how many deals have already converted against
-	// it. Absent when it is still changeable.
+	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it. Absent
+	// when it is still changeable.
 	BaseCurrencyLockedReason *string `json:"base_currency_locked_reason,omitempty"`
+
+	// BaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
+	// signals, extracted facts, agent answers. Not a user's display language, which is
+	// per-user.
+	//
+	// It does not govern everything a model writes: correspondence keeps the language of
+	// the correspondence, so a German thread still gets a German reply, and a brief cached
+	// for one reader keeps that reader's language.
+	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
@@ -16704,6 +16756,15 @@ type InstallationSettings struct {
 	// display timezone, which is per-user).
 	Timezone string `json:"timezone"`
 }
+
+// InstallationSettingsBaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
+// signals, extracted facts, agent answers. Not a user's display language, which is
+// per-user.
+//
+// It does not govern everything a model writes: correspondence keeps the language of
+// the correspondence, so a German thread still gets a German reply, and a brief cached
+// for one reader keeps that reader's language.
+type InstallationSettingsBaseLanguage string
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
@@ -22952,9 +23013,13 @@ type UpdateDealRoomRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
-	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
 	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
+	// nothing already written, so artifacts stay in the language they were written in.
+	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
@@ -22962,6 +23027,10 @@ type UpdateInstallationSettingsRequest struct {
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
 }
+
+// UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
+// nothing already written, so artifacts stay in the language they were written in.
+type UpdateInstallationSettingsRequestBaseLanguage string
 
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
 type UpdateLeadDisqualifyReasonRequest struct {

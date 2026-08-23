@@ -10093,13 +10093,25 @@ export interface components {
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
             /**
-             * @description True once a deal has frozen a conversion rate against the base currency, after
-             *     which it can no longer be changed (ADR-0085 §7).
+             * @description The language AI writes in when what it writes is read by the whole team — claims,
+             *     signals, extracted facts, agent answers. Not a user's display language, which is
+             *     per-user.
+             *
+             *     It does not govern everything a model writes: correspondence keeps the language of
+             *     the correspondence, so a German thread still gets a German reply, and a brief cached
+             *     for one reader keeps that reader's language.
+             * @enum {string}
+             */
+            base_language: "en" | "de" | "vi";
+            /**
+             * @description True once a conversion rate has been frozen against the base currency — by a closed
+             *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+             *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming how many deals have already converted against
-             *     it. Absent when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it. Absent
+             *     when it is still changeable.
              */
             base_currency_locked_reason?: string;
             /**
@@ -10122,10 +10134,16 @@ export interface components {
             /** @description The IANA reporting zone. */
             timezone?: string;
             /**
-             * @description ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+             * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
              *     rate against the current base.
              */
             base_currency?: string;
+            /**
+             * @description The language shared AI writing is written in. Never frozen: changing it re-means
+             *     nothing already written, so artifacts stay in the language they were written in.
+             * @enum {string}
+             */
+            base_language?: "en" | "de" | "vi";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];

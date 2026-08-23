@@ -63,6 +63,7 @@ type setupClaimRequest struct {
 	OrganizationName string `json:"organization_name"`
 	Timezone         string `json:"timezone"`
 	BaseCurrency     string `json:"base_currency"`
+	BaseLanguage     string `json:"base_language"`
 	AdminEmail       string `json:"admin_email"`
 	AdminName        string `json:"admin_name"`
 	AdminPassword    string `json:"admin_password"`
@@ -108,12 +109,19 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 			return
 		}
 
+		// The basis is validated INSIDE the claim, after the token has been
+		// matched, rather than here. Checking it on the way in would answer 422
+		// to a caller holding no valid token — telling an unauthenticated
+		// stranger which fields this body carries and which values it will
+		// take, on the one route that creates the root account.
+		//
 		// The seed's own discards, merged below. ClaimInstallation ASSIGNS the
 		// identity ones, so a shared slice would lose these.
 		var seedDiscards []string
 		wsID, discarded, err := svc.ClaimInstallation(r.Context(), in.SetupToken, identity.InstallationBootstrap{
 			OrganizationName: in.OrganizationName,
 			BaseCurrency:     in.BaseCurrency,
+			BaseLanguage:     in.BaseLanguage,
 			Timezone:         in.Timezone,
 			AdminEmail:       in.AdminEmail,
 			AdminName:        in.AdminName,

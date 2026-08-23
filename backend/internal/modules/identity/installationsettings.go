@@ -26,12 +26,24 @@ type InstallationSettings struct {
 	Name         string
 	Timezone     string
 	BaseCurrency string
+	BaseLanguage string
 	// BaseCurrencyLocked and its reason let a client render the field
 	// read-only instead of discovering the refusal by attempting a write —
 	// the same information the write path would give, offered before the
 	// operator types a currency they cannot save.
 	BaseCurrencyLocked       bool
 	BaseCurrencyLockedReason string
+}
+
+// InstallationPatch is a sparse installation-settings write: a nil field is
+// left unchanged. Named fields rather than positional pointers, because the
+// values are all *string and a transposed pair would write a language into the
+// currency row and pass the type checker.
+type InstallationPatch struct {
+	Name         *string
+	Timezone     *string
+	BaseCurrency *string
+	BaseLanguage *string
 }
 
 // InstallationSettingsStore reads and patches the installation settings.
@@ -71,12 +83,16 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	language, err := settings.Get(ctx, s.settings, BaseLanguage)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	locked, why, err := s.baseCurrencyLock(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
 	return InstallationSettings{
-		Name: name, Timezone: zone, BaseCurrency: currency,
+		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language,
 		BaseCurrencyLocked: locked, BaseCurrencyLockedReason: why,
 	}, nil
 }
@@ -111,7 +127,7 @@ func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (bool,
 // Every field commits in ONE transaction, and the settings rows are the only
 // copy: a change here moves the value everything computes in, because there is
 // no second place for it to disagree.
-func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, name, zone, currency *string) (InstallationSettings, error) {
+func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in InstallationPatch) (InstallationSettings, error) {
 	if err := auth.Require(ctx, installationSettingsObject, principal.ActionUpdate); err != nil {
 		return InstallationSettings{}, err
 	}
@@ -119,9 +135,10 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, name
 		entry *settings.Entry[string]
 		value *string
 	}{
-		{Name, name},
-		{Timezone, zone},
-		{BaseCurrency, currency},
+		{Name, in.Name},
+		{Timezone, in.Timezone},
+		{BaseCurrency, in.BaseCurrency},
+		{BaseLanguage, in.BaseLanguage},
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, w := range patch {

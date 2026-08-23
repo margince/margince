@@ -4108,6 +4108,17 @@ export const vi = {
   "setup.tokenHint":
     "Lấy từ tệp chứa mã thiết lập mà máy chủ ghi ở lần khởi động đầu tiên — nhật ký máy chủ nêu đường dẫn của tệp, và chứa chính mã đó nếu không ghi được tệp.",
   "setup.organization": "Tên tổ chức",
+  "setup.baseCurrency": "Đơn vị tiền tệ cơ sở",
+  "setup.baseCurrencyHint":
+    "Mọi số tiền trong sản phẩm đều được quy đổi về đơn vị này. Bạn có thể đổi trong phần Cài đặt, nhưng chỉ cho đến khi số tiền đầu tiên được quy đổi theo nó — vì vậy nên chọn đúng ngay bây giờ.",
+  "setup.baseCurrencyMalformed":
+    "Mã tiền tệ gồm ba chữ cái, ví dụ EUR, CHF hoặc USD.",
+  "setup.baseLanguage": "Ngôn ngữ cơ sở",
+  "setup.baseLanguageHint":
+    "Ngôn ngữ mà AI dùng để viết những nội dung cả nhóm cùng đọc. Mỗi người vẫn tự chọn ngôn ngữ hiển thị riêng, và thư trả lời khách hàng vẫn theo ngôn ngữ của cuộc trao đổi.",
+  "setup.timezone": "Múi giờ báo cáo",
+  "setup.timezoneHint":
+    "Tên múi giờ IANA. Mọi kỳ báo cáo đều được tính theo múi giờ này — lấy từ trình duyệt này, hãy đổi nếu bạn không ở nơi nhóm làm việc.",
   "setup.adminName": "Tên của bạn",
   "setup.adminEmail": "Email của bạn",
   "setup.adminPassword": "Chọn mật khẩu",
@@ -5236,9 +5247,12 @@ export const vi = {
     "Tên múi giờ IANA (ví dụ Europe/Berlin). Ranh giới kỳ của mọi báo cáo được tính theo múi giờ này, tách biệt với múi giờ hiển thị của riêng bạn.",
   "installationSettings.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
-    "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi giao dịch đầu tiên được quy đổi theo nó.",
+    "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi số tiền đầu tiên được quy đổi theo nó.",
   "installationSettings.baseCurrencyLocked":
-    "Đã khoá: đã có giao dịch được quy đổi theo đơn vị tiền tệ này, nên việc thay đổi sẽ làm sai lệch mọi số liệu tổng hợp dựa trên chúng.",
+    "Đã khoá: đã có số tiền được quy đổi theo đơn vị tiền tệ này, nên việc thay đổi sẽ làm sai lệch mọi số liệu tổng hợp dựa trên chúng.",
+  "installationSettings.baseLanguage": "Ngôn ngữ cơ sở",
+  "installationSettings.baseLanguageHint":
+    "Ngôn ngữ mà AI dùng để viết những nội dung cả nhóm cùng đọc. Ngôn ngữ hiển thị của riêng bạn là thiết lập riêng, và thư trả lời khách hàng vẫn theo ngôn ngữ của cuộc trao đổi.",
   "installationSettings.readOnly":
     "Chỉ quản trị viên hoặc ops mới có thể thay đổi các thiết lập này.",
   "installationSettings.edit": "Sửa",

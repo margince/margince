@@ -15481,7 +15481,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_currency_locked, max_upload_bytes]
+      required: [name, timezone, base_currency, base_language, base_currency_locked, max_upload_bytes]
       properties:
         name:
           type: string
@@ -15494,16 +15494,28 @@ components:
         base_currency:
           type: string
           description: ISO-4217 code every money roll-up converts to.
+        base_language:
+          type: string
+          enum: [en, de, vi]
+          description: |
+            The language AI writes in when what it writes is read by the whole team — claims,
+            signals, extracted facts, agent answers. Not a user's display language, which is
+            per-user.
+
+            It does not govern everything a model writes: correspondence keeps the language of
+            the correspondence, so a German thread still gets a German reply, and a brief cached
+            for one reader keeps that reader's language.
         base_currency_locked:
           type: boolean
           description: |
-            True once a deal has frozen a conversion rate against the base currency, after
-            which it can no longer be changed (ADR-0085 §7).
+            True once a conversion rate has been frozen against the base currency — by a closed
+            deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+            rate sheet — after which it can no longer be changed (ADR-0085 §7).
         base_currency_locked_reason:
           type: string
           description: |
-            Why the currency is locked, naming how many deals have already converted against
-            it. Absent when it is still changeable.
+            Why the currency is locked, naming what has already converted against it. Absent
+            when it is still changeable.
         max_upload_bytes:
           type: integer
           format: int64
@@ -15525,8 +15537,14 @@ components:
         base_currency:
           type: string
           description: |
-            ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+            ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
             rate against the current base.
+        base_language:
+          type: string
+          enum: [en, de, vi]
+          description: |
+            The language shared AI writing is written in. Never frozen: changing it re-means
+            nothing already written, so artifacts stay in the language they were written in.
 
     CaptureActivityResponse:
       type: object

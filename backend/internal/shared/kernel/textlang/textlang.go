@@ -45,6 +45,50 @@ const (
 	Vietnamese Lang = "vi"
 )
 
+// Shipped is every language the product speaks, in the order a chooser offers
+// them. Unknown is absent: it is the detector's honest shrug, never a language
+// anyone selects.
+//
+// This is the ONE list. The installation's base language, the UI catalogs and
+// the drafting floor all answer to it, so widening the product to a fourth
+// language is one edit here rather than four in agreement.
+var Shipped = []Lang{English, German, Vietnamese}
+
+// Known reports whether a code names a language the product speaks.
+//
+// It takes a string rather than a Lang because every caller is validating
+// something a human or a config file supplied, where the whole question is
+// whether that text IS one of these.
+func Known(code string) bool {
+	for _, lang := range Shipped {
+		if string(lang) == code {
+			return true
+		}
+	}
+	return false
+}
+
+// EnglishName is the language's name in English, which is what a prompt uses
+// to tell a model what to write in. Models follow "write in German" reliably;
+// they follow a bare "de" less so.
+//
+// An unknown code answers "" rather than guessing, so a caller composing a
+// prompt refuses instead of instructing the model in a language nobody named.
+func EnglishName(l Lang) string {
+	switch l {
+	case English:
+		return "English"
+	case German:
+		return "German"
+	case Vietnamese:
+		return "Vietnamese"
+	case Unknown:
+		return ""
+	default:
+		return ""
+	}
+}
+
 // The bar a winner clears.
 const (
 	// MinHits is how many stopwords a language needs before its lead means

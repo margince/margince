@@ -23,9 +23,9 @@ func seedInstallationIdentity(ctx context.Context, t *testing.T, owner *pgx.Conn
 	// half of the same fact. This harness builds the installation by raw SQL,
 	// so bootstrap never seeded them and 0191's backfill ran before the
 	// workspace existed, while the readers resolve the SETTINGS, not the
-	// columns (issue #521). All three, because bootstrap writes all three:
-	// name, currency and zone are one act, and a fixture holding some of them
-	// is a state no installation is ever in.
+	// columns (issue #521). All of them, because bootstrap writes all of them:
+	// name, currency, language and zone are one act, and a fixture holding some
+	// of them is a state no installation is ever in.
 	//
 	// They must match the columns above. A suite whose two copies disagree
 	// measures the drift rather than the behaviour under test — except where
@@ -34,6 +34,7 @@ func seedInstallationIdentity(ctx context.Context, t *testing.T, owner *pgx.Conn
 		`INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Authz"'::jsonb),
 			('installation.base_currency', '"EUR"'::jsonb),
+			('installation.base_language', '"en"'::jsonb),
 			('installation.timezone', '"UTC"'::jsonb)
 		 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
 		t.Fatal(err)

@@ -4204,6 +4204,17 @@ export const en = {
   "setup.tokenHint":
     "From the token file the server wrote at first start — the server log names its path, and carries the token itself if that file could not be written.",
   "setup.organization": "Organization name",
+  "setup.baseCurrency": "Base currency",
+  "setup.baseCurrencyHint":
+    "Every amount in the product is converted to this currency. It can be changed in Settings, but only until the first amount converts against it — so it is worth getting right now.",
+  "setup.baseCurrencyMalformed":
+    "A currency is three letters, like EUR, CHF or USD.",
+  "setup.baseLanguage": "Base language",
+  "setup.baseLanguageHint":
+    "The language AI writes in when the whole team reads what it wrote. Each person still picks their own display language, and replies to customers follow the language of the conversation.",
+  "setup.timezone": "Reporting timezone",
+  "setup.timezoneHint":
+    "IANA zone name. Every reporting period is computed in it — guessed from this browser, so change it if you are not where the team works.",
   "setup.adminName": "Your name",
   "setup.adminEmail": "Your email",
   "setup.adminPassword": "Choose a password",
@@ -5320,9 +5331,12 @@ export const en = {
     "IANA zone name (for example Europe/Berlin). Period boundaries in every report are computed in it, separate from your own display timezone.",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
-    "ISO-4217 code every amount converts to for roll-ups. Changeable until the first deal converts against it.",
+    "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",
   "installationSettings.baseCurrencyLocked":
-    "Locked: deals have already converted against this currency, so changing it would re-mean every roll-up built on them.",
+    "Locked: amounts have already converted against this currency, so changing it would re-mean every roll-up built on them.",
+  "installationSettings.baseLanguage": "Base language",
+  "installationSettings.baseLanguageHint":
+    "The language AI writes in when the whole team reads what it wrote. Your own display language is separate, and replies to customers still follow the language of the conversation.",
   "installationSettings.readOnly":
     "Only an admin or ops can change these settings.",
   "installationSettings.edit": "Edit",
