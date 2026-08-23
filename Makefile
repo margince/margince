@@ -262,7 +262,8 @@ space-tokens:
 ## with the rest of the suite. This target keeps its name for anyone who runs
 ## the gate on its own.
 native-controls:
-	cd frontend && pnpm vitest run src/design-system/native-controls.test.ts
+	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		src/design-system/native-controls.test.ts
 ## ext-imports — a unit screen reaches the core only through the published
 ## surface (frontend/package.json's exports map) and npm only through what its
 ## own package declares. The frontend has no module boundary of its own, so

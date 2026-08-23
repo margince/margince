@@ -105,6 +105,19 @@ function extensionFrontendFiles(): string[] {
     );
 }
 
+// scriptKindFor picks the dialect, and `.js` is the one that matters.
+//
+// A `.js` file holding JSX parsed as ScriptKind.TS yields no JSX nodes at all —
+// so `<select />` in one was silently missed, which the shell gate this
+// replaces did catch. `.ts` cannot be JSX, because `<T>()` there is a type
+// argument rather than an element, and asking for TSX would misparse ordinary
+// generics.
+function scriptKindFor(path: string): ts.ScriptKind {
+  if (path.endsWith(".tsx")) return ts.ScriptKind.TSX;
+  if (path.endsWith(".jsx") || path.endsWith(".js")) return ts.ScriptKind.JSX;
+  return ts.ScriptKind.TS;
+}
+
 // findNativeControls returns one report line per native dropdown element in the
 // source, with the author's own line number.
 //
@@ -118,9 +131,7 @@ function findNativeControls(path: string, text: string): string[] {
     text,
     ts.ScriptTarget.ES2022,
     true,
-    path.endsWith(".tsx") || path.endsWith(".jsx")
-      ? ts.ScriptKind.TSX
-      : ts.ScriptKind.TS,
+    scriptKindFor(path),
   );
   const found: string[] = [];
   const at = (node: ts.Node) =>
@@ -152,9 +163,17 @@ function findNativeControls(path: string, text: string): string[] {
       ts.isTemplateMiddle(node) ||
       ts.isTemplateTail(node)
     ) {
+      // The RAW text, not node.text, so an offset into it is an offset into
+      // the FILE: a match inside a multi-line template must report the line it
+      // is on, not the line the template opened on.
+      const raw = node.getText(source);
       for (const tag of nativeControls) {
-        if (new RegExp(`<${tag}([^a-zA-Z0-9]|$)`).test(node.text)) {
-          found.push(`${at(node)}: <${tag}> inside a string`);
+        const at2 = raw.search(new RegExp(`<${tag}([^a-zA-Z0-9]|$)`));
+        if (at2 >= 0) {
+          const line =
+            source.getLineAndCharacterOfPosition(node.getStart(source) + at2)
+              .line + 1;
+          found.push(`${line}: <${tag}> inside a string`);
         }
       }
     }
@@ -281,6 +300,20 @@ describe("the native-control detector sees what it claims to", () => {
       },
       // A .ts file has no JSX, and asking for it would be a parse error rather
       // than a finding.
+      // A .js file holding JSX is JSX. Parsed as TS it yields no nodes at all,
+      // which is a silent miss rather than a false negative you can see.
+      {
+        name: "JSX in a plain .js file",
+        fires: true,
+        src: "export const A = () => <select />;",
+        file: "probe.js",
+      },
+      // A hit inside a multi-line template reports ITS line, not the template's.
+      {
+        name: "a select on the second line of a template",
+        fires: true,
+        src: "const html = `<form>\n  <select>\n</form>`;",
+      },
       {
         name: "a plain .ts file with no markup",
         fires: false,
