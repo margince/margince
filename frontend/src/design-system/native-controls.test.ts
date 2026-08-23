@@ -145,6 +145,16 @@ function scriptKindFor(path: string): ts.ScriptKind {
 // detecting, and the shell gate this replaces had no such test at all — its
 // hand-written lexer was verified only by the tree happening to be clean.
 function findNativeControls(path: string, text: string): string[] {
+  // A file that does not mention any of the three names cannot hold one, so it
+  // is not parsed at all. This is a cost fix, not a coverage one: the census
+  // parses ~930 files and reparses every non-TSX one as TSX, which took 21s on
+  // a CI runner against 1.3s locally and timed the test out. Most files mention
+  // none of the names, so most are never parsed.
+  //
+  // The names WITHOUT the angle bracket, deliberately: an escaped `\u003cselect>`
+  // has no `<` in its raw text and is still a native dropdown, so filtering on
+  // `<select` would reintroduce the very miss this file already fixed once.
+  if (!/select|option|optgroup/.test(text)) return [];
   const source = ts.createSourceFile(
     path,
     text,
@@ -254,7 +264,13 @@ function findNativeControls(path: string, text: string): string[] {
 }
 
 describe("no product surface renders a browser-drawn dropdown", () => {
-  it("finds no native select, option or optgroup outside design-system/select.tsx", () => {
+  // A generous timeout, stated rather than defaulted: this walks and parses the
+  // whole tree, which is not a unit test's shape of work. The pre-filter above
+  // is what keeps it near a second, and the timeout is the floor under a slower
+  // runner — CI took 21s before the filter and timed out at 13s.
+  it("finds no native select, option or optgroup outside design-system/select.tsx", {
+    timeout: 60_000,
+  }, () => {
     const files = [
       ...sourceFilesUnder(srcDir),
       ...extensionFrontendFiles(),
