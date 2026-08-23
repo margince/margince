@@ -941,9 +941,12 @@ function employmentDetail(
   t: ReturnType<typeof useT>,
   locale: Locale,
 ): string {
-  // The record's zone: an employment boundary is a date-only wire value with
-  // no instant to localize, so a reader west of UTC rendering it in their own
-  // would quote the day before to a colleague quoting the right one.
+  // The record's zone. These arrive as instants (`format: date-time`), but they
+  // are WRITTEN from a date picker, so what is stored is midnight on the day a
+  // human chose and the time carries no information. Rendered in a reader's own
+  // zone west of UTC that midnight falls on the previous day, and two
+  // colleagues would quote different start dates for one employment. The
+  // record's zone is never behind UTC, so it renders the day that was picked.
   const start = employment.started_at
     ? formatDayMonth(employment.started_at, locale, RECORD_ZONE)
     : undefined;

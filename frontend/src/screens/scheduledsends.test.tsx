@@ -214,7 +214,20 @@ it.each(["Etc/GMT-1", "Etc/GMT+5", "GMT", "+01:00"])(
     expect(await screen.findByText("The follow-up")).toBeTruthy();
     // And the moment falls back to the reader's own zone rather than claiming
     // the offset: a zone this product will not render is not one it may name.
-    expect(screen.queryByText(new RegExp(`in ${offsetZone}`, "i"))).toBeNull();
+    //
+    // Matched as literal TEXT, not through a RegExp built from the zone. Two of
+    // these four names carry a `+`, which a regular expression reads as an
+    // operator — `/in +01:00/` means "in" then one-or-more spaces, so it cannot
+    // match the string it was built from and the assertion passes over anything
+    // at all. A negative assertion that cannot fail is indistinguishable from
+    // one that holds.
+    expect(
+      screen.queryByText(
+        (_, element) =>
+          element?.children.length === 0 &&
+          (element.textContent ?? "").includes(offsetZone),
+      ),
+    ).toBeNull();
   },
 );
 
