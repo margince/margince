@@ -162,11 +162,11 @@ func subjectOf(a crmcontracts.Activity) string {
 }
 
 func since(now, then time.Time) string {
-	return spell(int(now.Sub(then).Hours() / 24))
+	return spell(calendarDaysBetween(then, now))
 }
 
 func until(now, then time.Time) string {
-	days := int(then.Sub(now).Hours() / 24)
+	days := calendarDaysBetween(now, then)
 	switch days {
 	case 0:
 		return "today"
@@ -175,6 +175,20 @@ func until(now, then time.Time) string {
 	default:
 		return fmt.Sprintf("in %d days", days)
 	}
+}
+
+// calendarDaysBetween counts whole days between two moments by the CALENDAR,
+// not by elapsed hours.
+//
+// It has to, because the cache is keyed on the UTC day. Counting elapsed hours
+// would flip "today" to "yesterday" 24 hours after the contact — mid-afternoon,
+// say — while the fingerprint waits for midnight, and the card would spend the
+// gap saying the wrong thing with nothing to notice. Counting the same way the
+// key does means the wording can only change when the key does.
+func calendarDaysBetween(from, to time.Time) int {
+	fromDay := from.UTC().Truncate(24 * time.Hour)
+	toDay := to.UTC().Truncate(24 * time.Hour)
+	return int(toDay.Sub(fromDay).Hours() / 24)
 }
 
 func spell(days int) string {

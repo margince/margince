@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestABookedMeetingIsProjectedAsScheduledNotPast(t *testing.T) {
@@ -70,5 +72,50 @@ func TestTheHealthFactorsCarryNoProseToQuote(t *testing.T) {
 		if strings.Contains(f.Key, " ") {
 			t.Fatalf("factor key %q reads as a sentence", f.Key)
 		}
+	}
+}
+
+func TestEveryCitableIDResolvesWhenTheCardIsAssembled(t *testing.T) {
+	// The two sets are declared in different files — citableIDs decides what
+	// the filter accepts, citedRecord decides what the card can render — and
+	// a citation admitted by the first and refused by the second drops its
+	// sentence AFTER the sentence has already earned its grounding. Derived
+	// from the facts rather than listed, so a new citable kind fails here
+	// until the card can render it.
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{
+			act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2)),
+			act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3)),
+		},
+		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Send the revised terms"}},
+	}
+	in := project(f, crmcontracts.DealStatusCardMove{Action: ActionNone})
+	citable := citableIDs(in)
+	if len(citable) != 3 {
+		t.Fatalf("citable = %d ids, want the two timeline rows and the task", len(citable))
+	}
+	for id := range citable {
+		if _, ok := citedRecord(f, id); !ok {
+			t.Errorf("the filter would accept a citation of %s that the card cannot render", id)
+		}
+	}
+}
+
+func TestACitedTaskCarriesASubjectTheReaderCanRead(t *testing.T) {
+	// A task renders as the activity row it is. Handing the card an activity
+	// with no subject would cite it by kind — "task" — which tells the reader
+	// nothing about which promise the sentence rests on.
+	task := activities.OpenTask{ID: ids.NewV7(), Subject: "Send the revised terms"}
+	f := facts{deal: openDeal(), now: testNow, openTasks: []activities.OpenTask{task}}
+	got, ok := citedRecord(f, task.ID.String())
+	if !ok {
+		t.Fatal("an open task in the facts could not be cited")
+	}
+	if got.Subject == nil || *got.Subject != task.Subject {
+		t.Fatalf("the cited task lost its subject: %v", got.Subject)
+	}
+	if got.Kind != crmcontracts.ActivityKindTask {
+		t.Fatalf("kind = %q, want task", got.Kind)
 	}
 }
