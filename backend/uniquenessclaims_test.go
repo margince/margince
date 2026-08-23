@@ -397,10 +397,8 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // claim, which a line added for a claim written this morning satisfies
 // perfectly. Only a count catches that.
 //
-// Lowering it is the point of the file it counts. Raising it is legal and is
-// what a widened detector shape requires — either way it is the ONE line a
-// reviewer has to agree with, rather than a change spread across a diff nobody
-// reads to the end.
+// Lowering it is the point of the file it counts; raising it is legal and is
+// what a widened detector shape requires.
 const registeredDebt = 646
 
 func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
