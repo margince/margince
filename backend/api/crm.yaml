@@ -18633,10 +18633,13 @@ components:
               type: [string, 'null']
               format: date
               description: >-
-                The OLDEST rate date among the converted deals: each freezes its rate on its own
-                issue date, so this is the furthest back any part of the figure reaches. §4.2
-                forbids a cross-currency sum without an explicit conversion source and as-of
-                date, and this is that date. Null when nothing needed converting.
+                The OLDEST rate date among the converted deals. An open deal has frozen no rate
+                — that happens on close — so each converts at the latest rate stored on or
+                before this read's day, and an installation does not hold every currency's rate
+                for every day: the dates behind one total can differ, and this is the furthest
+                back any part of the figure reaches. §4.2 forbids a cross-currency sum without
+                an explicit conversion source and as-of date, and this is that date. Null when
+                nothing needed converting.
             base_currency:
               type: [string, 'null']
               description: >-
