@@ -86,11 +86,11 @@ func (s *Service) Acknowledge(ctx context.Context, orgID ids.OrganizationID) (cr
 // statement in this product that writes user_record_view.
 //
 // Exported because a SECOND record type acknowledges visits — person360 — and
-// it held a byte-identical copy of this upsert. Two writers of one table's
-// write shape drift silently: `GREATEST` is the whole correctness argument, and
-// a copy that lost it would rewind a baseline on a late-arriving ack from a
-// slow tab, consuming an unread marker nobody consumed. Nothing in the two
-// statements differed, so nothing signalled that they had to stay the same.
+// a caller reaching for its own upsert instead is what this export exists to
+// prevent. `GREATEST` is the whole correctness argument: a copy that lost it
+// would rewind a baseline on a late-arriving ack from a slow tab, consuming an
+// unread marker nobody consumed. Two writers of one write shape signal nothing
+// while they agree, and they agree right up until one of them is edited.
 //
 // What the callers keep is the part that legitimately differs: their own
 // visibility gate. org360 asks `EnsureVisible`, person360 asks

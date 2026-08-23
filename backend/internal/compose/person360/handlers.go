@@ -139,12 +139,10 @@ func (s *Service) Acknowledge(ctx context.Context, personID ids.PersonID) (crmco
 		if err := auth.EnsureVisibleLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		// org360's writer, not a copy of its statement. It owns
+		// org360's writer, not a copy of its statement: it owns
 		// user_record_view (tableownership_test.go names it), and the upsert's
-		// GREATEST is the whole correctness argument — a second copy that lost
-		// it would rewind a baseline on a slow tab's late ack and consume an
-		// unread marker nobody consumed. The gate ABOVE is this package's own,
-		// because that is the part that legitimately differs.
+		// GREATEST is the whole correctness argument. The gate ABOVE is this
+		// package's own, because that is the part that legitimately differs.
 		stored, err = org360.RecordVisit(ctx, tx, userID, entityTypePerson, personID.UUID, now)
 		return err
 	})

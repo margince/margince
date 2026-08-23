@@ -8,11 +8,6 @@ package backendarch
 // counts against it, so the mark is the baseline every "new since you were
 // here" answer is measured from.
 //
-// It was written by TWO byte-identical statements — org360's, which owns the
-// table, and person360's, which acknowledges the person view. Nothing differed
-// between them, which is exactly why nothing signalled that they had to stay
-// the same.
-//
 // THE CORRECTNESS IS IN ONE WORD. `GREATEST(stored, EXCLUDED)` is what stops a
 // slow tab's late-arriving acknowledgement rewinding a newer one: two tabs open
 // on the same record converge on the later visit instead of racing the baseline
@@ -21,8 +16,11 @@ package backendarch
 // back an unread marker they had already consumed, on a surface where "3 new"
 // and "0 new" are both plausible and neither looks like a bug.
 //
-// So the rule is that the statement lives once, and this is the test that holds
-// it. What the callers keep is the part that legitimately differs: their own
+// So the statement lives once, and this is the test that holds it. Two writers
+// of one write shape signal nothing while they agree, which is the whole
+// window: they agree right up until the moment one of them is edited.
+//
+// What the callers keep is the part that legitimately differs: their own
 // visibility gate. org360 asks `EnsureVisible`; person360 asks
 // `EnsureVisibleLive`, because Art. 17 anonymizes a person in place while
 // leaving owner_id alone and the plain probe would still admit them. That is a
@@ -51,8 +49,14 @@ const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
 // answer to "how does this mark move". A bare `UPDATE user_record_view SET
 // last_viewed_at = $1` carries no GREATEST at all and is the worst possible
 // second writer: it rewinds unconditionally.
+//
+// The name may be SCHEMA-QUALIFIED or quoted — `public.user_record_view`,
+// `"user_record_view"` — and a pattern anchored on the bare word passes those
+// exactly like a clean tree. This gate's own rule is to plant the shape it
+// cannot see, so the optional qualifier is part of the pattern and both
+// spellings are planted below.
 var writesViewBaseline = regexp.MustCompile(
-	`(?is)(INSERT\s+INTO|UPDATE)\s+user_record_view\b`)
+	`(?is)(INSERT\s+INTO|UPDATE)\s+"?(?:[\w$]+"?\.\s*"?)?user_record_view\b`)
 
 // TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
 // comment names.
@@ -157,6 +161,11 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		"UPDATE user_record_view SET last_viewed_at = $1 WHERE user_id = $2",
 		// Case and whitespace are not the subject.
 		"insert   into\n\t\tuser_record_view (user_id)",
+		// Schema-qualified, and quoted. A pattern anchored on the bare word
+		// waves both through and reports the tree clean.
+		"INSERT INTO public.user_record_view (user_id) VALUES ($1)",
+		`UPDATE "user_record_view" SET last_viewed_at = $1`,
+		`INSERT INTO "public"."user_record_view" (user_id) VALUES ($1)`,
 	}
 	for _, statement := range caught {
 		if !writesViewBaseline.MatchString(statement) {
@@ -170,6 +179,8 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		// A different table whose name merely contains this one's would be a
 		// false positive; the word boundary is what stops it.
 		"INSERT INTO user_record_view_archive (user_id) VALUES ($1)",
+		// And the qualifier must not widen the near-neighbour either.
+		"INSERT INTO public.user_record_view_archive (user_id) VALUES ($1)",
 	}
 	for _, statement := range missed {
 		if writesViewBaseline.MatchString(statement) {
