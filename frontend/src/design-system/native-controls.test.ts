@@ -83,6 +83,24 @@ const SUBST = "$" + "{id}";
 // The elements a native dropdown is made of.
 const nativeControls = new Set(["select", "option", "optgroup"]);
 
+// The pre-filter's alternation, DERIVED from the set above rather than restated
+// beside it.
+//
+// It was restated, and that is the defect this file's own subject describes
+// wearing different clothes: the prefilter was a second copy of the element
+// list, inside the gate whose job is finding second copies. Both lists were
+// individually correct, so nothing failed — until a fourth element was added to
+// the set and the gate went silently blind to it, because a file spelling only
+// `<datalist>` was skipped before it was ever parsed.
+//
+// The backslash arm is NOT part of the derivation and stays hand-written: it is
+// a property of ESCAPES, not of any element name. `'<sel\u0065ct>'` holds no
+// verbatim `select` in its raw text but cooks to one, and every escape begins
+// with a backslash — so a file with neither a name nor a backslash cannot spell
+// one. Deriving it from the set would be wrong, which is why it is stated once
+// with its reason instead.
+const prefilter = new RegExp(`${[...nativeControls].join("|")}|\\\\`);
+
 // Tests and stories are scanned too: a test that drives a native control is a
 // test of the wrong control, and a story catalogues what we ship. Which files
 // those are is ../../scripts/lib/source-tree.ts's answer, shared with the
@@ -116,7 +134,7 @@ function findNativeControls(path: string, text: string): string[] {
   // character reaches cooked text only by appearing raw or by coming from an
   // escape, and every escape begins with a backslash — so a file with neither a
   // name nor a backslash cannot spell one, and skipping it costs no coverage.
-  if (!/select|option|optgroup|\\/.test(text)) return [];
+  if (!prefilter.test(text)) return [];
   const source = ts.createSourceFile(
     path,
     text,
@@ -520,4 +538,50 @@ describe("the native-control detector sees what it claims to", () => {
       if (tc.expect) expect(hits).toEqual(tc.expect);
     });
   }
+
+  // Every element the rule declares is one the census can actually reach.
+  //
+  // Asserted through `findNativeControls` — the real entry point — rather than
+  // against the pre-filter directly, so it holds whatever stops a declared
+  // element being seen: the pre-filter, the parse, the boundary rule. A test of
+  // one component passes while the path through it is broken.
+  //
+  // Keyed on the SET, so it is three assertions today and four the moment
+  // somebody adds a fourth, naming the new element without anybody remembering
+  // to write a case for it. That is the property worth having: the pre-filter
+  // was a hand-restated copy of this list, and the failure it produced was a
+  // file skipped before it was ever parsed — no finding, no error, and
+  // indistinguishable from a clean tree.
+  //
+  // What it does NOT do, stated because this file's standard is to say so:
+  // while the two lists agree it cannot detect that one is a restatement of the
+  // other. It goes red on the new element the instant the set grows.
+  it("can reach every element its own rule declares", () => {
+    for (const tag of nativeControls) {
+      expect(
+        findNativeControls("probe.tsx", `const a = <${tag} />;`),
+        `<${tag}> is in the rule, but the census would never parse a file that only mentions it`,
+      ).not.toEqual([]);
+    }
+  });
+
+  // The line between what is derived and what is hand-written, which is the
+  // whole of this fix and belongs here rather than only in the pull request:
+  // DERIVE what is a restatement of the rule, HAND-WRITE what is a property of
+  // the language.
+  //
+  // The names are the rule, so the pre-filter derives them. The backslash is
+  // not: it is a property of ESCAPES. `'<sel\u0065ct>'` holds no verbatim
+  // `select` in its raw text but cooks to one, and every escape begins with a
+  // backslash — so a file with neither a name nor a backslash cannot spell one.
+  // Deriving that arm from the set would be a second bug wearing the fix's
+  // clothes.
+  it("admits an escaped spelling, and does not admit an unrelated element", () => {
+    expect(
+      findNativeControls("probe.tsx", "const a = '<sel\\u0065ct>';"),
+    ).not.toEqual([]);
+    // Without this, "derived" would be satisfied by a pre-filter matching
+    // everything.
+    expect(prefilter.test("const a = <div />;")).toBe(false);
+  });
 });
