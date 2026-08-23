@@ -110,7 +110,16 @@ const CURRENCY_CODES = new Set([
 // and a kind that is a root but not a boundary invents one out of two unrelated
 // decisions. Methods, accessors and constructors are function scopes too — a
 // class holding a currency table in a method was neither.
-function isFunctionScope(node: ts.Node): boolean {
+type FunctionScope =
+  | ts.FunctionDeclaration
+  | ts.ArrowFunction
+  | ts.FunctionExpression
+  | ts.MethodDeclaration
+  | ts.ConstructorDeclaration
+  | ts.GetAccessorDeclaration
+  | ts.SetAccessorDeclaration;
+
+function isFunctionScope(node: ts.Node): node is FunctionScope {
   return (
     ts.isFunctionDeclaration(node) ||
     ts.isArrowFunction(node) ||
