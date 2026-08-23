@@ -12,8 +12,8 @@ var listTagsCopy = toolCopy{
 }
 
 var applyTagCopy = toolCopy{
-	Purpose: "Tag a person, company, deal or lead by tag_id, or by tag_name, which reuses the " +
-		"workspace's word or coins it.",
+	Purpose: "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which reuses " +
+		"the workspace's word or coins it.",
 	Limits: "Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss " +
 		"makes a NEW word. The same tag twice is a conflict.",
 }

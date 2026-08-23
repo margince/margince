@@ -17,17 +17,24 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/testdb"
 )
 
-// How many logical databases the lane may use is stated in three places that
-// cannot check each other: this package's RedisDBs, REDIS_DBS in the parallel
-// runner, and --databases in the compose file. Drift between them is silent in
-// the direction that matters — the runner assigns a db the server does not
-// serve, and the suite that drew it fails with `ERR DB index is out of range`,
-// naming Redis rather than the mismatch that caused it.
+// How many logical databases exist, and who owns which, is stated in four
+// places that cannot check each other: this package's RedisDBs, REDIS_DBS in
+// the parallel runner, DEV_REDIS_DB_MIN/MAX in scripts/dev.sh, and --databases
+// in the compose file.
+//
+// Drift is silent in the direction that matters, in two ways. A lane db the
+// server does not serve fails the suite that drew it with `ERR DB index is out
+// of range`, naming Redis rather than the mismatch. And a DEV_SLUG stack
+// landing inside the lane's range is worse than that: the suite that owns the
+// db FLUSHDBs it between tests, so a developer's running stack loses its
+// streams mid-run while the suite reads that stack's events as its own. Both
+// failures point anywhere except here.
 //
 // Paths are relative to this package, which is three levels under backend/.
 const (
 	laneRunnerPath = "../../../../scripts/test-integration-parallel.sh"
 	composePath    = "../../../../infra/docker-compose.dev.yml"
+	devScriptPath  = "../../../../scripts/dev.sh"
 )
 
 // The declarations this reads. Anchored to the assignment rather than any
@@ -35,6 +42,8 @@ const (
 var (
 	laneRunnerDecl = regexp.MustCompile(`(?m)^REDIS_DBS=(\d+)$`)
 	composeDecl    = regexp.MustCompile(`--databases",\s*"(\d+)"`)
+	devMinDecl     = regexp.MustCompile(`(?m)^DEV_REDIS_DB_MIN=(\d+)$`)
+	devMaxDecl     = regexp.MustCompile(`(?m)^DEV_REDIS_DB_MAX=(\d+)$`)
 )
 
 func TestRedisDBCountAgreesWithTheLaneAndTheServer(t *testing.T) {
@@ -45,12 +54,22 @@ func TestRedisDBCountAgreesWithTheLaneAndTheServer(t *testing.T) {
 		}
 	})
 
-	// The server serves indices 0..databases-1, and db 0 is reserved for a
-	// running `make dev`, so the lane's usable count is one less than declared.
-	t.Run("the compose file provisions one more than the lane uses", func(t *testing.T) {
-		if got := declaredInt(t, composePath, composeDecl); got != testdb.RedisDBs+1 {
-			t.Errorf("--databases %d in %s but testdb.RedisDBs=%d — Redis must serve %d so that db 1..%d exist alongside the reserved db 0",
-				got, composePath, testdb.RedisDBs, testdb.RedisDBs+1, testdb.RedisDBs)
+	// Three blocks, in order and touching: db 0 is bare `make dev`, 1..RedisDBs
+	// is the lane, and DEV_REDIS_DB_MIN..MAX is the slugged dev stacks. The
+	// server must serve every index any of them can name.
+	t.Run("the slugged dev range starts above the lane", func(t *testing.T) {
+		devMin := declaredInt(t, devScriptPath, devMinDecl)
+		if devMin <= testdb.RedisDBs {
+			t.Errorf("DEV_REDIS_DB_MIN=%d in %s but the lane owns 1..%d — a slugged stack inside the lane's range has its streams FLUSHDB'd mid-run by the suite that believes it owns that db",
+				devMin, devScriptPath, testdb.RedisDBs)
+		}
+	})
+
+	t.Run("the compose file provisions every block", func(t *testing.T) {
+		devMax := declaredInt(t, devScriptPath, devMaxDecl)
+		if got := declaredInt(t, composePath, composeDecl); got != devMax+1 {
+			t.Errorf("--databases %d in %s but DEV_REDIS_DB_MAX=%d — Redis serves 0..databases-1, so it must be asked for %d for the highest slugged stack's db to exist",
+				got, composePath, devMax, devMax+1)
 		}
 	})
 
@@ -87,9 +106,10 @@ func TestRedisDBCountAgreesWithTheLaneAndTheServer(t *testing.T) {
 		if err != nil {
 			t.Fatalf("the server reported databases=%q, which is not a number", raw)
 		}
-		if served != testdb.RedisDBs+1 {
-			t.Errorf("the server at %s serves %d databases but the lane assigns up to db %d — recreate the container (`make db-down && make db-up`); a container started before the count was raised keeps the old one",
-				addr, served, testdb.RedisDBs)
+		devMax := declaredInt(t, devScriptPath, devMaxDecl)
+		if served != devMax+1 {
+			t.Errorf("the server at %s serves %d databases but the blocks reach db %d — recreate the container (`make db-down && make db-up`); a container started before the count was raised keeps the old one",
+				addr, served, devMax)
 		}
 	})
 }

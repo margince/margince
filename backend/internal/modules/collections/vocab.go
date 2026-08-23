@@ -59,7 +59,12 @@ const ownerIDField = "owner_id"
 // matching vocabulary entry (the loop test below), but it cannot by itself
 // notice a type that becomes taggable in the schema and is never added here.
 // The integration lane closes that side by comparing the DDL's own CHECK.
-func taggableEntityTypes() []string {
+//
+// Exported because the compose tag seam serves it to the agents module, whose
+// apply_tag/remove_tag schemas derive their record_type enum from this set —
+// the tool surface once carried its own four-type copy and drifted (project
+// was taggable over REST and unnameable over MCP).
+func TaggableEntityTypes() []string {
 	return []string{
 		string(crmcontracts.TaggableEntityTypePerson),
 		string(crmcontracts.TaggableEntityTypeOrganization),

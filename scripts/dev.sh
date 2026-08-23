@@ -101,6 +101,89 @@ fi
 fe_port=$(( 8080 + hash ))
 api_port=$(( 18080 + hash ))
 
+# The Redis LOGICAL DATABASE this stack uses.
+#
+# One Redis serves every stack on the machine, and the stream names and
+# consumer groups are constants (`gw:events:crm:*`, `cg:*`). Two stacks on the
+# same index therefore share ONE consumer group: whichever worker reads an
+# entry first consumes it, resolves it against its OWN Postgres database, finds
+# nothing, and acks. The other stack's event is gone, and the symptom — a
+# projection or an accrual that never runs — is indistinguishable from a broken
+# feature. That cost a day and a wrongly-filed critical bug once.
+#
+# The instance serves 80 databases in three blocks that must not overlap
+# (infra/docker-compose.dev.yml says the same): db 0 is bare `make dev`, 1..63
+# belong to the parallel integration lane one per package, and 64..79 are
+# these slugged stacks. A slug landing in the test range would have its streams
+# FLUSHDB'd mid-run by a suite that believes it owns the db.
+#
+# The index is NOT the port hash. Two hashes differing by a multiple of the
+# block size would take different ports and the same db — a collision the port
+# check cannot see, which is the failure this whole change is about. It is
+# instead the lowest free index, claimed under a lock and recorded beside the
+# stack's other state, so a running stack's db is never handed out twice and a
+# resumed slug reclaims its own.
+DEV_REDIS_DB_MIN=64
+DEV_REDIS_DB_MAX=79
+
+# claim_redis_db SLUG — the logical database this slug owns, on stdout.
+#
+# Same slug wins the same index back, so restarting a stack keeps whatever its
+# streams already hold. A NEW slug takes the lowest index no other recorded
+# stack is using; two starting at once are serialised by a lock directory, so
+# they cannot both read "64 is free" and both take it.
+#
+# Reading the recorded stacks rather than hashing is what makes the guarantee
+# real: a hash gives distinct ports and a shared db whenever two hashes differ
+# by a multiple of the block size, which the port check cannot see and which is
+# exactly the collision this change exists to remove.
+claim_redis_db() { # slug
+  local want="$1" lock=".tmp/dev/.redis-db.lock" taken=() db
+  mkdir -p .tmp/dev
+  # A stale lock from a killed run would wedge every later start, so it is
+  # cleared on exit AND bounded: mkdir is the atomic primitive here.
+  local waited=0
+  until mkdir "$lock" 2>/dev/null; do
+    (( waited++ >= 50 )) && { rm -rf "$lock"; continue; }
+    sleep 0.1
+  done
+  trap 'rm -rf "'"$lock"'"' RETURN
+
+  local state_file other_slug REDIS_DB
+  for state_file in .tmp/dev/*/env; do
+    [[ -f "$state_file" ]] || continue
+    other_slug="$(basename "$(dirname "$state_file")")"
+    REDIS_DB=''
+    # shellcheck disable=SC1090
+    . "$state_file"
+    [[ -z "$REDIS_DB" ]] && continue
+    # This slug's own recorded index is the one it reclaims.
+    if [[ "$other_slug" == "$want" ]]; then
+      printf '%s' "$REDIS_DB"
+      return 0
+    fi
+    taken+=("$REDIS_DB")
+  done
+
+  for (( db = DEV_REDIS_DB_MIN; db <= DEV_REDIS_DB_MAX; db++ )); do
+    local used=0 t
+    for t in "${taken[@]:-}"; do [[ "$t" == "$db" ]] && { used=1; break; }; done
+    (( used )) || { printf '%s' "$db"; return 0; }
+  done
+
+  # Every index in the block is spoken for. Refuse rather than double up: a
+  # shared bus is the silent failure this whole mechanism prevents, and a
+  # 17th concurrent stack is a situation to notice, not to paper over.
+  echo "FAIL: all ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX} Redis databases are claimed by other dev stacks." >&2
+  echo "  Stop one (make dev-stop DEV_SLUG=<slug>), or a bare 'make dev' to sweep them all." >&2
+  exit 1
+}
+redis_db=0
+if [[ -n "$slug" ]]; then
+  redis_db=$(claim_redis_db "$slug")
+fi
+REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
+
 # with_database DSN NAME — the same connection, pointed at a different database.
 #
 # The database segment is REPLACED, never inherited. DEV_SLUG owns the name
@@ -610,7 +693,7 @@ up)
     MARGINCE_BLOBSTORE_BUCKET=margince-dev \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
-    --redis "localhost:${REDIS_PORT}" \
+    --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
     "${ai_flag[@]}" "${gmail_api_flags[@]+"${gmail_api_flags[@]}"}" > >(log_as api) 2>&1 &
   be_pid=$!
@@ -663,7 +746,7 @@ up)
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
     MARGINCE_BLOBSTORE_BUCKET=margince-dev \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
-    ./bin/worker --dsn "$dev_app_url" --redis "localhost:${REDIS_PORT}" \
+    ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     --retention-interval 720h \
     "${ai_flag[@]}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
@@ -674,8 +757,11 @@ up)
     echo "  worker   background relay + Surface-B runner + automation time-scan running"
   fi
 
-  printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
-    "$slug" "$api_port" "$fe_port" "$db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
+  # REDIS_DB is recorded because claim_redis_db reads it back: it is how this
+  # slug reclaims its own index on a restart, and how the next slug knows the
+  # index is spoken for.
+  printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nREDIS_DB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
+    "$slug" "$api_port" "$fe_port" "$db" "$redis_db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
 
   if wait_ready "http://localhost:${fe_port}/" 90; then
     echo "$label ready"
@@ -683,6 +769,12 @@ up)
     echo "  OPEN     http://localhost:${fe_port}"
     echo ""
     echo "  api      http://localhost:${api_port}  (also proxied at :${fe_port}/v1)"
+    # Printed for a slugged stack only, and printed at all because a shared bus
+    # is invisible until something goes missing: a reader debugging a consumer
+    # needs to know which index to point redis-cli at.
+    if [[ -n "$slug" ]]; then
+      echo "  bus      redis db ${redis_db} on :${REDIS_PORT}  (this slug's own — events are not shared with other stacks)"
+    fi
     # The only seat on a cold start is the bootstrap admin, and the deployment
     # config is where it is defined — read the address back from that file
     # rather than restating it, so an edited config prints the truth.

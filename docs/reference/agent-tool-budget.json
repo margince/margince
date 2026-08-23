@@ -5,7 +5,7 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 16996,
+    "tokens": 17004,
     "median_tool_tokens": 281,
     "mean_tool_tokens": 303
   },
@@ -230,7 +230,7 @@
     },
     {
       "name": "apply_tag",
-      "tokens": 206
+      "tokens": 211
     },
     {
       "name": "who_knows",
@@ -246,7 +246,7 @@
     },
     {
       "name": "remove_tag",
-      "tokens": 187
+      "tokens": 190
     },
     {
       "name": "list_channel_providers",

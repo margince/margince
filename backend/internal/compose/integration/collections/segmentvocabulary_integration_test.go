@@ -533,9 +533,16 @@ func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T)
 	for _, m := range checkLiteralRe.FindAllStringSubmatch(def, -1) {
 		got[m[1]] = true
 	}
-	want := map[string]bool{"person": true, "organization": true, "deal": true, "lead": true, "project": true}
+	// Derived from the Go slice, not restated: TaggableEntityTypes feeds the
+	// segment engines AND the apply_tag/remove_tag schemas, so this equality is
+	// what proves that slice complete against the CHECK — a type dropped from
+	// it fails here instead of silently vanishing from the tool surface.
+	want := map[string]bool{}
+	for _, entity := range collectionsmod.TaggableEntityTypes() {
+		want[entity] = true
+	}
 	if !maps.Equal(got, want) {
-		t.Fatalf("taggable's CHECK admits %v, want %v", got, want)
+		t.Fatalf("taggable's CHECK admits %v, TaggableEntityTypes answers %v — the two must agree", got, want)
 	}
 
 	// Every generated enum over the SAME vocabulary, asked about the CHECK's own
