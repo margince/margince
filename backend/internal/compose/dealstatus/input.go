@@ -15,14 +15,20 @@ import (
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// promptVersion changes whenever the prompt or the projection changes, so a
-// card written by the old wording is rewritten rather than served forever. It
-// is part of the fingerprint for exactly that reason.
-const promptVersion = "deal-status-2"
+// projectionVersion changes when the PROJECTION changes — the shape the facts
+// are rendered into, which is Go code and so the half a digest cannot reach. It
+// rides the fingerprint so a card built from the old shape is rewritten rather
+// than served forever.
+const projectionVersion = "deal-status-projection-1"
+
+// promptVersion is DERIVED from the prompt it versions, so rewording the prompt
+// rewrites the cards whether or not anybody remembers to bump anything.
+var promptVersion = ai.PromptDigest(statusSystem)
 
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,
@@ -152,7 +158,7 @@ func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, day tim
 		Reader  string      `json:"reader"`
 		Day     string      `json:"day"`
 	}{
-		In: in, Prompt: promptVersion, Routing: routingVersion,
+		In: in, Prompt: projectionVersion + "\x00" + promptVersion, Routing: routingVersion,
 		Reader: userID.String(), Day: day.UTC().Format("2006-01-02"),
 	})
 	if err != nil {

@@ -22,18 +22,30 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
-// promptVersion changes whenever ANYTHING about how a brief is written
-// changes: the model prompt, the shape of the assembled input, or the wording
-// the deterministic floor produces. It rides the fingerprint, so such a deploy
-// invalidates every cached brief rather than serving text written the old way.
+// floorVersion is bumped by hand when the DETERMINISTIC floor's wording
+// changes, and it is the half of the fingerprint a digest cannot reach.
 //
-// The floor's wording counts because the floor's OUTPUT is what gets cached. A
-// deploy that reworded it and left this alone kept serving the old sentences
-// to every account whose facts had not moved — which is most of them.
-const promptVersion = "org-brief-v6"
+// The floor's output is what gets cached, and its sentences are built by Go
+// code — `fmt.Sprintf` formats inside deterministic.go — so there is nothing to
+// hash. A deploy that reworded the floor and left this alone keeps serving the
+// old sentences to every account whose facts have not moved, which is most of
+// them. That has happened.
+//
+// It covers ONLY the floor. The prompts version themselves below, so the case
+// this constant used to also cover — somebody edits a prompt and forgets — is
+// no longer possible rather than merely warned about.
+const floorVersion = "org-brief-floor-v6"
+
+// promptVersion is DERIVED from the prompt text it versions, so editing a
+// prompt bumps it whether or not anybody remembers to.
+//
+// The input's SHAPE still rides the fingerprint separately: `Input` is
+// marshalled into the sum, so a changed field changes the key on its own.
+var promptVersion = ai.PromptDigest(briefSystem, askSystem)
 
 // Input is what one brief is written from: the account's identity, its
 // pipeline, its people, and what has moved recently — each already pruned
@@ -347,7 +359,7 @@ func Fingerprint(in Input, routingVersion string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the brief input: %w", err)
 	}
-	sum := sha256.Sum256([]byte(promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
+	sum := sha256.Sum256([]byte(floorVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
 
