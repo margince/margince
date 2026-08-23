@@ -58,6 +58,8 @@ func TestAMalformedOperandRouteIDAnswersNotFound(t *testing.T) {
 		{"updateCustomFieldOptions", updateCustomFieldOptionsCommand, operandRequest(http.MethodPatch, "/v1/custom-fields", "not-a-uuid", "", "", []byte(`{"options":["a"]}`))},
 		{"setProjectStakeholder", setStakeholderCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"person_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`))},
 		{"removeProjectStakeholder", removeStakeholderCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "person_id", ids.NewV7().String(), nil)},
+		{"setProjectCompany", setCompanyCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"organization_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`))},
+		{"removeProjectCompany", removeCompanyCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "organization_id", ids.NewV7().String(), nil)},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -188,6 +190,18 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 			operandRequest(http.MethodDelete, "/v1/projects", projectID.String(), "person_id", ids.NewV7().String(), nil), nil,
 			"project", projectID,
 		},
+		{
+			"setProjectCompany",
+			agentPolicy{Op: "setProjectCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject},
+			operandRequest(http.MethodPut, "/v1/projects", projectID.String(), "", "", []byte(`{"organization_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`)),
+			[]byte(`{"organization_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`), "project", projectID,
+		},
+		{
+			"removeProjectCompany",
+			agentPolicy{Op: "removeProjectCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject},
+			operandRequest(http.MethodDelete, "/v1/projects", projectID.String(), "organization_id", ids.NewV7().String(), nil), nil,
+			"project", projectID,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -304,15 +318,17 @@ func syntheticOperandRequest(route string, id ids.UUID) *http.Request {
 // because a synthetic request cannot exercise it: those decoders read a BODY,
 // and a body is per-operation where a path parameter is not. Their equivalent
 // proof is TestAPatchStagesItsRecordAndID and its siblings above.
-// operandBodies carries a minimal contract body for the one route in this
-// family whose operand is not in the path at all: setProjectStakeholder names
-// its person in the BODY, and its decoder refuses a request that names none
-// (agentcommandoperand.go). Every other route here is decodable from the path
-// alone, which is what lets the walk be synthetic.
+// operandBodies carries a minimal contract body for the routes in this family
+// whose operand is not in the path at all: setProjectStakeholder names its
+// person in the BODY and setProjectCompany names its company there, and both
+// decoders refuse a request that names none (agentcommandoperand.go). Every
+// other route here is decodable from the path alone, which is what lets the
+// walk be synthetic.
 //
-// gatekit:fixture the minimal contract body the one body-carrying route in this family declares — expected input, not a waived cost
+// gatekit:fixture the minimal contract body each body-carrying route in this family declares — expected input, not a waived cost
 var operandBodies = map[string]string{
 	"setProjectStakeholder": `{"person_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
+	"setProjectCompany":     `{"organization_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
 }
 
 func TestEveryConfirmFirstOperandRouteDecodesIntoTheRightCommand(t *testing.T) {

@@ -61,7 +61,11 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 		SELECT `+projectCardColumns+`
 		  FROM project p
 		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
-		 WHERE p.organization_id = $%d AND p.archived_at IS NULL AND (%s)
+		 WHERE EXISTS (
+		           SELECT 1 FROM relationship c
+		            WHERE c.kind = 'project_company' AND c.project_id = p.id
+		              AND c.organization_id = $%d AND c.archived_at IS NULL)
+		   AND p.archived_at IS NULL AND (%s)
 		 `+projectCardOrder+`
 		 LIMIT %d`, orgPos, scope, projectSurfaceCap), args...)
 	if err != nil {
@@ -113,7 +117,11 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 		        OR EXISTS (
 		            SELECT 1 FROM relationship e
 		             WHERE e.kind = 'employment' AND e.person_id = $%[1]d
-		               AND e.organization_id = p.organization_id AND e.is_current_primary
+		               AND EXISTS (
+		                   SELECT 1 FROM relationship c
+		                    WHERE c.kind = 'project_company' AND c.project_id = p.id
+		                      AND c.organization_id = e.organization_id AND c.archived_at IS NULL)
+		               AND e.is_current_primary
 		               AND e.archived_at IS NULL AND e.ended_at IS NULL
 		               AND (%[4]s)))
 		 `+projectCardOrder+`

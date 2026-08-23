@@ -178,6 +178,11 @@ func (q *queryEnv) seedFixture(t *testing.T) queryFixture {
 	// sharing a column name resolve to the right one.
 	f.project = q.SeedID(t, `INSERT INTO project (id, owner_id, name, organization_id, source, captured_by)
 		VALUES ($1, $2, 'Rollout', $3, 'manual', 'human:x')`, q.Rep1, f.rep1Org)
+	// The company edge the real writer always creates. A deal may only name a
+	// project one of whose companies it shares, and the trigger reads the edge:
+	// a hand-inserted project with no edge is a project no deal can point at.
+	q.SeedID(t, `INSERT INTO relationship (id, kind, project_id, organization_id, role, source, captured_by)
+		VALUES ($1, 'project_company', $2, $3, 'customer', 'manual', 'human:x')`, f.project, f.rep1Org)
 
 	f.rep1Deal = q.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, project_id, amount_minor, currency, status, expected_close_date, source, captured_by)
 		VALUES ($1, $2, 'Rollout', $3, $4, $5, $6, 100000, 'EUR', 'open', '2026-12-01', 'manual', 'human:x')`,

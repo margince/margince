@@ -41,7 +41,7 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 		if err != nil {
 			return err
 		}
-		out, err = maskProjectForCaller(ctx, tx, p)
+		out, err = s.maskProjectForCaller(ctx, tx, p)
 		return err
 	})
 	return out, err
@@ -78,7 +78,7 @@ func (s *Store) GetProjectTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID, a
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
-	return maskProjectForCaller(ctx, tx, p)
+	return s.maskProjectForCaller(ctx, tx, p)
 }
 
 // ListProjectsInput is one filtered, sorted, cursor-paginated list read.

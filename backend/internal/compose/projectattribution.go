@@ -94,7 +94,10 @@ func (projectCandidateFinder) LiveProjectsReached(ctx context.Context, tx pgx.Tx
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id, p.name, coalesce(p.key, '')
 		  FROM (`+activities.OrgReachSet()+`) ro
-		  JOIN project p ON p.organization_id = ro.organization_id
+		  JOIN relationship pc ON pc.kind = 'project_company'
+		                      AND pc.organization_id = ro.organization_id
+		                      AND pc.archived_at IS NULL
+		  JOIN project p ON p.id = pc.project_id
 		 WHERE ro.activity_id = $1
 		   AND p.archived_at IS NULL AND p.phase <> 'closed'`+scope+`
 		 ORDER BY p.id`, args...)

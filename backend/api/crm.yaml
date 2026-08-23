@@ -3403,6 +3403,59 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /projects/{id}/companies:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Projects]
+      operationId: setProjectCompany
+      summary: Put a company on a project with a role (idempotent per company).
+      description: |
+        A project is work several companies do together — a customer, a partner, a subcontractor —
+        so a company is an edge (`relationship` of kind `project_company`), not the project's one
+        anchor. Sending a company already on the project re-roles the edge that exists rather than
+        adding a second one.
+      x-mcp-tool: { verb: update_record, record_type: project, tier: confirmation_required, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetProjectCompanyRequest' }
+      responses:
+        '200':
+          description: The companies on the project, after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectCompanyListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{id}/companies/{organization_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: organization_id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Projects]
+      operationId: removeProjectCompany
+      summary: Take a company off a project (archives the edge).
+      description: |
+        The company keeps every record it owns; only its place on this project ends. Taking the
+        LAST company off a project is refused: a project no company is on is work nobody is doing,
+        and it would vanish from every company page that could lead a reader back to it.
+      x-mcp-tool: { verb: update_record, record_type: project, tier: confirmation_required, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      responses:
+        '204': { description: Taken off. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---------------------------- /pipelines ----------------------------------
   /pipelines:
     get:
@@ -21128,10 +21181,23 @@ components:
             The fields of THIS row the caller may not read (a field mask). A named field is null
             because it is withheld, not because it is empty; absent or empty means nothing is
             withheld.
+        organizations:
+          type: array
+          readOnly: true
+          items: { $ref: '#/components/schemas/ProjectCompany' }
+          description: >-
+            The companies working this project, in the order they were attached. A project is work
+            several companies do together — a customer, a partner, a subcontractor — so this is a
+            list rather than one anchor. A company the caller may not read is OMITTED rather than
+            named, so an empty list can mean either "no companies yet" or "none you can see".
         organization_id:
           type: [string, 'null']
           format: uuid
-          description: 'The anchor company — singular, and always set on the row. A company has many projects; a project has one company. Null on the wire when the caller may not read that company, in which case `masked_fields` names it: a project is readable across the workspace while the company it hangs off can still be an unpromoted capture.'
+          description: >-
+            The project's CUSTOMER — the first company attached with that role, or null when the
+            caller may not read it (in which case `masked_fields` names it) or when the project has
+            no customer. It is a view of `organizations`, kept because a project's client is the
+            one company most readers mean; the full picture is the list.
         owner_id: { type: [string, 'null'], format: uuid }
         phase:
           type: string
@@ -21342,6 +21408,40 @@ components:
         source: { type: string }
       additionalProperties: true
       x-extension: true
+
+    SetProjectCompanyRequest:
+      type: object
+      required: [organization_id]
+      properties:
+        organization_id: { type: string, format: uuid }
+        role:
+          type: string
+          description: 'What this company is to the project; defaults to `customer` when omitted.'
+      additionalProperties: false
+
+    ProjectCompanyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectCompany' }
+      additionalProperties: false
+
+    ProjectCompany:
+      type: object
+      description: One company's place on a project.
+      required: [organization_id, display_name, role]
+      properties:
+        organization_id: { type: string, format: uuid }
+        display_name: { type: string }
+        role:
+          type: string
+          description: >-
+            What this company is to the project — `customer` is its client, and the rest name the
+            other sides of a joint delivery. Free text rather than an enum: an installation whose
+            deliveries have a shape this vocabulary does not carry should not have to rename it.
+      additionalProperties: false
 
     UpdateProjectRequest:
       type: object

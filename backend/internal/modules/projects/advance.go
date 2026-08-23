@@ -91,7 +91,7 @@ func (s *Store) AdvanceProjectPhase(ctx context.Context, id ids.ProjectID, in Ad
 		if err != nil {
 			return fmt.Errorf("read advanced project: %w", err)
 		}
-		out, err = maskProjectForCaller(ctx, tx, advanced)
+		out, err = s.maskProjectForCaller(ctx, tx, advanced)
 		return err
 	})
 	return out, err

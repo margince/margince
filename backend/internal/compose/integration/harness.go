@@ -126,7 +126,11 @@ func Setup(t *testing.T) *Env {
 	e.Pool = pool
 	e.People = people.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
-	e.Projects = projects.NewStore(harnessDB(pool, e.WS))
+	// The company edges are wired the way compose wires them: a store without
+	// them refuses every create, and a harness that skipped them would be
+	// testing a store production never builds.
+	e.Projects = projects.NewStore(harnessDB(pool, e.WS)).
+		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx))
 	e.Contracts = contracts.NewStore(harnessDB(pool, e.WS))
 	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
 	return e

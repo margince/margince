@@ -76,7 +76,7 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	var out crmcontracts.Project
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createProjectTx(ctx, tx, in, by, active)
+		out, err = createProjectTx(ctx, tx, in, by, active, s.attachCompany, s.projectCompanies)
 		return err
 	})
 	return out, err
@@ -84,7 +84,10 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 
 // createProjectTx inserts the project with its birth phase-history row and
 // runs the write shape, all inside the caller's transaction.
-func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string, active []fieldcatalog.Column) (crmcontracts.Project, error) {
+func createProjectTx(
+	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
+	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
+) (crmcontracts.Project, error) {
 	// The anchor company is a client-supplied reference to a row-scoped
 	// record, so naming it is a read of it: the caller must be able to see
 	// the company before a project can be hung off it. The composite FK
@@ -99,6 +102,13 @@ func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by s
 		return crmcontracts.Project{}, err
 	}
 	in.Key = &key
+
+	// The company rides the SAME transaction as the row, so a project whose
+	// company edge failed to land cannot commit alone — a project no company
+	// page shows is a project a reader cannot find.
+	if err := attachCompany(ctx, tx, id, in.OrganizationID, CompanyRoleCustomer, by); err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("put the project's company on it: %w", err)
+	}
 
 	// The birth row: from_phase NULL, exactly as deal_stage_history records
 	// a deal's first placement. A project's history is complete from row one.
@@ -132,7 +142,14 @@ func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by s
 	if err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("read created project: %w", err)
 	}
-	return maskProjectForCaller(ctx, tx, out)
+	// The created project answers with its companies like every other single
+	// read. The store-bound spelling is unavailable here because this runs
+	// inside a caller-opened transaction, so the seam is threaded in.
+	one := []crmcontracts.Project{out}
+	if err := maskProjects(ctx, tx, one); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	return fillCompanies(ctx, tx, one[0], companies)
 }
 
 // RefuseArchiveProject answers every authority refusal ArchiveProject would
@@ -210,7 +227,7 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 		if err != nil {
 			return fmt.Errorf("read archived project: %w", err)
 		}
-		out, err = maskProjectForCaller(ctx, tx, archivedRow)
+		out, err = s.maskProjectForCaller(ctx, tx, archivedRow)
 		return err
 	})
 	return out, err

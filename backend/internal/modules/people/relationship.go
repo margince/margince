@@ -37,7 +37,7 @@ func relationshipAnchor(kind string) (object, column string) {
 		return "person", "person_id"
 	case "deal_stakeholder":
 		return "deal", "deal_id"
-	case ProjectStakeholderKind:
+	case ProjectStakeholderKind, ProjectCompanyKind:
 		return projectObjectName, "project_id"
 	default: // partner_of, referred_by, co_sell_with
 		return "organization", "organization_id"
@@ -46,7 +46,8 @@ func relationshipAnchor(kind string) (object, column string) {
 
 var relationshipKinds = map[string]bool{
 	"employment": true, "deal_stakeholder": true, "project_stakeholder": true,
-	"partner_of": true, "referred_by": true, "co_sell_with": true,
+	ProjectCompanyKind: true,
+	"partner_of":       true, "referred_by": true, "co_sell_with": true,
 }
 
 const relationshipColumns = `id, kind, person_id, organization_id, counterparty_org_id, deal_id, project_id,

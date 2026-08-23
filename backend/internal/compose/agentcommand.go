@@ -146,6 +146,8 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"updateCustomFieldOptions":        updateCustomFieldOptionsCommand,
 	"setProjectStakeholder":           setStakeholderCommand,
 	"removeProjectStakeholder":        removeStakeholderCommand,
+	"setProjectCompany":               setCompanyCommand,
+	"removeProjectCompany":            removeCompanyCommand,
 
 	// The seven bespoke auto-execute commands (agentcommandnested.go). Six of
 	// the seven — every one but upsertPartner — are nested creates or

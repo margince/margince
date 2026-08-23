@@ -280,3 +280,59 @@ func withRoomID(body []byte, roomID ids.UUID) (json.RawMessage, error) {
 	}
 	return merged, nil
 }
+
+// setCompanyCommand decodes PUT /v1/projects/{id}/companies. The body's
+// organization_id is held here for the same reason the stakeholder attach holds
+// person_id: an attach that names no company cannot run, and refusing at
+// staging tells the caller that rather than staging an approval that will fail
+// when it is redeemed.
+//
+//nolint:ireturn // the call IS the product: a concrete resolver here is exactly the thing that must not leave the agents package
+func setCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireCompanyOrganization(body); err != nil {
+		return nil, err
+	}
+	return agents.NewSetCompanyCall(deps.records, agents.SetCompanyCommand{ID: id}), nil
+}
+
+// requireCompanyOrganization holds the body to the one member the attach cannot
+// run without. A body that is not even an object is answered as the same
+// missing organization_id, since neither carries one.
+func requireCompanyOrganization(body []byte) error {
+	var payload struct {
+		OrganizationID string `json:"organization_id"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil || payload.OrganizationID == "" {
+		return httperr.Validation("organization_id", "missing", "organization_id is required")
+	}
+	if _, err := ids.Parse(payload.OrganizationID); err != nil {
+		return httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+	}
+	return nil
+}
+
+// removeCompanyCommand decodes DELETE
+// /v1/projects/{id}/companies/{organization_id} — the company is a second PATH
+// operand, so it is read from the route rather than a body.
+//
+//nolint:ireturn // the call IS the product: a concrete resolver here is exactly the thing that must not leave the agents package
+func removeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := pathOperand(r, "organization_id")
+	if err != nil {
+		return nil, err
+	}
+	organizationID, perr := ids.Parse(raw)
+	if perr != nil {
+		return nil, httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+	}
+	return agents.NewRemoveCompanyCall(deps.records,
+		agents.RemoveCompanyCommand{ID: id, OrganizationID: organizationID}), nil
+}
