@@ -923,6 +923,7 @@ export const en = {
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
   "access.lastSeen": "last seen {when}",
+  "access.downloads": "Downloaded {count} document(s)",
   "access.linkRequested":
     "Asked for a new link {when}. Issue one and send it yourself.",
   "access.rowActions": "Actions for {name}",

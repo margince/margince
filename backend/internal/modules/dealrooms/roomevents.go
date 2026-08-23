@@ -12,11 +12,21 @@ package dealrooms
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
+
+// ErrEventNamesNoDeal refuses a payload whose deal is absent.
+//
+// Every room event carries the deal its room belongs to, and a consumer's whole
+// job is to act on that deal. An absent one decodes to the zero UUID with no
+// error, so without this a consumer would act against no deal at all and read
+// as a room nobody used. Refusing here rather than in each consumer keeps the
+// check next to the shape it is about.
+var ErrEventNamesNoDeal = errors.New("dealrooms: the event names no deal")
 
 // The event types a Deal Room publishes that a reader of the deal's timeline
 // cares about: what the two sides said, what a buyer decided, and what the
@@ -54,6 +64,9 @@ func DecodeCommentPosted(payload json.RawMessage) (CommentPosted, error) {
 		doc := ids.UUID(*wire.DocumentId)
 		out.DocumentID = &doc
 	}
+	if out.DealID == ids.Nil {
+		return CommentPosted{}, ErrEventNamesNoDeal
+	}
 	return out, nil
 }
 
@@ -71,12 +84,16 @@ func DecodeDecisionRecorded(payload json.RawMessage) (DecisionRecorded, error) {
 	if err := json.Unmarshal(payload, &wire); err != nil {
 		return DecisionRecorded{}, fmt.Errorf("decode %s: %w", EventDecisionRecorded, err)
 	}
-	return DecisionRecorded{
+	out := DecisionRecorded{
 		DealID:     ids.UUID(wire.DealId),
 		DecisionID: ids.UUID(wire.DecisionId),
 		DocumentID: ids.UUID(wire.DocumentId),
 		Kind:       wire.Kind,
-	}, nil
+	}
+	if out.DealID == ids.Nil {
+		return DecisionRecorded{}, ErrEventNamesNoDeal
+	}
+	return out, nil
 }
 
 // Published is one release of a room to its buyers.
@@ -96,6 +113,9 @@ func DecodePublished(payload json.RawMessage) (Published, error) {
 	if wire.ReleaseId != nil {
 		rel := ids.UUID(*wire.ReleaseId)
 		out.ReleaseID = &rel
+	}
+	if out.DealID == ids.Nil {
+		return Published{}, ErrEventNamesNoDeal
 	}
 	return out, nil
 }

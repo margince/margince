@@ -9,6 +9,7 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -154,6 +155,17 @@ func TestTheSellersOwnHousekeepingStaysOffTheTimeline(t *testing.T) {
 			t.Errorf("%s wrote a timeline note %q, which this consumer does not carry",
 				eventType, note.subject)
 		}
+	}
+}
+
+func TestAPayloadNamingNoDealIsRefusedRatherThanFiledAgainstNothing(t *testing.T) {
+	// Every room event carries its deal. One that does not would otherwise
+	// decode to the zero UUID and write a note attached to nothing, which reads
+	// exactly like a room nobody used.
+	_, _, err := roomNote(roomEnvelope(t, dealrooms.EventPublished,
+		crmcontracts.PublicEventDealRoomPublished{ReleaseNo: 1}))
+	if !errors.Is(err, dealrooms.ErrEventNamesNoDeal) {
+		t.Fatalf("a publish naming no deal answered %v, want ErrEventNamesNoDeal", err)
 	}
 }
 

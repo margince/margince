@@ -26845,6 +26845,20 @@ components:
           type: [string, 'null']
           format: date-time
           description: When they last made a request. Null if they have never signed in.
+        download_count:
+          type: [integer, 'null']
+          readOnly: true
+          description: |
+            How many documents this person has taken out of the room, counting each
+            download. Absent until they take one.
+
+            A seller previewing their own room as a buyer is never counted: the panel
+            would otherwise report the buyer opening what the rep opened.
+        documents_downloaded:
+          type: [array, 'null']
+          readOnly: true
+          items: { type: string }
+          description: The titles of the documents they downloaded, each named once.
         has_signed_in:
           type: boolean
           readOnly: true

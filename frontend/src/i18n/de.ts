@@ -884,6 +884,7 @@ export const de = {
   "access.state.active": "angemeldet",
   "access.state.revoked": "entzogen",
   "access.lastSeen": "zuletzt gesehen {when}",
+  "access.downloads": "{count} Dokument(e) heruntergeladen",
   "access.linkRequested":
     "Hat {when} um einen neuen Link gebeten. Stellen Sie einen aus und senden Sie ihn selbst.",
   "access.rowActions": "Aktionen für {name}",

@@ -174,16 +174,10 @@ func publishNote(released dealrooms.Published) roomNoteText {
 }
 
 // write logs the note against the deal, keyed on the event so a replay returns
-// the note that is already there.
+// the note that is already there. The deal is known non-zero: the decoders
+// refuse a payload that names none (dealrooms.ErrEventNamesNoDeal), so a note
+// can never be attached to nothing.
 func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note roomNoteText) error {
-	if note.deal == ids.Nil {
-		// A payload without its deal names no timeline. Said out loud rather
-		// than written against the zero UUID, which would attach the note to
-		// nothing and look exactly like a room nobody talked in.
-		w.log.ErrorContext(ctx, "deal room timeline: the event names no deal, so no note was written",
-			"event", env.Type, "room", env.Entity.ID.String())
-		return nil
-	}
 	system, id := roomTimelineSource, env.EventID.String()
 	_, _, err := w.activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind:         string(crmcontracts.ActivityKindNote),
@@ -210,6 +204,9 @@ func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note 
 func (w *DealRoomTimeline) noteContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
+	// The note's own event names what caused it, so a reader can walk from the
+	// timeline entry back to the comment or release that produced it.
+	ctx = principal.WithCausationEvent(ctx, env.EventID)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:deal_room_timeline",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},

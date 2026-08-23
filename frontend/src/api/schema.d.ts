@@ -20157,6 +20157,16 @@ export interface components {
              */
             last_seen_at?: string | null;
             /**
+             * @description How many documents this person has taken out of the room, counting each
+             *     download. Absent until they take one.
+             *
+             *     A seller previewing their own room as a buyer is never counted: the panel
+             *     would otherwise report the buyer opening what the rep opened.
+             */
+            readonly download_count?: number | null;
+            /** @description The titles of the documents they downloaded, each named once. */
+            readonly documents_downloaded?: string[] | null;
+            /**
              * @description Whether this person has ever exchanged a credential for a session.
              *
              *     Distinct from `delivery_state == consumed`, which reports the LATEST

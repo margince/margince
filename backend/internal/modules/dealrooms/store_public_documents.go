@@ -116,7 +116,9 @@ func (s *Store) BuyerDocumentLocator(ctx context.Context, sess Session, document
 			return fmt.Errorf("locate deal room document: %w", err)
 		}
 		out.Filename, out.ContentType, out.ByteSize = published.Filename, published.ContentType, published.ByteSize
-		return nil
+		// Recorded with the locate that earned it: the seller's Access panel
+		// and the bytes the buyer receives commit together or not at all.
+		return noteBuyerEngagement(ctx, tx, sess, &documentID, engagementDocumentDownloaded)
 	})
 	return out, err
 }

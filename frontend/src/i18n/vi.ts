@@ -870,6 +870,7 @@ export const vi = {
   "access.state.active": "đã đăng nhập",
   "access.state.revoked": "đã thu hồi",
   "access.lastSeen": "xem lần cuối {when}",
+  "access.downloads": "Đã tải xuống {count} tài liệu",
   "access.linkRequested":
     "Đã xin liên kết mới {when}. Hãy cấp một liên kết và tự gửi.",
   "access.rowActions": "Thao tác cho {name}",

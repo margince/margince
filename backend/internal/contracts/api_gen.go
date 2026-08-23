@@ -15751,6 +15751,16 @@ type DealRoomParticipant struct {
 	// credential currently stands, which is what a revoked participant shows.
 	DeliveryState DealRoomDeliveryState `json:"delivery_state"`
 
+	// DocumentsDownloaded The titles of the documents they downloaded, each named once.
+	DocumentsDownloaded *[]string `json:"documents_downloaded,omitempty"`
+
+	// DownloadCount How many documents this person has taken out of the room, counting each
+	// download. Absent until they take one.
+	//
+	// A seller previewing their own room as a buyer is never counted: the panel
+	// would otherwise report the buyer opening what the rep opened.
+	DownloadCount *int `json:"download_count,omitempty"`
+
 	// Email Stored lowercase.
 	Email    openapi_types.Email `json:"email"`
 	FullName string              `json:"full_name"`
@@ -31205,6 +31215,22 @@ func (a *DealRoomParticipant) UnmarshalJSON(b []byte) error {
 		delete(object, "delivery_state")
 	}
 
+	if raw, found := object["documents_downloaded"]; found {
+		err = json.Unmarshal(raw, &a.DocumentsDownloaded)
+		if err != nil {
+			return fmt.Errorf("error reading 'documents_downloaded': %w", err)
+		}
+		delete(object, "documents_downloaded")
+	}
+
+	if raw, found := object["download_count"]; found {
+		err = json.Unmarshal(raw, &a.DownloadCount)
+		if err != nil {
+			return fmt.Errorf("error reading 'download_count': %w", err)
+		}
+		delete(object, "download_count")
+	}
+
 	if raw, found := object["email"]; found {
 		err = json.Unmarshal(raw, &a.Email)
 		if err != nil {
@@ -31337,6 +31363,20 @@ func (a DealRoomParticipant) MarshalJSON() ([]byte, error) {
 	object["delivery_state"], err = json.Marshal(a.DeliveryState)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'delivery_state': %w", err)
+	}
+
+	if a.DocumentsDownloaded != nil {
+		object["documents_downloaded"], err = json.Marshal(a.DocumentsDownloaded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'documents_downloaded': %w", err)
+		}
+	}
+
+	if a.DownloadCount != nil {
+		object["download_count"], err = json.Marshal(a.DownloadCount)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'download_count': %w", err)
+		}
 	}
 
 	object["email"], err = json.Marshal(a.Email)
