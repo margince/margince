@@ -26,6 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -122,12 +123,12 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 		  JOIN relationship colleague
 		    ON colleague.organization_id = theirs.organization_id
 		   AND colleague.kind = 'employment'
-		   AND colleague.ended_at IS NULL
+		   AND `+people.EmploymentIsCurrentSQL("colleague.ended_at")+`
 		   AND colleague.archived_at IS NULL
 		  JOIN person p ON p.id = colleague.person_id AND p.archived_at IS NULL
 		 WHERE theirs.person_id = $%d
 		   AND theirs.kind = 'employment'
-		   AND theirs.ended_at IS NULL
+		   AND `+people.EmploymentIsCurrentSQL("theirs.ended_at")+`
 		   AND theirs.archived_at IS NULL
 		   AND p.id <> $%d
 		   AND (%s)

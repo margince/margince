@@ -198,7 +198,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	for _, s := range stakeholders {
 		people = append(people, s.PersonID)
 	}
-	out.DepartedPersonIDs, err = readDeparted(ctx, tx, facts.organizationID, people, now)
+	out.DepartedPersonIDs, err = readDeparted(ctx, tx, facts.organizationID, people)
 	if err != nil {
 		return out, err
 	}

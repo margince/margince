@@ -10,8 +10,8 @@ package people
 
 import "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 
-// EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs", and
-// the only definition of a current employment in this product. `date` is the
+// EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs".
+// `date` is the
 // end-date expression at the call site: a column on a read, the incoming value
 // on a create, the patched-or-existing one on an update.
 //
@@ -36,6 +36,20 @@ import "github.com/gradionhq/margince/backend/internal/platform/database/storeki
 // is a function of today's date, so every READER derives it instead of trusting
 // a value written months ago. compose reaches this for the same reason the
 // readers in this package do — one definition, or the copies drift.
+//
+// "One definition" is held by TestEveryEmploymentCurrencyTestUsesTheOneDefinition
+// in backend/employmentcurrency_test.go, and it is written down here because
+// this comment used to say "the only definition of a current employment in this
+// product" with nothing holding it — and it was false eleven times over. Eight
+// statements asked with a bare `ended_at IS NULL`, which is the notice-period
+// defect described above; three more hand-spelled the correct form; one of
+// those compared against a Go clock in the same statement as a half that used
+// Postgres', so one query asked its two questions on two different days.
+//
+// The gate cannot reach four statements in activities, projects and signals: a
+// module never imports a sibling (ADR-0054 §3), so those cannot call this at
+// all until the predicate moves tier. They are ratified by name in the gate,
+// with that reason, rather than left looking clean.
 func EmploymentIsCurrentSQL(date string) string {
 	return storekit.SQLf("(%s IS NULL OR %s > current_date)", date, date)
 }
