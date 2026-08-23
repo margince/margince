@@ -50,13 +50,23 @@ const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
 // last_viewed_at = $1` carries no GREATEST at all and is the worst possible
 // second writer: it rewinds unconditionally.
 //
-// The name may be SCHEMA-QUALIFIED or quoted — `public.user_record_view`,
-// `"user_record_view"` — and a pattern anchored on the bare word passes those
-// exactly like a clean tree. This gate's own rule is to plant the shape it
-// cannot see, so the optional qualifier is part of the pattern and both
-// spellings are planted below.
+// The name may be QUALIFIED and quoted in more ways than one, and a pattern
+// anchored on the bare word passes every other spelling exactly like a clean
+// tree. Postgres accepts all of these, and each is planted below:
+//
+//	public.user_record_view          one qualifier
+//	tenant1.public.user_record_view  two — so the qualifier repeats
+//	public . user_record_view        whitespace around the separator
+//	"public"."user_record_view"      quoted, in any combination
+//	UPDATE ONLY user_record_view     the inheritance-scoped form
+//
+// The repeated qualifier does not cost the word boundary that keeps the
+// near-neighbour `user_record_view_archive` out: `_` is a word character, so
+// `user_record_view\b` cannot match the longer name. Both qualified and bare
+// spellings of that table are planted as must-MISS for the same reason.
 var writesViewBaseline = regexp.MustCompile(
-	`(?is)(INSERT\s+INTO|UPDATE)\s+"?(?:[\w$]+"?\.\s*"?)?user_record_view\b`)
+	`(?is)(INSERT\s+INTO|UPDATE(?:\s+ONLY)?)\s+` +
+		`(?:"?[\w$]+"?\s*\.\s*)*"?user_record_view\b`)
 
 // TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
 // comment names.
@@ -166,6 +176,14 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		"INSERT INTO public.user_record_view (user_id) VALUES ($1)",
 		`UPDATE "user_record_view" SET last_viewed_at = $1`,
 		`INSERT INTO "public"."user_record_view" (user_id) VALUES ($1)`,
+		// A three-part name, and whitespace around the separator. Both are
+		// valid Postgres and both were silent false negatives.
+		"INSERT INTO tenant1.public.user_record_view (user_id) VALUES ($1)",
+		`UPDATE "tenant1"."public"."user_record_view" SET last_viewed_at = $1`,
+		"INSERT INTO public . user_record_view (user_id) VALUES ($1)",
+		// UPDATE ONLY: inheritance-scoped, and it rewinds just as hard.
+		"UPDATE ONLY user_record_view SET last_viewed_at = $1",
+		"UPDATE ONLY public.user_record_view SET last_viewed_at = $1",
 	}
 	for _, statement := range caught {
 		if !writesViewBaseline.MatchString(statement) {
@@ -179,8 +197,11 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 		// A different table whose name merely contains this one's would be a
 		// false positive; the word boundary is what stops it.
 		"INSERT INTO user_record_view_archive (user_id) VALUES ($1)",
-		// And the qualifier must not widen the near-neighbour either.
+		// And no amount of qualifying may widen the near-neighbour: `_` is a
+		// word character, so the boundary after the name holds.
 		"INSERT INTO public.user_record_view_archive (user_id) VALUES ($1)",
+		"INSERT INTO tenant1.public.user_record_view_archive (user_id) VALUES ($1)",
+		"UPDATE ONLY user_record_view_archive SET last_viewed_at = $1",
 	}
 	for _, statement := range missed {
 		if writesViewBaseline.MatchString(statement) {
