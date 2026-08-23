@@ -61,11 +61,10 @@ const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
 //	UPDATE ONLY user_record_view     the inheritance-scoped form
 //
 // The NAME's end is a delimiter, not `\b`. `$`, `.` and `"` are all legal
-// around a Postgres identifier and none is a word character, so a boundary
-// alone reported `user_record_view$archive`, `"user_record_view.extra"` and
-// `user_record_view.extra` — different relations — as this one. The delimiter
+// around a Postgres identifier and none is a word character. The delimiter
 // excludes every character that can CONTINUE or QUALIFY a name, so a trailing
-// `.` is refused whether the target was quoted or not.
+// `.` or `"` is refused whether the target was quoted or not —
+// `user_record_view$archive` and `user_record_view.extra` are other relations.
 //
 // And the quoted branch is case-SENSITIVE while the rest is not, because that
 // is Postgres: an unquoted `USER_RECORD_VIEW` folds to this table, a quoted
