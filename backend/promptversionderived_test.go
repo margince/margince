@@ -486,7 +486,25 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 	}
 	// And it does NOT count a provenance label that ends in the same word, which
 	// would fire on a package whose hand-typed version is legitimate.
+	//
+	// Each label is asserted to EXIST before it is asserted to be excluded. A
+	// name that has been renamed away is absent from `found` for the wrong
+	// reason, and the check would go on passing while proving nothing about the
+	// floor it exists to test.
+	namedLikeAPrompt := map[string]bool{}
+	for _, pkg := range promptSurfacePackages(t) {
+		eachDeclaredString(pkg, isConst, func(name string, value ast.Expr) {
+			if _, isString := stringValue(value, pkg.consts); isString && promptConstantName.MatchString(name) {
+				namedLikeAPrompt[name] = true
+			}
+		}, func(string) {})
+	}
 	for _, label := range []string{"trustSystem", "roleSystem", "actorTypeSystem", "transcriptSourceSystem"} {
+		if !namedLikeAPrompt[label] {
+			t.Errorf("%s is gone from the tree, so it no longer tests that the floor excludes a "+
+				"provenance label — name one that is still there", label)
+			continue
+		}
 		if found[label] {
 			t.Errorf("the census counts %s as a prompt; it names where a record came from", label)
 		}
