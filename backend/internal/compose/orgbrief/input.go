@@ -22,18 +22,33 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
-// promptVersion changes whenever ANYTHING about how a brief is written
-// changes: the model prompt, the shape of the assembled input, or the wording
-// the deterministic floor produces. It rides the fingerprint, so such a deploy
-// invalidates every cached brief rather than serving text written the old way.
+// floorVersion is bumped by hand when the DETERMINISTIC floor's wording
+// changes, and it is the half of the fingerprint a digest cannot reach.
 //
-// The floor's wording counts because the floor's OUTPUT is what gets cached. A
-// deploy that reworded it and left this alone kept serving the old sentences
-// to every account whose facts had not moved — which is most of them.
-const promptVersion = "org-brief-v6"
+// The floor's output is what gets cached, and its sentences are built by Go
+// code — `fmt.Sprintf` formats inside deterministic.go — so there is nothing to
+// hash. A deploy that rewords the floor and leaves this alone keeps serving the
+// old sentences to every account whose facts have not moved, which is most of
+// them.
+//
+// It covers ONLY the floor. The model prompt versions itself below.
+const floorVersion = "org-brief-floor-v6"
+
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so editing that wording bumps it whether or not anybody remembers
+// to.
+//
+// The ask prompt is deliberately absent. Ask answers are not cached (see
+// Service.Ask), so binding them to the brief's key would rewrite every cached
+// brief for a change that cannot affect one.
+//
+// The input's SHAPE still rides the fingerprint separately: `Input` is
+// marshalled into the sum, so a changed field changes the key on its own.
+var promptVersion = ai.PromptDigest(briefSystemFor)
 
 // Input is what one brief is written from: the account's identity, its
 // pipeline, its people, and what has moved recently — each already pruned
@@ -347,7 +362,7 @@ func Fingerprint(in Input, routingVersion string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the brief input: %w", err)
 	}
-	sum := sha256.Sum256([]byte(promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
+	sum := sha256.Sum256([]byte(floorVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
 

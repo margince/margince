@@ -27,15 +27,27 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// growthFitPromptVersion identifies the assembly RULES in the fingerprint.
-// Bumping it invalidates every cached assessment, which is the point: a change
-// to the required inputs or the abstention floor must not leave yesterday's
-// bands being served beside today's (DOSS-AC-14).
-const growthFitPromptVersion = "growth-fit-v2"
+// growthFitAssemblyVersion identifies the assembly RULES in the fingerprint —
+// the required inputs and the abstention floor, which are Go code and so the
+// half a digest cannot reach. Bumping it invalidates every cached assessment,
+// which is the point: yesterday's bands must not be served beside today's
+// (DOSS-AC-14).
+const growthFitAssemblyVersion = "growth-fit-assembly-v2"
+
+// growthFitPromptVersion is DERIVED from the prompt as it is SENT — boundary
+// rule included — so editing that wording bumps it whether or not anybody
+// remembers to.
+//
+// Its own digest rather than the dossier's: the two surfaces keep separate
+// fingerprints, and folding both prompts into one would rewrite every cached
+// dossier whenever the growth-fit wording moved, and every cached assessment
+// whenever the dossier's did.
+var growthFitPromptVersion = ai.PromptDigest(growthFitSystemFor)
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
 // v2 adds the sub-scores (DOSS-AC-17): a v1 payload has none, and serving one
@@ -219,8 +231,9 @@ func growthFitFingerprint(in Input, routingVersion string, offering Offering) (s
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the growth-fit input: %w", err)
 	}
-	sum := sha256.Sum256(fmt.Appendf(nil, "%s\x00%s\x00%t\x00%s\x00%s",
-		growthFitPromptVersion, routingVersion, offering.Confirmed, offering.Fingerprint, encoded))
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s\x00%s\x00%s\x00%t\x00%s\x00%s",
+		growthFitAssemblyVersion, growthFitPromptVersion, routingVersion,
+		offering.Confirmed, offering.Fingerprint, encoded))
 	return hex.EncodeToString(sum[:]), nil
 }
 

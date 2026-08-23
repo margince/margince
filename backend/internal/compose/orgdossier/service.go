@@ -24,17 +24,24 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
-// promptVersion identifies the assembly RULES in the fingerprint. Bumping it
-// invalidates every cached dossier, which is the point: a change to how a
-// dossier is written must not leave yesterday's assemblies being served beside
-// today's (DOSS-AC-14).
-const promptVersion = "dossier-v1"
+// assemblyVersion identifies the assembly RULES in the fingerprint, and is the
+// half a digest cannot reach: the rules are Go code. Bumping it invalidates
+// every cached dossier, which is the point — a change to how a dossier is
+// written must not leave yesterday's assemblies being served beside today's
+// (DOSS-AC-14).
+const assemblyVersion = "dossier-assembly-v1"
+
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so editing that wording bumps it whether or not anybody remembers
+// to.
+var promptVersion = ai.PromptDigest(dossierSystemFor)
 
 // storedVersion is the payload SHAPE this build writes and can read. A row
 // written by an older shape unmarshals cleanly into a newer envelope with its
@@ -223,7 +230,7 @@ func Fingerprint(in Input, routingVersion string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the dossier input: %w", err)
 	}
-	sum := sha256.Sum256([]byte(promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
+	sum := sha256.Sum256([]byte(assemblyVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
 
