@@ -43,8 +43,10 @@ type RunnerService struct {
 	retriever retrieval.Retriever
 	log       *slog.Logger
 	// specByName resolves a stored job's catalog entry. It defaults to
-	// runner.SpecByName — the catalog IS code and this does not make it
-	// configuration.
+	// agentSpecByName — the catalog IS code and this does not make it
+	// configuration. It is deliberately NOT runner.SpecByName: that returns
+	// a spec with no Tools, and an empty allowlist is read as no narrowing,
+	// so the run would silently be bounded by its passport alone.
 	//
 	// It is a seam because the integration lane needs a spec that can stage
 	// an approval, and no shipped agent has one: every tool both catalog
@@ -79,7 +81,7 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 		store:      runner.NewStore(InstallationDB(pool)),
 		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, resolveIncumbent, send), brain),
 		identity:   identity.NewService(pool),
-		specByName: runner.SpecByName,
+		specByName: agentSpecByName,
 		retriever:  retriever,
 		log:        log,
 	}
@@ -113,7 +115,7 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// and the rail would silently never learn that the 06:00 brief was queued.
 	ctx = schedulerContext(ctx)
 	s.reapAbandonedRuns(ctx)
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		if due := spec.DueAt(now); !now.Before(due) {
 			// Cron-seeded jobs carry no passport yet: execution fails
 			// loudly rather than running with ambient authority.
