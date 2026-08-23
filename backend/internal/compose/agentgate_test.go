@@ -21,7 +21,7 @@ import (
 // list.
 func TestContractTierNeverBelowRegistryTier(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil)
 
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool {
@@ -52,7 +52,7 @@ func TestContractTierNeverBelowRegistryTier(t *testing.T) {
 // staging, so both artifacts are pinned.
 func TestUpdateRecordIsAutoExecuteOnBothArtifacts(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil)
 
 	spec, ok := registry.Spec("update_record")
 	if !ok || spec.Tier != mcp.TierAutoExecute {
@@ -161,7 +161,7 @@ func TestGovernanceOperationsAreHumanOnly(t *testing.T) {
 // tool fails closed.
 func TestOperationSpecTightenOnly(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil)
 
 	spec, _, ok := operationSpec(agentPolicy{Op: "archivePerson", Access: accessTool, Tool: "update_record", Tier: tierConfirmationRequired}, registry)
 	if !ok || spec.Tier != mcp.TierConfirmationRequired {
