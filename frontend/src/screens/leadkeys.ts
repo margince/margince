@@ -39,9 +39,17 @@ export function leadManualSignalsKey(id: string): QueryKey {
 // Deliberately NOT part of the write set below, and this is the one entry that
 // needs saying out loud. The promote preview asks what qualifying this lead
 // would do to the workspace as it stands the moment the dialog opens, so it is
-// declared `staleTime: 0` and `enabled: open` — it refetches on every open and
-// caches nothing between them. Adding it to `leadWriteKeys` would invalidate a
-// query that is never read stale, which reads as thoroughness and is noise.
+// declared `staleTime: 0` and `enabled: open` — it refetches on every open.
+// Invalidating it here would change nothing about that: an inactive query is
+// refetched when it next mounts either way.
+//
+// What it does NOT do is forget the previous answer. React Query's default
+// `gcTime` keeps it for five minutes, so a reopen inside that window paints the
+// LAST open's preview — a "create" that may be a merge by now — for as long as
+// the refetch takes. That is a real thing a reader can see, and it is not this
+// module's to fix: invalidating a cached-but-inactive query does not purge its
+// data either. Saying it here rather than claiming the query "caches nothing"
+// keeps the next reader from trusting a sentence that is false.
 export function leadPromotePreviewKey(id: string): QueryKey {
   return ["lead-promote-preview", id];
 }

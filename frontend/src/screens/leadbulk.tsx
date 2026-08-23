@@ -115,16 +115,28 @@ export function LeadBulkBar({
         return done;
       }, Promise.resolve([])),
     onSuccess: async (result, action) => {
+      // EVERY lead the run touched, refused ones included, and not only the
+      // list.
+      //
+      // Not only the list, because the list is `["leads", query]` and a
+      // detail page is the sibling `["lead", id]`: a bulk assign moved forty
+      // owners and left forty detail pages showing the old one.
+      //
+      // Refused ones included, because a refusal is the case where the
+      // client's copy is MOST likely wrong. The commonest refusal here is a
+      // version conflict, which says the server's row moved — so the row that
+      // refused is exactly the row whose cached version must not be trusted.
+      // Skipping them also emptied this set whenever a whole run refused, and
+      // then nothing was invalidated at all: the reader keeps the selection to
+      // retry, retries against the version that just conflicted, and conflicts
+      // forever until they reload the page by hand.
+      //
       // Awaited: the rows that refused keep their selection so they can be
       // retried, and a retry that fired before the refetch landed would
       // resend the very version that just conflicted. The run stays pending
       // — and the verbs disabled — until the list holds fresh versions.
-      // Every lead the run actually wrote, not just the list. A bulk assign
-      // moved forty owners and left forty detail pages showing the old one;
-      // the row that refused is skipped because nothing about it changed.
       await Promise.all(
         result
-          .filter((row) => row.error === undefined)
           .flatMap((row) => leadWriteKeys(row.id))
           .map((key) => queryClient.invalidateQueries({ queryKey: key })),
       );

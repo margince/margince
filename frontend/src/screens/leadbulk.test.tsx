@@ -264,7 +264,7 @@ describe("LeadBulkBar — disqualify", () => {
   // somewhere. The list is `["leads", query]`; the detail page is the sibling
   // `["lead", id]`, which prefix invalidation does not walk to — so naming
   // only the list left forty pages showing the owner the run had just changed.
-  it("invalidates every lead it actually wrote, and not the one that refused", async () => {
+  it("invalidates every lead the run touched, refused ones included", async () => {
     const { deletions } = stubFetch({
       "l-2": () =>
         new Response(
@@ -294,8 +294,46 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() => expect(invalidated).toContainEqual(["lead", "l-1"]));
     expect(invalidated).toContainEqual(["leads"]);
     expect(invalidated).toContainEqual(["record-history", "lead", "l-1"]);
-    // The refused row is skipped: nothing about it changed, and invalidating
-    // it would refetch a page that is already right.
-    expect(invalidated).not.toContainEqual(["lead", "l-2"]);
+    // The REFUSED row too. Its refusal was a version conflict, which is the
+    // server saying its row moved — so it is the row whose cached version is
+    // least trustworthy, not the one to skip.
+    expect(invalidated).toContainEqual(["lead", "l-2"]);
+  });
+
+  // The case the partial-failure test above cannot see, because a successful
+  // sibling's `["leads"]` invalidation masks it: a run in which EVERY row
+  // refuses. Filtering to the successes emptied the set, `Promise.all([])`
+  // resolved instantly, and nothing was invalidated — so the reader keeps the
+  // selection to retry, retries against the very version that just conflicted,
+  // and conflicts forever until they reload the page by hand.
+  it("refetches after a run in which every row refused", async () => {
+    const conflict = () =>
+      new Response(
+        JSON.stringify({
+          code: "version_conflict",
+          detail: "Somebody else changed this lead.",
+        }),
+        { status: 409, headers: { "content-type": "application/json" } },
+      );
+    const { deletions } = stubFetch({ "l-1": conflict, "l-2": conflict });
+    const user = userEvent.setup();
+    const { invalidated } = renderWithClient(
+      <LeadBulkBar leads={leads} onDone={() => undefined} />,
+    );
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    await waitFor(() => expect(deletions).toHaveLength(2));
+
+    await waitFor(() => expect(invalidated).toContainEqual(["leads"]));
+    expect(invalidated).toContainEqual(["lead", "l-1"]);
+    expect(invalidated).toContainEqual(["lead", "l-2"]);
   });
 });

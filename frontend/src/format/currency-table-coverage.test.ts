@@ -29,9 +29,21 @@ import { describe, expect, it } from "vitest";
 // case somebody made a decision about — a currency this product treats
 // differently — while two is a table.
 //
-// WHAT THIS DOES NOT CATCH, deliberately: a table built from an array of
-// codes, or one whose keys are computed. Nothing here writes one, and a rule
-// that had to follow a computed key would need the type checker.
+// THREE SHAPES, because a table can be written three ways and the third is the
+// one somebody reaches for after the first two are gated: a `switch`, an object
+// literal, and an if/else chain of `=== "EUR"` comparisons. The third arm is
+// here because it is the most natural way to rewrite the `symbolFor` this
+// change deleted, and a gate blind to it would have said PASS over the same
+// table in a different coat.
+//
+// WHAT THIS DOES NOT CATCH, deliberately: a table built from an ARRAY of codes,
+// and a vocabulary of OFFERED currencies. `deals.tsx` and `companyactions.tsx`
+// each spell `["EUR", "USD", "GBP", "CHF"]` for the currency picker — that is a
+// list of what this deployment sells in, a product decision, not a claim about
+// what a currency IS, and folding it in here would gate a preference with a
+// rule about facts. (It is a genuine third copy of one list and deserves its
+// own answer; it is not this one.) Nor does this follow a computed key, which
+// would need the type checker.
 //
 // `mcp-apps/bridge.ts` needs no exemption and is worth saying so: it formats
 // money for a document served to a third-party host and CANNOT import the
@@ -116,6 +128,36 @@ function tablesIn(fileName: string, text: string): string[] {
         found.push(`switch ${at(node)}`);
       }
     }
+    // The if/else chain. Counted per FUNCTION rather than per statement,
+    // because each `if` is its own node and a per-statement count would see
+    // three separate one-code decisions where a reader sees one table.
+    if (
+      ts.isFunctionDeclaration(node) ||
+      ts.isArrowFunction(node) ||
+      ts.isFunctionExpression(node)
+    ) {
+      const compared = new Set<string>();
+      const walk = (inner: ts.Node) => {
+        if (
+          ts.isBinaryExpression(inner) &&
+          (inner.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken ||
+            inner.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken)
+        ) {
+          for (const side of [inner.left, inner.right]) {
+            if (ts.isStringLiteral(side) && CURRENCY_CODES.has(side.text)) {
+              compared.add(side.text);
+            }
+          }
+        }
+        ts.forEachChild(inner, walk);
+      };
+      if (node.body !== undefined) {
+        walk(node.body);
+      }
+      if (compared.size >= 2) {
+        found.push(`compare ${at(node)}`);
+      }
+    }
     if (ts.isObjectLiteralExpression(node)) {
       const codes = node.properties.filter((property) => {
         const name = property.name;
@@ -194,7 +236,25 @@ describe("a currency", () => {
       "const DIGITS = { JPY: 0, VND: 0 };",
       1,
     ],
+    [
+      // Found by a reviewer probing the first draft: the same table with no
+      // switch and no object literal, which is exactly how the deleted
+      // symbolFor would most naturally be rewritten.
+      "an if-chain, which is the table wearing no detectable shape",
+      'function s(c: string) { if (c === "EUR") return "€"; if (c === "USD") return "$"; return c; }',
+      1,
+    ],
+    [
+      "the same chain as an arrow function",
+      'const s = (c: string) => (c === "JPY" ? 0 : c === "VND" ? 0 : 2);',
+      1,
+    ],
     // What must stay invisible.
+    [
+      "ONE code compared, which is a decision about one currency",
+      'function whole(c: string, a: number) { if (c === "JPY") { return a; } return a / 100; }',
+      0,
+    ],
     [
       "ONE code, which is a decision about one currency rather than a table",
       'if (currency === "JPY") { return whole(amount); }',

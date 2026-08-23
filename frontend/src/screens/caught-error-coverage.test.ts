@@ -26,7 +26,7 @@ import { describe, expect, it } from "vitest";
 // hand-kept list of these sites went stale twice — a site was recorded fixed
 // while the file it lived in was being rewritten with the same defect back in.
 //
-// FOUR ARMS, each keyed on what hid a real copy rather than on the shape that
+// FIVE ARMS, each keyed on what hid a real copy rather than on the shape that
 // was noticed first:
 //
 //   1. `.message` off the binding. What hid it: the `error instanceof Error`
@@ -48,11 +48,14 @@ import { describe, expect, it } from "vitest";
 //      was missing when this gate first read zero: the tree still had two.
 //
 // WHAT THIS DOES NOT CATCH, deliberately: a binding handed to a function that
-// coerces it out of sight (`setError(describe(err))`), and a binding stored in
-// state and read after the catch block closes. Following either needs the type
+// coerces it out of sight (`setError(describe(err))`); a binding stored in
+// state and read after the catch block closes; and a DESTRUCTURED read
+// (`const { message } = err as Error`). Following any of them needs the type
 // checker plus a rule about which helpers count as rendering, and this repo has
-// already learned that a gate with fiddly rules gets worked around. The four
-// arms cover every shape that has actually shipped here.
+// already learned that a gate with fiddly rules gets worked around. The
+// destructured form is named rather than left implied: it is one edit away from
+// the shapes below, and a reader who assumes it is covered would be wrong. The four
+// five arms cover every shape that has actually shipped here.
 //
 // A console sink is not an exception today because none exists: the one
 // sanctioned path to the console is `logUnexpectedError`, which is handed the
@@ -122,6 +125,16 @@ function disclosuresIn(fileName: string, text: string): string[] {
           found.push(`toString ${fileName}:${at(node)}`);
         }
       }
+      // `err["message"]` is the same read through the other accessor, and it
+      // is the one a gate written against the dot form never sees.
+      if (
+        ts.isElementAccessExpression(node) &&
+        isBinding(node.expression) &&
+        ts.isStringLiteral(node.argumentExpression) &&
+        node.argumentExpression.text === "message"
+      ) {
+        found.push(`message ${fileName}:${at(node)}`);
+      }
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
@@ -143,12 +156,32 @@ function disclosuresIn(fileName: string, text: string): string[] {
   // `X.error` is where every react-query result files the throw, and 309 sites
   // in this tree read it through `problemMessageOf`. Reading `.message` off it
   // is the same leak by a route with no `catch` to anchor on.
+  // A cast, a parenthesis or a non-null assertion between `.error` and
+  // `.message` leaves the same read in place. `download.error!.message` is the
+  // likely spelling, because strict-null narrowing is what invites the `!` —
+  // so the arm has to see through it or it is blind to its own commonest form.
+  const beneathWrappers = (node: ts.Expression): ts.Expression => {
+    let inner = node;
+    while (
+      ts.isParenthesizedExpression(inner) ||
+      ts.isAsExpression(inner) ||
+      ts.isNonNullExpression(inner) ||
+      ts.isTypeAssertionExpression(inner)
+    ) {
+      inner = inner.expression;
+    }
+    return inner;
+  };
   const visitResultError = (node: ts.Node) => {
+    const beneath = ts.isPropertyAccessExpression(node)
+      ? beneathWrappers(node.expression)
+      : undefined;
     if (
       ts.isPropertyAccessExpression(node) &&
       node.name.text === "message" &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === "error"
+      beneath !== undefined &&
+      ts.isPropertyAccessExpression(beneath) &&
+      beneath.name.text === "error"
     ) {
       const { line } = source.getLineAndCharacterOfPosition(node.getStart());
       found.push(`result.error ${fileName}:${line + 1}`);
@@ -258,6 +291,23 @@ describe("the census", () => {
     [
       "a query result's error inside JSX",
       "const x = <p>{save.error.message}</p>;",
+      1,
+    ],
+    [
+      // Found by a reviewer probing the first draft: the same read through the
+      // other accessor, invisible to a rule written against the dot form.
+      "a bracketed read of the same property",
+      'try { a(); } catch (e) { show(e["message"]); }',
+      1,
+    ],
+    [
+      "a result's error behind a non-null assertion",
+      "show(download.error!.message);",
+      1,
+    ],
+    [
+      "a result's error behind a cast",
+      "show((save.error as Error).message);",
       1,
     ],
     [

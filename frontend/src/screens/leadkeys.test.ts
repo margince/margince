@@ -31,10 +31,22 @@ import {
 // derived: every array literal under src/ whose first element is one of the
 // lead roots, found by parsing, with this module and its own tests excluded.
 //
-// WHAT THIS DOES NOT CATCH, deliberately: a key built from a variable
-// (`[root, id]`). Resolving those needs the type checker, and no site in this
-// tree writes one — every lead key is a literal, which is what makes the
-// literal the honest subject.
+// WHAT THIS DOES NOT CATCH, and the scope is worth stating precisely because
+// "one place" is a strong claim:
+//
+//   - a key built from a variable ROOT (`[root, id]`), or a literal assigned to
+//     a variable first (`const key = ["lead", id]; q({ queryKey: key })`).
+//     Following either needs the type checker; nothing in this tree writes one.
+//   - the list root spelled as a BARE STRING rather than an array, which
+//     `leads.list.tsx` really does: `useListQuery({ key: "leads" })` and
+//     `<CreateAction invalidate="leads" />` both feed the same cache root
+//     through helpers that take a string. Those are read sites of the list, not
+//     per-lead write sites, and it is the per-lead half that had the defect —
+//     but the claim above is true of the ARRAY spellings, and a reader deserves
+//     to know that rather than discover it.
+//
+// A cast, a parenthesis and a non-null assertion do NOT escape: see
+// isQueryKeyPosition.
 
 const screensDir = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(screensDir, "..");
@@ -66,11 +78,26 @@ const KEY_TAKING_CALLS = [
 ];
 
 function isQueryKeyPosition(node: ts.ArrayLiteralExpression): boolean {
-  const parent = node.parent;
+  // Climb through the wrappers that leave the literal in place. `as const` is
+  // THE react-query key idiom, so a rule anchored on the literal's direct
+  // parent would be blind to the spelling a new site is most likely to use —
+  // and the caught-error census in this same sweep already unwraps casts, so
+  // not doing it here would be an asymmetry inside one change.
+  let node_: ts.Node = node;
+  while (
+    node_.parent !== undefined &&
+    (ts.isAsExpression(node_.parent) ||
+      ts.isParenthesizedExpression(node_.parent) ||
+      ts.isNonNullExpression(node_.parent) ||
+      ts.isTypeAssertionExpression(node_.parent))
+  ) {
+    node_ = node_.parent;
+  }
+  const parent = node_.parent;
   if (
     parent !== undefined &&
     ts.isPropertyAssignment(parent) &&
-    parent.initializer === node &&
+    parent.initializer === node_ &&
     ts.isIdentifier(parent.name) &&
     parent.name.text === "queryKey"
   ) {
@@ -79,13 +106,12 @@ function isQueryKeyPosition(node: ts.ArrayLiteralExpression): boolean {
   return (
     parent !== undefined &&
     ts.isCallExpression(parent) &&
-    parent.arguments[0] === node &&
+    parent.arguments[0] === node_ &&
     ts.isPropertyAccessExpression(parent.expression) &&
     KEY_TAKING_CALLS.includes(parent.expression.name.text)
   );
 }
 
-/** `<file>:<line> <literal>` for every hand-spelled lead query key in one file. */
 /** `<file>:<line> <literal>` for every hand-spelled lead query key in one file. */
 function spelledIn(fileName: string, text: string): string[] {
   const source = ts.createSourceFile(
@@ -207,6 +233,19 @@ describe("a lead's cached reads", () => {
       0,
     ],
     [
+      // The escape a reviewer found in the first draft: `as const` is the
+      // standard react-query key idiom, so this is the spelling a new site is
+      // MOST likely to use, not a corner.
+      "a key wearing `as const`",
+      'q({ queryKey: ["lead", id] as const });',
+      1,
+    ],
+    [
+      "a key in parentheses, and one behind a non-null assertion",
+      'a({ queryKey: (["leads"]) }); b({ queryKey: ["lead", id] });',
+      2,
+    ],
+    [
       "the positional spelling ten setQueryData calls in this tree use",
       'queryClient.setQueryData(["lead", id], next);',
       1,
@@ -248,9 +287,9 @@ describe("the keys themselves", () => {
     ]);
   });
 
-  it("leaves the promote preview out, because it is never read stale", () => {
-    // staleTime 0 + enabled-on-open: it refetches every time the dialog opens
-    // and caches nothing between them.
+  it("leaves the promote preview out, because invalidating it would change nothing", () => {
+    // staleTime 0 + enabled-on-open: it refetches every time the dialog opens,
+    // and an inactive query is refetched on its next mount either way.
     expect(leadWriteKeys("l-1")).not.toContainEqual(
       leadPromotePreviewKey("l-1"),
     );
