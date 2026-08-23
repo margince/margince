@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -206,7 +207,7 @@ func accountContacts(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]accountC
 		   -- that row as live. Two spellings would let one surface call them
 		   -- gone while the other calls them current.
 		   AND r.archived_at IS NULL
-		   AND (r.ended_at IS NULL OR r.ended_at > current_date)
+		   AND `+people.EmploymentIsCurrentSQL("r.ended_at")+`
 		   AND (%s) AND (%s)
 		 ORDER BY p.id LIMIT %d`, orgPos, edgeBound, visible, accountContactFetch+1), args...)
 	if err != nil {
