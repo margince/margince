@@ -25,11 +25,11 @@ type openRow struct {
 	// amountMinor is the deal's own figure in its own currency; nil when the
 	// deal names no amount at all.
 	amountMinor *int64
-	// valueBase is the CONVERTED figure, and it is null on every open deal:
-	// the rate freezes on close (deals.deal_advance), so the generated column
-	// has nothing to compute from until then. Reading only this column would
-	// price the open pipeline at nothing forever, which is why the fold falls
-	// back to amountMinor for deals already in the base currency.
+	// valueBase is the CONVERTED figure. On a closed deal it is the frozen
+	// column; on an open one the read converts at the latest rate on or before
+	// its as-of day, because the rate freezes only on close
+	// (deals.deal_advance) and the column is null until then. It stays null
+	// when no rate exists for the pair, which is the case this fold refuses.
 	valueBase *int64
 	closeOn   *time.Time
 	currency  *string
@@ -43,14 +43,16 @@ type openRow struct {
 // A deal ALREADY in the base currency needs no rate, and contributes its own
 // figure. This is the ordinary case and the reason the fold cannot simply read
 // amount_minor_base: that generated column is null on every open deal, because
-// the rate freezes on CLOSE (deals.deal_advance). Summing it alone would price
-// the open pipeline at nothing on every installation, forever.
+// the rate freezes on CLOSE (deals.deal_advance).
 //
-// A deal in another currency contributes only when a frozen rate AND its date
-// are both present. Refusing it otherwise is what keeps §4.2's rule true —
-// a converted figure always has a conversion behind it and a date to name —
-// and the deal still counts toward open_count, so the page reports a total
-// covering part of the pipeline rather than a silently short one.
+// A deal in another currency contributes only when a converted figure AND its
+// rate date are both present — a frozen pair on a closed deal, or the latest
+// stored rate the read applied to an open one. Refusing it otherwise is what
+// keeps §4.2's rule true: a converted figure always has a conversion behind it
+// and a date to name. What is refused now is only the honestly unpriceable
+// case, a currency the installation holds no rate for at all, and such a deal
+// still counts toward open_count — so the page reports a total covering part of
+// the pipeline rather than a silently short one.
 func baseValueOf(deal openRow) (value int64, converted bool, ok bool) {
 	if deal.currency != nil && *deal.currency == deal.baseCcy {
 		if deal.amountMinor == nil {
