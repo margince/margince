@@ -188,13 +188,7 @@ function unmarked(raw: string): string {
 // asserting a shape is ABSENT passes identically over a clean tree and over a
 // detector that has stopped detecting.
 function specifiersIn(path: string, text: string): Specifier[] {
-  const source = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.ES2022,
-    true,
-    scriptKindFor(path),
-  );
+  const source = parse(path, text);
   // A comment is not an AST node, and the shell gate deliberately did not strip
   // them: a commented-out bad import is a bad import somebody is about to
   // uncomment. Dropping that silently is the regression this file exists not to
@@ -208,13 +202,28 @@ function specifiersIn(path: string, text: string): Specifier[] {
   // parser is the thing that knows.
   const inComments = commentRanges(source, text).flatMap((range) => {
     const at = source.getLineAndCharacterOfPosition(range.pos).line;
-    return astSpecifiers(
-      `${path}.comment`,
-      unmarked(text.slice(range.pos, range.end)),
-      scriptKindFor(path),
-    ).map((s) => ({ ...s, line: at + s.line, inComment: true }));
+    const body = parse(path, unmarked(text.slice(range.pos, range.end)));
+    return astSpecifiers(body).map((s) => ({
+      ...s,
+      line: at + s.line,
+      inComment: true,
+    }));
   });
-  return [...astSpecifiers(path, text, scriptKindFor(path)), ...inComments];
+  return [...astSpecifiers(source), ...inComments];
+}
+
+// parse reads one source the one way this gate reads sources. A file is parsed
+// ONCE and the same tree is handed to both the comment walk and the extractor:
+// they each built their own, which is a second parse of identical text and,
+// worse, two trees a later edit could make disagree.
+function parse(path: string, text: string): ts.SourceFile {
+  return ts.createSourceFile(
+    path,
+    text,
+    ts.ScriptTarget.ES2022,
+    true,
+    scriptKindFor(path),
+  );
 }
 
 // astSpecifiers is this gate's ONE reading of "what does this source import" —
@@ -222,18 +231,7 @@ function specifiersIn(path: string, text: string): Specifier[] {
 // that question inside one gate are two answers that drift. Not the only such
 // reading in the tree: scripts/test-budget.ts extracts specifiers too, for a
 // different question, and merging them would be a worse answer to both.
-function astSpecifiers(
-  path: string,
-  text: string,
-  kind: ts.ScriptKind,
-): Specifier[] {
-  const source = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.ES2022,
-    true,
-    kind,
-  );
+function astSpecifiers(source: ts.SourceFile): Specifier[] {
   const out: Specifier[] = [];
   const push = (node: ts.Node, spec: string) =>
     out.push({
@@ -846,11 +844,10 @@ describe("the extension-import detector sees what it claims to", () => {
       '/* const s = require("../x")*/',
     ];
     for (const raw of shapes) {
-      const kind = ts.ScriptKind.TS;
-      const asRead = astSpecifiers("c.ts", unmarked(raw), kind).map(
+      const asRead = astSpecifiers(parse("c.ts", unmarked(raw))).map(
         (x) => x.text,
       );
-      const asIfBlanked = astSpecifiers("c.ts", alsoBlanked(raw), kind).map(
+      const asIfBlanked = astSpecifiers(parse("c.ts", alsoBlanked(raw))).map(
         (x) => x.text,
       );
       expect(asRead, `blanking more changed the answer for: ${raw}`).toEqual(
