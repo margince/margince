@@ -104,15 +104,29 @@ func upcomingMeeting(f facts) (crmcontracts.Activity, bool) {
 // Mail only: the verb this arm names drafts a threaded reply, which the draft
 // path composes only for an inbound email — an inbound call has no thread to
 // answer on, and falls through to the next rule.
+//
+// It answers for the card's move AND for reply_to, so the button and the email
+// box in the deal's margin cannot disagree about whether somebody is waiting.
+//
+// Held by: TestTheMoveAndReplyToNameTheSameMail (move_test.go)
 func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
-		if a.Kind != crmcontracts.ActivityKindEmail || a.Direction == nil || a.OccurredAt.After(f.now) || withheld(a) {
+		if a.Kind != crmcontracts.ActivityKindEmail || a.Direction == nil || a.OccurredAt.After(f.now) {
 			continue
 		}
-		if *a.Direction == crmcontracts.ActivityDirectionInbound {
-			return a, true
+		// A withheld row still ANSWERS. Only its words are hidden from this
+		// reader, and skipping it would walk past the reply to the inbound
+		// behind it and report a mail as unanswered after somebody answered
+		// it. So an outbound ends the scan whether or not it can be read, and
+		// only a readable inbound is offered — there is no drafting a reply to
+		// a message whose text this reader may not see.
+		if *a.Direction != crmcontracts.ActivityDirectionInbound {
+			return crmcontracts.Activity{}, false
 		}
-		return crmcontracts.Activity{}, false
+		if withheld(a) {
+			return crmcontracts.Activity{}, false
+		}
+		return a, true
 	}
 	return crmcontracts.Activity{}, false
 }

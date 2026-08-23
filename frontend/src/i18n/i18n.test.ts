@@ -24,6 +24,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // deal's own name in a placeholder.
   "room.card.title",
   "deal360.title",
+  // Vietnamese uses "Email" for the noun; German has its own spelling and
+  // carries it. Only the vi value matches English, and it is the right word.
+  "dealmail.title",
   "persondealrooms.title",
   "room.create.defaultTitle",
   "buyer.poweredBy",

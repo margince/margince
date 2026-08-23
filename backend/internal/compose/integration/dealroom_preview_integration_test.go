@@ -96,6 +96,44 @@ func TestASellerPreviewsTheRoomAsABuyerAndCanChangeNothing(t *testing.T) {
 	}
 }
 
+// Clicking "View as buyer" again leaves the tab already open still working.
+//
+// Minting used to revoke every earlier session on the preview seat, so the
+// second click killed the first tab. The rep saw a dead-link page and read it
+// as the NEW link having expired, because that was the link they had just
+// asked for — the tab reporting the failure was the old one.
+func TestASecondPreviewLeavesTheFirstTabWorking(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+
+	open := func(what string) string {
+		var issued apptest.AnyMap
+		if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/preview", nil, nil, &issued); status != http.StatusCreated {
+			t.Fatalf("%s preview = %d %v", what, status, issued)
+		}
+		var session apptest.AnyMap
+		if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": issued["credential"]}, nil, &session); status != http.StatusOK {
+			t.Fatalf("%s exchange = %d %v", what, status, session)
+		}
+		token, _ := session["session_token"].(string)
+		if token == "" {
+			t.Fatalf("%s exchange returned no session token: %v", what, session)
+		}
+		return token
+	}
+
+	first := open("first")
+	second := open("second")
+
+	if status := publicCall(t, e, "GET", "/v1/public/rooms/me", nil, bearer(first), nil); status != http.StatusOK {
+		t.Fatalf("the first preview tab after a second click = %d, want 200 — it must keep reading", status)
+	}
+	if status := publicCall(t, e, "GET", "/v1/public/rooms/me", nil, bearer(second), nil); status != http.StatusOK {
+		t.Fatalf("the second preview tab = %d, want 200", status)
+	}
+}
+
 // A room can be previewed the moment it exists, because it is live the moment
 // it exists. Previewing used to be refused until a publish, which was the same
 // gate that showed an invited buyer an empty page.

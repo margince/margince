@@ -46,8 +46,14 @@ type IssuedPreview struct {
 }
 
 // PreviewRoom mints a credential for the caller's preview seat in the room,
-// creating the seat on first use and ending the caller's earlier preview
-// sessions.
+// creating the seat on first use.
+//
+// Preview tabs the rep already has open are LEFT ALONE. Minting used to revoke
+// them, which made the second "View as buyer" click kill the first tab: that
+// tab then reported a dead link, and the rep read the failure as belonging to
+// the link they had just made rather than to the one they had already opened.
+// Superseding the unconsumed CREDENTIAL is enough to keep a minted-but-unopened
+// link from lying around, and issueCredentialFor already does exactly that.
 func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedPreview, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return IssuedPreview{}, err
@@ -83,11 +89,6 @@ func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedP
 		seat, err := previewSeat(ctx, tx, roomID, by)
 		if err != nil {
 			return err
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE deal_room_session SET revoked_at = now()
-			  WHERE participant_id = $1 AND revoked_at IS NULL`, seat); err != nil {
-			return fmt.Errorf("end earlier preview sessions: %w", err)
 		}
 		expiresAt, err := issueCredentialFor(ctx, tx, seat, digest, by, previewCredentialTTL)
 		if err != nil {

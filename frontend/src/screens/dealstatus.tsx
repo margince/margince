@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListChecks, Mail, RefreshCw, Sparkles } from "lucide-react";
+import { ListChecks, RefreshCw, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -10,7 +10,6 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { SentenceList, WrittenBy } from "./company360";
-import { ComposeModal } from "./compose";
 import { PersonMeetingBrief } from "./persondrawers";
 import "./dealstatus.css";
 
@@ -40,10 +39,13 @@ const VERDICT_LABELS: Record<string, MessageKey> = {
   cold: "deal360.verdict.cold",
 };
 
-export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
+// The card's read, shared. Deal360 draws the briefing from it and the email
+// box takes `reply_to` out of the same entry, so the two cannot end up
+// disagreeing about whether there is a message waiting for an answer — and the
+// box costs no second request.
+export function useDealStatusCard(dealId: string) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const status = useQuery({
+  return useQuery({
     queryKey: ["deal-status", dealId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals/{id}/status", {
@@ -55,6 +57,12 @@ export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
       return data;
     },
   });
+}
+
+export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const status = useDealStatusCard(dealId);
   const rewrite = useMutation({
     mutationKey: ["deal-status-refresh", dealId],
     mutationFn: async () => {
@@ -198,7 +206,7 @@ function Verdict({
   );
 }
 
-// activityIdOf reads the one operand the navigation and reply verbs take. The
+// activityIdOf reads the one operand the meeting-brief verb takes. The
 // arguments object is typed open on the wire; a missing id renders no button
 // rather than a button that would 404.
 function activityIdOf(move: DealStatusCardMove): string | null {
@@ -233,7 +241,6 @@ function MoveButton({
 }: Readonly<{ dealId: string; move: DealStatusCardMove }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [composing, setComposing] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
   const activityId = activityIdOf(move);
   const createTask = useMutation({
@@ -281,27 +288,12 @@ function MoveButton({
         </>
       );
     case "draft_email":
-      if (!activityId) {
-        return null;
-      }
-      return (
-        <>
-          <Button variant="primary" onClick={() => setComposing(true)}>
-            <Mail aria-hidden />
-            {t("deal360.draftReply")}
-          </Button>
-          {composing ? (
-            <ComposeModal
-              activityId={activityId}
-              entityType="deal"
-              entityId={dealId}
-              kind="email"
-              open={composing}
-              onClose={() => setComposing(false)}
-            />
-          ) : null}
-        </>
-      );
+      // No button here. Writing to the buyer is the email box's job, in the
+      // right-hand column under the Deal Room — one place a rep goes to send
+      // mail, whether or not this move happens to rank first. Deal360 still
+      // says WHY the mail is the move; it just does not carry a second door
+      // to the same composer.
+      return null;
     case "open_meeting_brief":
       if (!activityId) {
         return null;

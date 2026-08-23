@@ -92,6 +92,79 @@ func TestAnAnsweredInboundMailIsNotStillWaiting(t *testing.T) {
 	}
 }
 
+// A reply this reader may not READ is still a reply. Skipping it would walk
+// past it to the inbound behind it and offer to answer a mail somebody has
+// already answered — the card would send a rep to write a duplicate.
+func TestAWithheldReplyStillCountsAsAnAnswer(t *testing.T) {
+	outbound := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2))
+	dir := crmcontracts.ActivityDirectionOutbound
+	outbound.Direction = &dir
+	state := crmcontracts.ActivityContentStateWithheld
+	outbound.ContentState = &state
+	outbound.Subject = nil
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{outbound, inboundMail(testNow.AddDate(0, 0, -5))},
+	}
+	if _, ok := unansweredInbound(f); ok {
+		t.Fatal("a withheld reply was ignored, so an answered mail read as unanswered")
+	}
+}
+
+// The card's move and the deal page's email box both answer "is an answer
+// owed?", and they must never answer it differently: a rep told "draft the
+// reply" by one and offered "send an email" by the other cannot tell which is
+// right. This fails if either stops reading unansweredInbound.
+func TestTheMoveAndReplyToNameTheSameMail(t *testing.T) {
+	cases := map[string][]crmcontracts.Activity{
+		"an unanswered mail": {inboundMail(testNow.AddDate(0, 0, -3))},
+		"nothing logged":     {},
+		// The mail is NOT the newest row. Without this case both readings
+		// coincide on every input and the comparison can never fail — which is
+		// exactly how the first version of this test passed against a reply_to
+		// that named the wrong record.
+		"a newer note sits above the mail": {
+			act(crmcontracts.ActivityKindNote, testNow.AddDate(0, 0, -1)),
+			inboundMail(testNow.AddDate(0, 0, -4)),
+		},
+		"only an outbound": func() []crmcontracts.Activity {
+			out := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -1))
+			dir := crmcontracts.ActivityDirectionOutbound
+			out.Direction = &dir
+			return []crmcontracts.Activity{out}
+		}(),
+	}
+	for name, timeline := range cases {
+		t.Run(name, func(t *testing.T) {
+			f := facts{deal: openDeal(), now: testNow, timeline: timeline}
+			card := composeDeterministic(f, decideMove(f))
+			mv := decideMove(f)
+
+			// What the button would open, and what the box would open.
+			var fromMove string
+			if mv.Action == ActionDraftEmail && mv.Arguments != nil {
+				if id, ok := (*mv.Arguments)["activity_id"].(openapi_types.UUID); ok {
+					fromMove = id.String()
+				}
+			}
+			var fromBox string
+			if card.ReplyTo != nil {
+				fromBox = card.ReplyTo.String()
+			}
+			// A draft_email move ALWAYS names a mail. Asserting that here is
+			// what stops the comparison below going vacuous: read the operand
+			// out with the wrong type and fromMove stays empty, the comparison
+			// is skipped, and the test passes having compared nothing.
+			if mv.Action == ActionDraftEmail && fromMove == "" {
+				t.Fatalf("the move offers a draft but names no mail: %#v", *mv.Arguments)
+			}
+			if fromMove != "" && fromMove != fromBox {
+				t.Fatalf("the move answers %q and the email box answers %q", fromMove, fromBox)
+			}
+		})
+	}
+}
+
 func TestLastContactIgnoresWhatIsOnlyScheduled(t *testing.T) {
 	// The timeline is newest first and holds booked meetings at the top, which
 	// are plans rather than contact. Counting one as contact prints "the last
