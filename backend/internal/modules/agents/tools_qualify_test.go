@@ -10,8 +10,10 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
+	"github.com/gradionhq/margince/backend/internal/platform/freemail"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -60,6 +62,17 @@ func leadFixture(t *testing.T, id ids.UUID, fields string, version int64) *fakeS
 	}}
 }
 
+// baselineConsumerMail is the platform matcher with NO deployment overlay —
+// the same object compose builds, minus the workspace's administered rows,
+// which is the honest stand-in for a unit test: it exercises the real list and
+// the real walk rather than a map the test wrote itself. compose's own seam is
+// exercised where it can reach a database.
+type baselineConsumerMail struct{}
+
+func (baselineConsumerMail) IsConsumer(_ context.Context, domain string) (bool, error) {
+	return freemail.New(nil, nil).IsConsumer(domain), nil
+}
+
 type qualifyWire struct {
 	RecordID string `json:"record_id"`
 	Filled   map[string]struct {
@@ -74,7 +87,7 @@ type qualifyWire struct {
 
 func qualify(t *testing.T, p *fakeSoR, id ids.UUID) qualifyWire {
 	t.Helper()
-	raw, err := qualifyLead{p: p}.Handle(context.Background(),
+	raw, err := qualifyLead{p: p, consumerMail: baselineConsumerMail{}}.Handle(context.Background(),
 		json.RawMessage(`{"record_id":"`+id.String()+`"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -168,4 +181,122 @@ func TestQualifyLeadNeverOverwritesAnExistingValue(t *testing.T) {
 	if len(out.Gaps) != 0 {
 		t.Fatalf("gaps = %v, want none for a fully qualified lead", out.Gaps)
 	}
+}
+
+// The two doors used to answer one question differently, and both halves of
+// the disagreement are pinned here.
+//
+// The list: this tool carried FIFTEEN domains against platform/freemail's
+// 8,758-entry baseline, so the agent door happily created companies called
+// "Zoho", "Yandex" and "Mail" from addresses the web door refuses to derive
+// anything from at all. A wrong employer is worse than a reported gap — the
+// gap asks a human, the employer is acted on.
+func TestQualifyLeadRefusesEveryConsumerProviderTheWebDoorRefuses(t *testing.T) {
+	// Each of these is in the platform baseline and was absent from the
+	// fifteen-entry map: a provider the agent door used to name as an employer.
+	for _, address := range []string{
+		"jane@zoho.com",
+		"jane@yandex.ru",
+		"jane@mail.com",
+		"jane@fastmail.com",
+		"jane@tutanota.com",
+		"jane@yahoo.co.uk",
+	} {
+		t.Run(address, func(t *testing.T) {
+			leadID := ids.NewV7()
+			p := leadFixture(t, leadID,
+				`{"email":"`+address+`","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
+
+			out := qualify(t, p, leadID)
+
+			if _, filled := out.Filled["company_name"]; filled {
+				t.Fatalf("%s: filled company_name = %+v — a mailbox host is not an employer",
+					address, out.Filled["company_name"])
+			}
+			if len(p.updates) != 0 {
+				t.Fatalf("%s: provider saw %d updates, want none", address, len(p.updates))
+			}
+			if len(out.Gaps) == 0 || out.Gaps[0] != "company_name" {
+				t.Fatalf("%s: gaps = %v, want company_name reported rather than guessed", address, out.Gaps)
+			}
+		})
+	}
+}
+
+// The derivation: cutting the domain at its FIRST dot named a subdomain.
+// "eu.docusign.net" became "Eu", which is not a company and reads as a bug in
+// front of whoever opens the record. The public-suffix walk names the
+// registrable label, which is what a human reads as the company.
+func TestQualifyLeadNamesTheCompanyNotTheSubdomain(t *testing.T) {
+	for _, tc := range []struct{ email, want string }{
+		{"jane@eu.docusign.net", "Docusign"},
+		{"jane@mail.acme-corp.co.uk", "Acme Corp"},
+		{"jane@acme.com", "Acme"},
+		// An unknown TLD still derives cleanly — nothing legitimate is lost by
+		// requiring the walk.
+		{"jane@acme.internal", "Acme"},
+	} {
+		t.Run(tc.email, func(t *testing.T) {
+			leadID := ids.NewV7()
+			p := leadFixture(t, leadID,
+				`{"email":"`+tc.email+`","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
+
+			out := qualify(t, p, leadID)
+
+			if got := out.Filled["company_name"].Value; got != tc.want {
+				t.Fatalf("%s -> %q, want %q", tc.email, got, tc.want)
+			}
+		})
+	}
+}
+
+// A lead's email is a string an outsider chose, and net/mail parses a domain
+// far more loosely than DNS allows: `jane@%` is a legal RFC 5322 address whose
+// domain is a LIKE wildcard. Nothing derivable comes out of one, and the tool
+// reports the gap rather than writing a company named after a metacharacter.
+func TestQualifyLeadDerivesNothingFromAnUnusableDomain(t *testing.T) {
+	for _, address := range []string{"jane@%", "jane@", "jane", "jane@co.uk", "jane@-acme.com"} {
+		t.Run(address, func(t *testing.T) {
+			leadID := ids.NewV7()
+			p := leadFixture(t, leadID,
+				`{"email":"`+address+`","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
+
+			out := qualify(t, p, leadID)
+
+			if _, filled := out.Filled["company_name"]; filled {
+				t.Fatalf("%s: filled company_name = %+v from an unusable domain",
+					address, out.Filled["company_name"])
+			}
+			if len(p.updates) != 0 {
+				t.Fatalf("%s: provider saw %d updates, want none", address, len(p.updates))
+			}
+		})
+	}
+}
+
+// The seam's failure is the tool's failure. A matcher that cannot be read is
+// not the same fact as "this domain is not a provider", and answering the
+// second when the first happened is how a company gets derived from an address
+// an operator had marked consumer — silently, and only while the database is
+// unhappy.
+func TestQualifyLeadRefusesRatherThanGuessingWhenTheListIsUnreadable(t *testing.T) {
+	leadID := ids.NewV7()
+	p := leadFixture(t, leadID,
+		`{"email":"jane@acme.com","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
+
+	_, err := qualifyLead{p: p, consumerMail: brokenConsumerMail{}}.Handle(context.Background(),
+		json.RawMessage(`{"record_id":"`+leadID.String()+`"}`))
+
+	if err == nil {
+		t.Fatal("qualify answered while the consumer-mail list was unreadable — a fill decided on an unknown is a guess")
+	}
+	if len(p.updates) != 0 {
+		t.Fatalf("provider saw %d updates, want none", len(p.updates))
+	}
+}
+
+type brokenConsumerMail struct{}
+
+func (brokenConsumerMail) IsConsumer(context.Context, string) (bool, error) {
+	return false, errors.New("the consumer-mail overlay is unreadable")
 }

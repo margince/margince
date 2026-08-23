@@ -210,7 +210,7 @@ func (repSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType
 func archiveRegistry(e *integration.Env) *agents.Registry {
 	native := NewProvider(e.Pool)
 	reg := agents.NewRegistry(approvalsAdapter{svc: approvals.NewService(e.DB())}, auth.NewGate(repSeat{e}))
-	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool})
+	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil)
 	return reg
 }
 

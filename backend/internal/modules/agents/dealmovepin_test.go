@@ -252,7 +252,7 @@ func TestEveryDynamicTierToolPinsTheReadItsTierTurnedOn(t *testing.T) {
 	}
 	stages := &reopenProbeStages{semantics: map[ids.UUID]string{openStage: "open"}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, provider, stages, nil, nil)
+	RegisterCoreTools(r, provider, stages, nil, nil, nil)
 
 	args := json.RawMessage(`{"deal_id":"` + ids.NewV7().String() +
 		`","to_stage_id":"` + openStage.String() + `"}`)

@@ -453,7 +453,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		agents.WithTierFloor(func(string, string) (mcp.RiskTier, bool) {
 			return mcp.TierConfirmationRequired, true
 		}))
-	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil)
+	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
 	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})

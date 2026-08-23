@@ -60,7 +60,7 @@ type StageResolver interface {
 // Every verb the contract declares with `x-mcp-tool` is registered by one of
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership) {
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail) {
 	r.Register(searchRecords{p: p})
 	r.Register(readRecord{p: p})
 	r.Register(createRecord{p: p})
@@ -69,7 +69,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages})
 	r.Register(progressDeal{p: p, stages: stages})
-	r.Register(qualifyLead{p: p})
+	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p})
 	r.Register(promoteLead{p: p, promoter: promoter})
 	r.Register(mergeRecords{p: p})
