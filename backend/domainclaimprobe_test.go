@@ -24,9 +24,6 @@ package backendarch
 // holder leaves the reader nothing to act on.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -106,7 +103,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 				return readErr
 			}
 			judged++
-			for _, statement := range sqlLiteralsIn(t, path, string(source)) {
+			for _, statement := range sqlStatementsIn(t, path, string(source)) {
 				if !readsDomainClaim.MatchString(statement) {
 					continue
 				}
@@ -117,7 +114,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 				if domainResolvers.Waived(t, rel) {
 					continue
 				}
-				findings = append(findings, rel+": "+firstSQLLine(statement))
+				findings = append(findings, rel+": "+firstSQLStatementLine(statement))
 			}
 			return nil
 		})
@@ -147,77 +144,6 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 	}
 }
 
-// sqlLiteralsIn returns every string this file builds, one entry per STATEMENT
-// rather than per literal.
-//
-// Adjacent literals joined with `+` are flattened into one entry, because a
-// statement assembled that way is one statement to Postgres and three fragments
-// to the parser — and no fragment on its own carries `organization_id`, `FROM
-// organization_domain` and `domain =` together, so a probe written with a `+`
-// would match nothing at all. A detector that reads a statement in pieces
-// reports a clean tree over exactly the form somebody reaches for when a line
-// gets long.
-func sqlLiteralsIn(t *testing.T, path, source string) []string {
-	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, source, 0)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", path, err)
-	}
-	var out []string
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch typed := node.(type) {
-		case *ast.BinaryExpr:
-			if typed.Op != token.ADD {
-				return true
-			}
-			if joined, ok := concatenatedString(typed); ok {
-				out = append(out, joined)
-				// Do not descend: the parts are this statement, already read.
-				return false
-			}
-		case *ast.BasicLit:
-			if typed.Kind == token.STRING {
-				out = append(out, typed.Value)
-			}
-		}
-		return true
-	})
-	return out
-}
-
-// concatenatedString flattens a `+` chain of string literals into one text.
-//
-// A non-literal operand — an interpolated identifier — contributes nothing it
-// can read, so it becomes a space: the surrounding SQL still joins up, and the
-// pattern sees the shape rather than being broken by the hole.
-func concatenatedString(expr ast.Expr) (string, bool) {
-	switch typed := expr.(type) {
-	case *ast.BasicLit:
-		if typed.Kind != token.STRING {
-			return " ", false
-		}
-		return typed.Value, true
-	case *ast.BinaryExpr:
-		if typed.Op != token.ADD {
-			return " ", false
-		}
-		left, leftOK := concatenatedString(typed.X)
-		right, rightOK := concatenatedString(typed.Y)
-		return left + right, leftOK || rightOK
-	default:
-		return " ", false
-	}
-}
-
-func firstSQLLine(statement string) string {
-	for _, line := range strings.Split(statement, "\n") {
-		if trimmed := strings.TrimSpace(strings.Trim(line, "`\"")); trimmed != "" {
-			return trimmed
-		}
-	}
-	return strings.TrimSpace(statement)
-}
-
 // TestTheDomainClaimCensusSeesWhatItClaimsTo plants what the census must catch
 // and what it must not.
 //
@@ -241,9 +167,17 @@ func TestTheDomainClaimCensusSeesWhatItClaimsTo(t *testing.T) {
 var q = "SELECT organization_id " +
 	"FROM organization_domain " +
 	"WHERE domain = lower($1)"`
-	joined := sqlLiteralsIn(t, "concat.go", concatenated)
+	joined := sqlStatementsIn(t, "concat.go", concatenated)
 	if len(joined) != 1 || !readsDomainClaim.MatchString(joined[0]) {
 		t.Errorf("a probe assembled with `+` is not read as one statement: %q", joined)
+	}
+	// The same probe in INTERPRETED quotes, where the whitespace is an escape.
+	// Source text keeps the backslash, so a pattern asking for `\s` matches
+	// nothing unless the literal is decoded first.
+	escaped := "package p\nvar q = \"SELECT organization_id\\nFROM organization_domain\\nWHERE domain = lower($1)\""
+	decoded := sqlStatementsIn(t, "escaped.go", escaped)
+	if len(decoded) != 1 || !readsDomainClaim.MatchString(decoded[0]) {
+		t.Errorf("a probe whose whitespace is escaped is not decoded: %q", decoded)
 	}
 	for _, statement := range caught {
 		if !readsDomainClaim.MatchString(statement) {

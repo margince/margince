@@ -27,9 +27,6 @@ package backendarch
 // ruling per record type. The upsert is not.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -111,9 +108,9 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 				return readErr
 			}
 			judged++
-			for _, line := range statementsIn(t, path, string(source)) {
+			for _, line := range sqlStatementsIn(t, path, string(source)) {
 				if writesViewBaseline.MatchString(line) {
-					findings = append(findings, rel+": "+firstLine(line))
+					findings = append(findings, rel+": "+firstSQLStatementLine(line))
 				}
 			}
 			return nil
@@ -134,38 +131,6 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 			"own transaction, after your own visibility gate:\n\n\t%s",
 			len(findings), viewBaselineOwner, strings.Join(findings, "\n\t"))
 	}
-}
-
-// statementsIn returns every string literal in the file, joined per literal so
-// a statement wrapped across source lines is still one subject.
-//
-// Per LITERAL and not per line: the upsert this gate is about spans six source
-// lines, and a line-scoped census would see `INSERT INTO user_record_view` and
-// `DO UPDATE SET …` as unrelated fragments — matching the first and never
-// asking whether the second carried GREATEST.
-func statementsIn(t *testing.T, path, source string) []string {
-	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, source, 0)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", path, err)
-	}
-	var out []string
-	ast.Inspect(file, func(node ast.Node) bool {
-		if lit, ok := node.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			out = append(out, lit.Value)
-		}
-		return true
-	})
-	return out
-}
-
-func firstLine(statement string) string {
-	for _, line := range strings.Split(statement, "\n") {
-		if trimmed := strings.TrimSpace(strings.Trim(line, "`\"")); trimmed != "" {
-			return trimmed
-		}
-	}
-	return strings.TrimSpace(statement)
 }
 
 // TestTheViewBaselineCensusSeesWhatItClaimsTo plants what the census must
