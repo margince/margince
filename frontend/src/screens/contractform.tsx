@@ -11,7 +11,7 @@ import { MoneyInput } from "../design-system/moneyinput";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import { paperState, useContractPaper } from "./contractpaper";
 
 // Recording an agreement.
@@ -290,7 +290,7 @@ export function ContractForm({
 
       {save.error && (
         <p className="t-caption" role="alert">
-          {save.error.message}
+          {problemMessageOf(save.error, t)}
         </p>
       )}
 

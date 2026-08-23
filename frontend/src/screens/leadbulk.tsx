@@ -8,6 +8,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { useRoster } from "./entityref";
+import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
@@ -114,11 +115,42 @@ export function LeadBulkBar({
         return done;
       }, Promise.resolve([])),
     onSuccess: async (result, action) => {
+      // EVERY lead the run touched, refused ones included, and not only the
+      // list.
+      //
+      // Not only the list, because the list is `["leads", query]` and a
+      // detail page is the sibling `["lead", id]`: a bulk assign moved forty
+      // owners and left forty detail pages showing the old one.
+      //
+      // Refused ones included, because a refusal is the case where the
+      // client's copy is MOST likely wrong. The commonest refusal here is a
+      // version conflict, which says the server's row moved — so the row that
+      // refused is exactly the row whose cached version must not be trusted.
+      // Skipping them also emptied this set whenever a whole run refused, and
+      // then nothing was invalidated at all: the reader keeps the selection to
+      // retry, retries against the version that just conflicted, and conflicts
+      // forever until they reload the page by hand.
+      //
       // Awaited: the rows that refused keep their selection so they can be
-      // retried, and a retry that fired before the refetch landed would
-      // resend the very version that just conflicted. The run stays pending
-      // — and the verbs disabled — until the list holds fresh versions.
-      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      // retried, and a retry that fired before the refetch landed would resend
+      // the very version that just conflicted. The run stays pending — and the
+      // verbs disabled — until the refetch has SETTLED.
+      //
+      // Settled, not succeeded, and the difference is worth writing down
+      // because the comment here used to promise the stronger thing.
+      // `invalidateQueries` resolves whether the refetch it triggered
+      // succeeded or failed — it swallows the refetch error unless
+      // `throwOnError` is set. So this closes the window in which a retry
+      // races a refetch still in flight, which is the failure it was written
+      // for, and it does NOT promise fresh versions after a refetch the server
+      // refused. That case is the ordinary one of a list that could not be
+      // read, and it announces itself the way any failed read does rather than
+      // by turning a completed bulk run into an error the reader cannot act on.
+      await Promise.all(
+        result
+          .flatMap((row) => leadWriteKeys(row.id))
+          .map((key) => queryClient.invalidateQueries({ queryKey: key })),
+      );
       setOutcomes(result);
       onDone(result, action);
     },

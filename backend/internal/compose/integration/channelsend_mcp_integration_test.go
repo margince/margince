@@ -28,7 +28,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -43,7 +42,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
 // sendMessageInvoker builds the SAME governed registry the api role
@@ -52,7 +50,53 @@ import (
 // Invoke closure that re-authenticates the passport per call, exactly as
 // every transport does (registry.go's Invoke doc: "There is no other path
 // to a Handle in this package").
+// sendMessageInvoker calls send_message. Kept as its own name because the
+// send-specific tests below are about that verb and nothing else.
 func (c *channelSendEnv) sendMessageInvoker(t *testing.T, agentToken string) func(args string) (string, error) {
+	t.Helper()
+	return c.verbInvoker(t, agentToken, "send_message")
+}
+
+// enrichTarget is a company for the approval-mechanism tests to name, created
+// on demand so the send tests carry none of it.
+func (c *channelSendEnv) enrichTarget(t *testing.T) string {
+	t.Helper()
+	var org struct {
+		ID string `json:"id"`
+	}
+	if status := c.Call(t, "POST", "/v1/organizations",
+		apptest.AnyMap{"display_name": "Approval Mechanism GmbH"}, nil, &org); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
+	}
+	return org.ID
+}
+
+// enrichArgs is one enrich call, and the same call every time it is asked for:
+// the mechanism tests re-issue an identical call to prove one approval is
+// collected however often it is retried.
+func enrichArgs(orgID string) string {
+	return fmt.Sprintf(`{"organization_id":%q}`, orgID)
+}
+
+func enrichRetry(orgID, approvalID string) string {
+	return fmt.Sprintf(`{"organization_id":%q,"approval_id":%q}`, orgID, approvalID)
+}
+
+// enrichInvoker calls the verb that still stages by default.
+//
+// The approval MECHANISM — one row per refused call, single-use redemption,
+// one passport's approval never offered to another — is what the tests using
+// this are about, and it needs some confirm-first verb to exercise. It used to
+// be send_message, until a passport stopped needing a second confirmation from
+// the person who granted it. `enrich` stays confirm-first for a different
+// reason (the model names the URL the server fetches), which makes it the verb
+// that still puts a call in front of a human.
+func (c *channelSendEnv) enrichInvoker(t *testing.T, agentToken string) func(args string) (string, error) {
+	t.Helper()
+	return c.verbInvoker(t, agentToken, "enrich")
+}
+
+func (c *channelSendEnv) verbInvoker(t *testing.T, agentToken, verb string) func(args string) (string, error) {
 	t.Helper()
 	ApplyRiverSchema(t)
 	inserter, err := jobs.NewInserter(c.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -74,44 +118,31 @@ func (c *channelSendEnv) sendMessageInvoker(t *testing.T, agentToken string) fun
 			t.Fatal(err)
 		}
 		ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
-		out, invokeErr := registry.Invoke(ctx, "send_message", json.RawMessage(args))
+		out, invokeErr := registry.Invoke(ctx, verb, json.RawMessage(args))
 		return string(out), invokeErr
 	}
 }
 
-// TestSendMessageMCPLoopStagesApprovesAndRedeemsAgainstRealPostgres proves
-// the loop finding 2 found unproven: a send-scoped agent's tools/call
-// refusal stages a REAL approval row and sends nothing; a human's approval
-// makes it decidable; the retry carrying approval_id is the only call that
-// reaches Handle and produces the outbound activity plus its staged
-// delivery; and the redemption is single-use.
-func TestSendMessageMCPLoopStagesApprovesAndRedeemsAgainstRealPostgres(t *testing.T) {
+// TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres proves
+// the loop end to end over MCP against real Postgres: a send-scoped agent's
+// tools/call reaches Handle and produces the outbound activity plus its staged
+// delivery, anchored on the conversation it answers.
+//
+// It used to stage first, and the staging half is what changed: a passport
+// carries the granting human's own seat and row scope, and `send` is a cap that
+// human chose to lend, so a second confirmation from the same person bought
+// nothing. What still bounds the call is the cap — a passport never granted
+// `send` cannot reach this at all (TestSendMessageRefusesAPassportWithoutTheSendCap).
+func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *testing.T) {
 	c := setupChannelSend(t)
 	token := c.mintPassport(t, []string{"read", "send"})
 	invoke := c.sendMessageInvoker(t, token)
 
 	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.activityID)
 
-	_, err := invoke(args)
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("first send_message call → %v, want a StagedApprovalError", err)
-	}
-	if staged.ApprovalID.IsZero() {
-		t.Fatal("StagedApprovalError carries a zero approval id")
-	}
-	c.assertNoOutboundEffect(t, "a staged-but-not-yet-approved send_message call")
-
-	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
-	}
-
-	retryArgs := fmt.Sprintf(
-		`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional","approval_id":%q}`,
-		c.activityID, staged.ApprovalID.String())
-	out, retryErr := invoke(retryArgs)
-	if retryErr != nil {
-		t.Fatalf("approved retry → %v, want it to reach Handle and send", retryErr)
+	out, err := invoke(args)
+	if err != nil {
+		t.Fatalf("send_message on a send-scoped passport → %v, want it to reach Handle and send", err)
 	}
 	var sent struct {
 		ActivityID string `json:"activity_id"`
@@ -146,15 +177,4 @@ func TestSendMessageMCPLoopStagesApprovesAndRedeemsAgainstRealPostgres(t *testin
 		t.Fatalf("%d outbound activities logged after the approved retry, want 1", n)
 	}
 
-	// Exactly-once: the approval was consumed by the retry above, so
-	// replaying the identical call must not send a second time.
-	if _, replayErr := invoke(retryArgs); replayErr == nil {
-		t.Fatal("replaying a consumed approval succeeded; redemption must be single-use")
-	}
-	if n := c.stagedChannelDeliveries(t); n != 1 {
-		t.Fatalf("%d channel deliveries staged after replaying a consumed approval, want still 1", n)
-	}
-	if n := c.outboundActivities(t); n != 1 {
-		t.Fatalf("%d outbound activities logged after replaying a consumed approval, want still 1", n)
-	}
 }

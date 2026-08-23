@@ -116,7 +116,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way."}},
+			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
@@ -290,11 +290,11 @@ func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
 		Description:   commitImportCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{
 			"run_id":{"type":"string","format":"uuid"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportRunResult](),
 	}
@@ -317,6 +317,14 @@ func (t commitImport) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	id, err := importRunArg(in)
 	if err != nil {
 		return nil, err
+	}
+	// The seam is checked here, not only where an approval used to be staged.
+	// A deployment with no object store still SERVES this verb — the contract
+	// declares it, so the registry advertises it — and a nil seam reached by a
+	// direct call panics on the read below rather than naming what is missing.
+	if t.imports == nil {
+		return nil, fmt.Errorf(
+			"no import seam is wired, so run %s cannot be committed here", id)
 	}
 	// Checked again on the approved retry. StageInfo's check is the courtesy
 	// that avoids spending an approval; this one is the rule, because Handle

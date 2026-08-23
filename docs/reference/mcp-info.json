@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 155815,
+    "tool_catalog_bytes": 155648,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39730,
+    "approx_wire_tokens_total": 39689,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 35883,
-      "input_schema_bytes": 34139,
+      "description_bytes": 35511,
+      "input_schema_bytes": 34346,
       "output_schema_bytes": 73753,
-      "description_plus_input_schema_bytes": 70022
+      "description_plus_input_schema_bytes": 69857
     }
   },
   "tools": {
@@ -419,12 +419,12 @@
           "readOnlyHint": false,
           "title": "Move a project to a phase"
         },
-        "description": "Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read; a person approves the move before it runs. (Governance: a person approves every call before it runs; requires passport scope \"write\".)",
+        "description": "Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read; a person approves the move before it runs. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -714,12 +714,12 @@
           "readOnlyHint": false,
           "title": "Archive a record"
         },
-        "description": "Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. A person approves this call before it runs; do not report the record as archived until the retry that carries their approval has answered. (Governance: a person approves every call before it runs; requires passport scope \"write\".)",
+        "description": "Retire a record that should no longer be worked — a duplicate, a dead account, a project that ended. Archiving hides the record from day-to-day work; it does not delete it and does not move anything attached to it, so an archived duplicate still holds the activities and deals that were logged against it. Use merge_records when a duplicate's history should end up on the record that survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the reason where archiving would not. A person approves this call before it runs; do not report the record as archived until the retry that carries their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -1029,12 +1029,12 @@
           "readOnlyHint": false,
           "title": "Book a meeting"
         },
-        "description": "Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, so a person approves it first. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: a person approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, so a person approves it first. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -1559,12 +1559,12 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace, once a person approves. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: a person approves every call before it runs; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace, once a person approves. Only from awaiting_approval. Undoing one needs the web app. read_import_report first; nobody should approve what they have not read. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -1702,6 +1702,11 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "approval_id": {
+              "description": "Set on approved retry",
+              "format": "uuid",
+              "type": "string"
+            },
             "fields": {
               "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
               "type": "object"
@@ -2432,12 +2437,12 @@
           "readOnlyHint": false,
           "title": "Disqualify a lead"
         },
-        "description": "Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. A person approves this call before it runs; do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: a person approves every call before it runs; requires passport scope \"write\".)",
+        "description": "Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's own terminal state and keeps the record and its history; it is not a deletion and not an archive. Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing information. A person approves this call before it runs; do not report the lead as disqualified until the retry carrying their approval has answered. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -2911,7 +2916,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -4344,12 +4349,12 @@
           "readOnlyHint": false,
           "title": "Merge two records"
         },
-        "description": "Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing, because a person approves the call as you described it. (Governance: a person approves every call before it runs; requires passport scope \"write\".)",
+        "description": "Collapse two records for the same real person or company into one, moving the source's activities, deals and links onto the record that survives. People merge with people and organizations with organizations; the source is archived and redirected to the target, and the direction is not reversible by calling this again the other way round. Use archive_record when the extra record has nothing worth keeping, rather than merging to make it disappear. target_id is the record that survives and source_id the one merged away — read both records before choosing, because a person approves the call as you described it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -5102,7 +5107,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates` and still created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates`. Give the user both numbers before committing — \"100 companies, 94 already here\" is their decision, not yours. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5130,7 +5135,7 @@
               "type": "string"
             },
             "on_duplicate": {
-              "description": "A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way.",
+              "description": "A company already here: create (default) lands a second; skip leaves the incumbent.",
               "enum": [
                 "create",
                 "skip"
@@ -5455,12 +5460,12 @@
           "readOnlyHint": false,
           "title": "Promote a lead to a person"
         },
-        "description": "Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. A person approves this call before it runs; the promoted person's id comes back only from the retry that carries their approval. (Governance: a person approves every call before it runs; requires passport scope \"write\".)",
+        "description": "Turn a lead who has genuinely engaged into a person record, carrying their history across. It requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead when the engagement says the opposite. A person approves this call before it runs; the promoted person's id comes back only from the retry that carries their approval. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -6387,7 +6392,7 @@
           "readOnlyHint": true,
           "title": "Read an import report"
         },
-        "description": "What an import will do, or did: rows created, updated, failed, unusable, and how many are already here (`duplicates`). These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -7516,6 +7521,11 @@
               "minItems": 1,
               "type": "array"
             },
+            "approval_id": {
+              "description": "Set on approved retry",
+              "format": "uuid",
+              "type": "string"
+            },
             "entity_id": {
               "format": "uuid",
               "type": "string"
@@ -7657,6 +7667,11 @@
               "format": "uuid",
               "type": "string"
             },
+            "approval_id": {
+              "description": "Set on approved retry",
+              "format": "uuid",
+              "type": "string"
+            },
             "entity_id": {
               "description": "The record to link it to",
               "format": "uuid",
@@ -7795,6 +7810,11 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "approval_id": {
+              "description": "Set on approved retry",
+              "format": "uuid",
+              "type": "string"
+            },
             "entity_id": {
               "format": "uuid",
               "type": "string"
@@ -9077,12 +9097,12 @@
           "readOnlyHint": false,
           "title": "Start an email conversation from a record"
         },
-        "description": "Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose, and a person approves the send first — a sent mail cannot be recalled. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: a person approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Put a mail on the wire to a real recipient, from this workspace, starting a new conversation rather than answering one, and file it on the records it is about. Sends EXACTLY the subject and body given; composes nothing. Needs at least one link naming the records it belongs to. Every recipient must have granted the named consent purpose, and a person approves the send first — a sent mail cannot be recalled. Use send_email to answer a conversation already recorded here; this starts a separate thread beside it. Keep the staged approval id and re-send the identical text and links: the approval is bound to that exact message. The activity_id that comes back is the new conversation. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -9276,7 +9296,7 @@
           "readOnlyHint": false,
           "title": "Send an email"
         },
-        "description": "Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names, and a person approves the send before it leaves — a message leaving the workspace cannot be recalled. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: a person approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Put a mail on the wire to a real recipient, from this workspace, and record it on the thread it belongs to. It sends EXACTLY the subject and body it is given and composes nothing, so it is not the tool to reach for when the message does not exist yet. Every recipient must have granted the consent purpose the call names, and a person approves the send before it leaves — a message leaving the workspace cannot be recalled. Use draft_email first to produce the message and let it be read, and send_message when the conversation is on a chat channel rather than mail. Send the same activity_id, subject and body the draft produced, and keep the staged approval id: the approval is bound to that exact message, so changed text needs a new approval. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -9285,7 +9305,7 @@
               "type": "string"
             },
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -9449,7 +9469,7 @@
           "readOnlyHint": false,
           "title": "Reply on a channel conversation"
         },
-        "description": "Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names, and a person approves it before it leaves. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: a person approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Reply on a captured chat conversation — the channels this workspace has connected — on the thread it was captured from. It replies to an existing conversation named by activity_id; it cannot start one, and it cannot choose a channel. The recipient must have granted the consent purpose the call names, and a person approves it before it leaves. Use send_email when the thread is a mail thread, and log_activity when the point is to record that something was said rather than to say it. Keep the activity_id of the conversation and the staged approval id; the approval binds the exact text, so changed text needs a new approval. (Governance: runs immediately; requires passport scope \"send\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -9459,7 +9479,7 @@
               "type": "string"
             },
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -10343,7 +10363,7 @@
     "ttlMs": 60000
   },
   "documents": {
-    "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":56,\"execute_directly\":[\"account_coverage\",\"apply_tag\",\"at_risk_relationships\",\"catch_me_up_on\",\"check_availability\",\"create_record\",\"create_task\",\"decide_approval\",\"decide_approval_bundle\",\"draft_email\",\"draft_follow_ups_for\",\"intro_path_to\",\"list_approvals\",\"list_channel_providers\",\"list_colleagues\",\"list_pipelines\",\"list_records\",\"list_tags\",\"log_activity\",\"prep_for_meeting\",\"prepare_handoff\",\"preview_import\",\"qualify_lead\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_import_report\",\"read_import_run\",\"read_project_360\",\"read_record\",\"remove_tag\",\"resolve_entities\",\"review_commitments\",\"run_report\",\"search_context\",\"search_records\",\"update_record\",\"whats_slipping_this_week\",\"who_knows\",\"whoami\"],\"stage_for_approval\":[\"advance_project_phase\",\"archive_record\",\"book_meeting\",\"commit_import\",\"disqualify_lead\",\"enrich\",\"merge_records\",\"promote_lead\",\"send_account_email\",\"send_email\",\"send_message\"],\"decided_per_call\":[\"advance_deal\",\"progress_deal\",\"relink_activities\",\"relink_activity\",\"relink_thread\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
+    "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":56,\"execute_directly\":[\"account_coverage\",\"advance_project_phase\",\"apply_tag\",\"archive_record\",\"at_risk_relationships\",\"book_meeting\",\"catch_me_up_on\",\"check_availability\",\"commit_import\",\"create_record\",\"create_task\",\"decide_approval\",\"decide_approval_bundle\",\"disqualify_lead\",\"draft_email\",\"draft_follow_ups_for\",\"intro_path_to\",\"list_approvals\",\"list_channel_providers\",\"list_colleagues\",\"list_pipelines\",\"list_records\",\"list_tags\",\"log_activity\",\"merge_records\",\"prep_for_meeting\",\"prepare_handoff\",\"preview_import\",\"promote_lead\",\"qualify_lead\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_import_report\",\"read_import_run\",\"read_project_360\",\"read_record\",\"remove_tag\",\"resolve_entities\",\"review_commitments\",\"run_report\",\"search_context\",\"search_records\",\"send_account_email\",\"send_email\",\"send_message\",\"update_record\",\"whats_slipping_this_week\",\"who_knows\",\"whoami\"],\"stage_for_approval\":[\"enrich\"],\"decided_per_call\":[\"advance_deal\",\"progress_deal\",\"relink_activities\",\"relink_activity\",\"relink_thread\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
     "margince://schema/query": "{\"version\":\"v1\",\"grammar\":{\"predicates\":\"{\\\"field\\\": \\u003cname below\\u003e, \\\"op\\\": \\u003cop the field admits\\u003e, \\\"value\\\": \\u003coperand\\u003e} — or \\\"values\\\": [...] for \\\"in\\\". Clauses are combined with AND.\",\"semantic_target\":\"\\\"similar_to\\\": \\u003cfree text\\u003e — one similarity clause, ranked by the hybrid retriever.\",\"traversal\":\"\\\"traverse\\\": {\\\"relation\\\": \\u003crelation below\\u003e, \\\"where\\\": [...]} — exactly one hop. A second hop is refused; ask it as its own query.\",\"limit\":\"\\\"limit\\\": 1..200; omit for the default page.\",\"refusal\":\"Anything outside this vocabulary is refused with a typed clarification naming what was not understood. Nothing is coerced, and no plan is narrowed to the part that was recognised.\"},\"targets\":[],\"unavailable\":[]}",
     "margince://schema/record-fields": "{\"version\":\"1\",\"notation\":\"A key with no `?` is REQUIRED by the contract; `?` marks one the body may omit. A name not listed is not a field: it is refused by name, never stored silently.\",\"create_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \\\"inbound\\\"|\\\"outbound\\\", due_at?: rfc3339, duration_seconds?: integer, kind: \\\"email\\\"|\\\"call\\\"|\\\"meeting\\\"|\\\"note\\\"|\\\"task\\\"|\\\"message\\\", links?: [{entity_id: uuid, entity_type: \\\"person\\\"|\\\"organization\\\"|\\\"deal\\\"|\\\"lead\\\"|\\\"project\\\"}], meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}\",\"deal\":\"{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_org_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}\",\"lead\":\"{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\"|\\\"promoted\\\"|\\\"disqualified\\\", title?: string}\",\"organization\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_org_id?: uuid, size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\", source?: string}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, source?: string, title?: string}\",\"project\":\"{description?: string, name: string, organization_id: uuid, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{counterparty_org_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \\\"employment\\\"|\\\"deal_stakeholder\\\"|\\\"project_stakeholder\\\"|\\\"partner_of\\\"|\\\"referred_by\\\"|\\\"co_sell_with\\\", organization_id?: uuid, person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` is accepted but overwritten — this surface stamps its own provenance.\",\"A deal's `pipeline_id` and `stage_id` come from list_pipelines — nothing else on this surface yields them, and neither is defaultable.\",\"A person's employer is a relationship, not a field on the person: record_type=relationship with kind=employment, person_id and organization_id. Each kind REQUIRES its own endpoint pair, and a wrong pair is refused by name — employment: person + organization; deal_stakeholder: deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: organization + counterparty_org_id. An edge is not searchable, so keep the id a relationship write returns.\",\"An activity is not searchable — search_records does not serve it — so keep the id an activity write returns; read_record answers it by that id.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"A recording of a conversation is logged with `source_system: \\\"transcript\\\"` — that value is what has it read for next steps and commitments; any other value stores the text and reads nothing.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]},\"update_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}\",\"deal\":\"{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \\\"commit\\\"|\\\"best_case\\\"|\\\"pipeline\\\"|\\\"omitted\\\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_org_id?: uuid, project_id?: uuid, status?: \\\"open\\\"|\\\"won\\\"|\\\"lost\\\", wait_until?: YYYY-MM-DD}\",\"lead\":\"{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\", title?: string}\",\"organization\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \\\"unknown\\\"|\\\"target\\\"|\\\"prospect\\\"|\\\"opportunity\\\"|\\\"customer\\\"|\\\"former_customer\\\"|\\\"disqualified\\\", linkedin_url?: string, owner_id?: uuid, parent_org_id?: uuid, relationship_types?: [\\\"customer\\\"|\\\"partner\\\"|\\\"supplier\\\"|\\\"investor\\\"|\\\"portfolio_company\\\"|\\\"competitor\\\"|\\\"other\\\"], size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\"}\",\"person\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, social?: object, title?: string}\",\"project\":\"{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows.\",\"A person's employer is NOT a field here: employment is a relationship, created and archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched.\",\"An activity's links are NOT patchable, here or by any tool on this surface: this write changes what an activity says, never who it is about.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues answers those, whoami answers your own. A person id is a contact and is refused.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]}}",
     "ui://margince/account-brief.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",

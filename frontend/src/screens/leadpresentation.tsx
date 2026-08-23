@@ -15,6 +15,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
+import { leadWriteKeys } from "./leadkeys";
 import { sourceLabelFor } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
@@ -196,12 +197,23 @@ export function LeadBoard({
       if (error) throwProblem(error, t);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    // The moved lead is named on BOTH arms. The board reads
+    // `["leads", query]` and the detail page reads the sibling `["lead", id]`,
+    // which prefix invalidation does not walk sideways to: naming only the
+    // list left a detail page open behind the board showing the status the
+    // reader had just dragged away from. The error arm owes the same — a
+    // refused move means the row on screen may no longer be what the server
+    // holds, which is exactly when a stale detail page misleads.
+    onSuccess: (_moved, variables) => {
+      for (const key of leadWriteKeys(variables.id)) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
       onMoved();
     },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    onError: (_failure, variables) => {
+      for (const key of leadWriteKeys(variables.id)) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
     },
   });
 

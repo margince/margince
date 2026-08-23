@@ -42,6 +42,7 @@ import (
 func tightenedPairs(t *testing.T) map[toolRecordType]string {
 	t.Helper()
 	registry := NewRegistry(nil, SendPath{})
+	ambiguous := ambiguousPairs()
 	pairs := map[toolRecordType]string{}
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
@@ -51,7 +52,11 @@ func tightenedPairs(t *testing.T) map[toolRecordType]string {
 		if !registered || spec.Tier == mcp.TierConfirmationRequired {
 			continue
 		}
-		if !isCanonicalRecordRoute(route) || !registry.Performs(pol.Tool, string(pol.RecordType)) {
+		pair := toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}
+		if ambiguous[pair] && !isCanonicalRecordRoute(route) {
+			continue
+		}
+		if !registry.Performs(pol.Tool, string(pol.RecordType)) {
 			continue
 		}
 		pairs[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] = route
@@ -60,11 +65,14 @@ func tightenedPairs(t *testing.T) map[toolRecordType]string {
 }
 
 func TestEveryTierTheContractTightensReachesTheToolDoor(t *testing.T) {
+	// An empty set is now a legitimate state, not a broken derivation. The
+	// verbs that used to be floored per record type execute directly by
+	// default, so today's contract tightens none of the canonical record
+	// routes — and the MECHANISM this gate protects is what makes that safe:
+	// an installation that wants a verb confirmed declares it, and the floor
+	// must still reach the tool door. The two gates below assert the mechanism
+	// holds for whatever set exists, which is the property #982 is about.
 	pairs := tightenedPairs(t)
-	if len(pairs) == 0 {
-		t.Fatal("no tightened pair found — this gate walks the set #982 is about, and an empty " +
-			"set means the derivation stopped seeing it, not that the contract stopped declaring it")
-	}
 	for pair, route := range pairs {
 		if _, declared := tierFloor(pair.tool, pair.recordType); !declared {
 			t.Errorf("%s tightens %s to confirm-first for record type %q, and the tool door's floor "+
@@ -111,11 +119,13 @@ func TestEveryVerbTheFloorTightensNamesItsRecordType(t *testing.T) {
 // it is invisible to every gate above, all of which only ask whether the floor
 // knows ENOUGH.
 func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
+	ambiguous := ambiguousPairs()
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierAutoExecute {
 			continue
 		}
-		if !isCanonicalRecordRoute(route) {
+		if ambiguous[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] &&
+			!isCanonicalRecordRoute(route) {
 			continue
 		}
 		if _, declared := tierFloor(pol.Tool, string(pol.RecordType)); declared {
@@ -123,5 +133,104 @@ func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
 				"tightens that pair anyway, so the tool door stages what the REST door runs unattended",
 				route, pol.Tool, pol.RecordType)
 		}
+	}
+}
+
+// Every verb that CAN stage must also be reachable by a floor.
+//
+// This is the gate the tier-parity change was missing, and its absence is what
+// made a claim in that change's own commit message untrue. Ten consequential
+// verbs stopped staging by default — archive, the three sends, the booking, the
+// two merges, both lead transitions, the import commit — on the argument that a
+// passport carries its holder's own authority, and that an installation wanting
+// one confirmed sets a tier floor for it (ADR-0055).
+//
+// The floor could not reach nine of them. Registry.tightened resolves a floor only
+// through recordTypedTool, and only the two generic verbs implemented it: nothing
+// else had ever needed to, because nothing else had ever been anything but
+// confirm-first. So "an installation can floor it back" was documentation, not
+// behaviour, and every gate above stayed green because each one walks the pairs
+// the contract tightens TODAY — an empty set.
+//
+// This walks the other direction. A verb that stages is a verb an installation may
+// want confirmed; if the floor cannot resolve a call to it, that wish has no way
+// to be expressed, and the default becomes the only setting there is.
+func TestEveryStageableVerbCanBeFlooredBack(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	for _, spec := range registry.Specs() {
+		if !registry.Stageable(spec.Name) || spec.Tier == mcp.TierConfirmationRequired {
+			// Already confirm-first for every call, or unable to stage at all —
+			// either way there is nothing a floor could add.
+			continue
+		}
+		if !registry.NamesRecordType(spec.Name) {
+			t.Errorf("%s executes directly and can stage, so an installation may want it confirmed — "+
+				"but it does not report the record type of a call, so no tier floor can reach it and "+
+				"the default is the only setting there is", spec.Name)
+		}
+	}
+}
+
+// The failure mode Codex named on the first draft of this filter: a verb that
+// performs ONE effect losing its floor because arbitration was applied to it.
+//
+// Arbitration drops every route that is not the record's own collection route.
+// That is right for a generic verb, whose pair really is declared by several
+// operations and only one of them is the effect. It is wrong for a dedicated
+// verb, whose single route may be action-shaped — and when it is, arbitration
+// drops the ONLY route and the floor disappears with it. Six verbs were in
+// exactly that state before this branch.
+//
+// The gate walks it from the outcome rather than from the rule: every verb the
+// contract tightens must end up with a floor it can be tightened by. If a future
+// route makes a dedicated verb's pair look ambiguous, this fails rather than
+// quietly removing a human from the loop.
+func TestNoDedicatedVerbLosesItsFloorToArbitration(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	for route, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
+			continue
+		}
+		if !registry.Performs(pol.Tool, string(pol.RecordType)) {
+			continue
+		}
+		if _, declared := tierFloor(pol.Tool, string(pol.RecordType)); !declared {
+			t.Errorf("%s tightens %s for %q and performs it, but no floor survives for that pair — "+
+				"canonical-route arbitration dropped the only route the verb has, so an installation "+
+				"declaring this tightening gets nothing", route, pol.Tool, pol.RecordType)
+		}
+	}
+}
+
+// Arbitration must still bite where it was written to.
+//
+// `PATCH /v1/custom-fields/{id}/options` is confirm-first: editing the option set
+// of a field rewrites what existing rows can say, which is a schema change. The
+// canonical route on the same pair — `PATCH /v1/custom-fields/{id}`, a rename —
+// is auto-execute. Both declare (update_record, custom_field).
+//
+// Without arbitration the options route's tightening collapses onto that pair,
+// and every ordinary custom-field rename stages on the tool door while the REST
+// door runs it unattended. That is #982 pointing the other way, and it is what
+// the first draft of this fix actually did.
+func TestArbitrationStillDropsASidecarRoutesTightening(t *testing.T) {
+	const sidecar = "PATCH /v1/custom-fields/{id}/options"
+	const canonical = "PATCH /v1/custom-fields/{id}"
+
+	side, declared := agentPolicies[sidecar]
+	canon, alsoDeclared := agentPolicies[canonical]
+	if !declared || !alsoDeclared {
+		t.Fatalf("%s and %s are the pair this gate is built on and one is gone from the contract; "+
+			"point it at another sidecar route rather than deleting it", sidecar, canonical)
+	}
+	if side.Tier != tierConfirmationRequired || canon.Tier != tierAutoExecute {
+		t.Skipf("the custom-field routes no longer have the tightened-sidecar shape "+
+			"(sidecar=%s, canonical=%s); pick another pair for this gate", side.Tier, canon.Tier)
+	}
+
+	if _, floored := tierFloor("update_record", "custom_field"); floored {
+		t.Errorf("%s tightens an OPTION SET rewrite, and its tightening reached the "+
+			"(update_record, custom_field) floor — every ordinary rename through %s would now stage "+
+			"on the tool door while the REST door runs it unattended", sidecar, canonical)
 	}
 }

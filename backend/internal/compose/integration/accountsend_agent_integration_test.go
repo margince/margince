@@ -30,6 +30,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -37,10 +39,13 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
 )
 
 // accountSendBody is the one call this suite makes, so the human's send and the
@@ -133,31 +138,98 @@ func (a *accountSendEnv) pendingApprovals(t *testing.T) int {
 	return n
 }
 
-func TestAnAgentsAccountStartedSendStagesTheCreateAndOnlyLeavesOnceApproved(t *testing.T) {
+// The MCP door stages through the tool's own StageInfo rather than through the
+// REST gate's route walk, so the two could disagree about what an
+// account-started send targets — and a human would then be deciding a
+// different question depending on which transport the agent used.
+//
+// They agree here because the REST gate takes its target from the route and
+// this route has no {id}, so the id-less create is the only shape both doors
+// can reach. That is a bound on the approver too — read+create on `activity`
+// rather than the row scope of the records the message is filed under — and
+// #928 is where the gate gains the body-derived target that would lift it.
+//
+// It drives Registry.Invoke directly, for the reason channelsend_mcp does: the
+// JSON-RPC framing is proven elsewhere, and Invoke is the one call every
+// transport dispatches through.
+func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 	a := setupAccountSend(t)
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := a.Call(t, "POST", "/v1/passports", apptest.AnyMap{
-		"label": "outreach agent", "scopes": []string{"read", "send"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
-	body := accountSendBody(a.org, "Hello from an agent")
+	token := a.mintAccountSendPassport(t)
 
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
+	args, err := json.Marshal(map[string]any{
+		"to": []string{"buyer@preflight.test"}, "subject": "Hello over MCP",
+		"body": "Good morning.", "consent_purpose": "transactional",
+		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if status := a.Call(t, "POST", "/v1/emails", body, bearer, &problem); status != http.StatusForbidden ||
-		problem.Code != "approval_required" {
-		t.Fatalf("agent account-started send → %d %q, want 403 approval_required", status, problem.Code)
+
+	// Asked of the tool's own StageInfo. The verb executes directly now, so
+	// Invoke no longer stages — but the SUBJECT it would put in front of a
+	// human must still match the REST door's, because a workspace tier floor
+	// brings the confirm-first path back for both.
+	info := a.accountSendStageInfo(t, token, args)
+
+	if info.TargetType != "activity" {
+		t.Errorf("the MCP door would stage target type %q, want the REST door's \"activity\"", info.TargetType)
+	}
+	if !info.TargetID.IsZero() {
+		t.Errorf("the MCP door named target id %v, want none — this send answers no message, so there is "+
+			"no row for an approval to pin", info.TargetID)
+	}
+	if info.Summary == "" {
+		t.Error("the staged subject has no summary; an inbox would show a human nothing to decide")
+	}
+}
+
+// The whole confirm-first loop for an account-started send, under a workspace
+// tier floor, against real Postgres.
+//
+// This test used to drive the REST door, because the contract declared
+// sendAccountEmail confirm-first and every agent call staged. ADR-0055 made the
+// verb execute directly, and the REST door reads its tier from the generated
+// policy table — so there is no longer a way for a test to floor that door
+// without editing the contract, which is what an INSTALLATION does rather than
+// what a test can do. The MCP door takes its floor as a registry option, so the
+// loop is exercised here instead.
+//
+// It is worth keeping in some form, because five properties live nowhere else
+// and none of them is about which door the call came through:
+//
+//   - nothing leaves before a human decides;
+//   - approving AUTHORIZES and does not itself send;
+//   - the approved retry delivers exactly one message;
+//   - that message is filed under the organization the call named, which is what
+//     an account-started send has instead of an anchor;
+//   - the approval is single-use, so a replay sends nothing more.
+//
+// Deleting them with the REST test was the mistake this restores. The generic
+// half of the mechanism — one row per refused call, single-use redemption, one
+// passport's approval never offered to another — is also covered by
+// agentcallapproval_integration_test.go on `enrich`; what is only here is what
+// happens to a SEND.
+func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
+	a := setupAccountSend(t)
+	token := a.mintAccountSendPassport(t)
+	args, err := json.Marshal(map[string]any{
+		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
+		"body": "Good morning.", "consent_purpose": "transactional",
+		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	invoke := a.flooredAccountSendInvoker(t, token)
+
+	_, err = invoke(string(args))
+	if !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Fatalf("a floored account send answered %v, want the confirm-first refusal", err)
 	}
 	if n := a.deliveryCount(t); n != 0 {
 		t.Fatalf("%d deliveries staged behind an unapproved agent send, want 0 — nothing may leave", n)
 	}
-	approvalID := ExtractStagedApprovalID(t, problem.Detail)
+	approvalID := ExtractStagedApprovalID(t, err.Error())
 
 	// The staged SHAPE, which is what makes the row decidable at all: the type
 	// the effect will write, and no row for a scope probe to resolve, because
@@ -178,19 +250,28 @@ func TestAnAgentsAccountStartedSendStagesTheCreateAndOnlyLeavesOnceApproved(t *t
 	if !a.inboxShows(t, approvalID) {
 		t.Fatal("the staged send is not in the approvals inbox; nobody could ever release it")
 	}
-	if status := a.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := a.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve",
+		apptest.AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 	if n := a.deliveryCount(t); n != 0 {
 		t.Fatalf("%d deliveries staged by the approval itself, want 0 — approving authorizes, it does not send", n)
 	}
 
-	// The identical request, now carrying the released approval. Identical is
-	// the requirement, not the style: the diff hash binds the approval to this
+	// The identical call, now carrying the released approval. Identical is the
+	// requirement, not the style: the diff hash binds the approval to this
 	// exact message.
-	redeem := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
-	if status := a.Call(t, "POST", "/v1/emails", body, redeem, nil); status != http.StatusAccepted {
-		t.Fatalf("approved retry → %d, want 202", status)
+	retry, err := json.Marshal(map[string]any{
+		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
+		"body": "Good morning.", "consent_purpose": "transactional",
+		"links":       []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
+		"approval_id": approvalID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := invoke(string(retry)); err != nil {
+		t.Fatalf("approved retry answered %v, want the send to go", err)
 	}
 	if n := a.deliveryCount(t); n != 1 {
 		t.Fatalf("%d deliveries after the approved retry, want exactly 1", n)
@@ -201,11 +282,50 @@ func TestAnAgentsAccountStartedSendStagesTheCreateAndOnlyLeavesOnceApproved(t *t
 	}
 
 	// Single-use: the same approval cannot send a second message.
-	if status := a.Call(t, "POST", "/v1/emails", body, redeem, nil); status == http.StatusAccepted {
+	if _, err := invoke(string(retry)); err == nil {
 		t.Fatal("a consumed approval sent a second message; redemption must be single-use")
 	}
 	if n := a.deliveryCount(t); n != 1 {
 		t.Fatalf("%d deliveries after replaying a consumed approval, want still 1", n)
+	}
+}
+
+// flooredAccountSendInvoker calls send_account_email through a registry with a
+// tier floor on it — the composition an installation gets when it declares the
+// verb confirm-first.
+func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken string) func(string) (string, error) {
+	t.Helper()
+	ApplyRiverSchema(t)
+	inserter, err := jobs.NewInserter(a.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	registry := compose.NewRegistry(a.Pool, compose.SendPath{
+		Delivery: compose.NewDeliveryStager(a.Pool, inserter),
+	})
+	// After construction, for the reason composedRegistryFlooring states: the
+	// composition appends its own contract floor to any option it is passed.
+	agents.WithTierFloor(func(tool, _ string) (mcp.RiskTier, bool) {
+		if tool != "send_account_email" {
+			return mcp.TierAutoExecute, false
+		}
+		return mcp.TierConfirmationRequired, true
+	})(registry)
+
+	authSvc := identity.NewService(a.Pool)
+	return func(args string) (string, error) {
+		wsID, err := authSvc.InstallationWorkspace(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := principal.WithWorkspaceID(context.Background(), wsID.UUID)
+		agent, err := authSvc.AuthenticateAgent(ctx, agentToken)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
+		out, invokeErr := registry.Invoke(ctx, "send_account_email", json.RawMessage(args))
+		return string(out), invokeErr
 	}
 }
 
@@ -234,72 +354,11 @@ func (a *accountSendEnv) inboxShows(t *testing.T, approvalID string) bool {
 	return false
 }
 
-// The MCP door stages through the tool's own StageInfo rather than through the
-// REST gate's route walk, so the two could disagree about what an
-// account-started send targets — and a human would then be deciding a
-// different question depending on which transport the agent used.
-//
-// They agree here because the REST gate takes its target from the route and
-// this route has no {id}, so the id-less create is the only shape both doors
-// can reach. That is a bound on the approver too — read+create on `activity`
-// rather than the row scope of the records the message is filed under — and
-// #928 is where the gate gains the body-derived target that would lift it.
-//
-// It drives Registry.Invoke directly, for the reason channelsend_mcp does: the
-// JSON-RPC framing is proven elsewhere, and Invoke is the one call every
-// transport dispatches through.
-func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
-	a := setupAccountSend(t)
-	token := a.mintAccountSendPassport(t)
-
-	args, err := json.Marshal(map[string]any{
-		"to": []string{"buyer@preflight.test"}, "subject": "Hello over MCP",
-		"body": "Good morning.", "consent_purpose": "transactional",
-		"links": []map[string]string{{"entity_type": "organization", "entity_id": a.org}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	staged := a.invokeAccountSend(t, token, args)
-
-	var kind string
-	var targetType, targetID *string
-	if err := a.Owner.QueryRow(t.Context(),
-		`SELECT kind, target_entity_type, target_entity_id FROM approval WHERE id = $1`,
-		staged.String()).Scan(&kind, &targetType, &targetID); err != nil {
-		t.Fatal(err)
-	}
-	if kind != "send_account_email" {
-		t.Errorf("staged kind = %q, want send_account_email — the decision grants are looked up by it", kind)
-	}
-	if targetType == nil || *targetType != "activity" || targetID != nil {
-		t.Fatalf("the MCP door staged %v/%v, want the REST door's activity with no id", targetType, targetID)
-	}
-}
-
-// mintAccountSendPassport issues the credential an outreach agent presents.
-func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
-	t.Helper()
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := a.Call(t, "POST", "/v1/passports", apptest.AnyMap{
-		"label": "outreach agent", "scopes": []string{"read", "send"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-	return minted.Token
-}
-
-// invokeAccountSend calls the tool through the governed registry the api role
-// composes, re-authenticating the passport exactly as every transport does, and
-// returns the approval its refusal staged.
-//
-// The SendPath is empty because nothing here is ever redeemed: this test is
-// about what the refusal STAGES, and the send itself is covered end to end by
-// the REST loop above. A delivery machinery wired here would be scenery.
-func (a *accountSendEnv) invokeAccountSend(t *testing.T, token string, args json.RawMessage) ids.ApprovalID {
+// accountSendStageInfo asks the tool for the subject it WOULD stage, on the
+// passport that would make the call. Registry.Invoke no longer stages this
+// verb, so the comparison reaches StageInfo directly — which is the same thing
+// a workspace tier floor reaches.
+func (a *accountSendEnv) accountSendStageInfo(t *testing.T, token string, args json.RawMessage) agents.StageInfo {
 	t.Helper()
 	registry := compose.NewRegistry(a.Pool, compose.SendPath{})
 	authSvc := identity.NewService(a.Pool)
@@ -314,14 +373,27 @@ func (a *accountSendEnv) invokeAccountSend(t *testing.T, token string, args json
 	}
 	ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
 
-	_, invokeErr := registry.Invoke(ctx, "send_account_email", args)
+	stager, ok := registry.StagerFor("send_account_email")
+	if !ok {
+		t.Fatal("send_account_email describes no staging; a floored installation could not confirm it")
+	}
+	info, err := stager.StageInfo(ctx, args)
+	if err != nil {
+		t.Fatalf("StageInfo: %v", err)
+	}
+	return info
+}
 
-	var staged *workflow.StagedApprovalError
-	if !errors.As(invokeErr, &staged) {
-		t.Fatalf("tools/call send_account_email → %v, want it to stage an approval", invokeErr)
+// mintAccountSendPassport issues the credential an outreach agent presents.
+func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
+	t.Helper()
+	var minted struct {
+		Token string `json:"token"`
 	}
-	if staged.ApprovalID.IsZero() {
-		t.Fatal("the staged refusal carries a zero approval id")
+	if status := a.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+		"label": "outreach agent", "scopes": []string{"read", "send"},
+	}, nil, &minted); status != http.StatusCreated {
+		t.Fatalf("issue passport → %d", status)
 	}
-	return staged.ApprovalID
+	return minted.Token
 }

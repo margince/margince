@@ -2820,9 +2820,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a (possibly edited) email draft — 🟡 confirm-first / gated.
-         * @description The `send_email` MCP verb. Outbound + irreversible → 🟡 confirm-first: an agent
-         *     caller must supply an approval token; a human caller's own action is the approval.
+         * Send a (possibly edited) email draft — runs directly, consent-gated.
+         * @description The `send_email` MCP verb. It RUNS DIRECTLY (ADR-0055): a passport carries the
+         *     granting human's own seat, grants and row scope, so a send it can make is one its
+         *     holder could make unaided in the app, and asking that same person to confirm again
+         *     made the agent surface weaker than the person behind it rather than safer. An
+         *     installation that wants sends confirmed sets a tier floor on `send_email`, which
+         *     stages the call for a human exactly as it always did.
          *     Consent gate is **default-deny per purpose** (A22/ADR-0011, data-model §3.4): the send is
          *     suppressed (409, `code: consent_not_granted`) unless an active, proven `granted`
          *     `person_consent` row exists for the *purpose* this send falls under (passed as
@@ -2846,7 +2850,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Start a new email conversation from a record — 🟡 confirm-first / gated.
+         * Start a new email conversation from a record — runs directly, consent-gated.
          * @description The account-started twin of `send_email` (ADR-0087/A132). "Write email" from a company,
          *     a person or a deal is a NEW conversation: there is no prior message to anchor to, and
          *     the product refuses to fabricate a placeholder activity to obtain one — that would put a
@@ -2867,11 +2871,12 @@ export interface paths {
          *     - every entry in `links` is row-scope probed, so a record the caller cannot see is
          *       refused 404 exactly as reading it directly would be.
          *
-         *     Governed identically to the reply, with no new authority (ADR-0087 §6): an agent caller
-         *     is confirm-first and stages for approval, a human caller's own action IS the approval
-         *     (ADR-0055). What is staged is a CREATE — this send answers no message, so there is no
-         *     anchor to name and no version to pin — and it is released by a human holding
-         *     `activity.create`, the grant `send_email` already asks of its approver. Whichever door
+         *     Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
+         *     directly on the passport holder's own authority (ADR-0055). Under a tier floor on
+         *     `send_account_email` it stages instead, and what is staged is a CREATE — this send
+         *     answers no message, so there is no anchor to name and no version to pin — released
+         *     by a human holding `activity.create`, the grant `send_email` already asks of its
+         *     approver. Whichever door
          *     the call arrives at, every entry in `links` is row-scope probed before the message is
          *     sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
          *     see is refused before a human is asked about it at all.
@@ -2970,10 +2975,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reply on a captured messaging-channel conversation — 🟡 confirm-first / gated.
-         * @description The `send_message` MCP verb — the channel twin of `send_email`. Outbound + irreversible
-         *     → 🟡 confirm-first: an agent caller must supply an approval token; a human caller's own
-         *     action is the approval.
+         * Reply on a captured messaging-channel conversation — runs directly, consent-gated.
+         * @description The `send_message` MCP verb — the channel twin of `send_email`. It RUNS DIRECTLY
+         *     (ADR-0055), on the passport holder's own seat, grants and row scope: a reply it can
+         *     send is one that person could send unaided in the app. An installation that wants
+         *     replies confirmed sets a tier floor on `send_message`.
          *
          *     The `{id}` activity is the conversation being answered, and its `channel_provider` names
          *     the transport the reply transmits through — NOT its `kind`, which since ADR-0107/A158 says
@@ -3006,7 +3012,7 @@ export interface paths {
          * Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
          * @description Reads connected-calendar free/busy and returns candidate slots. 🟢 read-only — proposes,
          *     never books. Scheduling is a **governed MCP tool** (`features/07 §5c`): this read pairs with
-         *     the 🟡 `book_meeting` action below.
+         *     the `book_meeting` action below, which writes.
          */
         get: operations["getAvailability"];
         put?: never;
@@ -3027,9 +3033,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Book a meeting at a chosen slot — 🟡 confirm-first / gated (the `book_meeting` MCP verb).
-         * @description Outbound + creates a calendar event and sends an invite → 🟡 confirm-first: an agent caller
-         *     must supply an approval token; a human caller's own action is the approval. On success a
+         * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+         * @description Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+         *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
+         *     the same check the app applies. An installation that wants bookings confirmed sets a
+         *     tier floor on `book_meeting`. On success a
          *     `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
          *     `Idempotency-Key`.
          */
@@ -3590,7 +3598,9 @@ export interface paths {
          *     person. Sets `person.converted_from_lead_id`, carries provenance + activities (zero
          *     orphaned FKs), marks lead `status=promoted` + archives it. One audit row recording
          *     trigger + evidence; emits `lead.promoted` + `person.*`. Cold outbound with no reply
-         *     must NOT call this path. 🟡 confirm-first when triggered by an agent.
+         *     must NOT call this path. Runs directly for an agent too (ADR-0055), on the passport
+         *     holder's own authority; an installation that wants promotions confirmed sets a tier
+         *     floor on `promote_lead`.
          */
         post: operations["promoteLead"];
         delete?: never;
@@ -8308,8 +8318,8 @@ export interface paths {
          *     organization), the relationship we have, and a concrete suggested next move with a
          *     drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
          *     warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
-         *     send rides the 🟡 confirm-first send tool (POST /activities/{id}/send-email); the
-         *     warm room proposes, the rep sends.
+         *     send rides the governed send tool (POST /activities/{id}/send-email); the warm
+         *     room proposes, the rep sends.
          */
         get: operations["getSignalIntroPath"];
         put?: never;
@@ -16948,7 +16958,7 @@ export interface components {
         /**
          * @description An actionable warm-intro path — names the route-in contact, the relationship we
          *     have, and a concrete next move with a drafted message. Proposal only: the send is
-         *     the 🟡 confirm-first send tool, never this read.
+         *     the governed send tool, never this read.
          */
         SignalIntroPath: {
             /** Format: uuid */

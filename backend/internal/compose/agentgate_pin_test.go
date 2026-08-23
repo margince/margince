@@ -104,19 +104,37 @@ var unpinnableConfirmFirstTypes = gatekit.Waive(map[agentRecordType]string{
 		"move onto the guarded patch — not before.",
 })
 
-// Every confirm-first operation that names a concrete record type must have
-// a type the approvals engine can PIN — or sit in the ratified list above
-// with a reason. This is the read-side twin the pin was missing: the gate
-// used to take a server-side pin for exactly the five datasource-readable
-// types and fall back to the agent's own If-Match for the rest, so most
-// confirm-first routes carried a pin the agent could simply decline to
-// supply, and nothing said so.
+// Every operation that can stage against a concrete record type must have a type
+// the approvals engine can PIN — or sit in the ratified list above with a reason.
+// This is the read-side twin the pin was missing: the gate used to take a
+// server-side pin for exactly the five datasource-readable types and fall back to
+// the agent's own If-Match for the rest, so most confirm-first routes carried a
+// pin the agent could simply decline to supply, and nothing said so.
+//
+// "Can stage" is wider than "the contract declares confirm-first", and the
+// difference is new. A verb whose declared tier is auto_execute stages anyway
+// under a workspace tier floor (agenttierfloor.go), so its target type has to be
+// pinnable too — otherwise an installation that tightens the verb gets an
+// approval bound by diff_hash alone, silently weaker than the one the contract
+// would have given it. That is why import_run stays waived: commit_import no
+// longer declares confirm-first, but a floor on it stages against a run, and the
+// rationale below is what makes that residue acceptable rather than unnoticed.
 func TestConfirmFirstTargetsArePinnable(t *testing.T) {
 	defer unpinnableConfirmFirstTypes.AssertAllMatched(t)
 
+	registry := NewRegistry(nil, SendPath{})
 	checked := 0
 	for route, pol := range agentPolicies {
-		if pol.Access != accessTool || pol.Tier == tierAutoExecute || pol.RecordType == "" {
+		if pol.Access != accessTool || pol.RecordType == "" {
+			continue
+		}
+		// An auto_execute verb counts only if a floor could actually stage it.
+		// That is the same three conditions Registry.tightened applies: the verb
+		// carries the staging seam, it can name a record type, and it PERFORMS
+		// this one. The third is what excludes the deal-room routes, which borrow
+		// create_record's annotation for effects create_record does not have — a
+		// floor on those pairs is inert, so there is no approval to pin.
+		if pol.Tier == tierAutoExecute && !floorCouldStage(registry, pol) {
 			continue
 		}
 		checked++
@@ -126,11 +144,11 @@ func TestConfirmFirstTargetsArePinnable(t *testing.T) {
 		if unpinnableConfirmFirstTypes.Waived(t, pol.RecordType) {
 			continue
 		}
-		t.Errorf("%s (%s) stages against %q, which carries no version pin — either give the table a version column "+
+		t.Errorf("%s (%s) can stage against %q, which carries no version pin — either give the table a version column "+
 			"or ratify the residue in unpinnableConfirmFirstTypes", route, pol.Op, pol.RecordType)
 	}
 	if checked == 0 {
-		t.Fatal("no confirm-first record-typed routes in the generated policy — the pin no longer covers anything")
+		t.Fatal("no stageable record-typed routes in the generated policy — the pin no longer covers anything")
 	}
 }
 
@@ -367,4 +385,13 @@ func TestTheInboxAndTheFanOutClassifyEveryTargetTypeAlike(t *testing.T) {
 	if len(subjects) == 0 {
 		t.Fatal("the union of the policy table and both classifications is empty — the parity gate covers nothing")
 	}
+}
+
+// floorCouldStage reports whether a workspace tier floor could actually put this
+// operation in front of a human — the three conditions Registry.tightened applies
+// before it tightens anything.
+func floorCouldStage(registry *agents.Registry, pol agentPolicy) bool {
+	return registry.Stageable(pol.Tool) &&
+		registry.NamesRecordType(pol.Tool) &&
+		registry.Performs(pol.Tool, string(pol.RecordType))
 }

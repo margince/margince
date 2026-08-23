@@ -137,14 +137,44 @@ function stubFetch(refuse: Readonly<Record<string, () => Response>> = {}): {
 }
 
 function render(ui: ReactNode) {
+  return renderWithClient(ui).rendered;
+}
+
+// The same render, handing back the client so a case can read what the run
+// invalidated. Separate rather than folded in, so the existing cases keep
+// reading as a reader's story rather than a cache one.
+function renderWithClient(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const invalidated: unknown[] = [];
+  // The spy is SLOW on purpose. Recording the key synchronously and returning
+  // the real promise would let this suite pass with the production `await`
+  // deleted — the assertions would read a list the spy had already filled
+  // before `onDone` ever ran. Deferring the resolution makes the ordering
+  // observable: `settled` only becomes true a tick after the last
+  // invalidation, so a caller that did not await sees it false.
+  let outstanding = 0;
+  const real = client.invalidateQueries.bind(client);
+  client.invalidateQueries = ((filters?: { queryKey?: unknown }) => {
+    invalidated.push(filters?.queryKey);
+    outstanding += 1;
+    return real(filters as Parameters<typeof real>[0]).then(
+      () =>
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            outstanding -= 1;
+            resolve();
+          }, 0);
+        }),
+    );
+  }) as typeof client.invalidateQueries;
+  const rendered = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return { rendered, invalidated, pending: () => outstanding };
 }
 
 const disqualifyButton = () =>
@@ -244,5 +274,119 @@ describe("LeadBulkBar — disqualify", () => {
       ["l-1", false],
       ["l-2", true],
     ]);
+  });
+
+  // A bulk run writes MANY leads, and each of them has an open detail page
+  // somewhere. The list is `["leads", query]`; the detail page is the sibling
+  // `["lead", id]`, which prefix invalidation does not walk to — so naming
+  // only the list left forty pages showing the owner the run had just changed.
+  it("invalidates every lead the run touched, refused ones included", async () => {
+    const { deletions } = stubFetch({
+      "l-2": () =>
+        new Response(
+          JSON.stringify({
+            code: "version_conflict",
+            detail: "Somebody else changed this lead.",
+          }),
+          { status: 409, headers: { "content-type": "application/json" } },
+        ),
+    });
+    const user = userEvent.setup();
+    const { invalidated } = renderWithClient(
+      <LeadBulkBar leads={leads} onDone={() => undefined} />,
+    );
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    await waitFor(() => expect(deletions).toHaveLength(2));
+
+    await waitFor(() => expect(invalidated).toContainEqual(["lead", "l-1"]));
+    expect(invalidated).toContainEqual(["leads"]);
+    expect(invalidated).toContainEqual(["record-history", "lead", "l-1"]);
+    // The REFUSED row too. Its refusal was a version conflict, which is the
+    // server saying its row moved — so it is the row whose cached version is
+    // least trustworthy, not the one to skip.
+    expect(invalidated).toContainEqual(["lead", "l-2"]);
+  });
+
+  // The case the partial-failure test above cannot see, because a successful
+  // sibling's `["leads"]` invalidation masks it: a run in which EVERY row
+  // refuses. Filtering to the successes emptied the set, `Promise.all([])`
+  // resolved instantly, and nothing was invalidated — so the reader keeps the
+  // selection to retry, retries against the very version that just conflicted,
+  // and conflicts forever until they reload the page by hand.
+  it("refetches after a run in which every row refused", async () => {
+    const conflict = () =>
+      new Response(
+        JSON.stringify({
+          code: "version_conflict",
+          detail: "Somebody else changed this lead.",
+        }),
+        { status: 409, headers: { "content-type": "application/json" } },
+      );
+    const { deletions } = stubFetch({ "l-1": conflict, "l-2": conflict });
+    const user = userEvent.setup();
+    const { invalidated } = renderWithClient(
+      <LeadBulkBar leads={leads} onDone={() => undefined} />,
+    );
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    await waitFor(() => expect(deletions).toHaveLength(2));
+
+    await waitFor(() => expect(invalidated).toContainEqual(["leads"]));
+    expect(invalidated).toContainEqual(["lead", "l-1"]);
+    expect(invalidated).toContainEqual(["lead", "l-2"]);
+  });
+
+  // The ordering the production `await` exists for, asserted rather than
+  // assumed. The reader keeps their selection after a refused run, so the
+  // moment the verbs come back is the moment a retry can fire — and a retry
+  // that fires while the refetch is still in flight resends the very version
+  // that just conflicted.
+  //
+  // What this pins is that `onDone` runs after the invalidations SETTLE, which
+  // is what the code can honestly promise: `invalidateQueries` resolves whether
+  // its refetch succeeded or failed, so awaiting it closes the race and does
+  // not guarantee fresh rows after a refetch the server refused.
+  it("hands the verbs back only after the refetch has settled", async () => {
+    const { deletions } = stubFetch();
+    const user = userEvent.setup();
+    const outstandingWhenDone: number[] = [];
+    const { pending } = renderWithClient(
+      <LeadBulkBar
+        leads={leads}
+        onDone={() => outstandingWhenDone.push(pending())}
+      />,
+    );
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    await waitFor(() => expect(deletions).toHaveLength(2));
+
+    await waitFor(() => expect(outstandingWhenDone).toHaveLength(1));
+    // Zero in flight at the moment the caller was told the run was done.
+    expect(outstandingWhenDone[0]).toBe(0);
   });
 });

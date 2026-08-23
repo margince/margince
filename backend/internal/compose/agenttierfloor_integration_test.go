@@ -7,18 +7,25 @@ package compose
 
 // The bypass itself, against real Postgres (#982).
 //
-// The contract declares `createProject` and `updateProject` confirm-first for an
-// agent — a tier tightened for ONE record type, where creating a person or a
-// deal is not tightened at all. The REST door honours it, because its tier comes
-// from the operation. The MCP door resolves a tier from the VERB, and the verb
-// that performs the same write is `create_record`, which is auto-execute for
-// every type it admits.
+// A tier tightened for ONE record type — creating a project confirmed, creating a
+// person not — is honoured by the REST door, whose tier comes from the operation.
+// The MCP door resolves a tier from the VERB, and the verb that performs the same
+// write is `create_record`, auto-execute for every type it admits.
 //
 // So the refusal is one tool call away from being irrelevant, and the only way
 // to prove that is to let the call reach the write and then look at the
 // database. A unit test asserting a resolved tier would prove what the gate
 // decided; it would not prove that a project now exists which no human agreed
 // to.
+//
+// The floor these two tests exercise is DECLARED HERE rather than read off the
+// contract. It used to be `createProject`/`updateProject`, which the contract
+// tightened at the time; ADR-0055 then made both auto-execute and the tests began
+// failing for a reason that had nothing to do with what they check. What they
+// check is the MECHANISM — that a floor reaches the served registry and is applied
+// before admission — and the mechanism does not care which pair carries it. Stating
+// the pair here keeps that property provable whatever today's contract declares.
+// The gates in agenttierfloor_test.go are the ones that walk the contract.
 //
 // The registry is built through registryWithGate — the same function the api role
 // composes — so what is proved is that the floor is WIRED and applied before
@@ -48,14 +55,15 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
 )
 
-func TestATierTheContractTightensForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
+func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
 
-	registry := composedRegistry(e)
+	registry := composedRegistryFlooring(e, "project")
 
 	org := seedOrgForTierFloor(human, t, native)
 
@@ -76,13 +84,13 @@ func TestATierTheContractTightensForOneRecordTypeBindsTheToolDoorToo(t *testing.
 	// StageInfo implementations. The row count says no effect happened, which a
 	// call refused for a missing grant would also satisfy — hence a full seat.
 	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Errorf("create_record{project} answered %v, want the confirm-first refusal the "+
-			"contract declares for createProject — a tier tightened for one record type is a "+
-			"decision the tool door cannot see", err)
+		t.Errorf("create_record{project} answered %v, want the confirm-first refusal the floor "+
+			"declares for a project — a tier tightened for one record type is a decision the "+
+			"tool door cannot see", err)
 	}
 	if n := liveProjectsNamed(human, t, e, "Unapproved"); n != 0 {
-		t.Errorf("%d project(s) named Unapproved exist; the agent performed unattended the write "+
-			"POST /v1/projects would have staged for a human", n)
+		t.Errorf("%d project(s) named Unapproved exist; the agent performed unattended a write "+
+			"the floor stages for a human", n)
 	}
 	assertStagedApprovalRow(human, t, e, stagedRow{kind: "create_record", targetType: "project", hasTargetID: false})
 }
@@ -95,7 +103,7 @@ func TestATightenedUpdateAlsoStagesOnTheToolDoor(t *testing.T) {
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
-	registry := composedRegistry(e)
+	registry := composedRegistryFlooring(e, "project")
 
 	org := seedOrgForTierFloor(human, t, native)
 	project := seedProjectForTierFloor(human, t, native, org)
@@ -105,11 +113,11 @@ func TestATightenedUpdateAlsoStagesOnTheToolDoor(t *testing.T) {
 			`","fields":{"name":"Renamed without asking"}}`))
 
 	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Errorf("update_record{project} answered %v, want the confirm-first refusal "+
-			"PATCH /v1/projects/{id} declares", err)
+		t.Errorf("update_record{project} answered %v, want the confirm-first refusal the "+
+			"floor declares for a project patch", err)
 	}
 	if n := liveProjectsNamed(human, t, e, "Renamed without asking"); n != 0 {
-		t.Error("the project was renamed unattended; the REST twin stages that patch for a human")
+		t.Error("the project was renamed unattended; the floor stages that patch for a human")
 	}
 	assertStagedApprovalRow(human, t, e, stagedRow{kind: "update_record", targetType: "project", hasTargetID: true})
 }
@@ -144,6 +152,30 @@ func TestAnOrdinaryOrganizationPatchStillRunsUnattended(t *testing.T) {
 func composedRegistry(e *integration.Env) *agents.Registry {
 	return registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil, nil,
 		SendPath{}, companyEnricher{}, nil, nil, nil, nil)
+}
+
+// composedRegistryFlooring is that same composition with ONE pair floored to
+// confirm-first, for whichever record type the caller names.
+//
+// The option arrives after registryWithGate's own withContractTierFloor and
+// replaces it, which is deliberate: what these tests prove is that a floor
+// reaches this registry and runs before admission, and a floor the test states
+// cannot go stale when the contract's own declarations move. The tests that walk
+// what the contract declares TODAY are the unit gates in agenttierfloor_test.go.
+func composedRegistryFlooring(e *integration.Env, recordType string) *agents.Registry {
+	registry := composedRegistry(e)
+	// Applied AFTER construction, not passed as an option: registryWithGate
+	// appends its own withContractTierFloor to whatever it is given, so an
+	// option supplied here would be overwritten by the composed one rather than
+	// replace it. What is under test is still the composed registry — the same
+	// tools, the same gate, the same staging — with one declaration swapped.
+	agents.WithTierFloor(func(_, rt string) (mcp.RiskTier, bool) {
+		if rt != recordType {
+			return mcp.TierAutoExecute, false
+		}
+		return mcp.TierConfirmationRequired, true
+	})(registry)
+	return registry
 }
 
 // stagedRow is what a staged approval must look like for the operation that

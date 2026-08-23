@@ -16,6 +16,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
+import { leadManualSignalsKey, leadWriteKeys } from "./leadkeys";
 
 type SetSignalRequest = components["schemas"]["SetLeadManualSignalRequest"];
 type SignalFactor = SetSignalRequest["factor"];
@@ -95,7 +96,7 @@ export function LeadManualSignals({
   const zone = viewerZone();
   const queryClient = useQueryClient();
   const signals = useQuery({
-    queryKey: ["lead", id, "manual-signals"],
+    queryKey: leadManualSignalsKey(id),
     queryFn: async () => {
       const { data, error } = await api.GET("/leads/{id}/manual-signals", {
         params: { path: { id } },
@@ -112,11 +113,12 @@ export function LeadManualSignals({
   const [confidence, setConfidence] = useState<string>(CONFIDENCE_UNSTATED);
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["lead", id] });
-    queryClient.invalidateQueries({ queryKey: ["leads"] });
-    queryClient.invalidateQueries({
-      queryKey: ["lead", id, "manual-signals"],
-    });
+    // leadWriteKeys carries `["lead", id]`, and React Query invalidates by
+    // PREFIX — so the manual-signals read under `["lead", id, …]` is already
+    // reached. Naming it again is a second refetch of the same rows.
+    for (const key of leadWriteKeys(id)) {
+      queryClient.invalidateQueries({ queryKey: key });
+    }
   };
   const set = useMutation({
     // The batch arrives as the mutation's variable, never read back out of

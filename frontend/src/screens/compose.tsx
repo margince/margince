@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -38,7 +44,16 @@ import {
 } from "./common";
 import { useOrganization360 } from "./company360";
 import { useConsentPurposes } from "./consent";
-import { useEntityName } from "./entityref";
+import {
+  type Filing,
+  filingFor,
+  stripEveryKeyTag,
+  stripSubjectTag,
+  subjectTag,
+  useProjectRecord,
+  withSubjectTag,
+} from "./projectrecord";
+import type { Project } from "./projects.form";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
@@ -245,8 +260,16 @@ function fillFromDraft(
   }>,
 ) {
   const drafted = result.draft;
-  if (!form.subject) {
-    form.setSubject(drafted.subject);
+  // A subject holding only the project tag is a subject the rep has not written
+  // yet: the composer put it there, not them. The drafted subject fills in
+  // behind the tag rather than being dropped as "the field is taken".
+  const written = stripEveryKeyTag(form.subject).trim();
+  if (!written) {
+    form.setSubject(
+      form.subject.trim()
+        ? withSubjectTag(drafted.subject, form.subject.trim())
+        : drafted.subject,
+    );
   }
   if (!form.body) {
     form.setBody(drafted.body);
@@ -308,48 +331,119 @@ async function draftFromActivity({
 // reply", saw no project anywhere, and concluded the feature was not there.
 // This says where the message is going, and points at the one control that can
 // change it — which moves the whole conversation, not one message of it.
-function ReplyFiling({ activityId }: Readonly<{ activityId: string }>) {
+/**
+ * What survives clearing a subject: the project tag, and nothing else.
+ *
+ * A tag is not the rep's words and not the draft's — the composer put it there
+ * to route the reply. Wiping it with the rejected draft would leave the filing
+ * checkbox asserting a routing the subject no longer performs.
+ */
+function keptTag(subject: string): string {
+  const words = stripEveryKeyTag(subject);
+  return subject.slice(0, subject.length - words.length).trim();
+}
+
+/**
+ * Where this send will file, stated rather than asked, with the one control
+ * that matters: the rep can decline it.
+ *
+ * The thread's own project settles it when it has one. A deal's project is the
+ * fallback for a conversation that predates it, and the copy names that reason
+ * — a rep seeing a project they never put on this thread should be told where
+ * it came from.
+ *
+ * Declining files the message under no project and takes the subject tag back
+ * off. It does NOT move the thread: the control that does that is Relink, on
+ * the message's own timeline row, and it moves every message at once. Two
+ * spellings of "move this conversation" is what this component exists to avoid.
+ */
+// NOTE ON THE REPLY PATH: a reply posts to /activities/{id}/send-email, which
+// takes NO links — the server files the reply under the links its ANCHOR
+// carries (activities/sendorigin.go, FromActivity). So on a reply this section
+// states a filing the client cannot itself perform, and it is honest only
+// because of the subject tag: the tag is what carries the project, and capture
+// reads it back on the way in. The `filed` flag still governs the tag, so
+// declining genuinely changes what is sent.
+//
+// The account-started path DOES send links, and there the project link travels
+// (composedLinks). Making a reply send one needs `links` on the reply request —
+// a contract change, tracked as its own piece of work.
+function ProjectFiling({
+  filing,
+  project,
+  filed,
+  onFiledChange,
+}: Readonly<{
+  filing: Filing;
+  project: Project | null;
+  filed: boolean;
+  onFiledChange: (next: boolean) => void;
+}>) {
   const t = useT();
+  if (filing.kind !== "derived" || !project?.name) {
+    return null;
+  }
+  const tag = subjectTag(project);
+  return (
+    <div className="stack-2xs">
+      <Checkbox
+        className="t-body"
+        label={t("compose.fileUnderProject")}
+        checked={filed}
+        onChange={(event) => onFiledChange(event.target.checked)}
+      />
+      {filed && (
+        <p className="t-caption">
+          {t(
+            filing.from === "deal"
+              ? "compose.filedUnderDeal"
+              : "compose.filedUnder",
+            { project: project.name },
+          )}
+        </p>
+      )}
+      {filed && tag && (
+        <p className="t-caption">{t("compose.subjectTagged", { tag })}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The project link a reply's own thread already carries, if any.
+ *
+ * Read from the anchor activity rather than assumed, because the thread is the
+ * first rung of the same ladder the capture side walks: a sibling message that
+ * was filed — by capture or by a human relink — is the settled answer, and it
+ * outranks anything the deal says.
+ */
+function useThreadProject(activityId?: string): {
+  projectId?: string;
+  settled: boolean;
+} {
   const query = useQuery({
     queryKey: ["activity", activityId, "filing"],
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
+        params: { path: { id: activityId ?? "" } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
+    enabled: Boolean(activityId),
   });
-  const projectId = (query.data?.links ?? []).find(
-    (link) => link.entity_type === "project",
-  )?.entity_id;
-  const { name } = useEntityName("project", projectId);
-  // This line makes a claim about where a send will land, so it is drawn only
-  // when both reads have actually answered. A failed or pending read looks
-  // exactly like "no project" from here, and silence is the honest rendering of
-  // both: "this will be filed under nothing" tells a reader less than nothing
-  // does, and naming a project the read never returned would be worse — the
-  // caption would assert a filing that is not the one the server will perform.
-  if (query.isPending || query.isError || !projectId) {
-    return null;
-  }
-  // The link is there but its name is not — pending, refused, or blank; the
-  // three are one case here. Same rule: say nothing rather than name the
-  // project "Unnamed project", which reads as a fact about the project instead
-  // of a gap in what this component managed to read.
-  if (!name) {
-    return null;
-  }
-  // It SAYS, and does not offer to change: the control that moves a
-  // conversation is Relink, on the message's own row in the timeline, and it
-  // moves the whole thread. A second one here would be a second spelling of one
-  // action — and the shorter path to filing a single message away from its
-  // conversation, which is the split this line exists to make visible.
-  return (
-    <p className="t-caption">{t("compose.filedUnder", { project: name })}</p>
-  );
+  return {
+    projectId: (query.data?.links ?? []).find(
+      (link) => link.entity_type === "project",
+    )?.entity_id,
+    // A read that has not answered — or FAILED — is not "no project". Treating
+    // an error as absence falls through to the deal's project, which the send
+    // would then contradict: the server re-reads the anchor and inherits the
+    // thread's own filing. Unsettled means say nothing.
+    settled: !activityId || (!query.isPending && !query.isError),
+  };
 }
 
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
@@ -523,13 +617,14 @@ export type Grounding = {
 function composedLinks(
   anchor: { entityType: RelinkKind; entityId: string },
   chosen: Grounding | null,
+  // The project this send files under when the rep CHOSE nothing — derived
+  // from the thread or from the anchor record, and already declinable in the
+  // UI. Empty means no project link, which is what a decline produces.
+  derivedProjectId = "",
 ): { entity_type: RelinkKind; entity_id: string }[] {
   const links: { entity_type: RelinkKind; entity_id: string }[] = [
     { entity_type: anchor.entityType, entity_id: anchor.entityId },
   ];
-  if (!chosen) {
-    return links;
-  }
   const add = (kind: RelinkKind, id: string) => {
     const already = links.some(
       (l) => l.entity_type === kind && l.entity_id === id,
@@ -539,6 +634,13 @@ function composedLinks(
     }
     links.push({ entity_type: kind, entity_id: id });
   };
+  if (!chosen) {
+    // An anchored send: the record it was started from, plus the filing it
+    // states. A reply that states no filing still sends anchor-only, which is
+    // the shape every existing reply has.
+    add("project", derivedProjectId);
+    return links;
+  }
   add("person", chosen.recipientId);
   add("deal", chosen.dealId);
   add("project", chosen.projectId);
@@ -1279,6 +1381,127 @@ function useDraftMutation({
   });
 }
 
+/**
+ * The project the anchor RECORD names, for the sends whose anchor can name one.
+ *
+ * Only a deal does today: it carries `project_id` as a column, and a message
+ * about a deal is a message about that deal's work. A company or a person
+ * reaches several projects at once and names none of them, so there is nothing
+ * to derive — those anchors answer nothing here and the account path's picker
+ * is what asks.
+ */
+function useAnchorProject(
+  entityType: RelinkKind,
+  entityId: string,
+): { projectId?: string | null; settled: boolean } {
+  const query = useQuery({
+    // The SAME key the deal page's own read uses, so opening the composer on a
+    // deal costs no request and cannot disagree with the page behind it. A
+    // second key would be a second answer to one question.
+    queryKey: ["deal", entityId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals/{id}", {
+        params: { path: { id: entityId } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    enabled: entityType === "deal",
+    staleTime: 60_000,
+  });
+  return {
+    projectId: query.data?.project_id,
+    // A read that failed says nothing about this deal's project. Reporting it
+    // as "no project" would drop the filing silently; unsettled keeps the
+    // composer quiet instead, which is the same rule the thread read follows.
+    settled: entityType !== "deal" || (!query.isPending && !query.isError),
+  };
+}
+
+/**
+ * The filing this composer will perform, and the subject tag that goes with it.
+ *
+ * Kept as one hook because the two move together: the tag is only in the
+ * subject while the filing is on, so a rep who declines the filing must not be
+ * left with the bracketed key still in their subject line, promising a routing
+ * that will not happen.
+ *
+ * The subject is rewritten only when the FILING changes, never on a keystroke.
+ * A rep who deletes the tag by hand keeps it deleted — that is a second way to
+ * say the same "not this one", and re-adding it under their cursor would be the
+ * composer arguing with them.
+ */
+function useProjectFiling(input: {
+  activityId?: string;
+  anchorProjectId?: string | null;
+  reachable: readonly { id: string }[];
+  // Whether the anchor's own read has answered. False keeps the composer quiet
+  // rather than reporting a failed read as "no project".
+  anchorSettled: boolean;
+  subject: string;
+  setSubject: (next: string) => void;
+}): {
+  filing: Filing;
+  project: Project | null;
+  filed: boolean;
+  setFiled: (next: boolean) => void;
+} {
+  const thread = useThreadProject(input.activityId);
+  const [declined, setDeclined] = useState(false);
+  // Nothing is derived until the thread has answered. The thread outranks the
+  // deal, so guessing while its read is in flight is guessing the loser: the
+  // composer would announce the deal's project, then swap under the rep, or —
+  // when the read failed — announce one the send will not use.
+  const filing =
+    thread.settled && input.anchorSettled
+      ? filingFor({
+          threadProjectId: thread.projectId,
+          dealProjectId: input.anchorProjectId,
+          reachable: input.reachable,
+        })
+      : ({ kind: "none" } as const);
+  const derived = filing.kind === "derived" ? filing.projectId : undefined;
+  const { project } = useProjectRecord(derived);
+  const filed = Boolean(derived) && !declined;
+  const tag = subjectTag(project);
+  // The tag follows the filing, applied once per change rather than on every
+  // render: `applied` remembers what this composer last wrote, so a rerender
+  // with the same answer leaves the rep's subject alone.
+  const applied = useRef<string>("");
+  const want = filed && thread.settled ? tag : "";
+  // In an effect, not during render: setting the subject inline would be a
+  // state write inside another component's render pass, the shape that drives
+  // React into an update loop. The subject is read through a ref so a rep's
+  // typing never re-runs this.
+  const subjectRef = useRef(input.subject);
+  subjectRef.current = input.subject;
+  const setSubject = input.setSubject;
+
+  useEffect(() => {
+    // Re-apply when the tag CHANGED, and also when the subject no longer holds
+    // the tag this hook believes it wrote — discarding a draft clears the field
+    // programmatically, and without this the checkbox would keep claiming a tag
+    // the subject does not carry.
+    if (applied.current === want) {
+      return;
+    }
+    const previous = applied.current;
+    applied.current = want;
+    const bare = previous
+      ? stripSubjectTag(subjectRef.current, previous)
+      : subjectRef.current;
+    setSubject(want ? withSubjectTag(bare, want) : bare);
+  }, [want, setSubject]);
+  return {
+    filing,
+    project,
+    filed,
+    setFiled: (next: boolean) => setDeclined(!next),
+  };
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement. The drafting call, the form fill, the body edit and both draft controls are already extracted; what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
 export function ComposeModal({
   activityId,
@@ -1357,6 +1580,21 @@ export function ComposeModal({
   // recipient server-side and has no draft endpoint at all.
   const groundable =
     !activityId && entityType === "organization" && !isChannelReply;
+  // Where this send files, and the subject tag that travels with it. The
+  // account path keeps its own picker (it chooses a project rather than
+  // inheriting one), so this covers the anchored sends: a reply, and a message
+  // started from a deal.
+  const anchorProject = useAnchorProject(entityType, entityId);
+  const projectFiling = useProjectFiling({
+    activityId,
+    anchorProjectId: groundable ? null : anchorProject.projectId,
+    anchorSettled: anchorProject.settled,
+    // The reachable set only decides between "ask" and "say nothing", and the
+    // anchored path never asks — the account path owns that question.
+    reachable: [],
+    subject,
+    setSubject,
+  });
 
   // An emptied body no longer holds the served draft, so everything that
   // describes those words goes with it: the reference would bind the next
@@ -1438,8 +1676,10 @@ export function ComposeModal({
     },
     onSuccess: () => {
       // The rejected words leave with the judgment; the recipients the rep
-      // addressed are their own work and stay.
-      setSubject("");
+      // addressed are their own work and stay. So does the project tag: it is
+      // not part of the draft being rejected, and clearing it would leave the
+      // checkbox claiming a filing the subject no longer carries.
+      setSubject((current) => keptTag(current));
       setBody("");
       setProvenance(null);
     },
@@ -1467,7 +1707,11 @@ export function ComposeModal({
         isChannelReply,
         mail,
         channelBody: { body, consent_purpose: purpose },
-        links: composedLinks({ entityType, entityId }, grounding),
+        links: composedLinks(
+          { entityType, entityId },
+          grounding,
+          projectFiling.filed ? (projectFiling.project?.id ?? "") : "",
+        ),
       });
       if (response.status === 501) return { sent: false as const };
       // Only a real 202 is a send. openapi-fetch returns a falsy `error` for a
@@ -1604,8 +1848,13 @@ export function ComposeModal({
         {accountContext}
         {/* A reply says where it is going. The picker above is for the
             account-started message, which has no thread to inherit from. */}
-        {activityId && !isChannelReply && (
-          <ReplyFiling activityId={activityId} />
+        {!isChannelReply && (
+          <ProjectFiling
+            filing={projectFiling.filing}
+            project={projectFiling.project}
+            filed={projectFiling.filed}
+            onFiledChange={projectFiling.setFiled}
+          />
         )}
         {/* AI drafting is mail-only — there is no draft-message endpoint, and
             a channel reply's recipient is resolved server-side, so neither

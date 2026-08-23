@@ -8,6 +8,7 @@ import {
   Modal,
   SearchField,
   Skeleton,
+  TableScroll,
 } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -171,56 +172,68 @@ function CoverageGrid({
           {t("acctCoverage.columnCap", { cap: COLUMN_CAP })}
         </p>
       )}
-      <table className="coverage-table">
-        <thead>
-          <tr>
-            <th>{t("acctCoverage.contact")}</th>
-            {shown.map((id) => (
-              <th key={id}>
-                {colleagues.find((colleague) => colleague.id === id)?.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((contact) => (
-            <tr key={contact.person_id}>
-              <th scope="row">{contact.full_name}</th>
-              {shown.map((id) => {
-                const colleague = colleagues.find((c) => c.id === id);
-                const band = colleague?.bands.get(contact.person_id);
-                return (
-                  // The column header travels with the cell twice over: as
-                  // data-label, which the narrow layout renders as visible
-                  // text, and as an aria-label, which carries the same fact to
-                  // a screen reader. The CSS turns rows into cards at 720px,
-                  // and display:block strips the table roles a screen reader
-                  // would otherwise navigate by — so each cell has to be
-                  // self-describing rather than relying on a header row that
-                  // no longer exists in the accessibility tree.
-                  <td
-                    key={id}
-                    data-label={colleague?.label}
-                    aria-label={colleague?.label}
-                  >
-                    {/* No band is UNTRIED, not zero. The cell says so in words
-                        rather than leaving a blank a reader has to interpret. */}
-                    {band ? (
-                      <Badge tone={band === "strong" ? "success" : undefined}>
-                        {t(BAND_LABELS[band])}
-                      </Badge>
-                    ) : (
-                      <span className="t-caption">
-                        {t("acctCoverage.untried")}
-                      </span>
-                    )}
-                  </td>
-                );
-              })}
+      {/* `TableScroll` rather than a wrapper of this screen's own: an
+          N-colleague matrix runs past the panel's right edge, and the box that
+          scrolls sideways — keyboard-reachable, and announced as a named region
+          only while it is actually holding something past that edge — is one
+          spelling for every table in the product (atoms.tsx).
+          No screen-owned overflow class beside it: below 720px the rows become
+          block cards with nothing left to run past the edge, so TableScroll's
+          own rule already shows no scrollbar there — and an override would have
+          been the same specificity as TableScroll's, winning only if this
+          screen's stylesheet happened to load second. */}
+      <TableScroll label={t("acctCoverage.title")}>
+        <table className="coverage-table">
+          <thead>
+            <tr>
+              <th>{t("acctCoverage.contact")}</th>
+              {shown.map((id) => (
+                <th key={id}>
+                  {colleagues.find((colleague) => colleague.id === id)?.label}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((contact) => (
+              <tr key={contact.person_id}>
+                <th scope="row">{contact.full_name}</th>
+                {shown.map((id) => {
+                  const colleague = colleagues.find((c) => c.id === id);
+                  const band = colleague?.bands.get(contact.person_id);
+                  return (
+                    // The column header travels with the cell twice over: as
+                    // data-label, which the narrow layout renders as visible
+                    // text, and as an aria-label, which carries the same fact to
+                    // a screen reader. The CSS turns rows into cards at 720px,
+                    // and display:block strips the table roles a screen reader
+                    // would otherwise navigate by — so each cell has to be
+                    // self-describing rather than relying on a header row that
+                    // no longer exists in the accessibility tree.
+                    <td
+                      key={id}
+                      data-label={colleague?.label}
+                      aria-label={colleague?.label}
+                    >
+                      {/* No band is UNTRIED, not zero. The cell says so in words
+                        rather than leaving a blank a reader has to interpret. */}
+                      {band ? (
+                        <Badge tone={band === "strong" ? "success" : undefined}>
+                          {t(BAND_LABELS[band])}
+                        </Badge>
+                      ) : (
+                        <span className="t-caption">
+                          {t("acctCoverage.untried")}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
       {rows.length === 0 && (
         <EmptyState>{t("acctCoverage.noMatch")}</EmptyState>
       )}

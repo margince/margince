@@ -13,6 +13,7 @@ import { Wordmark } from "./auth";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
+import { downloadBytes } from "./download";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside person ever
@@ -466,26 +467,34 @@ function BuyerDocumentVerbs({
   const t = useT();
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
-    mutationFn: async (input: { documentId: string; filename: string }) => {
+    // The failure line rides as a mutation VARIABLE rather than being read off
+    // `t` inside the function. A mutationFn is re-armed in a passive effect, so
+    // a closure read here is the render-before-last's — for a translator that
+    // means the locale the reader has just left.
+    mutationFn: async (input: {
+      documentId: string;
+      filename: string;
+      failure: string;
+      token: string;
+    }) => {
       const { data, error, response } = await api.GET(
         "/public/rooms/documents/{documentId}/file",
         {
           params: { path: { documentId: input.documentId } },
           parseAs: "blob",
-          ...bearer(token),
+          ...bearer(input.token),
         },
       );
       if (error || !data) {
-        throw new Error(t("buyer.docs.downloadFailed"), {
-          cause: response.status,
-        });
+        // A refusal this screen decided, with copy it already translated, so
+        // it rides as a problem body — a plain Error is wording nobody wrote
+        // for a user and is replaced by the shared failure line.
+        throwProblem({ status: response.status, detail: input.failure });
       }
-      const url = URL.createObjectURL(data);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = input.filename;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      // The blob's OWN type, because the server chose it: a PDF handed to the
+      // reader as application/octet-stream downloads with the wrong icon and
+      // opens in nothing.
+      downloadBytes(data, input.filename, data.type);
     },
   });
   return (
@@ -495,14 +504,21 @@ function BuyerDocumentVerbs({
         aria-label={t("buyer.docs.download", { title: doc.title })}
         pending={download.isPending}
         onClick={() =>
-          download.mutate({ documentId: doc.id, filename: doc.filename })
+          download.mutate({
+            documentId: doc.id,
+            filename: doc.filename,
+            failure: t("buyer.docs.downloadFailed"),
+            token,
+          })
         }
       >
         <Download aria-hidden />
         {t("buyer.docs.downloadShort")}
       </Button>
       {download.isError ? (
-        <p className="t-small t-danger">{download.error.message}</p>
+        <p className="t-small t-danger">
+          {problemMessageOf(download.error, t)}
+        </p>
       ) : null}
     </div>
   );

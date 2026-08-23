@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2190 | 9% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 16970 | 70% | — | — | — |
+| _whole served catalog, for scale_ | 56 | 16996 | 70% | — | — | — |
 
 ### `morning_brief`
 
@@ -118,7 +118,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 280 tokens, mean 302, across 56 served tools.
+Median 281 tokens, mean 303, across 56 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -129,45 +129,45 @@ a term in an addition.
 |---|---:|---:|
 | `run_report` | 1213 | 3 scenarios |
 | `update_record` | 565 | 4 scenarios |
-| `send_account_email` | 546 | — |
+| `send_account_email` | 545 | — |
 | `resolve_entities` | 513 | — |
 | `list_records` | 475 | — |
 | `advance_deal` | 474 | 1 scenario |
-| `send_email` | 472 | 1 scenario |
+| `send_email` | 471 | 1 scenario |
 | `log_activity` | 448 | 1 scenario |
 | `progress_deal` | 435 | 3 scenarios |
-| `book_meeting` | 432 | — |
+| `book_meeting` | 431 | — |
 | `query_workspace` | 402 | 3 scenarios |
 | `search_records` | 392 | 6 scenarios |
-| `enrich` | 388 | — |
-| `create_record` | 370 | 1 scenario |
+| `create_record` | 391 | 1 scenario |
+| `enrich` | 386 | — |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
-| `preview_import` | 328 | — |
-| `merge_records` | 325 | — |
+| `merge_records` | 323 | — |
 | `draft_email` | 317 | — |
 | `review_commitments` | 316 | — |
-| `send_message` | 315 | — |
-| `advance_project_phase` | 311 | — |
+| `send_message` | 314 | — |
+| `advance_project_phase` | 310 | — |
+| `relink_activity` | 308 | — |
 | `draft_follow_ups_for` | 304 | — |
 | `decide_approval` | 303 | — |
-| `promote_lead` | 303 | — |
-| `archive_record` | 293 | — |
+| `promote_lead` | 301 | — |
+| `preview_import` | 294 | — |
+| `archive_record` | 292 | — |
 | `catch_me_up_on` | 287 | 3 scenarios |
-| `relink_activity` | 286 | — |
 | `prepare_handoff` | 275 | 1 scenario |
 | `list_approvals` | 274 | — |
 | `check_availability` | 270 | — |
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
+| `relink_activities` | 237 | — |
 | `read_record` | 229 | 2 scenarios |
-| `disqualify_lead` | 222 | — |
+| `relink_thread` | 228 | — |
+| `disqualify_lead` | 221 | — |
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
-| `relink_activities` | 215 | — |
 | `read_brief` | 213 | — |
-| `relink_thread` | 207 | — |
 | `apply_tag` | 206 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
@@ -177,11 +177,11 @@ a term in an addition.
 | `account_coverage` | 178 | 2 scenarios |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
-| `commit_import` | 150 | — |
+| `commit_import` | 149 | — |
 | `list_colleagues` | 148 | — |
 | `list_tags` | 102 | — |
-| `read_import_report` | 89 | — |
 | `whoami` | 88 | — |
+| `read_import_report` | 80 | — |
 | `read_import_run` | 75 | — |
 
 ## Related
