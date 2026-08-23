@@ -186,7 +186,10 @@ func TestCaptureOvernightJobsRegisterAndRun(t *testing.T) {
 		}
 	}()
 
-	for _, kind := range []string{"capture_classify", "capture_enrich", "capture_digest"} {
-		awaitKindCompleted(t, sub, kind)
-	}
+	// Awaited as a SET, not a sequence. All three are RunOnStart, so River
+	// enqueues them together and finishes them in whatever order the queues
+	// allow — and capture_digest is the one that usually wins, because
+	// captureDigestWorker deliberately runs on the default queue rather than
+	// behind the two model-bound workers on ai_capture.
+	awaitKindsCompleted(t, sub, "capture_classify", "capture_enrich", "capture_digest")
 }
