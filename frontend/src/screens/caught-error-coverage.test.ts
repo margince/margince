@@ -54,8 +54,8 @@ import { describe, expect, it } from "vitest";
 // checker plus a rule about which helpers count as rendering, and this repo has
 // already learned that a gate with fiddly rules gets worked around. The
 // destructured form is named rather than left implied: it is one edit away from
-// the shapes below, and a reader who assumes it is covered would be wrong. The four
-// five arms cover every shape that has actually shipped here.
+// the shapes below, and a reader who assumes it is covered would be wrong. The
+// five arms above cover every shape that has actually shipped here.
 //
 // A console sink is not an exception today because none exists: the one
 // sanctioned path to the console is `logUnexpectedError`, which is handed the
@@ -172,16 +172,31 @@ function disclosuresIn(fileName: string, text: string): string[] {
     }
     return inner;
   };
-  const visitResultError = (node: ts.Node) => {
-    const beneath = ts.isPropertyAccessExpression(node)
-      ? beneathWrappers(node.expression)
+  // Either accessor on either hop, because there are four spellings of one
+  // read and a rule written against the dot form sees one of them:
+  // `r.error.message`, `r["error"].message`, `r.error["message"]`, and both
+  // brackets. The census's first draft saw only the first.
+  const namesProperty = (node: ts.Node, property: string): boolean => {
+    if (ts.isPropertyAccessExpression(node)) {
+      return node.name.text === property;
+    }
+    return (
+      ts.isElementAccessExpression(node) &&
+      ts.isStringLiteral(node.argumentExpression) &&
+      node.argumentExpression.text === property
+    );
+  };
+  const accessed = (node: ts.Node): ts.Expression | undefined =>
+    ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)
+      ? node.expression
       : undefined;
+  const visitResultError = (node: ts.Node) => {
+    const target = accessed(node);
+    const beneath = target === undefined ? undefined : beneathWrappers(target);
     if (
-      ts.isPropertyAccessExpression(node) &&
-      node.name.text === "message" &&
+      namesProperty(node, "message") &&
       beneath !== undefined &&
-      ts.isPropertyAccessExpression(beneath) &&
-      beneath.name.text === "error"
+      namesProperty(beneath, "error")
     ) {
       const { line } = source.getLineAndCharacterOfPosition(node.getStart());
       found.push(`result.error ${fileName}:${line + 1}`);
@@ -218,9 +233,11 @@ function disclosures(): string[] {
   const files = sourceFiles(srcRoot).filter((file) => {
     const text = readFileSync(file, "utf8");
     // Arms 1-4 need a catch clause; arm 5 needs none, so a file with only a
-    // `.error.message` read still has to be parsed. Narrowing on "catch"
-    // alone is how arm 5 would have been added and still seen nothing.
-    return text.includes("catch") || text.includes(".error");
+    // result-error read still has to be parsed. Narrowing on "catch" alone is
+    // how arm 5 would have been added and still seen nothing — and narrowing on
+    // ".error" alone is the same mistake one level down, since `r["error"]`
+    // contains no dot before the word.
+    return text.includes("catch") || text.includes("error");
   });
   // A sweep that found no files and a tree with no defects look identical from
   // the outside, and both look green.
@@ -300,6 +317,14 @@ describe("the census", () => {
       'try { a(); } catch (e) { show(e["message"]); }',
       1,
     ],
+    [
+      // Found by a second reviewer probing the widened arm 5: the bracket
+      // spelling on the FIRST hop, which the `.error` prefilter also dropped.
+      "a result error reached by bracket",
+      'show(download["error"].message);',
+      1,
+    ],
+    ["both hops by bracket", 'show(save["error"]["message"]);', 1],
     [
       "a result's error behind a non-null assertion",
       "show(download.error!.message);",

@@ -148,17 +148,33 @@ function renderWithClient(ui: ReactNode) {
     defaultOptions: { queries: { retry: false } },
   });
   const invalidated: unknown[] = [];
+  // The spy is SLOW on purpose. Recording the key synchronously and returning
+  // the real promise would let this suite pass with the production `await`
+  // deleted — the assertions would read a list the spy had already filled
+  // before `onDone` ever ran. Deferring the resolution makes the ordering
+  // observable: `settled` only becomes true a tick after the last
+  // invalidation, so a caller that did not await sees it false.
+  let outstanding = 0;
   const real = client.invalidateQueries.bind(client);
   client.invalidateQueries = ((filters?: { queryKey?: unknown }) => {
     invalidated.push(filters?.queryKey);
-    return real(filters as Parameters<typeof real>[0]);
+    outstanding += 1;
+    return real(filters as Parameters<typeof real>[0]).then(
+      () =>
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            outstanding -= 1;
+            resolve();
+          }, 0);
+        }),
+    );
   }) as typeof client.invalidateQueries;
   const rendered = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
-  return { rendered, invalidated };
+  return { rendered, invalidated, pending: () => outstanding };
 }
 
 const disqualifyButton = () =>
@@ -335,5 +351,42 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() => expect(invalidated).toContainEqual(["leads"]));
     expect(invalidated).toContainEqual(["lead", "l-1"]);
     expect(invalidated).toContainEqual(["lead", "l-2"]);
+  });
+
+  // The ordering the production `await` exists for, asserted rather than
+  // assumed. The reader keeps their selection after a refused run, so the
+  // moment the verbs come back is the moment a retry can fire — and a retry
+  // that fires while the refetch is still in flight resends the very version
+  // that just conflicted.
+  //
+  // What this pins is that `onDone` runs after the invalidations SETTLE, which
+  // is what the code can honestly promise: `invalidateQueries` resolves whether
+  // its refetch succeeded or failed, so awaiting it closes the race and does
+  // not guarantee fresh rows after a refetch the server refused.
+  it("hands the verbs back only after the refetch has settled", async () => {
+    const { deletions } = stubFetch();
+    const user = userEvent.setup();
+    const outstandingWhenDone: number[] = [];
+    const { pending } = renderWithClient(
+      <LeadBulkBar
+        leads={leads}
+        onDone={() => outstandingWhenDone.push(pending())}
+      />,
+    );
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    await waitFor(() => expect(deletions).toHaveLength(2));
+
+    await waitFor(() => expect(outstandingWhenDone).toHaveLength(1));
+    // Zero in flight at the moment the caller was told the run was done.
+    expect(outstandingWhenDone[0]).toBe(0);
   });
 });

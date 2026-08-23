@@ -188,14 +188,30 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
+// The files that OWN a per-currency table, named one by one rather than by
+// directory. `format/` as a PREFIX was the first draft and it was too wide: a
+// second symbol table added beside `minorunits.ts` would have passed the census
+// this test exists to keep at zero — the same defect in the gate that the gate
+// is about in the code.
+//
+// `minorunits.ts` is the minor-unit scale, held in step with its Go half by
+// `backend/frontendminorunits_test.go`. `format.ts` holds no table at all and
+// is deliberately NOT listed — it asks Intl. The test files are listed because
+// a suite about currencies has to name them to assert about them.
+const CURRENCY_TABLE_OWNERS = [
+  "format/minorunits.ts",
+  "format/minorunits.test.ts",
+  "format/format.test.ts",
+  "format/currency-table-coverage.test.ts",
+  // Generated from the contract, which names currencies because the CONTRACT
+  // does.
+  "api/schema.d.ts",
+];
+
 function tables(): string[] {
   const files = sourceFiles(srcRoot)
     .map((file) => [relative(srcRoot, file), file] as const)
-    // `format/` is where the answers live, and the generated contract types
-    // name currencies because the CONTRACT does.
-    .filter(
-      ([name]) => !name.startsWith("format/") && name !== "api/schema.d.ts",
-    );
+    .filter(([name]) => !CURRENCY_TABLE_OWNERS.includes(name));
   // A sweep that found no files and a tree with no tables look identical.
   expect(files.length).toBeGreaterThan(0);
   return files

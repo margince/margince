@@ -132,9 +132,20 @@ export function LeadBulkBar({
       // forever until they reload the page by hand.
       //
       // Awaited: the rows that refused keep their selection so they can be
-      // retried, and a retry that fired before the refetch landed would
-      // resend the very version that just conflicted. The run stays pending
-      // — and the verbs disabled — until the list holds fresh versions.
+      // retried, and a retry that fired before the refetch landed would resend
+      // the very version that just conflicted. The run stays pending — and the
+      // verbs disabled — until the refetch has SETTLED.
+      //
+      // Settled, not succeeded, and the difference is worth writing down
+      // because the comment here used to promise the stronger thing.
+      // `invalidateQueries` resolves whether the refetch it triggered
+      // succeeded or failed — it swallows the refetch error unless
+      // `throwOnError` is set. So this closes the window in which a retry
+      // races a refetch still in flight, which is the failure it was written
+      // for, and it does NOT promise fresh versions after a refetch the server
+      // refused. That case is the ordinary one of a list that could not be
+      // read, and it announces itself the way any failed read does rather than
+      // by turning a completed bulk run into an error the reader cannot act on.
       await Promise.all(
         result
           .flatMap((row) => leadWriteKeys(row.id))

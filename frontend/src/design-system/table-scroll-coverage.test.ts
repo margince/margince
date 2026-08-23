@@ -29,26 +29,32 @@ import { describe, expect, it } from "vitest";
 // The subject is DERIVED: every `<table>` JSX element under src/, found by
 // parsing. A new screen is enrolled the moment it draws one.
 //
-// WHAT THIS DOES NOT CATCH, deliberately: a wrapper element that is not a
-// JSX ancestor in the same file — a screen that renders `<table>` into a
-// `children` prop the wrapper supplies from another file. Nothing here does
-// that, and following it needs the type checker.
+// WHAT THIS DOES NOT CATCH, deliberately:
+//
+//   - a wrapper element that is not a JSX ancestor in the same file — a screen
+//     that renders `<table>` into a `children` prop the wrapper supplies from
+//     another file. Nothing here does that.
+//   - an ancestor merely NAMED `TableScroll`. The ancestor is matched by tag
+//     name, not resolved to its import, so a local component of that name would
+//     satisfy this. Resolving it needs the type checker, and the honest note is
+//     that this gate reads a name — which is still the whole distance between
+//     "somebody thought about the overflow" and "nobody did".
 
 const dsDir = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(dsDir, "..");
 
-// The two components that ARE the box, so their own `<table>` is inside it by
-// construction. Named files rather than a pattern: a pattern is how a third
-// implementation joins the exemption without anybody deciding it should.
-const THE_BOX_ITSELF = [
-  // DataTable renders into a TableScroll two lines above its `<table>`.
-  "design-system/atoms.tsx",
-  // ListTable's `.lt-scroll` shares TableScroll's `useScrollRegion` hook, so it
-  // takes the same tab stop and the same announced name. That is the sanctioned
-  // second spelling, and it is sanctioned because it reuses the behaviour
-  // rather than re-deriving it.
-  "design-system/listtable.tsx",
-];
+// ONE exempt file. `atoms.tsx` was in this list and did not need to be:
+// DataTable renders its `<table>` inside a `TableScroll` two lines above it, so
+// the rule already passes there — and exempting it meant a NEW bare table in the
+// design system's largest file would have escaped. An exemption nobody needs is
+// a hole nobody is watching.
+//
+// `listtable.tsx` genuinely cannot pass: its `.lt-scroll` box is not a
+// `TableScroll` element, it is a div that calls `useScrollRegion` — the same
+// hook TableScroll calls, so the tab stop and the announced name are the same
+// behaviour rather than a second derivation of it. That is the reason it is
+// sanctioned, and it is why this is a NAMED file and not a pattern.
+const THE_BOX_ITSELF = ["design-system/listtable.tsx"];
 
 /** The names of JSX elements enclosing `node`, innermost first. */
 function ancestorElements(node: ts.Node): string[] {
