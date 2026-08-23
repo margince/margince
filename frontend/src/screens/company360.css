@@ -673,9 +673,6 @@
   width: 100%;
   border-collapse: collapse;
 }
-.coverage-scroll {
-  overflow-x: auto;
-}
 
 @media (max-width: 720px) {
   .coverage-scroll {

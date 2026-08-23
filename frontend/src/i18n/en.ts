@@ -2628,6 +2628,8 @@ export const en = {
   "import.choose": "Choose a file",
   "import.chooseAnother": "Choose a different file",
   "import.profiled": "Read from the first {rows} rows of the file.",
+  // The name the mapping grid announces once it is wider than its box.
+  "import.mappingTable": "Column mapping",
   "import.col.column": "Column",
   "import.col.filled": "Filled",
   "import.col.samples": "Values",

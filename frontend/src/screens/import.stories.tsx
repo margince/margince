@@ -76,7 +76,7 @@ export const ChoosingAFile: Story = {
 // SegmentedControl whose selected segment is the loudest thing in the dialog.
 //
 // A narrow variant would prove less: the flow past the first step needs a real
-// file drop, so the wide mapping table and its .import__scroll box — the parts
+// file drop, so the wide mapping table and its TableScroll box — the parts
 // that have a width problem to have — are not reachable from a story at all.
 export const ChoosingAFileDark: Story = {
   globals: { theme: "dark" },

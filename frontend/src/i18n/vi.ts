@@ -2574,6 +2574,7 @@ export const vi = {
   "import.choose": "Chọn tệp",
   "import.chooseAnother": "Chọn tệp khác",
   "import.profiled": "Đọc từ {rows} dòng đầu của tệp.",
+  "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
   "import.col.filled": "Có dữ liệu",
   "import.col.samples": "Giá trị",

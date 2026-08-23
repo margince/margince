@@ -2601,6 +2601,7 @@ export const de = {
   "import.choose": "Datei wählen",
   "import.chooseAnother": "Andere Datei wählen",
   "import.profiled": "Aus den ersten {rows} Zeilen der Datei gelesen.",
+  "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
   "import.col.filled": "Gefüllt",
   "import.col.samples": "Werte",

@@ -150,4 +150,26 @@ describe("comparing the colleagues a reader chooses", () => {
     expect(screen.queryByText("Dana Buyer")).toBeNull();
     expect(screen.getByText("Sam Silent")).toBeTruthy();
   });
+
+  // The matrix is one column per colleague, so it runs past the panel on any
+  // real account. It had no scroll box at all: the columns past the right edge
+  // were unreachable by mouse AND keyboard, and `.coverage-scroll` sat in the
+  // stylesheet referenced by nothing. `TableScroll` is the one box, and its
+  // tab stop and announced name come with it.
+  it("draws the matrix inside the shared scroll box", async () => {
+    stubGraph();
+    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    await open();
+    await screen.findByText("Sam Silent");
+
+    // Queried from the document: the explorer opens in a dialog, which the
+    // design system renders outside the caller's container.
+    const table = document.querySelector("table.coverage-table");
+    expect(table).not.toBeNull();
+    const box = table?.closest(".table-scroll");
+    expect(box).not.toBeNull();
+    // The screen's own half of the contract: below 720px the rows become
+    // cards and there is nothing left to scroll, which that class turns off.
+    expect(box?.classList.contains("coverage-scroll")).toBe(true);
+  });
 });

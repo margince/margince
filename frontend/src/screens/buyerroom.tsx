@@ -13,6 +13,7 @@ import { Wordmark } from "./auth";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
+import { downloadBytes } from "./download";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside person ever
@@ -476,16 +477,18 @@ function BuyerDocumentVerbs({
         },
       );
       if (error || !data) {
-        throw new Error(t("buyer.docs.downloadFailed"), {
-          cause: response.status,
+        // A refusal this screen decided, with copy it already translated, so
+        // it rides as a problem body — a plain Error is wording nobody wrote
+        // for a user and is replaced by the shared failure line.
+        throwProblem({
+          status: response.status,
+          detail: t("buyer.docs.downloadFailed"),
         });
       }
-      const url = URL.createObjectURL(data);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = input.filename;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      // The blob's OWN type, because the server chose it: a PDF handed to the
+      // reader as application/octet-stream downloads with the wrong icon and
+      // opens in nothing.
+      downloadBytes(data, input.filename, data.type);
     },
   });
   return (
@@ -502,7 +505,9 @@ function BuyerDocumentVerbs({
         {t("buyer.docs.downloadShort")}
       </Button>
       {download.isError ? (
-        <p className="t-small t-danger">{download.error.message}</p>
+        <p className="t-small t-danger">
+          {problemMessageOf(download.error, t)}
+        </p>
       ) : null}
     </div>
   );

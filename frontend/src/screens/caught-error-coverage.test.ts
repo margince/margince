@@ -41,6 +41,11 @@ import { describe, expect, it } from "vitest";
 //      with no `String` to grep for.
 //   4. A local alias — `const failure = err` — because a gate that a rename
 //      defeats is a gate that gets renamed around rather than fixed.
+//   5. `<anything>.error.message` — the same disclosure with NO `catch` in
+//      sight. A react-query result carries the throw as `.error`, and a screen
+//      rendering `download.error.message` never writes a catch clause at all,
+//      so the four arms above are structurally blind to it. It is the arm that
+//      was missing when this gate first read zero: the tree still had two.
 //
 // WHAT THIS DOES NOT CATCH, deliberately: a binding handed to a function that
 // coerces it out of sight (`setError(describe(err))`), and a binding stored in
@@ -134,6 +139,23 @@ function disclosuresIn(fileName: string, text: string): string[] {
     scan(clause.block);
   };
 
+  // Arm 5, which needs no catch clause and therefore sits outside visitCatch.
+  // `X.error` is where every react-query result files the throw, and 309 sites
+  // in this tree read it through `problemMessageOf`. Reading `.message` off it
+  // is the same leak by a route with no `catch` to anchor on.
+  const visitResultError = (node: ts.Node) => {
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      node.name.text === "message" &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === "error"
+    ) {
+      const { line } = source.getLineAndCharacterOfPosition(node.getStart());
+      found.push(`result.error ${fileName}:${line + 1}`);
+    }
+    ts.forEachChild(node, visitResultError);
+  };
+
   const visit = (node: ts.Node) => {
     if (ts.isCatchClause(node)) {
       visitCatch(node);
@@ -141,6 +163,7 @@ function disclosuresIn(fileName: string, text: string): string[] {
     ts.forEachChild(node, visit);
   };
   visit(source);
+  visitResultError(source);
   return found;
 }
 
@@ -159,9 +182,13 @@ function sourceFiles(dir: string): string[] {
 function disclosures(): string[] {
   // Only files that can contain a catch clause at all — the parse cost then
   // grows with the number of error handlers rather than with the SPA.
-  const files = sourceFiles(srcRoot).filter((file) =>
-    readFileSync(file, "utf8").includes("catch"),
-  );
+  const files = sourceFiles(srcRoot).filter((file) => {
+    const text = readFileSync(file, "utf8");
+    // Arms 1-4 need a catch clause; arm 5 needs none, so a file with only a
+    // `.error.message` read still has to be parsed. Narrowing on "catch"
+    // alone is how arm 5 would have been added and still seen nothing.
+    return text.includes("catch") || text.includes(".error");
+  });
   // A sweep that found no files and a tree with no defects look identical from
   // the outside, and both look green.
   expect(files.length).toBeGreaterThan(0);
@@ -224,6 +251,16 @@ describe("the census", () => {
       1,
     ],
     [
+      "a mutation result's error, which carries no catch at all",
+      "show(download.error.message);",
+      1,
+    ],
+    [
+      "a query result's error inside JSX",
+      "const x = <p>{save.error.message}</p>;",
+      1,
+    ],
+    [
       "a nested catch inside a handler",
       "try { a(); } catch (outer) { try { b(); } catch (inner) { show(inner.message); } }",
       1,
@@ -248,6 +285,11 @@ describe("the census", () => {
     [
       "an unrelated .message outside any catch",
       "const problem = read(); show(problem.message);",
+      0,
+    ],
+    [
+      "the correct spelling of a result's error",
+      "show(problemMessageOf(download.error, t));",
       0,
     ],
     [
