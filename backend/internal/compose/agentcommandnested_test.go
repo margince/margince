@@ -3,13 +3,13 @@
 
 package compose
 
-// The REST door's half of the seven bespoke auto-execute commands
+// The REST door's half of the six bespoke auto-execute commands
 // (agentcommandnested.go): the routed {id}'s existence-hiding 404, the
 // offer line items' own {lineItemId} 422, and the staged target each decoder
 // resolves to — the sibling of agentcommandoperand_test.go's proof shape for
 // the confirm-first eight.
 //
-// That every one of the seven is REGISTERED is not asserted here:
+// That every one of the six is REGISTERED is not asserted here:
 // TestEveryAgentReachableMutatingRouteDecodesIntoACommand
 // (agentcommandcoverage_test.go) derives that for the whole surface. What this
 // file adds is what a registration alone does not say — that the decoder bound
@@ -29,7 +29,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// A malformed routed {id} answers 404 for every one of the seven, the same
+// A malformed routed {id} answers 404 for every one of the six, the same
 // existence-hiding answer archiveCommand/patchCommand and task 5's eight
 // already give.
 func TestANestedCommandMalformedRouteIDAnswersNotFound(t *testing.T) {
@@ -55,10 +55,6 @@ func TestANestedCommandMalformedRouteIDAnswersNotFound(t *testing.T) {
 		{
 			"createOffer", createOfferCommand,
 			operandRequest(http.MethodPost, "/v1/deals", "not-a-uuid", "", "", []byte(`{}`)),
-		},
-		{
-			"upsertPartner", upsertPartnerCommand,
-			operandRequest(http.MethodPut, "/v1/organizations", "not-a-uuid", "", "", []byte(`{}`)),
 		},
 	}
 	for _, c := range cases {
@@ -115,13 +111,13 @@ func TestAMalformedLineItemIDAnswers422(t *testing.T) {
 	}
 }
 
-// Each of the seven stages against the routed record it names — proven
+// Each of the six stages against the routed record it names — proven
 // through stageRefusal end to end, the same shape
 // TestEachOperandCommandStagesTheRoutedRecord proves for task 5's eight.
 // createOffer is the one exception: it stages the record TYPE with no id
 // (gradionhq/margince-poc-v1#1046), asserted separately below.
 func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
-	listID, tagID, offerID, orgID := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	listID, tagID, offerID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	lineItemID := ids.NewV7()
 	cases := []struct {
 		name           string
@@ -161,12 +157,6 @@ func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
 			operandRequest(http.MethodDelete, "/v1/offers", offerID.String(), "lineItemId", lineItemID.String(), nil), nil,
 			"offer", offerID,
 		},
-		{
-			"upsertPartner",
-			agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner},
-			operandRequest(http.MethodPut, "/v1/organizations", orgID.String(), "", "", []byte(`{}`)), []byte(`{}`),
-			"organization", orgID,
-		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -205,13 +195,12 @@ func TestCreateOfferStagesNoIDThroughStageRefusal(t *testing.T) {
 	}
 }
 
-// The behaviour change registering these seven in restCommands buys over
-// the route-walk fallback: Guards now runs, for the two families the
-// record seam actually serves. createOffer refuses a DEAL the caller
-// cannot see; upsertPartner refuses an ORGANIZATION the caller cannot see.
-// The other five (list, tag, offer) have no such proof — the seam has
-// never served those types, so there is no read for Guards to skip, the
-// same bound task 5's custom_field commands stand on.
+// The behaviour change registering these six in restCommands buys over
+// the route-walk fallback: Guards now runs, for the one family the record
+// seam actually serves — createOffer refuses a DEAL the caller cannot see.
+// The other five (list, tag, offer) have no such proof: the seam has never
+// served those types, so there is no read for Guards to skip, the same
+// bound task 5's custom_field commands stand on.
 func TestANestedCommandOfAnUnseeableParentStagesNothing(t *testing.T) {
 	cases := []struct {
 		name string
@@ -223,11 +212,6 @@ func TestANestedCommandOfAnUnseeableParentStagesNothing(t *testing.T) {
 			"createOffer",
 			agentPolicy{Op: "createOffer", Access: accessTool, Tool: "create_record", RecordType: recordTypeOffer},
 			operandRequest(http.MethodPost, "/v1/deals", ids.NewV7().String(), "", "", []byte(`{}`)), []byte(`{}`),
-		},
-		{
-			"upsertPartner",
-			agentPolicy{Op: "upsertPartner", Access: accessTool, Tool: "update_record", RecordType: recordTypePartner},
-			operandRequest(http.MethodPut, "/v1/organizations", ids.NewV7().String(), "", "", []byte(`{}`)), []byte(`{}`),
 		},
 	}
 	for _, c := range cases {

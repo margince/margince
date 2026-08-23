@@ -147,28 +147,20 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"setProjectStakeholder":           setStakeholderCommand,
 	"removeProjectStakeholder":        removeStakeholderCommand,
 
-	// The seven bespoke auto-execute commands (agentcommandnested.go). Six of
-	// the seven — every one but upsertPartner — are nested creates or
-	// child/membership actions that are 🟢 today and have NEVER staged:
-	// registered anyway, because a tier floor tightening one would otherwise
-	// leave this door with only the route's own shape to name a target from,
-	// and for createOffer that shape is provably wrong: the routed id is the
-	// parent deal (gradionhq/margince-poc-v1#1046).
-	// upsertPartner is the one exception: it stages TODAY, through BOTH
-	// splitHumanOwnedUpdate branches a human-owned conflict can take —
-	// stageRefusal when every touched field is human-owned, and
-	// applyAutoExecuteAndStageResidue's residue when only some are
-	// (agentsplit.go) — since both resolve their staged target through this
-	// same table rather than off pol.RecordType directly (agentsplit.go's
-	// actionShapedUpdateOps — upsertPartner is deliberately NOT a member —
-	// explains why "partner" is the wrong target type). So this entry is
-	// already load-bearing on two call sites, not merely future-proofing.
-	// Five of the seven share their operationId constant with agentsplit.go's
-	// own (opAddListMember's own comment says why); upsertPartner shares the
-	// CONSTANT with agentsplit.go too (its restCommands entry and its
-	// exclusion from actionShapedUpdateOps must name the identical
-	// operationId), though it is not a MEMBER of that map; createOffer has no
-	// such twin at all, since create_record never reaches the split.
+	// The six bespoke auto-execute commands (agentcommandnested.go). All six
+	// are nested creates or child/membership actions that are 🟢 today and
+	// have NEVER staged: registered anyway, because a tier floor tightening
+	// one would otherwise leave this door with only the route's own shape to
+	// name a target from, and for createOffer that shape is provably wrong:
+	// the routed id is the parent deal (gradionhq/margince-poc-v1#1046).
+	//
+	// upsertPartner was a seventh and is gone: setting a partner's margin tier
+	// is human-only (crm.yaml), so no agent reaches that route and a decoder
+	// for it would read as coverage of a door nobody can open.
+	//
+	// Five of the six share their operationId constant with agentsplit.go's
+	// own (opAddListMember's own comment says why); createOffer has no such
+	// twin at all, since create_record never reaches the split.
 	opAddListMember: addListMemberCommand,
 	opApplyTag:      applyTagCommand,
 	// removeTag binds to the same subject applyTag does — the tag — so it
@@ -178,7 +170,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	opUpdateOfferLineItem: updateOfferLineItemCommand,
 	opRemoveOfferLineItem: removeOfferLineItemCommand,
 	"createOffer":         createOfferCommand,
-	opUpsertPartner:       upsertPartnerCommand,
 
 	// The fourteen single-purpose commands over sixteen routes
 	// (agentcommandsend.go, agentcommandlifecycle.go, agentcommandrecord.go,
