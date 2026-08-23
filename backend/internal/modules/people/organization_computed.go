@@ -32,19 +32,25 @@ const (
 	servedByHierarchyRollupReason = "served_by_hierarchy_rollup"
 	// awaitingFXReason floors open_pipeline when the view row EXISTS
 	// (open deals reference this organization) but its aggregate is
-	// itself NULL: every one of those deals is still missing
-	// fx_rate_to_base, the ordinary state for an open deal (0065's
-	// documented "not computable yet" case) — distinct from the
-	// genuine zero of an organization with no open deals at all.
+	// itself NULL: not one of those deals could be converted, because
+	// the installation holds no rate on or before today for any
+	// currency they are held in. Distinct from the genuine zero of an
+	// organization with no open deals at all, and — since the view
+	// converts rather than reading a column that is null until close —
+	// now the rare state its name always implied.
 	awaitingFXReason       = "awaiting_fx"
-	openPipelineFormulaSQL = "organization_open_pipeline_rollup (0065): SUM(deal.amount_minor_base) FROM deal WHERE deal.status = 'open' AND deal.organization_id = <this org> AND deal.archived_at IS NULL"
+	openPipelineFormulaSQL = "organization_open_pipeline_rollup: SUM over deal WHERE status = 'open' AND organization_id = <this org> AND archived_at IS NULL, each amount converted to the installation base currency at the latest fx_rate on or before today"
 )
 
-// openPipelineDependencies names the columns feeding the view's
-// aggregate: the two inputs of deal.amount_minor_base's own GENERATED
-// expression (0065), plus the two columns the view's WHERE clause
-// gates participation on.
-var openPipelineDependencies = []string{"deal.amount_minor", "deal.fx_rate_to_base", "deal.status", "deal.archived_at"}
+// openPipelineDependencies names what the view's aggregate reads: the
+// deal's own amount and currency, the two columns its WHERE clause gates
+// participation on, and the rate sheet the conversion resolves against.
+// deal.fx_rate_to_base is deliberately absent — it is null on every open
+// deal, which is why the view stopped reading it.
+var openPipelineDependencies = []string{
+	"deal.amount_minor", "deal.currency", "deal.status", "deal.archived_at",
+	"fx_rate.rate", "setting.installation.base_currency",
+}
 
 // computedFieldsVisible answers the STATE-4 gate: does the acting
 // principal's merged role policy grant computed_field:read? poc-1

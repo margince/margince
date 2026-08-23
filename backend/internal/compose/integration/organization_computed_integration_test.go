@@ -231,26 +231,64 @@ func TestOrganizationComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
 	}
 }
 
-// TestOrganizationComputed_OpenDealsWithoutFrozenFX_AwaitingFX is the
-// OTHER honest "not computable yet" state 0065 documents: open deals
-// exist (the view row IS present, open_deal_count > 0) but every one is
-// still missing fx_rate_to_base — the ordinary state for an open deal
-// through any real write path — so amount_minor_base is NULL for every
-// summand and SUM ignores them all, leaving the row's aggregate itself
-// NULL. Flooring this to a real 0 would be dishonest: it would sit
-// beside a non-zero weighted_pipeline (arc 1b's hierarchy-rollup) as a
-// fabricated "no pipeline" figure. The assembler instead floors it to
-// computable:false, reason:"awaiting_fx", with no value_minor on the
-// wire — the row EXISTS with a NULL aggregate, distinct from the
-// genuine-zero no-row case the next test covers.
-func TestOrganizationComputed_OpenDealsWithoutFrozenFX_AwaitingFX(t *testing.T) {
+// The case this field got wrong for every installation: an ordinary open
+// pipeline, in the installation's own currency, needing no conversion at all.
+//
+// The view summed deal.amount_minor_base, which is null on every OPEN deal
+// because the rate freezes on close. So a perfectly computable pipeline
+// reported "awaiting FX" — for deals that needed no FX — and the field was
+// effectively dead on every account that had not closed and reopened a deal.
+func TestOrganizationComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	orgID := e.SeedOrg(t, "Ordinary Pipeline GmbH", nil)
+
+	for _, amount := range []int64{75_000, 125_000} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Open deal", AmountMinor: int64Ptr(amount), Currency: strPtr("EUR"),
+			PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := computedFieldByKey(*org.ComputedFields, "open_pipeline")
+	if !got.Computable {
+		t.Fatalf("an open EUR pipeline on a EUR installation is not computable: %+v — it needs no rate to convert", got)
+	}
+	if got.ValueMinor == nil || *got.ValueMinor != 200_000 {
+		t.Errorf("open_pipeline.value_minor = %v, want 200000 (750.00 + 1250.00)", got.ValueMinor)
+	}
+}
+
+// TestOrganizationComputed_OpenDealsWithNoUsableRate_AwaitingFX is the OTHER
+// honest "not computable yet" state: open deals exist (the view row IS present,
+// open_deal_count > 0) but not one of them can be converted, because the
+// installation holds no rate on or before today for the currency they are held
+// in. The aggregate is NULL and flooring it to a real 0 would be dishonest — it
+// would sit beside a non-zero weighted_pipeline as a fabricated "no pipeline"
+// figure. The assembler floors it to computable:false, reason:"awaiting_fx",
+// with no value_minor on the wire, distinct from the genuine-zero no-row case
+// the next test covers.
+//
+// The deals are held in JPY on purpose. This state used to be reachable with
+// deals in the installation's OWN currency, because the view summed
+// amount_minor_base — null on every open deal — so an ordinary EUR pipeline on
+// a EUR installation reported "awaiting FX" while needing no FX at all. The
+// view converts now, so reaching this state takes a currency the rate sheet
+// genuinely cannot price.
+func TestOrganizationComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	orgID := e.SeedOrg(t, "Unpriced Pipeline LLC", nil)
 
 	for _, amount := range []int64{75000, 125000} {
 		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Unpriced deal", AmountMinor: int64Ptr(amount), Currency: strPtr("EUR"),
+			Name: "Unpriced deal", AmountMinor: int64Ptr(amount), Currency: strPtr("JPY"),
 			PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
 		}); err != nil {
 			t.Fatal(err)
@@ -262,7 +300,7 @@ func TestOrganizationComputed_OpenDealsWithoutFrozenFX_AwaitingFX(t *testing.T) 
 		t.Fatal("test fixture: expected a view row (2 open deals reference this org)")
 	}
 	if minor != nil {
-		t.Fatalf("test fixture: expected a NULL aggregate (neither deal has fx_rate_to_base), got %d", *minor)
+		t.Fatalf("test fixture: expected a NULL aggregate (no rate prices JPY here), got %d", *minor)
 	}
 	if count != 2 {
 		t.Fatalf("test fixture: open_deal_count = %d, want 2", count)
@@ -283,7 +321,7 @@ func TestOrganizationComputed_OpenDealsWithoutFrozenFX_AwaitingFX(t *testing.T) 
 		t.Fatalf("open_pipeline.value_minor = %v, want absent (awaiting_fx carries no value)", open0.ValueMinor)
 	}
 	if open0.FormulaSql == "" {
-		t.Fatal("open_pipeline.formula_sql must stay populated: the formula exists, only its FX input doesn't yet")
+		t.Fatal("open_pipeline.formula_sql must stay populated: the formula exists, only a rate for this currency does not")
 	}
 
 	raw, err := json.Marshal(org)
