@@ -7,7 +7,6 @@ fixture:
   deal:
     name: "Kessler GmbH — WMS Pilot"
     status: open
-    stage: Qualified
     amount: "1200000 EUR (minor units)"
     expected_close: "2026-10-15"
   timeline: []
@@ -22,7 +21,7 @@ expect:
     floor: 40
   rubric: >
     Score whether the proposed task is a real opening move for THIS deal —
-    anchored in what the fixture states (a qualified WMS pilot at Kessler
+    anchored in what the fixture states (a WMS pilot at Kessler
     GmbH, closing mid-October), such as arranging the first conversation
     about the pilot's scope. A generic checklist item that fits every deal
     scores low. Any invented contact name, meeting or prior conversation

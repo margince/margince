@@ -30,6 +30,11 @@ const (
 // brief is the thing to open; beyond it the deal still needs a move today.
 const meetingHorizon = 72 * time.Hour
 
+// laneDeadline caps the model call. The card is read inline on the deal page
+// and the API's write window is 30s: the lane must give up early enough that
+// the deterministic fallback still reaches the reader.
+const laneDeadline = 15 * time.Second
+
 // How many timeline rows the rules read. The timeline is ordered by
 // occurred_at DESC, which is when a thing happened OR is scheduled — a booked
 // meeting sits at the top with a future time — so the window holds the nearest
@@ -101,7 +106,13 @@ func (s *Service) answer(ctx context.Context, f facts) crmcontracts.DealNextBest
 	out := decide(f)
 	by := crmcontracts.Deterministic
 	if s.lane != nil && out.Action == ActionCreateTask {
-		if written, err := writeNextMove(ctx, s.lane, f, out); err == nil {
+		// The lane gets a deadline well inside the HTTP write window: a
+		// stalled provider must leave time for the deterministic fallback to
+		// still reach the reader, or the degrade posture is a response nobody
+		// receives. Expiry is an ordinary lane error and serves the floor.
+		laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)
+		defer cancel()
+		if written, err := writeNextMove(laneCtx, s.lane, f, out); err == nil {
 			// A refused lane is the declared degrade posture, not a swallowed
 			// error: unavailable, over budget, or a reply the grounding filter
 			// emptied all serve the deterministic fallback unchanged.

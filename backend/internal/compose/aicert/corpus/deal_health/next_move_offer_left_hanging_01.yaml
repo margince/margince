@@ -7,7 +7,6 @@ fixture:
   deal:
     name: "Nordwind Logistik — Einführung"
     status: open
-    stage: Negotiation
     amount: "8400000 EUR (minor units)"
     expected_close: "2026-09-30"
   timeline:

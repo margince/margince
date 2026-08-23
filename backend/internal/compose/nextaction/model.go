@@ -76,12 +76,14 @@ type Input struct {
 	Timeline []ActIn `json:"timeline"`
 }
 
-// DealIn is the deal as the prompt sees it.
+// DealIn is the deal as the prompt sees it. No stage field on purpose: the
+// facts carry only the stage's id, and a certification fixture supplying a
+// stage NAME production never sends would certify a better-informed model
+// than the one readers get.
 type DealIn struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
 	Status        string `json:"status"`
-	Stage         string `json:"stage,omitempty"`
 	Amount        string `json:"amount,omitempty"`
 	ExpectedClose string `json:"expected_close,omitempty"`
 }

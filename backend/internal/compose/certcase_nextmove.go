@@ -45,7 +45,6 @@ type nextMoveFixture struct {
 type nextMoveDealFixture struct {
 	Name          string `json:"name"`
 	Status        string `json:"status"`
-	Stage         string `json:"stage"`
 	Amount        string `json:"amount"`
 	ExpectedClose string `json:"expected_close"`
 }
@@ -99,7 +98,7 @@ func (nextMoveCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepare
 func nextMoveInput(f nextMoveFixture) (nextaction.Input, map[string]string, error) {
 	in := nextaction.Input{Deal: nextaction.DealIn{
 		ID:   ids.NewV7().String(),
-		Name: f.Deal.Name, Status: f.Deal.Status, Stage: f.Deal.Stage,
+		Name: f.Deal.Name, Status: f.Deal.Status,
 		Amount: f.Deal.Amount, ExpectedClose: f.Deal.ExpectedClose,
 	}}
 	label := map[string]string{}
