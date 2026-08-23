@@ -31,20 +31,37 @@ type DealRoomDecision = components["schemas"]["DealRoomDecision"];
 function shareState(
   doc: DealRoomDocument,
   room: DealRoom,
-  changes: readonly DealRoomChange[] | undefined,
-): "unshared" | "changed" | "shared" | "unknown" {
-  if (!changes) {
+  changes: ChangeReading,
+): "unshared" | "changed" | "shared" | "ineligible" | "unknown" {
+  // A badge is a claim about what the buyer has. While the change list is
+  // being re-read, or after a read that failed, this side does not know — and
+  // saying "Shared with the buyer" off a list that is one mutation stale is
+  // the one wrong answer here, because it is the answer that stops a seller
+  // publishing.
+  if (!changes.list || changes.stale) {
     return "unknown";
   }
   if (!room.published_at) {
     return "unshared";
   }
-  const mine = changes.filter((c) => c.document_id === doc.id);
+  const mine = changes.list.filter((c) => c.document_id === doc.id);
   if (mine.some((c) => c.kind === "document_added")) {
     return "unshared";
   }
+  // A document the publish would drop has never reached the buyer and never
+  // will in this state, so it is not "changed since last published".
+  if (mine.some((c) => c.kind === "document_ineligible")) {
+    return "ineligible";
+  }
   return mine.length > 0 ? "changed" : "shared";
 }
+
+// What this side knows of the unpublished change list right now: the list
+// itself, and whether the reading behind it can still be trusted.
+type ChangeReading = Readonly<{
+  list: readonly DealRoomChange[] | undefined;
+  stale: boolean;
+}>;
 
 function ShareBadge({
   state,
@@ -57,6 +74,8 @@ function ShareBadge({
       return <Badge tone="warn">{t("room.docs.changed")}</Badge>;
     case "shared":
       return <Badge tone="success">{t("room.docs.shared")}</Badge>;
+    case "ineligible":
+      return <Badge tone="danger">{t("room.docs.ineligible")}</Badge>;
     default:
       return null;
   }
@@ -192,13 +211,19 @@ export function DealRoomConversation({
     onSuccess: refresh,
   });
   const mayWrite = refusal === undefined;
+  // A decisions read that failed is not "no decisions": a card would then say
+  // nothing where a buyer had asked for changes. The panel says so instead.
   const decided = decisions.data?.data ?? [];
+  const reading: ChangeReading = {
+    list: changes.data?.changes,
+    stale: changes.isFetching || changes.isError,
+  };
   const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => ({
     id: doc.id,
     groupKey: doc.group_key,
     title: doc.title,
     meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
-    status: <ShareBadge state={shareState(doc, room, changes.data?.changes)} />,
+    status: <ShareBadge state={shareState(doc, room, reading)} />,
     actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
     note: (
       <DecisionNote
@@ -207,32 +232,36 @@ export function DealRoomConversation({
     ),
   }));
   return (
-    <QueryStates query={threads} pendingLines={3}>
-      {threads.data && docs.data ? (
-        <DocumentBoard
-          title={t("room.docs.title")}
-          sub={t("room.docs.sub")}
-          groups={DOCUMENT_GROUPS.map((g) => ({
-            key: g.key,
-            label: t(g.labelKey),
-          }))}
-          documents={documents}
-          threads={threads.data.data}
-          empty={t("room.docs.empty")}
-          footer={<AddDocument room={room} refusal={refusal} />}
-          verbs={{
-            mayRequireChange: false,
-            refusal,
-            open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
-            reply: mayWrite
-              ? (threadId, body) => reply.mutateAsync({ threadId, body })
-              : undefined,
-            resolve: mayWrite
-              ? (threadId) => resolve.mutateAsync(threadId)
-              : undefined,
-          }}
-        />
-      ) : null}
+    <QueryStates query={docs} pendingLines={3}>
+      <QueryStates query={decisions} pendingLines={1}>
+        <QueryStates query={threads} pendingLines={3}>
+          {threads.data && docs.data ? (
+            <DocumentBoard
+              title={t("room.docs.title")}
+              sub={t("room.docs.sub")}
+              groups={DOCUMENT_GROUPS.map((g) => ({
+                key: g.key,
+                label: t(g.labelKey),
+              }))}
+              documents={documents}
+              threads={threads.data.data}
+              empty={t("room.docs.empty")}
+              footer={<AddDocument room={room} refusal={refusal} />}
+              verbs={{
+                mayRequireChange: false,
+                refusal,
+                open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
+                reply: mayWrite
+                  ? (threadId, body) => reply.mutateAsync({ threadId, body })
+                  : undefined,
+                resolve: mayWrite
+                  ? (threadId) => resolve.mutateAsync(threadId)
+                  : undefined,
+              }}
+            />
+          ) : null}
+        </QueryStates>
+      </QueryStates>
     </QueryStates>
   );
 }

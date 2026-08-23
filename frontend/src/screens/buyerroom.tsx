@@ -221,7 +221,9 @@ function PoweredBy() {
   const t = useT();
   return (
     <span className="buyer-powered">
-      <span className="t-small">{t("buyer.poweredBy")}</span>
+      <span className="t-small" aria-hidden>
+        {t("buyer.poweredBy")}
+      </span>
       <Wordmark
         alt={t("buyer.poweredByMargince")}
         className="buyer-powered-mark"
@@ -382,6 +384,9 @@ function useBuyerDocuments(token: string, onSessionLost: () => void) {
   const docs = useQuery({
     queryKey: ["buyer-room-documents", token],
     retry: false,
+    // Re-asked with the tab, for the same reason /public/rooms/me is: a release
+    // published while the buyer was away is what they came back to read.
+    refetchOnWindowFocus: "always",
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/public/rooms/documents",
@@ -547,6 +552,8 @@ function BuyerBoard({
   const threads = useQuery({
     queryKey: ["buyer-room-threads", token],
     retry: false,
+    // The conversation is live on both sides, so a returning tab re-reads it.
+    refetchOnWindowFocus: "always",
     queryFn: async () => {
       const { data, error, response } = await api.GET("/public/rooms/threads", {
         ...bearer(token),

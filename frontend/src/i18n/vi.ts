@@ -4266,6 +4266,7 @@ export const vi = {
   "room.docs.unshared": "Chưa chia sẻ — xuất bản để chia sẻ",
   "room.docs.changed": "Đã thay đổi kể từ lần xuất bản trước",
   "room.docs.shared": "Đã chia sẻ với người mua",
+  "room.docs.ineligible": "Không thể chia sẻ — tệp đã rời khỏi giao dịch",
   "buyer.docs.downloadShort": "Tải xuống",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",

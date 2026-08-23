@@ -90,7 +90,15 @@ export function DocumentBoard({
       byDocument.set(thread.document_id, list);
     }
   }
-  const roomThreads = threads.filter((thread) => !thread.document_id);
+  // A thread about a document the list no longer carries still has to be
+  // readable and answerable: a seller who removed a document before publishing
+  // it can otherwise no longer see, answer or resolve the question the buyer
+  // asked about it, while the buyer — still on the last release — can. It joins
+  // the room-wide panel rather than disappearing.
+  const shown = new Set(documents.map((doc) => doc.id));
+  const roomThreads = threads.filter(
+    (thread) => !thread.document_id || !shown.has(thread.document_id),
+  );
   return (
     <>
       <Panel title={title} sub={sub} titleAction={titleAction}>

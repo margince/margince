@@ -4358,6 +4358,7 @@ export const en = {
   "room.docs.unshared": "Not yet shared — publish to share",
   "room.docs.changed": "Changed since last published",
   "room.docs.shared": "Shared with the buyer",
+  "room.docs.ineligible": "Cannot be shared — the file left the deal",
   "buyer.docs.downloadShort": "Download",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",

@@ -4304,6 +4304,8 @@ export const de = {
   "room.docs.unshared": "Noch nicht geteilt – zum Teilen veröffentlichen",
   "room.docs.changed": "Seit der letzten Veröffentlichung geändert",
   "room.docs.shared": "Mit dem Käufer geteilt",
+  "room.docs.ineligible":
+    "Kann nicht geteilt werden – die Datei ist nicht mehr im Deal",
   "buyer.docs.downloadShort": "Herunterladen",
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
