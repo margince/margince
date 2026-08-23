@@ -170,14 +170,21 @@ export function VoiceInsights({
         data.sources !== null ||
         data.meanSentence !== null) && (
         <div className="t-small">
+          {/* All three counts through the same formatter. A number handed to
+              `t` straight is interpolated with `String`, which groups nothing
+              and puts a decimal POINT where a German reader writes a comma — so
+              a mean sentence length of 12.5 reads "12.5" to every reader on a
+              line whose other two figures are localized. The three sit in one
+              sentence; two spellings inside it is the drift this whole change
+              is about. #2463 is the same defect across the rest of the app. */}
           {data.words !== null &&
             t("voice.insights.statWords", {
               count: formatNumber(data.words, locale),
             })}
           {data.sources !== null &&
-            ` · ${t("voice.insights.statSources", { count: data.sources })}`}
+            ` · ${t("voice.insights.statSources", { count: formatNumber(data.sources, locale) })}`}
           {data.meanSentence !== null &&
-            ` · ${t("voice.insights.statSentence", { count: data.meanSentence })}`}
+            ` · ${t("voice.insights.statSentence", { count: formatNumber(data.meanSentence, locale) })}`}
         </div>
       )}
       {data.thinking && (
