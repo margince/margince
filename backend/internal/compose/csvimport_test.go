@@ -145,6 +145,41 @@ func TestMappingFromRefusesATargetTheObjectDoesNotHave(t *testing.T) {
 	}
 }
 
+// Both refusals below are dead ends without the vocabulary: the mapping targets
+// are a closed set that no error, schema or tool description spells out, so a
+// caller who guesses wrong has nowhere to look. An agent driving this over MCP
+// cannot open the field catalog the way a screen can.
+func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
+	targets, err := importTargets(migration.ObjectOrganization)
+	if err != nil {
+		t.Fatalf("importTargets: %v", err)
+	}
+
+	cases := map[string]map[string]string{
+		// "city" reads like an obvious company field and is not one.
+		"unknown target": {"City": "city"},
+		// A header whose columns match nothing: SuggestMapping proposes
+		// nothing by design, so the caller arrives here having sent no mapping.
+		"nothing mapped": {},
+	}
+
+	for name, mapping := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := mappingFrom(migration.ObjectOrganization, crmcontracts.CreateImportRunRequest{
+				Mapping: mapping,
+			})
+			if err == nil {
+				t.Fatal("the mapping was accepted; expected a refusal")
+			}
+			for _, target := range targets {
+				if !strings.Contains(err.Error(), target) {
+					t.Errorf("the refusal does not name %q, so the caller cannot act on it: %v", target, err)
+				}
+			}
+		})
+	}
+}
+
 func TestMappingFromNeedsAColumnThatIdentifiesARow(t *testing.T) {
 	// Nothing maps to email, and no explicit source key is given, so no row
 	// could be recognized on a re-import or found by an undo.
