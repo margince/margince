@@ -387,21 +387,23 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 	}
 }
 
-// registeredDebt is the number of unheld claims this tree carries. It may only
-// be LOWERED, and lowering it is the whole point of the file it counts.
+// registeredDebt is the number of unheld claims this tree carries, tracked
+// EXACTLY: the register may not hold more, and may not hold fewer while this
+// still says so.
 //
 // Pinned because "the register is closed to new entries" is a claim, and a
-// claim about membership that nothing counts is exactly what this gate refuses
+// claim about membership that nothing counts is what this gate refuses
 // everywhere else: the other arms check that each line describes a live unheld
 // claim, which a line added for a claim written this morning satisfies
 // perfectly. Only a count catches that.
 //
-// Raising it is legal and is what a widened detector shape requires — the ONE
-// line a reviewer has to agree with, rather than a growth spread across a
-// diff nobody reads to the end.
+// Lowering it is the point of the file it counts. Raising it is legal and is
+// what a widened detector shape requires — either way it is the ONE line a
+// reviewer has to agree with, rather than a change spread across a diff nobody
+// reads to the end.
 const registeredDebt = 646
 
-func TestTheRegisterOnlyEverShrinks(t *testing.T) {
+func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
 	keys := readRegister(t)
 	if len(keys) > registeredDebt {
 		t.Errorf("the register holds %d entries against a ceiling of %d.\n\n"+
