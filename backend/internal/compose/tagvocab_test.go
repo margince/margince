@@ -3,12 +3,12 @@
 
 package compose
 
-// The tag tools' record_type enum, held against the store's own vocabulary.
-// The agents module once carried its own copy of this list and it drifted:
-// the store admitted project tags and the tool schema could not name one, so
-// the web app could do what the assistant had to refuse. The schema now
-// derives from the seam; this gate is what fails if anyone reintroduces a
-// literal.
+// The tag tools' record_type enum, held to the collections vocabulary: this
+// gate fails if the schema stops deriving from the seam (a reintroduced
+// literal). Whether that vocabulary is itself COMPLETE against the taggable
+// CHECK is the integration lane's claim
+// (TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint), not this
+// one's — both sides of the comparison here read TaggableEntityTypes.
 
 import (
 	"encoding/json"

@@ -148,6 +148,15 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 	if !memberEntityTables[entityType] {
 		return taggableRow{}, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
+	// READ on the target's own object type, the same gate RemoveTag and
+	// EnsureTaggable hold: tagging a record is a read of it, and without this
+	// a role holding tag.update but not <type>.read could tag rows it may not
+	// see. Only the tag_name path went through EnsureTaggable, so a direct
+	// tag_id apply was the one door where the target's object type went
+	// unasked.
+	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+		return taggableRow{}, err
+	}
 	var out taggableRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var archived *time.Time

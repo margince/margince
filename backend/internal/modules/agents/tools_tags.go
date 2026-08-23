@@ -64,8 +64,7 @@ type Tags interface {
 	RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
 	// TaggableTypes answers the record types a tagging may name — the store's
 	// own vocabulary, so the apply/remove schemas advertise exactly what the
-	// `taggable` table admits. This module once carried its own copy of the
-	// list and it drifted: project was taggable over REST and unnameable here.
+	// `taggable` table admits rather than a copy of that list kept here.
 	TaggableTypes() []string
 }
 
@@ -81,7 +80,7 @@ func RegisterTagTools(r *Registry, tags Tags) {
 }
 
 // taggingSchema is apply's and remove's argument shape, spelled once: they name
-// the same three things, and two copies is two places for them to drift. The
+// the same arguments, and two copies is two places for them to drift. The
 // record_type enum comes from the seam rather than a literal here, so the
 // schema advertises what the store admits by construction.
 func taggingSchema(taggableTypes []string) string {
