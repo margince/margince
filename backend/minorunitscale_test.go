@@ -71,12 +71,20 @@ const (
 func handScaled(file *ast.File) []string {
 	var found []string
 	valuesQualifier := importedAs(file)
+	// A bare `MinorUnitDigits(...)` is values' own call only inside values. In
+	// any other package it names something else entirely, and reporting it
+	// sends somebody to disprove a finding.
+	if file.Name != nil && file.Name.Name == "values" {
+		valuesQualifier = ""
+	} else if valuesQualifier == "" {
+		return nil
+	}
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
 			continue
 		}
-		if asksForDigits(fn, valuesQualifier) && buildsAPowerOfTen(fn) {
+		if asksForDigits(fn, valuesQualifier) && buildsAPowerOfTen(fn, mathAs(file)) {
 			found = append(found, fn.Name.Name)
 			continue
 		}
@@ -117,7 +125,11 @@ func rendersADecimalPoint(fn *ast.FuncDecl) bool {
 	// reporting it would send somebody to disprove a finding.
 	point, formats, uses := false, false, false
 	name := digitParamName(fn)
-	ast.Inspect(fn, func(n ast.Node) bool {
+	// fn.Body and not fn: walking the whole declaration includes Type.Params,
+	// so the parameter's own identifier in the SIGNATURE set `uses` and the
+	// guard could never fail. A guard that cannot fail is the thing this file
+	// exists to stop shipping.
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		switch v := n.(type) {
 		case *ast.BasicLit:
 			if v.Kind == token.STRING && (v.Value == `"."` || strings.Contains(v.Value, `.%0`)) {
@@ -162,7 +174,11 @@ func digitParamName(fn *ast.FuncDecl) string {
 }
 
 // importedAs returns the local name the values package is bound to in this
-// file, "." for a dot import, or "" if the file does not import it at all.
+// file, or "" if the file does not import it. A DOT import returns "" too, and
+// that is a stated gap rather than an oversight: a dot-imported call is a bare
+// identifier, indistinguishable from a local function of the same name without
+// type information, and the census would rather miss it than name the wrong
+// function. Nothing in this tree dot-imports values.
 //
 // It exists so the census asks about VALUES' MinorUnitDigits and not about any
 // selector that happens to end in that name. Matching by suffix alone would
@@ -175,6 +191,9 @@ func importedAs(file *ast.File) string {
 			continue
 		}
 		if spec.Name != nil {
+			if spec.Name.Name == "." {
+				return ""
+			}
 			return spec.Name.Name
 		}
 		return "values"
@@ -182,9 +201,25 @@ func importedAs(file *ast.File) string {
 	return ""
 }
 
+// mathAs returns the local name the math package is bound to, or "" if this
+// file does not import it.
+func mathAs(file *ast.File) string {
+	for _, spec := range file.Imports {
+		if strings.Trim(spec.Path.Value, `"`) != "math" {
+			continue
+		}
+		if spec.Name != nil {
+			return spec.Name.Name
+		}
+		return "math"
+	}
+	return ""
+}
+
 // asksForDigits reports whether the declaration calls values.MinorUnitDigits.
-// A bare call counts only inside the values package itself, which is where the
-// function is declared and the only place it can be reached unqualified.
+// An empty qualifier means the caller has established this file IS the values
+// package, where the function is declared and the only place it is reachable
+// unqualified.
 func asksForDigits(fn *ast.FuncDecl, qualifier string) bool {
 	asks := false
 	ast.Inspect(fn, func(n ast.Node) bool {
@@ -214,12 +249,16 @@ func asksForDigits(fn *ast.FuncDecl, qualifier string) bool {
 // ten elsewhere. The detector still cannot prove the loop is bounded BY the
 // digit count — that needs data flow — but "in a loop" is the part that
 // distinguishes a scale from arithmetic, and it is checkable.
-func buildsAPowerOfTen(fn *ast.FuncDecl) bool {
+func buildsAPowerOfTen(fn *ast.FuncDecl, mathQualifier string) bool {
 	builds := false
 	ast.Inspect(fn, func(n ast.Node) bool {
+		// math.Pow10 and not any `x.Pow10`: a name-only match reported an
+		// unrelated package's method as this defect.
 		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "Pow10" {
-			builds = true
-			return false
+			if pkg, isIdent := sel.X.(*ast.Ident); isIdent && pkg.Name == mathQualifier {
+				builds = true
+				return false
+			}
 		}
 		body := loopBody(n)
 		if body == nil {
@@ -351,16 +390,28 @@ func TestNobodyBuildsAMinorUnitScaleByHand(t *testing.T) {
 // and over a detector that has stopped detecting, so the detector is read
 // directly here — against the shapes that actually shipped, and against the
 // lookalikes it must leave alone.
-func TestTheHandScaledDetectorSeesWhatItClaimsTo(t *testing.T) {
-	cases := []struct {
-		name  string
-		fires bool
-		// bare omits the values import, which is how the values package itself
-		// sees the function — the only place a call to it is unqualified.
-		bare bool
-		src  string
-	}{
-		{"the loop that shipped in compose", true, false, `
+// handScaledProbe is one planted source file and the answer the detector must
+// give for it. Extracted from the test because the table is the substance and a
+// 170-line function is not navigable — the test below is the four lines that
+// read it.
+type handScaledProbe struct {
+	name  string
+	fires bool
+	// mode picks the file the probe is parsed as, because the detector's
+	// answers depend on it and a probe that guesses wrong asks a different
+	// question than the tree does:
+	//
+	//   ""         package probe, importing values — an ordinary caller
+	//   "values"   package values, no import — the one place a bare call
+	//              to MinorUnitDigits is values' own
+	//   "noimport" package probe, no import — a package that does not use
+	//              values at all and may well declare its own
+	mode string
+	src  string
+}
+
+var handScaledProbes = []handScaledProbe{
+	{"the loop that shipped in compose", true, "", `
 func priceEvidenced(currency string, priceMinor int64) bool {
 	digits := values.MinorUnitDigits(currency)
 	scale := int64(1)
@@ -369,7 +420,7 @@ func priceEvidenced(currency string, priceMinor int64) bool {
 	}
 	return priceMinor/scale > 0
 }`},
-		{"the loop that shipped in overlay, digits read inline", true, false, `
+	{"the loop that shipped in overlay, digits read inline", true, "", `
 func amountFor(code, amount string) int64 {
 	scale := int64(1)
 	for i := 0; i < values.MinorUnitDigits(code); i++ {
@@ -377,7 +428,7 @@ func amountFor(code, amount string) int64 {
 	}
 	return toMinor(amount, scale)
 }`},
-		{"a range loop rather than a counter", true, false, `
+	{"a range loop rather than a counter", true, "", `
 func scaleOf(currency string) int64 {
 	scale := int64(1)
 	for range values.MinorUnitDigits(currency) {
@@ -385,7 +436,7 @@ func scaleOf(currency string) int64 {
 	}
 	return scale
 }`},
-		{"the multiplication written out", true, false, `
+	{"the multiplication written out", true, "", `
 func scaleOf(currency string) int64 {
 	digits, scale := values.MinorUnitDigits(currency), int64(1)
 	for i := 0; i < digits; i++ {
@@ -393,11 +444,11 @@ func scaleOf(currency string) int64 {
 	}
 	return scale
 }`},
-		// The fourth copy, verbatim as it stood in overlay/hubspot before this
-		// change. It builds no power of ten, so the arithmetic arm cannot see
-		// it — and it was found only because deleting it made an exported
-		// wrapper dead, which is not a way of finding things.
-		{"the string-splice renderer that shipped in hubspot", true, false, `
+	// The fourth copy, verbatim as it stood in overlay/hubspot before this
+	// change. It builds no power of ten, so the arithmetic arm cannot see
+	// it — and it was found only because deleting it made an exported
+	// wrapper dead, which is not a way of finding things.
+	{"the string-splice renderer that shipped in hubspot", true, "", `
 func minorToDecimalString(minor int64, exponent int) string {
 	s := strconv.FormatInt(minor, 10)
 	neg := strings.HasPrefix(s, "-")
@@ -416,15 +467,15 @@ func minorToDecimalString(minor int64, exponent int) string {
 	}
 	return s
 }`},
-		{"the same renderer written with Sprintf", true, false, `
+	{"the same renderer written with Sprintf", true, "", `
 func render(minor int64, digits int) string {
 	return fmt.Sprintf("%d.%0*d", minor/100, digits, minor%100)
 }`},
-		{"math.Pow10, the next spelling nobody has written yet", true, false, `
+	{"math.Pow10, the next spelling nobody has written yet", true, "", `
 func scaleOf(currency string) float64 {
 	return math.Pow10(values.MinorUnitDigits(currency))
 }`},
-		{"an unqualified call, as values itself would write it", true, true, `
+	{"an unqualified call, as values itself would write it", true, "values", `
 func scaleOf(currency string) int64 {
 	scale := int64(1)
 	for range MinorUnitDigits(currency) {
@@ -433,21 +484,21 @@ func scaleOf(currency string) int64 {
 	return scale
 }`},
 
-		// The other direction, which is where a census of zero usually goes
-		// wrong: a detector that fires on everything also reports nothing, in
-		// the sense that nobody can act on it.
-		{"asking the table without scaling", false, false, `
+	// The other direction, which is where a census of zero usually goes
+	// wrong: a detector that fires on everything also reports nothing, in
+	// the sense that nobody can act on it.
+	{"asking the table without scaling", false, "", `
 func decimalsFor(currency string) int {
 	return values.MinorUnitDigits(currency)
 }`},
-		{"asking, then delegating the scaling to values", false, false, `
+	{"asking, then delegating the scaling to values", false, "", `
 func majorOf(currency string, amountMinor int64) string {
 	if values.MinorUnitDigits(currency) == 0 {
 		return strconv.FormatInt(amountMinor, 10)
 	}
 	return values.MajorUnits(amountMinor, currency)
 }`},
-		{"scaling by ten with nothing to do with currency", false, false, `
+	{"scaling by ten with nothing to do with currency", false, "", `
 func decimate(n int64) int64 {
 	scale := int64(1)
 	for i := 0; i < 3; i++ {
@@ -455,28 +506,28 @@ func decimate(n int64) int64 {
 	}
 	return n / scale
 }`},
-		{"a hundred, which is the money-scale gate's subject", false, false, `
+	{"a hundred, which is the money-scale gate's subject", false, "", `
 func majorOf(currency string, amountMinor int64) int64 {
 	_ = values.MinorUnitDigits(currency)
 	return amountMinor / 100
 }`},
-		{"a function taking a digit count that renders nothing", false, false, `
+	{"a function taking a digit count that renders nothing", false, "", `
 func padTo(s string, digits int) string {
 	for len(s) < digits {
 		s = "0" + s
 	}
 	return s
 }`},
-		// The detector cannot prove the loop counts the DIGITS — that needs data
-		// flow. What it can require is that the multiplication happens in a
-		// loop at all, which is what separates building a scale from ordinary
-		// arithmetic. Without it, reading the digit count for a legitimate
-		// reason and multiplying anything by ten elsewhere was a finding.
-		{"reading the digit count beside an unrelated * 10", false, false, `
+	// The detector cannot prove the loop counts the DIGITS — that needs data
+	// flow. What it can require is that the multiplication happens in a
+	// loop at all, which is what separates building a scale from ordinary
+	// arithmetic. Without it, reading the digit count for a legitimate
+	// reason and multiplying anything by ten elsewhere was a finding.
+	{"reading the digit count beside an unrelated * 10", false, "", `
 func widthFor(currency string, ratio int) (int, int) {
 	return values.MinorUnitDigits(currency), ratio * 10
 }`},
-		{"a different package's MinorUnitDigits is not values'", false, false, `
+	{"a different package's MinorUnitDigits is not values'", false, "", `
 func scaleOf(c legacy.Code) int64 {
 	scale := int64(1)
 	for range c.MinorUnitDigits() {
@@ -484,17 +535,33 @@ func scaleOf(c legacy.Code) int64 {
 	}
 	return scale
 }`},
-		// The digit count must reach the RENDER, not merely sit in the signature.
-		{"a digit count the render ignores", false, false, `
+	// The digit count must reach the RENDER, not merely sit in the signature.
+	// A package that does not import values and declares its OWN
+	// MinorUnitDigits is not calling values'.
+	{"another package's own unqualified MinorUnitDigits", false, "noimport", `
+func scaleOf(currency string) int64 {
+	scale := int64(1)
+	for range MinorUnitDigits(currency) {
+		scale *= 10
+	}
+	return scale
+}`},
+	{"a digit count the render ignores", false, "", `
 func label(name string, digits int) string {
-	_ = digits
 	return fmt.Sprintf("%s/%s", name, "eur")
 }`},
-		{"a decimal point with no digit count in sight", false, false, `
+	// The digit count must be USED in the body. Walking the whole
+	// declaration includes the signature, so the parameter's own
+	// identifier there satisfied the guard and it could never fail.
+	{"a renderer whose digit count is signature-only", false, "", `
+func render(minor int64, digits int) string {
+	return fmt.Sprintf("%d.%02d", minor/100, minor%100)
+}`},
+	{"a decimal point with no digit count in sight", false, "", `
 func label(name string) string {
 	return fmt.Sprintf("%s.%s", name, "eur")
 }`},
-		{"the two halves in DIFFERENT functions of one file", false, false, `
+	{"the two halves in DIFFERENT functions of one file", false, "", `
 func decimalsFor(currency string) int { return values.MinorUnitDigits(currency) }
 
 func decimate(n int64) int64 {
@@ -502,16 +569,22 @@ func decimate(n int64) int64 {
 	scale *= 10
 	return n / scale
 }`},
-	}
+}
+
+func TestTheHandScaledDetectorSeesWhatItClaimsTo(t *testing.T) {
 
 	fset := token.NewFileSet()
-	for _, tc := range cases {
+	for _, tc := range handScaledProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			// The probe carries the same imports the real call sites do, because
 			// the detector resolves the values qualifier through them — a probe
 			// without the import asks a different question than the tree does.
 			head := "package probe\n"
-			if !tc.bare {
+			switch tc.mode {
+			case "values":
+				head = "package values\n"
+			case "noimport":
+			default:
 				head += "import (\n\t\"fmt\"\n\t\"math\"\n\t\"strconv\"\n\t\"strings\"\n\n\t\"github.com/gradionhq/margince/backend/" + valuesOwner + "\"\n)\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
