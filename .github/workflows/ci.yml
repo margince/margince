@@ -156,19 +156,25 @@ jobs:
               # compile — the same claim on this scope that ci.yml itself has.
               - '.github/actions/**'
               - 'sonar-project.properties'
-            # The rulebooks. `backend/agentsdocparity_test.go` reads BOTH and
-            # fails when the three shared sections drift, so a unit lane has to
-            # run for either — but no integration test opens them, so the
-            # Postgres shards do not.
+            # The rulebooks and the catalog they point at. Go gates read all
+            # three: backend/rulebookdelegation_test.go asserts every CLAUDE.md
+            # is nothing but its `@AGENTS.md` import,
+            # backend/rulebookdirection_test.go that nothing under docs/ links
+            # back up to a rulebook, and backend/rulebooktally_test.go that no
+            # rulebook spells out a tally the tree can be asked for — which it
+            # reads out of docs/reference/modules.md too.
             #
-            # CLAUDE.md was absent from this classifier entirely until now,
-            # which meant an edit to it alone ran no Go lane at all and could
-            # break that parity test with nothing to catch it. Listing it here
-            # is the fix for that, not a convenience.
+            # Each path here is listed because omitting it means an edit to that
+            # file alone runs no Go lane, and the gate that exists to refuse
+            # exactly that edit never executes. No integration test opens any of
+            # them, so the Postgres shards still do not.
             backend:
               - *backend_db
               - 'AGENTS.md'
               - 'CLAUDE.md'
+              - 'frontend/AGENTS.md'
+              - 'frontend/CLAUDE.md'
+              - 'docs/**'
             frontend:
               - 'frontend/**'
               - 'backend/api/**'

@@ -176,6 +176,39 @@ in `lastactivity_integration_test.go`.
 | `storybook` | The component workbench on `:6006` — the design-system catalog and the story surface `fe-uat` renders. Stories live beside their component as `<name>.stories.tsx` |
 | `fe-uat` | Change-scoped Storybook render+capture UAT for frontend-only diffs: renders THIS branch's changed component's stories in headless Chromium and screenshots them (no live stack, no DB). Fails on an unclean render, an unregistered story, or a changed component with no story. Artifact: `.tmp/fe-uat/manifest.json`. Deliberately **not** in `make check` — the fe-only UAT lane a coordinator runs instead of the full stack. `ARGS="--allow-missing"` |
 
+A `DEV_SLUG` stack is the one thing the sweep leaves alone, so it outlives a bare
+`make dev` — but only until the next one, by design. Tear yours down explicitly
+when you are done with it:
+
+```
+DEV_SLUG=x make dev-stop DROP=1
+```
+
+`DROP=1` removes the per-slug databases; without it the stack stops and its data
+stays.
+
+## The API is a compiled binary, and Vite is not
+
+`make dev` runs two very different things. Vite hot-reloads the frontend, so a
+change under `frontend/src/` is in your browser by the time you have switched
+windows. **The API does not hot-reload.** It is a compiled Go binary, so every
+backend change — a new endpoint, a migration, a handler fix — needs `make dev`
+again before it reaches the browser at all.
+
+This is worth its own heading because of how it fails. The stale binary keeps
+answering on :8080 perfectly happily, so the SPA calls endpoints it has never
+heard of and the app breaks in ways that look exactly like a bug in the code you
+just wrote. An old server is indistinguishable from a broken feature.
+
+The same shape catches you across branches, and this working tree is often shared
+with parallel agent sessions that switch branches underneath you. So before you
+trust **any** manual test, confirm both:
+
+- `git branch --show-current` is the branch you think it is, and
+- the API on :8080 was started *after* your last backend change.
+
+Neither costs anything to check, and skipping them costs a debugging session.
+
 ## Isolated stack per worktree
 
 `make dev DEV_SLUG=<slug>` runs a full stack that won't collide with another

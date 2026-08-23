@@ -187,114 +187,42 @@ among its children.
 
 ## Build / test / seed
 
+_The commands, their flags and what each gate actually runs:
+[docs/reference/make-targets.md](docs/reference/make-targets.md). Config file,
+CLI flags, env vars and the operational endpoints:
+[docs/reference/configuration.md](docs/reference/configuration.md). The CI
+pipeline that runs these as required checks:
+[infra/ci-pipeline.md](infra/ci-pipeline.md). The governed tool surface:
+[docs/explanation/agent-surface.md](docs/explanation/agent-surface.md)._
+
 All Go code lives under `backend/` (one Go module,
 `github.com/gradionhq/margince/backend`); the root Makefile delegates there.
+Three process-role binaries, all wired through `internal/compose`: `cmd/api`,
+`cmd/worker`, `cmd/migrate`.
 
-```
-make install            # one-shot fresh-worktree setup: FE deps + gate tools + hooks
-make db-up              # start PG16 + Redis 7 containers, create the app role
-make migrate            # apply core + custom migrations (owner DSN)
-make check              # the full merge gate = check-backend + check-fe
-make check-backend      # backend half: build, vet, lint (baseline + new-code
-                        # strict), arch-lint, unit + fitness tests, contract drift,
-                        # plus the root script gates (craft-doc floor, image pins,
-                        # contract-breaking, test-lanes, file-length, rls-store-path,
-                        # no-jurisdiction, pkg-freeze). This is what CI's
-                        # deterministic-gates runs.
-make check-fe           # frontend half (biome + vitest + tsc + build)
-make test-integration   # real-Postgres lane: RLS gates + HTTP end-to-end (needs db-up).
-                        # Parallel — each package on its own throwaway clone db; ends
-                        # with `OK: integration passed with 0 skips`, never skips silently
-make dev                # full local stack: the app on :8080 (api behind it on :18080)
-                        # (worker = cmd/worker, always on: outbox relay + Surface-B runner)
-                        # (DEV_SLUG=x → isolated margince_dev_<slug> on slug-derived ports)
-make dev-stop           # stop the stack (add DEV_SLUG=x [DROP=1] for an isolated env)
-make dev-logs           # follow the stack log, coloured per process; ROLE=/LEVEL=/ALL=1 filter it
-```
+**`make check` is the merge gate** — `check-backend` + `check-fe`. Run it before
+you push. `make test-integration` is the real-Postgres lane and needs `make
+db-up`; it fails loudly without a database rather than skipping, because a
+skipped security gate looks exactly like a passing one.
 
 ### EXACTLY ONE dev stack at a time (non-negotiable)
 
-**`make dev` enforces this itself — it sweeps before it starts.** A bare
-`make dev` kills every margince api/worker/vite on the machine (recorded,
-orphaned, or from another checkout), evicts whatever holds :8080, drops
-every leftover `margince_dev_*` database, and only then boots ONE stack on
-:8080 against `margince`. So `make dev` is always safe to run; you no
-longer stop the old stack by hand.
+`make dev` enforces this itself — it sweeps every margince process on the machine
+before it starts, so it is always safe to run and you never stop the old stack by
+hand. Bare `make dev-stop` stops every stack; `DEV_SLUG=x` gives an isolated one
+that the sweep spares until the next bare `make dev`.
 
-The failure it removes is the one that does NOT announce itself: an `api`
-binary started from an earlier branch keeps serving :8080 happily while Vite
-hot-reloads the code you just wrote. The SPA then calls endpoints the running
-binary has never heard of, and the app fails in ways that look like your bug
-and are not — an old server is indistinguishable from a broken feature.
+**The API does not hot-reload.** Vite does, so the frontend is live as you type;
+the API is a compiled binary, and every backend change needs `make dev` again
+before it reaches the browser. This is here rather than in the reference because
+of how it fails: a stale binary keeps answering :8080 happily, so the app breaks
+in ways that look exactly like a bug in the code you just wrote. An old server is
+indistinguishable from a broken feature.
 
-The api is a compiled binary: **Vite hot-reloads the frontend, the API does
-not.** Any backend change — a new endpoint, a migration, a handler fix — needs
-`make dev` again (it sweeps and rebuilds). Restarting is the only way your Go
-code reaches the browser.
-
-`make dev-fresh` is `make dev` onto a rebuilt database — the first-run
-installation again, for when a previous session left data behind.
-
-`make dev-stop` is the mirror: bare, it stops EVERY stack, not just the one it
-recorded. The `margince` database survives both (stopping is not deleting);
-`DROP=1` removes the per-slug databases only.
-
-`DEV_SLUG=x` still gives an isolated stack (own database, own ports) and is the
-one thing the sweep leaves alone — but the next bare `make dev` will take it
-down, by design. Tear yours down with `DEV_SLUG=x make dev-stop DROP=1`.
-
-This repo's working tree is often shared with parallel agent sessions that
-switch branches under you. Before you trust ANY manual test, confirm both:
-`git branch --show-current` is the branch you think it is, and the api on :8080
-was started after your last backend change.
-
-`check-q` (quiet), `check-go` (backend-only), `fe-typecheck`, `fe-uat`
-(change-scoped Storybook render gate), and `infra-up`/`infra-down` round out
-the golden-command set. Full table:
-[docs/reference/make-targets.md](docs/reference/make-targets.md). The CI
-pipeline that runs these gates as required checks — the change classifier, the
-job graph, and the SonarCloud coverage flow — is documented in
-[infra/ci-pipeline.md](infra/ci-pipeline.md).
-
-Three process-role binaries, all wired through
-`internal/compose`: `cmd/api` (HTTP; inline outbox relay behind
-`--inline-relay`, default true), `cmd/worker` (standalone relay),
-`cmd/migrate` (up|down).
-
-MCP (Surface A2): the api serves the governed tool surface at `/mcp`, on the
-same origin as `/oauth/*` and the discovery documents — A1 stdio and its
-`cmd/mcp` binary are retired (SCR-9). A client needs only the URL:
-`claude mcp add --transport http margince <base>/mcp` walks discovery, DCR,
-consent and the token exchange itself. `tools/list` advertises only what the
-presenting passport's scopes admit. A passport is also a REST Bearer
-credential, governed exactly like MCP (ADR-0055, superseding the old
-"read-only on REST" C1 rule) — 🟢 mutations auto-execute, 🟡 ones stage for
-confirm-first approval, all still capped by the granting human's live
-seat/RBAC. Every call re-authenticates: revocation binds mid-session.
-
-Host requirements: Go ≥ 1.26, Docker, and `golangci-lint` (the codegen
-tool chain is pure Go, in its own module `backend/tools/`).
-
-One installation serves one organization (A107/ADR-0061): the server
-resolves its singleton organization itself — no request selects a tenant:
-`curl http://localhost:8080/v1/me --cookie 'crm_session=…'`. First boot
-bootstraps the organization + admin from `margince.yaml` (`--config` /
-`MARGINCE_CONFIG`). `make dev` seeds a gitignored `config/margince.yaml`
-from `config/margince.example.yaml` on first run and then **leaves it**
-(the same create-if-missing / leave-if-exists pattern as
-`config/ai-routing.yaml`), so edits — org details, admin, or the
-`ai.capture_payloads` posture — persist across `make dev-stop` / `make dev`;
-delete it to reset.
-
-Operational surface: `/healthz` (dumb liveness), `/readyz` (dependency
-probes; 503 names the unready dependency), and `/metrics` (Prometheus
-text: outbox backlog, relay throughput, pool state) sit next to `/v1`.
-api and worker take `--log-level` (debug|info|warn|error) and
-`--log-format` (text|json), env-backed as `MARGINCE_LOG_LEVEL` /
-`MARGINCE_LOG_FORMAT`; an invalid value is a boot error, never a silent
-default. The full flag/env table:
-[docs/reference/configuration.md](docs/reference/configuration.md).
-
+So before you trust ANY manual test, confirm both: `git branch --show-current` is
+the branch you think it is, and the api on :8080 was started after your last
+backend change. This tree is often shared with parallel agent sessions that
+switch branches under you.
 ## Shipping a change (branch → local gates → PR → green → merge)
 
 Every commit lands through this loop — code, docs, and config alike.
