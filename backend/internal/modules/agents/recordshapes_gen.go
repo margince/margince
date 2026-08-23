@@ -12,7 +12,7 @@ var createRecordShapes = map[string]string{
 	"deal":         "{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, name: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_org_id?: uuid, pipeline_id: uuid, project_id?: uuid, source?: string, stage_id: uuid}",
 	"lead":         "{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
 	"activity":     "{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"person\"|\"organization\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}",
-	"project":      "{description?: string, key?: string, name: string, organization_id: uuid, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
+	"project":      "{description?: string, name: string, organization_id: uuid, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
 	"relationship": "{counterparty_org_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\", organization_id?: uuid, person_id?: uuid, project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}",
 }
 
@@ -22,7 +22,7 @@ var updateRecordShapes = map[string]string{
 	"deal":         "{amount_minor?: integer, currency?: string, expected_close_date?: YYYY-MM-DD, forecast_category?: \"commit\"|\"best_case\"|\"pipeline\"|\"omitted\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, organization_id?: uuid, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_org_id?: uuid, project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD}",
 	"lead":         "{candidate_org_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
 	"activity":     "{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}",
-	"project":      "{description?: string, ended_at?: YYYY-MM-DD, key?: string, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
+	"project":      "{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
 	"relationship": "{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}",
 }
 

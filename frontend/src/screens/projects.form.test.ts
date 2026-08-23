@@ -5,37 +5,26 @@ import { describe, expect, it } from "vitest";
 import {
   mapProjectCreate,
   mapProjectUpdate,
-  PROJECT_KEY_PATTERN,
   projectFields,
-  projectKeyRefusal,
 } from "./projects.form";
 
 // The project form's pure half: the key rule the contract states as a
 // pattern, and the two bodies the dialogs build from their values.
 
-describe("projectKeyRefusal", () => {
-  it("accepts an empty key, because the key is optional", () => {
-    expect(projectKeyRefusal("")).toBeUndefined();
-    expect(projectKeyRefusal("   ")).toBeUndefined();
-  });
-
-  it("accepts the contract's shape: letter-led, 2–24 of [A-Za-z0-9_-]", () => {
-    for (const key of ["AB", "ACME-CRM", "p_1", "a".repeat(24)]) {
-      expect(projectKeyRefusal(key), key).toBeUndefined();
-      expect(PROJECT_KEY_PATTERN.test(key)).toBe(true);
-    }
-  });
-
-  it("refuses a bare number, a one-character key, a space and an overlong key", () => {
-    for (const key of [
-      "2026",
-      "A",
-      "ACME CRM",
-      "1ABC",
-      "a".repeat(25),
-      "é-x",
-    ]) {
-      expect(projectKeyRefusal(key), key).toBe("project.keyInvalid");
+// The key is minted by the server and is not a field either dialog offers: a
+// caller-chosen key is a subject-line matcher a caller can get wrong, so the
+// form must not grow one back.
+describe("the project form offers no key field", () => {
+  const t = (key: string) => `<${key}>`;
+  it("leaves the key out of both dialogs", () => {
+    for (const mode of ["create", "edit"] as const) {
+      const fields = projectFields(t, {
+        companies: [],
+        me: "u1",
+        currentOwner: null,
+        mode,
+      });
+      expect(fields.map((field) => field.key)).not.toContain("key");
     }
   });
 });
@@ -58,7 +47,6 @@ describe("projectFields", () => {
     });
     expect(create.map((field) => field.key)).toEqual([
       "name",
-      "key",
       "organization_id",
       "owner_id",
       "description",
@@ -81,19 +69,6 @@ describe("projectFields", () => {
       "",
     ]);
   });
-
-  it("carries the key rule into the field's own validation", () => {
-    const create = projectFields(t, {
-      companies: [],
-      me: "u-me",
-      currentOwner: null,
-      mode: "create",
-    });
-    const key = create.find((field) => field.key === "key");
-    expect(key?.validate?.("2026")).toBe("<project.keyInvalid>");
-    expect(key?.validate?.("ACME-CRM")).toBeUndefined();
-    expect(key?.hint).toBe("<project.keyHint>");
-  });
 });
 
 describe("mapProjectCreate / mapProjectUpdate", () => {
@@ -101,7 +76,10 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
     expect(
       mapProjectCreate({
         name: " Rollout ",
-        key: "",
+        // A key the caller somehow supplied is DROPPED, not forwarded: the
+        // server mints the key and a body carrying one would be sending a
+        // matcher nobody asked for.
+        key: "CALLER-CHOSE",
         organization_id: "o-1",
         owner_id: "",
         description: "",
@@ -109,7 +87,6 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       }),
     ).toEqual({
       name: "Rollout",
-      key: null,
       organization_id: "o-1",
       owner_id: null,
       description: null,
@@ -128,7 +105,6 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
     });
     expect(patch).toEqual({
       name: undefined,
-      key: "ACME",
       owner_id: null,
       description: "Phase two",
       target_end_date: null,

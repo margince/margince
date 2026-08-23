@@ -14,7 +14,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { useEntityName } from "./entityref";
-import { type Project, projectKeyRefusal } from "./projects.form";
+import type { Project } from "./projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the
 // inline "new project" it can grow), the chip on the deal page, and the one
@@ -97,16 +97,6 @@ export function dealProjectFields(
       required: true,
       showWhen: (values) => values.project_id === NEW_PROJECT,
     },
-    {
-      key: "new_project_key",
-      label: "project.key",
-      hint: t("project.keyHint"),
-      validate: (value) => {
-        const refusal = projectKeyRefusal(value);
-        return refusal ? t(refusal) : undefined;
-      },
-      showWhen: (values) => values.project_id === NEW_PROJECT,
-    },
   ];
 }
 
@@ -130,7 +120,6 @@ export async function resolveDealProject(
   const { data, error } = await api.POST("/projects", {
     body: {
       name: values.new_project_name?.trim() ?? "",
-      key: values.new_project_key?.trim() || null,
       organization_id: organizationId,
       source: "manual",
     },

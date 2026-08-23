@@ -6014,11 +6014,8 @@ export const vi = {
   "nav.projects": "Dự án",
   "unit.projects": "dự án",
   "project.name": "Tên dự án",
-  "project.key": "Mã",
-  "project.keyHint":
-    "Mã ngắn tùy chọn, ví dụ ACME-CRM. Ghi [MÃ] trong tiêu đề email thì thư được xếp vào dự án này.",
-  "project.keyInvalid":
-    "Mã bắt đầu bằng chữ cái và gồm 2–24 chữ cái, chữ số, _ hoặc -.",
+  "project.keyMinted":
+    "Margince cấp cho mỗi dự án một mã ngắn. Ghi [{key}] trong tiêu đề email thì thư được xếp vào dự án này.",
   "project.company": "Công ty",
   "project.owner": "Người phụ trách",
   "project.ownerKeep": "Giữ người phụ trách hiện tại",

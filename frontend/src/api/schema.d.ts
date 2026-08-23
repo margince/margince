@@ -2036,8 +2036,11 @@ export interface paths {
         /**
          * Create a project on a company.
          * @description `organization_id` is required — a project has exactly one anchor company.
-         *     A `key` is optional but must match `^[A-Za-z][A-Za-z0-9_-]{1,23}$` and be unique
-         *     among live projects; a collision is `409` carrying the existing project's id.
+         *     The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
+         *     number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
+         *     subject line to file mail under this project, so a caller-chosen one is a matcher
+         *     a caller can get wrong. A collision is resolved by taking the next number, never
+         *     reported.
          *     The project starts in `initiative` and its creation row is appended to the phase history.
          */
         post: operations["createProject"];
@@ -15193,7 +15196,6 @@ export interface components {
         };
         CreateProjectRequest: {
             name: string;
-            key?: string | null;
             /** Format: uuid */
             organization_id: string;
             /** Format: uuid */
@@ -15207,10 +15209,16 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description Note `phase` is absent by design — it moves only through advanceProjectPhase. */
+        /**
+         * @description Note `phase` is absent by design — it moves only through advanceProjectPhase.
+         *     `key` is absent for a different reason: the server mints it from the name and
+         *     it is read-only thereafter. A key is what a human writes in a subject line to
+         *     file mail under a project, so a caller-chosen one is a matcher a caller can
+         *     get wrong — a project keyed after a person's name would claim every bracketed
+         *     mention of that word.
+         */
         UpdateProjectRequest: {
             name?: string;
-            key?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
             description?: string | null;

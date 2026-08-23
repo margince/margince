@@ -195,7 +195,7 @@ describe("ProjectsScreen", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("refuses a key the contract would refuse before anything is posted, then creates", async () => {
+  it("posts a create with no key, because the server mints it", async () => {
     const user = userEvent.setup();
     let posted: unknown = null;
     projectsBackend({
@@ -211,19 +211,11 @@ describe("ProjectsScreen", () => {
     render(<ProjectsScreen />);
     await user.click(await screen.findByTestId("new-record"));
     await user.type(screen.getByLabelText("Project name *"), "CRM rollout");
-    await user.type(screen.getByLabelText("Key"), "2026");
-    expect(
-      screen.getByText(
-        "A key starts with a letter and is 2–24 letters, digits, _ or -.",
-      ),
-    ).toBeTruthy();
-    const save = screen.getByRole("button", { name: "Create" });
-    expect(save.hasAttribute("disabled")).toBe(true);
-    // The hint says what the key is for, beside the refusal.
-    expect(screen.getByText(/\[KEY\] in an email subject/)).toBeTruthy();
 
-    await user.clear(screen.getByLabelText("Key"));
-    await user.type(screen.getByLabelText("Key"), "ACME-CRM");
+    // The dialog asks for no key at all: a caller-chosen key is a subject-line
+    // matcher a caller can get wrong, so the server mints it from the name.
+    expect(screen.queryByLabelText("Key")).toBeNull();
+
     await pickOption(
       user,
       screen.getByLabelText("Company *"),
@@ -234,7 +226,6 @@ describe("ProjectsScreen", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({
       name: "CRM rollout",
-      key: "ACME-CRM",
       organization_id: "o-1",
       owner_id: null,
       description: null,

@@ -51,10 +51,10 @@ func assertOwner(t *testing.T, e *Env, id ids.ProjectID, want ids.UUID, why stri
 func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	first := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, &e.Rep1)
-	second := seedProject(e.Admin(), t, e, "Warehouse rollout", strPtr("WHR"), org, &e.Rep1)
-	retired := seedProject(e.Admin(), t, e, "Old intranet", strPtr("INTRA"), org, &e.Rep1)
-	foreign := seedProject(e.Admin(), t, e, "Rep3's project", strPtr("R3"), org, &e.Rep3)
+	first := seedProject(e.Admin(), t, e, "ERP replacement", org, &e.Rep1)
+	second := seedProject(e.Admin(), t, e, "Warehouse rollout", org, &e.Rep1)
+	retired := seedProject(e.Admin(), t, e, "Old intranet", org, &e.Rep1)
+	foreign := seedProject(e.Admin(), t, e, "Rep3's project", org, &e.Rep3)
 	if _, err := e.Projects.ArchiveProject(e.Admin(), retired.ID, nil); err != nil {
 		t.Fatalf("archive project: %v", err)
 	}
@@ -108,8 +108,8 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	shared := seedProject(e.Admin(), t, e, "Shared for writing", strPtr("SW"), org, &e.Rep3)
-	readOnly := seedProject(e.Admin(), t, e, "Shared for reading", strPtr("SR"), org, &e.Rep3)
+	shared := seedProject(e.Admin(), t, e, "Shared for writing", org, &e.Rep3)
+	readOnly := seedProject(e.Admin(), t, e, "Shared for reading", org, &e.Rep3)
 
 	granter := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},
@@ -152,7 +152,7 @@ func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) 
 func TestTransferProjectOwnershipRefusesAReceiverWhoCannotOwn(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	project := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, &e.Rep1)
+	project := seedProject(e.Admin(), t, e, "ERP replacement", org, &e.Rep1)
 
 	admin := identity.Identity{
 		UserID: ids.From[ids.UserKind](e.AdminUser), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),

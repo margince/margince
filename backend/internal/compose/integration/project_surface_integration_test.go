@@ -39,8 +39,8 @@ func orgSurfaceService(e *Env) *org360.Service {
 		func() time.Time { return roomFixedNow })
 }
 
-// projectKeys indexes a page's projects section by key, so a test reads
-// "ERP-27" rather than an id it would have to thread through the fixture.
+// projectKeys indexes a page's projects section by the key the server minted,
+// so a test names a project by its key rather than by an id.
 func projectKeys(projects *[]crmcontracts.Organization360Project) map[string]crmcontracts.Organization360Project {
 	out := map[string]crmcontracts.Organization360Project{}
 	if projects == nil {
@@ -87,18 +87,18 @@ func TestOrganization360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing
 		t.Fatalf("projects = %d, want the account's two", len(*page.Projects))
 	}
 	// The pursuing project is in motion and leads; the initiative follows.
-	if got := *(*page.Projects)[0].Key; got != "ERP-27" {
-		t.Errorf("first project = %q, want the pursuing ERP-27 ahead of the initiative", got)
+	if got := *(*page.Projects)[0].Key; got != f.erpKey {
+		t.Errorf("first project = %q, want the pursuing %s ahead of the initiative", got, f.erpKey)
 	}
 	byKey := projectKeys(page.Projects)
-	if byKey["ERP-27"].Phase != crmcontracts.Organization360ProjectPhasePursuing {
-		t.Errorf("ERP-27 phase = %q, want pursuing", byKey["ERP-27"].Phase)
+	if byKey[f.erpKey].Phase != crmcontracts.Organization360ProjectPhasePursuing {
+		t.Errorf("%s phase = %q, want pursuing", f.erpKey, byKey[f.erpKey].Phase)
 	}
-	if byKey["DC-4"].Name != "Datacentre migration" {
-		t.Errorf("DC-4 name = %q, want the project's name", byKey["DC-4"].Name)
+	if byKey[f.otherKey].Name != "Datacentre migration" {
+		t.Errorf("%s name = %q, want the project's name", f.otherKey, byKey[f.otherKey].Name)
 	}
-	if byKey["ERP-27"].LastActivityAt == nil {
-		t.Error("ERP-27 carries no last_activity_at though mail is filed under it")
+	if byKey[f.erpKey].LastActivityAt == nil {
+		t.Errorf("%s carries no last_activity_at though mail is filed under it", f.erpKey)
 	}
 }
 
@@ -179,8 +179,8 @@ func TestPerson360ListsTheProjectsAPersonIsPartOf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assemble with a seat: %v", err)
 	}
-	if keys := projectKeys(seated.Projects); len(keys) != 1 || keys["ERP-27"].Name == "" {
-		t.Fatalf("a seat on ERP-27 lists %v, want exactly that project", seated.Projects)
+	if keys := projectKeys(seated.Projects); len(keys) != 1 || keys[f.erpKey].Name == "" {
+		t.Fatalf("a seat on %s lists %v, want exactly that project", f.erpKey, seated.Projects)
 	}
 
 	employAtAccount(t, e, f)
@@ -192,7 +192,7 @@ func TestPerson360ListsTheProjectsAPersonIsPartOf(t *testing.T) {
 		t.Fatalf("seat + employer lists %d projects, want 2 — one row per project, no duplicate for the one both routes reach", len(*employed.Projects))
 	}
 	keys := projectKeys(employed.Projects)
-	if keys["DC-4"].Name == "" {
+	if keys[f.otherKey].Name == "" {
 		t.Error("the employer's other project is missing from the person page")
 	}
 }
@@ -227,8 +227,8 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	if in.Project == nil {
 		t.Fatal("the draft carries no project fact though the request named one")
 	}
-	if in.Project.Key != "ERP-27" || in.Project.Name != "ERP rollout" || in.Project.Phase != "initiative" {
-		t.Errorf("project fact = %+v, want ERP-27 / ERP rollout / initiative", in.Project)
+	if in.Project.Key != f.erpKey || in.Project.Name != "ERP rollout" || in.Project.Phase != "initiative" {
+		t.Errorf("project fact = %+v, want %s / ERP rollout / initiative", in.Project, f.erpKey)
 	}
 	if in.Project.OpenCommitments != 1 {
 		t.Errorf("open commitments = %d, want the ERP task alone — the other engagement's task is out of scope", in.Project.OpenCommitments)
@@ -299,8 +299,8 @@ func TestPersonDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	if !recent[f.onERP] || !recent[f.unfiled] {
 		t.Errorf("the scoped project's own mail or the unfiled mail is missing from the grounding: %v", recent)
 	}
-	if in.Project == nil || in.Project.Key != "ERP-27" {
-		t.Fatalf("project fact = %+v, want ERP-27 folded in", in.Project)
+	if in.Project == nil || in.Project.Key != f.erpKey {
+		t.Fatalf("project fact = %+v, want %s folded in", in.Project, f.erpKey)
 	}
 
 	wide, err := svc.Assemble(e.Admin(), personID)

@@ -111,8 +111,15 @@ func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Effort Co", nil)
-	erp := seedProject(admin, t, e, "ERP replacement", strPtr("ERP-1"), org, nil)
-	crm := seedProject(admin, t, e, "CRM rollout", nil, org, nil)
+	erp := seedProject(admin, t, e, "ERP replacement", org, nil)
+	crm := seedProject(admin, t, e, "CRM rollout", org, nil)
+	// The label rule has two arms — the key when the project has one, the name
+	// otherwise — so one project here must have no key. The store mints a key
+	// for every project it creates, so the only way to reach the second arm is
+	// to clear it on the row. That is the honest fixture: a keyless project can
+	// still exist (a key is nullable and archiving frees one), and a report that
+	// printed an empty label for it would be wrong in front of a reader.
+	e.WsExec(t, `UPDATE project SET key = NULL WHERE id = $1`, crm.ID)
 	when := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	fileActivity(admin, t, e, "meeting", when, &erp.ID)
 	fileActivity(admin, t, e, "meeting", when.Add(time.Hour), &erp.ID)
@@ -130,9 +137,9 @@ func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
 		byProject[cell(row, "project_id")+"|"+cell(row, "project")] = cell(row, "activities")
 	}
 	want := map[string]string{
-		erp.ID.String() + "|ERP-1":       "2",
-		crm.ID.String() + "|CRM rollout": "1",
-		"<nil>|<nil>":                    "1",
+		erp.ID.String() + "|" + mintedKey(admin, t, e, erp.ID): "2",
+		crm.ID.String() + "|CRM rollout":                       "1",
+		"<nil>|<nil>":                                          "1",
 	}
 	if fmt.Sprint(byProject) != fmt.Sprint(want) {
 		t.Fatalf("grouped by project = %v, want %v (key as the label when the project has one, name otherwise, NULL for unfiled)", byProject, want)
@@ -147,7 +154,7 @@ func TestProjectFilterRunsTheProjectReadGate(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Gated Co", nil)
-	p := seedProject(admin, t, e, "Hidden work", nil, org, nil)
+	p := seedProject(admin, t, e, "Hidden work", org, nil)
 
 	noProjectGrant := principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
@@ -195,9 +202,9 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "Phase Co", nil)
 	orgID := orgIDOf(org)
-	pursued := seedProject(admin, t, e, "Pursued", nil, org, nil)
+	pursued := seedProject(admin, t, e, "Pursued", org, nil)
 	advanceProject(admin, t, e, pursued.ID, projects.PhasePursuing)
-	seedProject(admin, t, e, "Idea", nil, org, nil)
+	seedProject(admin, t, e, "Idea", org, nil)
 
 	amount := int64(250000)
 	eur := "EUR"
@@ -243,8 +250,8 @@ func TestProjectCommitmentsCountsOpenAndOverdueFirst(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Promise Co", nil)
-	calm := seedProject(admin, t, e, "Calm", nil, org, nil)
-	late := seedProject(admin, t, e, "Late", nil, org, nil)
+	calm := seedProject(admin, t, e, "Calm", org, nil)
+	late := seedProject(admin, t, e, "Late", org, nil)
 	past := time.Now().UTC().Add(-48 * time.Hour)
 	future := time.Now().UTC().Add(72 * time.Hour)
 	fileTask(admin, t, e, calm.ID, future)
@@ -272,13 +279,13 @@ func TestProjectsGoneQuietHonoursTheDaysThreshold(t *testing.T) {
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Quiet Co", nil)
 	now := time.Now().UTC()
-	stale := seedProject(admin, t, e, "Stale", nil, org, &e.Rep1)
+	stale := seedProject(admin, t, e, "Stale", org, &e.Rep1)
 	advanceProject(admin, t, e, stale.ID, projects.PhasePursuing)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -40), &stale.ID)
-	recent := seedProject(admin, t, e, "Recent", nil, org, nil)
+	recent := seedProject(admin, t, e, "Recent", org, nil)
 	advanceProject(admin, t, e, recent.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -5), &recent.ID)
-	idea := seedProject(admin, t, e, "Idea", nil, org, nil)
+	idea := seedProject(admin, t, e, "Idea", org, nil)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -90), &idea.ID)
 
 	rows := runPrebuiltReport(admin, t, e, "projects-gone-quiet", "")
@@ -321,7 +328,7 @@ func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	org := e.SeedOrg(t, "Grant Co", nil)
 	orgID := orgIDOf(org)
-	p := seedProject(admin, t, e, "Priced", nil, org, nil)
+	p := seedProject(admin, t, e, "Priced", org, nil)
 	amount, eur := int64(5000), "EUR"
 	if _, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
 		Name: "Open", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
@@ -374,7 +381,7 @@ func TestActivitiesByProjectDimensionsTakeTheProjectGrant(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Label Co", nil)
-	p := seedProject(admin, t, e, "Secret rollout", nil, org, nil)
+	p := seedProject(admin, t, e, "Secret rollout", org, nil)
 	fileActivity(admin, t, e, "meeting", time.Now().UTC().Add(-time.Hour), &p.ID)
 
 	activityOnly := e.readerWith("activity")

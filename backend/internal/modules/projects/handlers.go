@@ -7,7 +7,6 @@ package projects
 // input, map the store's typed errors onto the codes the contract names.
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -187,9 +186,11 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 	if err := requireBodyID("organization_id", req.OrganizationId); err != nil {
 		return CreateProjectInput{}, err
 	}
+	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
+		return CreateProjectInput{}, err
+	}
 	in := CreateProjectInput{
 		Name:           name,
-		Key:            req.Key,
 		OrganizationID: pathID[ids.OrganizationKind](req.OrganizationId),
 		OwnerID:        idArg[ids.UserKind](req.OwnerId),
 		Description:    req.Description,
@@ -228,9 +229,11 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 		}
 		req.Name = &name
 	}
+	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
+		return UpdateProjectInput{}, err
+	}
 	in := UpdateProjectInput{
 		Name:         req.Name,
-		Key:          req.Key,
 		Description:  req.Description,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		IfVersion:    ifVersion,
@@ -248,23 +251,18 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 	return in, nil
 }
 
-// writeProjectErr maps the project store's typed errors onto the codes
-// the contract names; false means none matched and writeStoreErr should
-// keep falling through.
-func writeProjectErr(w http.ResponseWriter, r *http.Request, err error) bool {
-	var keyTaken *ProjectKeyTakenError
-	if errors.As(err, &keyTaken) {
-		// The existing id rides the 409 so a caller that collided can open
-		// the project it collided with instead of hunting for it — but only
-		// when that caller can see the row. A key held by a project outside
-		// their scope still refuses the write and names nothing, because the
-		// id would be the one thing the scope exists to withhold.
-		existing := ""
-		if keyTaken.ExistingID != nil {
-			existing = keyTaken.ExistingID.String()
-		}
-		httperr.Write(w, r, httperr.Duplicate("project_key_taken", existing))
-		return true
+// refuseCallerChosenKey answers 422 to a body that still carries a `key`.
+//
+// The field left the contract when the server took over minting, and both
+// bodies accept additionalProperties for custom fields — so without this a
+// client that sends `{"key": "NEW"}` gets a 200 and no key change, and believes
+// it renamed the project. Being told is the only outcome that is not a lie: the
+// key is not theirs to set, and a silent drop hides that from the one caller who
+// needs to know it.
+func refuseCallerChosenKey(extra map[string]any) error {
+	if _, sent := extra[projectKeyField]; !sent {
+		return nil
 	}
-	return false
+	return httperr.Validation(projectKeyField, "read_only",
+		"a project's key is assigned by the server from its name and cannot be set or changed")
 }

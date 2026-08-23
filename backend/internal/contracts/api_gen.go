@@ -14935,7 +14935,6 @@ type CreateProductRequest struct {
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
-	Key                  *string                `json:"key,omitempty"`
 	Name                 string                 `json:"name"`
 	OrganizationId       openapi_types.UUID     `json:"organization_id"`
 	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
@@ -23089,10 +23088,14 @@ type UpdateProductRequest struct {
 }
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
+// `key` is absent for a different reason: the server mints it from the name and
+// it is read-only thereafter. A key is what a human writes in a subject line to
+// file mail under a project, so a caller-chosen one is a matcher a caller can
+// get wrong — a project keyed after a person's name would claim every bracketed
+// mention of that word.
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
-	Key                  *string                `json:"key,omitempty"`
 	Name                 *string                `json:"name,omitempty"`
 	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
@@ -29970,14 +29973,6 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "description")
 	}
 
-	if raw, found := object["key"]; found {
-		err = json.Unmarshal(raw, &a.Key)
-		if err != nil {
-			return fmt.Errorf("error reading 'key': %w", err)
-		}
-		delete(object, "key")
-	}
-
 	if raw, found := object["name"]; found {
 		err = json.Unmarshal(raw, &a.Name)
 		if err != nil {
@@ -30049,13 +30044,6 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'description': %w", err)
-		}
-	}
-
-	if a.Key != nil {
-		object["key"], err = json.Marshal(a.Key)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'key': %w", err)
 		}
 	}
 
@@ -35862,14 +35850,6 @@ func (a *UpdateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "ended_at")
 	}
 
-	if raw, found := object["key"]; found {
-		err = json.Unmarshal(raw, &a.Key)
-		if err != nil {
-			return fmt.Errorf("error reading 'key': %w", err)
-		}
-		delete(object, "key")
-	}
-
 	if raw, found := object["name"]; found {
 		err = json.Unmarshal(raw, &a.Name)
 		if err != nil {
@@ -35932,13 +35912,6 @@ func (a UpdateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["ended_at"], err = json.Marshal(a.EndedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'ended_at': %w", err)
-		}
-	}
-
-	if a.Key != nil {
-		object["key"], err = json.Marshal(a.Key)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'key': %w", err)
 		}
 	}
 

@@ -50,7 +50,7 @@ func seedCloseWonFixture(t *testing.T, e *Env, projectName string) closeWonFixtu
 	t.Helper()
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, projectName, nil, org, nil)
+	p := seedProject(e.Admin(), t, e, projectName, org, nil)
 
 	orgID := orgIDOf(org)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -231,7 +231,7 @@ func TestWinningAProjectlessDealTouchesNoProject(t *testing.T) {
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	// A live project on the same company that the win must not reach for.
-	bystander := seedProject(e.Admin(), t, e, "Unrelated work", nil, org, nil)
+	bystander := seedProject(e.Admin(), t, e, "Unrelated work", org, nil)
 
 	orgID := orgIDOf(org)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -330,7 +330,7 @@ func TestTwoDealsWinningOnOneProjectProduceOneTransition(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "Multi-phase programme", nil, org, nil)
+	p := seedProject(e.Admin(), t, e, "Multi-phase programme", org, nil)
 
 	orgID := orgIDOf(org)
 	var wonDeals []ids.DealID
@@ -578,7 +578,7 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	// The project belongs to Rep1; the caller below is Rep3 in the other team,
 	// so neither own nor team scope reaches it — only the read class does.
 	owner := e.Rep1
-	theirProject := seedProject(e.Admin(), t, e, "Another team's delivery", nil, org, &owner)
+	theirProject := seedProject(e.Admin(), t, e, "Another team's delivery", org, &owner)
 
 	orgID := orgIDOf(org)
 	rep := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
@@ -644,7 +644,7 @@ func TestTheProjectsOwnerStillAttachesAndWins(t *testing.T) {
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	owner := e.Rep1
-	mine := seedProject(e.Admin(), t, e, "My delivery", nil, org, &owner)
+	mine := seedProject(e.Admin(), t, e, "My delivery", org, &owner)
 
 	orgID := orgIDOf(org)
 	rep := e.As(owner, []ids.UUID{e.Team1}, principal.Permissions{
