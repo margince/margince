@@ -192,6 +192,30 @@ func (e *Env) AgentCtx() context.Context {
 	})
 }
 
+// AgentFor binds the principal AgentIdentity.Principal() mints for a passport
+// granted by `human`: the human's own user id, teams, seat and merged policy,
+// carried under PrincipalAgent.
+//
+// It deliberately takes the SAME arguments As() takes, and builds the principal
+// the same way apart from Type and the passport fields. The invariant the agent
+// suites assert is that a human and their agent differ in Type and nothing
+// else — a helper that took its own permission fixture could make the pair
+// agree by construction, which would prove nothing about the product.
+//
+// AgentCtx and AgentCtxWithPassport are NOT this: they mint a synthetic agent
+// carrying no user, teams or permissions at all, for suites where the staging
+// path rather than the scope is what is under test. One of those would pass any
+// scope assertion vacuously.
+func (e *Env) AgentFor(human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:" + human.String(),
+		UserID: human, OnBehalfOf: human, TeamIDs: teams,
+		SeatType: principal.SeatFull, Permissions: perms,
+	})
+}
+
 // SeedPassport inserts a live passport for Rep1 and returns its id. Rows
 // that reference a passport carry a real foreign key, so a synthetic id
 // would be rejected by the database rather than by the code under test.
