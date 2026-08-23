@@ -191,6 +191,32 @@ const COLUMN_SIZES: Readonly<
   verbs: { share: null, min: 320 },
 };
 
+/**
+ * Whether a fresh reading of the scroller's width should be adopted.
+ *
+ * The measurement feeds back into itself, and on a platform with classic
+ * (non-overlay) scrollbars that feedback can oscillate: the column widths
+ * decide whether the body needs a horizontal scrollbar, that bar takes height,
+ * the lost height brings in a vertical bar, and the vertical bar takes the very
+ * width being measured — which produces the first widths again. React stops
+ * such a loop with "Maximum update depth exceeded", and the reader loses the
+ * whole list behind an error plate.
+ *
+ * So a reading that merely returns to the width of a render ago is refused.
+ * Both readings are honest views of a box with two stable states; taking the
+ * first and holding it leaves the table at most one scrollbar's width narrower
+ * than it could be, which is invisible next to losing the list. A genuine
+ * resize still lands, because it reports a width that is neither of the two
+ * being alternated.
+ */
+export function widthWorthAdopting(
+  next: number,
+  current: number,
+  beforeThat: number,
+): boolean {
+  return next !== current && next !== beforeThat;
+}
+
 function sizeOf(column: {
   fixed?: boolean;
   numeric?: boolean;
@@ -463,14 +489,25 @@ export function ListTable<Row>({
   // any other way. Read before paint so the first frame is already right rather
   // than every column starting at its minimum and jumping.
   const [available, setAvailable] = useState(0);
+  const [, setResized] = useState(0);
+  // The width a render ago, which is what makes the re-measure below safe to
+  // run after every render.
+  const previous = useRef(0);
   // Re-read after every render, so a body that arrives late — this surface can
   // render a board instead of its own table, and back again — is measured when
-  // it does rather than leaving every column pinned at its minimum. Setting the
-  // same width twice is a no-op, so this cannot loop.
+  // it does rather than leaving every column pinned at its minimum.
+  //
+  // Which readings are adopted, and why one is refused: widthWorthAdopting.
   useLayoutEffect(() => {
-    if (scroller.current) {
-      setAvailable(scroller.current.clientWidth);
+    if (!scroller.current) {
+      return;
     }
+    const next = scroller.current.clientWidth;
+    if (!widthWorthAdopting(next, available, previous.current)) {
+      return;
+    }
+    previous.current = available;
+    setAvailable(next);
   });
   // Re-attached when the scroller itself comes or goes, since an observer left
   // holding a detached node stops following anything. The dep is a trigger
@@ -485,9 +522,11 @@ export function ListTable<Row>({
     if (!scrolling || typeof ResizeObserver === "undefined") {
       return;
     }
-    const observer = new ResizeObserver(() =>
-      setAvailable(scrolling.clientWidth),
-    );
+    // The observer asks for a fresh look rather than measuring here, so every
+    // width this component adopts passes the oscillation guard above. Bumping a
+    // counter is what schedules that look: the layout effect has no dependency
+    // list and so runs after any render this causes.
+    const observer = new ResizeObserver(() => setResized((n) => n + 1));
     observer.observe(scrolling);
     return () => observer.disconnect();
   }, [drawsOwnTable]);
