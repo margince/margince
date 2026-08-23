@@ -142,6 +142,30 @@ var providers = []string{gmail, "outlook.com"}`,
 			want: 1,
 		},
 		{
+			// The EXPRESSION dimension. `"gmail" + ".com"` is a legal spelling
+			// of the domain, and a reader of string literals alone sees two
+			// fragments and no provider — in BOTH paths: the census counted one
+			// provider and reported nothing, and a list written entirely this
+			// way was dropped by the shortcut before anything parsed it.
+			name: "a constant built by concatenation",
+			code: `package p
+const gmail = "gmail" + ".com"
+var providers = []string{gmail, "outlook.com"}`,
+			want: 1,
+		},
+		{
+			name: "a list whose every domain is concatenated, which the shortcut dropped",
+			code: `package p
+var providers = []string{"gmail" + ".com", "outlook" + ".com"}`,
+			want: 1,
+		},
+		{
+			name: "concatenation in parentheses, and across three parts",
+			code: `package p
+var providers = []string{("gmail" + ".com"), "out" + "look" + ".com"}`,
+			want: 1,
+		},
+		{
 			// The escape dimension: the detector unquotes, so it counts this —
 			// and a prefilter comparing the RAW captured text dropped the file
 			// before anything parsed it.
@@ -264,6 +288,7 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 var stringToken = regexp.MustCompile("\"(?:[^\"\\\n]|\\\\.)*\"|`[^`]*`")
 
 func namesAnyProvider(code string) bool {
+	var values []string
 	for _, token := range stringToken.FindAllString(code, -1) {
 		value, err := strconv.Unquote(token)
 		if err != nil {
@@ -272,8 +297,21 @@ func namesAnyProvider(code string) bool {
 			// census behind it is the thing that decides.
 			return true
 		}
-		if looksLikeADomain(value) {
-			return true
+		values = append(values, value)
+	}
+	// Each token, and then each RUN of consecutive tokens joined — because
+	// `"gmail" + ".com"` spells a provider that neither fragment does, and a
+	// shortcut reading fragments would drop a file whose every domain is
+	// written that way. The window is bounded: a domain is a handful of pieces,
+	// not an arbitrary expression, and the census behind this is what decides.
+	const maxParts = 4
+	for i := range values {
+		joined := ""
+		for j := i; j < len(values) && j < i+maxParts; j++ {
+			joined += values[j]
+			if looksLikeADomain(joined) {
+				return true
+			}
 		}
 	}
 	return false
@@ -357,16 +395,37 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 	return found
 }
 
-// stringValue reads a node's string value: a literal directly, and a named
-// constant through the file's own declarations.
+// stringValue reads a node's string value: a literal directly, a named constant
+// through the file's own declarations, and a CONSTANT EXPRESSION built from
+// either.
+//
+// `const gmail = "gmail" + ".com"` is a legal spelling of the same domain, and
+// a reader of BasicLit alone sees two fragments and no provider. Parentheses
+// and `+` are the whole of what a string constant expression can be in Go, so
+// handling both is complete rather than a sample of the shapes.
 func stringValue(node ast.Node, constants map[string]string) (string, bool) {
-	if basic, ok := node.(*ast.BasicLit); ok && basic.Kind == token.STRING {
-		value, err := strconv.Unquote(basic.Value)
+	switch n := node.(type) {
+	case *ast.BasicLit:
+		if n.Kind != token.STRING {
+			return "", false
+		}
+		value, err := strconv.Unquote(n.Value)
 		return value, err == nil
-	}
-	if ident, ok := node.(*ast.Ident); ok {
-		value, known := constants[ident.Name]
+	case *ast.Ident:
+		value, known := constants[n.Name]
 		return value, known
+	case *ast.ParenExpr:
+		return stringValue(n.X, constants)
+	case *ast.BinaryExpr:
+		if n.Op != token.ADD {
+			return "", false
+		}
+		left, okL := stringValue(n.X, constants)
+		right, okR := stringValue(n.Y, constants)
+		if !okL || !okR {
+			return "", false
+		}
+		return left + right, true
 	}
 	return "", false
 }
