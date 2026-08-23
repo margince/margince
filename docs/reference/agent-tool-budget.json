@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 16841,
-    "median_tool_tokens": 274,
-    "mean_tool_tokens": 300
+    "tokens": 16970,
+    "median_tool_tokens": 280,
+    "mean_tool_tokens": 302
   },
   "agents": [
     {
@@ -129,6 +129,10 @@
       "tokens": 333
     },
     {
+      "name": "preview_import",
+      "tokens": 328
+    },
+    {
       "name": "merge_records",
       "tokens": 325
     },
@@ -221,10 +225,6 @@
       "tokens": 213
     },
     {
-      "name": "preview_import",
-      "tokens": 211
-    },
-    {
       "name": "relink_thread",
       "tokens": 207
     },
@@ -277,12 +277,12 @@
       "tokens": 102
     },
     {
-      "name": "whoami",
-      "tokens": 88
+      "name": "read_import_report",
+      "tokens": 89
     },
     {
-      "name": "read_import_report",
-      "tokens": 77
+      "name": "whoami",
+      "tokens": 88
     },
     {
       "name": "read_import_run",

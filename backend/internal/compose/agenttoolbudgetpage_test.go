@@ -45,7 +45,7 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 			a.Name, len(a.Tools), a.Tokens, a.PercentOf,
 			a.Headroom, len(a.Dangling), a.Temptation)
 	}
-	fmt.Fprintf(&p, "| _whole served catalog, for scale_ | %d | %d | %s | — | — | — |\n\n",
+	fmt.Fprintf(&p, "| _whole served catalog, for scale_ | %d | %d | %d%% | — | — | — |\n\n",
 		b.Catalog.Tools, b.Catalog.Tokens, percentOf(b.Catalog.Tokens, b.PromptCeiling))
 
 	for _, a := range b.Agents {
@@ -137,4 +137,8 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	return []byte(p.String())
 }
 
-func percentOf(n, of int) string { return fmt.Sprintf("%.1f%%", float64(n)*100/float64(of)) }
+// percentOf matches the payload's own percent_of_ceiling arithmetic, so the
+// catalog row and the agent rows above it are the same kind of number. A column
+// that mixed 4% with 70.2% would invite the reader to compare precisions rather
+// than shares.
+func percentOf(n, of int) int { return n * 100 / of }

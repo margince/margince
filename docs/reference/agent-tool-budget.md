@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2190 | 9% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 16841 | 70.2% | — | — | — |
+| _whole served catalog, for scale_ | 56 | 16970 | 70% | — | — | — |
 
 ### `morning_brief`
 
@@ -118,7 +118,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 300, across 56 served tools.
+Median 280 tokens, mean 302, across 56 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -143,6 +143,7 @@ a term in an addition.
 | `create_record` | 370 | 1 scenario |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
+| `preview_import` | 328 | — |
 | `merge_records` | 325 | — |
 | `draft_email` | 317 | — |
 | `review_commitments` | 316 | — |
@@ -166,7 +167,6 @@ a term in an addition.
 | `at_risk_relationships` | 215 | — |
 | `relink_activities` | 215 | — |
 | `read_brief` | 213 | — |
-| `preview_import` | 211 | — |
 | `relink_thread` | 207 | — |
 | `apply_tag` | 206 | — |
 | `who_knows` | 201 | — |
@@ -180,8 +180,8 @@ a term in an addition.
 | `commit_import` | 150 | — |
 | `list_colleagues` | 148 | — |
 | `list_tags` | 102 | — |
+| `read_import_report` | 89 | — |
 | `whoami` | 88 | — |
-| `read_import_report` | 77 | — |
 | `read_import_run` | 75 | — |
 
 ## Related
