@@ -37,6 +37,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -365,6 +366,11 @@ func loadDossierOrgNames(ctx context.Context, tx pgx.Tx, orgIDs []ids.Organizati
 func (s *Store) PromoteOrgName(ctx context.Context, orgID ids.OrganizationID, name, corroboration string) (bool, error) {
 	var promoted bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A no-op for the sweep's unbounded principal, and the scope this write
+		// needs the day a human promotes a name by hand.
+		if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
+			return err
+		}
 		var err error
 		promoted, err = s.PromoteOrgNameTx(ctx, tx, orgID, name, corroboration)
 		return err

@@ -227,6 +227,21 @@ type writeAuthorityFn struct {
 	requires map[string]bool
 	mutates  bool
 	calls    map[string]bool
+	// writes names the shareable tables this function's own body CHANGES, and
+	// dynamicWrite records a mutation whose target this pass could not read.
+	// mutates answers "does a write happen here at all"; these answer "to
+	// which record", which is the question the reach gate
+	// (writeauthorityreach_test.go) asks and this one does not.
+	writes       map[string]bool
+	dynamicWrite []string
+}
+
+// noteWrite records that this function changes the named table.
+func (f *writeAuthorityFn) noteWrite(table string) {
+	if f.writes == nil {
+		f.writes = map[string]bool{}
+	}
+	f.writes[table] = true
 }
 
 func TestEveryMutationOfAShareableRecordProbesForWriteAuthority(t *testing.T) {
@@ -405,8 +420,16 @@ func indexWriteAuthorityBody(fn *ast.FuncDecl, info *writeAuthorityFn, tables ma
 		case *ast.CallExpr:
 			indexWriteAuthorityCall(n, info, tables, consts, at, src)
 		case *ast.BasicLit:
-			if text, isString := stringConst(n); isString && writesSQL(text) {
-				info.mutates = true
+			if text, isString := stringConst(n); isString {
+				if writesSQL(text) {
+					info.mutates = true
+				}
+				tables, dynamic := mutatedTables(text)
+				for _, table := range tables {
+					info.mutates = true
+					info.noteWrite(table)
+				}
+				info.dynamicWrite = append(info.dynamicWrite, dynamic...)
 			}
 		}
 		return true
@@ -426,6 +449,9 @@ func indexWriteAuthorityCall(call *ast.CallExpr, info *writeAuthorityFn, tables 
 		}
 		if mutationMarkers[fun.Sel.Name] {
 			info.mutates = true
+			if table, ok := patchTargetTable(fun.Sel.Name, call, consts); ok && tables[table] {
+				info.noteWrite(table)
+			}
 		}
 		info.calls[fun.Sel.Name] = true
 	}
@@ -494,6 +520,149 @@ func writesSQL(text string) bool {
 	return false
 }
 
+// patchTargetTable reads the table a storekit patch or row lock names, for the
+// writes that carry no SQL literal at the call site at all.
+//
+// storekit.Patch.ApplyGuarded(ctx, tx, "deal", …) and LockRow(ctx, tx, "person",
+// …) are how the main human-facing update paths write — person.go, deal_update.go
+// and lead_update.go among them. A census reading SQL literals alone would
+// report green while covering none of the writers that matter most.
+//
+// ApplyLocked takes a RowLock rather than a name, so the table it writes is the
+// one its LockRow named; both appear in the same function body, and the LockRow
+// arm is what puts that table into the census.
+func patchTargetTable(spelling string, call *ast.CallExpr, consts map[string]string) (string, bool) {
+	switch spelling {
+	case "ApplyWithVersion", "ApplyGuarded", "ApplyGuardedIn", "LockRow", "LockPair":
+	default:
+		return "", false
+	}
+	if len(call.Args) < 3 {
+		return "", false
+	}
+	return resolveTableArg(call.Args[2], consts)
+}
+
+// mutatedTables reads the tables one SQL literal CHANGES, plus the first line of
+// any mutation whose target it could not name.
+//
+// The table name is matched as a WHOLE identifier, never a prefix. This tree
+// holds person_email, person_consent, person_profile_field, organization_domain
+// and some twenty more children that all begin with one of the five shareable
+// names, and a prefix match would drag every one of them into the census — the
+// "add a row that hangs off the record" paths that are deliberately outside it.
+//
+// INSERT is deliberately absent. A create has no row yet for a grant to widen
+// or an owner to hold, which is the same reason mutatingActions omits
+// ActionCreate; a create is gated by its object grant alone.
+//
+// The scan runs over the WHOLE literal rather than its first word, because a
+// statement in this tree routinely starts on the line after the backtick.
+func mutatedTables(text string) (tables []string, dynamic []string) {
+	upper := strings.ToUpper(text)
+	for _, verb := range []string{"UPDATE ", "DELETE FROM "} {
+		for at := 0; ; {
+			hit := strings.Index(upper[at:], verb)
+			if hit < 0 {
+				break
+			}
+			hit += at
+			at = hit + len(verb)
+			// A verb must start its own word: "SELECT ... FOR UPDATE " is not a
+			// mutation, and neither is a column called delete_from.
+			if hit > 0 && isSQLWordByte(text[hit-1]) {
+				continue
+			}
+			// And it must start the LITERAL, or follow a statement break. An
+			// error message that happens to read "update %d carries no message"
+			// is prose, and treating its %d as a dynamic table would make the
+			// tripwire fire on wording rather than on SQL.
+			if !startsStatement(text, hit) {
+				continue
+			}
+			name, ok := sqlTableName(text, upper, at)
+			if !ok {
+				// The literal ends at the verb, so the table name is being
+				// concatenated on. Report it only when a SHAREABLE table could
+				// be what follows: the merge relinkers build
+				// `UPDATE activity_link SET `+column, where the dynamic half is
+				// the column and the table is a literal the next fragment
+				// carries. Those are not writes this census can lose.
+				if endsAtVerb(text, at) || !looksLikeSQL(text) {
+					continue
+				}
+				dynamic = append(dynamic, strings.TrimSpace(firstLineFrom(text, hit)))
+				continue
+			}
+			tables = append(tables, name)
+		}
+	}
+	return tables, dynamic
+}
+
+// sqlTableName reads the identifier a mutation verb names, skipping whitespace
+// and an ONLY keyword. It reports false when the target is not a plain
+// identifier — a format verb, or a literal that ends mid-statement — so the
+// caller can say so out loud rather than dropping the write from the census.
+func sqlTableName(text, upper string, at int) (string, bool) {
+	for at < len(text) && (text[at] == ' ' || text[at] == '\t' || text[at] == '\n' || text[at] == '\r') {
+		at++
+	}
+	if strings.HasPrefix(upper[at:], "ONLY ") {
+		return sqlTableName(text, upper, at+len("ONLY "))
+	}
+	end := at
+	for end < len(text) && isSQLWordByte(text[end]) {
+		end++
+	}
+	if end == at {
+		return "", false
+	}
+	return text[at:end], true
+}
+
+// startsStatement reports whether the offset begins a SQL statement: the start
+// of the literal, or the first word after a semicolon or an opening parenthesis.
+// Everything before it must be whitespace or a statement terminator.
+func startsStatement(text string, at int) bool {
+	for i := at - 1; i >= 0; i-- {
+		switch text[i] {
+		case ' ', '\t', '\n', '\r':
+		case ';', '(':
+			return true
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// endsAtVerb reports whether the literal stops immediately after the mutation
+// verb, which is the shape of a statement assembled from fragments. The table
+// name then lives in the NEXT fragment, so this literal names no table at all
+// rather than naming one dynamically.
+func endsAtVerb(text string, at int) bool {
+	for at < len(text) {
+		switch text[at] {
+		case ' ', '\t', '\n', '\r':
+			at++
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// firstLineFrom returns the line the offset sits on, for an error that has to
+// name a statement this pass could not read.
+func firstLineFrom(text string, at int) string {
+	rest := text[at:]
+	if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
+		return rest[:nl]
+	}
+	return rest
+}
+
 // visibleWriteAuthorityFns returns the functions a name in this receiver can
 // reach: its own methods plus the package-level ones, merging a name held by
 // both — a bare foo(...) and an s.foo(...) are the same token in this index, so
@@ -516,6 +685,10 @@ func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn
 		}
 		for _, src := range []*writeAuthorityFn{pkgLevel, info} {
 			merged.probes = append(merged.probes, src.probes...)
+			merged.dynamicWrite = append(merged.dynamicWrite, src.dynamicWrite...)
+			for key := range src.writes {
+				merged.noteWrite(key)
+			}
 			for key := range src.requires {
 				merged.requires[key] = true
 			}

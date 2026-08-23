@@ -51,6 +51,11 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 // Commercial Judgement override triggered — the single case where an
 // unmoved score still has to be recorded (see below).
 func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, clearedOverride bool) error {
+	// A no-op for the workflow's unbounded principal, and the scope this write
+	// would need the day anything human-facing recomputes a score.
+	if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+		return err
+	}
 	var title, source, overrideReason *string
 	var currentScore int
 	var currentComputed *int
