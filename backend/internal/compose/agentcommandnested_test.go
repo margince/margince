@@ -3,13 +3,13 @@
 
 package compose
 
-// The REST door's half of the seven bespoke auto-execute commands
+// The REST door's half of the six bespoke auto-execute commands
 // (agentcommandnested.go): the routed {id}'s existence-hiding 404, the
 // offer line items' own {lineItemId} 422, and the staged target each decoder
 // resolves to — the sibling of agentcommandoperand_test.go's proof shape for
 // the confirm-first eight.
 //
-// That every one of the seven is REGISTERED is not asserted here:
+// That every one of the six is REGISTERED is not asserted here:
 // TestEveryAgentReachableMutatingRouteDecodesIntoACommand
 // (agentcommandcoverage_test.go) derives that for the whole surface. What this
 // file adds is what a registration alone does not say — that the decoder bound
@@ -29,7 +29,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// A malformed routed {id} answers 404 for every one of the seven, the same
+// A malformed routed {id} answers 404 for every one of the six, the same
 // existence-hiding answer archiveCommand/patchCommand and task 5's eight
 // already give.
 func TestANestedCommandMalformedRouteIDAnswersNotFound(t *testing.T) {
@@ -111,7 +111,7 @@ func TestAMalformedLineItemIDAnswers422(t *testing.T) {
 	}
 }
 
-// Each of the seven stages against the routed record it names — proven
+// Each of the six stages against the routed record it names — proven
 // through stageRefusal end to end, the same shape
 // TestEachOperandCommandStagesTheRoutedRecord proves for task 5's eight.
 // createOffer is the one exception: it stages the record TYPE with no id

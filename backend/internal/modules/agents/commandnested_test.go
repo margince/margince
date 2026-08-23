@@ -3,10 +3,10 @@
 
 package agents
 
-// The seven bespoke resolvers' own answers (commandnested.go): five stand
+// The six bespoke resolvers' own answers (commandnested.go): five stand
 // down the same way the six record-seam-unserved archivable types do
-// (list, tag, offer), and two — createOffer's parent deal, upsertPartner's
-// organization — refuse the same two ways patchResolver's own target does.
+// (list, tag, offer), and one — createOffer's parent deal — refuses the same
+// two ways patchResolver's own target does.
 
 import (
 	"context"

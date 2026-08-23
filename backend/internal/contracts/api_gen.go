@@ -37008,7 +37008,7 @@ type ServerInterface interface {
 	// Read the partner extension on an org (404 if the org is not a partner).
 	// (GET /organizations/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
-	// Create/update the partner extension on an org (sets classification='partner').
+	// Create/update the partner extension on an org (adds `partner` to its relationship types).
 	// (PUT /organizations/{id}/partner)
 	UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams)
 	// The organization's confirmed profile fields (organization_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
@@ -39291,7 +39291,7 @@ func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create/update the partner extension on an org (sets classification='partner').
+// Create/update the partner extension on an org (adds `partner` to its relationship types).
 // (PUT /organizations/{id}/partner)
 func (_ Unimplemented) UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams) {
 	w.WriteHeader(http.StatusNotImplemented)

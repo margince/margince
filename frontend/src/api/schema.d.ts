@@ -1608,10 +1608,11 @@ export interface paths {
         /** Read the partner extension on an org (404 if the org is not a partner). */
         get: operations["getPartner"];
         /**
-         * Create/update the partner extension on an org (sets classification='partner').
+         * Create/update the partner extension on an org (adds `partner` to its relationship types).
          * @description Promotes an org to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
-         *     setting `classification='partner'`. Company identity is never duplicated. Admin write,
-         *     and a HUMAN one.
+         *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
+         *     set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+         *     Company identity is never duplicated. Admin write, and a HUMAN one.
          *
          *     Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
          *     commission ledger multiplies a won deal by, so this sets what a partner is paid on every
