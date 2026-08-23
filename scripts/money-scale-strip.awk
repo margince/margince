@@ -85,11 +85,18 @@ FNR == 1 { closeFile(); flush() }
   # that can get stuck open is worse here than a rule that occasionally splits
   # one statement too many.
   #
-  # The residue: an object key literally named `default` or `case` reads as a
-  # label, so a value wrapped onto the next line under one is not joined. That
-  # is a false NEGATIVE in a spelling nobody writes for money, and the
-  # alternative — brace depth — swallowed whole function bodies when it was
-  # tried.
+  # Two residues, both false NEGATIVES and both stated rather than hidden.
+  #
+  # An object key literally named `default` or `case` reads as a label, so a
+  # value wrapped onto the next line under one is not joined. The alternative —
+  # brace depth — swallowed whole function bodies when it was tried.
+  #
+  # A ternary split across the colon is not joined either, in either spelling:
+  # a line ending in `)` does not continue a statement (it would join every
+  # closing paren in the tree), and a line ending in `):` reads as a wrapped
+  # label. Telling a label colon from a ternary colon needs a parser. Both
+  # spellings are missed identically before this change and after it, so the
+  # rule here is not what loses them.
   trimmed = c; sub(/[[:space:]]+$/, "", trimmed)
   if (t ~ /^(case|default)([^A-Za-z0-9_]|$)/ || trimmed ~ /[)\]]:$/) { flush(); next }
   if (trailing ~ /(=|\+|-|\*|\/|%|:|&&|\|\|)$/ && lines < 6) next

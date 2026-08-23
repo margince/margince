@@ -53,12 +53,16 @@ self="$0"
 # somebody's directory layout rather than on their code. Every other failure
 # here (dangling link, missing file) is already caught by the existence check
 # below.
-seen=""
+# An ARRAY and not a delimited string: a path may legally contain any character
+# except NUL and `/`, so framing each visited path inside a `|…|` in one string
+# lets a path holding a `|` collide with a different one — a valid chain
+# refused as cyclic, which is a gate failing on somebody's directory name.
+seen=()
 while [[ -L "$self" ]]; do
-  case "$seen" in
-    *"|$self|"*) echo "FAIL: $0 resolves through a symlink cycle at $self"; exit 1 ;;
-  esac
-  seen="$seen|$self|"
+  for prior in ${seen+"${seen[@]}"}; do
+    [[ "$prior" == "$self" ]] && { echo "FAIL: $0 resolves through a symlink cycle at $self"; exit 1; }
+  done
+  seen+=("$self")
   link="$(readlink -- "$self")"
   case "$link" in
     /*) self="$link" ;;
