@@ -84,11 +84,15 @@ func claimedDomainOwner(
 		`SELECT organization_id FROM organization_domain
 		  WHERE domain = lower($1) AND archived_at IS NULL`,
 		domain).Scan(&existing)
+	// The error FIRST. A failed scan leaves `existing` zero, and on the create
+	// path `self` is zero too — so asking `existing == self` before checking
+	// `err` reads a database failure as "the domain is free" and lets the
+	// duplicate through, with nothing reported anywhere.
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("probe domain dedupe: %w", err)
+	}
 	if errors.Is(err, pgx.ErrNoRows) || existing == self {
 		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("probe domain dedupe: %w", err)
 	}
 	dup := &DuplicateDomainError{Domain: domain}
 	visible, verr := auth.VisibleTo(ctx, tx, "organization", existing.UUID)
