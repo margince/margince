@@ -178,4 +178,34 @@ describe("ProjectLinks", () => {
       ).toBeNull(),
     );
   });
+
+  it("says what it links, so a mirror cannot half-rename itself", () => {
+    render(
+      <LocaleProvider initial="en">
+        <ProjectLinks
+          adapter={{
+            linked: [{ project_id: "o1", name: "Beta Systeme" }],
+            allowsMany: true,
+            search: async () => [],
+            roles: [{ value: "partner", label: "Partner" }],
+            attach: async () => undefined,
+            detach: async () => undefined,
+          }}
+          titleKey="projectCompanies.title"
+          emptyBody="projectCompanies.empty"
+          words={{
+            attach: "Attach company",
+            move: "Attach company",
+            detachTitle: "Take this company off?",
+            search: "Search companies by name",
+          }}
+        />
+      </LocaleProvider>,
+    );
+    // The project page's mirror links COMPANIES: a verb reading "Attach
+    // project" there is wrong on screen and wrong in the dialog's accessible
+    // name, which is what a screen reader announces.
+    expect(screen.getByRole("button", { name: "Attach company" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
+  });
 });

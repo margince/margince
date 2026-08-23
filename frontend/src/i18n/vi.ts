@@ -6045,6 +6045,8 @@ export const vi = {
   "projectCompanies.title": "Công ty",
   "projectCompanies.empty":
     "Dự án là công việc nhiều công ty cùng làm — khách hàng, cùng mọi đối tác hoặc nhà thầu phụ tham gia.",
+  "projectCompanies.attach": "Liên kết công ty",
+  "projectCompanies.detachTitle": "Bỏ công ty này khỏi dự án?",
   "projectCompanies.searchLabel": "Tìm công ty theo tên",
   "personProjects.title": "Dự án",
   "personProjects.empty":

@@ -114,7 +114,6 @@ export function PersonProjects({
       adapter={adapter}
       titleKey="personProjects.title"
       emptyBody="personProjects.empty"
-      searchLabel={t("projectLinks.searchLabel")}
     />
   );
 }

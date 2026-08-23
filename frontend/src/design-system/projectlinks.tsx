@@ -27,6 +27,15 @@ import "./projectlinks.css";
 // One project as this section shows it: enough to name it, phase it, and open
 // it. The same four fields the 360 sections already carry, so a page hands in
 // what it already has rather than fetching a second shape.
+// What a section calls the thing it links. Every string a reader or a screen
+// reader meets, so the mirror cannot half-rename itself.
+export type LinkWords = Readonly<{
+  attach: string;
+  move: string;
+  detachTitle: string;
+  search: string;
+}>;
+
 // One role a link may hold, with the words the reader sees.
 export type LinkRole = Readonly<{ value: string; label: string }>;
 
@@ -91,7 +100,7 @@ export function ProjectLinks({
   adapter,
   titleKey,
   emptyBody,
-  searchLabel,
+  words,
 }: Readonly<{
   adapter: ProjectLinksAdapter;
   // The section's own heading, because a project page saying "Companies" and a
@@ -100,10 +109,12 @@ export function ProjectLinks({
   // One line saying how a link of this kind comes to exist, shown when there
   // are none. A bare "nothing here" tells a reader what they can already see.
   emptyBody: MessageKey;
-  // What the picker asks for, already translated. Defaulted rather than
-  // required because the projects case is every caller but one, and a label
-  // saying "search projects" on the company mirror would be wrong.
-  searchLabel?: string;
+  // The words this section uses for the thing being linked, already
+  // translated. Defaulted to the projects wording because that is every caller
+  // but one — the project page's own mirror links COMPANIES, and a section
+  // saying "Attach project" about a company is wrong on screen and wrong in the
+  // dialog's accessible name.
+  words?: LinkWords;
 }>) {
   const t = useT();
   const [picking, setPicking] = useState(false);
@@ -111,6 +122,15 @@ export function ProjectLinks({
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [role, setRole] = useState(adapter.roles[0]?.value ?? "");
+  // The projects wording, which every caller but the project page's own mirror
+  // wants. Spelled once so a caller overriding one string cannot leave the
+  // other three saying "project" about a company.
+  const said: LinkWords = words ?? {
+    attach: t("projectLinks.attach"),
+    move: t("projectLinks.move"),
+    detachTitle: t("projectLinks.detachTitle"),
+    search: t("projectLinks.searchLabel"),
+  };
   // Focus returns to the SECTION rather than to the row's own verb: a
   // successful detach removes that button, and focus restored to a node that
   // is about to unmount leaves a keyboard reader nowhere.
@@ -162,7 +182,7 @@ export function ProjectLinks({
               )}
               {canAdd || moving ? (
                 <Button variant="ghost" onClick={() => setPicking(true)}>
-                  {t(moving ? "projectLinks.move" : "projectLinks.attach")}
+                  {moving ? said.move : said.attach}
                 </Button>
               ) : null}
             </div>
@@ -216,7 +236,7 @@ export function ProjectLinks({
           moving={moving}
           busy={busy}
           refusal={refusal}
-          searchLabel={searchLabel}
+          words={said}
           onClose={closeWhenIdle(() => setPicking(false))}
           onPick={(id) =>
             run(
@@ -231,6 +251,7 @@ export function ProjectLinks({
           busy={busy}
           refusal={refusal}
           returnFocusTo={() => section.current}
+          words={said}
           onClose={closeWhenIdle(() => setDetaching(null))}
           onConfirm={(id) =>
             run(
@@ -259,7 +280,7 @@ function AttachDialog({
   moving,
   busy,
   refusal,
-  searchLabel,
+  words,
   onClose,
   onPick,
 }: Readonly<{
@@ -270,7 +291,7 @@ function AttachDialog({
   moving: boolean;
   busy: boolean;
   refusal: string | null;
-  searchLabel?: string;
+  words: LinkWords;
   onClose: () => void;
   onPick: (projectID: string) => void;
 }>) {
@@ -282,8 +303,8 @@ function AttachDialog({
     <ConfirmModal
       open
       onClose={onClose}
-      title={t(moving ? "projectLinks.move" : "projectLinks.attach")}
-      confirmLabel={t("projectLinks.attach")}
+      title={moving ? words.move : words.attach}
+      confirmLabel={words.attach}
       confirmDisabled
       onConfirm={() => undefined}
       pending={busy}
@@ -307,7 +328,7 @@ function AttachDialog({
         </Field>
       )}
       <RecordPicker
-        label={searchLabel ?? t("projectLinks.searchLabel")}
+        label={words.search}
         searchTargets={adapter.search}
         disabled={busy}
         onPick={(candidate) => onPick(candidate.id)}
@@ -323,6 +344,7 @@ function DetachDialog({
   busy,
   refusal,
   returnFocusTo,
+  words,
   onClose,
   onConfirm,
 }: Readonly<{
@@ -331,6 +353,7 @@ function DetachDialog({
   busy: boolean;
   refusal: string | null;
   returnFocusTo: () => HTMLElement | null;
+  words: LinkWords;
   onClose: () => void;
   onConfirm: (projectID: string) => void;
 }>) {
@@ -343,7 +366,7 @@ function DetachDialog({
       open
       onClose={onClose}
       returnFocusTo={returnFocusTo}
-      title={t("projectLinks.detachTitle")}
+      title={words.detachTitle}
       confirmLabel={t("projectLinks.detachConfirm")}
       confirmVariant="danger"
       pending={busy}
