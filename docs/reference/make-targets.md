@@ -165,7 +165,8 @@ in `lastactivity_integration_test.go`.
 | `fe-quality` | The CI aggregate: every leg of the gate except the unit suite and the bundle, plus the composed-SPA typecheck and the unit screens' suites. Needs a Go toolchain (it composes) |
 | `fe-bundle` | The CI aggregate: `fe-build` + `fe-storybook` |
 | `fe-install` / `fe-lint` / `fe-test` / `fe-build` / `fe-storybook` / `fe-format` / `fe-preview` | The individual frontend steps (`pnpm` wrappers) |
-| `ds-purity` / `font-lock` / `icon-lint` / `ds-spacing` / `native-controls` | The design-system script gates, runnable alone. `native-controls` is the no-browser-drawn-dropdown gate: `<select>`, `<option>` or `<optgroup>` anywhere under `frontend/src` outside `design-system/select.tsx` |
+| `ds-purity` / `font-lock` / `icon-lint` / `ds-spacing` | The design-system script gates, runnable alone |
+| `native-controls` / `ext-imports` | The two source-wide gates that read the TypeScript AST rather than the text, so both run in `fe-unit` with the rest of the vitest suite; these targets exist to run one of them alone. `native-controls` refuses `<select>`, `<option>` or `<optgroup>` anywhere under `frontend/src` or an extension's frontend layer — there is no exemption, `design-system/select.tsx` included. `ext-imports` holds a unit's screen to `frontend/package.json`'s `exports` map and to what the unit's own `package.json` declares. Their shared walk is `frontend/scripts/lib/source-tree.ts` |
 | `gen-types` / `gen-types-check` | Aliases for backend `gen` / `drift` |
 | `seed-dev` | API-seed the demo workspace against a running stack (idempotent), then the API-less extras (`seed-dev-db`) |
 | `verify-boot` | Prove a running, seeded stack end to end: seeded-admin login, seeded people over `/v1`, frontend production build — pure client, fails loudly |

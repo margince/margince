@@ -71,43 +71,17 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { extensionLayers, filesUnder } from "./lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "..");
 const repoRoot = resolve(frontendRoot, "..");
 const extensionsDir = join(repoRoot, "extensions");
 const surfacePkg = join(frontendRoot, "package.json");
 
-// Every extension a bundler resolves, not just the two a well-behaved unit
-// writes: a `"main": "screen.jsx"` is a legal unit whose every file a
-// TypeScript-only collector skips, which makes the whole gate opt-in.
-const moduleFile = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
+// A test file may reach devDependencies; shipped code may not. The extensions
+// are the shared walk's set, spelled again here only because THIS half asks a
+// different question of the same name — which of a unit's files is a test.
 const testFile = /\.test\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
-
-// A layer is any directory named `frontend` under extensions/, at ANY depth.
-// The shell gate globbed `extensions/*/frontend`, so a unit that nests one was
-// invisible to it — latent in today's tree, which has only top-level layers,
-// and latent is exactly how a walk-shape hole survives to bite somebody later.
-function extensionLayers(root: string): string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    if (!entry.isDirectory() || entry.name === "node_modules") return [];
-    const full = join(root, entry.name);
-    return entry.name === "frontend" ? [full] : extensionLayers(full);
-  });
-}
-
-function moduleFilesUnder(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      // pnpm links the host into extensions/<unit>/frontend/node_modules/
-      // @margince/frontend, so a walk that followed it would read the entire
-      // core tree as if the unit shipped it.
-      return entry.name === "node_modules" ? [] : moduleFilesUnder(full);
-    }
-    return moduleFile.test(entry.name) ? [full] : [];
-  });
-}
 
 function readJson(path: string): Record<string, unknown> {
   return existsSync(path)
@@ -313,7 +287,7 @@ function auditLayers(roots: { extensions: string; surface: string }): {
       ...keysOf(pkg.peerDependencies),
     ];
     const forTests = [...shipped, ...keysOf(pkg.devDependencies)];
-    return moduleFilesUnder(layer).flatMap((file) => {
+    return filesUnder(layer).flatMap((file) => {
       files += 1;
       return judge({
         file,
