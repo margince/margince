@@ -485,10 +485,6 @@ func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 	}
 }
 
-// The seeded field mask reaches the principal through the role: a rep's
-// login carries the deal amount mask, and a manager's does not. A mask is a
-// property of the role, read at login like the grants — the store that
-// withholds the column never reads the table.
 // No seeded role withholds a column. The baseline shipped one field mask — a
 // rep read a deal's amount_minor as withheld outside their write authority —
 // and it is gone: deal values are open to every seat that may read the deal.
@@ -513,6 +509,39 @@ func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 			t.Errorf("a %s's field masks = %+v, want none — the shipped roles withhold no column",
 				role, seat.Permissions.FieldMasks)
 		}
+	}
+
+	// An empty answer is the right answer only if the question was asked. Login
+	// dropping mask loading altogether would satisfy every assertion above, so
+	// one mask is authored on the role and the SAME login must carry it: the
+	// mechanism is proved live, and the zero above is then a fact about what
+	// ships rather than about a loader that stopped running.
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO field_mask (role_key, object, field, condition)
+		 VALUES ('rep', 'deal', 'amount_minor', 'always')`); err != nil {
+		t.Fatal(err)
+	}
+	// Removed again before the test ends: field_mask has no workspace column, so
+	// the row would outlive this test and every sibling asserting the shipped
+	// posture would then read this test's fixture as the product's own.
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(context.Background(),
+			`DELETE FROM field_mask WHERE role_key = 'rep' AND condition = 'always'`); err != nil {
+			t.Errorf("removing this test's own mask: %v", err)
+		}
+	})
+	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
+		t.Fatal(err)
+	}
+	masked, _, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := principal.FieldMask{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}
+	if len(masked.Permissions.FieldMasks) != 1 || masked.Permissions.FieldMasks[0] != want {
+		t.Errorf("an operator's own mask on the rep role reaches the principal as %+v, want %+v — "+
+			"the loading mechanism is what makes the zero above meaningful",
+			masked.Permissions.FieldMasks, want)
 	}
 }
 
@@ -575,8 +604,9 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 		t.Errorf("rep preview = scope %s deal.read %v, want own scope with deal.read", preview.Permissions.RowScope, preview.Permissions.Allows("deal", principal.ActionRead))
 	}
 	// The preview reports masks HONESTLY, which now means reporting none: no
-	// seeded role withholds a column. It is asserted rather than dropped because
-	// the preview inventing a mask would be as wrong as it hiding one.
+	// seeded role withholds a column. TestNoSeededRoleWithholdsAColumn proves
+	// the loader still runs, against a mask an operator authored, so the zero
+	// here is a fact about what ships rather than about a loader that stopped.
 	if len(preview.Permissions.FieldMasks) != 0 {
 		t.Errorf("rep preview masks = %+v, want none — the shipped roles withhold no column",
 			preview.Permissions.FieldMasks)
