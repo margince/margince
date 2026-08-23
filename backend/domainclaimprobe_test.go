@@ -147,8 +147,16 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 	}
 }
 
-// sqlLiteralsIn returns every string literal in the file, one entry per
-// literal, so a statement wrapped across source lines stays one subject.
+// sqlLiteralsIn returns every string this file builds, one entry per STATEMENT
+// rather than per literal.
+//
+// Adjacent literals joined with `+` are flattened into one entry, because a
+// statement assembled that way is one statement to Postgres and three fragments
+// to the parser — and no fragment on its own carries `organization_id`, `FROM
+// organization_domain` and `domain =` together, so a probe written with a `+`
+// would match nothing at all. A detector that reads a statement in pieces
+// reports a clean tree over exactly the form somebody reaches for when a line
+// gets long.
 func sqlLiteralsIn(t *testing.T, path, source string) []string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), path, source, 0)
@@ -157,12 +165,48 @@ func sqlLiteralsIn(t *testing.T, path, source string) []string {
 	}
 	var out []string
 	ast.Inspect(file, func(node ast.Node) bool {
-		if lit, ok := node.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			out = append(out, lit.Value)
+		switch typed := node.(type) {
+		case *ast.BinaryExpr:
+			if typed.Op != token.ADD {
+				return true
+			}
+			if joined, ok := concatenatedString(typed); ok {
+				out = append(out, joined)
+				// Do not descend: the parts are this statement, already read.
+				return false
+			}
+		case *ast.BasicLit:
+			if typed.Kind == token.STRING {
+				out = append(out, typed.Value)
+			}
 		}
 		return true
 	})
 	return out
+}
+
+// concatenatedString flattens a `+` chain of string literals into one text.
+//
+// A non-literal operand — an interpolated identifier — contributes nothing it
+// can read, so it becomes a space: the surrounding SQL still joins up, and the
+// pattern sees the shape rather than being broken by the hole.
+func concatenatedString(expr ast.Expr) (string, bool) {
+	switch typed := expr.(type) {
+	case *ast.BasicLit:
+		if typed.Kind != token.STRING {
+			return " ", false
+		}
+		return typed.Value, true
+	case *ast.BinaryExpr:
+		if typed.Op != token.ADD {
+			return " ", false
+		}
+		left, leftOK := concatenatedString(typed.X)
+		right, rightOK := concatenatedString(typed.Y)
+		return left + right, leftOK || rightOK
+	default:
+		return " ", false
+	}
 }
 
 func firstSQLLine(statement string) string {
@@ -190,6 +234,16 @@ func TestTheDomainClaimCensusSeesWhatItClaimsTo(t *testing.T) {
 		"select ORGANIZATION_ID from Organization_Domain where domain = $1",
 		// A set of candidate domains is the same question asked in bulk.
 		"SELECT organization_id FROM organization_domain WHERE domain = ANY($1) AND archived_at IS NULL",
+	}
+	// Assembled with `+`, which no single fragment matches. Read from the AST
+	// rather than written out here, so the flattening itself is what is proven.
+	concatenated := `package p
+var q = "SELECT organization_id " +
+	"FROM organization_domain " +
+	"WHERE domain = lower($1)"`
+	joined := sqlLiteralsIn(t, "concat.go", concatenated)
+	if len(joined) != 1 || !readsDomainClaim.MatchString(joined[0]) {
+		t.Errorf("a probe assembled with `+` is not read as one statement: %q", joined)
 	}
 	for _, statement := range caught {
 		if !readsDomainClaim.MatchString(statement) {

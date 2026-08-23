@@ -66,15 +66,10 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 	// already owns is a conflict: claiming it here would silently move a record
 	// off its company. Anything that narrows this back to a subset of the
 	// installation has to change the index, not just this statement.
-	// Asked through the shared probe, so this door answers a taken domain the
-	// same way the domains endpoint does: a typed 409 that NAMES the company
-	// already holding it, when the caller may see that company.
-	//
-	// It answered a bare conflict sentinel before, which reaches the client as
-	// a 409 with no `existing_id` — the same collision, through two doors, and
-	// this one dropped the only fact that makes it actionable. A reader saving
-	// a company profile was told "conflict" and left to find the owner
-	// themselves.
+	// Through the shared probe, which is what makes this door answer a taken
+	// domain exactly as the domains endpoint does: a typed 409 NAMING the
+	// company already holding it, when the caller may see that company. The
+	// disclosure rule lives there, once.
 	if err := claimedDomainOwner(ctx, tx, orgID, host); err != nil {
 		return err
 	}
