@@ -166,4 +166,4 @@ see [write-backbone.md](write-backbone.md) for the write path that rides inside 
 
 ## Where this is recorded
 
-The binding short form is in [AGENTS.md](../../AGENTS.md) under "The write shape".
+The binding short form is in `AGENTS.md` under "The write shape".

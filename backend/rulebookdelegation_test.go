@@ -5,135 +5,133 @@
 
 package backendarch
 
-// AGENTS.md is the rulebook and the only copy of it. CLAUDE.md exists because
-// Claude Code reads CLAUDE.md and not AGENTS.md, so it imports the rulebook with
-// `@AGENTS.md` and adds only what is true of Claude Code and false of the other
-// harnesses.
+// AGENTS.md is the rulebook — at the root, and in any directory that needs one of
+// its own. The CLAUDE.md beside it contains one line, `@AGENTS.md`, and nothing
+// else. It exists only because Claude Code reads CLAUDE.md and never AGENTS.md.
 //
-// This file holds that arrangement, and the failure it is against is the one
-// duplication always has: a rule written into one harness's file binds that
-// harness and no other. `cli/craft` feeds the nearest AGENTS.md into its gate
-// prompt and never reads CLAUDE.md, so a rule that lands here alone is a rule
-// the gate cannot see — and nothing about either file looks wrong when that
-// happens.
+// Keeping the shim empty is the whole rule, and it is stricter than it looks
+// because the alternative fails silently. A rule written into a CLAUDE.md binds
+// Claude Code and no other harness: `cli/craft` walks up for the nearest
+// AGENTS.md and never opens CLAUDE.md, so that rule cannot reach the gate, and
+// neither file looks wrong. An empty shim cannot hold a rule at all, which is
+// why the assertion is "nothing but the import" rather than a heading census or
+// a size ceiling — those admit the paragraph that is not quite a rule yet, and
+// they need a hand-written list of what a rule looks like, which is itself a
+// second copy of the rulebook's table of contents.
 //
-// Two assertions, because the arrangement has two halves that break separately:
-// the import can go missing (the rulebook stops reaching Claude at all), and a
-// rule section can grow back below it (a second copy, drifting from the day it
-// is written).
+// Both assertions derive their subjects from the tree: the pairs come from
+// walking for AGENTS.md. A directory that grows a rulebook tomorrow is enrolled
+// the moment it exists, and there is no list here to go short.
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 )
 
-const (
-	rulebookPath = "../AGENTS.md"
-	claudePath   = "../CLAUDE.md"
-)
+// repoRoot is where the rulebooks live, relative to this package.
+const repoRoot = ".."
 
-// rulebookImport matches the `@AGENTS.md` import that puts the rulebook in front
-// of Claude Code. Claude Code skips imports inside code spans and fenced blocks,
-// so a backticked mention does not count and neither does this pattern: the
-// match must be at the start of a line with no backtick before it.
-var rulebookImport = regexp.MustCompile(`(?m)^@AGENTS\.md\s*$`)
+// importLine matches the one line a shim is allowed to contain.
+var importLine = regexp.MustCompile(`^@AGENTS\.md$`)
 
-func TestClaudeMdImportsTheRulebook(t *testing.T) {
-	claude, err := os.ReadFile(claudePath)
-	if err != nil {
-		t.Fatalf("read %s: %v", claudePath, err)
-	}
-	if !rulebookImport.MatchString(string(claude)) {
-		t.Errorf("%s does not import the rulebook. Claude Code reads CLAUDE.md and not AGENTS.md, so without a "+
-			"line reading exactly `@AGENTS.md` (outside backticks, on its own line) a Claude session gets none of "+
-			"the rules. Nothing else in the repository notices: every gate that reads the rulebook reads AGENTS.md.",
-			claudePath)
-	}
-}
-
-// ruleSections are the H2 headings that carry binding rules. They live in
-// AGENTS.md, and a copy of any of them in CLAUDE.md is a second answer to one
-// question — the exact shape *Reuse before you build* refuses.
-//
-// The list is a list, and that is worth saying out loud rather than hiding: the
-// honest derivation would be "every H2 in AGENTS.md", and it is not used here
-// because CLAUDE.md legitimately carries a heading of its own ("## Claude
-// Code"), so the gate needs to know which headings are the rulebook's rather
-// than merely which exist. What keeps it from going short is that it is checked
-// against AGENTS.md below: a name here that AGENTS.md has stopped using fails,
-// so the list cannot quietly describe a rulebook that no longer exists.
-var ruleSections = []string{
-	"## What decides a question",
-	"## This repository is public",
-	"## Build / test / seed",
-	"## Shipping a change",
-	"## Layout",
-	"## DO NOT TOUCH",
-	"## The write shape",
-	"## Reuse before you build",
-	"## Craftsmanship",
-	"## License headers",
-	"## Rules learned from the review loop",
-}
-
-func TestClaudeMdOnlyImportsTheRulebook(t *testing.T) {
-	rulebook := readLines(t, rulebookPath)
-	claude := readLines(t, claudePath)
-
-	for _, heading := range ruleSections {
-		if !hasHeading(rulebook, heading) {
-			t.Errorf("%s no longer carries a %q section, so this gate is describing a rulebook that has moved on. "+
-				"Update ruleSections to the headings AGENTS.md actually uses.", rulebookPath, heading)
-			continue
-		}
-		if hasHeading(claude, heading) {
-			t.Errorf("%s carries a %q section of its own. That is a second copy of a rule: it binds Claude Code and "+
-				"nothing else, and `cli/craft` — which reads AGENTS.md and never CLAUDE.md — cannot see it. Move the "+
-				"rule into %s and leave CLAUDE.md to the `@AGENTS.md` import plus what is Claude-Code-specific.",
-				claudePath, heading, rulebookPath)
-		}
-	}
-}
-
-// TestTheClaudeHalfStaysSmall is a size ceiling, not a style preference. Every
-// line of CLAUDE.md that is not the import is a line no other harness reads, so
-// the file growing is the duplication coming back one paragraph at a time —
-// under headings this gate's list does not name, which is precisely how it would
-// get past the check above.
-//
-// The number is deliberately generous. It is not a target to sit against; it is
-// the point at which "a note about Claude Code" has become "a second rulebook"
-// and somebody should have to argue for it in review.
-func TestTheClaudeHalfStaysSmall(t *testing.T) {
-	const ceiling = 80
-
-	claude := readLines(t, claudePath)
-	if n := len(claude); n > ceiling {
-		t.Errorf("%s is %d lines, over the %d-line ceiling. Only the `@AGENTS.md` import reaches the other "+
-			"harnesses, so content here is content that binds Claude Code alone. A rule belongs in %s; a long "+
-			"procedure belongs in a skill or a `.claude/rules/` file with a `paths:` glob, which costs a session "+
-			"nothing until it is relevant.", claudePath, n, ceiling, rulebookPath)
-	}
-}
-
-func readLines(t *testing.T, path string) []string {
-	t.Helper()
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	return strings.Split(string(raw), "\n")
-}
-
-// hasHeading reports whether any line opens an H2 whose text starts with prefix,
-// so a heading may carry a parenthetical without escaping the match.
-func hasHeading(lines []string, prefix string) bool {
-	for _, line := range lines {
-		if strings.HasPrefix(line, prefix) {
-			return true
-		}
+// skipRulebookDir keeps the walk to the rulebooks this repository ships.
+// Worktrees hold whole checkouts of their own, including their own copies of
+// these files; node_modules holds other people's.
+func skipRulebookDir(name string) bool {
+	switch name {
+	case "node_modules", ".git", ".tmp", "worktrees", "build", "dist", "coverage":
+		return true
 	}
 	return false
+}
+
+// rulebookDirs returns every directory holding an AGENTS.md.
+func rulebookDirs(t *testing.T) []string {
+	t.Helper()
+	var dirs []string
+	err := filepath.WalkDir(repoRoot, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if skipRulebookDir(d.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.Name() == "AGENTS.md" {
+			dirs = append(dirs, filepath.Dir(path))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking for rulebooks: %v", err)
+	}
+	if len(dirs) == 0 {
+		t.Fatal("no AGENTS.md found anywhere — this gate is reading a tree shape that is gone")
+	}
+	return dirs
+}
+
+// TestEveryRulebookHasAClaudeShim covers the direction that produces no error at
+// all: an AGENTS.md with no CLAUDE.md beside it is a rulebook Claude Code never
+// opens, so a Claude session in that directory works without those rules and
+// nothing says so.
+func TestEveryRulebookHasAClaudeShim(t *testing.T) {
+	for _, dir := range rulebookDirs(t) {
+		shim := filepath.Join(dir, "CLAUDE.md")
+		if _, err := os.Stat(shim); err != nil {
+			if os.IsNotExist(err) {
+				t.Errorf("%s/AGENTS.md has no CLAUDE.md beside it, so Claude Code reads none of it — it loads "+
+					"CLAUDE.md and never AGENTS.md. Create %s containing exactly one line: @AGENTS.md", dir, shim)
+				continue
+			}
+			t.Fatalf("stat %s: %v", shim, err)
+		}
+	}
+}
+
+// TestEveryClaudeShimIsNothingButTheImport is the rule stated as one assertion.
+//
+// The import must also be a line of its own with no backticks and no fence
+// around it, because Claude Code's import parser skips code spans and fenced
+// blocks — a shim reading `@AGENTS.md` in backticks, or inside a fence, looks
+// correct in a diff and imports nothing at all. A file that is allowed to hold
+// only that line cannot hold a fence to hide it in, which is the second reason
+// this shape is the one to gate.
+func TestEveryClaudeShimIsNothingButTheImport(t *testing.T) {
+	for _, dir := range rulebookDirs(t) {
+		path := filepath.Join(dir, "CLAUDE.md")
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue // reported by TestEveryRulebookHasAClaudeShim
+			}
+			t.Fatalf("read %s: %v", path, err)
+		}
+		imports := 0
+		for i, line := range strings.Split(string(raw), "\n") {
+			trimmed := strings.TrimSpace(line)
+			switch {
+			case trimmed == "":
+				continue
+			case importLine.MatchString(trimmed):
+				imports++
+			default:
+				t.Errorf("%s:%d holds content other than the import:\n  %s\n"+
+					"A CLAUDE.md is one line, @AGENTS.md, and nothing else. Anything written here binds Claude Code "+
+					"alone — Codex does not read it, and `cli/craft` feeds the nearest AGENTS.md into its gate prompt "+
+					"and never opens this file. Put it in %s/AGENTS.md, or in a skill or a `.claude/rules/` file with "+
+					"a `paths:` glob if it is a procedure rather than a rule.", path, i+1, trimmed, dir)
+			}
+		}
+		if imports != 1 {
+			t.Errorf("%s contains %d lines reading exactly `@AGENTS.md`, want 1. Claude Code skips imports inside "+
+				"code spans and fenced blocks, so a backticked or fenced one loads nothing while reading correctly "+
+				"in a diff.", path, imports)
+		}
+	}
 }

@@ -3,7 +3,7 @@
 **A change to a domain row, the audit record of that change, and the event
 announcing it commit together or not at all.** One transaction, three rows.
 
-The binding form is [*The write shape*](../../CLAUDE.md#the-write-shape-non-negotiable)
+The binding form is *The write shape*
 in the rulebook, spelled once in `platform/database/storekit` (`Audit` + `Emit`)
 and called by every module store. This page is why it is shaped that way.
 

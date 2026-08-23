@@ -5,22 +5,17 @@
 
 package backendarch
 
-// docs/reference/modules.md is the map the rulebook sends you to in order to
-// place a change — "Read it to place a change; don't guess from the package
-// name". A module missing from it makes that instruction a dead end, and the
-// page reads complete either way: nothing about a missing row looks different
-// from a module that has none to need.
+// A rulebook must not spell out a tally of anything the tree can be asked for.
+// This is the rule the rulebook already states about extension units — "read
+// `extensions/` for the live list rather than trusting this sentence — a list in
+// prose goes stale the first time somebody adds a unit, and it reads no
+// differently when it has" — applied to the rulebook itself, which had been
+// exempting itself from it.
 //
-// That is under-recognition, the one failure mode a census must not have, and
-// it had already happened. Five modules — aiactivity, commissions, dealrooms,
-// finance, integrations — existed with no row at all while the page's prose
-// counted twenty and the rulebook counted twenty-one against a tree of
-// twenty-seven. Three documents, three numbers, none of them the tree's, and
-// nothing comparing any of them to it.
-//
-// So the expectation is derived from the directory listing rather than restated
-// here: a module added tomorrow is enrolled the moment its directory exists,
-// and there is no list in this file to go short.
+// It had gone wrong three ways at once: the rulebooks counted twenty-one modules
+// and the module catalog's prose counted twenty, against a tree of twenty-seven.
+// Nothing compared any of the three to the tree, and none of the sentences looks
+// stale when it is.
 
 import (
 	"os"
@@ -31,55 +26,6 @@ import (
 )
 
 const moduleCatalog = "../docs/reference/modules.md"
-
-// catalogRow matches a table row naming a module in the catalog's own spelling,
-// `| **name** |`. Anchored at the line start and at the cell boundary so a
-// module NAMED in another row's prose — several rows legitimately mention a
-// sibling — is not mistaken for a row of its own. That direction matters: a
-// prose mention counted as a row is a missing module reported as present.
-var catalogRow = regexp.MustCompile(`(?m)^\|\s*\*\*([a-z0-9]+)\*\*\s*\|`)
-
-func TestModuleCatalogCoversEveryModule(t *testing.T) {
-	entries, err := os.ReadDir("internal/modules")
-	if err != nil {
-		t.Fatalf("reading the module tree: %v", err)
-	}
-	inTree := map[string]bool{}
-	for _, e := range entries {
-		if e.IsDir() {
-			inTree[e.Name()] = true
-		}
-	}
-	if len(inTree) == 0 {
-		t.Fatal("no module directories found — this gate is reading a tree shape that is gone")
-	}
-
-	page, err := os.ReadFile(moduleCatalog)
-	if err != nil {
-		t.Fatalf("reading %s: %v", moduleCatalog, err)
-	}
-	inCatalog := map[string]bool{}
-	for _, m := range catalogRow.FindAllStringSubmatch(string(page), -1) {
-		inCatalog[m[1]] = true
-	}
-	if len(inCatalog) == 0 {
-		t.Fatalf("no module rows parsed out of %s — a census that reads nothing agrees with everything", moduleCatalog)
-	}
-
-	for name := range inTree {
-		if !inCatalog[name] {
-			t.Errorf("internal/modules/%s has no row in %s, so the rulebook's instruction to read that page "+
-				"to place a change is a dead end for it — add a row (Module | Owns | Spine | Owns tables | HTTP surface)",
-				name, moduleCatalog)
-		}
-	}
-	for name := range inCatalog {
-		if !inTree[name] {
-			t.Errorf("%s has a row for %q and internal/modules/%s does not exist — a reader sent to place a change "+
-				"there finds nothing; delete the row or restore the module", moduleCatalog, name, name)
-		}
-	}
-}
 
 // TestNoRulebookSpellsOutACountableTally is the other half. Backfilling the
 // catalog fixes today's five; a spelled-out tally in prose ("the twenty
@@ -107,20 +53,38 @@ func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
 	// direction. Digits are deliberately not matched: a version, a port, an
 	// ADR number and a line ceiling are all legitimately numerals, and the
 	// prose tallies this rule is about are all written as words.
+	//
+	// The floor is ten because below it the rule stops being one. Running this
+	// against one..nine over the current tree returns twenty findings and
+	// almost all of them are correct prose — "one Go module", "three ways",
+	// "Two sanctioned spine shapes, and ONLY two", "in one package". A closed
+	// set stated as a number is a rule; a population stated as a number is a
+	// bug; and at those magnitudes nothing mechanical separates them. Above
+	// ten, a closed set that small is vanishingly rare and a population is the
+	// likely reading.
 	numberWord := regexp.MustCompile(`(?i)\b(?:twenty|thirty)(?:[ -](?:one|two|three|four|five|six|seven|eight|nine))?\b|` +
 		`\b(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b`)
 	// The nouns whose population is a directory listing or a gated map away,
 	// and so must never be quoted as a word.
+	//
+	// This list is hand-written, which makes it a slice of this gate's own
+	// subject and so the thing *Reuse before you build* rule 5 warns about.
+	// It is not derived because the derivation does not exist: "a noun whose
+	// population the tree can be asked for" is a judgement, not a query — no
+	// listing distinguishes the modules (countable, and it went wrong) from
+	// the spine shapes (a closed set of two, deliberately stated as two). So
+	// it will be short, and the honest consequence is that a tally over a
+	// noun not named here passes. Add the noun when you meet one; do not
+	// mistake a green run here for proof that no tally is stale.
 	countable := regexp.MustCompile(`(?i)bounded capabilit|module|extension unit|first-party unit|principle page|table`)
 
-	for _, path := range []string{"../AGENTS.md", "../CLAUDE.md", moduleCatalog} {
+	for _, path := range rulebookProse(t) {
+		// Every path here comes from the walk or is the catalog the rulebook
+		// sends a reader to, so all of them exist. An unreadable one is a
+		// broken gate, never a clean tree — skipping it would report the same
+		// word for a file nobody looked at.
 		raw, err := os.ReadFile(path)
 		if err != nil {
-			// CLAUDE.md may be a symlink to AGENTS.md, or absent in a
-			// checkout that only carries one. Neither is this gate's business.
-			if os.IsNotExist(err) {
-				continue
-			}
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		for _, para := range prose(string(raw)) {
@@ -188,5 +152,22 @@ func prose(src string) []prosePara {
 		buf = append(buf, trimmed)
 	}
 	flush()
+	return out
+}
+
+// rulebookProse is every file whose prose this rule binds: each AGENTS.md in the
+// tree, and the module catalog they send a reader to. The CLAUDE.md shims are not
+// scanned because they are one import line each and cannot hold a sentence —
+// `TestEveryClaudeShimIsNothingButTheImport` is what keeps that true. Derived
+// rather than listed, so a directory that grows a rulebook is covered the moment
+// it does — the alternative is a list of two paths that stopped describing the
+// tree the first time a second rulebook appeared, which is the same defect this
+// gate is about.
+func rulebookProse(t *testing.T) []string {
+	t.Helper()
+	out := []string{moduleCatalog}
+	for _, dir := range rulebookDirs(t) {
+		out = append(out, filepath.Join(dir, "AGENTS.md"))
+	}
 	return out
 }

@@ -4,7 +4,7 @@
 Legibility is not polish applied at the end — it is the property that decides
 whether the next change is cheap or dangerous.
 
-The binding form is [*Craftsmanship*](../../CLAUDE.md#craftsmanship) in the
+The binding form is *Craftsmanship* in the
 rulebook: the anti-tell catalog T1–T11 and the deterministic `craft static` gate,
 diff-scoped and strict. It judges the **Go files a push changes** — a docs-only
 push exits before it runs at all. This page is the reasoning

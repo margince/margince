@@ -10,7 +10,7 @@ The authoritative row is a separate question; this principle is about the one
 function, constant, statement or seam every caller of a topic passes through.
 
 The rulebook states the obligation in
-[*Reuse before you build*](../../CLAUDE.md#reuse-before-you-build-non-negotiable).
+*Reuse before you build*.
 This page is the **method**: how to find out whether a topic already has an
 owner, what to do when it has two, and how to leave a gate behind so the second
 one cannot come back. Read it before adding a capability, and run its scan when

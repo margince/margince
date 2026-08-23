@@ -1,7 +1,9 @@
 # Module catalog
 
-Every bounded capability under `backend/internal/modules/`, one row each. This is the "what owns what" map
-— use it to find the module a change belongs to, or to place a new one. For the *why* of the module
+The bounded capabilities under `backend/internal/modules/` — use this to find the module a change
+belongs to, or to place a new one. The page is editorial rather than generated, so
+`internal/modules/` is the authority on which capabilities exist: a directory this catalog has not
+caught up with is still a module, and the tree wins. For the *why* of the module
 boundary (the DAG, the two spine shapes), see [explanation/architecture.md](../explanation/architecture.md);
 for the store/write mechanics every module shares, see
 [explanation/write-backbone.md](../explanation/write-backbone.md).

@@ -11,7 +11,7 @@ defect *Reuse before you build* below describes — two answers to one question,
 with nothing forcing them to be asked together — and a rulebook is a bad place
 to hold that shape while telling everybody else not to. Pinning a few sections
 byte-identical does not fix it either: the pinned ones stay level and the rest
-drift. `TestClaudeMdOnlyImportsTheRulebook` in `backend/rulebookdelegation_test.go`
+drift. `backend/rulebookdelegation_test.go`
 holds this.
 
 `cli/craft` feeds the **whole** nearest `AGENTS.md` into its gate prompt
@@ -22,12 +22,22 @@ file still carries a `## Craftsmanship` heading. So a rule that moves out of her
 the binding short form here and put the reasoning in
 [docs/principles/](docs/principles/README.md).
 
+**A rule belongs here; a procedure does not.** Every line of this file is paid
+for by every session and every gate prompt, which is the right price for a rule
+that binds a change and the wrong one for a runbook. A procedure that matters in
+one part of the tree goes to that directory's own `AGENTS.md`, to a
+`.claude/rules/` file with a `paths:` glob, or to a skill — all three cost
+nothing until they are relevant. Adding to this file is the expensive option, so
+spend it on rules.
+
 Margince CRM implementation PoC (WP0 foundation + WP1 core spine). This is the
 repository the product is built in: the running Go software, its contract, its
 tests, and its documentation. There is no separate specification that outranks
 what is here.
 
 ## What decides a question here
+
+_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/the-record-is-the-code.md](docs/principles/the-record-is-the-code.md)._
 
 When two sources disagree, this is the order. It replaces the older rule that a
 separate specification won every argument.
@@ -61,6 +71,8 @@ product.
 
 ## This repository is public
 
+_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/nothing-here-is-private.md](docs/principles/nothing-here-is-private.md)._
+
 Everything here is readable by anyone. Two obligations follow:
 
 - **Never refer to a private repository, document, path or link** — not in code,
@@ -81,20 +93,23 @@ A decision number (`ADR-0054`) may appear as a label, but never cite it as
 though a reader could open it — the records are not in this tree. Write the rule
 itself out here, where a public contributor can read it.
 
-**[docs/principles/](docs/principles/README.md) explains these rules** — six
-pages, one per principle, each naming the rulebook section it explains, the
-method for checking the tree still holds it, and what it explicitly does not ask
-for. That is the PUBLIC explanation and the audit method, which is a different
-thing from the private decision rationale described above: a principle page
-tells you how to check a rule, not why the team chose it.
+**[docs/principles/](docs/principles/README.md) explains these rules** — one
+page per principle, carrying the method for checking the tree still holds it and
+what it explicitly does not ask for. That is the PUBLIC explanation and the audit
+method, a different thing from the private decision rationale above: a principle
+page tells you how to check a rule, not why the team chose it. Read one when you
+need to know why a rule is shaped the way it is, or when you are auditing a
+subsystem against it rather than obeying it on one diff. Each rule section below
+links to its own.
 
-The binding short form stays in the rulebooks, and specifically in `AGENTS.md`:
-`cli/craft` feeds the whole nearest `AGENTS.md` into its gate prompt, so a rule
-relocated to `docs/` stops reaching the gate. Read a principle when you need to
-know *why* a rule is shaped the way it is, or when you are auditing a subsystem
-against it rather than obeying it on one diff —
-[one-source-of-truth.md](docs/principles/one-source-of-truth.md) carries the
-six-probe scan for finding a capability that got built twice.
+**The direction is one-way: this file links down into `docs/`, and nothing under
+`docs/` links back up.** Two reasons, and the second is why it is a rule rather
+than a preference. `cli/craft` feeds the whole nearest `AGENTS.md` into its gate
+prompt, so a rule relocated into `docs/` stops reaching the gate — the binding
+short form has to stay here. And an upward link is a link to a heading: six of
+them went dead the day these sections moved, silently, because a renamed heading
+breaks an anchor without breaking a build. A page that names a rule in prose
+instead survives the rename.
 
 **Start at [STATUS.md](STATUS.md)** — open work and the session-pickup point.
 Read its *Open work, in one screen* index first and open only the sections that
@@ -366,11 +381,11 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   `backend/tableownership_test.go`.
   Which module owns what — purpose, spine shape, owned tables and HTTP
   surface, plus the compose-owned tables and the notable subpackages — is
-  the table in [docs/reference/modules.md](docs/reference/modules.md), one
-  row per directory under `internal/modules/` and gated against that listing
-  by `TestModuleCatalogCoversEveryModule`. Read it to place a change; don't
-  guess from the package name, and don't count the capabilities here — ask
-  the directory.
+  the table in [docs/reference/modules.md](docs/reference/modules.md). Read
+  it to place a change rather than guessing from the package name, and take
+  `internal/modules/` itself as the authority on which capabilities exist:
+  the catalog is editorial, so a directory it has not caught up with is
+  still a module.
 
   Two sanctioned spine shapes, and ONLY two — don't invent a third:
   **Handlers→Store** for CRUD modules (people, deals, activities, …:
@@ -401,7 +416,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
 - `frontend/` — the Vite/React web UI: a standalone static build served
   separately from the API binary (which serves `/v1` only — no embedded
   SPA); `make frontend-check` / `make dev` exist at the repo root.
-  **Working in here? Read [frontend/CLAUDE.md](frontend/CLAUDE.md) first**, and
+  **Working in here? Read [frontend/AGENTS.md](frontend/AGENTS.md) first**, and
   then the file it opens with:
   **[frontend/src/design-system/README.md](frontend/src/design-system/README.md)
   is the catalog of every control that already exists** — cards, buttons,
@@ -468,6 +483,8 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
 
 ## The write shape (non-negotiable)
 
+_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/every-mutation-leaves-a-trace.md](docs/principles/every-mutation-leaves-a-trace.md)._
+
 Every mutation commits domain row + `audit_log` row + `event_outbox` row
 in ONE transaction — spelled once in `platform/database/storekit`
 (`Audit` + `Emit`), called by every module store. `captured_by` is
@@ -484,6 +501,8 @@ scope clauses in `platform/auth`): object denial →
 `apperrors.ErrNotFound` (404, existence-hiding).
 
 ## Reuse before you build (non-negotiable)
+
+_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/one-source-of-truth.md](docs/principles/one-source-of-truth.md)._
 
 A second implementation of one capability is not untidy — it is two answers to
 one question, and the two drift until they disagree in front of a user. Five
@@ -550,6 +569,8 @@ Catalogs to read before building anything they might already list:
 every control that already exists.
 
 ## Craftsmanship
+
+_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/legibility-is-the-product.md](docs/principles/legibility-is-the-product.md)._
 
 The anti-tell catalog T1–T11, in full below — this list is the rule, not a summary
 of one kept elsewhere. The rule under every rule:
@@ -619,6 +640,8 @@ not the current year. This is the license model's "honest labeling / don't
 strip notices" obligation (spec `business/12-license.md` §5, §8).
 
 ## Rules learned from the review loop (binding)
+
+_Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/derive-the-obligation.md](docs/principles/derive-the-obligation.md)._
 
 Full rationale in [README.md](README.md#engineering-rules-learned-from-the-review-loop);
 the short form:

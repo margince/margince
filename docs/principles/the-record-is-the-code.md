@@ -9,7 +9,7 @@ for the ways a green one can prove nothing.
 
 This replaces the older arrangement where a separate specification outranked the
 tree. It is the principle behind the precedence order in
-[CLAUDE.md](../../CLAUDE.md#what-decides-a-question-here), and the reason that
+`AGENTS.md`, and the reason that
 order puts the running software above every prose artefact except the current
 request and the guardrails.
 

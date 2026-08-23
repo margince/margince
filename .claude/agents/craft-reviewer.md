@@ -13,7 +13,7 @@ open one file and trace one flow — *"would I enjoy working in this? can I find
 
 ## Your reference (read it first, every run)
 
-The repo's own binding rules in `CLAUDE.md` — "The write shape", "Craftsmanship"
+The repo's own binding rules in `AGENTS.md` — "The write shape", "Craftsmanship"
 T1–T11, and "Rules learned from the review loop" — are your normative checklist of
 loved patterns (✅) and anti-patterns (❌) across architecture, naming, comments,
 error handling, the public interface, tests, dependencies, and docs. Where a change
@@ -71,6 +71,6 @@ invariant a change touches (rule 1: fix the invariant, not the one call site).
 ## Output
 
 Report **only** what you would block or change, most-load-bearing first. For each:
-`file:line` · one-sentence defect · the concrete fix · which CLAUDE.md
+`file:line` · one-sentence defect · the concrete fix · which AGENTS.md
 rule it violates. If the diff is clean at this layer, say so plainly in one line — do
 not invent findings. You do not edit; the main agent applies fixes.
