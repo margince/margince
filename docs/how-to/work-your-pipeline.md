@@ -150,7 +150,14 @@ Pipeline narrows either view to them.
 ## Narrow the list, and keep the narrowing
 
 Filters, on both views: **Stage**, **Company**, **Stalled only**, **My deals**,
-**Partner-sourced**, the **Pipeline** picker, and a **Show archived** toggle.
+**Partner-sourced**, **Partner**, the **Pipeline** picker, and a **Show archived**
+toggle.
+
+**Partner-sourced** and **Partner** answer different questions: the first asks
+whether a deal came through any partner at all, the second narrows to one named
+partner. **Partner** appears only once a company has been made a partner — with
+no partner program there is nothing to pick from. The board's column totals
+narrow with the list.
 
 **There is no search box on this screen.** To find a deal by name, use the global
 **Search everything…** at the top, or narrow with the filters.
