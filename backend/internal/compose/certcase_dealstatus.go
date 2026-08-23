@@ -158,9 +158,16 @@ func (c *dealStatusCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	cited := map[string]bool{}
-	for _, line := range append(written.Standing, written.Risk...) {
-		for _, id := range line.Evidence {
-			cited[id] = true
+	// Every cited section counts. A scenario's expected record may be what the
+	// verdict rests on rather than what the story names, and a measurement that
+	// read only some sections would call that card wrong for citing it well.
+	for _, section := range [][]dealstatus.WrittenLine{
+		written.Story, written.Blocker, written.Buyer, written.Verdict.Because,
+	} {
+		for _, line := range section {
+			for _, id := range line.Evidence {
+				cited[id] = true
+			}
 		}
 	}
 	var missing []string

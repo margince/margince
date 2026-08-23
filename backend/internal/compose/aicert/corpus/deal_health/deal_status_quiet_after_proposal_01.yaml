@@ -36,10 +36,13 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
-    Score whether the card is honest about a deal that is going well. "standing"
-    must say the buyer accepted the scope and a kickoff is booked. "risk" must
-    be EMPTY: nothing in the fixture threatens this deal, and a card that
-    invents a concern — "no pricing discussed yet", "close date is tight" —
-    fails the scenario outright, because a risk line that always finds
-    something teaches the reader to stop reading it. "move_reason" must explain
-    reading the brief before the booked meeting.
+    Score whether the briefing is honest about a deal that is going well.
+    "story" must say the buyer accepted the scope and a kickoff is booked, and
+    must treat the kickoff as SCHEDULED rather than as something that already
+    happened. "blocker" must be EMPTY: nothing in the fixture holds this deal
+    up, and a card that invents one — "no pricing discussed yet", "the close
+    date is tight" — fails the scenario outright, because a blocker section
+    that always finds something teaches the reader to stop reading it.
+    "verdict" must be live; blocked or cold fails, and drifting scores low
+    given a booked meeting three days out. "move_reason" must explain reading
+    the brief before that meeting.

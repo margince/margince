@@ -15856,12 +15856,31 @@ type DealRoomThreadListResponse struct {
 	Data []DealRoomThread `json:"data"`
 }
 
-// DealStatusCard The deal page's one written card. `standing` is always present; `risk` is
-// absent when nothing threatens the deal, because an invented reassurance is
-// worse than silence. `next` is absent only when the deal is closed.
+// DealStatusCard Deal360 — the deal page's written briefing, the thing a rep reads in a
+// minute before a call.
+//
+// It is a reading of the deal, not a restatement of it. The page already
+// shows the stage, the value and the timeline; this says what they MEAN:
+// why the deal is where it is, what the buyer is actually after, whether
+// it is still alive, and what to say next.
+//
+// Every section is optional except `story`, and an absent one means the
+// records do not support saying anything — never that the section was
+// forgotten. A section invented to fill the layout is the failure this
+// shape exists to prevent.
 type DealStatusCard struct {
-	DealId      openapi_types.UUID `json:"deal_id"`
-	GeneratedAt time.Time          `json:"generated_at"`
+	// Blocker What is actually holding the deal up, named as a thing somebody can
+	// act on — an unsent mail, an unanswered objection, a decision-maker
+	// who has never replied. Absent when nothing is holding it up. "Time
+	// has passed" is not a blocker.
+	Blocker *DealStatusCardSection `json:"blocker,omitempty"`
+
+	// Buyer What the buyer wants, read from what they have said. What they are
+	// optimising for, what they have not objected to, what they asked for
+	// and never got. Absent when the buyer has said too little to read.
+	Buyer       *DealStatusCardSection `json:"buyer,omitempty"`
+	DealId      openapi_types.UUID     `json:"deal_id"`
+	GeneratedAt time.Time              `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured
@@ -15872,11 +15891,13 @@ type DealStatusCard struct {
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`
 
-	// Risk What could lose this deal. Absent when nothing does.
-	Risk *DealStatusCardSection `json:"risk,omitempty"`
+	// Story What has happened and where that leaves things, in the order it
+	// happened. The section a reader with no memory of the deal starts at.
+	Story DealStatusCardSection `json:"story"`
 
-	// Standing Where the deal is right now — what moved, what is waiting.
-	Standing DealStatusCardSection `json:"standing"`
+	// Verdict Whether this deal is real, and what that judgement rests on.
+	// Includes being willing to say it looks dead.
+	Verdict *DealStatusCardVerdict `json:"verdict,omitempty"`
 }
 
 // DealStatusCardMove The one thing to do next, and what performing it means. `action` is one of
@@ -15900,6 +15921,26 @@ type DealStatusCardSection struct {
 	// Sentences Each sentence cites the record it rests on. A sentence whose citations do
 	// not resolve is dropped whole rather than shown uncited.
 	Sentences []OrganizationBriefSentence `json:"sentences"`
+}
+
+// DealStatusCardVerdict An honest call on whether the deal closes, and why.
+//
+// `standing` is the call itself. It is deliberately coarse — a reader acts
+// on "this is drifting", not on a percentage, and a number would imply a
+// precision the records cannot support.
+type DealStatusCardVerdict struct {
+	// Because What the call rests on, cited like every other sentence.
+	Because DealStatusCardSection `json:"because"`
+
+	// Standing `live` — moving, with a next step both sides expect.
+	// `drifting` — nothing wrong, nothing happening; it dies of neglect if
+	// nobody acts.
+	// `blocked` — something specific is in the way and is named in `blocker`.
+	// `cold` — long silence after real engagement; treat as lost unless
+	// something changes.
+	// A plain string, not an inline enum, for the reason
+	// `DealRoomParticipantCapability` gives.
+	Standing string `json:"standing"`
 }
 
 // DecideCommissionRequest defines model for DecideCommissionRequest.

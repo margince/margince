@@ -80,10 +80,10 @@ func TestTheDealStatusCardCitesItsRecordsAndHidesADealTheCallerCannotSee(t *test
 	dealID, _ := roomRow["deal_id"].(string)
 
 	card := readStatus(t, e, dealID)
-	standing, _ := card["standing"].(map[string]any)
-	lines, _ := standing["sentences"].([]any)
+	story, _ := card["story"].(map[string]any)
+	lines, _ := story["sentences"].([]any)
 	if len(lines) == 0 {
-		t.Fatal("the card says nothing about where the deal stands")
+		t.Fatal("the briefing tells no story")
 	}
 	// A sentence resting on an activity must name it, so the reader can open
 	// what it was written from. A sentence about the deal's own fields cites

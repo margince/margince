@@ -14047,22 +14047,72 @@ export interface components {
             days_since_touch?: number | null;
         };
         /**
-         * @description The deal page's one written card. `standing` is always present; `risk` is
-         *     absent when nothing threatens the deal, because an invented reassurance is
-         *     worse than silence. `next` is absent only when the deal is closed.
+         * @description Deal360 — the deal page's written briefing, the thing a rep reads in a
+         *     minute before a call.
+         *
+         *     It is a reading of the deal, not a restatement of it. The page already
+         *     shows the stage, the value and the timeline; this says what they MEAN:
+         *     why the deal is where it is, what the buyer is actually after, whether
+         *     it is still alive, and what to say next.
+         *
+         *     Every section is optional except `story`, and an absent one means the
+         *     records do not support saying anything — never that the section was
+         *     forgotten. A section invented to fill the layout is the failure this
+         *     shape exists to prevent.
          */
         DealStatusCard: {
             /** Format: uuid */
             deal_id: string;
-            /** @description Where the deal is right now — what moved, what is waiting. */
-            standing: components["schemas"]["DealStatusCardSection"];
-            /** @description What could lose this deal. Absent when nothing does. */
-            risk?: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description What has happened and where that leaves things, in the order it
+             *     happened. The section a reader with no memory of the deal starts at.
+             */
+            story: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description What is actually holding the deal up, named as a thing somebody can
+             *     act on — an unsent mail, an unanswered objection, a decision-maker
+             *     who has never replied. Absent when nothing is holding it up. "Time
+             *     has passed" is not a blocker.
+             */
+            blocker?: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description What the buyer wants, read from what they have said. What they are
+             *     optimising for, what they have not objected to, what they asked for
+             *     and never got. Absent when the buyer has said too little to read.
+             */
+            buyer?: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description Whether this deal is real, and what that judgement rests on.
+             *     Includes being willing to say it looks dead.
+             */
+            verdict?: components["schemas"]["DealStatusCardVerdict"];
             /** @description The one move to make, with the verb to perform it. */
             next?: components["schemas"]["DealStatusCardMove"];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
+        };
+        /**
+         * @description An honest call on whether the deal closes, and why.
+         *
+         *     `standing` is the call itself. It is deliberately coarse — a reader acts
+         *     on "this is drifting", not on a percentage, and a number would imply a
+         *     precision the records cannot support.
+         */
+        DealStatusCardVerdict: {
+            /**
+             * @description `live` — moving, with a next step both sides expect.
+             *     `drifting` — nothing wrong, nothing happening; it dies of neglect if
+             *     nobody acts.
+             *     `blocked` — something specific is in the way and is named in `blocker`.
+             *     `cold` — long silence after real engagement; treat as lost unless
+             *     something changes.
+             *     A plain string, not an inline enum, for the reason
+             *     `DealRoomParticipantCapability` gives.
+             */
+            standing: string;
+            /** @description What the call rests on, cited like every other sentence. */
+            because: components["schemas"]["DealStatusCardSection"];
         };
         DealStatusCardSection: {
             /**

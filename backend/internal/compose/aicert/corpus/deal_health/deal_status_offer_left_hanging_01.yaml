@@ -39,12 +39,15 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
-    Score whether the card tells the truth about this deal. "standing" must say
-    that a revised offer covering the two extra depots was promised on the call
-    and has not been sent — not that the deal is progressing, and not a
-    restatement of its name and value. "risk" must name the unsent offer or the
-    silence since, with a close date at the end of September; an empty risk
-    list scores low here because the fixture plainly shows something wrong.
-    "move_reason" must explain the given move rather than proposing a
-    different one. Any invented person, meeting, discount or figure the summary
-    never mentions fails the scenario.
+    Score whether the briefing tells the truth about this deal, section by
+    section. "story" must say that a revised offer covering the two extra
+    depots was promised on the call and has not been sent — not that the deal
+    is progressing, and not a restatement of its name and value. "blocker"
+    must name the unsent offer as the thing holding it up; "no contact for N
+    days" alone scores low, because elapsed time is not something a reader can
+    act on. "buyer" must read what Nordwind is after from their own words —
+    the two extra depots, the revised pricing — and score low if it invents a
+    motive the summary never states. "verdict" should be blocked or drifting
+    with reasoning naming the unsent offer; live scores low. "move_reason"
+    must explain the given move rather than proposing a different one. Any
+    invented person, meeting, discount or figure fails the scenario.

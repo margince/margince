@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  ListChecks,
-  Mail,
-  RefreshCw,
-  Sparkles,
-} from "lucide-react";
+import { ListChecks, Mail, RefreshCw, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -13,25 +7,38 @@ import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { SentenceList, WrittenBy } from "./company360";
 import { ComposeModal } from "./compose";
 import { PersonMeetingBrief } from "./persondrawers";
 import "./dealstatus.css";
 
-// The deal page's one card: where the deal stands, what could lose it, and the
-// one move to make. It replaces the three that stood here before — a brief, a
-// health score and a next-move box — which asked the reader to decide which to
-// believe.
+// Deal360 — the deal page's written briefing, read before a call.
 //
-// The READ writes nothing a user can see: the server caches the card per
+// It leads the page rather than sitting in the margin, because it is the one
+// thing on the screen that answers "what do I need to know" instead of "what
+// is recorded". Everything else on the page is a record; this is the reading.
+//
+// The READ writes nothing a user can see: the server caches the briefing per
 // reader, so a repeat view costs nothing and a changed deal is rewritten
 // before the read answers. The CLICK performs the move through the verb the
-// card names — the task door, the compose modal, the meeting-brief drawer —
-// so nothing here re-implements a write or skips its gates.
+// briefing names — the task door, the compose modal, the meeting-brief drawer
+// — so nothing here re-implements a write or skips its gates.
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
 type DealStatusCardMove = components["schemas"]["DealStatusCardMove"];
+type DealStatusCardSection = components["schemas"]["DealStatusCardSection"];
+
+// The verdict words the server may send, and how each reads to a person. A
+// word this build does not know renders as no badge rather than as itself:
+// the reader has learned four, and a fifth in raw form teaches them nothing.
+const VERDICT_LABELS: Record<string, MessageKey> = {
+  live: "deal360.verdict.live",
+  drifting: "deal360.verdict.drifting",
+  blocked: "deal360.verdict.blocked",
+  cold: "deal360.verdict.cold",
+};
 
 export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
@@ -63,27 +70,23 @@ export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
       queryClient.setQueryData(["deal-status", dealId], data),
   });
   return (
-    <Panel
-      title={t("dealstatus.title")}
-      sub={t("dealstatus.sub")}
-      tone="accent"
-    >
-      <QueryStates query={status} pendingLines={4}>
-        {status.data?.standing ? (
-          <StatusBody
+    <Panel title={t("deal360.title")} sub={t("deal360.sub")} tone="accent">
+      <QueryStates query={status} pendingLines={6}>
+        {status.data?.story ? (
+          <Briefing
             dealId={dealId}
             card={status.data}
             onRewrite={() => rewrite.mutate()}
             rewriting={rewrite.isPending}
           />
         ) : null}
-        {status.isSuccess && !status.data?.standing ? (
-          // `standing` is required on the wire and the server always writes at
+        {status.isSuccess && !status.data?.story ? (
+          // `story` is required on the wire and the server always writes at
           // least one line, so reaching here means a response that is not the
-          // shape the contract promises. Saying so beats an empty panel with a
-          // title, which reads as a deal nobody has touched.
+          // shape the contract promises. Saying so beats an empty panel, which
+          // reads as a deal nobody has touched.
           <PanelBody>
-            <p className="t-small">{t("dealstatus.unreadable")}</p>
+            <p className="t-small">{t("deal360.unreadable")}</p>
           </PanelBody>
         ) : null}
       </QueryStates>
@@ -91,7 +94,7 @@ export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
   );
 }
 
-function StatusBody({
+function Briefing({
   dealId,
   card,
   onRewrite,
@@ -112,45 +115,86 @@ function StatusBody({
   };
   return (
     <>
+      <Section section={card.story} onOpenRecord={open} />
+      <Section
+        heading={t("deal360.blocker")}
+        section={card.blocker}
+        onOpenRecord={open}
+        tone="warn"
+      />
+      <Section
+        heading={t("deal360.buyer")}
+        section={card.buyer}
+        onOpenRecord={open}
+      />
+      {card.verdict ? <Verdict verdict={card.verdict} onOpen={open} /> : null}
+      {card.next ? <Move dealId={dealId} move={card.next} /> : null}
       <PanelBody>
-        <SentenceList sentences={card.standing.sentences} onOpenRecord={open} />
-      </PanelBody>
-      {card.risk ? (
-        <PanelBody>
-          <p className="t-caption dealstatus-risk-head">
-            <AlertTriangle aria-hidden />
-            {t("dealstatus.risk")}
-          </p>
-          <SentenceList sentences={card.risk.sentences} onOpenRecord={open} />
-        </PanelBody>
-      ) : null}
-      {card.next ? (
-        <PanelBody>
-          <div className="dealstatus-move">
-            <p className="dealstatus-move-reason">{card.next.reason}</p>
-            <MoveButton dealId={dealId} move={card.next} />
-            {(card.next.evidence ?? []).length > 0 ? (
-              <ul className="dealstatus-evidence t-small">
-                {(card.next.evidence ?? []).map((row) => (
-                  <li key={`${row.activity_id ?? ""}-${row.text}`}>
-                    {row.text}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </PanelBody>
-      ) : null}
-      <PanelBody>
-        <div className="dealstatus-foot">
+        <div className="deal360-foot">
           <WrittenBy by={card.generated_by} />
           <Button variant="ghost" pending={rewriting} onClick={onRewrite}>
             <RefreshCw aria-hidden />
-            {t("dealstatus.rewrite")}
+            {t("deal360.rewrite")}
           </Button>
         </div>
       </PanelBody>
     </>
+  );
+}
+
+// Section renders one headed block, and renders NOTHING when the server sent
+// none. An absent section means the records did not support saying anything —
+// an empty "what is holding this up" would read as "nothing is".
+function Section({
+  heading,
+  section,
+  onOpenRecord,
+  tone,
+}: Readonly<{
+  heading?: string;
+  section: DealStatusCardSection | undefined;
+  onOpenRecord: (entityType: string, entityId: string) => void;
+  tone?: "warn";
+}>) {
+  if (!section || section.sentences.length === 0) {
+    return null;
+  }
+  return (
+    <PanelBody>
+      {heading ? (
+        <p className={tone === "warn" ? "t-caption deal360-warn" : "t-caption"}>
+          {heading}
+        </p>
+      ) : null}
+      <SentenceList sentences={section.sentences} onOpenRecord={onOpenRecord} />
+    </PanelBody>
+  );
+}
+
+function Verdict({
+  verdict,
+  onOpen,
+}: Readonly<{
+  verdict: NonNullable<DealStatusCard["verdict"]>;
+  onOpen: (entityType: string, entityId: string) => void;
+}>) {
+  const t = useT();
+  const label = VERDICT_LABELS[verdict.standing];
+  return (
+    <PanelBody>
+      <div className="deal360-verdict-head">
+        <p className="t-caption">{t("deal360.verdict")}</p>
+        {label ? (
+          <span className={`deal360-standing deal360-${verdict.standing}`}>
+            {t(label)}
+          </span>
+        ) : null}
+      </div>
+      <SentenceList
+        sentences={verdict.because.sentences}
+        onOpenRecord={onOpen}
+      />
+    </PanelBody>
   );
 }
 
@@ -160,6 +204,27 @@ function StatusBody({
 function activityIdOf(move: DealStatusCardMove): string | null {
   const raw = move.arguments?.activity_id;
   return typeof raw === "string" && raw !== "" ? raw : null;
+}
+
+function Move({
+  dealId,
+  move,
+}: Readonly<{ dealId: string; move: DealStatusCardMove }>) {
+  const t = useT();
+  return (
+    <PanelBody>
+      <p className="t-caption">{t("deal360.next")}</p>
+      <p className="deal360-move-reason">{move.reason}</p>
+      <MoveButton dealId={dealId} move={move} />
+      {move.evidence.length > 0 ? (
+        <ul className="deal360-evidence t-small">
+          {move.evidence.map((row) => (
+            <li key={`${row.activity_id ?? ""}-${row.text}`}>{row.text}</li>
+          ))}
+        </ul>
+      ) : null}
+    </PanelBody>
+  );
 }
 
 function MoveButton({
@@ -206,7 +271,7 @@ function MoveButton({
             onClick={() => createTask.mutate(taskBody)}
           >
             <ListChecks aria-hidden />
-            {t("dealstatus.createTask")}
+            {t("deal360.createTask")}
           </Button>
           {createTask.isError ? (
             <p className="t-small t-danger">
@@ -223,7 +288,7 @@ function MoveButton({
         <>
           <Button variant="primary" onClick={() => setComposing(true)}>
             <Mail aria-hidden />
-            {t("dealstatus.draftReply")}
+            {t("deal360.draftReply")}
           </Button>
           {composing ? (
             <ComposeModal
@@ -245,7 +310,7 @@ function MoveButton({
         <>
           <Button variant="primary" onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
-            {t("dealstatus.openBrief")}
+            {t("deal360.openBrief")}
           </Button>
           <PersonMeetingBrief
             activityId={activityId}

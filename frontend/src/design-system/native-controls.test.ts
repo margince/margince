@@ -435,12 +435,14 @@ describe("the native-control detector sees what it claims to", () => {
     {
       name: "a template with a substitution",
       fires: true,
+      // biome-ignore lint/style/useTemplate: a template literal cannot hold the backticks this probe source is made of, and SUBST exists so the file never spells a live ${.
       src: "const html = `<select id=" + SUBST + ">`;",
       expect: ["1: <select> inside a string"],
     },
     {
       name: "a substitution's TAIL, on its own line",
       fires: true,
+      // biome-ignore lint/style/useTemplate: a template literal cannot hold the backticks this probe source is made of, and SUBST exists so the file never spells a live ${.
       src: "const html = `" + SUBST + "\n<option>`;",
       expect: ["2: <option> inside a string"],
     },
