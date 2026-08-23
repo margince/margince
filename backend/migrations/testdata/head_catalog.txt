@@ -2785,7 +2785,8 @@ public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.or
             WHEN ((d.currency)::text = base.code) THEN d.amount_minor
             ELSE (round(((d.amount_minor)::numeric * live.rate)))::bigint
         END) AS open_pipeline_minor_base,
-    count(*) AS open_deal_count
+    count(*) AS open_deal_count,
+    count(*) FILTER (WHERE ((d.amount_minor IS NOT NULL) AND (((d.currency)::text = base.code) OR (live.rate IS NOT NULL)))) AS priced_deal_count
    FROM ((deal d
      LEFT JOIN LATERAL ( SELECT (setting.value #>> '{}'::text[]) AS code
            FROM setting
@@ -2800,6 +2801,7 @@ public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.or
 public.organization_open_pipeline_rollup.open_deal_count bigint gen=- def=-
 public.organization_open_pipeline_rollup.open_pipeline_minor_base numeric gen=- def=-
 public.organization_open_pipeline_rollup.organization_id uuid gen=- def=-
+public.organization_open_pipeline_rollup.priced_deal_count bigint gen=- def=-
 public.organization_pkey CREATE UNIQUE INDEX organization_pkey ON public.organization USING btree (id)
 public.organization_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization_profile_field.captured_at timestamp with time zone NOT NULL gen=- def=now()

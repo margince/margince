@@ -231,6 +231,49 @@ func TestOrganizationComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
 	}
 }
 
+// A mix of priced and unpriced deals reports NO figure, not a short one.
+//
+// This is the defect a converting view introduces if nobody looks for it: SUM
+// ignores the deal it could not price, silently, so an account with one EUR
+// deal and one unpriceable JPY deal produces a real number covering half the
+// pipeline. Shown as a total it is worse than the "not computable" it replaced
+// — the reader cannot see what is missing from it.
+func TestOrganizationComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	orgID := e.SeedOrg(t, "Half Priced GmbH", nil)
+
+	for _, deal := range []struct {
+		amount   int64
+		currency string
+	}{
+		{75_000, "EUR"},    // prices: the installation's own currency
+		{5_000_000, "JPY"}, // cannot: no rate is loaded for the pair
+	} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Deal", AmountMinor: int64Ptr(deal.amount), Currency: strPtr(deal.currency),
+			PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := computedFieldByKey(*org.ComputedFields, "open_pipeline")
+	if got.Computable {
+		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", got)
+	}
+	if got.ValueMinor != nil {
+		t.Errorf("open_pipeline.value_minor = %v, want absent — 75000 is real but it is not the pipeline", got.ValueMinor)
+	}
+	if got.Reason == nil || *got.Reason != "partial_pipeline" {
+		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\"", got.Reason)
+	}
+}
+
 // The case this field got wrong for every installation: an ordinary open
 // pipeline, in the installation's own currency, needing no conversion at all.
 //

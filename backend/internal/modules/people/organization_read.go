@@ -90,11 +90,11 @@ func getOrganizationInTx(ctx context.Context, tx pgx.Tx, id ids.OrganizationID,
 	// rollup read below, and out.ComputedFields stays its nil zero
 	// value — omitempty then drops the key entirely on marshal (T1).
 	if computedFieldsVisible(ctx) {
-		minor, dealCount, err := openPipelineRollup(ctx, tx, id)
+		open, err := openPipelineRollup(ctx, tx, id)
 		if err != nil {
 			return crmcontracts.Organization{}, fmt.Errorf("read open pipeline rollup: %w", err)
 		}
-		rows := organizationComputedFields(minor, dealCount)
+		rows := organizationComputedFields(open)
 		out.ComputedFields = &rows
 	}
 	return out, nil

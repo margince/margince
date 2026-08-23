@@ -38,18 +38,39 @@ const (
 	// organization with no open deals at all, and — since the view
 	// converts rather than reading a column that is null until close —
 	// now the rare state its name always implied.
-	awaitingFXReason       = "awaiting_fx"
+	awaitingFXReason = "awaiting_fx"
+	// partialPipelineReason floors open_pipeline when SOME open deals reached
+	// the total and others could not be priced. The sum is real but short, and
+	// a short figure shown as a total is worse than none: the reader has no way
+	// to see what is missing from it, and the number sits on the page looking
+	// like the whole pipeline.
+	partialPipelineReason  = "partial_pipeline"
 	openPipelineFormulaSQL = "organization_open_pipeline_rollup: SUM over deal WHERE status = 'open' AND organization_id = <this org> AND archived_at IS NULL, each amount converted to the installation base currency at the latest fx_rate on or before today"
 )
 
-// openPipelineDependencies names what the view's aggregate reads: the
-// deal's own amount and currency, the two columns its WHERE clause gates
-// participation on, and the rate sheet the conversion resolves against.
+// openPipelineDependencies names every column the view's aggregate reads:
+// what is summed, what its WHERE gates participation on, what the rate
+// lookup matches and orders by, and the setting the base currency comes
+// from. A change to any of them changes the answer, which is what makes
+// this list worth keeping accurate.
+//
 // deal.fx_rate_to_base is deliberately absent — it is null on every open
 // deal, which is why the view stopped reading it.
 var openPipelineDependencies = []string{
-	"deal.amount_minor", "deal.currency", "deal.status", "deal.archived_at",
-	"fx_rate.rate", "setting.installation.base_currency",
+	"deal.amount_minor", "deal.currency", "deal.organization_id",
+	"deal.status", "deal.archived_at",
+	"fx_rate.from_currency", "fx_rate.to_currency", "fx_rate.rate", "fx_rate.rate_date",
+	"setting.installation.base_currency",
+}
+
+// openPipeline is what the view reports for one organization: the converted
+// total, how many open deals there are, and how many of them actually reached
+// the total. The third is what tells a complete figure from a short one — SUM
+// ignores a null summand without saying so.
+type openPipeline struct {
+	minorBase   *int64
+	dealCount   int
+	pricedCount int
 }
 
 // computedFieldsVisible answers the STATE-4 gate: does the acting
@@ -91,29 +112,31 @@ func computedFieldsVisible(ctx context.Context) bool {
 //
 // No tenant term appears here because none exists to appear: the tables this
 // read touches carry no tenant column, and a join on one would only re-derive
-// the bound the foreign key above already carries.
+// the bound the foreign key above already carries. The view reaches setting
+// and fx_rate as well as deal now, and neither is tenant-scoped either — the
+// migration says what that does and does not disclose.
 //
 // No row (an organization with no open deals at all) is the honest
-// "nothing to sum" case: (nil, 0, nil), never an error. dealCount is the
-// caller's only way to distinguish that genuine-zero state from the
-// OTHER honest "not computable yet" state — open deals exist
-// (dealCount > 0) but every one is still missing fx_rate_to_base, so
-// the aggregate itself comes back NULL.
-func openPipelineRollup(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (minorBase *int64, dealCount int, err error) {
+// "nothing to sum" case: a zero openPipeline, never an error. The two counts
+// are what separate the three states a caller must tell apart — no deals at
+// all, every deal priced, and some priced while others could not be. Without
+// pricedCount the third is indistinguishable from the second, and a total
+// covering half the pipeline would be reported as the pipeline.
+func openPipelineRollup(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (roll openPipeline, err error) {
 	err = tx.QueryRow(ctx,
-		`SELECT open_pipeline_minor_base, open_deal_count
+		`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
 		 FROM organization_open_pipeline_rollup WHERE organization_id = $1`,
-		orgID).Scan(&minorBase, &dealCount)
+		orgID).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// Scan never ran, so minorBase/dealCount are still their zero
-		// values (nil, 0) — return the named vars, not literal zeroes:
-		// the honest "nothing to sum" case above, not a swallowed error.
-		return minorBase, dealCount, nil
+		// Scan never ran, so roll is still its zero value — return it, not
+		// literal zeroes: the honest "nothing to sum" case above, not a
+		// swallowed error.
+		return roll, nil
 	}
 	if err != nil {
-		return nil, 0, err
+		return openPipeline{}, err
 	}
-	return minorBase, dealCount, nil
+	return roll, nil
 }
 
 // organizationComputedFields assembles the 5 display rows RD-T08 names.
@@ -124,18 +147,17 @@ func openPipelineRollup(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 //   - openDealCount == 0 (no view row: an organization with no open
 //     deals at all) is the honest "nothing to sum" case: computable:true,
 //     value_minor:0 — a real zero, not a missing one.
-//   - openPipelineMinor != nil (the view row's aggregate is non-NULL) is
-//     the genuinely computable case: computable:true, value_minor:sum.
-//   - openPipelineMinor == nil AND openDealCount > 0 (open deals exist
-//     but every one is still missing fx_rate_to_base, the ordinary state
-//     for an open deal — 0065's documented "not computable yet" case) is
-//     NOT a zero: flooring it would show a dishonest 0 pipeline beside a
-//     non-zero weighted_pipeline. It floors instead to computable:false,
-//     reason:"awaiting_fx", with no value_minor on the wire — the honest
-//     "not computable yet" state 0065's migration comment already names,
-//     now surfaced here instead of floored away. formula_sql stays
-//     populated: the formula exists, only its FX input doesn't yet.
-func organizationComputedFields(openPipelineMinor *int64, openDealCount int) []crmcontracts.ComputedField {
+//   - Every open deal reached the total (priced == open) and the aggregate is
+//     non-NULL: computable:true, value_minor:sum.
+//   - Some deals reached it and others did not: the sum is SHORT, and a short
+//     figure presented as a total is worse than no figure — a reader cannot
+//     see what is missing from it. It floors to computable:false with the
+//     partial reason.
+//   - No deal reached it (aggregate NULL, open deals exist): not one of them
+//     could be priced. It floors to computable:false, reason:"awaiting_fx",
+//     with no value_minor on the wire. formula_sql stays populated either way:
+//     the formula exists, only a rate for these currencies does not.
+func organizationComputedFields(open openPipeline) []crmcontracts.ComputedField {
 	weightedReason := servedByHierarchyRollupReason
 	customerAgeReason := notYetBuiltReason
 	nrrReason := notYetBuiltReason
@@ -149,14 +171,18 @@ func organizationComputedFields(openPipelineMinor *int64, openDealCount int) []c
 		Dependencies: openPipelineDependencies,
 	}
 	switch {
-	case openPipelineMinor != nil:
-		value := *openPipelineMinor
-		openPipelineRow.Computable = true
-		openPipelineRow.ValueMinor = &value
-	case openDealCount == 0:
+	case open.dealCount == 0:
 		zero := int64(0)
 		openPipelineRow.Computable = true
 		openPipelineRow.ValueMinor = &zero
+	case open.minorBase != nil && open.pricedCount == open.dealCount:
+		value := *open.minorBase
+		openPipelineRow.Computable = true
+		openPipelineRow.ValueMinor = &value
+	case open.pricedCount > 0:
+		reason := partialPipelineReason
+		openPipelineRow.Computable = false
+		openPipelineRow.Reason = &reason
 	default:
 		reason := awaitingFXReason
 		openPipelineRow.Computable = false
