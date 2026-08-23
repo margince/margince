@@ -6104,6 +6104,8 @@ export const de = {
   "projectCompanies.title": "Unternehmen",
   "projectCompanies.empty":
     "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",
+  "projectCompanies.attach": "Unternehmen verknüpfen",
+  "projectCompanies.detachTitle": "Dieses Unternehmen entfernen?",
   "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
   "personProjects.title": "Projekte",
   "personProjects.empty":

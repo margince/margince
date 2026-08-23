@@ -6171,6 +6171,8 @@ export const en = {
   "projectCompanies.title": "Companies",
   "projectCompanies.empty":
     "A project is work several companies do together — the client, and any partner or subcontractor delivering it.",
+  "projectCompanies.attach": "Attach company",
+  "projectCompanies.detachTitle": "Take this company off?",
   "projectCompanies.searchLabel": "Search companies by name",
   "personProjects.title": "Projects",
   "personProjects.empty":

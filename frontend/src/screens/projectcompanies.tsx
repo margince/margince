@@ -104,7 +104,14 @@ export function ProjectCompanies({
       adapter={adapter}
       titleKey="projectCompanies.title"
       emptyBody="projectCompanies.empty"
-      searchLabel={t("projectCompanies.searchLabel")}
+      // The mirror links COMPANIES, so every word it shows says so — the verb
+      // on screen and the dialog's accessible name alike.
+      words={{
+        attach: t("projectCompanies.attach"),
+        move: t("projectCompanies.attach"),
+        detachTitle: t("projectCompanies.detachTitle"),
+        search: t("projectCompanies.searchLabel"),
+      }}
     />
   );
 }

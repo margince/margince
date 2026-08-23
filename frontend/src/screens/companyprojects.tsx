@@ -21,10 +21,16 @@ import type { ProjectPhase } from "./projects.form";
 
 type Organization360Project = components["schemas"]["Organization360Project"];
 
-// What a company can BE to a project. The vocabulary the server records and the
-// reports group by, so a reader picks from it rather than every attach landing
-// as one guessed role.
-export const COMPANY_ROLES = ["customer", "partner", "subcontractor"] as const;
+// What a company can BE to a project, PARTNER FIRST because the first role is
+// the picker's default and a default is a claim.
+//
+// A project has one customer — the account the work is for — and it already has
+// one by the time anybody reaches this section, since creating a project
+// attaches its company as the customer. So a company joining afterwards is a
+// partner or a subcontractor; defaulting it to customer would hand a project two
+// customers on a reader who took the default, which is what the reports group
+// by and what organization_id resolves to.
+export const COMPANY_ROLES = ["partner", "subcontractor", "customer"] as const;
 
 // The message key for one role, spelled once so the picker and any row that
 // renders a role cannot disagree about the words.
