@@ -5,8 +5,8 @@ package ai
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
-	"strings"
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -42,15 +42,23 @@ import (
 // assembly. This one hashes the prompt, because a cache key only has to move
 // when the wording does.
 //
+// Each prompt is length-prefixed rather than joined by a separator. A separator
+// only works while no prompt can contain it, and nothing enforces that: under a
+// join, ("a\x00b", "c") and ("a", "b\x00c") hash alike, as do no prompts at all
+// and one empty one. Two different prompt sets sharing a key is the stale-answer
+// defect this exists to prevent, reached from the inside.
+//
 // The prefix keeps the value readable in a stored row, and eight bytes is ample
 // for a key that only has to differ.
 func PromptDigest(build ...func(promptfence.Fence) string) string {
 	fence := promptfence.New()
-	sent := make([]string, 0, len(build))
+	var framed []byte
 	for _, buildPrompt := range build {
 		prompt := buildPrompt(fence)
-		sent = append(sent, promptfence.Canonicalize(prompt, prompt))
+		canonical := promptfence.Canonicalize(prompt, prompt)
+		framed = binary.AppendUvarint(framed, uint64(len(canonical)))
+		framed = append(framed, canonical...)
 	}
-	sum := sha256.Sum256([]byte(strings.Join(sent, "\x00")))
+	sum := sha256.Sum256(framed)
 	return "prompts-" + hex.EncodeToString(sum[:8])
 }

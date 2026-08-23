@@ -59,3 +59,26 @@ func TestTextMovingAcrossThePromptBoundaryIsNotTheSameInput(t *testing.T) {
 		t.Errorf("(%q,%q) and (%q,%q) share the digest %s", "ab", "c", "a", "bc", joined)
 	}
 }
+
+// A separator only works while no prompt can contain it, and nothing enforces
+// that. Under a join these two prompt sets hash alike, so one would be served
+// the other's cached answer.
+func TestAPromptContainingTheSeparatorDoesNotCollide(t *testing.T) {
+	fixed := func(text string) func(promptfence.Fence) string {
+		return func(promptfence.Fence) string { return text }
+	}
+	left := PromptDigest(fixed("a\x00b"), fixed("c"))
+	right := PromptDigest(fixed("a"), fixed("b\x00c"))
+	if left == right {
+		t.Errorf("prompts differing only in where a NUL falls share the digest %s", left)
+	}
+}
+
+// No prompts at all and one empty prompt are different inputs. A join maps both
+// to zero bytes.
+func TestNoPromptsAndOneEmptyPromptDigestDifferently(t *testing.T) {
+	empty := func(promptfence.Fence) string { return "" }
+	if none, one := PromptDigest(), PromptDigest(empty); none == one {
+		t.Errorf("no prompts and one empty prompt share the digest %s", none)
+	}
+}
