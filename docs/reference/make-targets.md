@@ -193,8 +193,17 @@ share one consumer group: whichever worker reads an entry first consumes it,
 resolves it against its OWN Postgres, finds nothing, and acks. The other
 stack's event is gone, and a projection or accrual that never runs looks
 exactly like a broken feature — it cost a day and a wrongly-filed critical bug
-once. Slugs take 1–15; the startup banner prints which. With more than 15
-slugged stacks two will collide, which is the state bare `make dev` sweeps.
+once.
+
+The instance serves 80 databases in three blocks: **0** is bare `make dev`,
+**1–63** the parallel integration lane (one per package, which `FLUSHDB`s), and
+**64–79** slugged stacks. A slug takes the lowest free index in its block,
+claimed under a lock and recorded in `.tmp/dev/<slug>/env`, so restarting a
+slug reclaims its own and two slugs never share one. Deliberately not the port
+hash: two hashes differing by a multiple of the block size would take different
+ports and the SAME database, a collision the port check cannot see. The startup
+banner prints the index. A 17th concurrent slugged stack is refused rather than
+doubled up.
 
 A slugged stack is the one thing `make dev`'s sweep does not perform — it
 sweeps nothing itself, so it can start alongside the base stack. But the next

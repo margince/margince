@@ -101,7 +101,7 @@ fi
 fe_port=$(( 8080 + hash ))
 api_port=$(( 18080 + hash ))
 
-# The Redis LOGICAL DATABASE this stack uses, derived from the same hash.
+# The Redis LOGICAL DATABASE this stack uses.
 #
 # One Redis serves every stack on the machine, and the stream names and
 # consumer groups are constants (`gw:events:crm:*`, `cg:*`). Two stacks on the
@@ -111,15 +111,76 @@ api_port=$(( 18080 + hash ))
 # projection or an accrual that never runs — is indistinguishable from a broken
 # feature. That cost a day and a wrongly-filed critical bug once.
 #
-# Bare `make dev` keeps db 0 so every existing recipe, redis-cli one-liner and
-# habit still points at the same place. A slug takes 1..15 (Redis ships
-# `databases 16`), so slugged stacks are isolated from the base stack and, by
-# the same hash that keeps their ports apart, from each other. A collision
-# beyond 15 slugs is possible and shows up as two stacks sharing a bus, which
-# is exactly the state bare `make dev` already sweeps.
+# The instance serves 80 databases in three blocks that must not overlap
+# (infra/docker-compose.dev.yml says the same): db 0 is bare `make dev`, 1..63
+# belong to the parallel integration lane one per package, and 64..79 are
+# these slugged stacks. A slug landing in the test range would have its streams
+# FLUSHDB'd mid-run by a suite that believes it owns the db.
+#
+# The index is NOT the port hash. Two hashes differing by a multiple of the
+# block size would take different ports and the same db — a collision the port
+# check cannot see, which is the failure this whole change is about. It is
+# instead the lowest free index, claimed under a lock and recorded beside the
+# stack's other state, so a running stack's db is never handed out twice and a
+# resumed slug reclaims its own.
+DEV_REDIS_DB_MIN=64
+DEV_REDIS_DB_MAX=79
+
+# claim_redis_db SLUG — the logical database this slug owns, on stdout.
+#
+# Same slug wins the same index back, so restarting a stack keeps whatever its
+# streams already hold. A NEW slug takes the lowest index no other recorded
+# stack is using; two starting at once are serialised by a lock directory, so
+# they cannot both read "64 is free" and both take it.
+#
+# Reading the recorded stacks rather than hashing is what makes the guarantee
+# real: a hash gives distinct ports and a shared db whenever two hashes differ
+# by a multiple of the block size, which the port check cannot see and which is
+# exactly the collision this change exists to remove.
+claim_redis_db() { # slug
+  local want="$1" lock=".tmp/dev/.redis-db.lock" taken=() db
+  mkdir -p .tmp/dev
+  # A stale lock from a killed run would wedge every later start, so it is
+  # cleared on exit AND bounded: mkdir is the atomic primitive here.
+  local waited=0
+  until mkdir "$lock" 2>/dev/null; do
+    (( waited++ >= 50 )) && { rm -rf "$lock"; continue; }
+    sleep 0.1
+  done
+  trap 'rm -rf "'"$lock"'"' RETURN
+
+  local state_file other_slug REDIS_DB
+  for state_file in .tmp/dev/*/env; do
+    [[ -f "$state_file" ]] || continue
+    other_slug="$(basename "$(dirname "$state_file")")"
+    REDIS_DB=''
+    # shellcheck disable=SC1090
+    . "$state_file"
+    [[ -z "$REDIS_DB" ]] && continue
+    # This slug's own recorded index is the one it reclaims.
+    if [[ "$other_slug" == "$want" ]]; then
+      printf '%s' "$REDIS_DB"
+      return 0
+    fi
+    taken+=("$REDIS_DB")
+  done
+
+  for (( db = DEV_REDIS_DB_MIN; db <= DEV_REDIS_DB_MAX; db++ )); do
+    local used=0 t
+    for t in "${taken[@]:-}"; do [[ "$t" == "$db" ]] && { used=1; break; }; done
+    (( used )) || { printf '%s' "$db"; return 0; }
+  done
+
+  # Every index in the block is spoken for. Refuse rather than double up: a
+  # shared bus is the silent failure this whole mechanism prevents, and a
+  # 17th concurrent stack is a situation to notice, not to paper over.
+  echo "FAIL: all ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX} Redis databases are claimed by other dev stacks." >&2
+  echo "  Stop one (make dev-stop DEV_SLUG=<slug>), or a bare 'make dev' to sweep them all." >&2
+  exit 1
+}
 redis_db=0
 if [[ -n "$slug" ]]; then
-  redis_db=$(( 1 + hash % 15 ))
+  redis_db=$(claim_redis_db "$slug")
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
@@ -696,8 +757,11 @@ up)
     echo "  worker   background relay + Surface-B runner + automation time-scan running"
   fi
 
-  printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
-    "$slug" "$api_port" "$fe_port" "$db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
+  # REDIS_DB is recorded because claim_redis_db reads it back: it is how this
+  # slug reclaims its own index on a restart, and how the next slug knows the
+  # index is spoken for.
+  printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nREDIS_DB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
+    "$slug" "$api_port" "$fe_port" "$db" "$redis_db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
 
   if wait_ready "http://localhost:${fe_port}/" 90; then
     echo "$label ready"

@@ -51,13 +51,43 @@ func TestAnUnusableDatabaseIsRefusedRatherThanIgnored(t *testing.T) {
 		"localhost:16379/",    // suffix present, index missing
 		"localhost:16379/x",   // not a number
 		"localhost:16379/-1",  // below the range
-		"localhost:16379/16",  // Redis ships `databases 16`, so 0..15
+		"localhost:16379/80",  // Redis ships `databases 16`, so 0..15
 		"localhost:16379/1/2", // two suffixes
 	} {
 		if _, err := ClientOptions(addr); err == nil {
 			t.Errorf("%q was accepted; a bad index must refuse rather than fall back to db 0, "+
 				"because falling back shares a consumer group with every other stack", addr)
 		}
+	}
+}
+
+// A UNIX SOCKET is an address, not a suffixed host. go-redis reads a leading
+// slash as one, and every path has slashes in it — splitting those would
+// refuse a deployment that worked before this parameter existed.
+func TestAUnixSocketIsAnAddressNotADatabaseSuffix(t *testing.T) {
+	opts, err := ClientOptions("/var/run/redis.sock")
+	if err != nil {
+		t.Fatalf("a unix socket was refused: %v", err)
+	}
+	if opts.Network != "unix" {
+		t.Errorf("network = %q, want unix", opts.Network)
+	}
+	if opts.Addr != "/var/run/redis.sock" {
+		t.Errorf("addr = %q, want the path carried through whole", opts.Addr)
+	}
+	if opts.DB != 0 {
+		t.Errorf("db = %d, want 0 — a socket path names no database", opts.DB)
+	}
+}
+
+// The top of the range the dev compose actually serves.
+func TestTheHighestServedDatabaseIsAccepted(t *testing.T) {
+	opts, err := ClientOptions("localhost:16379/79")
+	if err != nil {
+		t.Fatalf("db 79 was refused, but the instance serves 80: %v", err)
+	}
+	if opts.DB != 79 {
+		t.Errorf("db = %d, want 79", opts.DB)
 	}
 }
 

@@ -402,10 +402,11 @@ the process exits.
 ## The bus address and its logical database (api, worker)
 
 `--redis` accepts a Redis logical database as a suffix: `localhost:16379/7`
-selects database 7, and a bare `localhost:16379` keeps the default 0. Valid
-indices are 0–15, Redis's own `databases 16`. A suffix that is not an index in
-that range is refused rather than ignored — falling back to 0 would put the
-process on a bus it was configured off.
+selects database 7, and a bare `localhost:16379` keeps the default 0. A suffix
+that is not an index in 0–79 is refused rather than ignored — falling back to 0
+would put the process on a bus it was configured off. A UNIX SOCKET path
+(`/var/run/redis.sock`) is an address rather than a suffixed host and is passed
+through whole.
 
 **Why it exists.** The stream names and consumer groups are constants
 (`gw:events:crm:*`, `cg:*`), so two installations pointed at one Redis database
@@ -416,8 +417,9 @@ a projection, an accrual or a notification that simply never runs — looks
 exactly like a broken feature rather than a misconfigured bus.
 
 A production installation has its own Redis and needs none of this. It matters
-on a developer machine, where `make dev` gives every `DEV_SLUG` stack its own
-index (bare `make dev` keeps 0) so parallel stacks stop stealing each other's
+on a developer machine, where one instance serves three blocks — db 0 for bare
+`make dev`, 1–63 for the parallel integration lane, 64–79 for `DEV_SLUG` stacks
+— so parallel stacks and test packages stop stealing and flushing each other's
 events. The startup banner prints which index a slugged stack took.
 
 ## Capture connector OAuth (api, worker) — Gmail / Microsoft 365

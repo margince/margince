@@ -62,6 +62,14 @@ func NewClient(ctx context.Context, addr string) (*redis.Client, error) {
 // the other honoured the suffix, which is the same event-stealing bug wearing
 // a different hat.
 func ClientOptions(addr string) (*redis.Options, error) {
+	// A UNIX SOCKET is an address, not a suffixed host: go-redis reads a
+	// leading slash as one, and every path has slashes in it. Splitting those
+	// would turn /var/run/redis.sock into host "" and database
+	// "var/run/redis.sock" and refuse a deployment that worked before this
+	// parameter existed.
+	if strings.HasPrefix(addr, "/") {
+		return &redis.Options{Network: "unix", Addr: addr}, nil
+	}
 	host, index, found := strings.Cut(addr, "/")
 	if !found {
 		return &redis.Options{Addr: addr}, nil
@@ -75,10 +83,14 @@ func ClientOptions(addr string) (*redis.Options, error) {
 	return &redis.Options{Addr: host, DB: db}, nil
 }
 
-// maxRedisDB is Redis's own default `databases 16`, so 0..15. A higher index
-// would connect and then fail on the first command, which reads as an
-// unreachable bus rather than as a misconfigured one.
-const maxRedisDB = 15
+// maxRedisDB bounds the index this parser will accept. Redis's own default is
+// `databases 16`; the dev compose raises it to 80 so the integration lane and
+// the DEV_SLUG stacks each get a block. The ceiling here is deliberately the
+// higher one: an index this parser refused but the instance serves would be a
+// working configuration rejected at the door, and one it accepts that the
+// instance does not connects and then fails on the first command — which reads
+// as an unreachable bus, the error an operator can act on.
+const maxRedisDB = 79
 
 // publishedTotal counts rows shipped since process start — process-wide,
 // not per-Relay, so the metrics endpoint reads it without holding the
