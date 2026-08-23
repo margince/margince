@@ -294,9 +294,13 @@ func resumeIndex(walk []datasource.EntityType, stream string) int {
 	if stream == "" {
 		return 0
 	}
-	at := slices.Index(searchable, datasource.EntityType(stream))
+	// NAMEABLE, not searchable: it is the order every walk is built in, and a
+	// stream absent from the list Index is asked about answers -1 — which
+	// compares below every position and restarts the walk at its first type,
+	// re-serving records the caller already has.
+	at := slices.Index(nameable, datasource.EntityType(stream))
 	for i, et := range walk {
-		if slices.Index(searchable, et) >= at {
+		if slices.Index(nameable, et) >= at {
 			return i
 		}
 	}

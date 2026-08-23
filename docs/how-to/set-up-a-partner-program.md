@@ -124,9 +124,10 @@ the shape:
   for lives on the organization, so searching without naming a type finds the company once
   rather than twice. Name `record_type=partner` to reach the terms.
 - **The role and certification dials are not on the tool surface yet.** `GET /partners` narrows
-  by `partner_role` and `cert_status`, and the store binds both, but `list_records` — the tool
-  that carries filters — does not serve `partner`, so an agent gets the whole list and filters
-  it itself. Tracked as a follow-up.
+  by `partner_role` and `cert_status`, and the store binds both. But `search_records` — the tool
+  that serves partner — takes no filters at all, and `list_records`, which does carry them, does
+  not serve `partner`. So an agent gets the whole partner list and narrows it itself. Tracked as
+  a follow-up.
 
 **The generic tools only READ a partner.** `partner` is not one of the record types
 `update_record` accepts, so an agent working through those tools cannot set a tier or a
@@ -134,9 +135,16 @@ certification.
 
 That is a statement about the generic tools, not a guarantee that no agent can ever write partner
 state. `PUT /organizations/{id}/partner` carries a write annotation, and a passport is a REST
-credential as well as an MCP one — so an agent holding a passport with the `partner` object grant
-can reach that route directly. If you want partner terms to be human-only, the object grant is
-what decides it, not the tool vocabulary.
+credential as well as an MCP one, so an agent can reach that route directly. Three things all
+have to be true for it to succeed, and any one of them is where you stop it:
+
+- the passport carries **write** scope,
+- the granting human's seat has **update** on `partner`,
+- and **update** on `organization` as well — becoming a partner stamps the company's
+  relationship types, so the route needs both.
+
+If you want partner terms to be human-only, that is what to withhold. The tool vocabulary is not
+what decides it.
 
 A deal's partner and what that partner did for it are both readable and writable, through the
 deal's own `partner_org_id` and `partner_attribution` fields — settable when an agent creates a

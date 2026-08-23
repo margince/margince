@@ -32,6 +32,21 @@
 -- the old one did. It is run anyway rather than left NOT VALID: an unvalidated
 -- constraint is not trusted by the planner and reads as provisional to the
 -- next person who looks at the schema.
+--
+-- WHAT THIS DOES NOT BUY, stated so nobody reads more safety into it than is
+-- here. dbmigrate runs each migration file inside ONE transaction, so the
+-- ACCESS EXCLUSIVE taken by ADD CONSTRAINT is held until this file commits —
+-- the VALIDATE scan runs under it rather than under the SHARE UPDATE EXCLUSIVE
+-- it would take on its own connection. Splitting the two across separately
+-- committed migrations is the only way to get that, and that is a change to
+-- how every migration in this tree runs, not a choice this one may make.
+--
+-- What the staging still buys is the shape: the swap is additive and
+-- reversible, the constraint keeps its name, and the day the migrator learns
+-- to commit phases this file needs no rewrite. The four tables here are also
+-- the small end — embedding is the largest and the scan is a sequential read
+-- of one text column — so the exposure is bounded today even though the
+-- mechanism is not.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE attachment ADD CONSTRAINT attachment_entity_type_check_v2
