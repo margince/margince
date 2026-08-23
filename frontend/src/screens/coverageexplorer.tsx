@@ -176,11 +176,13 @@ function CoverageGrid({
           N-colleague matrix runs past the panel's right edge, and the box that
           scrolls sideways — keyboard-reachable, and announced as a named region
           only while it is actually holding something past that edge — is one
-          spelling for every table in the product (atoms.tsx). The
-          `.coverage-scroll` class is the screen's own half: below 720px the
-          rows become cards and there is nothing left to scroll, so the overflow
-          is turned back off there. */}
-      <TableScroll className="coverage-scroll" label={t("acctCoverage.title")}>
+          spelling for every table in the product (atoms.tsx).
+          No screen-owned overflow class beside it: below 720px the rows become
+          block cards with nothing left to run past the edge, so TableScroll's
+          own rule already shows no scrollbar there — and an override would have
+          been the same specificity as TableScroll's, winning only if this
+          screen's stylesheet happened to load second. */}
+      <TableScroll label={t("acctCoverage.title")}>
         <table className="coverage-table">
           <thead>
             <tr>

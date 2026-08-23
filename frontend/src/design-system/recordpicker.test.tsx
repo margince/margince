@@ -157,6 +157,7 @@ describe("RecordPicker", () => {
   });
 
   it("renders a rejected search inline instead of throwing", async () => {
+    const user = userEvent.setup();
     const searchTargets = vi.fn().mockRejectedValue(new Error("search down"));
     rtlRender(
       <RecordPicker
@@ -166,7 +167,7 @@ describe("RecordPicker", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "anna");
+    await user.type(screen.getByRole("searchbox"), "anna");
 
     // A plain Error is a failure nobody phrased for a reader — "search down"
     // is a sentence written for whoever reads a stack trace. The line the
@@ -187,6 +188,7 @@ describe("RecordPicker", () => {
   // they lack and on what — the shape of the authority model, handed to
   // whoever probed it.
   it("answers a refusal in the reader's words, never the server's", async () => {
+    const user = userEvent.setup();
     const refused = new ProblemError({
       code: "permission_denied",
       detail: "person.update: permission denied",
@@ -201,7 +203,7 @@ describe("RecordPicker", () => {
       </LocaleProvider>,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "anna");
+    await user.type(screen.getByRole("searchbox"), "anna");
 
     await waitFor(() =>
       expect(screen.getByText(/do not have permission/)).toBeTruthy(),
@@ -214,6 +216,7 @@ describe("RecordPicker", () => {
   // untouched — replacing a cause somebody composed for a user would be the
   // opposite defect.
   it("keeps a detail the server wrote for a reader", async () => {
+    const user = userEvent.setup();
     const refused = new ProblemError({
       code: "search_unavailable",
       detail: "Search is being rebuilt. Try again in a few minutes.",
@@ -228,7 +231,7 @@ describe("RecordPicker", () => {
       </LocaleProvider>,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "anna");
+    await user.type(screen.getByRole("searchbox"), "anna");
 
     await waitFor(() => expect(screen.getByText(/being rebuilt/)).toBeTruthy());
   });
@@ -308,6 +311,7 @@ describe("RecordPicker", () => {
   // A failed search that is then made in a new space must not leave its line
   // behind: it described a question nobody is asking any more.
   it("drops a failed search's message when the search space changes", async () => {
+    const user = userEvent.setup();
     const failing = vi.fn().mockRejectedValue(new Error("search unavailable"));
     const working = vi
       .fn()
@@ -316,7 +320,7 @@ describe("RecordPicker", () => {
       <RecordPicker label="Search…" searchTargets={failing} onPick={vi.fn()} />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "weber");
+    await user.type(screen.getByRole("searchbox"), "weber");
     await waitFor(() =>
       expect(
         screen.getByText("The request failed. No cause reported."),

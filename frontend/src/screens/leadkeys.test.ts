@@ -163,8 +163,11 @@ function handSpelled(): string[] {
     .map((file) => [relative(srcRoot, file), file] as const)
     .filter(([name]) => !OWNERS.includes(name))
     // A file that never says "lead" cannot spell one of these keys, and
-    // parsing it anyway is what this gate would otherwise cost.
-    .filter(([, file]) => readFileSync(file, "utf8").includes('"lead'));
+    // parsing it anyway is what this gate would otherwise cost. The word
+    // ALONE, not `"lead` — a key written with single quotes or in a template
+    // contains no double quote, and narrowing on one was a prefilter that
+    // dropped the file before the census ever looked at it.
+    .filter(([, file]) => readFileSync(file, "utf8").includes("lead"));
   // A sweep that found no files and a tree with no defects look identical.
   expect(files.length).toBeGreaterThan(0);
   return files

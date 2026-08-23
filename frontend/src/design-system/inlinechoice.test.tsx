@@ -111,6 +111,7 @@ describe("editing a value where it is read", () => {
   // whether or not the catalog arm is consulted. Only a refusal the catalog
   // REPLACES separates the two.
   it("answers a permission refusal in the reader's words, never the server's", async () => {
+    const user = userEvent.setup();
     const onSave = vi.fn(async () => {
       throw new ProblemError({
         code: "permission_denied",
@@ -118,10 +119,10 @@ describe("editing a value where it is read", () => {
       });
     });
     renderChoice({ onSave });
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Change Account lifecycle" }),
     );
-    await userEvent.click(screen.getByRole("option", { name: "Customer" }));
+    await user.click(screen.getByRole("option", { name: "Customer" }));
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain(
@@ -365,6 +366,7 @@ describe("editing free text where it is read", () => {
   // error's own text handed the person who was just refused the name of the
   // permission they lack and the record kind it governs.
   it("answers a permission refusal in the reader's words, never the server's", async () => {
+    const user = userEvent.setup();
     const onSave = vi.fn(async () => {
       throw new ProblemError({
         code: "permission_denied",
@@ -372,12 +374,10 @@ describe("editing free text where it is read", () => {
       });
     });
     renderText({ onSave });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Change Industry" }));
     const input = screen.getByLabelText("Industry");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Aerospace{Enter}");
+    await user.clear(input);
+    await user.type(input, "Aerospace{Enter}");
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain(
         "do not have permission",

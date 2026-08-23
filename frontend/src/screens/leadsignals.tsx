@@ -113,7 +113,10 @@ export function LeadManualSignals({
   const [confidence, setConfidence] = useState<string>(CONFIDENCE_UNSTATED);
 
   const invalidate = () => {
-    for (const key of [...leadWriteKeys(id), leadManualSignalsKey(id)]) {
+    // leadWriteKeys carries `["lead", id]`, and React Query invalidates by
+    // PREFIX — so the manual-signals read under `["lead", id, …]` is already
+    // reached. Naming it again is a second refetch of the same rows.
+    for (const key of leadWriteKeys(id)) {
       queryClient.invalidateQueries({ queryKey: key });
     }
   };

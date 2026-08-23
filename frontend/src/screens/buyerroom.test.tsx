@@ -143,6 +143,7 @@ function render(ui: ReactNode) {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   globalThis.sessionStorage.clear();
   globalThis.location.hash = "";
@@ -252,15 +253,18 @@ describe("BuyerRoomScreen", () => {
   // nothing).
   it("hands the buyer a file through the shared download, revoke included", async () => {
     const created: Blob[] = [];
-    const createObjectURL = vi.fn((blob: Blob) => {
-      created.push(blob);
+    const createObjectURL = vi.fn((source: Blob | MediaSource) => {
+      if (source instanceof Blob) {
+        created.push(source);
+      }
       return "blob:room";
     });
     const revokeObjectURL = vi.fn();
-    Object.defineProperties(URL, {
-      createObjectURL: { configurable: true, value: createObjectURL },
-      revokeObjectURL: { configurable: true, value: revokeObjectURL },
-    });
+    // spyOn, not defineProperties: the file's afterEach calls
+    // vi.unstubAllGlobals(), which does not undo a defineProperties, so a
+    // hand-installed mock would stay on URL for every later test in this file.
+    vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL);
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
     stubRoom({
       "GET /public/rooms/documents/d-1/file": () =>
         new Response(new Blob(["%PDF-1.7"], { type: "application/pdf" }), {

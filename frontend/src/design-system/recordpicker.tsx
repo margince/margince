@@ -53,7 +53,13 @@ export function RecordPicker({
   // array — re-firing the request on every render — or read a stale locale.
   // Translating where it is rendered has neither problem, and a locale change
   // re-words a refusal already on screen.
-  const [searchFailure, setSearchFailure] = useState<unknown>(null);
+  // WRAPPED, not stored bare. A promise may reject with anything, `null`
+  // included, and a bare `unknown` cannot tell "rejected with null" from "no
+  // failure" — the picker would then clear its candidates and say nothing at
+  // all, which is the one state this control exists to avoid.
+  const [searchFailure, setSearchFailure] = useState<{
+    readonly cause: unknown;
+  } | null>(null);
 
   // A NEW search space empties the list, at once.
   //
@@ -103,7 +109,7 @@ export function RecordPicker({
       } catch (error) {
         if (!cancelled) {
           setCandidates([]);
-          setSearchFailure(error);
+          setSearchFailure({ cause: error });
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -130,7 +136,7 @@ export function RecordPicker({
       />
       {searchFailure !== null && (
         <p className="t-caption" style={{ color: "var(--danger)" }}>
-          {problemMessageOf(searchFailure, t)}
+          {problemMessageOf(searchFailure.cause, t)}
         </p>
       )}
       {/* The current selection stays visible on its own line, independent of

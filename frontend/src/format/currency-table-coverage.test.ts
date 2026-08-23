@@ -138,6 +138,18 @@ function tablesIn(fileName: string, text: string): string[] {
     ) {
       const compared = new Set<string>();
       const walk = (inner: ts.Node) => {
+        // STOP at a nested function. Each is visited in its own right by the
+        // outer traversal, so descending would attribute a child's comparison
+        // to every ancestor — and an outer function holding two unrelated
+        // single-code callbacks would be reported as a table it is not.
+        if (
+          inner !== node &&
+          (ts.isFunctionDeclaration(inner) ||
+            ts.isArrowFunction(inner) ||
+            ts.isFunctionExpression(inner))
+        ) {
+          return;
+        }
         if (
           ts.isBinaryExpression(inner) &&
           (inner.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken ||
@@ -266,6 +278,15 @@ describe("a currency", () => {
       1,
     ],
     // What must stay invisible.
+    [
+      // Found by a bot probing the if-chain arm: descending into nested
+      // functions attributed a child's comparison to every ancestor, so a
+      // function merely CONTAINING two unrelated one-code callbacks was
+      // reported as a table.
+      "two unrelated one-code callbacks inside one function",
+      'function outer() { a(() => { if (c === "JPY") return 0; }); b(() => { if (c === "VND") return 0; }); }',
+      0,
+    ],
     [
       "ONE code compared, which is a decision about one currency",
       'function whole(c: string, a: number) { if (c === "JPY") { return a; } return a / 100; }',

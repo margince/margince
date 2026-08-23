@@ -467,7 +467,15 @@ function BuyerDocumentVerbs({
   const t = useT();
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
-    mutationFn: async (input: { documentId: string; filename: string }) => {
+    // The failure line rides as a mutation VARIABLE rather than being read off
+    // `t` inside the function. A mutationFn is re-armed in a passive effect, so
+    // a closure read here is the render-before-last's — for a translator that
+    // means the locale the reader has just left.
+    mutationFn: async (input: {
+      documentId: string;
+      filename: string;
+      failure: string;
+    }) => {
       const { data, error, response } = await api.GET(
         "/public/rooms/documents/{documentId}/file",
         {
@@ -480,10 +488,7 @@ function BuyerDocumentVerbs({
         // A refusal this screen decided, with copy it already translated, so
         // it rides as a problem body — a plain Error is wording nobody wrote
         // for a user and is replaced by the shared failure line.
-        throwProblem({
-          status: response.status,
-          detail: t("buyer.docs.downloadFailed"),
-        });
+        throwProblem({ status: response.status, detail: input.failure });
       }
       // The blob's OWN type, because the server chose it: a PDF handed to the
       // reader as application/octet-stream downloads with the wrong icon and
@@ -498,7 +503,11 @@ function BuyerDocumentVerbs({
         aria-label={t("buyer.docs.download", { title: doc.title })}
         pending={download.isPending}
         onClick={() =>
-          download.mutate({ documentId: doc.id, filename: doc.filename })
+          download.mutate({
+            documentId: doc.id,
+            filename: doc.filename,
+            failure: t("buyer.docs.downloadFailed"),
+          })
         }
       >
         <Download aria-hidden />

@@ -675,10 +675,14 @@
 }
 
 @media (max-width: 720px) {
-  .coverage-scroll {
-    overflow-x: visible;
-  }
-  /* display:block strips the table roles a screen reader navigates by, so the
+  /* No overflow override here. The rows below become block CARDS at this
+   * width, so there is nothing left to run past the right edge and
+   * TableScroll's own `overflow-x: auto` shows no scrollbar — while an
+   * override would have been the same specificity as TableScroll's rule and
+   * won only if this stylesheet happened to load second. A contract that rests
+   * on load order is not a contract.
+   *
+   * display:block strips the table roles a screen reader navigates by, so the
    * markup below sets role="list"/"listitem" at this width to match what the
    * cards actually are. Leaving the roles implicit would announce a table
    * whose rows and columns no longer exist.

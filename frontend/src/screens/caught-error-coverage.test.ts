@@ -66,6 +66,25 @@ import { describe, expect, it } from "vitest";
 const screensDir = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(screensDir, "..");
 
+// A cast, a parenthesis and a non-null assertion all leave the same value in
+// place: `(err as Error).message` is arm 1 wearing a cast, and
+// `download.error!.message` is arm 5 wearing a non-null assertion. ONE helper,
+// because this file briefly carried two copies of this four-case peel and a
+// fifth wrapper added to one of them would have left the other blind — the same
+// second-implementation defect the census itself is about.
+function unwrap(node: ts.Expression): ts.Expression {
+  let inner = node;
+  while (
+    ts.isParenthesizedExpression(inner) ||
+    ts.isAsExpression(inner) ||
+    ts.isNonNullExpression(inner) ||
+    ts.isTypeAssertionExpression(inner)
+  ) {
+    inner = inner.expression;
+  }
+  return inner;
+}
+
 /** A rendered read of one caught binding: `<arm> <file>:<line>`. */
 function disclosuresIn(fileName: string, text: string): string[] {
   const source = ts.createSourceFile(
@@ -86,20 +105,6 @@ function disclosuresIn(fileName: string, text: string): string[] {
     // walked. Declarations precede their uses, so one pass suffices.
     const names = new Set([declared.text]);
 
-    // A cast, a parenthesis and a non-null assertion all leave the same value
-    // in place — `(err as Error).message` is arm 1 wearing a cast.
-    const unwrap = (node: ts.Expression): ts.Expression => {
-      let inner = node;
-      while (
-        ts.isParenthesizedExpression(inner) ||
-        ts.isAsExpression(inner) ||
-        ts.isNonNullExpression(inner) ||
-        ts.isTypeAssertionExpression(inner)
-      ) {
-        inner = inner.expression;
-      }
-      return inner;
-    };
     const isBinding = (node: ts.Expression): boolean => {
       const inner = unwrap(node);
       return ts.isIdentifier(inner) && names.has(inner.text);
@@ -156,22 +161,6 @@ function disclosuresIn(fileName: string, text: string): string[] {
   // `X.error` is where every react-query result files the throw, and 309 sites
   // in this tree read it through `problemMessageOf`. Reading `.message` off it
   // is the same leak by a route with no `catch` to anchor on.
-  // A cast, a parenthesis or a non-null assertion between `.error` and
-  // `.message` leaves the same read in place. `download.error!.message` is the
-  // likely spelling, because strict-null narrowing is what invites the `!` —
-  // so the arm has to see through it or it is blind to its own commonest form.
-  const beneathWrappers = (node: ts.Expression): ts.Expression => {
-    let inner = node;
-    while (
-      ts.isParenthesizedExpression(inner) ||
-      ts.isAsExpression(inner) ||
-      ts.isNonNullExpression(inner) ||
-      ts.isTypeAssertionExpression(inner)
-    ) {
-      inner = inner.expression;
-    }
-    return inner;
-  };
   // Either accessor on either hop, because there are four spellings of one
   // read and a rule written against the dot form sees one of them:
   // `r.error.message`, `r["error"].message`, `r.error["message"]`, and both
@@ -192,7 +181,7 @@ function disclosuresIn(fileName: string, text: string): string[] {
       : undefined;
   const visitResultError = (node: ts.Node) => {
     const target = accessed(node);
-    const beneath = target === undefined ? undefined : beneathWrappers(target);
+    const beneath = target === undefined ? undefined : unwrap(target);
     if (
       namesProperty(node, "message") &&
       beneath !== undefined &&
@@ -325,6 +314,7 @@ describe("the census", () => {
       1,
     ],
     ["both hops by bracket", 'show(save["error"]["message"]);', 1],
+    ["only the MESSAGE hop bracketed", 'show(download.error["message"]);', 1],
     [
       "a result's error behind a non-null assertion",
       "show(download.error!.message);",
