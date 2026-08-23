@@ -162,3 +162,24 @@ func TestADeactivatedSellersPreviewEndsWithTheirSeat(t *testing.T) {
 		t.Fatalf("preview after deactivation = %d, want 401", status)
 	}
 }
+
+// A room created before this change sits in `draft`, and nothing promotes it
+// any more: publish is gone. The migration turns those rooms live, because a
+// draft room would otherwise be permanently unreadable by the people invited
+// to it, with no control anywhere to fix it.
+//
+// The check is on the SCHEMA the migrations build, not on a row this test
+// inserted: the default is what decides every room created from here on.
+func TestNoRoomCanBeCreatedInDraftAnyMore(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var def string
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT column_default FROM information_schema.columns
+		  WHERE table_name = 'deal_room' AND column_name = 'state'`).Scan(&def); err != nil {
+		t.Fatalf("reading the state default: %v", err)
+	}
+	if !strings.Contains(def, "live") {
+		t.Fatalf("deal_room.state defaults to %q, want live — a room landing in draft is unreadable", def)
+	}
+}
