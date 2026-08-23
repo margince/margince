@@ -462,7 +462,8 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | Every declared extension operation is mounted, and every mounted route was declared | `backend/internal/compose/extparity_test.go` |
 | A unit's served tool is dispatched only by that unit's own route — one unit cannot inherit another's handler by naming its verb | `backend/internal/compose/extparity_test.go` |
 | A unit's SCREEN reaches the core only through the published surface (`frontend/package.json`'s `exports`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts` — a vitest fitness function over the TypeScript AST, carrying its own fixture suite |
-| A unit's screen is held to the same design system as core — tokens, icons, spacing, no native dropdown | the four `frontend/scripts/check-*.sh` gates, which sweep `extensions/*/frontend` as well as `frontend/src` |
+| A unit's screen is held to the same design system as core — tokens, icons, spacing | the `frontend/scripts/check-*.sh` design-system gates, which sweep `extensions/*/frontend` as well as `frontend/src` |
+| …and renders no native dropdown | `frontend/src/design-system/native-controls.test.ts` — a vitest fitness function over the TypeScript AST, reaching every extension frontend layer at any depth |
 | A unit cannot ship a second copy of state the host owns (React's hook dispatcher, react-query's QueryClient) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches a transitive one |
 | A unit's copy is namespaced to that unit and cannot rewrite a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | A unit screen's own test suite is RUN, not merely typechecked | `frontend/vitest.ext.config.ts` via `make fe-test-ext`, which `make check-fe` calls |
