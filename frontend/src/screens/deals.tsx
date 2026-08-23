@@ -113,6 +113,7 @@ import {
   resolveDealProject,
   StartDeliveryPrompt,
   useOpenProjects,
+  useProjectsOfCompany,
 } from "./dealproject";
 import { DealRoomAside } from "./dealroom";
 import { EditAction } from "./edit";
@@ -127,6 +128,7 @@ import {
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import { DealCoverageCard } from "./network";
+import type { Project } from "./projects.form";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
@@ -1736,6 +1738,9 @@ export function DealsScreen({
 
   const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
 
+  // The picker asks the server for ONE company's projects, so the form's chosen
+  // company is what it is keyed on: a project is worked by several companies,
+  // and only the server can say which of them this one is on.
   const openProjects = useOpenProjects();
 
   const createDeal = async (values: Record<string, string>) => {
@@ -2680,6 +2685,30 @@ function ReopenAction({
 // archived deal is read-only (no edit/archive/advance path exists server-side
 // for a non-live row), so its verbs render REFUSED rather than missing: the
 // page's one sentence about the archive says why, and each of them points at
+// The edit form's project fields, or none when the reader may not see which
+// project this deal names. Named rather than inlined so `DealBadges` stays
+// under the complexity ceiling, and so the masked case reads as one decision.
+function editProjectFields(
+  t: (key: MessageKey) => string,
+  opts: Readonly<{
+    masked: readonly string[];
+    openProjects: readonly Project[];
+    currentProject?: { id: string; label: string };
+    company?: string;
+  }>,
+): CreateField[] {
+  if (opts.masked.includes("project_id")) {
+    return [];
+  }
+  return dealProjectFields(
+    t,
+    opts.openProjects,
+    opts.currentProject,
+    true,
+    opts.company,
+  );
+}
+
 // it (STATE-4a). A missing control says nothing about the deal, while a
 // refused one names the reason.
 function DealBadges({
@@ -2736,7 +2765,11 @@ function DealBadges({
   // One fact refuses every write below, so it is named once. Undefined while
   // the deal is live, which is what leaves the verbs pressable.
   const refusedByArchive = deal.archived_at ? archivedReasonId : undefined;
-  const openProjects = useOpenProjects();
+  // This deal's company, so the picker offers the projects that company is on —
+  // as customer, partner or subcontractor. The server decides which; asking for
+  // every project and filtering here on organization_id would show only the
+  // ones it is the CUSTOMER of.
+  const openProjects = useProjectsOfCompany(deal.organization_id ?? undefined);
   const projectById = useEntityName("project", deal.project_id);
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
@@ -2763,9 +2796,12 @@ function DealBadges({
             // nobody has priced has none to put there.
             currency: deal.currency ?? "",
           }),
-          ...(masked.includes("project_id")
-            ? []
-            : dealProjectFields(t, openProjects, currentProject)),
+          ...editProjectFields(t, {
+            masked,
+            openProjects,
+            currentProject,
+            company: deal.organization_id ?? undefined,
+          }),
           ...cf.formFields,
         ]}
         record={{ ...dealEditRecord(deal), ...cf.recordSlice(deal) }}

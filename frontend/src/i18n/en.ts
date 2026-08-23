@@ -2378,6 +2378,8 @@ export const en = {
   "compose.multiRecipientWarning":
     "This purpose carries an unsubscribe link, so a send to more than one addressee will be refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
+  "compose.filedUnder":
+    "This reply will be filed under {project}, like the rest of this conversation.",
   "compose.relinkTarget": "Search a person, organization, deal, or lead",
   "compose.relinkReplace": "Move instead of also-link",
   "compose.relinkReplaceHint":
