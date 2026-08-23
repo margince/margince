@@ -63,7 +63,7 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		return RenderIngredients{}, err
 	}
 	var out RenderIngredients
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		offer, err := visibleOffer(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -198,7 +198,7 @@ func (s *Store) SetPdfAssetRef(ctx context.Context, id ids.OfferID, ref string, 
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, nil, err
 	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		existing, err := visibleOffer(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err

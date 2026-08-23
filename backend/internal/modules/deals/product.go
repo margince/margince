@@ -60,7 +60,7 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 	active := in.Active == nil || *in.Active
 
 	var out crmcontracts.Product
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		id := ids.New[ids.ProductKind]()
 		_, err := tx.Exec(ctx,
 			`INSERT INTO product (id, name, sku, description, unit, unit_price_minor,
@@ -103,7 +103,7 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 		return crmcontracts.Product{}, err
 	}
 	var out crmcontracts.Product
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, err := readProduct(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -166,7 +166,7 @@ func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontra
 		return crmcontracts.Product{}, err
 	}
 	var out crmcontracts.Product
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func (s *Store) GetProduct(ctx context.Context, id ids.ProductID, archived store
 		return crmcontracts.Product{}, err
 	}
 	var out crmcontracts.Product
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = readProduct(ctx, tx, id, archived)
 		return err
 	})
@@ -236,24 +236,24 @@ func (s *Store) ListProducts(ctx context.Context, in ListProductsInput) ([]crmco
 	}
 	// The catalogue carries no custom columns, so the vocabulary is the
 	// fixed one and there is nothing to append to the select.
-	pre, err := buildListPrelude(ctx, "", productListFields, nil,
+	pre, err := storekit.BuildListPrelude(ctx, "", productListFields, nil,
 		in.Sort, in.Limit, in.Cursor, nil)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where := pre.where
+	where := pre.Where()
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
 	if in.Active != nil {
-		where = append(where, storekit.SQLf(productActiveField+" = $%d", pre.arg(*in.Active)))
+		where = append(where, storekit.SQLf(productActiveField+" = $%d", pre.Arg(*in.Active)))
 	}
 	if in.Query != nil && *in.Query != "" {
-		pos := pre.arg("%" + storekit.EscapeLike(*in.Query) + "%")
+		pos := pre.Arg("%" + storekit.EscapeLike(*in.Query) + "%")
 		where = append(where, storekit.SQLf("(name ILIKE $%d OR sku ILIKE $%d)", pos, pos))
 	}
 
-	return runListPage(ctx, s, pre, "product", productColumns, nil, where, scanProductPage,
+	return storekit.RunListPage(ctx, s, pre, "product", productColumns, nil, where, scanProductPage,
 		func(p crmcontracts.Product) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) })
 }
 

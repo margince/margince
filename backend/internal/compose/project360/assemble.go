@@ -17,6 +17,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -32,6 +33,7 @@ const sectionLimit = 25
 type Service struct {
 	pool       *pgxpool.Pool
 	deals      *deals.Store
+	projects   *projects.Store
 	people     *people.Store
 	contracts  *contracts.Store
 	activities *activities.Store
@@ -45,13 +47,14 @@ type Service struct {
 func NewService(
 	pool *pgxpool.Pool,
 	dealStore *deals.Store,
+	projectStore *projects.Store,
 	peopleStore *people.Store,
 	contractStore *contracts.Store,
 	activityStore *activities.Store,
 	now func() time.Time,
 ) *Service {
 	return &Service{
-		pool: pool, deals: dealStore, people: peopleStore,
+		pool: pool, deals: dealStore, projects: projectStore, people: peopleStore,
 		contracts: contractStore, activities: activityStore, now: now,
 	}
 }
@@ -65,14 +68,14 @@ func NewService(
 // who may read the project but not its company. The organization section
 // reads it itself, so that refusal lands as an omission.
 type catalogs struct {
-	project deals.CustomColumns
+	project projects.CustomColumns
 	deal    deals.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 	var c catalogs
 	var err error
-	if c.project, err = s.deals.ActiveProjectColumns(ctx); err != nil {
+	if c.project, err = s.projects.ActiveProjectColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
@@ -93,7 +96,7 @@ func (s *Service) Assemble(ctx context.Context, projectID ids.ProjectID) (crmcon
 		return crmcontracts.Project360{}, err
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		project, err := s.deals.GetProjectTx(ctx, tx, projectID, storekit.LiveOnly, cats.project)
+		project, err := s.projects.GetProjectTx(ctx, tx, projectID, storekit.LiveOnly, cats.project)
 		if err != nil {
 			return err
 		}

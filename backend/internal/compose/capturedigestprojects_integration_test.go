@@ -19,7 +19,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -28,12 +28,12 @@ import (
 
 func (b *backfillWireEnv) seedDigestProject(t *testing.T, name string, org ids.UUID, owner *ids.UUID) ids.ProjectID {
 	t.Helper()
-	in := deals.CreateProjectInput{Name: name, OrganizationID: ids.From[ids.OrganizationKind](org), Source: "manual"}
+	in := projects.CreateProjectInput{Name: name, OrganizationID: ids.From[ids.OrganizationKind](org), Source: "manual"}
 	if owner != nil {
 		id := ids.From[ids.UserKind](*owner)
 		in.OwnerID = &id
 	}
-	p, err := b.env.Deals.CreateProject(b.env.Admin(), in)
+	p, err := b.env.Projects.CreateProject(b.env.Admin(), in)
 	if err != nil {
 		t.Fatalf("create project %q: %v", name, err)
 	}
@@ -59,7 +59,7 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	org := e.SeedOrg(t, "Digest Client", nil)
 
 	moved := b.seedDigestProject(t, "Moved overnight", org, nil)
-	if _, err := e.Deals.AdvanceProjectPhase(admin, moved, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhasePursuing}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(admin, moved, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhasePursuing}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
 	due := now.Add(72 * time.Hour)
@@ -67,13 +67,13 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	b.fileOnProject(t, "task", promised, now, &due)
 	b.fileOnProject(t, "task", promised, now, &due)
 	quiet := b.seedDigestProject(t, "Gone quiet", org, &e.Rep1)
-	if _, err := e.Deals.AdvanceProjectPhase(admin, quiet, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhaseDelivering}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(admin, quiet, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering}); err != nil {
 		t.Fatalf("advance the quiet project: %v", err)
 	}
 	b.fileOnProject(t, "meeting", quiet, now.AddDate(0, 0, -40), nil)
 	// Touched last week: in flight, recently active, in no list.
 	busy := b.seedDigestProject(t, "Busy", org, nil)
-	if _, err := e.Deals.AdvanceProjectPhase(admin, busy, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhaseDelivering}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(admin, busy, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering}); err != nil {
 		t.Fatalf("advance the busy project: %v", err)
 	}
 	b.fileOnProject(t, "call", busy, now.AddDate(0, 0, -7), nil)
@@ -139,7 +139,7 @@ func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T
 	e := b.env
 	org := e.SeedOrg(t, "Digest Client", nil)
 	quiet := b.seedDigestProject(t, "Gone quiet", org, nil)
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), quiet, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhaseDelivering}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), quiet, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering}); err != nil {
 		t.Fatalf("advance: %v", err)
 	}
 	now := time.Now().UTC()

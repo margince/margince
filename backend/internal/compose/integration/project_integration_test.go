@@ -20,6 +20,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -35,14 +36,14 @@ type projectFixture struct {
 
 func seedProject(ctx context.Context, t *testing.T, e *Env, name string, key *string, org ids.UUID, owner *ids.UUID) projectFixture {
 	t.Helper()
-	in := deals.CreateProjectInput{
+	in := projects.CreateProjectInput{
 		Name:           name,
 		Key:            key,
 		OrganizationID: orgIDOf(org),
 		OwnerID:        userIDPtr(owner),
 		Source:         "manual",
 	}
-	p, err := e.Deals.CreateProject(ctx, in)
+	p, err := e.Projects.CreateProject(ctx, in)
 	if err != nil {
 		t.Fatalf("create project %q: %v", name, err)
 	}
@@ -57,12 +58,12 @@ func TestProjectIsBornWithItsHistoryRow(t *testing.T) {
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, nil)
 
-	got, err := e.Deals.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
+	got, err := e.Projects.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Phase == nil || string(*got.Phase) != deals.PhaseInitiative {
-		t.Errorf("phase = %v, want %s", got.Phase, deals.PhaseInitiative)
+	if got.Phase == nil || string(*got.Phase) != projects.PhaseInitiative {
+		t.Errorf("phase = %v, want %s", got.Phase, projects.PhaseInitiative)
 	}
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM project_phase_history WHERE project_id = $1 AND from_phase IS NULL AND to_phase = 'initiative'`,
@@ -79,10 +80,10 @@ func TestProjectKeyIsUniqueAmongLiveProjectsAndFreedByArchiving(t *testing.T) {
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	first := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, nil)
 
-	_, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
+	_, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Second", Key: strPtr("erp-27"), OrganizationID: orgIDOf(org), Source: "manual",
 	})
-	var taken *deals.ProjectKeyTakenError
+	var taken *projects.ProjectKeyTakenError
 	if !errors.As(err, &taken) {
 		t.Fatalf("a case-different duplicate key produced %v, want ProjectKeyTakenError", err)
 	}
@@ -91,10 +92,10 @@ func TestProjectKeyIsUniqueAmongLiveProjectsAndFreedByArchiving(t *testing.T) {
 	}
 
 	// Archiving frees the key: the uniqueness index is partial on live rows.
-	if _, err := e.Deals.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
+	if _, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Reused", Key: strPtr("ERP-27"), OrganizationID: orgIDOf(org), Source: "manual",
 	}); err != nil {
 		t.Fatalf("archiving did not free the key: %v", err)
@@ -109,7 +110,7 @@ func TestAdvanceProjectPhaseWritesHistoryAndTheFirstClassEvent(t *testing.T) {
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, org, nil)
 
-	moved, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{ToPhase: "delivering"})
+	moved, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: "delivering"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,8 +143,8 @@ func TestClosingAProjectRequiresAReason(t *testing.T) {
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, org, nil)
 
-	_, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhaseClosed})
-	var needsReason *deals.ClosedReasonRequiredError
+	_, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseClosed})
+	var needsReason *projects.ClosedReasonRequiredError
 	if !errors.As(err, &needsReason) {
 		t.Fatalf("closing without a reason produced %v, want ClosedReasonRequiredError", err)
 	}
@@ -153,12 +154,12 @@ func TestClosingAProjectRequiresAReason(t *testing.T) {
 
 	// Re-opening clears the closed reason: a live project must not carry
 	// the explanation of a close that no longer applies.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseClosed, Reason: strPtr("Delivered."),
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: strPtr("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	reopened, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{ToPhase: "delivering"})
+	reopened, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: "delivering"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +222,7 @@ func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := e.Deals.ArchiveProject(e.Admin(), p.ID, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), p.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -326,7 +327,7 @@ func TestARepReadsAProjectTheyDoNotOwnButCannotWriteIt(t *testing.T) {
 		RowScope: principal.RowScopeOwn,
 	})
 
-	got, err := e.Deals.GetProject(reader, p.ID, storekit.LiveOnly)
+	got, err := e.Projects.GetProject(reader, p.ID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("a rep working a project they do not own cannot read it: %v", err)
 	}
@@ -351,13 +352,13 @@ func TestARepReadsAProjectTheyDoNotOwnButCannotWriteIt(t *testing.T) {
 	// legitimately reads the row, so there is no existence left to hide and
 	// saying "not there" about a record they can see would be a lie.
 	renamed := "Renamed by a passer-by"
-	if _, err := e.Deals.UpdateProject(reader, p.ID, deals.UpdateProjectInput{Name: &renamed}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Projects.UpdateProject(reader, p.ID, projects.UpdateProjectInput{Name: &renamed}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a rep who does not own the project changed its name → %v, want ErrPermissionDenied — "+
 			"reading a project is not permission to rewrite it", err)
 	}
 	// And the row really is untouched, so the refusal was not a rollback of a
 	// write that had already landed.
-	after, err := e.Deals.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
+	after, err := e.Projects.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -431,7 +432,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	}
 
 	// And it is actionable: archive one side, then the merge proceeds.
-	if _, err := e.Deals.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target)); err != nil {
@@ -458,8 +459,8 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 
 	// PROJ-LIFE-2: a closed project still accepts work. Nothing about the
 	// phase gates an attachment — only the auto-link ladder consults it.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseClosed, Reason: strPtr("Delivered."),
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: strPtr("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -483,7 +484,7 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 	seedProject(e.Admin(), t, e, "Rollout A", nil, other, nil)
 
 	orgID := orgIDOf(wanted)
-	byOrg, _, err := e.Deals.ListProjects(e.Admin(), deals.ListProjectsInput{OrganizationID: &orgID})
+	byOrg, _, err := e.Projects.ListProjects(e.Admin(), projects.ListProjectsInput{OrganizationID: &orgID})
 	if err != nil {
 		t.Fatalf("list by organization: %v", err)
 	}
@@ -493,8 +494,8 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 
 	// Two filters plus a quick-find: three arguments registered after the
 	// prelude, which is where the value-copy bug showed up.
-	phase, query := deals.PhaseInitiative, "ERP"
-	found, _, err := e.Deals.ListProjects(e.Admin(), deals.ListProjectsInput{
+	phase, query := projects.PhaseInitiative, "ERP"
+	found, _, err := e.Projects.ListProjects(e.Admin(), projects.ListProjectsInput{
 		OrganizationID: &orgID, Phase: &phase, Query: &query,
 	})
 	if err != nil {
@@ -506,7 +507,7 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 
 	// And the key lookup, matched case-insensitively like its index.
 	key := "erp-27"
-	byKey, _, err := e.Deals.ListProjects(e.Admin(), deals.ListProjectsInput{Key: &key})
+	byKey, _, err := e.Projects.ListProjects(e.Admin(), projects.ListProjectsInput{Key: &key})
 	if err != nil {
 		t.Fatalf("list by key: %v", err)
 	}

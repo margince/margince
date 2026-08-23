@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // Winning a deal starts the delivery it was sold for.
 //
@@ -59,7 +59,7 @@ var deliveryEvidence = map[string]any{
 	"transition_trigger": "deal_won",
 }
 
-// startDeliveryForWonDeal advances the project a just-won deal belongs to into
+// StartDeliveryForWonDeal advances the project a just-won deal belongs to into
 // `delivering`, inside the transaction that won it. Every case it declines to
 // act on is a legitimate state of the world rather than a failure, so it
 // returns only an error: there is no outcome the win path would do anything
@@ -93,7 +93,7 @@ var deliveryEvidence = map[string]any{
 // deliveryEvidence so the ledger names that authority rather than implying a
 // project grant.
 //
-// What makes that safe is ensureProjectAttachable below: the deal could only
+// What makes that safe is EnsureAttachable below: the deal could only
 // come to name this project through a caller who held WRITE authority over it.
 // The skip here inherits that check rather than dispensing with one. Both
 // halves are load-bearing — a visibility-only gate at attach time would turn
@@ -105,7 +105,7 @@ var deliveryEvidence = map[string]any{
 // pointer is re-read from it here rather than taken from a pre-lock snapshot,
 // because a concurrent edit that repoints the deal from one project to another
 // would otherwise send this advance at the project the deal no longer names.
-func startDeliveryForWonDeal(ctx context.Context, tx pgx.Tx, dealID ids.DealID, by string) error {
+func StartDeliveryForWonDeal(ctx context.Context, tx pgx.Tx, dealID ids.DealID, by string) error {
 	projectID, err := lockedDealProject(ctx, tx, dealID)
 	if err != nil || projectID == nil {
 		return err
@@ -139,9 +139,9 @@ func startDeliveryForWonDeal(ctx context.Context, tx pgx.Tx, dealID ids.DealID, 
 		AdvanceProjectPhaseInput{ToPhase: PhaseDelivering}, by, deliveryEvidence)
 }
 
-// ensureProjectAttachable is the gate every path that points a deal at a
+// EnsureAttachable is the gate every path that points a deal at a
 // project calls — create and update alike. It asks for WRITE authority on the
-// project, not visibility, and it lives beside startDeliveryForWonDeal because
+// project, not visibility, and it lives beside StartDeliveryForWonDeal because
 // that function is the reason the bar is this high: attaching a project is the
 // act that later authorizes advancing its phase, so the authority has to be
 // checked here or nowhere.
@@ -152,7 +152,15 @@ func startDeliveryForWonDeal(ctx context.Context, tx pgx.Tx, dealID ids.DealID, 
 // not-found: this caller can read the project (every seat holding the object
 // grant does), so claiming it is not there would be a lie about a record they
 // can see.
-func ensureProjectAttachable(ctx context.Context, tx pgx.Tx, projectID ids.UUID) error {
+// EnsureAttachable refuses a project a caller may not write to, or one that is
+// archived. It is the deals-facing name for that check: a deal may not point at
+// a project its writer has no authority over, because winning the deal later
+// advances the project's phase without asking again.
+//
+// A package-level function rather than a store method because it needs no state
+// beyond the caller's transaction, and compose injects it into deals as a port
+// (deals/projectseam.go) — a module never imports a sibling.
+func EnsureAttachable(ctx context.Context, tx pgx.Tx, projectID ids.UUID) error {
 	return auth.EnsureWritableLive(ctx, tx, projectObject, projectID)
 }
 

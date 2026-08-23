@@ -27,6 +27,6 @@
 //
 // No SQL against a module-owned table is written here. The phase history,
 // the deal totals and the filing coverage are reads the owning module
-// stores gained for this page (deals.ListProjectPhaseHistoryTx,
+// stores gained for this page (projects.ListProjectPhaseHistoryTx,
 // deals.ProjectDealTotalsTx, activities.ProjectActivityFactsTx).
 package project360

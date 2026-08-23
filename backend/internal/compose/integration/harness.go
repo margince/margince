@@ -18,6 +18,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/platform/testdb"
@@ -32,6 +33,7 @@ type Env struct {
 	Pool       *pgxpool.Pool
 	People     *people.Store
 	Deals      *deals.Store
+	Projects   *projects.Store
 	Contracts  *contracts.Store
 	Activities *activities.Store
 	WS         ids.UUID
@@ -123,6 +125,7 @@ func Setup(t *testing.T) *Env {
 	e.Pool = pool
 	e.People = people.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
+	e.Projects = projects.NewStore(harnessDB(pool, e.WS))
 	e.Contracts = contracts.NewStore(harnessDB(pool, e.WS))
 	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
 	return e

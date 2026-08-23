@@ -76,7 +76,7 @@ func (s *Store) SetFxRate(ctx context.Context, in SetFxRateInput) (FxRateRow, er
 		return FxRateRow{}, err
 	}
 	var out FxRateRow
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var e error
 		out, e = s.writeFxRate(ctx, tx, from, in)
 		return e
@@ -258,7 +258,7 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 		return nil, err
 	}
 	var rows []FxRateRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		base, err := s.installation.BaseCurrency(ctx, tx)
 		if err != nil {
 			return err
@@ -288,7 +288,7 @@ func (s *Store) ListEffectiveFxRates(ctx context.Context) ([]FxRateRow, error) {
 		return nil, err
 	}
 	var rows []FxRateRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		base, err := s.installation.BaseCurrency(ctx, tx)
 		if err != nil {
 			return err
@@ -352,7 +352,7 @@ func (s *Store) BaseCurrency(ctx context.Context) (string, error) {
 		return "", err
 	}
 	var base string
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		base, err = s.installation.BaseCurrency(ctx, tx)
 		return err
@@ -376,7 +376,7 @@ func (s *Store) FxRateHistory(ctx context.Context, fromCurrency string) ([]FxRat
 	}
 	from := strings.ToUpper(strings.TrimSpace(fromCurrency))
 	var rows []FxRateRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
 			SELECT from_currency, to_currency, rate::text, rate_date
 			FROM fx_rate WHERE from_currency = $1

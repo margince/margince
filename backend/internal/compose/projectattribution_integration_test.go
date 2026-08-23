@@ -29,8 +29,8 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -94,7 +94,7 @@ func seedAttributionAccount(t *testing.T, e *integration.Env) attributionAccount
 // the table.
 func (a attributionAccount) project(t *testing.T, name, key string) ids.UUID {
 	t.Helper()
-	created, err := a.e.Deals.CreateProject(a.e.Admin(), deals.CreateProjectInput{
+	created, err := a.e.Projects.CreateProject(a.e.Admin(), projects.CreateProjectInput{
 		Name: name, Key: &key, OrganizationID: ids.From[ids.OrganizationKind](a.orgID), Source: "manual",
 	})
 	if err != nil {

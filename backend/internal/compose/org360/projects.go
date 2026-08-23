@@ -16,7 +16,7 @@ func (a *assembly) readProjects() error {
 	if err := auth.Require(a.ctx, "project", principal.ActionRead); err != nil {
 		return err
 	}
-	projects, err := a.svc.deals.ListProjectsForOrganizationTx(a.ctx, a.tx, a.orgID)
+	projects, err := a.svc.projects.ListProjectsForOrganizationTx(a.ctx, a.tx, a.orgID)
 	if err != nil {
 		return err
 	}

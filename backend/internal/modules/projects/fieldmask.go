@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The project read mask, the sibling of fieldmask.go's deal mask and for the
 // same reason: a projection that carries a reference to ANOTHER record must

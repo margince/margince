@@ -34,7 +34,7 @@ func (s *Store) RefuseArchiveDeal(ctx context.Context, id ids.DealID) error {
 	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
+	return s.Tx(ctx, func(tx pgx.Tx) error {
 		return auth.EnsureWritable(ctx, tx, "deal", id.UUID)
 	})
 }
@@ -54,7 +54,7 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 		return crmcontracts.Deal{}, err
 	}
 	var out crmcontracts.Deal
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, "deal", id.UUID); err != nil {
 			return err
 		}

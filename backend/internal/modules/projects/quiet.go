@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // "Gone quiet" as a predicate on the project row, spelled once. The
 // projects-gone-quiet report, the project_gone_quiet signal producer and the
@@ -44,16 +44,4 @@ func ProjectQuietSQL(alias, nowSQL string, daysPos int) string {
 // or keying a finding to one quiet episode reads the value the rule used.
 func ProjectQuietAnchorSQL(alias string) string {
 	return fmt.Sprintf("coalesce(%[1]s.last_activity_at, %[1]s.created_at)", alias)
-}
-
-// OpenDealBaseValueSQL is what one OPEN deal is worth in the installation's
-// base currency, with baseSQL the SQL expression carrying that currency — a
-// bind position, or a token a caller substitutes one for later. A deal
-// already in the base currency contributes its own amount; one in another
-// currency contributes its frozen base amount, which is NULL until it closes
-// (the rate freezes on close, deal_advance), so it contributes nothing yet.
-// ProjectDealTotalsTx and the projects-by-phase report both fold with this.
-func OpenDealBaseValueSQL(alias, baseSQL string) string {
-	return fmt.Sprintf("CASE WHEN %[1]s.currency = %[2]s THEN %[1]s.amount_minor ELSE %[1]s.amount_minor_base END",
-		alias, baseSQL)
 }

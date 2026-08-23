@@ -23,6 +23,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -97,7 +98,7 @@ func fileTask(ctx context.Context, t *testing.T, e *Env, project ids.ProjectID, 
 
 func advanceProject(ctx context.Context, t *testing.T, e *Env, project ids.ProjectID, phase string) {
 	t.Helper()
-	if _, err := e.Deals.AdvanceProjectPhase(ctx, project, deals.AdvanceProjectPhaseInput{ToPhase: phase}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(ctx, project, projects.AdvanceProjectPhaseInput{ToPhase: phase}); err != nil {
 		t.Fatalf("moving the project to %s: %v", phase, err)
 	}
 }
@@ -195,7 +196,7 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 	org := e.SeedOrg(t, "Phase Co", nil)
 	orgID := orgIDOf(org)
 	pursued := seedProject(admin, t, e, "Pursued", nil, org, nil)
-	advanceProject(admin, t, e, pursued.ID, deals.PhasePursuing)
+	advanceProject(admin, t, e, pursued.ID, projects.PhasePursuing)
 	seedProject(admin, t, e, "Idea", nil, org, nil)
 
 	amount := int64(250000)
@@ -225,12 +226,12 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 		byPhase[cell(row, "phase")] = row
 	}
 	// Winning the deal moved the project to delivering (the close-won bridge).
-	delivering := byPhase[deals.PhaseDelivering]
+	delivering := byPhase[projects.PhaseDelivering]
 	if cell(delivering, "projects") != "1" || cell(delivering, "open_deal_value_minor") != "250000" ||
 		cell(delivering, "won_deal_value_minor") != "100000" {
 		t.Fatalf("delivering row = %v, want 1 project, open 250000, won 100000", delivering)
 	}
-	initiative := byPhase[deals.PhaseInitiative]
+	initiative := byPhase[projects.PhaseInitiative]
 	if cell(initiative, "projects") != "1" || cell(initiative, "open_deal_value_minor") != "0" {
 		t.Fatalf("initiative row = %v, want 1 project worth nothing yet", initiative)
 	}
@@ -272,10 +273,10 @@ func TestProjectsGoneQuietHonoursTheDaysThreshold(t *testing.T) {
 	org := e.SeedOrg(t, "Quiet Co", nil)
 	now := time.Now().UTC()
 	stale := seedProject(admin, t, e, "Stale", nil, org, &e.Rep1)
-	advanceProject(admin, t, e, stale.ID, deals.PhasePursuing)
+	advanceProject(admin, t, e, stale.ID, projects.PhasePursuing)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -40), &stale.ID)
 	recent := seedProject(admin, t, e, "Recent", nil, org, nil)
-	advanceProject(admin, t, e, recent.ID, deals.PhaseDelivering)
+	advanceProject(admin, t, e, recent.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -5), &recent.ID)
 	idea := seedProject(admin, t, e, "Idea", nil, org, nil)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -90), &idea.ID)

@@ -41,7 +41,7 @@ import (
 // is who is asking.
 func meetingBriefReader(pool *pgxpool.Pool) agents.MeetingBriefReader {
 	peopleStore := people.NewStore(InstallationDB(pool))
-	view := person360.NewService(pool, peopleStore, deals.NewStore(InstallationDB(pool), DealsInstallation()),
+	view := person360.NewService(pool, peopleStore, deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
 		consent.NewStore(InstallationDB(pool)),
 		ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
 	service := meetingbrief.NewService(pool, view, peopleStore, time.Now)

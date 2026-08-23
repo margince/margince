@@ -265,7 +265,7 @@ func (s *Store) DealHealth(ctx context.Context, dealID ids.DealID, now time.Time
 		return DealHealth{}, err
 	}
 	in := dealHealthInputs{dealID: dealID}
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "deal", dealID.UUID); err != nil {
 			return err
 		}

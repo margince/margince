@@ -4,7 +4,7 @@
 // The project read paths: single-row get, the filtered keyset list, and
 // the one column list + scanner every project read shares.
 
-package deals
+package projects
 
 import (
 	"context"
@@ -28,12 +28,12 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.activeColumnsFor(ctx, projectObject)
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
 	var out crmcontracts.Project
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error)
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return CustomColumns{}, err
 	}
-	cols, err := s.activeColumnsFor(ctx, projectObject)
+	cols, err := s.catalogColumns(ctx)
 	if err != nil {
 		return CustomColumns{}, err
 	}
@@ -105,13 +105,18 @@ type ListProjectsInput struct {
 // the same clause matches already indexes the pair.
 const projectQuickFindExpr = `(coalesce(name,'') || ' ' || coalesce(key,''))`
 
+// projectNameField is the column a project sorts by name on. Spelled here
+// rather than borrowed from another module's constant of the same value: the
+// two are equal by coincidence, not by rule.
+const projectNameField = "name"
+
 // projectListFields is the project list's core sortable vocabulary.
 var projectListFields = map[string]string{
-	"created_at":           storekit.KindTimestamp,
-	"updated_at":           storekit.KindTimestamp,
-	"last_activity_at":     storekit.KindTimestamp,
-	offerTemplateNameField: fieldcatalog.TypeText,
-	"target_end_date":      fieldcatalog.TypeDate,
+	"created_at":       storekit.KindTimestamp,
+	"updated_at":       storekit.KindTimestamp,
+	"last_activity_at": storekit.KindTimestamp,
+	projectNameField:   fieldcatalog.TypeText,
+	"target_end_date":  fieldcatalog.TypeDate,
 }
 
 // ListProjects answers one page under the caller's row scope.
@@ -119,18 +124,18 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.activeColumnsFor(ctx, projectObject)
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	pre, err := buildListPrelude(ctx, projectObject, projectListFields, active,
+	pre, err := storekit.BuildListPrelude(ctx, projectObject, projectListFields, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where := appendProjectFilters(pre.where, in, pre.arg)
+	where := appendProjectFilters(pre.Where(), in, pre.Arg)
 
-	return runListPage(ctx, s, pre, projectObject, projectColumns, active, where, scanProjectPage,
+	return storekit.RunListPage(ctx, s, pre, projectObject, projectColumns, active, where, scanProjectPage,
 		func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Project) error { return maskProjects(ctx, tx, page) })
 }

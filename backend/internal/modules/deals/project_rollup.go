@@ -4,9 +4,15 @@
 package deals
 
 // The money a project's deals add up to, for the project page header.
+//
+// It lives with the deals rather than with the project: every figure here is
+// read from the deal table under the caller's DEAL row scope, and priced in the
+// installation's base currency, which is this module's Installation seam.
+// modules/projects consumes it through a port compose injects.
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -72,4 +78,17 @@ func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.Proje
 		return ProjectDealTotals{}, err
 	}
 	return totals, nil
+}
+
+// OpenDealBaseValueSQL is what one OPEN deal is worth in the installation's
+// base currency, with baseSQL the SQL expression carrying that currency — a
+// bind position, or a token a caller substitutes one for later. A deal
+// already in the base currency contributes its own amount; one in another
+// currency contributes its frozen base amount, which is NULL until it closes
+// (the rate freezes on close, deal_advance), so it contributes nothing yet.
+// ProjectDealTotalsTx and the projects-by-phase report both fold with this.
+// It prices a DEAL, so it lives with the deals rather than with the project.
+func OpenDealBaseValueSQL(alias, baseSQL string) string {
+	return fmt.Sprintf("CASE WHEN %[1]s.currency = %[2]s THEN %[1]s.amount_minor ELSE %[1]s.amount_minor_base END",
+		alias, baseSQL)
 }

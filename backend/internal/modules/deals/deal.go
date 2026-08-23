@@ -98,7 +98,8 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if in.Currency != nil {
 		p.Set("currency", current.Currency, *in.Currency)
 	}
-	if err := applyDealLinkPatches(ctx, tx, current, in, p, s.installation.EnsurePartner); err != nil {
+	if err := applyDealLinkPatches(ctx, tx, current, in, p,
+		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
 		return nil, err
 	}
 	if in.ExpectedClose != nil {
@@ -140,7 +141,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 // attach any project in the workspace and then force it into `delivering`.
 func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
-	ensurePartner EnsurePartner,
+	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
 ) error {
 	if in.OrganizationID != nil {
 		if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
