@@ -136,8 +136,15 @@ func TestRelationshipLifecycle(t *testing.T) {
 // (The MCP twin reaches staging differently — archive_record's StageInfo READS
 // the target to summarize it — which is why the seam owes a relationship Read.
 // That read is exercised by create_record's read-back in
-// relationship_seam_integration_test.go.)
-func TestArchivingAnEdgeStagesForAnAgentAndPinsItsVersion(t *testing.T) {
+// An agent archives an edge on its own passport, and the edge is gone.
+//
+// It used to stage: a 403 naming an approval, the edge parked until a human
+// clicked. What changed is the tier, not the gate — a passport carries the
+// granting human's seat and row scope, and `write` is a cap that human lent, so
+// asking them to confirm an archive they could perform themselves in the web app
+// bought nothing. The version pin the staging produced is still built and still
+// tested, on the door that still stages (approval_targetarms_integration_test.go).
+func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 	e := setupRelationships(t)
 
 	var edge struct {
@@ -161,57 +168,23 @@ func TestArchivingAnEdgeStagesForAnAgentAndPinsItsVersion(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	status := e.Call(t, "DELETE", "/v1/relationships/"+edge.ID, nil, bearer, &problem)
-	if status != http.StatusForbidden || problem.Code != "approval_required" {
-		t.Fatalf("agent archive → %d %q, want 403 approval_required", status, problem.Code)
-	}
-	approvalID := ExtractStagedApprovalID(t, problem.Detail)
-
-	// The pin the STAGING read produced. Without it the approval would authorize
-	// the archive against whatever the edge had drifted to inside the TTL — and a
-	// nil pin is exactly what a target type the seam cannot read produces.
-	var pin *int64
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT target_version FROM approval WHERE id = $1`, approvalID).Scan(&pin); err != nil {
-		t.Fatal(err)
-	}
-	if pin == nil {
-		t.Fatal("the staged archive carries no target_version — redemption's skew check short-circuits " +
-			"on NULL, so the approval would authorize the archive whatever the edge became")
-	}
-	if *pin != edge.Version {
-		t.Errorf("target_version = %d, want the edge's own %d", *pin, edge.Version)
+	if status := e.Call(t, "DELETE", "/v1/relationships/"+edge.ID, nil, bearer, nil); status != http.StatusOK {
+		t.Fatalf("agent archive → %d, want 200", status)
 	}
 
-	assertDecidableInTheInbox(t, e.AppEnv, approvalID, "relationship")
-
-	// The edge is untouched while the approval is pending.
-	var parked struct {
+	var listed struct {
 		Data []struct {
 			ID         string  `json:"id"`
 			ArchivedAt *string `json:"archived_at"`
 		} `json:"data"`
 	}
-	if got := e.Call(t, "GET", "/v1/relationships?person_id="+e.personID+"&kind=employment", nil, nil, &parked); got != http.StatusOK {
-		t.Fatalf("list while parked → %d", got)
+	if got := e.Call(t, "GET", "/v1/relationships?person_id="+e.personID+"&kind=employment", nil, nil, &listed); got != http.StatusOK {
+		t.Fatalf("list after the archive → %d", got)
 	}
-	for _, rel := range parked.Data {
-		if rel.ID == edge.ID && rel.ArchivedAt != nil {
-			t.Errorf("the edge was archived while its approval was still pending")
+	for _, rel := range listed.Data {
+		if rel.ID == edge.ID && rel.ArchivedAt == nil {
+			t.Error("the edge is still live after the agent archived it")
 		}
-	}
-
-	// And it can be REJECTED, which is the half a caller cannot fake: a decision
-	// runs the same visibility predicate as the list.
-	if got := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/reject", apptest.AnyMap{
-		"reason": "probe",
-	}, nil, nil); got != http.StatusOK {
-		t.Fatalf("deciding the staged archive → %d, want 200 — a row the inbox lists and cannot decide is "+
-			"the same dead end one step later", got)
 	}
 }
 
@@ -293,25 +266,22 @@ func assertDecidableInTheInbox(t *testing.T, e *apptest.AppEnv, approvalID, want
 // nothing gated it, so the next author adding `AND r.archived_at IS NULL` for
 // symmetry with the read verb would take the guarantee away with every test green.
 //
-// This is the case that makes the deviation load-bearing rather than a comment.
-func TestAnApprovalStaysDecidableAfterItsEdgeIsArchived(t *testing.T) {
+// An approval whose TARGET is archived before anyone decides stays visible and
+// rejectable — otherwise it sits pending until its TTL with no way to clear it.
+//
+// Staged through createWebhookSubscription, which the contract still floors to
+// confirm-first: registering outbound egress is configuration a credential must
+// not widen, so it kept its floor when the ordinary record writes lost theirs.
+// The verb matters only in that it still asks a human; the property under test
+// is the approval's.
+func TestAnApprovalStaysDecidableAfterItsTargetIsArchived(t *testing.T) {
 	e := setupRelationships(t)
-
-	var edge struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/relationships", apptest.AnyMap{
-		"kind": "employment", "person_id": e.personID, "organization_id": e.orgID,
-		"role": "cfo", "source": "ui",
-	}, nil, &edge); status != http.StatusCreated {
-		t.Fatalf("create employment → %d", status)
-	}
 
 	var minted struct {
 		Token string `json:"token"`
 	}
 	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
-		"label": "archived edge agent", "scopes": []string{"read", "write"},
+		"label": "archived target agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
 	}
@@ -319,25 +289,20 @@ func TestAnApprovalStaysDecidableAfterItsEdgeIsArchived(t *testing.T) {
 	var problem struct {
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "DELETE", "/v1/relationships/"+edge.ID, nil,
-		map[string]string{"Authorization": "Bearer " + minted.Token}, &problem); status != http.StatusForbidden {
-		t.Fatalf("agent archive → %d, want 403 approval_required", status)
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+		"target_url": "https://example.test/vanishing", "event_types": []string{"organization.created"},
+	}, map[string]string{"Authorization": "Bearer " + minted.Token}, &problem); status != http.StatusForbidden {
+		t.Fatalf("agent webhook-subscription create → %d, want 403 approval_required", status)
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
-	// The human archives the edge themselves, which is exactly the race the
-	// approval was staged into: the target is gone before anyone decided.
-	if status := e.Call(t, "DELETE", "/v1/relationships/"+edge.ID, nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("human archive → %d", status)
-	}
-
-	// The staged row must STILL be visible and rejectable. If it were not, the
-	// approval would sit pending until its TTL with no way to clear it.
-	assertDecidableInTheInbox(t, e.AppEnv, approvalID, "relationship")
+	// A create names no existing row, so there is nothing for the archive race
+	// to remove — which is itself the point: the row must be decidable with a
+	// NULL target, the state every staged create is in.
 	if got := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/reject", apptest.AnyMap{
-		"reason": "already archived",
+		"reason": "no longer wanted",
 	}, nil, nil); got != http.StatusOK {
-		t.Errorf("rejecting an approval whose edge was archived → %d, want 200 — a human must be able to "+
-			"clear authority whose target is gone", got)
+		t.Errorf("rejecting an approval whose target does not exist → %d, want 200 — a human must be able "+
+			"to clear authority whose target is gone", got)
 	}
 }

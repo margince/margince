@@ -28,7 +28,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -43,7 +42,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
 // sendMessageInvoker builds the SAME governed registry the api role
@@ -125,39 +123,26 @@ func (c *channelSendEnv) verbInvoker(t *testing.T, agentToken, verb string) func
 	}
 }
 
-// TestSendMessageMCPLoopStagesApprovesAndRedeemsAgainstRealPostgres proves
-// the loop finding 2 found unproven: a send-scoped agent's tools/call
-// refusal stages a REAL approval row and sends nothing; a human's approval
-// makes it decidable; the retry carrying approval_id is the only call that
-// reaches Handle and produces the outbound activity plus its staged
-// delivery; and the redemption is single-use.
-func TestSendMessageMCPLoopStagesApprovesAndRedeemsAgainstRealPostgres(t *testing.T) {
+// TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres proves
+// the loop end to end over MCP against real Postgres: a send-scoped agent's
+// tools/call reaches Handle and produces the outbound activity plus its staged
+// delivery, anchored on the conversation it answers.
+//
+// It used to stage first, and the staging half is what changed: a passport
+// carries the granting human's own seat and row scope, and `send` is a cap that
+// human chose to lend, so a second confirmation from the same person bought
+// nothing. What still bounds the call is the cap — a passport never granted
+// `send` cannot reach this at all (TestSendMessageRefusesAPassportWithoutTheSendCap).
+func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *testing.T) {
 	c := setupChannelSend(t)
 	token := c.mintPassport(t, []string{"read", "send"})
 	invoke := c.sendMessageInvoker(t, token)
 
 	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.activityID)
 
-	_, err := invoke(args)
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("first send_message call → %v, want a StagedApprovalError", err)
-	}
-	if staged.ApprovalID.IsZero() {
-		t.Fatal("StagedApprovalError carries a zero approval id")
-	}
-	c.assertNoOutboundEffect(t, "a staged-but-not-yet-approved send_message call")
-
-	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
-	}
-
-	retryArgs := fmt.Sprintf(
-		`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional","approval_id":%q}`,
-		c.activityID, staged.ApprovalID.String())
-	out, retryErr := invoke(retryArgs)
-	if retryErr != nil {
-		t.Fatalf("approved retry → %v, want it to reach Handle and send", retryErr)
+	out, err := invoke(args)
+	if err != nil {
+		t.Fatalf("send_message on a send-scoped passport → %v, want it to reach Handle and send", err)
 	}
 	var sent struct {
 		ActivityID string `json:"activity_id"`
@@ -192,15 +177,4 @@ func TestSendMessageMCPLoopStagesApprovesAndRedeemsAgainstRealPostgres(t *testin
 		t.Fatalf("%d outbound activities logged after the approved retry, want 1", n)
 	}
 
-	// Exactly-once: the approval was consumed by the retry above, so
-	// replaying the identical call must not send a second time.
-	if _, replayErr := invoke(retryArgs); replayErr == nil {
-		t.Fatal("replaying a consumed approval succeeded; redemption must be single-use")
-	}
-	if n := c.stagedChannelDeliveries(t); n != 1 {
-		t.Fatalf("%d channel deliveries staged after replaying a consumed approval, want still 1", n)
-	}
-	if n := c.outboundActivities(t); n != 1 {
-		t.Fatalf("%d outbound activities logged after replaying a consumed approval, want still 1", n)
-	}
 }
