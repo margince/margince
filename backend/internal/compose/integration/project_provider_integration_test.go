@@ -36,7 +36,7 @@ func projectProvider(e *Env) *projects.Provider {
 	// Built the way compose builds it, seams and all: a provider without the
 	// company edges refuses every create, and a test that wired its own would be
 	// proving something production never runs.
-	return projects.ProviderOver(projects.NewStore(e.DB()).
+	return projects.ProviderOver(ProjectsStore(e.DB()).
 		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)))
 }
 

@@ -72,7 +72,7 @@ func setupDealCFV(t *testing.T) dealCFVFixture {
 		e:     e,
 		svc:   svc,
 		store: deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(svc),
-		projects: projects.NewStore(e.DB()).WithFieldCatalog(svc).
+		projects: ProjectsStore(e.DB()).WithFieldCatalog(svc).
 			WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)),
 		ctx:      e.As(e.Rep1, nil, dealCFVPerms),
 		pipeline: pipeline,

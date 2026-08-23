@@ -89,7 +89,7 @@ func setupFixture(t *testing.T) fixture {
 		ctx:      e.As(e.Rep1, nil, testPerms),
 		svc:      svc,
 		people:   peoplemod.NewStore(e.DB()).WithFieldCatalog(svc),
-		projects: projects.NewStore(e.DB()).WithFieldCatalog(svc),
+		projects: integration.ProjectsStore(e.DB()).WithFieldCatalog(svc),
 		lists:    collectionsmod.NewStore(e.DB()).WithFieldCatalog(svc),
 	}
 }

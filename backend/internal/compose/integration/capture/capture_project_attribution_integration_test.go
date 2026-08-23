@@ -96,7 +96,7 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 	return projectSeeder{
 		pool:  e.Pool,
 		store: deals.NewStore(e.DB(), compose.DealsInstallation()),
-		projects: projects.NewStore(e.DB()).
+		projects: integration.ProjectsStore(e.DB()).
 			WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)),
 		ctx:        ctx,
 		orgID:      orgID,
