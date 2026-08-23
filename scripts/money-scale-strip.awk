@@ -10,11 +10,8 @@ function closes(s,  n, t) { t = s; n = gsub(/[)\]]/, "", t); return n }
 
 # `bufFile` and not FILENAME: flush() also runs at FNR == 1, where awk has
 # already moved FILENAME on to the new file while buf still holds the tail of
-# the old one. A statement left buffered at end of file — a line ending in a
-# trailing operator — was then reported at a line number in a DIFFERENT file,
-# and worse, joined to that file's first line, which can pair an identifier
-# from one file with a power of ten from another and invent a finding out of
-# two innocent files.
+# the old one. The buffer must be reported under the file it came from, or an
+# identifier in one file pairs with a power of ten in the next.
 function flush() { if (buf != "") print bufFile ":" start ":" buf; buf = ""; depth = 0; lines = 0 }
 FNR == 1 { closeFile(); flush() }
 {
@@ -32,12 +29,8 @@ FNR == 1 { closeFile(); flush() }
   if (waived(c, waiver)) { flush(); next }
   c = code
   t = c; sub(/^[[:space:]]+/, "", t)
-  # A line that was ENTIRELY comment is not a statement boundary. codeOf hands
-  # back "" for one, and treating that as a blank line flushed the statement
-  # underway — so `const amountMinor =`, a `/* note */` line, and `major * 100`
-  # were judged as three fragments and none of them matched. A real blank line
-  # still ends a statement; `$0` distinguishes the two, because only the
-  # comment line had something on it.
+  # A line that was ENTIRELY comment is not a statement boundary, but a blank
+  # one is. codeOf empties both, so `$0` is what tells them apart.
   if (t == "" && $0 ~ /[^[:space:]]/) next
   # And the contents of a STRING are not code. A line mentioning the shape
   # in prose — "see amountMinor / 100 in the old code" — was reported as
@@ -59,24 +52,19 @@ FNR == 1 { closeFile(); flush() }
   # COMMA ends a perfectly good line in a struct literal, and treating it as a
   # continuation joined unrelated members.
   #
-  # A trailing colon is different and used to be lumped in with the comma on
-  # the strength of that same example — wrongly, because the example's members
-  # end in a COMMA (`valueMinor: 1,`), not a colon. A line that ends ON the
-  # colon has its value on the next line, which is how biome wraps a long
-  # object property: `amountMinor:` then `major * 100`. That is the write
-  # direction this gate exists for and it was escaping. Re-measured with the
-  # example the old comment named, plus a `mode:` / `"fast"` pair over an
-  # unrelated `ratio * 100` — neither is a finding, and the real tree stays
-  # green. Braces are
+  # A trailing COLON continues, and the distinction from the comma is the whole
+  # rule rather than an accident: a member ending in a comma is complete
+  # (`valueMinor: 1,`), while a line ending ON the colon has its value on the
+  # next one — which is how biome wraps a long object property, `amountMinor:`
+  # then `major * 100`. Collapsing the two back together, which reads like a
+  # simplification, loses the write direction this gate exists for. Braces are
   # left out of the depth above for the same reason: they open a BLOCK, and
   # counting them swallowed whole function bodies.
   trailing = c
   sub(/[[:space:]]+$/, "", trailing)
-  # `%` belongs here: a remainder is how the cents half of an amount is taken,
-  # and `amountMinor %` / `100` split across two lines was the one arithmetic
-  # shape in the gate's own vocabulary that its continuation rule could not
-  # rejoin. A postfix `++`/`--` does NOT continue a statement — it ENDS one —
-  # so it is excluded rather than caught by the bare `+`/`-` alternatives.
+  # `%` continues: a remainder is how the cents half of an amount is taken. A
+  # postfix `++`/`--` ENDS a statement, so it is excluded rather than caught by
+  # the bare `+`/`-` alternatives.
   if (trailing ~ /(\+\+|--)$/) { if (depth <= 0 || lines >= 6) flush(); next }
   # A `case x:` or a bare label ends with a colon and does NOT continue — its
   # body is a separate statement, and joining it paired a `case valueMinor:`
