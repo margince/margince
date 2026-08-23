@@ -72,16 +72,26 @@ FNR == 1 { closeFile(); flush() }
   # `[^A-Za-z0-9_]` and not `\b`: POSIX ERE has no word boundary, and awk reads
   # `\b` as a backspace — the guard matched nothing and the case label went on
   # joining the arm below it.
-  # A label spanning an open bracket — `case pick(` / `valueMinor):` — is still
-  # a label, and its closing `):` used to join the arm below it. `labelOpen`
-  # carries the fact across the lines the label takes.
-  if (t ~ /^(case|default)([^A-Za-z0-9_]|$)/) { labelOpen = 1 }
-  if (labelOpen) {
-    trimmed = c; sub(/[[:space:]]+$/, "", trimmed)
-    if (trimmed ~ /:$/) labelOpen = 0
-    flush()
-    next
-  }
+  # A `case`/`default` label ends its statement: its body is a separate one, and
+  # joining them paired a `case valueMinor:` with an unrelated `ratio * 100` in
+  # the arm below.
+  #
+  # Two lines can be a label — `case pick(` and its closing `valueMinor):` — so
+  # both are boundaries, and a line ending in `):` or `]:` is the second of
+  # them. Stateless on purpose: carrying "am I still in a label" across lines
+  # meant a label with code on it (`case x: doThing()`) never cleared the flag,
+  # and every later line in the FILE was flushed on its own — so a wrapped
+  # expression anywhere below the switch stopped being judged at all. A state
+  # that can get stuck open is worse here than a rule that occasionally splits
+  # one statement too many.
+  #
+  # The residue: an object key literally named `default` or `case` reads as a
+  # label, so a value wrapped onto the next line under one is not joined. That
+  # is a false NEGATIVE in a spelling nobody writes for money, and the
+  # alternative — brace depth — swallowed whole function bodies when it was
+  # tried.
+  trimmed = c; sub(/[[:space:]]+$/, "", trimmed)
+  if (t ~ /^(case|default)([^A-Za-z0-9_]|$)/ || trimmed ~ /[)\]]:$/) { flush(); next }
   if (trailing ~ /(=|\+|-|\*|\/|%|:|&&|\|\|)$/ && lines < 6) next
   # Bounded at SIX lines. Four was the first bound and it missed the shape
   # this gate exists for, one line longer: biome wraps

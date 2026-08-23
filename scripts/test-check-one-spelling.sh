@@ -12,7 +12,7 @@ set -uo pipefail
 # directory it can name a path that does not exist — and the census below then
 # reads zero cases and reports a fully passing run as a failure. Launching the
 # suite from `scripts/` did exactly that.
-SELF="$(cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
+SELF="$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 cd "$(dirname "$0")/.."
 
 GATE=./scripts/check-one-spelling.sh

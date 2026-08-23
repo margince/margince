@@ -9,7 +9,7 @@ set -uo pipefail
 # directory it can name a path that does not exist — and the census below then
 # reads zero cases and reports a fully passing run as a failure. Launching the
 # suite from `scripts/` did exactly that.
-SELF="$(cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
+SELF="$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 cd "$(dirname "$0")/.."
 
 GATE=./scripts/check-money-scale.sh
@@ -257,6 +257,15 @@ expect silent ts "a case label spanning a bracket" 'switch (k) {
     valueMinor):
     widthPct = ratio * 100;
 }'
+# A label with code ON it is still just a label line. This is here because the
+# first version of the rule carried "am I in a label" across lines, and a label
+# like this never cleared it — so every later line in the file was flushed on
+# its own and nothing below the switch was judged at all.
+expect fires ts "code on the label line, defect below the switch" 'switch (k) {
+  case "eur": doThing();
+}
+const amountMinor =
+  major * 100;'
 # A quoted string cannot legally span a line, so it does not carry — carrying it
 # would blind the rest of the FILE over a typo, which is the one direction a
 # scanner must not fail in.
