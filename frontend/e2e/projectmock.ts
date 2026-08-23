@@ -14,6 +14,13 @@ import type { Route } from "@playwright/test";
 
 type Json = (body: unknown, status?: number) => Promise<void>;
 
+// What this fake hands back as a newly minted key. Any well-formed key does:
+// the assertion it serves is that the client SHOWS the key the server chose,
+// not that this file can rederive the server's stem (projects/keymint.go owns
+// that rule). Exported because the spec asserts on it: one spelling, so a
+// change here cannot leave the assertion quietly matching nothing.
+export const MOCK_MINTED_KEY = "BE-1";
+
 export type MockProject = {
   id: string;
   workspace_id: string;
@@ -74,10 +81,6 @@ export function projectMock(input: {
 }) {
   const projects: MockProject[] = [{ ...input.seeded }];
   const history = new Map<string, Transition[]>();
-  // What this fake hands back as a newly minted key. Any well-formed key does:
-  // the assertion it serves is that the client SHOWS the key the server chose,
-  // not that this file can rederive the server's stem.
-  const MOCK_MINTED_KEY = "BE-1";
   let minted = 0;
 
   const record = (

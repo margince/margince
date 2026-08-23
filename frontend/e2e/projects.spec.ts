@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { MOCK_MINTED_KEY } from "./projectmock";
 import { mockApi } from "./seed";
 
 /**
@@ -54,7 +55,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // Scoped to the mono chip: the key also appears in the prose that explains
   // what a key is for, and a bare text match would pass on the explanation
   // alone — which renders whether or not the project actually got a key.
-  await expect(page.locator(".t-mono").filter({ hasText: "BE-1" })).toBeVisible();
+  await expect(
+    page.locator(".t-mono").filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),
   ).toBeVisible();
