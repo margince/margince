@@ -71,9 +71,13 @@ const (
 )
 
 // employmentKind matches a statement that has scoped itself to employments.
-// Either spelling counts, because both appear: the column compared to the
-// literal, and the same test written into a join condition.
-var employmentKind = regexp.MustCompile(`kind\s*(=|IN)\s*\(?\s*'employment'`)
+//
+// `'employment'` ANYWHERE in an IN list, not only first. The pattern used to
+// anchor on the opening paren, so `kind IN ('deal_stakeholder', 'employment')`
+// was not an employment statement as far as the census was concerned — and a
+// hand-written currency test in one would have passed. Ordering inside an IN
+// list is the author's whim, which is a poor thing for a gate to depend on.
+var employmentKind = regexp.MustCompile(`kind\s*=\s*'employment'|kind\s+IN\s*\([^)]*'employment'`)
 
 // endedAtCurrency matches a hand-written currency test on ended_at — the bare
 // null check that loses a notice period, and the long form that gets the
@@ -117,12 +121,12 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
-		peopleAlias := importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people")
-		if file.Name != nil && file.Name.Name == "people" {
-			peopleAlias = ""
+		scope := helperScope{
+			qualifier: importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people"),
+			inside:    file.Name != nil && file.Name.Name == "people",
 		}
 		for _, decl := range file.Decls {
-			for _, sql := range employmentStatements(decl, peopleAlias) {
+			for _, sql := range employmentStatements(decl, scope) {
 				judged++
 				if !endedAtCurrency.MatchString(sql) {
 					continue
@@ -174,14 +178,14 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 // Per DECLARATION and not per file: a file may hold one query about employments
 // and another about deal stakeholders, and asking whether both shapes appear
 // somewhere in the same file reports a pairing nobody wrote.
-func employmentStatements(decl ast.Decl, peopleQualifier string) []string {
+func employmentStatements(decl ast.Decl, people helperScope) []string {
 	var out []string
 	seen := map[ast.Node]bool{}
 	ast.Inspect(decl, func(n ast.Node) bool {
 		if seen[n] {
 			return false
 		}
-		text, ok := flattenSQL(n, seen, peopleQualifier)
+		text, ok := flattenSQL(n, seen, people)
 		if !ok || !employmentKind.MatchString(text) {
 			return true
 		}
@@ -210,7 +214,7 @@ func employmentStatements(decl ast.Decl, peopleQualifier string) []string {
 // stopped at the callee name would judge nothing. The name is dropped because
 // it is not part of the SQL; only the helper's is kept, as the marker that
 // says the one definition was reached.
-func flattenSQL(n ast.Node, seen map[ast.Node]bool, peopleQualifier string) (string, bool) {
+func flattenSQL(n ast.Node, seen map[ast.Node]bool, people helperScope) (string, bool) {
 	switch v := n.(type) {
 	case *ast.BasicLit:
 		if v.Kind != token.STRING {
@@ -222,8 +226,8 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, peopleQualifier string) (str
 		if v.Op != token.ADD {
 			return "", false
 		}
-		left, lok := flattenSQL(v.X, seen, peopleQualifier)
-		right, rok := flattenSQL(v.Y, seen, peopleQualifier)
+		left, lok := flattenSQL(v.X, seen, people)
+		right, rok := flattenSQL(v.Y, seen, people)
 		if !lok && !rok {
 			return "", false
 		}
@@ -231,13 +235,13 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, peopleQualifier string) (str
 		return left + right, true
 	case *ast.CallExpr:
 		seen[n] = true
-		if isOneDefinition(v, peopleQualifier) {
+		if people.isOneDefinition(v) {
 			markSeen(v, seen)
 			return " " + employmentCalleeName(v) + " ", true
 		}
 		text := ""
 		for _, a := range v.Args {
-			if part, ok := flattenSQL(a, seen, peopleQualifier); ok {
+			if part, ok := flattenSQL(a, seen, people); ok {
 				text += part
 			}
 		}
@@ -249,23 +253,35 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, peopleQualifier string) (str
 	return "", false
 }
 
+// helperScope says how the ONE DEFINITION is reachable from one file, and it is
+// a struct rather than a string because the string had two meanings.
+//
+// `qualifier == ""` was read as "this file IS package people", where a bare
+// call is the helper's own. But importAliasOf returns "" for every file that
+// does not import people at all — which is most of the tree — so in any of
+// them a bare `EmploymentIsCurrentSQL(…)` was accepted as canonical and its
+// arguments hidden. `inside` says the one thing the empty string could not.
+type helperScope struct {
+	qualifier string // the local name people is bound to, "" if not imported
+	inside    bool   // this file IS package people
+}
+
 // isOneDefinition reports whether the call is people's helper — the PACKAGE as
 // well as the name.
 //
 // The name alone was not enough, and the gap is the one this gate exists to
-// close: markSeen claims a helper call's whole subtree, so `other.
+// close: a helper call's whole subtree is claimed, so `other.
 // EmploymentIsCurrentSQL(…)` would have been treated as canonical and its
 // arguments hidden, letting a hand-written currency test ride inside a
-// lookalike. An empty qualifier means the file IS package people, which is the
-// only place the helper is reachable unqualified.
-func isOneDefinition(call *ast.CallExpr, peopleQualifier string) bool {
+// lookalike.
+func (h helperScope) isOneDefinition(call *ast.CallExpr) bool {
+	named := func(n string) bool { return n == employmentHelper || n == primaryHelper }
 	switch f := call.Fun.(type) {
 	case *ast.Ident:
-		return peopleQualifier == "" && (f.Name == employmentHelper || f.Name == primaryHelper)
+		return h.inside && named(f.Name)
 	case *ast.SelectorExpr:
 		pkg, ok := f.X.(*ast.Ident)
-		return ok && peopleQualifier != "" && pkg.Name == peopleQualifier &&
-			(f.Sel.Name == employmentHelper || f.Sel.Name == primaryHelper)
+		return ok && h.qualifier != "" && pkg.Name == h.qualifier && named(f.Sel.Name)
 	}
 	return false
 }
@@ -361,10 +377,16 @@ func handWrittenGoSources(t *testing.T) []string {
 type employmentProbe struct {
 	name  string
 	fires bool
-	// insidePeople renders the probe AS package people, where the helper is
-	// reachable unqualified — the only place a bare call to it is its own.
-	insidePeople bool
-	src          string
+	// mode picks the file the probe is parsed as, because the gate's answers
+	// depend on it and a probe that guesses wrong asks a different question
+	// than the tree does:
+	//
+	//   ""         package probe, importing people — an ordinary caller
+	//   "people"   package people — the one place a bare call is the helper's
+	//   "noimport" package probe, NOT importing people — most of the tree, and
+	//              where a bare helper name is somebody else's function
+	mode string
+	src  string
 }
 
 // The census above is a census of ZERO: it passes identically over a clean tree
@@ -373,54 +395,67 @@ type employmentProbe struct {
 //
 // Every case here exists because the gate was once green over it.
 var employmentProbes = []employmentProbe{
-	{"the bare form that shipped, one literal", true, false, `
+	{"the bare form that shipped, one literal", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NULL` + "`" + `
 }`},
-	{"the same, split across a concatenation", true, false, `
+	{"the same, split across a concatenation", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + ` + "`" + `r.ended_at IS NULL` + "`" + `
 }`},
-	{"the same, inside a formatter's argument", true, false, `
+	{"the same, inside a formatter's argument", true, "", `
 func read() string {
 	return fmt.Sprintf(` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NULL AND (%s)` + "`" + `, scope)
 }`},
-	{"the negation, which is the same decision backwards", true, false, `
+	{"the negation, which is the same decision backwards", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NOT NULL` + "`" + `
 }`},
-	{"the helper AND a hand-written test beside it", true, false, `
+	{"the helper AND a hand-written test beside it", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.ended_at IS NOT NULL` + "`" + `
 }`},
 	// The name alone is not the helper. markSeen claims a helper call's whole
 	// subtree, so a LOOKALIKE would have had its arguments hidden and could
 	// have carried a hand-written test through inside them.
-	{"a lookalike helper from another package", true, false, `
+	{"a lookalike helper from another package", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + other.EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
 }`},
 
-	{"the real helper, qualified", false, false, `
+	{"the real helper, qualified", false, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
 }`},
-	{"the real helper, unqualified inside people", false, true, `
+	{"the real helper, unqualified inside people", false, "people", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
 }`},
 	// A bare call outside people names something else entirely.
-	{"an unqualified call outside people", true, false, `
+	{"an unqualified call outside people", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
 }`},
 	// Another relationship kind is a different question, deliberately not this
 	// gate's.
-	{"a deal_stakeholder edge", false, false, `
+	// `'employment'` need not be FIRST in an IN list. Ordering there is the
+	// author's whim, which is a poor thing for a gate to depend on.
+	{"an IN list where employment is not first", true, "", `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind IN ('deal_stakeholder', 'employment') AND r.ended_at IS NULL` + "`" + `
+}`},
+	// A bare call in a file that simply does not import people names something
+	// else. An empty qualifier used to mean both "this file IS people" and
+	// "this file does not import people", and most of the tree is the second.
+	{"a bare helper name in a file that does not import people", true, "noimport", `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
+}`},
+	{"a deal_stakeholder edge", false, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND r.ended_at IS NULL` + "`" + `
 }`},
-	{"an employment query that never asks about currency", false, false, `
+	{"an employment query that never asks about currency", false, "", `
 func read() string {
 	return ` + "`" + `SELECT count(*) FROM relationship r WHERE r.kind = 'employment'` + "`" + `
 }`},
@@ -431,10 +466,13 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 	for _, tc := range employmentProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
-			alias := "people"
-			if tc.insidePeople {
-				head, alias = "package people\n", ""
-			} else {
+			scope := helperScope{qualifier: "people"}
+			switch tc.mode {
+			case "people":
+				head, scope = "package people\n", helperScope{inside: true}
+			case "noimport":
+				scope = helperScope{}
+			default:
 				head += "import (\n\t\"fmt\"\n\n\t\"github.com/gradionhq/margince/backend/internal/modules/people\"\n)\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
@@ -443,7 +481,7 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 			}
 			hit := false
 			for _, decl := range file.Decls {
-				for _, sql := range employmentStatements(decl, alias) {
+				for _, sql := range employmentStatements(decl, scope) {
 					if endedAtCurrency.MatchString(sql) {
 						hit = true
 					}
