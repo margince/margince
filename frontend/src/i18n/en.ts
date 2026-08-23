@@ -2375,23 +2375,6 @@ export const en = {
   "compose.multiRecipientWarning":
     "This purpose carries an unsubscribe link, so a send to more than one addressee will be refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
-  "compose.filedUnder":
-    "This reply will be filed under {project}, like the rest of this conversation.",
-  // The filing line, in its two readings. The THREAD reading is the settled
-  // case: a sibling message already said where this conversation belongs. The
-  // DEAL reading is the fallback, and it names its reason, because a rep who
-  // sees a project they did not put on this conversation deserves to know why
-  // it is being offered.
-  "compose.filedUnderDeal":
-    "This will be filed under {project}, this deal's project.",
-  // The subject tag, explained where it is applied. It says what the tag is
-  // FOR — the reply coming back — because a bracketed code in a subject line
-  // reads as noise until you know it routes the answer.
-  "compose.subjectTagged":
-    "{tag} is added to the subject so their reply files itself here.",
-  // The opt-out. Not "remove" or "delete": nothing is destroyed, the message
-  // simply is not filed under this project.
-  "compose.fileUnderProject": "File under this project",
   "compose.relinkTarget":
     "Search a person, organization, deal, lead, or project",
   "compose.relinkReplace": "Move instead of also-link",

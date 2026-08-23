@@ -23,6 +23,7 @@ import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   liveProjects,
+  type PickableProject,
   ProjectPicker,
   type ProjectScope,
   useSoleProjectDefault,
@@ -45,15 +46,12 @@ import {
 import { useOrganization360 } from "./company360";
 import { useConsentPurposes } from "./consent";
 import {
-  type Filing,
-  filingFor,
   stripEveryKeyTag,
   stripSubjectTag,
   subjectTag,
   useProjectRecord,
   withSubjectTag,
 } from "./projectrecord";
-import type { Project } from "./projects.form";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
@@ -344,84 +342,32 @@ function keptTag(subject: string): string {
 }
 
 /**
- * Where this send will file, stated rather than asked, with the one control
- * that matters: the rep can decline it.
+ * The one control that says which project a message belongs to — on a reply
+ * and on a message started from an account alike.
  *
- * The thread's own project settles it when it has one. A deal's project is the
- * fallback for a conversation that predates it, and the copy names that reason
- * — a rep seeing a project they never put on this thread should be told where
- * it came from.
+ * It carries no explanation of its own. The tag it puts in the Subject field
+ * is visible there, and a rep who does not want it deletes it like any other
+ * text; a sentence saying so would restate what the field already shows.
  *
- * Declining files the message under no project and takes the subject tag back
- * off. It does NOT move the thread: the control that does that is Relink, on
- * the message's own timeline row, and it moves every message at once. Two
- * spellings of "move this conversation" is what this component exists to avoid.
+ * Choosing None takes the tag out. Choosing a project puts it in. Nothing
+ * renders when the record reaches no live project, because a list whose only
+ * entry is None asks a question with one answer.
  */
-// NOTE ON THE REPLY PATH: a reply posts to /activities/{id}/send-email, which
-// takes NO links — the server files the reply under the links its ANCHOR
-// carries (activities/sendorigin.go, FromActivity). So on a reply this section
-// states a filing the client cannot itself perform, and it is honest only
-// because of the subject tag: the tag is what carries the project, and capture
-// reads it back on the way in. The `filed` flag still governs the tag, so
-// declining genuinely changes what is sent.
-//
-// The account-started path DOES send links, and there the project link travels
-// (composedLinks). Making a reply send one needs `links` on the reply request —
-// a contract change, tracked as its own piece of work.
 function ProjectFiling({
-  filing,
-  project,
-  filed,
-  onFiledChange,
+  projects,
+  projectId,
+  onChange,
 }: Readonly<{
-  filing: Filing;
-  project: Project | null;
-  filed: boolean;
-  onFiledChange: (next: boolean) => void;
+  projects: readonly PickableProject[];
+  projectId: string;
+  onChange: (next: string) => void;
 }>) {
-  const t = useT();
-  if (filing.kind !== "derived" || !project?.name) {
-    return null;
-  }
-  const tag = subjectTag(project);
-  // A THREAD already filed under a project settles this reply too: the send
-  // inherits the anchor's links, and no control on this form can undo that.
-  // So the thread reading states the filing and offers nothing — a tickbox
-  // here would promise a choice the send does not honour, and unticking it
-  // would still file. Moving a filed conversation is Relink, on the message's
-  // own timeline row, which moves the whole thread rather than one message.
-  //
-  // The DEAL reading is a genuine choice: nothing else carries that project,
-  // so the box decides both the filing and the tag.
-  if (filing.from === "thread") {
-    return (
-      <div className="stack-2xs">
-        <p className="t-caption">
-          {t("compose.filedUnder", { project: project.name })}
-        </p>
-        {tag && (
-          <p className="t-caption">{t("compose.subjectTagged", { tag })}</p>
-        )}
-      </div>
-    );
-  }
   return (
-    <div className="stack-2xs">
-      <Checkbox
-        className="t-body"
-        label={t("compose.fileUnderProject")}
-        checked={filed}
-        onChange={(event) => onFiledChange(event.target.checked)}
-      />
-      {filed && (
-        <p className="t-caption">
-          {t("compose.filedUnderDeal", { project: project.name })}
-        </p>
-      )}
-      {filed && tag && (
-        <p className="t-caption">{t("compose.subjectTagged", { tag })}</p>
-      )}
-    </div>
+    <ProjectPicker
+      projects={projects}
+      projectId={projectId}
+      onChange={onChange}
+    />
   );
 }
 
@@ -732,18 +678,12 @@ function AccountDraftContext({
   onRecipientChange,
   dealId,
   onDealChange,
-  projectId,
-  onProjectChange,
-  scope,
 }: Readonly<{
   orgId: string;
   recipientId: string;
   onRecipientChange: (next: string) => void;
   dealId: string;
   onDealChange: (next: string) => void;
-  projectId: string;
-  onProjectChange: (next: string) => void;
-  scope?: ProjectScope;
 }>) {
   const t = useT();
   const query = useOrganization360(orgId);
@@ -752,8 +692,7 @@ function AccountDraftContext({
   const view = query.data?.state === "ready" ? query.data.view : undefined;
   const contacts = view?.people?.data ?? [];
   const deals = view?.deals?.data ?? [];
-  const projects = liveProjects(view?.projects);
-  useSoleProjectDefault(projects, projectId, onProjectChange);
+
   // No contact on the account is an honest dead end for the DRAFT — the model
   // has no relationship to write from — and saying so beats an empty picker the
   // rep tries and cannot use. They can still type an address into To and write
@@ -767,19 +706,7 @@ function AccountDraftContext({
   // thread to inherit a project from. It would land unfiled, and the ladder
   // would ask about it in Approvals afterwards instead.
   if (query.isSuccess && contacts.length === 0) {
-    return (
-      <>
-        <p className="t-caption">{t("compose.noGroundableRecipient")}</p>
-        {projects.length > 0 && (
-          <ProjectPicker
-            projects={projects}
-            projectId={projectId}
-            onChange={onProjectChange}
-            scope={scope}
-          />
-        )}
-      </>
-    );
+    return <p className="t-caption">{t("compose.noGroundableRecipient")}</p>;
   }
   return (
     <>
@@ -815,12 +742,6 @@ function AccountDraftContext({
           />
         </label>
       )}
-      <ProjectPicker
-        projects={projects}
-        projectId={projectId}
-        onChange={onProjectChange}
-        scope={scope}
-      />
     </>
   );
 }
@@ -1409,7 +1330,7 @@ function useDraftMutation({
 function useAnchorProject(
   entityType: RelinkKind,
   entityId: string,
-): { projectId?: string | null; settled: boolean } {
+): { projectId?: string | null; companyId?: string; settled: boolean } {
   const query = useQuery({
     // The SAME key the deal page's own read uses, so opening the composer on a
     // deal costs no request and cannot disagree with the page behind it. A
@@ -1429,6 +1350,15 @@ function useAnchorProject(
   });
   return {
     projectId: query.data?.project_id,
+    // The company whose projects the picker offers. A deal names one; a
+    // company page IS one; the other anchors reach none this composer can ask
+    // about.
+    companyId:
+      entityType === "deal"
+        ? (query.data?.organization_id ?? undefined)
+        : entityType === "organization"
+          ? entityId
+          : undefined,
     // A read that failed says nothing about this deal's project. Reporting it
     // as "no project" would drop the filing silently; unsettled keeps the
     // composer quiet instead, which is the same rule the thread read follows.
@@ -1437,89 +1367,78 @@ function useAnchorProject(
 }
 
 /**
- * The filing this composer will perform, and the subject tag that goes with it.
+ * Which project this message files under, and the subject tag that follows it.
  *
- * Kept as one hook because the two move together: the tag is only in the
- * subject while the filing is on, so a rep who declines the filing must not be
- * left with the bracketed key still in their subject line, promising a routing
- * that will not happen.
+ * The rep chooses; the composer only SUGGESTS. The suggestion is the thread's
+ * own project when the conversation is already filed — a conversation is one
+ * body of work and a sibling settled it — and otherwise the anchor's, which is
+ * a deal's project. It is adopted once, when it first arrives, so a rep who
+ * then picks None is not overruled on the next render.
  *
- * The subject is rewritten only when the FILING changes, never on a keystroke.
- * A rep who deletes the tag by hand keeps it deleted — that is a second way to
- * say the same "not this one", and re-adding it under their cursor would be the
- * composer arguing with them.
+ * The tag is written only when the CHOICE changes, never on a keystroke, so a
+ * tag the rep deletes by hand stays deleted.
  */
 function useProjectFiling(input: {
   activityId?: string;
   anchorProjectId?: string | null;
-  reachable: readonly { id: string }[];
-  // Whether the anchor's own read has answered. False keeps the composer quiet
-  // rather than reporting a failed read as "no project".
   anchorSettled: boolean;
+  projects: readonly PickableProject[];
   subject: string;
   setSubject: (next: string) => void;
-}): {
-  filing: Filing;
-  project: Project | null;
-  filed: boolean;
-  setFiled: (next: boolean) => void;
-} {
+}): { projectId: string; setProjectId: (next: string) => void } {
   const thread = useThreadProject(input.activityId);
-  const [declined, setDeclined] = useState(false);
-  // Nothing is derived until the thread has answered. The thread outranks the
-  // deal, so guessing while its read is in flight is guessing the loser: the
-  // composer would announce the deal's project, then swap under the rep, or —
-  // when the read failed — announce one the send will not use.
-  const filing =
-    thread.settled && input.anchorSettled
-      ? filingFor({
-          threadProjectId: thread.projectId,
-          dealProjectId: input.anchorProjectId,
-          reachable: input.reachable,
-        })
-      : ({ kind: "none" } as const);
-  const derived = filing.kind === "derived" ? filing.projectId : undefined;
-  const { project } = useProjectRecord(derived);
-  // A thread's filing is not declinable — the send inherits it whatever this
-  // form says — so the thread reading shows no tickbox, and a `declined` left
-  // over from a deal reading must not silently strip the tag here.
-  const declinable = filing.kind === "derived" && filing.from === "deal";
-  const filed = Boolean(derived) && (!declinable || !declined);
+  // Empty string is a real answer ("None"), so unanswered is undefined.
+  const [picked, setPicked] = useState<string | undefined>(undefined);
+  const settled = thread.settled && input.anchorSettled;
+  const suggested = settled
+    ? (thread.projectId ?? input.anchorProjectId ?? "")
+    : "";
+  // Adopted once, when the suggestion first arrives. `picked` then holds it, so
+  // a rep who chooses None is not overruled on the next render.
+  const adopted = useRef("");
+  useEffect(() => {
+    if (suggested && adopted.current !== suggested) {
+      adopted.current = suggested;
+      setPicked(suggested);
+    }
+  }, [suggested]);
+  const chosen = picked ?? suggested;
+  // The account path has no thread and no deal to suggest from, so its rule is
+  // the older one: a company with exactly ONE live project defaults to it. The
+  // two never both fire — a suggestion above means there was something to
+  // inherit, and this only applies when there was not.
+  useSoleProjectDefault(input.projects, chosen, setPicked);
+  // A value the option list does not carry is not shown as chosen — the control
+  // would render blank while the subject claimed a filing nobody can see named.
+  // Read rather than written: writing it back would race the adoption above,
+  // clearing the suggestion on the render before the list arrives and leaving
+  // `adopted` unwilling to try again. The list settling is what makes it
+  // appear.
+  const offered =
+    chosen === "" ||
+    input.projects.some((project) => project.project_id === chosen);
+  const projectId = offered ? chosen : "";
+  const { project } = useProjectRecord(projectId || undefined);
   const tag = subjectTag(project);
-  // The tag follows the filing, applied once per change rather than on every
-  // render: `applied` remembers what this composer last wrote, so a rerender
-  // with the same answer leaves the rep's subject alone.
   const applied = useRef<string>("");
-  const want = filed && thread.settled ? tag : "";
-  // In an effect, not during render: setting the subject inline would be a
-  // state write inside another component's render pass, the shape that drives
-  // React into an update loop. The subject is read through a ref so a rep's
-  // typing never re-runs this.
   const subjectRef = useRef(input.subject);
   subjectRef.current = input.subject;
   const setSubject = input.setSubject;
-
+  // In an effect, not during render: setting the subject inline would be a
+  // state write inside another component's render pass, the shape that drives
+  // React into an update loop.
   useEffect(() => {
-    // Re-apply when the tag CHANGED, and also when the subject no longer holds
-    // the tag this hook believes it wrote — discarding a draft clears the field
-    // programmatically, and without this the checkbox would keep claiming a tag
-    // the subject does not carry.
-    if (applied.current === want) {
+    if (applied.current === tag) {
       return;
     }
     const previous = applied.current;
-    applied.current = want;
+    applied.current = tag;
     const bare = previous
       ? stripSubjectTag(subjectRef.current, previous)
       : subjectRef.current;
-    setSubject(want ? withSubjectTag(bare, want) : bare);
-  }, [want, setSubject]);
-  return {
-    filing,
-    project,
-    filed,
-    setFiled: (next: boolean) => setDeclined(!next),
-  };
+    setSubject(tag ? withSubjectTag(bare, tag) : bare);
+  }, [tag, setSubject]);
+  return { projectId, setProjectId: setPicked };
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement. The drafting call, the form fill, the body edit and both draft controls are already extracted; what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
@@ -1605,13 +1524,21 @@ export function ComposeModal({
   // inheriting one), so this covers the anchored sends: a reply, and a message
   // started from a deal.
   const anchorProject = useAnchorProject(entityType, entityId);
+  // The projects this message may be filed under: the live ones the anchor's
+  // company reaches. That set already includes the projects the company works
+  // as a partner or a subcontractor, because the 360's own section is built
+  // from the company edges rather than from a project's anchor column.
+  const anchorCompany = useOrganization360(anchorProject.companyId ?? "");
+  const reachableProjects = liveProjects(
+    anchorCompany.data?.state === "ready"
+      ? anchorCompany.data.view.projects
+      : undefined,
+  );
   const projectFiling = useProjectFiling({
     activityId,
-    anchorProjectId: groundable ? null : anchorProject.projectId,
+    anchorProjectId: anchorProject.projectId,
     anchorSettled: anchorProject.settled,
-    // The reachable set only decides between "ask" and "say nothing", and the
-    // anchored path never asks — the account path owns that question.
-    reachable: [],
+    projects: reachableProjects,
     subject,
     setSubject,
   });
@@ -1730,7 +1657,7 @@ export function ComposeModal({
         links: composedLinks(
           { entityType, entityId },
           grounding,
-          projectFiling.filed ? (projectFiling.project?.id ?? "") : "",
+          projectFiling.projectId,
         ),
       });
       if (response.status === 501) return { sent: false as const };
@@ -1789,7 +1716,14 @@ export function ComposeModal({
   // picker directly above it, rather than running and coming back with a
   // refusal about a field already on screen.
   const draftControl = {
-    run: () => draft.mutate(account.grounding),
+    // The project the PICKER holds, not the account hook's own copy: one
+    // control owns that answer now, and the draft must be grounded in the
+    // project the reader can see chosen.
+    run: () =>
+      draft.mutate({
+        ...account.grounding,
+        projectId: projectFiling.projectId,
+      }),
     pending: draft.isPending,
     disabled:
       draft.isPending ||
@@ -1813,9 +1747,6 @@ export function ComposeModal({
       onRecipientChange={account.setRecipientId}
       dealId={account.dealId}
       onDealChange={account.setDealId}
-      projectId={account.projectId}
-      onProjectChange={account.setProjectId}
-      scope={account.scope}
     />
   ) : null;
   const accountReasons = (
@@ -1860,7 +1791,13 @@ export function ComposeModal({
       placement={groundable ? "right" : "center"}
       confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
       confirmDisabled={!canSend || rejectionInFlight}
-      onConfirm={() => send.mutate(groundable ? account.grounding : null)}
+      onConfirm={() =>
+        send.mutate(
+          groundable
+            ? { ...account.grounding, projectId: projectFiling.projectId }
+            : null,
+        )
+      }
       pending={send.isPending}
       error={sendError}
     >
@@ -1870,10 +1807,9 @@ export function ComposeModal({
             account-started message, which has no thread to inherit from. */}
         {!isChannelReply && (
           <ProjectFiling
-            filing={projectFiling.filing}
-            project={projectFiling.project}
-            filed={projectFiling.filed}
-            onFiledChange={projectFiling.setFiled}
+            projects={reachableProjects}
+            projectId={projectFiling.projectId}
+            onChange={projectFiling.setProjectId}
           />
         )}
         {/* AI drafting is mail-only — there is no draft-message endpoint, and

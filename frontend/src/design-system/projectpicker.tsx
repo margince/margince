@@ -76,7 +76,7 @@ export function useSoleProjectDefault(
 // every request, so the rep reads an unscoped surface while the server
 // answers for a project they can no longer see. Cleared through the same
 // setter a pick uses, so the surface re-reads unscoped like any other change.
-function useClearVanishedChoice(
+export function useClearVanishedChoice(
   projects: readonly PickableProject[],
   projectId: string,
   onChange: (next: string) => void,
@@ -98,6 +98,12 @@ function useClearVanishedChoice(
 // projects after a draft arrived must not read the previous project's counts
 // under the new project's key. Until a counted report arrives the line names
 // the chosen project alone.
+// The picker RENDERS a value; it does not decide one. Both of the rules that
+// choose a value — defaulting to a sole project, and clearing one the list no
+// longer offers — are hooks the caller runs, in the order its own state needs.
+// They lived in here until a caller grew a second source of defaults (a
+// reply's own thread) and the two decided the same value on the same render,
+// each undoing the other.
 export function ProjectPicker({
   projects,
   projectId,
@@ -110,7 +116,6 @@ export function ProjectPicker({
   scope?: ProjectScope;
 }>) {
   const t = useT();
-  useClearVanishedChoice(projects, projectId, onChange);
   if (projects.length === 0) {
     return null;
   }
