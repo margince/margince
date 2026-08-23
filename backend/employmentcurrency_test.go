@@ -77,7 +77,13 @@ const (
 // was not an employment statement as far as the census was concerned — and a
 // hand-written currency test in one would have passed. Ordering inside an IN
 // list is the author's whim, which is a poor thing for a gate to depend on.
-var employmentKind = regexp.MustCompile(`kind\s*=\s*'employment'|kind\s+IN\s*\([^)]*'employment'`)
+//
+// One level of nesting is allowed inside the list, because `[^)]*` stopped at
+// the FIRST close-paren and an item like `(SELECT …)` ended the match before
+// the literal. One level and not arbitrary depth: RE2 has no recursion, the
+// deeper form does not occur here, and a bounded pattern that says what it
+// does is better than an unbounded claim.
+var employmentKind = regexp.MustCompile(`kind\s*=\s*'employment'|kind\s+IN\s*\((?:[^()]|\([^()]*\))*'employment'`)
 
 // endedAtCurrency matches a hand-written currency test on ended_at — the bare
 // null check that loses a notice period, and the long form that gets the
@@ -450,6 +456,10 @@ func read() string {
 	{"a bare helper name in a file that does not import people", true, "noimport", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
+}`},
+	{"an IN list whose earlier item is a subquery", true, "", `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind IN ('x', (SELECT k FROM t), 'employment') AND r.ended_at IS NULL` + "`" + `
 }`},
 	{"a deal_stakeholder edge", false, "", `
 func read() string {
