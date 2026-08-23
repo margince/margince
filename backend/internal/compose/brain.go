@@ -65,6 +65,10 @@ type ModelPath struct {
 	// degrade to a deterministic floor, so a role without this lane still
 	// answers — just not in written prose.
 	Summarize completer
+	// DealHealth serves the deal card's next_move site: one concrete task
+	// proposed from the deal's own timeline. Its floor is the generic "agree
+	// the next step" task, so a role without this lane still answers the card.
+	DealHealth completer
 	// GrowthFit judges how well one company fits what we sell. It is the only
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
@@ -228,6 +232,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		RateExtract:                brain(ai.TaskRateExtract),
 		BriefRanking:               brain(ai.TaskBriefRanking),
 		Summarize:                  brain(ai.TaskSummarize),
+		DealHealth:                 brain(ai.TaskDealHealth),
 		GrowthFit:                  brain(ai.TaskGrowthFit),
 		DraftReply:                 brain(ai.TaskDraftReply),
 		OfferDraft:                 brain(ai.TaskOfferDraft),

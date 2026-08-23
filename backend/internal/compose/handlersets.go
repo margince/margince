@@ -114,9 +114,8 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// The deal's next best action reads the deal and its timeline through
 	// their own gated stores and performs nothing; the click goes through the
 	// verb the answer names.
-	s.nextActionHandlers = nextaction.NewHandlers(
-		nextaction.NewService(s.dealsStore, activities.NewStore(InstallationDB(pool)), time.Now),
-	)
+	s.nextActionSvc = nextaction.NewService(s.dealsStore, activities.NewStore(InstallationDB(pool)), time.Now)
+	s.nextActionHandlers = nextaction.NewHandlers(s.nextActionSvc)
 	// The deal brief reads the same deal, its health, timeline and tasks,
 	// plus its Deal Room, all through their own gates, and writes nothing.
 	s.dealBriefHandlers = dealbrief.NewHandlers(

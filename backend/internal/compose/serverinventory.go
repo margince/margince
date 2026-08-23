@@ -20,6 +20,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/briefs"
 	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/network"
+	"github.com/gradionhq/margince/backend/internal/compose/nextaction"
 	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
@@ -327,6 +328,9 @@ type Server struct {
 	// meetingBriefSvc is held so an option can bind its model lane after the
 	// handler sets are built.
 	meetingBriefSvc *meetingbrief.Service
+	// nextActionSvc is held for the same reason: WithNextMoveWriter binds the
+	// deal_health lane onto the service the handler set already wraps.
+	nextActionSvc *nextaction.Service
 
 	// orgDossierSvc and orgGrowthFitSvc are the company view's other two
 	// generated surfaces. They are held for WithGrowthFit's sake: rebinding one

@@ -14105,6 +14105,14 @@ export interface components {
             evidence: components["schemas"]["DealNextBestActionEvidence"][];
             /** Format: date-time */
             computed_at: string;
+            /**
+             * @description Which writer produced the recommendation. `model` only on the `create_task`
+             *     fallback, where the deal_health lane proposes the concrete next step; every
+             *     rule-matched answer — and the fallback whenever the lane is absent, over
+             *     budget, or refused — is `deterministic`. Absent means `deterministic`, so a
+             *     client reading an older server fails honest.
+             */
+            generated_by?: components["schemas"]["WrittenBy"];
         };
         DealNextBestActionEvidence: {
             text: string;
