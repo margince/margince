@@ -171,6 +171,11 @@ function findNativeControls(path: string, text: string): string[] {
   const at = (node: ts.Node) =>
     source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
 
+  // The boundary is whitespace, `/` or `>` — NOT "any non-alphanumeric". A
+  // hyphen is a legal element-name character, and `[^a-zA-Z0-9]` accepted it, so
+  // `<select-menu>`, `<option-item>` and `<optgroup-picker>` were reported as
+  // native controls. A custom element is the opposite of a native one.
+  //
   // An intrinsic element is lowercase; the design-system component is `Select`,
   // capitalised, and the parser tells the two apart by kind rather than by a
   // pattern that has to guess. `<selected>` is a different tag name entirely,
@@ -223,7 +228,7 @@ function findNativeControls(path: string, text: string): string[] {
         // EVERY occurrence, not the first: a template rendering the same tag
         // twice on different lines used to report one line and drop the rest.
         for (const m of cooked.matchAll(
-          new RegExp(`<${tag}([^a-zA-Z0-9]|$)`, "g"),
+          new RegExp(`<${tag}([^a-zA-Z0-9._:-]|$)`, "g"),
         )) {
           const ahead = spansLines
             ? (cooked.slice(0, m.index).match(/\n/g) ?? []).length
@@ -235,7 +240,11 @@ function findNativeControls(path: string, text: string): string[] {
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(source, visit);
-  return found;
+  // Deduped at the RETURN, not only where the reparse merges in. The reparse
+  // checked itself against `found` and the primary parse then appended
+  // unconditionally, so every string hit in a non-TSX file was reported twice —
+  // the two parses see the same string node at the same offset.
+  return [...new Set(found)];
 }
 
 describe("no product surface renders a browser-drawn dropdown", () => {
@@ -498,6 +507,28 @@ describe("the native-control detector sees what it claims to", () => {
       src: "const a = 1;\nconst html = '\\n<select>';",
       expect: ["2: <select> inside a string"],
     },
+    // A hyphen CONTINUES an element name, so these are custom elements —
+    // the opposite of native ones. The first boundary spelling accepted a
+    // hyphen and reported all three.
+    {
+      name: "a custom element named select-menu",
+      fires: false,
+      src: "const a = <select-menu />;",
+    },
+    {
+      name: "a custom element in a string",
+      fires: false,
+      src: "const h = '<option-item></option-item>';",
+    },
+    // Two parses see the same string node at the same offset, so a hit in a
+    // non-TSX file was reported twice.
+    {
+      name: "a string hit in a .ts file, reported once",
+      fires: true,
+      src: "export const h = '<select>';",
+      file: "probe.ts",
+      expect: ["1: <select> inside a string"],
+    },
     {
       name: "markup inside a regex literal",
       fires: true,
@@ -524,7 +555,6 @@ describe("the native-control detector sees what it claims to", () => {
     it(`${tc.fires ? "reports" : "ignores"} ${tc.name}`, () => {
       const hits = findNativeControls(tc.file ?? "probe.tsx", tc.src);
       expect(hits.length > 0, `hits: ${JSON.stringify(hits)}`).toBe(tc.fires);
-      if (tc.expect) expect(hits).toEqual(tc.expect);
       if (tc.expect) expect(hits).toEqual(tc.expect);
     });
   }
