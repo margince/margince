@@ -15782,7 +15782,7 @@ type DealRoomParticipant struct {
 	LinkRequestedAt *time.Time `json:"link_requested_at,omitempty"`
 
 	// RevokedAt When their access was taken away. The row survives revocation so their
-	// comments and decisions stay attributed to a name.
+	// comments stay attributed to a name.
 	RevokedAt            *time.Time             `json:"revoked_at,omitempty"`
 	RoomId               openapi_types.UUID     `json:"room_id"`
 	Source               string                 `json:"source"`
@@ -18031,7 +18031,7 @@ type OpenDealRoomThreadRequest struct {
 	// DocumentId The room document the thread is about. Omit for a room-level exchange.
 	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
 
-	// RequiredChange Only with a document. Marks the thread as blocking confirmation until resolved.
+	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
 	// Source Provenance. Defaults to `ui` on the public edge.

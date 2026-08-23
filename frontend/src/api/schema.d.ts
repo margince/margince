@@ -3248,8 +3248,8 @@ export interface paths {
         /**
          * Ask a question on a published document, or post a room-level update, as the buyer.
          * @description Needs the `comment` capability. A document thread may be
-         *     marked `required_change`, which blocks confirming that document's version
-         *     until the seller resolves it. Refused while the room is paused, closed or
+         *     marked `required_change`, which is how the buyer says this document needs
+         *     work — it stays open until the seller resolves it. Refused while the room is paused, closed or
          *     expired.
          */
         post: operations["openBuyerRoomThread"];
@@ -7727,8 +7727,8 @@ export interface paths {
          *     closed, so this is never frozen along with the room's content.
          *
          *     Ends their live session immediately and retires any unconsumed credential. The
-         *     participant row survives, so their comments and decisions stay
-         *     attributed. Revoking twice is accepted and changes nothing further.
+         *     participant row survives, so their comments stay attributed. Revoking
+         *     twice is accepted and changes nothing further.
          */
         post: operations["revokeDealRoomParticipant"];
         delete?: never;
@@ -7868,9 +7868,9 @@ export interface paths {
         put?: never;
         /**
          * Close a thread — the seller's side saying the point is settled.
-         * @description Human-only: resolving a required-change thread is what unblocks the buyer's
-         *     confirmation of a document version, so a person stands behind it. Resolving
-         *     an already resolved thread answers 200 with the thread unchanged.
+         * @description Human-only: resolving a required-change thread is the seller answering the
+         *     buyer's objection, so a person stands behind it. Resolving an already
+         *     resolved thread answers 200 with the thread unchanged.
          */
         post: operations["resolveDealRoomThread"];
         delete?: never;
@@ -18136,7 +18136,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_decision" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -20142,7 +20142,7 @@ export interface components {
             /**
              * Format: date-time
              * @description When their access was taken away. The row survives revocation so their
-             *     comments and decisions stay attributed to a name.
+             *     comments stay attributed to a name.
              */
             revoked_at?: string | null;
             source: string;
@@ -20343,7 +20343,7 @@ export interface components {
             document_id?: string | null;
             /** @description The first comment. */
             body: string;
-            /** @description Only with a document. Marks the thread as blocking confirmation until resolved. */
+            /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
             required_change?: boolean;
             /** @description Provenance. Defaults to `ui` on the public edge. */
             source?: string;

@@ -48,7 +48,6 @@ function RemoveButton({
   );
 }
 
-// The latest decision a reviewer made on this document, as one sentence.
 export function DealRoomConversation({
   room,
   refusal,

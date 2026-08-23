@@ -41,7 +41,6 @@ const (
 	recordTypeDeal                agentRecordType = "deal"
 	recordTypeDealRoom            agentRecordType = "deal_room"
 	recordTypeDealRoomComment     agentRecordType = "deal_room_comment"
-	recordTypeDealRoomDecision    agentRecordType = "deal_room_decision"
 	recordTypeDealRoomDocument    agentRecordType = "deal_room_document"
 	recordTypeDealRoomParticipant agentRecordType = "deal_room_participant"
 	recordTypeDealRoomThread      agentRecordType = "deal_room_thread"

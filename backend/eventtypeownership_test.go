@@ -399,7 +399,7 @@ var unemittedEventTypes = gatekit.Waive(map[string]string{
 	"person.restored":             "the same, for the person restore path that does not exist",
 	"pipeline.archived":           "documented in the contract as never emitted today — no archive path",
 	"mirror.write_rejected":       "documented in the contract as never emitted today, reserved for the overlay write-back's refusal case",
-	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The type and the deal_room_decision rows stay: a decision somebody genuinely made is a record of what happened, and the deal timeline still renders the ones already on the bus",
+	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The deal_room_decision table went with it. The TYPE stays because the deal timeline still decodes events emitted before the retirement, which are on the bus whether or not the rows behind them survive",
 	"conversation_claim.changed":  "the odd one out, and filed rather than ratified quietly: unlike the four above, the contract does NOT mark this one unemitted — it describes it as published, because 'a correction is SHARED truth'. There is no correction path in people/conversationclaim.go to publish from; the module exposes RecordConversationClaim and nothing else. Waived here so the gate is green over a real state of the tree, not because the state is right",
 })
 

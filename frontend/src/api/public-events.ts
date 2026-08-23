@@ -138,7 +138,7 @@ export interface components {
             deal_id: string;
             /** Format: uuid */
             participant_id: string;
-            /** @description view, comment or reviewer. */
+            /** @description view or comment. */
             capability: string;
         };
         /**
@@ -238,8 +238,13 @@ export interface components {
         };
         /**
          * @description Payload for deal_room.decision_recorded — a buyer asked for changes to a
-         *     document version, or confirmed it. A confirmation is a working decision
-         *     inside the room and explicitly not a legal signature.
+         *     document version, or confirmed it.
+         *
+         *     HISTORICAL ONLY. Deciding on a document version is retired: sharing a
+         *     document with a buyer is sharing it, and what they want to say about one
+         *     they say in the thread under it. Nothing emits this any more, and the
+         *     rows it named are gone. It stays declared because a subscriber may still
+         *     be reading events emitted before the retirement off the bus.
          */
         PublicEventDealRoomDecisionRecorded: {
             /** Format: uuid */
