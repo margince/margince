@@ -489,29 +489,30 @@ func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 // login carries the deal amount mask, and a manager's does not. A mask is a
 // property of the role, read at login like the grants — the store that
 // withholds the column never reads the table.
-func TestTheRepRoleCarriesTheDealAmountMask(t *testing.T) {
+// No seeded role withholds a column. The baseline shipped one field mask — a
+// rep read a deal's amount_minor as withheld outside their write authority —
+// and it is gone: deal values are open to every seat that may read the deal.
+//
+// The masking MACHINERY is not gone, and this test says nothing about it. An
+// operator may still author a mask on a custom role, and the paths that apply
+// one are covered by fieldmask_integration_test.go, which builds its own. What
+// is asserted here is the SHIPPED posture: a seat gets what its grants admit,
+// with no column quietly missing from it.
+func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 	e := setupRevocationEnv(t, "field-mask")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
-	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
-		t.Fatal(err)
-	}
-	asRep, _, err := e.svc.Login(ctx, e.member.Email, memberPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := principal.FieldMask{Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority}
-	if len(asRep.Permissions.FieldMasks) != 1 || asRep.Permissions.FieldMasks[0] != want {
-		t.Errorf("a rep's field masks = %+v, want exactly %+v", asRep.Permissions.FieldMasks, want)
-	}
-	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "manager"); err != nil {
-		t.Fatal(err)
-	}
-	asManager, _, err := e.svc.Login(ctx, e.member.Email, memberPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(asManager.Permissions.FieldMasks) != 0 {
-		t.Errorf("a manager's field masks = %+v, want none", asManager.Permissions.FieldMasks)
+	for _, role := range []string{"rep", "manager"} {
+		if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, role); err != nil {
+			t.Fatal(err)
+		}
+		seat, _, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(seat.Permissions.FieldMasks) != 0 {
+			t.Errorf("a %s's field masks = %+v, want none — the shipped roles withhold no column",
+				role, seat.Permissions.FieldMasks)
+		}
 	}
 }
 
@@ -573,8 +574,12 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 	if preview.Permissions.RowScope != principal.RowScopeOwn || !preview.Permissions.Allows("deal", principal.ActionRead) {
 		t.Errorf("rep preview = scope %s deal.read %v, want own scope with deal.read", preview.Permissions.RowScope, preview.Permissions.Allows("deal", principal.ActionRead))
 	}
-	if len(preview.Permissions.FieldMasks) != 1 || preview.Permissions.FieldMasks[0].Field != "amount_minor" {
-		t.Errorf("rep preview masks = %+v, want the deal amount mask", preview.Permissions.FieldMasks)
+	// The preview reports masks HONESTLY, which now means reporting none: no
+	// seeded role withholds a column. It is asserted rather than dropped because
+	// the preview inventing a mask would be as wrong as it hiding one.
+	if len(preview.Permissions.FieldMasks) != 0 {
+		t.Errorf("rep preview masks = %+v, want none — the shipped roles withhold no column",
+			preview.Permissions.FieldMasks)
 	}
 	if len(preview.Teams) != 1 || preview.Teams[0].Name != "DACH" {
 		t.Errorf("rep preview teams = %+v, want DACH", preview.Teams)
