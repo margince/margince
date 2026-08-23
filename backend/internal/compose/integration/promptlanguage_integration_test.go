@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -105,5 +106,37 @@ func TestAnInstallationThatNeverNamedALanguageStillGetsAPrompt(t *testing.T) {
 	rule := promptlang.Rule(identity.BaseLanguageForPrompt(ctx, e.Pool))
 	if !strings.Contains(rule, "English") {
 		t.Fatalf("an installation with no base-language row did not fall back to English:\n%s", rule)
+	}
+}
+
+// The two shared-artifact prompts carry the language the installation actually
+// set, resolved through the same accessor production uses.
+//
+// The static gate can see that a rule reaches these prompts. It cannot see that
+// the rule names the right language, because that is a settings row and a
+// transaction — which is what this reads back.
+func TestTheDossierAndGrowthFitPromptsCarryTheInstallationsLanguage(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+
+	setBaseLanguage(ctx, t, e, "vi")
+	lang := identity.BaseLanguageForPrompt(ctx, e.Pool)
+
+	dossier := orgdossier.DossierRequest(orgdossier.Input{}, lang)
+	if !strings.Contains(dossier.System, "Vietnamese") {
+		t.Errorf("the dossier prompt does not ask for Vietnamese:\n%s", dossier.System)
+	}
+	fit := orgdossier.GrowthFitRequest(orgdossier.Input{}, lang)
+	if !strings.Contains(fit.System, "Vietnamese") {
+		t.Errorf("the growth-fit prompt does not ask for Vietnamese:\n%s", fit.System)
+	}
+
+	// Both prompts must still say what must NOT be translated. A model told to
+	// write Vietnamese will otherwise translate a JSON key or an entity_type
+	// value, and the parser that reads the reply matches those exactly.
+	for name, req := range map[string]string{"dossier": dossier.System, "growth fit": fit.System} {
+		if !strings.Contains(req, "JSON keys") {
+			t.Errorf("the %s prompt asks for a language without protecting its JSON keys from translation", name)
+		}
 	}
 }

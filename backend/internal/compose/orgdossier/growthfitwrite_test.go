@@ -15,6 +15,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -86,7 +87,7 @@ func TestEveryModelFailureDegradesToTheFloorAndSaysSo(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, by, laneFailed := WriteGrowthFit(context.Background(), tc.lane, in, true, at)
+			got, by, laneFailed := WriteGrowthFit(context.Background(), tc.lane, in, true, at, string(textlang.English))
 
 			if by != crmcontracts.Deterministic {
 				t.Errorf("generated_by = %q, want deterministic — the model did not produce this", by)
@@ -109,7 +110,7 @@ func TestEveryModelFailureDegradesToTheFloorAndSaysSo(t *testing.T) {
 func TestAGroundedReplyIsServedAsTheModelsWithItsClaims(t *testing.T) {
 	in := sevenOfSeven()
 
-	got, by, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", in)}, in, true, at)
+	got, by, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", in)}, in, true, at, string(textlang.English))
 
 	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %q, want model", by)
@@ -134,7 +135,7 @@ func TestTheCompletenessFloorOverrulesAConfidentModelAndWithholdsItsReasons(t *t
 		},
 	}
 
-	got, by, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", thin)}, thin, true, at)
+	got, by, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", thin)}, thin, true, at, string(textlang.English))
 
 	if got.Band != crmcontracts.GrowthFitBandUnknown {
 		t.Errorf("band = %q, want unknown — one of seven cannot support a judgment", got.Band)
@@ -158,7 +159,7 @@ func TestTheCompletenessFloorOverrulesAConfidentModelAndWithholdsItsReasons(t *t
 func TestTheCapAppliesToTheModelsBandAsWell(t *testing.T) {
 	in := sevenOfSeven()
 
-	got, _, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", in)}, in, false, at)
+	got, _, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", in)}, in, false, at, string(textlang.English))
 
 	if got.Band != crmcontracts.GrowthFitBandModerate {
 		t.Errorf("band = %q, want moderate — our own offering is unconfirmed", got.Band)

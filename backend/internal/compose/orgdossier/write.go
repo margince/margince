@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -39,18 +40,21 @@ Put ids ONLY in evidence. An id must never appear in a sentence's text — the r
 Write plainly, one claim per sentence, and never open two sentences with the company name.`
 
 // dossierSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func dossierSystemFor(fence promptfence.Fence) string {
-	return dossierSystem + "\n" + fence.Rule("company summary")
+//
+// The dossier describes a company and is filed on that company's page, where
+// anybody who opens it reads the same text. So it takes the installation's
+// shared language rather than the language the crawled site happened to be in,
+// which is what an unruled prompt would have followed.
+func dossierSystemFor(fence promptfence.Fence, lang string) string {
+	return dossierSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
 }
 
 // DossierRequest builds the one-shot call. Exported so the AI cert case
 // measures the request production actually sends rather than a copy of it.
-//
-//promptlang:exempt DEFERRED, not exempt on the merits: the dossier is cached against Fingerprint, so the language has to enter that key with the rule or a language change serves the old dossier indefinitely. Fingerprint is being rewritten concurrently to derive its prompt version from the prompt text; the two edits belong in one change rather than as a conflict.
-func DossierRequest(in Input) model.Request {
+func DossierRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:   dossierSystemFor(fence),
+		System:   dossierSystemFor(fence, lang),
 		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		// Deliberately NOT set: the dossier describes the company, and our own
 		// context is only ever an input to a judgment about fit. A writer given
@@ -66,12 +70,12 @@ func DossierRequest(in Input) model.Request {
 // The floor is a real answer here, unlike the growth fit's: it describes the
 // company from the same fields, just plainly. So a deployment with no lane is
 // not missing the surface, and `generated_by` says which of the two wrote it.
-func WriteDossier(ctx context.Context, lane Completer, in Input) ([]Section, crmcontracts.WrittenBy, bool) {
+func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([]Section, crmcontracts.WrittenBy, bool) {
 	floor := keepGrounded(Deterministic(in), in)
 	if lane == nil {
 		return floor, crmcontracts.Deterministic, false
 	}
-	written, err := writeWithModel(ctx, lane, in)
+	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
 		// The declared degrade posture (on_budget_exhausted: degrade), not a
 		// swallowed error. A lane that is unavailable, over budget or answering
@@ -88,8 +92,8 @@ func WriteDossier(ctx context.Context, lane Completer, in Input) ([]Section, crm
 	return written, crmcontracts.Model, false
 }
 
-func writeWithModel(ctx context.Context, lane Completer, in Input) ([]Section, error) {
-	resp, err := lane.Complete(ctx, DossierRequest(in))
+func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
+	resp, err := lane.Complete(ctx, DossierRequest(in, lang))
 	if err != nil {
 		return nil, err
 	}
