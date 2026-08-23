@@ -104,12 +104,25 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		if filepath.ToSlash(path) == employmentCurrencyOwner {
 			continue
 		}
+		// This file holds the planted probes below, which are deliberate
+		// defects — judging them would report the gate's own evidence as a
+		// finding. Skipped by name rather than by "_test.go", because a real
+		// test that hand-writes an employment currency test is still a finding
+		// and there is no reason to stop looking at the ones that do not plant
+		// anything.
+		if filepath.Base(path) == "employmentcurrency_test.go" {
+			continue
+		}
 		file, err := parser.ParseFile(fset, path, nil, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
+		peopleAlias := importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people")
+		if file.Name != nil && file.Name.Name == "people" {
+			peopleAlias = ""
+		}
 		for _, decl := range file.Decls {
-			for _, sql := range employmentStatements(decl) {
+			for _, sql := range employmentStatements(decl, peopleAlias) {
 				judged++
 				if !endedAtCurrency.MatchString(sql) {
 					continue
@@ -161,14 +174,14 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 // Per DECLARATION and not per file: a file may hold one query about employments
 // and another about deal stakeholders, and asking whether both shapes appear
 // somewhere in the same file reports a pairing nobody wrote.
-func employmentStatements(decl ast.Decl) []string {
+func employmentStatements(decl ast.Decl, peopleQualifier string) []string {
 	var out []string
 	seen := map[ast.Node]bool{}
 	ast.Inspect(decl, func(n ast.Node) bool {
 		if seen[n] {
 			return false
 		}
-		text, ok := flattenSQL(n, seen)
+		text, ok := flattenSQL(n, seen, peopleQualifier)
 		if !ok || !employmentKind.MatchString(text) {
 			return true
 		}
@@ -191,11 +204,13 @@ func employmentStatements(decl ast.Decl) []string {
 // the helper for one half and hand-writing the other was skipped WHOLESALE.
 // Calling the one definition is not a licence to write a second one beside it.
 //
-// Other calls render as their name and their arguments, because a formatter
-// holds its SQL in an argument: `fmt.Sprintf(`… kind = 'employment' … `, …)`
-// keeps the statement inside the call, and a flattener that stopped at the
-// call name would judge nothing.
-func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
+// Any other call renders as its ARGUMENTS and not its name, because a
+// formatter holds its SQL in an argument — `fmt.Sprintf(`… kind = 'employment'
+// … `, …)` keeps the whole statement inside the call, and a flattener that
+// stopped at the callee name would judge nothing. The name is dropped because
+// it is not part of the SQL; only the helper's is kept, as the marker that
+// says the one definition was reached.
+func flattenSQL(n ast.Node, seen map[ast.Node]bool, peopleQualifier string) (string, bool) {
 	switch v := n.(type) {
 	case *ast.BasicLit:
 		if v.Kind != token.STRING {
@@ -207,8 +222,8 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
 		if v.Op != token.ADD {
 			return "", false
 		}
-		left, lok := flattenSQL(v.X, seen)
-		right, rok := flattenSQL(v.Y, seen)
+		left, lok := flattenSQL(v.X, seen, peopleQualifier)
+		right, rok := flattenSQL(v.Y, seen, peopleQualifier)
 		if !lok && !rok {
 			return "", false
 		}
@@ -216,13 +231,13 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
 		return left + right, true
 	case *ast.CallExpr:
 		seen[n] = true
-		if name := employmentCalleeName(v); name == employmentHelper || name == primaryHelper {
+		if isOneDefinition(v, peopleQualifier) {
 			markSeen(v, seen)
-			return " " + name + " ", true
+			return " " + employmentCalleeName(v) + " ", true
 		}
 		text := ""
 		for _, a := range v.Args {
-			if part, ok := flattenSQL(a, seen); ok {
+			if part, ok := flattenSQL(a, seen, peopleQualifier); ok {
 				text += part
 			}
 		}
@@ -232,6 +247,47 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool) (string, bool) {
 		return " ", true
 	}
 	return "", false
+}
+
+// isOneDefinition reports whether the call is people's helper — the PACKAGE as
+// well as the name.
+//
+// The name alone was not enough, and the gap is the one this gate exists to
+// close: markSeen claims a helper call's whole subtree, so `other.
+// EmploymentIsCurrentSQL(…)` would have been treated as canonical and its
+// arguments hidden, letting a hand-written currency test ride inside a
+// lookalike. An empty qualifier means the file IS package people, which is the
+// only place the helper is reachable unqualified.
+func isOneDefinition(call *ast.CallExpr, peopleQualifier string) bool {
+	switch f := call.Fun.(type) {
+	case *ast.Ident:
+		return peopleQualifier == "" && (f.Name == employmentHelper || f.Name == primaryHelper)
+	case *ast.SelectorExpr:
+		pkg, ok := f.X.(*ast.Ident)
+		return ok && peopleQualifier != "" && pkg.Name == peopleQualifier &&
+			(f.Sel.Name == employmentHelper || f.Sel.Name == primaryHelper)
+	}
+	return false
+}
+
+// importAliasOf returns the local name an import path is bound to in this file,
+// or "" if the file does not import it. A dot import returns "" too: a
+// dot-imported call is a bare identifier, and the gate would rather miss it
+// than name the wrong function.
+func importAliasOf(file *ast.File, path string) string {
+	for _, spec := range file.Imports {
+		if strings.Trim(spec.Path.Value, `"`) != path {
+			continue
+		}
+		if spec.Name != nil {
+			if spec.Name.Name == "." {
+				return ""
+			}
+			return spec.Name.Name
+		}
+		return "people"
+	}
+	return ""
 }
 
 // employmentCalleeName is the function's own name, however it is qualified.
@@ -298,4 +354,107 @@ func handWrittenGoSources(t *testing.T) []string {
 		t.Fatalf("the walk found only %d Go files, so this census covered almost nothing", len(paths))
 	}
 	return paths
+}
+
+// employmentProbe is one planted source file and the answer the gate must give
+// for it.
+type employmentProbe struct {
+	name  string
+	fires bool
+	// insidePeople renders the probe AS package people, where the helper is
+	// reachable unqualified — the only place a bare call to it is its own.
+	insidePeople bool
+	src          string
+}
+
+// The census above is a census of ZERO: it passes identically over a clean tree
+// and over a detector that has stopped detecting. These read the detector
+// directly, which is the half that makes the census mean anything.
+//
+// Every case here exists because the gate was once green over it.
+var employmentProbes = []employmentProbe{
+	{"the bare form that shipped, one literal", true, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NULL` + "`" + `
+}`},
+	{"the same, split across a concatenation", true, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + ` + "`" + `r.ended_at IS NULL` + "`" + `
+}`},
+	{"the same, inside a formatter's argument", true, false, `
+func read() string {
+	return fmt.Sprintf(` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NULL AND (%s)` + "`" + `, scope)
+}`},
+	{"the negation, which is the same decision backwards", true, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NOT NULL` + "`" + `
+}`},
+	{"the helper AND a hand-written test beside it", true, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.ended_at IS NOT NULL` + "`" + `
+}`},
+	// The name alone is not the helper. markSeen claims a helper call's whole
+	// subtree, so a LOOKALIKE would have had its arguments hidden and could
+	// have carried a hand-written test through inside them.
+	{"a lookalike helper from another package", true, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + other.EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
+}`},
+
+	{"the real helper, qualified", false, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
+}`},
+	{"the real helper, unqualified inside people", false, true, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
+}`},
+	// A bare call outside people names something else entirely.
+	{"an unqualified call outside people", true, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
+}`},
+	// Another relationship kind is a different question, deliberately not this
+	// gate's.
+	{"a deal_stakeholder edge", false, false, `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND r.ended_at IS NULL` + "`" + `
+}`},
+	{"an employment query that never asks about currency", false, false, `
+func read() string {
+	return ` + "`" + `SELECT count(*) FROM relationship r WHERE r.kind = 'employment'` + "`" + `
+}`},
+}
+
+func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
+	fset := token.NewFileSet()
+	for _, tc := range employmentProbes {
+		t.Run(tc.name, func(t *testing.T) {
+			head := "package probe\n"
+			alias := "people"
+			if tc.insidePeople {
+				head, alias = "package people\n", ""
+			} else {
+				head += "import (\n\t\"fmt\"\n\n\t\"github.com/gradionhq/margince/backend/internal/modules/people\"\n)\n"
+			}
+			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
+			if err != nil {
+				t.Fatalf("the probe does not parse, so it proves nothing: %v", err)
+			}
+			hit := false
+			for _, decl := range file.Decls {
+				for _, sql := range employmentStatements(decl, alias) {
+					if endedAtCurrency.MatchString(sql) {
+						hit = true
+					}
+				}
+			}
+			if tc.fires && !hit {
+				t.Errorf("the detector missed a hand-written currency test — the census would read green over this:\n%s", tc.src)
+			}
+			if !tc.fires && hit {
+				t.Errorf("the detector reported a statement that asks the one definition, or asks nothing:\n%s", tc.src)
+			}
+		})
+	}
 }
