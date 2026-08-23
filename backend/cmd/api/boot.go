@@ -23,6 +23,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/agentquota"
 	"github.com/gradionhq/margince/backend/internal/platform/config"
 	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/gradionhq/margince/backend/internal/platform/events"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/platform/licensecheck"
@@ -206,7 +207,23 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 // relay's own client is the one that must ping (a stranded outbox row is a lost
 // fact, a shed force-fresh read is not).
 func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func()) {
-	rdb := redis.NewClient(&redis.Options{Addr: cfg.redisAddr})
+	// Through the bus's own parser, so this client honours a `host:port/N`
+	// logical database exactly as the relay's does. Two spellings would let
+	// one of them keep landing on db 0 while the other moved, which is the
+	// event-stealing bug this suffix exists to prevent.
+	//
+	// A malformed suffix degrades to the bare address rather than refusing to
+	// boot, because this client is deliberately lazy (see above) and the relay
+	// — which parses the same string and DOES refuse — is the one that reports
+	// it. Two hard failures on one typo would be one too many; none would be
+	// silent.
+	redisOpts, err := events.ClientOptions(cfg.redisAddr)
+	if err != nil {
+		logger.Warn("the redis address names no usable logical database; using its host as given",
+			"addr", cfg.redisAddr, "err", err)
+		redisOpts = &redis.Options{Addr: cfg.redisAddr}
+	}
+	rdb := redis.NewClient(redisOpts)
 	return rdb, func() {
 		if err := rdb.Close(); err != nil {
 			logger.Warn("closing the shared redis client", "err", err)
