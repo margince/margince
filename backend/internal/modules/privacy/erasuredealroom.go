@@ -41,13 +41,43 @@ import (
 // tombstone. Nothing can be delivered to it.
 const erasedEmail = "erased@example.invalid"
 
+// eraseDealRoomSeats is the whole Deal Room step of an erasure: wipe the seats
+// carrying one of the subject's addresses, purge what those seats still betray,
+// and tombstone each one's audit spine.
+//
+// It runs BEFORE deleteSubjectIdentifierRows, like the provider purge one step
+// over: a seat holds no person id and is resolved by address, which that delete
+// destroys.
+func eraseDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string, reason string) error {
+	seats, err := anonymizeDealRoomSeats(ctx, tx, emails)
+	if err != nil {
+		return err
+	}
+	if err := purgeDealRoomSeatTraces(ctx, tx, seats); err != nil {
+		return err
+	}
+	// The invitation's own audit image stores the address in plain text, and
+	// the field-history projection cuts a record's timeline at its own newest
+	// erase row. Without this the audit log hands the "erased" address
+	// straight back — an erasure the record itself contradicts.
+	return tombstoneCollateralScrubs(ctx, tx, "deal_room_participant", seats, reason)
+}
+
 // anonymizeDealRoomSeats wipes the subject's name and address from every Deal
 // Room seat that carries one of their addresses, and revokes the seat so the
 // access it stood for cannot be exercised again.
 //
 // It matches on ADDRESS because a seat holds no person id — see the file
-// header. It must therefore run BEFORE deleteSubjectIdentifierRows, like the
-// provider purge one step over, or the addresses it resolves by are gone.
+// header.
+//
+// An address is a weaker key than a person id, so the question "could this wipe
+// somebody else's seat" has to be answered rather than assumed. It cannot,
+// because the erasure refuses outright when a second live person still holds
+// one of these addresses (refuseRivalIdentifierHolders, run before this): a
+// shared mailbox is a conflict the operator resolves by merging, not something
+// this function silently guesses at. What remains is a seat invited under a
+// different DISPLAY NAME on the subject's own address, which is the subject
+// under another spelling of their name and is theirs to have erased.
 //
 // It returns the seats it wiped so the caller can tombstone each one's audit
 // spine, the same way the lead twins are handled.
@@ -93,8 +123,9 @@ func anonymizeDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string) ([]
 // to the seller only as a claim about a person who has asked to be forgotten.
 //
 // The invitations stay: they are the seller's record that access was granted
-// and when, they name no addressee beyond the now-wiped seat, and the audit
-// spine for the grant refers to them.
+// and when, and they name no addressee beyond the now-wiped seat.
+//
+// The seat's AUDIT spine is tombstoned by eraseDealRoomSeats above, not here.
 func purgeDealRoomSeatTraces(ctx context.Context, tx pgx.Tx, seats []ids.UUID) error {
 	if len(seats) == 0 {
 		return nil

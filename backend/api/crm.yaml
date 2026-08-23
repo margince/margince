@@ -19706,6 +19706,27 @@ components:
             no surviving sentence is absent, never present-and-empty: `risks` in particular is
             specified as omitted when empty, and the same rule reads honestly for every other.
           items: { $ref: '#/components/schemas/MeetingBriefSection' }
+        omitted:
+          type: array
+          description: >-
+            What this reader's own grants kept OUT of the brief, named so a silence is
+            never mistaken for an absence. A brief that cannot see the Deal Room reads
+            exactly like a brief about a deal with no room, and a rep would walk in
+            believing the buyer had done nothing. Empty when the reader could see
+            everything the brief looks at.
+          items: { $ref: '#/components/schemas/MeetingBriefOmission' }
+
+    MeetingBriefOmission:
+      type: object
+      description: One source this reader may not see, and what that costs the brief.
+      required: [source, reason]
+      properties:
+        source:
+          type: string
+          description: '`deal_room` today. A machine key, so a client can render its own wording.'
+        reason:
+          type: string
+          description: One sentence a reader can act on, naming what is missing and why.
 
     MeetingBriefSection:
       type: object

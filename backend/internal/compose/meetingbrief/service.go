@@ -151,7 +151,24 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		GeneratedBy: crmcontracts.Deterministic,
 		Scope:       scope,
 		Sections:    wireSections(Deterministic(in)),
+		Omitted:     omissions(in),
 	}, filed, nil
+}
+
+// omissions names what this reader's own grants kept out of the brief.
+//
+// Nil rather than an empty slice when the reader could see everything: the
+// contract's field is optional, and an empty array on the wire invites a client
+// to render an empty "what you cannot see" heading.
+func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
+	if !in.RoomHidden {
+		return nil
+	}
+	out := []crmcontracts.MeetingBriefOmission{{
+		Source: "deal_room",
+		Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
+	}}
+	return &out
 }
 
 // assembleInput gathers everything the brief is written from.
@@ -172,6 +189,8 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var perAttendee map[ids.UUID][]crmcontracts.ConversationClaim
 	var earlier []priorMeeting
 	var lastSpoke *time.Time
+	var moves []DealMoveIn
+	var roomHidden bool
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -200,9 +219,19 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 			return err
 		}
 		spoke, ever, err := s.readLastSpoke(ctx, tx, loaded, scope, s.now().UTC())
-		if ever {
-			lastSpoke = &spoke
+		if err != nil {
+			return err
 		}
+		if !ever {
+			// No baseline is FIRST CONTACT, and nothing has moved "since" a
+			// conversation that never happened.
+			return nil
+		}
+		lastSpoke = &spoke
+		if loaded.Deal == nil {
+			return nil
+		}
+		moves, roomHidden, err = s.readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
 		return err
 	})
 	if err != nil {
@@ -212,6 +241,8 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in := FromMeeting(room, perAttendee, s.now().UTC())
 	in.PriorMeetings = foldPriorMeetings(earlier)
 	in.LastSpokeAt = lastSpoke
+	in.DealMoves = moves
+	in.RoomHidden = roomHidden
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a person nobody named would be a read of a

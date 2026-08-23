@@ -17434,6 +17434,9 @@ type MeetingBrief struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
+	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
+	Omitted *[]MeetingBriefOmission `json:"omitted,omitempty"`
+
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
 	// guessing. Present only when the request named a `project_id`.
@@ -17446,6 +17449,15 @@ type MeetingBrief struct {
 
 	// Sections The sections that had something to say, in ADR-0097 D5's fixed order. A section with no surviving sentence is absent, never present-and-empty: `risks` in particular is specified as omitted when empty, and the same rule reads honestly for every other.
 	Sections []MeetingBriefSection `json:"sections"`
+}
+
+// MeetingBriefOmission One source this reader may not see, and what that costs the brief.
+type MeetingBriefOmission struct {
+	// Reason One sentence a reader can act on, naming what is missing and why.
+	Reason string `json:"reason"`
+
+	// Source `deal_room` today. A machine key, so a client can render its own wording.
+	Source string `json:"source"`
 }
 
 // MeetingBriefSection One of the nine fixed sections, with its cited sentences.

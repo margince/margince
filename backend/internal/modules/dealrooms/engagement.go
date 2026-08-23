@@ -17,11 +17,13 @@ package dealrooms
 // the rep opened, and a rep would ring a buyer about a document nobody outside
 // the company has seen. Every write here refuses a preview seat.
 //
-// THE RECORD COMMITS WITH THE ACT IT RECORDS. The write rides the same
-// transaction as the read that earned it, so the seller's panel and the buyer's
-// download can never disagree about whether the file was taken. A separate
-// best-effort write would fail silently and leave a rep ringing a buyer about a
-// document the record says they never opened.
+// THE RECORD FOLLOWS THE ACT, IT DOES NOT PRECEDE IT. A download is recorded
+// only once the bytes have actually been fetched. Recording at the locate step
+// would report a download for a file the object store then failed to open — a
+// rep ringing a buyer about a document they never received — and would let a
+// failed bookkeeping write refuse a file the buyer is entitled to. Between the
+// two mistakes, understating what the buyer took is the one that costs nobody
+// their file.
 
 import (
 	"context"
@@ -62,18 +64,6 @@ func recordEngagement(
 		return fmt.Errorf("record deal room engagement: %w", err)
 	}
 	return nil
-}
-
-// noteBuyerEngagement records one act of a live buyer seat inside the caller's
-// transaction. A preview seat writes nothing: see the file header.
-func noteBuyerEngagement(
-	ctx context.Context, tx pgx.Tx, sess Session,
-	documentID *ids.DealRoomDocumentID, kind string,
-) error {
-	if sess.Preview {
-		return nil
-	}
-	return recordEngagement(ctx, tx, sess.RoomID, sess.ParticipantID, documentID, kind)
 }
 
 // participantEngagement is what the Access panel says about one seat beyond
@@ -127,6 +117,12 @@ func withEngagement(
 	for i := range participants {
 		act, ok := seen[ids.UUID(participants[i].Id)]
 		if !ok {
+			continue
+		}
+		if act.Downloads == 0 {
+			// A seat that signed in and took nothing has no download count.
+			// Zero and absent read differently to a seller, and the contract
+			// says absent until they take one.
 			continue
 		}
 		downloads := act.Downloads

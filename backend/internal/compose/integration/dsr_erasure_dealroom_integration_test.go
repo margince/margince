@@ -169,3 +169,31 @@ func TestErasingASubjectLeavesNoRoomActivityTrailBehind(t *testing.T) {
 		t.Errorf("erasure left %d live session(s): the erased subject can still enter the room", n)
 	}
 }
+
+// The invitation's own audit image stores the buyer's address in plain text,
+// and the record-history read serves images verbatim. Without an erase row on
+// the seat, the audit log hands the "erased" address straight back — an
+// erasure the record itself contradicts.
+func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
+	e := Setup(t)
+	seeded := seedBuyerInARoom(t, e, "audit.erasure@acme.test")
+
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_participant'
+		   AND entity_id = $1 AND action = 'erase'`, seeded.seat); n != 0 {
+		t.Fatalf("the seat carried %d erase row(s) before any erasure ran", n)
+	}
+
+	if err := privacy.NewEraser(e.DB()).ErasePerson(
+		e.As(e.AdminUser, nil, roomErasureAdmin), seeded.person.UUID,
+		"an erasure request from the subject"); err != nil {
+		t.Fatalf("erasing the subject: %v", err)
+	}
+
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_participant'
+		   AND entity_id = $1 AND action = 'erase'`, seeded.seat); n != 1 {
+		t.Errorf("the wiped seat carries %d erase row(s), want exactly 1: without it the "+
+			"invitation's audit image still discloses the erased address", n)
+	}
+}

@@ -52,6 +52,16 @@ type Input struct {
 	// LastTouchAt is the newest conversation with anyone in the room before
 	// this meeting. Nil means nothing was ever captured with any of them.
 	LastTouchAt *time.Time
+	// DealMoves are what happened to the DEAL since LastSpokeAt — stage moves,
+	// offers issued, what the buyer did in the Deal Room. Empty when nothing
+	// moved, when the meeting is about no deal, or when this reader may not
+	// see the part that moved.
+	DealMoves []DealMoveIn
+	// RoomHidden says this reader holds no deal_room grant, so whatever the
+	// buyer did in the room is missing from DealMoves. Rendered as an omission
+	// rather than left silent: a brief that cannot see the room reads exactly
+	// like a brief about a deal with no room.
+	RoomHidden bool
 }
 
 // DealIn is the deal this meeting is about.
