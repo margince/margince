@@ -222,14 +222,17 @@ export function LocaleProvider({
       // as a key it has no entry for. Every lookup then throws, including the
       // error boundary's own, so a single unknown string costs the reader the
       // whole application rather than just their language.
-      if (!isLocale(next)) {
+      // An unshipped value FALLS BACK rather than being ignored. Ignoring it
+      // would keep whatever is on screen, and after a sign-out the provider
+      // outlives the account — so the previous person's server-chosen language
+      // would stay up for the next one. Detection is what "no usable answer
+      // from the server" already means everywhere else in this file.
+      const usable = isLocale(next) ? next : (storedLocale() ?? detectLocale());
+      if (usable === adopted) {
         return;
       }
-      if (next === adopted) {
-        return;
-      }
-      setAdopted(next);
-      setLocaleState(next);
+      setAdopted(usable);
+      setLocaleState(usable);
     },
     [adopted],
   );
