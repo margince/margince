@@ -4332,9 +4332,14 @@ export const de = {
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
   "deal360.next": "Was als Nächstes zu tun ist",
+  "dealmail.title": "E-Mail",
+  "dealmail.sub.reply":
+    "Sie haben geschrieben, und noch hat niemand geantwortet.",
+  "dealmail.sub.fresh": "Schreiben Sie den Beteiligten dieses Deals.",
+  "dealmail.reply": "Antwort entwerfen",
+  "dealmail.send": "E-Mail senden",
   "deal360.rewrite": "Neu schreiben",
   "deal360.createTask": "Aufgabe anlegen",
-  "deal360.draftReply": "Antwort entwerfen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
   "deal360.unreadable":
     "Dieses Briefing konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",

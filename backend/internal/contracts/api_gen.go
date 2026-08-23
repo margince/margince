@@ -15891,6 +15891,17 @@ type DealStatusCard struct {
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`
 
+	// ReplyTo The inbound message an email from here would answer: the most recent
+	// one this deal has received that nobody has replied to. Null when the
+	// buyer has never written, or when the last thing they wrote has been
+	// answered — then a mail from here starts a thread rather than
+	// continuing one.
+	//
+	// Independent of `next` on purpose. Whether there is something to reply
+	// to is a fact about the deal; which move ranks first is a judgement,
+	// and the two must not have to agree for the reply to be reachable.
+	ReplyTo *openapi_types.UUID `json:"reply_to,omitempty"`
+
 	// Story What has happened and where that leaves things, in the order it
 	// happened. The section a reader with no memory of the deal starts at.
 	Story DealStatusCardSection `json:"story"`

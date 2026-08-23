@@ -84,7 +84,7 @@ import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { DealBulkBar } from "./dealbulk";
-
+import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import {
   DealProjectChip,
@@ -3463,7 +3463,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               )}
               aside={
                 overlay ? undefined : (
-                  <DealRoomAside dealId={id} dealName={deal.name} />
+                  <>
+                    <DealRoomAside dealId={id} dealName={deal.name} />
+                    <DealEmailAside dealId={id} dealName={deal.name} />
+                  </>
                 )
               }
               asideLabel={t("room.card.title")}

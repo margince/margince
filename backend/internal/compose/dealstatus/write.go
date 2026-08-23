@@ -46,6 +46,13 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	if mv.Action != ActionNone {
 		out.Next = &mv
 	}
+	// Set on the floor, so the model path inherits it: foldWritten starts from
+	// this card, and reply_to is a fact about the records rather than anything
+	// the lane may revise.
+	if inbound, ok := unansweredInbound(f); ok {
+		id := inbound.Id
+		out.ReplyTo = &id
+	}
 	return out
 }
 

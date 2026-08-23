@@ -30,6 +30,12 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	if card["generated_by"] != "deterministic" {
 		t.Fatalf("generated_by = %v, want the composition this lane runs", card["generated_by"])
 	}
+	// Nobody has written, so a mail from the deal page starts a thread. The
+	// email box reads this to decide between "Send an email" and "Draft the
+	// reply", so it must be absent rather than merely falsy.
+	if card["reply_to"] != nil {
+		t.Fatalf("reply_to = %v on a deal nobody has written to, want null", card["reply_to"])
+	}
 	next, _ := card["next"].(map[string]any)
 	if next["action"] != "create_task" {
 		t.Fatalf("an empty deal should ask for a first step, got %v", next)
@@ -66,6 +72,27 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	repliedArgs, _ := repliedNext["arguments"].(map[string]any)
 	if repliedNext["action"] != "draft_email" || repliedArgs["activity_id"] != mail["id"] {
 		t.Fatalf("after an inbound mail the card still offers %v", repliedNext)
+	}
+	// And the email box now has a thread to answer. It names the same message
+	// the move does, because both read one rule — the box must not offer to
+	// start a fresh mail while an answer is owed.
+	if replied["reply_to"] != mail["id"] {
+		t.Fatalf("reply_to = %v, want the unanswered mail %v", replied["reply_to"], mail["id"])
+	}
+
+	// Answering it takes the thread away again: the box goes back to offering
+	// a fresh mail, which is the whole behaviour the two labels describe.
+	var reply apptest.AnyMap
+	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+		"kind": "email", "direction": "outbound", "subject": "Re: rollout", "body": "DPA attached.",
+		"links":  []apptest.AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		"source": "ui",
+	}, nil, &reply); status != http.StatusCreated {
+		t.Fatalf("log the reply = %d %v", status, reply)
+	}
+	answered := readStatus(t, e, dealID)
+	if answered["reply_to"] != nil {
+		t.Fatalf("reply_to = %v after the mail was answered, want null", answered["reply_to"])
 	}
 }
 

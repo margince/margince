@@ -14088,6 +14088,19 @@ export interface components {
             verdict?: components["schemas"]["DealStatusCardVerdict"];
             /** @description The one move to make, with the verb to perform it. */
             next?: components["schemas"]["DealStatusCardMove"];
+            /**
+             * Format: uuid
+             * @description The inbound message an email from here would answer: the most recent
+             *     one this deal has received that nobody has replied to. Null when the
+             *     buyer has never written, or when the last thing they wrote has been
+             *     answered — then a mail from here starts a thread rather than
+             *     continuing one.
+             *
+             *     Independent of `next` on purpose. Whether there is something to reply
+             *     to is a fact about the deal; which move ranks first is a judgement,
+             *     and the two must not have to agree for the reply to be reachable.
+             */
+            reply_to?: string | null;
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
