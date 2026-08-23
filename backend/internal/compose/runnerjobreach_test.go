@@ -60,6 +60,31 @@ var buildsAJobLegitimately = gatekit.Waive(map[string]string{
 // papered over: closing it means resolving imports per file, and an alias for
 // this package would itself be a strange thing to find in review.
 func jobConstructionForms(file *ast.File) []token.Pos {
+	// A struct type written INSIDE a signature — `func f(arg struct{ job
+	// runner.Job })` — is a shape the function receives, not one it builds, so
+	// those are collected first and skipped below. Rare, but a gate that
+	// reports a file for a Job it was handed sends someone to read the wrong
+	// line.
+	received := map[ast.Node]bool{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncType)
+		if !ok {
+			return true
+		}
+		for _, list := range []*ast.FieldList{fn.Params, fn.Results} {
+			if list == nil {
+				continue
+			}
+			ast.Inspect(list, func(inner ast.Node) bool {
+				if st, isStruct := inner.(*ast.StructType); isStruct {
+					received[st] = true
+				}
+				return true
+			})
+		}
+		return true
+	})
+
 	var at []token.Pos
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
@@ -82,7 +107,7 @@ func jobConstructionForms(file *ast.File) []token.Pos {
 			// results, receivers and interface methods — so a bare Field case
 			// would report `func f(job runner.Job)` as building one, and would
 			// double-count every function that returns one.
-			if node.Fields == nil {
+			if node.Fields == nil || received[node] {
 				return true
 			}
 			for _, field := range node.Fields.List {
@@ -219,7 +244,8 @@ func f() { _ = holder{}.job }`},
 	passesOneThrough := `package p
 import "x/runner"
 type iface interface{ take(j runner.Job) }
-func f(job runner.Job) { _ = job }`
+func f(job runner.Job) { _ = job }
+func g(arg struct{ job runner.Job }) { _ = arg }`
 	parsed, err := parser.ParseFile(token.NewFileSet(), "x.go", passesOneThrough, 0)
 	if err != nil {
 		t.Fatalf("parsing the fixture: %v", err)
