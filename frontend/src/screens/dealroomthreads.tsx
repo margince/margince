@@ -179,7 +179,9 @@ function DocumentCard({
         <div className="board-doc-threads">
           <span className="t-small board-doc-threads-head">
             <MessageSquare aria-hidden />
-            {t("threads.aboutThis", { count: String(threads.length) })}
+            {threads.length === 1
+              ? t("threads.aboutThisOne")
+              : t("threads.aboutThis", { count: String(threads.length) })}
           </span>
           <ThreadList threads={threads} verbs={verbs} />
         </div>

@@ -4256,6 +4256,7 @@ export const vi = {
   "threads.roomTitle": "Toàn bộ phòng",
   "threads.roomSub": "Mọi điều không thuộc về một tài liệu cụ thể.",
   "threads.aboutThis": "{count} chủ đề về tài liệu này",
+  "threads.aboutThisOne": "1 chủ đề về tài liệu này",
   "threads.askAbout": "Hỏi về tài liệu này",
   "threads.cancel": "Hủy",
   "threads.empty": "Chưa có trao đổi nào.",
