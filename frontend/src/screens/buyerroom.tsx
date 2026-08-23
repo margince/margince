@@ -475,13 +475,14 @@ function BuyerDocumentVerbs({
       documentId: string;
       filename: string;
       failure: string;
+      token: string;
     }) => {
       const { data, error, response } = await api.GET(
         "/public/rooms/documents/{documentId}/file",
         {
           params: { path: { documentId: input.documentId } },
           parseAs: "blob",
-          ...bearer(token),
+          ...bearer(input.token),
         },
       );
       if (error || !data) {
@@ -507,6 +508,7 @@ function BuyerDocumentVerbs({
             documentId: doc.id,
             filename: doc.filename,
             failure: t("buyer.docs.downloadFailed"),
+            token,
           })
         }
       >

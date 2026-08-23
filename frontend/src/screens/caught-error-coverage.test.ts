@@ -77,6 +77,7 @@ function unwrap(node: ts.Expression): ts.Expression {
   while (
     ts.isParenthesizedExpression(inner) ||
     ts.isAsExpression(inner) ||
+    ts.isSatisfiesExpression(inner) ||
     ts.isNonNullExpression(inner) ||
     ts.isTypeAssertionExpression(inner)
   ) {
@@ -270,6 +271,14 @@ describe("the census", () => {
       1,
     ],
     ["a non-null assertion", "try { a(); } catch (e) { show(e!.message); }", 1],
+    [
+      // `satisfies` narrows the TYPE and preserves the value, so it is a
+      // wrapper like the other four — and the one a rule listing casts by name
+      // is most likely to have forgotten.
+      "a satisfies expression",
+      "try { a(); } catch (e) { show(((e as Error) satisfies Error).message); }",
+      1,
+    ],
     ["String() alone", "try { a(); } catch (e) { show(String(e)); }", 1],
     ["toString()", "try { a(); } catch (e) { show(e.toString()); }", 1],
     [

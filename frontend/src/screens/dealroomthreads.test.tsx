@@ -74,7 +74,7 @@ function draw(verbs: Partial<ThreadVerbs> = {}, threads = [thread()]) {
 describe("a refused reply", () => {
   // The server's own sentence, composed for a reader, reaches them untouched —
   // the opposite path from the permission refusal below, where the catalog
-  // REPLACES a detail that was never copy.
+  // REPLACES a detail that was never composed for a reader.
   it("keeps the reader's draft and passes the server's own sentence through", async () => {
     const user = userEvent.setup();
     const reply = vi.fn(async () => {

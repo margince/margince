@@ -125,12 +125,15 @@ function spelledIn(fileName: string, text: string): string[] {
   const visit = (node: ts.Node) => {
     if (ts.isArrayLiteralExpression(node) && node.elements.length > 0) {
       const [first, second] = node.elements;
-      const head = ts.isStringLiteral(first) ? first.text : null;
+      // isStringLiteralLike, not isStringLiteral: a no-substitution template
+      // (`` [`lead`, id] ``) is a string in every way that matters here, and a
+      // rule that reads only the quoted form is a rule one backtick escapes.
+      const head = ts.isStringLiteralLike(first) ? first.text : null;
       const isLeadRoot = head !== null && LEAD_ROOTS.includes(head);
       const isRecordHistoryOfALead =
         head === "record-history" &&
         second !== undefined &&
-        ts.isStringLiteral(second) &&
+        ts.isStringLiteralLike(second) &&
         second.text === "lead";
       if ((isLeadRoot || isRecordHistoryOfALead) && isQueryKeyPosition(node)) {
         const { line } = source.getLineAndCharacterOfPosition(node.getStart());
@@ -251,6 +254,16 @@ describe("a lead's cached reads", () => {
       "a key in parentheses, and one behind a non-null assertion",
       'a({ queryKey: (["leads"]) }); b({ queryKey: ["lead", id]! });',
       2,
+    ],
+    [
+      "a key whose head is a template literal",
+      "q({ queryKey: [`lead`, id] });",
+      1,
+    ],
+    [
+      "the shared history key with a templated record kind",
+      "q({ queryKey: [`record-history`, `lead`, id] });",
+      1,
     ],
     [
       "the positional spelling ten setQueryData calls in this tree use",

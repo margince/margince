@@ -104,6 +104,24 @@ const CURRENCY_CODES = new Set([
   "MGA",
 ]);
 
+// ONE predicate for "this node owns a scope", used as the scan ROOT and as the
+// traversal BOUNDARY. Two lists would drift, and the drift is silent in a
+// specific direction: a kind that is a boundary but not a root skips a table,
+// and a kind that is a root but not a boundary invents one out of two unrelated
+// decisions. Methods, accessors and constructors are function scopes too — a
+// class holding a currency table in a method was neither.
+function isFunctionScope(node: ts.Node): boolean {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isConstructorDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node)
+  );
+}
+
 /** `<kind> <file>:<line>` for every per-currency table in one file. */
 function tablesIn(fileName: string, text: string): string[] {
   const source = ts.createSourceFile(
@@ -131,23 +149,14 @@ function tablesIn(fileName: string, text: string): string[] {
     // The if/else chain. Counted per FUNCTION rather than per statement,
     // because each `if` is its own node and a per-statement count would see
     // three separate one-code decisions where a reader sees one table.
-    if (
-      ts.isFunctionDeclaration(node) ||
-      ts.isArrowFunction(node) ||
-      ts.isFunctionExpression(node)
-    ) {
+    if (isFunctionScope(node)) {
       const compared = new Set<string>();
       const walk = (inner: ts.Node) => {
         // STOP at a nested function. Each is visited in its own right by the
         // outer traversal, so descending would attribute a child's comparison
         // to every ancestor — and an outer function holding two unrelated
         // single-code callbacks would be reported as a table it is not.
-        if (
-          inner !== node &&
-          (ts.isFunctionDeclaration(inner) ||
-            ts.isArrowFunction(inner) ||
-            ts.isFunctionExpression(inner))
-        ) {
+        if (inner !== node && isFunctionScope(inner)) {
           return;
         }
         if (
@@ -273,6 +282,16 @@ describe("a currency", () => {
       1,
     ],
     [
+      "a table in a class METHOD, which was neither a root nor a boundary",
+      'class F { symbol(c: string) { if (c === "EUR") return "€"; if (c === "USD") return "$"; return c; } }',
+      1,
+    ],
+    [
+      "a getter holding the same table",
+      'class F { get digits() { return this.c === "JPY" ? 0 : this.c === "VND" ? 0 : 2; } }',
+      1,
+    ],
+    [
       "the same chain as an arrow function",
       'const s = (c: string) => (c === "JPY" ? 0 : c === "VND" ? 0 : 2);',
       1,
@@ -285,6 +304,11 @@ describe("a currency", () => {
       // reported as a table.
       "two unrelated one-code callbacks inside one function",
       'function outer() { a(() => { if (c === "JPY") return 0; }); b(() => { if (c === "VND") return 0; }); }',
+      0,
+    ],
+    [
+      "two unrelated one-code METHODS in one class",
+      'class F { a(c: string) { if (c === "JPY") return 0; } b(c: string) { if (c === "VND") return 0; } }',
       0,
     ],
     [
