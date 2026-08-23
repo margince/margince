@@ -69,11 +69,11 @@ func TestAQuietProjectIsRaisedOncePerQuietEpisode(t *testing.T) {
 	admin := e.Admin()
 	now := time.Now().UTC()
 	org := e.SeedOrg(t, "Quiet Client", nil)
-	erp := seedProject(admin, t, e, "ERP replacement", strPtr("ERP-27"), org, &e.Rep1)
+	erp := seedProject(admin, t, e, "ERP replacement", org, &e.Rep1)
 	advanceProject(admin, t, e, erp.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "meeting", now.AddDate(0, 0, -45), &erp.ID)
 	// Not in flight: an initiative nobody has touched is not a finding.
-	idea := seedProject(admin, t, e, "Someday", nil, org, nil)
+	idea := seedProject(admin, t, e, "Someday", org, nil)
 	fileActivity(admin, t, e, "note", now.AddDate(0, 0, -45), &idea.ID)
 
 	pass := quietProjectPass(t, e, now)
@@ -115,7 +115,7 @@ func TestAProjectSignalIsWithheldFromASeatWithoutTheProjectGrant(t *testing.T) {
 	admin := e.Admin()
 	now := time.Now().UTC()
 	org := e.SeedOrg(t, "Quiet Client", nil)
-	erp := seedProject(admin, t, e, "ERP replacement", nil, org, nil)
+	erp := seedProject(admin, t, e, "ERP replacement", org, nil)
 	advanceProject(admin, t, e, erp.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "meeting", now.AddDate(0, 0, -45), &erp.ID)
 	if pass := quietProjectPass(t, e, now); pass.Raised != 1 {

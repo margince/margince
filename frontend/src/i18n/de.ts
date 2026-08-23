@@ -6067,11 +6067,8 @@ export const de = {
   "nav.projects": "Projekte",
   "unit.projects": "Projekte",
   "project.name": "Projektname",
-  "project.key": "Kürzel",
-  "project.keyHint":
-    "Optionales Kürzel, z. B. ACME-CRM. Steht [KÜRZEL] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
-  "project.keyInvalid":
-    "Ein Kürzel beginnt mit einem Buchstaben und hat 2–24 Buchstaben, Ziffern, _ oder -.",
+  "project.keyMinted":
+    "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
   "project.ownerKeep": "Aktuelle Verantwortung behalten",

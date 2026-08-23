@@ -18,11 +18,13 @@ package integration
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -38,6 +40,42 @@ func projectProvider(e *Env) *projects.Provider {
 // has phases, not stages.
 func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
+}
+
+// A key an agent sends is NOT the key the project gets. The create body carries
+// custom fields (additionalProperties), so a stray `key` lands there and is
+// dropped like any other name the catalog does not know — what matters is that
+// it never becomes the project's subject-line matcher, because an agent that
+// could choose one could file every bracketed mention of a word onto a record.
+func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
+	e := Setup(t)
+	p := projectProvider(e)
+	ctx := e.Admin()
+	org := e.SeedOrg(t, "Minted GmbH", nil)
+
+	created, err := p.Create(ctx, datasource.CreateInput{
+		EntityType: datasource.EntityProject,
+		Fields: map[string]any{
+			"name": "Warehouse rollout", "organization_id": org.String(), "key": "MINE",
+		},
+		Source: "agent",
+	})
+	if err != nil {
+		t.Fatalf("create through the seam: %v", err)
+	}
+	got, err := e.Projects.GetProject(ctx, projectIDOf(created.ID), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Key == nil {
+		t.Fatal("the project carries no key; the server mints one for every project")
+	}
+	if *got.Key == "MINE" {
+		t.Fatalf("the agent's key %q became the project's matcher", *got.Key)
+	}
+	if !strings.HasPrefix(*got.Key, "WR-") {
+		t.Errorf("minted key %q does not carry the stem the NAME gives", *got.Key)
+	}
 }
 
 // The seam's create-read-update-archive round trip, with the provenance the
@@ -137,7 +175,6 @@ func TestTheAgentSeamAppliesTheSameProjectRulesAsREST(t *testing.T) {
 	for name, fields := range map[string]map[string]any{
 		"no name":    {"organization_id": org.String()},
 		"blank name": {"name": "   ", "organization_id": org.String()},
-		"bad key":    {"name": "Keyed", "key": "1nvalid", "organization_id": org.String()},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := p.Create(e.Admin(), datasource.CreateInput{

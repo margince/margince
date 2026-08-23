@@ -34,6 +34,11 @@ type scopeFixture struct {
 	erp    ids.ProjectID
 	// other is the second engagement, the one a scope to erp must drop.
 	other ids.ProjectID
+	// The keys the SERVER minted for the two projects. A caller no longer
+	// chooses a key, so a test that reads a page's project by key has to read
+	// back what the create actually produced.
+	erpKey   string
+	otherKey string
 	// bystander is a second contact who appears ONLY in the other
 	// engagement's mail — the hop-2 case: a scoped walk reaches people
 	// through the activities it kept, so a person reachable only through a
@@ -65,17 +70,20 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	org := e.SeedOrg(t, "Acme", &e.Rep1)
 	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
 
-	newProject := func(name, key string) ids.ProjectID {
+	newProject := func(name string) (ids.ProjectID, string) {
 		p, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
-			Name: name, Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
+			Name: name, OrganizationID: orgIDOf(org), Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("create project %q: %v", name, err)
 		}
-		return projectIDOf(ids.UUID(p.Id))
+		if p.Key == nil {
+			t.Fatalf("the server minted no key for %q", name)
+		}
+		return projectIDOf(ids.UUID(p.Id)), *p.Key
 	}
-	erp := newProject("ERP rollout", "ERP-27")
-	migration := newProject("Datacentre migration", "DC-4")
+	erp, erpKey := newProject("ERP rollout")
+	migration, migrationKey := newProject("Datacentre migration")
 	bystander := e.SeedPerson(t, "Rack Vendor", &e.Rep1)
 
 	// Three exchanges with the same contact on the same account: one per
@@ -117,6 +125,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	otherAt := roomFixedNow.AddDate(0, 0, -1)
 	return scopeFixture{
 		person: person, org: org, erp: erp, other: migration, bystander: bystander, otherAt: otherAt,
+		erpKey: erpKey, otherKey: migrationKey,
 		onERP:     mail("ERP cutover plan", &erp, roomFixedNow.AddDate(0, 0, -3)),
 		onOther:   mail("Rack decommissioning", &migration, otherAt, bystander),
 		unfiled:   mail("Invoice question", nil, roomFixedNow.AddDate(0, 0, -2)),

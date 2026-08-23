@@ -6135,11 +6135,8 @@ export const en = {
   "nav.projects": "Projects",
   "unit.projects": "projects",
   "project.name": "Project name",
-  "project.key": "Key",
-  "project.keyHint":
-    "Optional short handle, e.g. ACME-CRM. Write [KEY] in an email subject and the mail is filed under this project.",
-  "project.keyInvalid":
-    "A key starts with a letter and is 2–24 letters, digits, _ or -.",
+  "project.keyMinted":
+    "Margince gives each project a short key. Write [{key}] in an email subject and the mail is filed under this project.",
   "project.company": "Company",
   "project.owner": "Owner",
   "project.ownerKeep": "Keep current owner",

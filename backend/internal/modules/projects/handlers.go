@@ -7,7 +7,6 @@ package projects
 // input, map the store's typed errors onto the codes the contract names.
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -189,7 +188,6 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 	}
 	in := CreateProjectInput{
 		Name:           name,
-		Key:            req.Key,
 		OrganizationID: pathID[ids.OrganizationKind](req.OrganizationId),
 		OwnerID:        idArg[ids.UserKind](req.OwnerId),
 		Description:    req.Description,
@@ -230,7 +228,6 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 	}
 	in := UpdateProjectInput{
 		Name:         req.Name,
-		Key:          req.Key,
 		Description:  req.Description,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		IfVersion:    ifVersion,
@@ -246,25 +243,4 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 		in.EndedAt = &req.EndedAt.Time
 	}
 	return in, nil
-}
-
-// writeProjectErr maps the project store's typed errors onto the codes
-// the contract names; false means none matched and writeStoreErr should
-// keep falling through.
-func writeProjectErr(w http.ResponseWriter, r *http.Request, err error) bool {
-	var keyTaken *ProjectKeyTakenError
-	if errors.As(err, &keyTaken) {
-		// The existing id rides the 409 so a caller that collided can open
-		// the project it collided with instead of hunting for it — but only
-		// when that caller can see the row. A key held by a project outside
-		// their scope still refuses the write and names nothing, because the
-		// id would be the one thing the scope exists to withhold.
-		existing := ""
-		if keyTaken.ExistingID != nil {
-			existing = keyTaken.ExistingID.String()
-		}
-		httperr.Write(w, r, httperr.Duplicate("project_key_taken", existing))
-		return true
-	}
-	return false
 }

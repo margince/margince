@@ -52,8 +52,8 @@ func projectClock(ctx context.Context, t *testing.T, e *Env, id ids.ProjectID) *
 func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "Clocked Client", nil)
-	erp := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, nil)
-	crm := seedProject(e.Admin(), t, e, "CRM rollout", strPtr("CRM-9"), org, nil)
+	erp := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
+	crm := seedProject(e.Admin(), t, e, "CRM rollout", org, nil)
 
 	before, err := e.Projects.GetProject(e.Admin(), erp.ID, storekit.LiveOnly)
 	if err != nil {
@@ -138,7 +138,7 @@ func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.
 func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "Deal-Reached Client", nil)
-	project := seedProject(e.Admin(), t, e, "Programme", strPtr("PRG-1"), org, nil)
+	project := seedProject(e.Admin(), t, e, "Programme", org, nil)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Phase one", AmountMinor: int64Ptr(100), Currency: strPtr("EUR"),

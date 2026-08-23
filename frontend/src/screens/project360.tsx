@@ -112,6 +112,15 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       band={
         <div className="project-band">
+          {/* The key is not a form field any more — the server mints it — so
+            this line is where a reader learns what it is FOR. Without it the
+            chip is a code beside a name and nothing says that writing it in a
+            subject files the mail here. */}
+          {project.key && (
+            <p className="t-caption">
+              {t("project.keyMinted", { key: project.key })}
+            </p>
+          )}
           {project.archived_at && (
             <p id={archivedReasonId} className="t-caption">
               {t("project.archivedReadOnly")}

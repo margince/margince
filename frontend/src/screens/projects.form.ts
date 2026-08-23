@@ -6,7 +6,7 @@ import type { MessageKey } from "../i18n/en";
 import type { CreateField } from "./create";
 
 // The project form's vocabulary and transport, with no React in it: what the
-// create and edit dialogs ask, how a typed key is refused before the server
+// create and edit dialogs ask, and
 // sees it, and how the answers become the two request bodies.
 
 export type Project = components["schemas"]["Project"];
@@ -33,26 +33,6 @@ export const PHASE_LABEL: Record<ProjectPhase, MessageKey> = {
 
 export function isProjectPhase(value: string): value is ProjectPhase {
   return (PROJECT_PHASES as readonly string[]).includes(value);
-}
-
-/**
- * The contract's own shape for a key (createProject): letter-led, then up to
- * 23 of letters, digits, `_` or `-`. Letter-led so a key can never be a bare
- * number, which would match dates, amounts and order numbers in a subject
- * line — the one place a key is meant to be recognised.
- */
-export const PROJECT_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{1,23}$/;
-
-/**
- * Why a typed key is refused, as a message key, or undefined for a key the
- * contract would accept. Empty is accepted: the key is optional.
- */
-export function projectKeyRefusal(value: string): MessageKey | undefined {
-  const key = value.trim();
-  if (key === "") {
-    return undefined;
-  }
-  return PROJECT_KEY_PATTERN.test(key) ? undefined : "project.keyInvalid";
 }
 
 export type ProjectCompanyOption = { id: string; display_name: string };
@@ -89,16 +69,6 @@ export function projectFields(
   ];
   return [
     { key: "name", label: "project.name", required: true },
-    {
-      key: "key",
-      label: "project.key",
-      placeholder: "ACME-CRM",
-      hint: t("project.keyHint"),
-      validate: (value) => {
-        const refusal = projectKeyRefusal(value);
-        return refusal ? t(refusal) : undefined;
-      },
-    },
     ...(opts.mode === "create"
       ? [
           {
@@ -137,7 +107,6 @@ export function mapProjectCreate(
 ): CreateProjectRequest {
   return {
     name: str(values.name),
-    key: str(values.key) || null,
     organization_id: str(values.organization_id),
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
@@ -156,7 +125,6 @@ export function mapProjectUpdate(
 ): UpdateProjectRequest {
   return {
     name: str(values.name) || undefined,
-    key: str(values.key) || null,
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
     target_end_date: str(values.target_end_date) || null,

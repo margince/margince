@@ -242,7 +242,8 @@ describe("the deal form's project picker", () => {
     );
     await pickOption(user, screen.getByLabelText("Project"), "New project…");
     await user.type(screen.getByLabelText("Project name *"), "Born here");
-    await user.type(screen.getByLabelText("Key"), "BORN");
+    // No key field here either: the server mints one from the name.
+    expect(screen.queryByLabelText("Key")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(writes).toHaveLength(2));
@@ -250,7 +251,6 @@ describe("the deal form's project picker", () => {
       method: "POST",
       body: {
         name: "Born here",
-        key: "BORN",
         organization_id: "o-1",
         source: "manual",
       },

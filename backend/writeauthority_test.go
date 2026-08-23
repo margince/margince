@@ -127,8 +127,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// cannot see must still block the write — so narrowing the clause would not
 	// tighten the refusal, only strip a legitimate caller of the ids that tell
 	// them what to go and look at.
-	"internal/modules/projects:ensureProjectKeyFree": "whether a key collision may name the project already holding it. The unique index is the authority that refuses either way; this clause decides only disclosure",
-	"internal/modules/deals:refuseIfOccupied":        "the stage-removal refusal's naming clause: which of the deals still sitting on the stage may be listed back. Every occupant blocks the removal, visible or not",
+	"internal/modules/deals:refuseIfOccupied": "the stage-removal refusal's naming clause: which of the deals still sitting on the stage may be listed back. Every occupant blocks the removal, visible or not",
 
 	// The `add` verb again (#1405), in its rendered-clause form: each of these
 	// writes the row that HANGS OFF the record — a link, a participant, an

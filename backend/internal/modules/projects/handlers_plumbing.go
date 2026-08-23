@@ -117,12 +117,8 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 }
 
 // writeStoreErr maps a store error onto the wire the same way for every handler
-// in this package: the project-specific typed errors first, then the
-// defence-in-depth net below, then the sentinel registry.
+// in this package: the defence-in-depth net below, then the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	if writeProjectErr(w, r, err) {
-		return
-	}
 	// A CHECK constraint is a business rule, so a breach that slipped past the
 	// per-path validations still answers a typed 422 — never an opaque 500. The
 	// constraint's NAME stays out of the body: it is schema, and the one a
