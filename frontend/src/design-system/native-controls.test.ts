@@ -201,17 +201,34 @@ function findNativeControls(path: string, text: string): string[] {
       ts.isTemplateTail(node) ||
       ts.isRegularExpressionLiteral(node)
     ) {
-      // The RAW text, not node.text, so an offset into it is an offset into
-      // the FILE: a match inside a multi-line template must report the line it
-      // is on, not the line the template opened on.
-      const raw = node.getText(source);
+      // Detection reads the COOKED text and position reads the RAW, because
+      // neither alone is right.
+      //
+      // Cooked, because an escape evaluates to markup: `\u003cselect>` renders
+      // a native dropdown and the raw text has no `<` in it at all. Raw, because
+      // node.text carries no file offsets, so a hit in a multi-line template
+      // reported the line the template OPENED on.
+      //
+      // The line is counted from newlines in the cooked text ahead of the
+      // match, added to the node's own line — but only when the raw text
+      // actually spans lines. A single-line string holding a `\n` escape has
+      // newlines in its cooked form that do not exist in the file, and counting
+      // those would report a line the reader cannot find.
+      const cooked = node.text;
+      const spansLines = /\n/.test(node.getText(source));
+      const start = source.getLineAndCharacterOfPosition(
+        node.getStart(source),
+      ).line;
       for (const tag of nativeControls) {
-        const at2 = raw.search(new RegExp(`<${tag}([^a-zA-Z0-9]|$)`));
-        if (at2 >= 0) {
-          const line =
-            source.getLineAndCharacterOfPosition(node.getStart(source) + at2)
-              .line + 1;
-          found.push(`${line}: <${tag}> inside a string`);
+        // EVERY occurrence, not the first: a template rendering the same tag
+        // twice on different lines used to report one line and drop the rest.
+        for (const m of cooked.matchAll(
+          new RegExp(`<${tag}([^a-zA-Z0-9]|$)`, "g"),
+        )) {
+          const ahead = spansLines
+            ? (cooked.slice(0, m.index).match(/\n/g) ?? []).length
+            : 0;
+          found.push(`${start + ahead + 1}: <${tag}> inside a string`);
         }
       }
     }
@@ -456,6 +473,31 @@ describe("the native-control detector sees what it claims to", () => {
     },
     // A regex literal is neither a string node nor JSX, and the shell gate
     // saw it because it read text.
+    {
+      name: "an escape that evaluates to markup",
+      fires: true,
+      // The raw text has no `<` at all; the cooked text renders a native
+      // dropdown. Scanning raw missed it entirely.
+      src: "const html = `\\u003cselect>`;",
+      expect: ["1: <select> inside a string"],
+    },
+    {
+      name: "the same tag twice, on different lines of one template",
+      fires: true,
+      // search() returned only the first, so the second line was dropped
+      // silently — a report naming one of two is one a reader trusts to be
+      // complete.
+      src: "const html = `<select>\n<select>`;",
+      expect: ["1: <select> inside a string", "2: <select> inside a string"],
+    },
+    {
+      name: "a newline escape in a single-line string does not move the line",
+      fires: true,
+      // Cooked newlines that do not exist in the FILE must not be counted,
+      // or the report names a line the reader cannot find.
+      src: "const a = 1;\nconst html = '\\n<select>';",
+      expect: ["2: <select> inside a string"],
+    },
     {
       name: "markup inside a regex literal",
       fires: true,
