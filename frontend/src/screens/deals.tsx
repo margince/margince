@@ -93,15 +93,12 @@ function DealAside({
 }: Readonly<{ dealId: string; dealName: string }>) {
   return (
     <>
-      <DealStatusCardPanel dealId={dealId} />
-      <DealNextMeeting dealId={dealId} />
       <DealRoomAside dealId={dealId} dealName={dealName} />
     </>
   );
 }
 
 import { DealFiles } from "./dealfiles";
-import { DealNextMeeting } from "./dealmeeting";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -3465,8 +3462,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   <DealAside dealId={id} dealName={deal.name} />
                 )
               }
-              asideLabel={t("dealstatus.title")}
+              asideLabel={t("room.card.title")}
             >
+              {overlay ? null : (
+                <div className="deal360-lead">
+                  <DealStatusCardPanel dealId={id} />
+                </div>
+              )}
               <div style={{ marginBottom: 16 }}>
                 <SegmentedControl
                   options={DEAL_TABS}

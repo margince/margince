@@ -1,34 +1,73 @@
-/* The deal page's one status card. Tokens only. */
+/* Deal360 — the deal page's written briefing. Tokens only. */
 
-.dealstatus-risk-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-2);
+.deal360-warn {
   color: var(--warn);
 }
 
-.dealstatus-move {
+.deal360-verdict-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: flex-start;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
-.dealstatus-move-reason {
-  margin: 0;
+/* The call, as a word rather than a colour alone: a reader who cannot tell
+   the tints apart still reads "drifting". */
+.deal360-standing {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.dealstatus-evidence {
-  margin: 0;
+.deal360-live {
+  background: var(--successBg);
+  color: var(--success);
+}
+
+.deal360-drifting,
+.deal360-blocked {
+  background: var(--warnBg);
+  color: var(--warn);
+}
+
+.deal360-cold {
+  background: var(--dangerBg);
+  color: var(--danger);
+}
+
+.deal360-move-reason {
+  margin: 0 0 var(--space-3);
+}
+
+/* The line to send, set apart from the reasoning for it. */
+.deal360-opening {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-left: 2px solid var(--accent);
+  background: var(--bgElevated);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.deal360-evidence {
+  margin: var(--space-3) 0 0;
   padding-left: var(--space-4);
   color: var(--textMeta);
 }
 
-.dealstatus-foot {
+.deal360-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* Deal360 leads the page, so it needs room to breathe above the tabs. */
+.deal360-lead {
+  margin-bottom: var(--space-4);
 }

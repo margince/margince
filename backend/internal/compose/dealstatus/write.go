@@ -28,15 +28,20 @@ import (
 type sentence = crmcontracts.OrganizationBriefSentence
 
 // composeDeterministic builds the card from the facts alone.
+//
+// It writes fewer sections than the model does, and that is honest rather than
+// lazy: reading what a buyer WANTS out of their own words is not something a
+// fold over records can do, and a deterministic guess at it would be the one
+// section of this card nobody could check.
 func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontracts.DealStatusCard {
 	out := crmcontracts.DealStatusCard{
 		DealId:      f.deal.Id,
 		GeneratedAt: f.now,
 		GeneratedBy: crmcontracts.Deterministic,
-		Standing:    crmcontracts.DealStatusCardSection{Sentences: standingLines(f)},
+		Story:       crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
 	}
-	if risk := riskLines(f); len(risk) > 0 {
-		out.Risk = &crmcontracts.DealStatusCardSection{Sentences: risk}
+	if blocker := blockerLines(f); len(blocker) > 0 {
+		out.Blocker = &crmcontracts.DealStatusCardSection{Sentences: blocker}
 	}
 	if mv.Action != ActionNone {
 		out.Next = &mv
@@ -44,9 +49,9 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	return out
 }
 
-// standingLines say where the deal is: its own fields, then what happened
-// last, then what is still owed.
-func standingLines(f facts) []sentence {
+// storyLines say what has happened: the deal's own fields, then the last
+// contact, then what is still owed.
+func storyLines(f facts) []sentence {
 	lines := []sentence{plain(fmt.Sprintf("%s is %s.", f.deal.Name, f.deal.Status))}
 	if last, ok := lastContact(f); ok {
 		lines = append(lines, cited(
@@ -71,14 +76,15 @@ func openTasksLine(n int, more bool) string {
 	return fmt.Sprintf("%d tasks are still open on this deal.", n)
 }
 
-// riskLines name what is wrong, and say nothing when nothing is.
+// blockerLines name what is holding the deal up, and say nothing when nothing
+// is.
 //
 // The floor reads the health factors rather than guessing, and it uses the
 // formula's OWN sentences — deals.HealthReasons — because a deterministic card
 // restates records rather than interpreting them, and those sentences were
 // written beside the numbers they explain. The model lane is handed the bare
 // measurements instead, for the reason FactorIn gives.
-func riskLines(f facts) []sentence {
+func blockerLines(f facts) []sentence {
 	if f.health == nil || !f.health.AtRisk {
 		return nil
 	}
@@ -88,7 +94,7 @@ func riskLines(f facts) []sentence {
 			continue
 		}
 		lines = append(lines, plain(r.Reason))
-		if len(lines) == maxRiskRows {
+		if len(lines) == maxBlockerRows {
 			break
 		}
 	}
@@ -125,24 +131,60 @@ func activityEvidence(a crmcontracts.Activity) crmcontracts.OrganizationBriefEvi
 }
 
 // foldWritten puts the lane's words on the floor's card. The MOVE keeps the
-// floor's verb and arguments — the model explains the move, it never chooses
-// one — and the health reading stays the formula's.
+// floor's verb and arguments — the model explains the move and supplies the
+// words to open with, it never chooses one.
 func foldWritten(
 	floor crmcontracts.DealStatusCard, w WrittenStatus, f facts, mv crmcontracts.DealStatusCardMove,
 ) crmcontracts.DealStatusCard {
 	out := floor
 	out.GeneratedBy = crmcontracts.Model
-	out.Standing = crmcontracts.DealStatusCardSection{Sentences: wire(w.Standing, f)}
-	out.Risk = nil
-	if len(w.Risk) > 0 {
-		out.Risk = &crmcontracts.DealStatusCardSection{Sentences: wire(w.Risk, f)}
-	}
-	if mv.Action != ActionNone && w.MoveReason != "" {
-		written := mv
-		written.Reason = w.MoveReason
-		out.Next = &written
-	}
+	out.Story = crmcontracts.DealStatusCardSection{Sentences: wire(w.Story, f)}
+	out.Blocker = optionalSection(w.Blocker, f)
+	out.Buyer = optionalSection(w.Buyer, f)
+	out.Verdict = verdictOf(w, f)
+	out.Next = writtenMove(mv, w)
 	return out
+}
+
+// optionalSection is a section the card omits rather than shows empty. A
+// heading over no sentence is furniture, and on this card it also reads as a
+// claim — an empty "what is holding this up" says nothing is.
+func optionalSection(lines []WrittenLine, f facts) *crmcontracts.DealStatusCardSection {
+	wired := wire(lines, f)
+	if len(wired) == 0 {
+		return nil
+	}
+	return &crmcontracts.DealStatusCardSection{Sentences: wired}
+}
+
+// verdictOf carries the call only when it has both a recognised standing and
+// something to rest on. A call with no reasoning is an opinion the reader
+// cannot argue with.
+func verdictOf(w WrittenStatus, f facts) *crmcontracts.DealStatusCardVerdict {
+	because := wire(w.Verdict.Because, f)
+	if w.Verdict.Standing == "" || len(because) == 0 {
+		return nil
+	}
+	return &crmcontracts.DealStatusCardVerdict{
+		Standing: w.Verdict.Standing,
+		Because:  crmcontracts.DealStatusCardSection{Sentences: because},
+	}
+}
+
+// writtenMove keeps the rules' verb and arguments and takes only the words.
+func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus) *crmcontracts.DealStatusCardMove {
+	if mv.Action == ActionNone {
+		return nil
+	}
+	written := mv
+	if w.MoveReason != "" {
+		written.Reason = w.MoveReason
+	}
+	if w.Opening != "" {
+		opening := w.Opening
+		written.Opening = &opening
+	}
+	return &written
 }
 
 // wire turns the lane's cited lines into sentences the reader can follow back
@@ -153,7 +195,7 @@ func foldWritten(
 // Every id the filter admits must resolve HERE. A citation the filter accepts
 // and this cannot render drops the sentence after it survived grounding, which
 // is worse than refusing it: the card loses its best-grounded line silently and
-// can end up with no standing at all.
+// can end up telling no story at all.
 func wire(lines []WrittenLine, f facts) []sentence {
 	out := make([]sentence, 0, len(lines))
 	for _, line := range lines {

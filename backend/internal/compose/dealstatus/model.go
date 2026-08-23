@@ -5,10 +5,14 @@ package dealstatus
 
 // The model lane: the card's words.
 //
-// The deterministic composition in write.go stays the floor and the fallback.
-// This lane writes the same three parts better — reading the deal's timeline,
-// its health factors, its open tasks and what the buyer said in the room, and
-// saying where the deal stands, what could lose it, and the one move to make.
+// The deterministic composition in write.go stays the floor and the fallback,
+// and it writes strictly less: the story and the blocker, from records.
+//
+// This lane writes the briefing — what happened, what is holding it up, what
+// the buyer is after, whether the deal is real, and the line to open with. The
+// three it adds are the three a fold over records cannot do: reading a motive
+// out of somebody's own words, judging whether a deal will close, and putting
+// a sentence in the reader's mouth.
 //
 // The VERB never moves. Which action the card offers is decided by the rules
 // in move.go from records, not by the model: a reader clicking "Draft the
@@ -33,20 +37,39 @@ type Completer interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
 }
 
-// statusSystem is this site's prompt. The card is read at a glance before a
-// call, so every sentence has to earn its line: no preamble, no restating the
-// deal's name back at a reader who is looking at it.
-const statusSystem = `You write the status of one sales deal, from a JSON summary of the deal, its timeline, its open tasks and its buyer conversation in a CRM.
-Return ONLY a JSON object: {"standing":[{"text":"...","evidence":["<id>", ...]}, ...],"risk":[{"text":"...","evidence":["<id>", ...]}, ...],"move_reason":"..."}.
-"standing" is where the deal is now: at most three sentences, each under 300 characters. What moved, what is waiting, what the buyer last said.
-"risk" is what could lose this deal: at most two sentences, each under 300 characters. Write it ONLY when the summary shows something wrong — silence after a proposal, a close date the deal cannot make, a question nobody answered, an objection still open. When nothing is wrong, return an empty list. Never write a reassurance.
-"move_reason" is one sentence saying why the recommended next move is the right one now, at most 200 characters. The move itself is decided elsewhere and given to you in "recommended_move" — explain it, never replace it.
-Every sentence in "standing" and "risk" lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — an id must never appear in any "text" or in "move_reason".
-Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
+// statusSystem is this site's prompt.
+//
+// The card is a BRIEFING, not a summary. The page beside it already shows the
+// stage, the value and the timeline; a card that restates them has told the
+// reader nothing they could not see. What it owes them is the reading: why the
+// deal sits where it does, what the buyer is actually after, whether it is
+// still alive, and what to say next.
+//
+// The instruction to write like a colleague rather than a report is doing real
+// work here. A model asked for "a status" produces "engagement has been
+// limited and next steps remain to be defined", which is a sentence about
+// nothing. Asked to say what it would tell a colleague in the corridor, it
+// says "she asked for times on 2 June and nobody sent them".
+const statusSystem = `You brief a colleague on one sales deal, from a JSON summary of the deal, its timeline, its open tasks and its buyer conversation in a CRM.
+
+Return ONLY a JSON object with these keys:
+{"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":"...","opening":"..."}
+Each of "story", "blocker", "buyer" and "verdict.because" is a list of {"text":"...","evidence":["<id>", ...]}.
+
+"story" — what happened and where it leaves things, in the order it happened. Two to four sentences. Start with the thing a reader who has forgotten this deal most needs to know. Name people, dates and what was actually said.
+"blocker" — what is HOLDING THE DEAL UP, named as something somebody can act on: an unsent mail, a question nobody answered, a person who never replied, a decision nobody has asked for. One or two sentences. Return an empty list when nothing is holding it up. "Time has passed" is not a blocker; "she asked for times on 2 June and nobody sent them" is.
+"buyer" — what the buyer wants, read from what they have actually said: what they are optimising for, what they asked for, what they have NOT objected to. One or two sentences. Return an empty list when they have said too little to read honestly. Never guess at a motive the summary does not support.
+"verdict" — your honest call. "standing" is exactly one of: live (moving, with a next step both sides expect), drifting (nothing wrong, nothing happening, it dies of neglect if nobody acts), blocked (something specific is in the way, and you named it in "blocker"), cold (a long silence after real engagement — treat as lost unless something changes). "because" is one or two sentences saying what the call rests on. Be willing to say a deal is cold. A briefing that never delivers bad news is not read twice.
+"move_reason" — one sentence on why the recommended move is the right one now. The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it.
+"opening" — the actual line to open with, ready to send or say. One or two sentences in the language the buyer writes in. Write it as the seller, to the buyer, by name. Leave it empty when the move needs no words.
+
+Every sentence in "story", "blocker", "buyer" and "verdict.because" lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text", in "move_reason" or in "opening".
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
+Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
 "health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
-Never write the same fact in both "standing" and "risk". Standing says where the deal is; risk says what could lose it. A sentence repeated in both wastes the reader's one glance.
-Voice: a calm, capable colleague briefing you in the corridor. Lead with what matters. No greetings, no praise, no exclamation marks, no "I recommend", no restating the deal's name.`
+Never write the same fact in two sections. Each one answers a different question.
+
+Voice: a capable colleague briefing you in the corridor, in plain words. Say "she asked for times and nobody sent them", not "follow-up communication remains outstanding". Short sentences. No corporate register, no hedging, no "it appears that", no greetings, no praise, no exclamation marks, no restating the deal's name.`
 
 // statusSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func statusSystemFor(fence promptfence.Fence) string {
@@ -63,10 +86,13 @@ func statusSystemFor(fence promptfence.Fence) string {
 // feel neat rejects good cards, and the reader gets the deterministic one
 // without ever learning why.
 const (
-	maxSentenceLen  = 400
-	maxMoveReason   = 300
-	maxStandingRows = 3
-	maxRiskRows     = 2
+	maxSentenceLen = 400
+	maxMoveReason  = 300
+	maxStoryRows   = 4
+	maxBlockerRows = 2
+	maxBuyerRows   = 2
+	maxBecauseRows = 2
+	maxOpeningLen  = 400
 	// maxExcerptLen bounds what one row contributes, so a pasted contract in
 	// a mail body does not become the whole context.
 	maxExcerptLen = 400
@@ -192,9 +218,27 @@ func encodeInput(in StatusInput) string {
 
 // WrittenStatus is what the lane proposes once the filter has kept it.
 type WrittenStatus struct {
-	Standing   []WrittenLine
-	Risk       []WrittenLine
+	Story      []WrittenLine
+	Blocker    []WrittenLine
+	Buyer      []WrittenLine
+	Verdict    WrittenVerdict
 	MoveReason string
+	Opening    string
+}
+
+// WrittenVerdict is the call and what it rests on. An empty Standing means the
+// reply named no call this build recognises, and the card shows none rather
+// than inventing one.
+type WrittenVerdict struct {
+	Standing string
+	Because  []WrittenLine
+}
+
+// The calls a verdict may make. A reply naming anything else is refused: a
+// card is allowed to say a deal is dead, but only in words the reader has
+// learned to read.
+var verdictStandings = map[string]bool{
+	"live": true, "drifting": true, "blocked": true, "cold": true,
 }
 
 // WrittenLine is one sentence and the ids it rests on.
@@ -210,36 +254,95 @@ type WrittenLine struct {
 // A refusal here is not a failure to handle — it is the declared degrade
 // posture, and the caller composes the deterministic card instead.
 func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
-	var parsed struct {
-		Standing   []replyLine `json:"standing"`
-		Risk       []replyLine `json:"risk"`
-		MoveReason string      `json:"move_reason"`
-	}
+	var parsed replyShape
 	if err := json.Unmarshal([]byte(reply), &parsed); err != nil {
 		return WrittenStatus{}, fmt.Errorf("parse deal status: %w", err)
 	}
 	known, citable := knownIDs(in), citableIDs(in)
-	standing, err := keepGrounded(parsed.Standing, known, citable, maxStandingRows)
+	sections, err := keepSections(parsed, known, citable)
 	if err != nil {
-		return WrittenStatus{}, fmt.Errorf("standing: %w", err)
+		return WrittenStatus{}, err
 	}
-	if len(standing) == 0 {
-		return WrittenStatus{}, errors.New("deal status reply says nothing about where the deal stands")
+	// The story is the one section a briefing cannot do without: without it
+	// the card opens with what is wrong about a deal it never described.
+	if len(sections.Story) == 0 {
+		return WrittenStatus{}, errors.New("deal status reply tells no story")
 	}
-	// Risk is allowed to be empty and that is the point: a card that always
-	// finds something wrong teaches the reader to stop reading the risk line.
-	risk, err := keepGrounded(parsed.Risk, known, citable, maxRiskRows)
-	if err != nil {
-		return WrittenStatus{}, fmt.Errorf("risk: %w", err)
+	if err := keepFreeText(&sections, parsed, known); err != nil {
+		return WrittenStatus{}, err
 	}
+	return sections, nil
+}
+
+// replyShape is the reply as the prompt asks for it.
+type replyShape struct {
+	Story   []replyLine `json:"story"`
+	Blocker []replyLine `json:"blocker"`
+	Buyer   []replyLine `json:"buyer"`
+	Verdict struct {
+		Standing string      `json:"standing"`
+		Because  []replyLine `json:"because"`
+	} `json:"verdict"`
+	MoveReason string `json:"move_reason"`
+	Opening    string `json:"opening"`
+}
+
+// keepSections runs the grounding filter over every cited section. Each may
+// come back empty except the story, and an empty one means the records did not
+// support saying anything — which is a section the card omits rather than pads.
+func keepSections(parsed replyShape, known, citable map[string]bool) (WrittenStatus, error) {
+	var out WrittenStatus
+	for _, section := range []struct {
+		name  string
+		lines []replyLine
+		limit int
+		into  *[]WrittenLine
+	}{
+		{"story", parsed.Story, maxStoryRows, &out.Story},
+		{"blocker", parsed.Blocker, maxBlockerRows, &out.Blocker},
+		{"buyer", parsed.Buyer, maxBuyerRows, &out.Buyer},
+		{"verdict", parsed.Verdict.Because, maxBecauseRows, &out.Verdict.Because},
+	} {
+		kept, err := keepGrounded(section.lines, known, citable, section.limit)
+		if err != nil {
+			return WrittenStatus{}, fmt.Errorf("%s: %w", section.name, err)
+		}
+		*section.into = kept
+	}
+	// A call this build does not recognise is dropped rather than shown: the
+	// reader has learned what four words mean, and a fifth teaches them
+	// nothing. The reasoning behind it stays, because it is still grounded.
+	if verdictStandings[parsed.Verdict.Standing] {
+		out.Verdict.Standing = parsed.Verdict.Standing
+	}
+	return out, nil
+}
+
+// keepFreeText holds the two fields that carry no citations of their own: the
+// move's reason, and the line the reader will actually send.
+//
+// Neither is cited, and that is deliberate rather than an oversight. A reason
+// explains a move the RULES chose from records, and an opening is words for
+// the reader to say — citing a record inside a sentence addressed to the buyer
+// would put a footnote in an email. Both are still bounded and still refused
+// when they spell an id.
+func keepFreeText(out *WrittenStatus, parsed replyShape, known map[string]bool) error {
 	reason := strings.TrimSpace(parsed.MoveReason)
 	if len([]rune(reason)) > maxMoveReason {
-		return WrittenStatus{}, errors.New("deal status reply's move reason exceeds the card's bounds")
+		return errors.New("deal status reply's move reason exceeds the card's bounds")
 	}
 	if err := refuseIDsInReaderText(reason, known); err != nil {
-		return WrittenStatus{}, fmt.Errorf("move reason: %w", err)
+		return fmt.Errorf("move reason: %w", err)
 	}
-	return WrittenStatus{Standing: standing, Risk: risk, MoveReason: reason}, nil
+	opening := strings.TrimSpace(parsed.Opening)
+	if len([]rune(opening)) > maxOpeningLen {
+		return errors.New("deal status reply's opening line exceeds the card's bounds")
+	}
+	if err := refuseIDsInReaderText(opening, known); err != nil {
+		return fmt.Errorf("opening: %w", err)
+	}
+	out.MoveReason, out.Opening = reason, opening
+	return nil
 }
 
 // replyLine is one sentence as the reply spells it.
