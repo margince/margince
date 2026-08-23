@@ -178,7 +178,12 @@ var catalog = map[string]struct {
 	// The sender's own sign-off. It rides the person stream because what it
 	// governs is how a member is represented on every message they send, which
 	// is a fact about that person rather than about any one mail.
-	"email_signature.changed":  {personStreamEntity, 1},
+	"email_signature.changed": {personStreamEntity, 1},
+	// The language a member reads their own interface in. It rides the person
+	// stream for the same reason the sign-off does: it is a fact about that
+	// person rather than about the installation, which names its own language
+	// in a setting and publishes nothing per reader.
+	"user_locale.changed":      {personStreamEntity, 1},
 	"linkedin_account.changed": {personStreamEntity, 1},
 	// One import act, not one row: an export is thousands of rows and a
 	// per-row event would bury every other event in the stream, while the

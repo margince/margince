@@ -943,6 +943,10 @@ func (stubs) GetMyLinkedInReach(w nethttp.ResponseWriter, r *nethttp.Request, pa
 	httperr.NotImplemented(w, r, "GetMyLinkedInReach")
 }
 
+func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyLocale")
+}
+
 func (stubs) GetConsentRequest(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetConsentRequestParams) {
 	httperr.NotImplemented(w, r, "GetConsentRequest")
 }

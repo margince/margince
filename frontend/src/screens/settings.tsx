@@ -1149,6 +1149,25 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
 function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();
+  const queryClient = useQueryClient();
+  // The choice is written to the seat so it follows this person to their next
+  // browser; `setLocale` still keeps its local copy, which is what renders
+  // before the request lands and what a signed-out reader is left with.
+  //
+  // A failed write does NOT revert the language. The page is already in the
+  // language they asked for, and yanking it back would be a worse answer to a
+  // dropped request than letting the next sign-in re-ask the server.
+  const remember = useMutation({
+    mutationFn: async (next: Locale) => {
+      const { error } = await api.PUT("/me/locale", { body: { locale: next } });
+      if (error) {
+        throwProblem(error, t);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
   return (
     <SettingRow
       label={t("locale.switchLabel")}
@@ -1166,6 +1185,7 @@ function LanguageSettingRow() {
             const picked = LOCALES.find((option) => option === next);
             if (picked) {
               setLocale(picked);
+              remember.mutate(picked);
             }
           }}
           // Language names are proper nouns and deliberately not

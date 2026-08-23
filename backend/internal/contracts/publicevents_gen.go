@@ -192,6 +192,7 @@ const (
 	TeamChanged                           SubscribableEventType = "team.changed"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
 	UserInvited                           SubscribableEventType = "user.invited"
+	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
@@ -381,6 +382,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserDeactivated:
 		return true
 	case UserInvited:
+		return true
+	case UserLocaleChanged:
 		return true
 	case UserPasswordLinkIssued:
 		return true
@@ -1504,6 +1507,12 @@ type PublicEventUserInvited struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventUserLocaleChanged Payload for user_locale.changed — a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this person needs to know which catalog to reach for.
+type PublicEventUserLocaleChanged struct {
+	// Locale The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event.
+	Locale string `json:"locale"`
+}
+
 // PublicEventUserPasswordLinkIssued Payload for user.password_link_issued — on an installation with no outbound-email channel, an admin minted a single-use set-password link for a member and will deliver it out-of-band (ADR-0061 Amendment 1). Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password, which is an account takeover an admin is trusted to perform; this event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is NEVER a property here, and must never be added — the raw value is returned to the issuing admin exactly once, over the response body, and reaches no ledger, log, or bus.
 type PublicEventUserPasswordLinkIssued struct {
 	// By The admin who issued the link.
@@ -2030,6 +2039,10 @@ func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
 
+func (PublicEventUserLocaleChanged) EventType() string { return "user_locale.changed" }
+
+func (PublicEventUserLocaleChanged) EntityType() string { return "user" }
+
 func (PublicEventUserPasswordLinkIssued) EventType() string { return "user.password_link_issued" }
 
 func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
@@ -2162,6 +2175,7 @@ var PublicEventVersions = map[string]int{
 	"user.invited":                              1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
+	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
 	"voice.draft_outcome_recorded":              1,

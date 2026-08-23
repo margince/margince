@@ -83,6 +83,10 @@ type Identity struct {
 	Email         string
 	DisplayName   string
 	SeatType      string
+	// Locale is the language this member chose for their own interface, empty
+	// when they never chose one. Distinct from the installation's base
+	// language, which is what AI writes in for the whole team.
+	Locale string
 	// MustChangePassword is true while this account is still using a password
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
@@ -334,8 +338,14 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		// first-class entity id — its row id has no kind and stays ids.UUID.
 		var sessionID ids.UUID
 		var userID ids.UserID
+		// The locale rides the session read because /me carries it: the SPA
+		// needs to know which catalog to render before it draws anything, and a
+		// second round-trip for one column would paint the wrong language
+		// first.
+		var locale *string
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
+			        u.locale,
 			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
@@ -344,7 +354,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND u.status = 'active' AND u.archived_at IS NULL`,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -352,6 +362,12 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			return err
 		}
 		id.UserID = userID
+		// NULL stays empty: somebody who never chose a language is not somebody
+		// who chose English, and only the reader's own browser can answer for
+		// the first case.
+		if locale != nil {
+			id.Locale = *locale
+		}
 
 		if _, err := tx.Exec(ctx,
 			`UPDATE session SET last_seen_at = now(),

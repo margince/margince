@@ -21,9 +21,10 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { ToastRegion, useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { LOCALES, localeNameKey, useT } from "../i18n";
 import {
   problemFieldErrorsOf,
   problemMessageOf,
@@ -32,30 +33,35 @@ import {
 } from "./common";
 
 // The installation settings surface (ADR-0090/A135): the organization's name,
-// the IANA zone every reporting period is computed in, and the ISO-4217 base
-// currency every roll-up converts to. Every role reads them — a rep reading
-// amounts benefits from knowing which currency they are in — and only admin/ops
-// may change them, so the three facts are READ on the card for everyone and the
-// verb that changes them is refused with a reason for everyone else. Refusing
-// without a reason is the failure mode this avoids: it is indistinguishable
-// from a bug, and a reader cannot act on it either way.
+// the IANA zone every reporting period is computed in, the ISO-4217 base
+// currency every roll-up converts to, and the language AI writes the shared
+// record in. Every role reads them — a rep reading amounts benefits from
+// knowing which currency they are in — and only admin/ops may change them, so
+// the facts are READ on the card for everyone and the verb that changes them is
+// refused with a reason for everyone else. Refusing without a reason is the
+// failure mode this avoids: it is indistinguishable from a bug, and a reader
+// cannot act on it either way.
 //
-// THREE ROWS AND ONE FORM. The card is a list of decisions — what the
+// FOUR ROWS AND ONE FORM. The card is a list of decisions — what the
 // organization is called, when its periods start, which currency every amount
-// is re-expressed in — so each is a row that shows its own answer, which is
-// what lets a reader audit the installation by travelling one column. The
-// EDITING is one act: the server takes ONE sparse PATCH, so the three fields
-// are submitted together with one Save, and that belongs in a dialog rather
-// than on the card (design-system README, `SettingList` / `SettingRow`: a
-// control needing two inputs submitted together goes behind a verb, which
-// keeps every row an answer). Each row's Edit opens that one dialog with its
-// own field focused, so the verb beside a fact leads to the fact.
+// is re-expressed in, which language AI writes for the whole team in — so each
+// is a row that shows its own answer, which is what lets a reader audit the
+// installation by travelling one column. The EDITING is one act: the server
+// takes ONE sparse PATCH, so the fields are submitted together with one Save,
+// and that belongs in a dialog rather than on the card (design-system README,
+// `SettingList` / `SettingRow`: a control needing two inputs submitted together
+// goes behind a verb, which keeps every row an answer). Each row's Edit opens
+// that one dialog with its own field focused, so the verb beside a fact leads
+// to the fact.
 //
-// The base currency is a fourth state: it stops being changeable once a deal
-// has frozen a conversion rate against it (ADR-0085 §7). The server reports
-// that as a flag and a reason, so the row and the field both carry the reason
-// — an operator learns why before typing a value they cannot save, rather than
-// discovering it from a 422.
+// The base currency carries a state the others do not: it stops being
+// changeable once a conversion rate has been frozen against it — by a closed
+// deal, a sent offer, a mirrored invoice, a contract, a commission entry or a
+// loaded rate sheet (ADR-0085 §7). The server reports that as a flag and a
+// reason, so the row and the field both carry the reason — an operator learns
+// why before typing a value they cannot save, rather than discovering it from
+// a 422. The base language never freezes: changing it re-means nothing already
+// written.
 
 // Both shapes come from the generated contract rather than being restated
 // here: a hand-written copy would drift the first time the contract gains a
@@ -63,10 +69,21 @@ import {
 type InstallationSettings = components["schemas"]["InstallationSettings"];
 type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 
-// Which fact the reader pressed Edit on. The dialog always edits all three —
+// The facts this form writes, in the order the rows show them. ONE list: the
+// dirty check, the sparse patch and the re-seed signature all walk it, so a
+// field added to the form cannot be left out of one of the three — which is
+// how a value silently stops saving, or stops noticing another admin's change.
+const EDITABLE_FACTS = [
+  "name",
+  "timezone",
+  "base_currency",
+  "base_language",
+] as const;
+
+// Which fact the reader pressed Edit on. The dialog always edits all of them —
 // one record, one sparse PATCH, one Save — so this decides nothing about what
 // is written, only where focus lands when the dialog opens.
-type EditedFact = "name" | "timezone" | "base_currency";
+type EditedFact = (typeof EDITABLE_FACTS)[number];
 
 function useUpdateInstallationSettings(onSaved: () => void) {
   const t = useT();
@@ -116,6 +133,22 @@ export function InstallationSettingsCard() {
       )}
     </QueryGate>
   );
+}
+
+// The base language, rendered as the language's own name.
+//
+// The endonyms come from the i18n catalog rather than a list here, because the
+// personal language switcher already draws from it — two lists would disagree
+// the day the product speaks a fourth language, and the settings page would be
+// the one still offering three.
+//
+// A code the UI does not ship falls back to itself. That is reachable: the
+// contract admits en/de/vi, but an installation whose row predates this build
+// (or was written straight into the settings table) can hold anything, and a
+// row that renders the raw code is honest where one that renders blank is not.
+function languageName(code: string, t: ReturnType<typeof useT>): string {
+  const known = LOCALES.find((locale) => locale === code);
+  return known ? t(localeNameKey(known)) : code;
 }
 
 // A frozen currency is frozen for an admin too, so the lock reason replaces the
@@ -206,10 +239,7 @@ function InstallationSettingsForm({
     ]),
   );
 
-  const dirty =
-    draft.name !== settings.name ||
-    draft.timezone !== settings.timezone ||
-    draft.base_currency !== settings.base_currency;
+  const dirty = EDITABLE_FACTS.some((fact) => draft[fact] !== settings[fact]);
   // The claim the Save button's own condition was already making privately.
   // It outlives the dialog on purpose: dismissing the dialog does not destroy
   // what was typed (the draft is still here, and reopening Edit shows it), so
@@ -220,11 +250,15 @@ function InstallationSettingsForm({
   // unchanged base currency would ask the server to write a value that may be
   // frozen — refused, for a field the operator never touched.
   const submit = () => {
+    // Walks EDITABLE_FACTS rather than naming the fields again: the wire names
+    // and the draft's keys are the same names, so a fact added to that list is
+    // sent by this without a second edit. Enumerating them here is how a field
+    // ends up dirty-checked, drawn, and never actually submitted.
     const patch: Patch = {};
-    if (draft.name !== settings.name) patch.name = draft.name;
-    if (draft.timezone !== settings.timezone) patch.timezone = draft.timezone;
-    if (draft.base_currency !== settings.base_currency) {
-      patch.base_currency = draft.base_currency;
+    for (const fact of EDITABLE_FACTS) {
+      if (draft[fact] !== settings[fact]) {
+        Object.assign(patch, { [fact]: draft[fact] });
+      }
     }
     update.mutate(patch);
   };
@@ -272,6 +306,17 @@ function InstallationSettingsForm({
             control={editVerb(
               "base_currency",
               t("installationSettings.baseCurrency"),
+            )}
+          />
+          <SettingRow
+            label={t("installationSettings.baseLanguage")}
+            description={t("installationSettings.baseLanguageHint")}
+            // The language's own name, not its code: "Deutsch" is what an
+            // operator recognises, and `en` is what the wire carries.
+            value={languageName(settings.base_language, t)}
+            control={editVerb(
+              "base_language",
+              t("installationSettings.baseLanguage"),
             )}
           />
         </SettingList>
@@ -339,15 +384,25 @@ function InstallationProfileDialog({
   // the `autoFocus` attribute, the same way the sign-in page does it, so the
   // a11y lint's blanket rule against autofocus stays intact.
   const asked = useRef<HTMLInputElement>(null);
+  // The language field is a `Select` — a button and a portalled listbox, not an
+  // input — so it takes neither the ref the three text fields share nor one of
+  // its own. Its trigger is found through the form, which keeps the same
+  // promise the other three keep: the verb beside a fact leads to the fact.
+  const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
+    if (focus === "base_language") {
+      form.current?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+      return;
+    }
     asked.current?.focus();
-  }, []);
+  }, [focus]);
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <h2 id={titleId} className="t-h2 modal-title">
         {t("installationSettings.orgTitle")}
       </h2>
       <form
+        ref={form}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -418,6 +473,43 @@ function InstallationProfileDialog({
           )}
         </Field>
 
+        <Field
+          label={t("installationSettings.baseLanguage")}
+          hint={t("installationSettings.baseLanguageHint")}
+          error={refused.get("base_language")}
+        >
+          {(control) => (
+            <Select
+              {...control}
+              // `control.id` is spread through UNCHANGED: `Field` renders its
+              // label with `htmlFor` pointing at it, so replacing it would
+              // leave the combobox with no accessible name. The focus effect
+              // reads that same id back out of the DOM.
+              aria-describedby={describe(control)}
+              value={draft.base_language}
+              disabled={!canManage}
+              // Language names are proper nouns and deliberately untranslated,
+              // so every option is in a different language from the page around
+              // it — `lang` is WCAG 2.2 AA 3.1.2, and our locale codes are the
+              // BCP 47 subtags it wants.
+              options={LOCALES.map((locale) => ({
+                value: locale,
+                label: t(localeNameKey(locale)),
+                lang: locale,
+              }))}
+              // `Select` reports a string; narrowing it back through LOCALES is
+              // what makes it a locale without an assertion, and drops an
+              // answer the control was never offering.
+              onChange={(next) => {
+                const picked = LOCALES.find((locale) => locale === next);
+                if (picked) {
+                  onChange({ ...draft, base_language: picked });
+                }
+              }}
+            />
+          )}
+        </Field>
+
         {/* Only what no field claimed. A refusal shown BOTH on the input and
             again in a paragraph below states one problem twice, and the
             paragraph is the copy a reader stops reading. */}
@@ -446,10 +538,10 @@ function InstallationProfileDialog({
 
 // What the server SAID, as one comparable string. Used to tell a refetch that
 // changed nothing from one that did — see the re-seed effect above.
+//
+// Built from EDITABLE_FACTS rather than a list of its own: a field added to the
+// form and forgotten here would leave another admin's change to it invisible,
+// and the draft would keep overwriting it with a stale value on every save.
 function serverSignature(settings: InstallationSettings): string {
-  return JSON.stringify([
-    settings.name,
-    settings.timezone,
-    settings.base_currency,
-  ]);
+  return JSON.stringify(EDITABLE_FACTS.map((fact) => settings[fact]));
 }

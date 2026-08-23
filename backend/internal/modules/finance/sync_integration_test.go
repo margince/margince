@@ -318,6 +318,62 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 	}
 }
 
+// An account billed in more than one currency still gets a figure, labelled
+// with the base currency it converted to.
+//
+// The amounts were always base-currency — every field the formulas read is an
+// `*MinorBase`, converted at each invoice's own frozen rate. What was missing
+// was the WORD: the label came from a census of issued currencies, which
+// existed only when an account billed in exactly one, so a customer invoiced in
+// EUR and CHF got no label and therefore no money figure at all. The reading
+// was suppressed for want of a name for a number it had already computed.
+func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
+	e := setupFinance(t)
+	ctx, orgID, provider := e.ctx, e.org, e.provider()
+
+	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
+		t.Fatal(err)
+	}
+	single := e.summaryAtEpoch(t, orgID)
+	if single.NetInvoiced == nil || single.NetInvoiced.AmountMinor == nil {
+		t.Fatal("no total on a single-currency ledger; the rest of this test proves nothing")
+	}
+	wasNet := *single.NetInvoiced.AmountMinor
+
+	// Restate ONE invoice as CHF, keeping its frozen rate. The account now
+	// bills in two currencies while every stored amount converts exactly as it
+	// did a moment ago — so a total that disappears here disappeared over the
+	// label, not over the arithmetic.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE finance_invoice
+			   SET currency = 'CHF'
+			 WHERE id = (SELECT id FROM finance_invoice
+			              WHERE organization_id = $1
+			              ORDER BY issued_at ASC, id ASC
+			              LIMIT 1)`, orgID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	mixed := e.summaryAtEpoch(t, orgID)
+	if mixed.NetInvoiced == nil || mixed.NetInvoiced.AmountMinor == nil {
+		t.Fatal("a mixed-currency account reported no total; the figure is suppressed for want of a label")
+	}
+	if got := *mixed.NetInvoiced.AmountMinor; got != wasNet {
+		t.Errorf("net invoiced = %d after restating one invoice's currency, want %d unchanged — the amounts convert per invoice and none of them moved", got, wasNet)
+	}
+	// And the label is what the amounts converted TO, not what any one invoice
+	// was issued in.
+	if mixed.NetInvoiced.Currency == nil {
+		t.Fatal("the total carries no currency, so a reader cannot tell what the number is in")
+	}
+	if got := *mixed.NetInvoiced.Currency; got != "EUR" {
+		t.Errorf("total is labelled %q, want EUR — the installation's base currency is what every figure converted to", got)
+	}
+}
+
 // A credit note reduces the invoice it names. FIN-FORM-1's term is
 // `net - credited`, read off the reduced invoice, so this is the write that
 // proves the amount landed on the right row.

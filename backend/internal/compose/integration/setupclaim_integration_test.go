@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
@@ -31,6 +33,14 @@ import (
 // unprovisionedServer is an installation with no organization and one
 // outstanding setup token — the state a first boot leaves behind.
 func unprovisionedServer(t *testing.T) (*httptest.Server, string) {
+	t.Helper()
+	srv, token, _ := unprovisionedServerWithOwner(t)
+	return srv, token
+}
+
+// unprovisionedServerWithOwner also hands back the owner connection, for the
+// cases that check what the claim actually WROTE rather than what it answered.
+func unprovisionedServerWithOwner(t *testing.T) (*httptest.Server, string, *pgx.Conn) {
 	t.Helper()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
@@ -43,7 +53,7 @@ func unprovisionedServer(t *testing.T) (*httptest.Server, string) {
 	}
 	srv := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(srv.Close)
-	return srv, token
+	return srv, token, e.Owner
 }
 
 // claimStatus posts and returns only the status. The request is issued here
@@ -60,9 +70,12 @@ func claimStatus(t *testing.T, srv *httptest.Server, body string) int {
 	return resp.StatusCode
 }
 
+// A claim names what the installation is measured in — the form asks for both,
+// and the server refuses a claim that leaves either out.
 func claimBody(token string) string {
 	return `{"setup_token":"` + token + `","organization_name":"Claimed Co","timezone":"Europe/Berlin",` +
-		`"base_currency":"EUR","admin_email":"ops@claimed.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
+		`"base_currency":"EUR","base_language":"en",` +
+		`"admin_email":"ops@claimed.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 }
 
 func TestSetupStatusIsReachableWithNoOrganization(t *testing.T) {
@@ -144,11 +157,84 @@ func TestAClaimWithTheWrongTokenIsUnauthorized(t *testing.T) {
 	}
 }
 
+// The basis is checked AFTER the token, so a stranger cannot use this route to
+// learn which fields it carries or which values it takes. This is the one route
+// that creates the root account, and it is unauthenticated by design — the
+// token is the credential, so nothing about the body may be disclosed before it
+// matches.
+func TestAWrongTokenIsRefusedBeforeTheBodyIsJudged(t *testing.T) {
+	srv, token := unprovisionedServer(t)
+
+	// A body that would fail validation twice over, presented with a token that
+	// does not match. The answer must be about the TOKEN.
+	nonsense := `{"setup_token":"not-the-token","organization_name":"X","timezone":"Europe/Berlin",` +
+		`"base_currency":"EURO","base_language":"fr",` +
+		`"admin_email":"ops@x.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
+	if got := claimStatus(t, srv, nonsense); got != http.StatusUnauthorized {
+		t.Errorf("a bad token with a bad body answered %d, want 401 — the body was judged before the credential", got)
+	}
+	// And the real token still claims: a refused probe must not spend it.
+	if got := claimStatus(t, srv, claimBody(token)); got != http.StatusCreated {
+		t.Errorf("the token no longer claims after a rejected probe: %d", got)
+	}
+}
+
+func TestAClaimWithoutABasisIsRefused(t *testing.T) {
+	srv, token := unprovisionedServer(t)
+
+	// The old client sent a hardcoded currency and no language at all. Both are
+	// now asked on the form, so a claim that omits either is a client that
+	// stopped asking — and defaulting it would put this installation
+	// permanently on a currency nobody chose.
+	noLanguage := `{"setup_token":"` + token + `","organization_name":"Silent Co","timezone":"Europe/Berlin",` +
+		`"base_currency":"EUR","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
+	if got := claimStatus(t, srv, noLanguage); got != http.StatusUnprocessableEntity {
+		t.Errorf("a claim naming no base language answered %d, want 422", got)
+	}
+	noCurrency := `{"setup_token":"` + token + `","organization_name":"Silent Co","timezone":"Europe/Berlin",` +
+		`"base_language":"en","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
+	if got := claimStatus(t, srv, noCurrency); got != http.StatusUnprocessableEntity {
+		t.Errorf("a claim naming no base currency answered %d, want 422", got)
+	}
+	// Neither refusal spends the token: the operator fixes the form and retries.
+	if got := claimStatus(t, srv, claimBody(token)); got != http.StatusCreated {
+		t.Errorf("the token no longer claims after a refused basis: %d", got)
+	}
+}
+
+// The claim's answer is what the installation is measured in from then on —
+// not the defaults, and not what the browser guessed.
+func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
+	srv, token, owner := unprovisionedServerWithOwner(t)
+
+	body := `{"setup_token":"` + token + `","organization_name":"Zurich Co","timezone":"Europe/Zurich",` +
+		`"base_currency":"CHF","base_language":"de",` +
+		`"admin_email":"ops@zurich.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
+	if got := claimStatus(t, srv, body); got != http.StatusCreated {
+		t.Fatalf("claiming with CHF and German answered %d, want 201", got)
+	}
+	for _, want := range []struct{ key, value string }{
+		{"installation.base_currency", `"CHF"`},
+		{"installation.base_language", `"de"`},
+		{"installation.timezone", `"Europe/Zurich"`},
+	} {
+		var got string
+		if err := owner.QueryRow(context.Background(),
+			`SELECT value::text FROM setting WHERE key = $1`, want.key).Scan(&got); err != nil {
+			t.Fatalf("reading %s: %v", want.key, err)
+		}
+		if got != want.value {
+			t.Errorf("%s = %s, want %s — the claim's answer is what the installation holds", want.key, got, want.value)
+		}
+	}
+}
+
 func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
 	srv, token := unprovisionedServer(t)
 
 	body := `{"setup_token":"` + token + `","organization_name":"Weak Co","timezone":"Europe/Berlin",` +
-		`"base_currency":"EUR","admin_email":"ops@weak.test","admin_name":"Ops","admin_password":""}`
+		`"base_currency":"EUR","base_language":"en",` +
+		`"admin_email":"ops@weak.test","admin_name":"Ops","admin_password":""}`
 	if got := claimStatus(t, srv, body); got != http.StatusUnprocessableEntity {
 		t.Fatalf("an empty admin password answered %d, want 422 — this is the field the caller must fix, not a server fault", got)
 	}

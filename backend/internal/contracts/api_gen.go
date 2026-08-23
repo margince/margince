@@ -4975,6 +4975,27 @@ func (e IngestVoiceCorpusSourceRequestRegister) Valid() bool {
 	}
 }
 
+// Defines values for InstallationSettingsBaseLanguage.
+const (
+	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
+	InstallationSettingsBaseLanguageEn InstallationSettingsBaseLanguage = "en"
+	InstallationSettingsBaseLanguageVi InstallationSettingsBaseLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsBaseLanguage enum.
+func (e InstallationSettingsBaseLanguage) Valid() bool {
+	switch e {
+	case InstallationSettingsBaseLanguageDe:
+		return true
+	case InstallationSettingsBaseLanguageEn:
+		return true
+	case InstallationSettingsBaseLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InviteUserRequestRole.
 const (
 	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
@@ -8401,6 +8422,27 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	}
 }
 
+// Defines values for SaveMyLocaleRequestLocale.
+const (
+	SaveMyLocaleRequestLocaleDe SaveMyLocaleRequestLocale = "de"
+	SaveMyLocaleRequestLocaleEn SaveMyLocaleRequestLocale = "en"
+	SaveMyLocaleRequestLocaleVi SaveMyLocaleRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the SaveMyLocaleRequestLocale enum.
+func (e SaveMyLocaleRequestLocale) Valid() bool {
+	switch e {
+	case SaveMyLocaleRequestLocaleDe:
+		return true
+	case SaveMyLocaleRequestLocaleEn:
+		return true
+	case SaveMyLocaleRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SavePersonResearchClaimField.
 const (
 	SavePersonResearchClaimFieldLinkedin SavePersonResearchClaimField = "linkedin"
@@ -9421,6 +9463,27 @@ func (e UpdateDealRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpdateInstallationSettingsRequestBaseLanguage.
+const (
+	UpdateInstallationSettingsRequestBaseLanguageDe UpdateInstallationSettingsRequestBaseLanguage = "de"
+	UpdateInstallationSettingsRequestBaseLanguageEn UpdateInstallationSettingsRequestBaseLanguage = "en"
+	UpdateInstallationSettingsRequestBaseLanguageVi UpdateInstallationSettingsRequestBaseLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestBaseLanguage enum.
+func (e UpdateInstallationSettingsRequestBaseLanguage) Valid() bool {
+	switch e {
+	case UpdateInstallationSettingsRequestBaseLanguageDe:
+		return true
+	case UpdateInstallationSettingsRequestBaseLanguageEn:
+		return true
+	case UpdateInstallationSettingsRequestBaseLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateLeadRequestStatus.
 const (
 	UpdateLeadRequestStatusContacted UpdateLeadRequestStatus = "contacted"
@@ -9724,6 +9787,27 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 	case UpsertPartnerRequestRelationshipStageNoFit:
 		return true
 	case UpsertPartnerRequestRelationshipStageResearch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserLocale.
+const (
+	UserLocaleDe UserLocale = "de"
+	UserLocaleEn UserLocale = "en"
+	UserLocaleVi UserLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the UserLocale enum.
+func (e UserLocale) Valid() bool {
+	switch e {
+	case UserLocaleDe:
+		return true
+	case UserLocaleEn:
+		return true
+	case UserLocaleVi:
 		return true
 	default:
 		return false
@@ -16679,13 +16763,23 @@ type InstallationSettings struct {
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
-	// BaseCurrencyLocked True once a deal has frozen a conversion rate against the base currency, after
-	// which it can no longer be changed (ADR-0085 §7).
+	// BaseCurrencyLocked True once a conversion rate has been frozen against the base currency — by a closed
+	// deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+	// rate sheet — after which it can no longer be changed (ADR-0085 §7).
 	BaseCurrencyLocked bool `json:"base_currency_locked"`
 
-	// BaseCurrencyLockedReason Why the currency is locked, naming how many deals have already converted against
-	// it. Absent when it is still changeable.
+	// BaseCurrencyLockedReason Why the currency is locked, naming what has already converted against it. Absent
+	// when it is still changeable.
 	BaseCurrencyLockedReason *string `json:"base_currency_locked_reason,omitempty"`
+
+	// BaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
+	// signals, extracted facts, agent answers. Not a user's display language, which is
+	// per-user.
+	//
+	// It does not govern everything a model writes: correspondence keeps the language of
+	// the correspondence, so a German thread still gets a German reply, and a brief cached
+	// for one reader keeps that reader's language.
+	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
@@ -16704,6 +16798,15 @@ type InstallationSettings struct {
 	// display timezone, which is per-user).
 	Timezone string `json:"timezone"`
 }
+
+// InstallationSettingsBaseLanguage The language AI writes in when what it writes is read by the whole team — claims,
+// signals, extracted facts, agent answers. Not a user's display language, which is
+// per-user.
+//
+// It does not govern everything a model writes: correspondence keeps the language of
+// the correspondence, so a German thread still gets a German reply, and a brief cached
+// for one reader keeps that reader's language.
+type InstallationSettingsBaseLanguage string
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
@@ -21927,6 +22030,21 @@ type SaveLinkedInAccountRequest struct {
 	ProfileUrl *string `json:"profile_url,omitempty"`
 }
 
+// SaveMyLocaleRequest defines model for SaveMyLocaleRequest.
+type SaveMyLocaleRequest struct {
+	// Locale The language to render this person's own interface in. One of the
+	// languages the product ships a catalog for — a tag it does not
+	// (`en-GB`, `fr`) is refused rather than approximated, because a locale
+	// with no catalog renders as raw message keys.
+	Locale SaveMyLocaleRequestLocale `json:"locale"`
+}
+
+// SaveMyLocaleRequestLocale The language to render this person's own interface in. One of the
+// languages the product ships a catalog for — a tag it does not
+// (`en-GB`, `fr`) is refused rather than approximated, because a locale
+// with no catalog renders as raw message keys.
+type SaveMyLocaleRequestLocale string
+
 // SavePersonResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SavePersonResearchClaim struct {
 	// Field Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
@@ -22952,9 +23070,13 @@ type UpdateDealRoomRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
-	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
 	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
+	// nothing already written, so artifacts stay in the language they were written in.
+	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
@@ -22962,6 +23084,10 @@ type UpdateInstallationSettingsRequest struct {
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
 }
+
+// UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
+// nothing already written, so artifacts stay in the language they were written in.
+type UpdateInstallationSettingsRequestBaseLanguage string
 
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
 type UpdateLeadDisqualifyReasonRequest struct {
@@ -23282,6 +23408,10 @@ type User struct {
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
 
+	// Locale The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+	// Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+	Locale *UserLocale `json:"locale,omitempty"`
+
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles  *[]string  `json:"roles,omitempty"`
 	Status UserStatus `json:"status"`
@@ -23290,6 +23420,10 @@ type User struct {
 	Timezone  *string    `json:"timezone,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
+
+// UserLocale The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+// Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+type UserLocale string
 
 // UserStatus defines model for User.Status.
 type UserStatus string
@@ -28112,6 +28246,9 @@ type SaveMyLinkedInAccountJSONRequestBody = SaveLinkedInAccountRequest
 
 // ImportLinkedInConnectionsMultipartRequestBody defines body for ImportLinkedInConnections for multipart/form-data ContentType.
 type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMultipartBody
+
+// SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
+type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
 
 // CreateOfferTemplateJSONRequestBody defines body for CreateOfferTemplate for application/json ContentType.
 type CreateOfferTemplateJSONRequestBody = CreateOfferTemplateRequest
@@ -36743,6 +36880,9 @@ type ServerInterface interface {
 	// Which accounts your imported network reaches.
 	// (GET /me/linkedin-reach)
 	GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params GetMyLinkedInReachParams)
+	// Choose the language your own interface is in.
+	// (PUT /me/locale)
+	SaveMyLocale(w http.ResponseWriter, r *http.Request)
 	// What the OAuth consent screen renders for one pending authorization.
 	// (GET /oauth/consent-request)
 	GetConsentRequest(w http.ResponseWriter, r *http.Request, params GetConsentRequestParams)
@@ -38852,6 +38992,12 @@ func (_ Unimplemented) ImportLinkedInConnections(w http.ResponseWriter, r *http.
 // Which accounts your imported network reaches.
 // (GET /me/linkedin-reach)
 func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params GetMyLinkedInReachParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose the language your own interface is in.
+// (PUT /me/locale)
+func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -50053,6 +50199,26 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMyLinkedInReach(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyLocale operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyLocale(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -62453,6 +62619,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/linkedin-reach", wrapper.GetMyLinkedInReach)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/oauth/consent-request", wrapper.GetConsentRequest)

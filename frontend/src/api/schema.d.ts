@@ -8907,6 +8907,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/locale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the language your own interface is in.
+         * @description Always the CALLER's own, never anybody else's — an admin does not pick a
+         *     colleague's display language through this API.
+         *
+         *     This is a person's own interface, not the installation's basis. It does
+         *     not change what AI writes for the whole team, which is the installation's
+         *     `base_language` and is admin/ops to set.
+         *
+         *     Stored so the choice follows the person to their next browser. Until they
+         *     make one there is no row and no value, which is not the same as `en`:
+         *     somebody who never chose follows whatever their browser asks for, and
+         *     writing a choice they did not make would freeze one browser's guess
+         *     forever.
+         */
+        put: operations["saveMyLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -10103,13 +10134,25 @@ export interface components {
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
             /**
-             * @description True once a deal has frozen a conversion rate against the base currency, after
-             *     which it can no longer be changed (ADR-0085 §7).
+             * @description The language AI writes in when what it writes is read by the whole team — claims,
+             *     signals, extracted facts, agent answers. Not a user's display language, which is
+             *     per-user.
+             *
+             *     It does not govern everything a model writes: correspondence keeps the language of
+             *     the correspondence, so a German thread still gets a German reply, and a brief cached
+             *     for one reader keeps that reader's language.
+             * @enum {string}
+             */
+            base_language: "en" | "de" | "vi";
+            /**
+             * @description True once a conversion rate has been frozen against the base currency — by a closed
+             *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+             *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming how many deals have already converted against
-             *     it. Absent when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it. Absent
+             *     when it is still changeable.
              */
             base_currency_locked_reason?: string;
             /**
@@ -10132,10 +10175,16 @@ export interface components {
             /** @description The IANA reporting zone. */
             timezone?: string;
             /**
-             * @description ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+             * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
              *     rate against the current base.
              */
             base_currency?: string;
+            /**
+             * @description The language shared AI writing is written in. Never frozen: changing it re-means
+             *     nothing already written, so artifacts stay in the language they were written in.
+             * @enum {string}
+             */
+            base_language?: "en" | "de" | "vi";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -14154,6 +14203,16 @@ export interface components {
              */
             body: string;
         };
+        SaveMyLocaleRequest: {
+            /**
+             * @description The language to render this person's own interface in. One of the
+             *     languages the product ships a catalog for — a tag it does not
+             *     (`en-GB`, `fr`) is refused rather than approximated, because a locale
+             *     with no catalog renders as raw message keys.
+             * @enum {string}
+             */
+            locale: "en" | "de" | "vi";
+        };
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
             connected: boolean;
@@ -17322,6 +17381,12 @@ export interface components {
              * @default UTC
              */
             timezone: string;
+            /**
+             * @description The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+             *     Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
             /**
              * @default active
              * @enum {string}
@@ -36989,6 +37054,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyLocaleRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the chosen locale. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             401: components["responses"]["Unauthorized"];
