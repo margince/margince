@@ -227,6 +227,7 @@ func hasHandTypedVersion(pkg promptPackage) bool {
 // follow fails loudly rather than silently covering nothing.
 func digestCoverage(pkg promptPackage) (reached map[string]bool, derives bool, unsupported []string) {
 	reached = map[string]bool{}
+	var follow []string
 	for _, file := range pkg.files {
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
@@ -251,8 +252,10 @@ func digestCoverage(pkg promptPackage) (reached map[string]bool, derives bool, u
 				switch builder := arg.(type) {
 				case *ast.Ident:
 					reached[builder.Name] = true
+					follow = append(follow, builder.Name)
 				case *ast.FuncLit:
 					collectIdents(builder.Body, reached)
+					follow = append(follow, returnedNames(builder.Body)...)
 				default:
 					unsupported = append(unsupported, types.ExprString(arg))
 				}
@@ -260,19 +263,29 @@ func digestCoverage(pkg promptPackage) (reached map[string]bool, derives bool, u
 			return true
 		})
 	}
-	followFunctions(pkg, reached)
+	followBuilders(pkg, follow, reached)
 	return reached, derives, unsupported
 }
 
-// followFunctions widens reached through the package's own functions, to a
-// fixed point.
+// followBuilders widens reached through the functions a builder RETURNS THROUGH,
+// to a fixed point.
 //
 // A builder is free to delegate — a literal that calls a named builder, a named
 // builder that calls another — and the prompt is sent at the bottom of that
-// chain, not at the top. Following one hop would clear the shape this tree
-// happens to write today and miss the next one; following to a fixed point
-// answers "does this digest send that prompt" whatever the chain.
-func followFunctions(pkg promptPackage, reached map[string]bool) {
+// chain, not the top. Following one hop would clear the shape this tree happens
+// to write today and miss the next one.
+//
+// Only the RETURN position is followed. A body may also call a helper for an
+// unrelated effect, and following that would let a prompt the helper merely
+// mentions count as sent — which would weaken the census whose whole point is to
+// fail when a prompt rides no digest. What a builder returns is what reaches the
+// model.
+//
+// Identifiers in a followed body still all count toward reached, so a prompt
+// bound to a local before being returned is not missed. Being generous about the
+// prompt and strict about the chain keeps the census from reporting a covered
+// prompt as uncovered, which is the failure that teaches a reader to ignore it.
+func followBuilders(pkg promptPackage, follow []string, reached map[string]bool) {
 	bodies := map[string]*ast.BlockStmt{}
 	for _, file := range pkg.files {
 		for _, decl := range file.Decls {
@@ -281,22 +294,39 @@ func followFunctions(pkg promptPackage, reached map[string]bool) {
 			}
 		}
 	}
-	for {
-		widened := false
-		for name := range reached {
-			body, isFunction := bodies[name]
-			if !isFunction {
-				continue
-			}
-			delete(bodies, name) // each body contributes once
-			collectIdents(body, reached)
-			widened = true
-			break // reached was mutated; restart the scan
+	for len(follow) > 0 {
+		name := follow[len(follow)-1]
+		follow = follow[:len(follow)-1]
+		body, isFunction := bodies[name]
+		if !isFunction {
+			continue
 		}
-		if !widened {
-			return
-		}
+		delete(bodies, name) // each body contributes once; this also ends a cycle
+		collectIdents(body, reached)
+		follow = append(follow, returnedNames(body)...)
 	}
+}
+
+// returnedNames are the identifiers a body's return statements name — the
+// functions and constants its value is built from.
+func returnedNames(body *ast.BlockStmt) []string {
+	var names []string
+	ast.Inspect(body, func(node ast.Node) bool {
+		ret, ok := node.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		for _, result := range ret.Results {
+			ast.Inspect(result, func(inner ast.Node) bool {
+				if ident, ok := inner.(*ast.Ident); ok {
+					names = append(names, ident.Name)
+				}
+				return true
+			})
+		}
+		return true
+	})
+	return names
 }
 
 func collectIdents(node ast.Node, into map[string]bool) {
