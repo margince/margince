@@ -121,6 +121,18 @@ func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) 
 	}
 }
 
+// readApproval reads the staged row's target and the two fields that must
+// distinguish it from a sibling staging: diff_hash and summary.
+func readApproval(t *testing.T, e *apptest.AppEnv, approvalID string) (targetType string, targetID *string, diffHash, summary string) {
+	t.Helper()
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT coalesce(target_entity_type, ''), target_entity_id, diff_hash, coalesce(summary, '') FROM approval WHERE id = $1`,
+		approvalID).Scan(&targetType, &targetID, &diffHash, &summary); err != nil {
+		t.Fatalf("reading approval %s: %v", approvalID, err)
+	}
+	return targetType, targetID, diffHash, summary
+}
+
 // stageWebhookCreate provokes a refused agent subscription create and returns
 // the approval id it staged.
 func stageWebhookCreate(t *testing.T, e *apptest.AppEnv, bearer map[string]string, url string) string {
@@ -135,32 +147,4 @@ func stageWebhookCreate(t *testing.T, e *apptest.AppEnv, bearer map[string]strin
 		t.Fatalf("agent subscription create %q → %d %q, want 403 approval_required", url, status, problem.Code)
 	}
 	return ExtractStagedApprovalID(t, problem.Detail)
-}
-
-// stageFactConfirm provokes a refused agent fact confirmation and returns
-// the approval id it staged.
-func stageFactConfirm(t *testing.T, e *apptest.AppEnv, bearer map[string]string, orgID, factKey string) string {
-	t.Helper()
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	path := "/v1/organizations/" + orgID + "/facts/" + factKey + "/confirm"
-	if status := e.Call(t, "POST", path, nil, bearer, &problem); status != http.StatusForbidden ||
-		problem.Code != "approval_required" {
-		t.Fatalf("agent fact confirm %q → %d %q, want 403 approval_required", factKey, status, problem.Code)
-	}
-	return ExtractStagedApprovalID(t, problem.Detail)
-}
-
-// readApproval reads the staged row's target and the two fields that must
-// distinguish it from a sibling staging: diff_hash and summary.
-func readApproval(t *testing.T, e *apptest.AppEnv, approvalID string) (targetType string, targetID *string, diffHash, summary string) {
-	t.Helper()
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT coalesce(target_entity_type, ''), target_entity_id, diff_hash, coalesce(summary, '') FROM approval WHERE id = $1`,
-		approvalID).Scan(&targetType, &targetID, &diffHash, &summary); err != nil {
-		t.Fatalf("reading approval %s: %v", approvalID, err)
-	}
-	return targetType, targetID, diffHash, summary
 }

@@ -139,18 +139,25 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		t.Fatalf("agent create stamped captured_by=%q, want the authenticated agent", created.CapturedBy)
 	}
 
-	// 🟡 (archivePerson is on the confirm-first floor): no effect, a
-	// staged approval instead.
+	// The archive PERFORMS now: a passport carries the granting human's seat
+	// and row scope, and archiving a person is ordinary work its holder does
+	// unaided.
+	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, bearer, nil); status == 403 {
+		t.Fatal("agent archive → 403 — a passport archives what its holder could archive unaided")
+	}
+
+	// 🟡 still exists, on the routes whose destination the credential-holder did
+	// not choose: registering outbound egress is configuration a credential must
+	// not widen, so createWebhookSubscription keeps its floor.
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, bearer, &problem)
+	status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
+	}, bearer, &problem)
 	if status != 403 || problem.Code != "approval_required" {
 		t.Fatalf("🟡 REST mutation → %d %q, want 403 approval_required", status, problem.Code)
-	}
-	if getStatus := e.Call(t, "GET", "/v1/people/"+created.ID, nil, bearer, nil); getStatus != 200 {
-		t.Fatalf("staged archive must not have executed; GET → %d", getStatus)
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
@@ -176,12 +183,18 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
-	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, withToken, nil); status != 200 {
-		t.Fatalf("approved retry → %d, want the archive to execute", status)
+	body := apptest.AnyMap{
+		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
+	}
+	// Past the gate is what the token buys. Where the create lands after that is
+	// the webhook module's business — this composition seals no signing key, so
+	// it answers 503 — and an unredeemed call never reaches the module at all.
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", body, withToken, nil); status == 403 {
+		t.Fatal("approved retry → 403, want the token to release the staged call")
 	}
 	// Single-use: the same token cannot authorize a second effect.
-	if e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, withToken, &problem) == 200 {
-		t.Fatal("a consumed approval token authorized a second effect")
+	if e.Call(t, "POST", "/v1/webhook-subscriptions", body, withToken, &problem) != 403 {
+		t.Fatal("a consumed approval token was not refused on the second call")
 	}
 }
 
