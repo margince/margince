@@ -154,10 +154,20 @@ func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.Use
 	return ids.From[ids.UserKind](*owner), true, nil
 }
 
-// UpdateRoom edits a room's working copy. It never changes what a buyer is
-// currently reading — that is the published release, which only publish moves.
+// UpdateRoom edits the room's title and welcome message — the words a buyer
+// reads at the top of the page, and reads AS SOON AS they are saved.
+//
+// Human-only, and that is a change: this used to shape a draft nobody outside
+// could read, so an agent writing a better welcome paragraph changed nothing an
+// outside party would see. With the room live from creation, the same write
+// now reaches every invited buyer immediately, which puts it on the side of the
+// line the rest of this module already draws — anything an outside party reads
+// is a person's to say.
 func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoomInput) (crmcontracts.DealRoom, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
+		return crmcontracts.DealRoom{}, err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom

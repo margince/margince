@@ -33,12 +33,6 @@ import (
 // operationId spelled the same way.
 const opRenameCustomField = "renameCustomField"
 
-// opUpdateDealRoomDocument is named here for the same reason opRenameCustomField
-// is: three places have to spell one operationId identically — patchTargetParam
-// below, agentcommand.go's restCommands entry, and the test that pins the
-// ownership probe onto the document rather than its room.
-const opUpdateDealRoomDocument = "updateDealRoomDocument"
-
 // The remaining five action-shaped ops named below are ALSO both this
 // file's and agentcommand.go's restCommands table's
 // (agentcommandnested.go): named once here so the two do not spell an
@@ -99,9 +93,12 @@ var actionShapedUpdateOps = map[string]bool{
 // is for calls with no human-typed field of their target at all, and a to-do's
 // wording is exactly such a field. It is the same trap actionShapedUpdateOps'
 // own comment describes, in a different shape.
-var patchTargetParam = map[string]string{
-	opUpdateDealRoomDocument: "documentId",
-}
+// Empty today: the Deal Room document patch that used to live here is
+// human-only now, so no agent-reachable field patch writes a record other than
+// its route's own {id}. The map and patchTargetID stay because the NEXT such
+// route needs them, and rediscovering why a patch must probe the item rather
+// than its parent is the expensive half.
+var patchTargetParam = map[string]string{}
 
 // patchTargetID resolves the record a field patch writes: the route's own {id}
 // unless the operation declares another parameter above.

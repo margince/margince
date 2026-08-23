@@ -465,3 +465,48 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 		t.Fatalf("thread while paused = %d, want 422", status)
 	}
 }
+
+// A buyer who kept a thread id cannot go on speaking in it after its document
+// leaves the room.
+//
+// The list already hides such a thread. Without the same rule on the write, a
+// buyer holding the id from an earlier read could reply — and the reply call
+// hands back the whole conversation, so hiding it from the list alone would be
+// a curtain rather than a gate.
+func TestAThreadClosesToTheBuyerWhenItsDocumentLeavesTheRoom(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	var roomRow apptest.AnyMap
+	e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow)
+	dealID, _ := roomRow["deal_id"].(string)
+	attachmentID := uploadDealFile(t, e, dealID, "terms.pdf", []byte("%PDF-TERMS"))
+	var doc apptest.AnyMap
+	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", apptest.AnyMap{
+		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
+	}, nil, &doc)
+	docID, _ := doc["id"].(string)
+
+	var session apptest.AnyMap
+	publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": room.credential}, nil, &session)
+	token, _ := session["session_token"].(string)
+
+	var thread apptest.AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", apptest.AnyMap{
+		"document_id": docID, "body": "Is clause 4 negotiable?",
+	}, bearer(token), &thread); status != http.StatusCreated {
+		t.Fatalf("open thread = %d %v", status, thread)
+	}
+	threadID, _ := thread["id"].(string)
+
+	// The seller takes the document back.
+	if status := e.Call(t, "DELETE", "/v1/deal-rooms/"+room.roomID+"/documents/"+docID, nil,
+		map[string]string{"If-Match": fmt.Sprint(doc["version"])}, nil); status != http.StatusOK {
+		t.Fatalf("remove document = %d", status)
+	}
+
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads/"+threadID+"/comments",
+		apptest.AnyMap{"body": "still there?"}, bearer(token), nil); status != http.StatusNotFound {
+		t.Fatalf("reply after the document left = %d, want 404", status)
+	}
+}

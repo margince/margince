@@ -13098,12 +13098,12 @@ type BriefSnoozeRequest struct {
 // would collide with the lifecycle's.
 type BuyerRoomAccess = string
 
-// BuyerRoomContent The latest release, and only that. Every field here was copied at publish
-// time; the live deal is never read on this path.
+// BuyerRoomContent What the buyer reads at the top of the room, as it stands now. A room is
+// live from creation, so there is no release between an edit and this: the
+// seller changes the wording and the buyer reads it on their next load.
+// The live DEAL is still never read on this path — only the room's own row.
 type BuyerRoomContent struct {
-	ClosedAt   *time.Time `json:"closed_at,omitempty"`
-	ReleaseNo  int        `json:"release_no"`
-	ReleasedAt time.Time  `json:"released_at"`
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
 
 	// StewardName The named person on the seller's side to contact. Null when the steward's seat is gone.
 	StewardName    *string `json:"steward_name,omitempty"`
@@ -15570,13 +15570,16 @@ type DealRoom struct {
 	Id        openapi_types.UUID `json:"id"`
 	Source    string             `json:"source"`
 
-	// State Where the room stands. Only `live` serves a buyer; `draft`, `building`, `ready`
-	// and `publishing` are seller-side assembly, and the last four are terminal or
-	// suspended.
+	// State Where the room stands. A room is created `live`, and `live` and `closed` are
+	// the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+	// retired: no writer produces them, and the enum keeps them so an old audit
+	// image still reads.
 	//
-	// `closed` freezes content while KEEPING access — the buyer still reads what
-	// they were shown. `expired` is access lapsing on its own. `archived` ends the
-	// room outright and frees the deal for another.
+	// `closed` stops the room taking new work while KEEPING access — the buyer goes
+	// on reading it, and neither side adds a document or a comment. It is not a
+	// frozen copy: what the buyer reads is the live room, so a file later removed
+	// from the deal stops being served here too. `expired` is access lapsing on its
+	// own. `archived` ends the room outright and frees the deal for another.
 	State DealRoomState `json:"state"`
 
 	// StewardUserId The named human a buyer is pointed at for help. Defaults to the deal's owner
@@ -15854,13 +15857,16 @@ type DealRoomSessionIssued struct {
 	SessionToken string `json:"session_token"`
 }
 
-// DealRoomState Where the room stands. Only `live` serves a buyer; `draft`, `building`, `ready`
-// and `publishing` are seller-side assembly, and the last four are terminal or
-// suspended.
+// DealRoomState Where the room stands. A room is created `live`, and `live` and `closed` are
+// the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+// retired: no writer produces them, and the enum keeps them so an old audit
+// image still reads.
 //
-// `closed` freezes content while KEEPING access — the buyer still reads what
-// they were shown. `expired` is access lapsing on its own. `archived` ends the
-// room outright and frees the deal for another.
+// `closed` stops the room taking new work while KEEPING access — the buyer goes
+// on reading it, and neither side adds a document or a comment. It is not a
+// frozen copy: what the buyer reads is the live room, so a file later removed
+// from the deal stops being served here too. `expired` is access lapsing on its
+// own. `archived` ends the room outright and frees the deal for another.
 type DealRoomState string
 
 // DealRoomThread One thread of the room's conversation, with its comments. Served to both
@@ -22960,8 +22966,8 @@ type UpdateDealRoomParticipantRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. Edits the working copy — a live
-// room keeps serving its last release until someone publishes.
+// UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
+// reads the new wording on their next load, with nothing staged in between.
 //
 // `expires_at` is deliberately NOT here: moving the moment a buyer loses access
 // is a change to what an outside party can reach, so it has its own human-only
@@ -36478,7 +36484,7 @@ type ServerInterface interface {
 	// Get a Deal Room by id.
 	// (GET /deal-rooms/{id})
 	GetDealRoom(w http.ResponseWriter, r *http.Request, id Id)
-	// Edit a Deal Room's draft text (partial).
+	// Edit a Deal Room's title and welcome message (partial).
 	// (PATCH /deal-rooms/{id})
 	UpdateDealRoom(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealRoomParams)
 	// Freeze the room's content, keeping buyer access.
@@ -37186,7 +37192,7 @@ type ServerInterface interface {
 	// Ask for a fresh Deal Room link by email (anonymous, always 202).
 	// (POST /public/rooms/link-request)
 	RequestDealRoomLink(w http.ResponseWriter, r *http.Request)
-	// The room as its buyer sees it — the latest release, never the live deal.
+	// The room as its buyer sees it — the room itself, never the live deal.
 	// (GET /public/rooms/me)
 	GetBuyerRoom(w http.ResponseWriter, r *http.Request)
 	// Whether a Deal Room credential can still be exchanged (anonymous).
@@ -38305,7 +38311,7 @@ func (_ Unimplemented) GetDealRoom(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit a Deal Room's draft text (partial).
+// Edit a Deal Room's title and welcome message (partial).
 // (PATCH /deal-rooms/{id})
 func (_ Unimplemented) UpdateDealRoom(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealRoomParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -39721,7 +39727,7 @@ func (_ Unimplemented) RequestDealRoomLink(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The room as its buyer sees it — the latest release, never the live deal.
+// The room as its buyer sees it — the room itself, never the live deal.
 // (GET /public/rooms/me)
 func (_ Unimplemented) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

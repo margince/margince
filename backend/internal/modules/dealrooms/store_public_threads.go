@@ -10,6 +10,7 @@ package dealrooms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -105,19 +106,19 @@ var errNotReviewer = &fieldError{
 	msg:   "only a reviewer can decide on a document; ask your contact to make you one",
 }
 
-// buyerVisibleDocument is the attachment behind a document the buyer can see —
-// what their thread is about. A document they cannot see is absent, which is
-// the same answer an id that never existed gets.
-func buyerVisibleDocument(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentID ids.UUID) (ids.UUID, error) {
+// requireBuyerVisibleDocument refuses a document this buyer cannot see: one
+// that never was in the room, one the seller has taken back, or one whose file
+// has left the deal's Files area. Absent rather than forbidden, which is the
+// same answer an id that never existed gets.
+func requireBuyerVisibleDocument(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentID ids.UUID) error {
 	docs, err := visibleDocuments(ctx, tx, roomID, time.Now())
 	if err != nil {
-		return ids.Nil, err
+		return err
 	}
-	wanted, ok := findVisible(docs, ids.From[ids.DealRoomDocumentKind](documentID))
-	if !ok {
-		return ids.Nil, apperrors.ErrNotFound
+	if _, ok := findVisible(docs, ids.From[ids.DealRoomDocumentKind](documentID)); !ok {
+		return apperrors.ErrNotFound
 	}
-	return wanted.AttachmentID, nil
+	return nil
 }
 
 // OpenBuyerThread opens a thread as the buyer. A document thread is about a
@@ -133,7 +134,7 @@ func (s *Store) OpenBuyerThread(ctx context.Context, sess Session, in OpenThread
 			return err
 		}
 		if in.DocumentID != nil {
-			if _, err := buyerVisibleDocument(ctx, tx, sess.RoomID, *in.DocumentID); err != nil {
+			if err := requireBuyerVisibleDocument(ctx, tx, sess.RoomID, *in.DocumentID); err != nil {
 				return err
 			}
 		}
@@ -152,6 +153,14 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		room, err := liveRoomForBuyerWrite(ctx, tx, sess, capabilityComment)
 		if err != nil {
+			return err
+		}
+		// A thread is only the buyer's to speak in while its document is still
+		// theirs to see. The list already hides a thread whose document left
+		// the room; without the same rule here, a buyer holding the id from an
+		// earlier read could go on talking in it — and replyTx hands back the
+		// whole conversation, so the refusal has to happen before that.
+		if err := ensureThreadStillVisible(ctx, tx, sess, threadID); err != nil {
 			return err
 		}
 		out, err = replyTx(ctx, tx, room, threadID, body, source, threadAuthor{participantID: &sess.ParticipantID})
@@ -189,4 +198,28 @@ func (s *Store) DecideAsBuyer(_ context.Context, sess Session, _ ids.UUID, _ str
 		return crmcontracts.DealRoomDecision{}, apperrors.ErrPermissionDenied
 	}
 	return crmcontracts.DealRoomDecision{}, ErrDecisionsRetired
+}
+
+// ensureThreadStillVisible refuses a thread the buyer's own list would not show
+// them: one about a document that has left the room, or whose file has left the
+// deal's Files area. A thread about the room as a whole is always theirs.
+//
+// ErrNotFound, not a permission error: the buyer is entitled to be here, and
+// telling them a specific thread exists but is closed to them says more about
+// the seller's material than the refusal needs to.
+func ensureThreadStillVisible(ctx context.Context, tx pgx.Tx, sess Session, threadID ids.UUID) error {
+	var documentID *ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT document_id FROM deal_room_thread WHERE id = $1 AND room_id = $2`,
+		threadID, sess.RoomID).Scan(&documentID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("read the thread's document: %w", err)
+	}
+	if documentID == nil {
+		return nil
+	}
+	return requireBuyerVisibleDocument(ctx, tx, sess.RoomID, *documentID)
 }

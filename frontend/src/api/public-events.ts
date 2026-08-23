@@ -107,9 +107,10 @@ export interface components {
             steward_user_id?: string;
         };
         /**
-         * @description Payload for deal_room.updated — the room's WORKING copy changed. What the
-         *     buyer reads is unaffected: that is the last published release, and it stays
-         *     authoritative until somebody publishes again.
+         * @description Payload for deal_room.updated — something a buyer reads changed: the
+         *     room's title or welcome message, or the documents in it. A room is live
+         *     from creation, so there is no staging step between this event and what
+         *     an invited buyer sees on their next read.
          */
         PublicEventDealRoomUpdated: {
             /** Format: uuid */

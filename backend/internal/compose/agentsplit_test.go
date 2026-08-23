@@ -296,16 +296,32 @@ func (o ownedOnlyFor) HumanOwnedConflicts(_ context.Context, _ string, target id
 
 // A sub-resource patch asks the ownership probe about the record it WRITES.
 //
-// On /deal-rooms/{id}/documents/{documentId} the route's own {id} is the ROOM,
-// so a probe reading {id} asks "who typed this field on document ⟨room-id⟩" — a question
-// no audit row answers. It misses, the split sees no conflict, and an agent
-// overwrite of a human-typed document title auto-executes instead of staging. The §2.1
-// protection would be off while the route still looked governed.
+// On a route like /parents/{id}/items/{itemId} the route's own {id} is the
+// PARENT, so a probe reading {id} asks "who typed this field on item
+// ⟨parent-id⟩" — a question no audit row answers. It misses, the split sees no
+// conflict, and an agent overwrite of a human-typed field auto-executes instead
+// of staging. The §2.1 protection would be off while the route still looked
+// governed.
+//
+// No agent-reachable route is shaped this way today: the Deal Room document
+// patch that was is human-only now. The mechanism (patchTargetParam) stays for
+// the next one, and so does this test — rediscovering the trap is the expensive
+// half, and an untested mechanism is one somebody deletes as unused.
 func TestASubResourcePatchProbesTheRecordItWrites(t *testing.T) {
+	// Registered for this test only: no live route is shaped this way, and the
+	// mechanism is what is under test rather than any one operation.
+	const opPatchSubResource = "patchSubResourceUnderTest"
+	patchTargetParam[opPatchSubResource] = "documentId"
+	restCommands[opPatchSubResource] = roomItemPatch("documentId")
+	t.Cleanup(func() {
+		delete(patchTargetParam, opPatchSubResource)
+		delete(restCommands, opPatchSubResource)
+	})
+
 	roomID, documentID := ids.NewV7(), ids.NewV7()
 	staging := &capturingApprovals{}
 	pol := agentPolicy{
-		Op: opUpdateDealRoomDocument, Access: accessTool,
+		Op: opPatchSubResource, Access: accessTool,
 		Tool: "update_record", RecordType: recordTypeDealRoomDocument,
 	}
 	body := []byte(`{"title":"wording a human typed"}`)

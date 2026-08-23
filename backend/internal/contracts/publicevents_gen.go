@@ -782,9 +782,10 @@ type PublicEventDealRoomThreadResolved struct {
 	ThreadId   openapi_types.UUID  `json:"thread_id"`
 }
 
-// PublicEventDealRoomUpdated Payload for deal_room.updated — the room's WORKING copy changed. What the
-// buyer reads is unaffected: that is the last published release, and it stays
-// authoritative until somebody publishes again.
+// PublicEventDealRoomUpdated Payload for deal_room.updated — something a buyer reads changed: the
+// room's title or welcome message, or the documents in it. A room is live
+// from creation, so there is no staging step between this event and what
+// an invited buyer sees on their next read.
 type PublicEventDealRoomUpdated struct {
 	// ChangedFields Which editorial fields moved. Names only — the text itself is not published.
 	// Typed as a plain string rather than an inline enum: an inline enum here

@@ -56,8 +56,15 @@ func (s *Store) ResumeRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts
 	})
 }
 
-// CloseRoom freezes the room's CONTENT while leaving buyer ACCESS intact. The
-// buyer keeps reading what they were shown; nobody writes to it again.
+// CloseRoom stops the room taking new work while leaving buyer ACCESS intact:
+// the buyer keeps reading it, and neither side adds a document or a comment.
+//
+// It is not a FREEZE, and saying so matters. What the buyer reads is the live
+// room, so a file later archived on the deal, unlinked from it, or hidden from
+// its Files area stops being served here too — a closed room is a room nobody
+// works in any more, not a preserved copy of one. Anyone needing the second
+// thing needs the audit trail, which records every document this room carried
+// and when it stopped.
 func (s *Store) CloseRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.DealRoom, error) {
 	return s.moveRoom(ctx, id, roomMove{
 		to:        stateClosed,

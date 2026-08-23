@@ -303,9 +303,10 @@ components:
       x-entity-type: deal_room
       x-version: 1
       description: |
-        Payload for deal_room.updated — the room's WORKING copy changed. What the
-        buyer reads is unaffected: that is the last published release, and it stays
-        authoritative until somebody publishes again.
+        Payload for deal_room.updated — something a buyer reads changed: the
+        room's title or welcome message, or the documents in it. A room is live
+        from creation, so there is no staging step between this event and what
+        an invited buyer sees on their next read.
       required:
         - deal_id
         - changed_fields

@@ -3170,7 +3170,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The room as its buyer sees it — the latest release, never the live deal.
+         * The room as its buyer sees it — the room itself, never the live deal.
          * @description What the session admits the caller to. `access` says whether content is
          *     served: `live` and `closed` carry the room (closed is read-only), `paused`
          *     and `expired` carry none — only the participant and whom to contact.
@@ -7434,8 +7434,9 @@ export interface paths {
         put?: never;
         /**
          * Open a Deal Room on a deal.
-         * @description Starts in `draft` — nothing is buyer-visible until a human publishes. At most
-         *     one active room per deal: a second create while the first is still in draft,
+         * @description Starts LIVE, and reaches nobody: the invitation is what decides who may read
+         *     a room, so a room nobody has been invited to is private without a second gate.
+         *     At most one active room per deal: a second create while the first is still
          *     building, ready, publishing, live or paused is rejected
          *     (409 `deal_room_already_open`). Archiving the first frees the deal for another.
          *
@@ -7474,7 +7475,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit a Deal Room's draft text (partial).
+         * Edit a Deal Room's title and welcome message (partial).
          * @description Edits the WORKING copy only. A live room keeps serving its last published
          *     release until a human publishes again, so changing the title or welcome text
          *     here never changes what a buyer is currently reading.
@@ -7577,10 +7578,10 @@ export interface paths {
         get?: never;
         /**
          * Set or clear when buyer access lapses.
-         * @description HUMAN-ONLY, for the same reason publish is: this moves the moment an outside
-         *     party stops being able to read the deal's material, and extending it is a
-         *     decision somebody has to own. An agent may draft a room's text; it may not
-         *     widen the window in which a buyer can read it.
+         * @description HUMAN-ONLY: this moves the moment an outside party stops being able to read
+         *     the deal's material, and extending it is a decision somebody has to own. An
+         *     agent may open a room, which nobody can read yet; it may not widen the window
+         *     in which a buyer can read one.
          *
          *     Null clears the bound, leaving access open until the room is closed or
          *     archived. A past instant is accepted and takes effect immediately — that is
@@ -8662,8 +8663,8 @@ export interface paths {
          * Stop listing a captured file on this deal without touching the file.
          * @description A captured attachment belongs to its message: it stays on the activity and in
          *     the company library. Hiding only takes it off THIS deal's Files area. A file
-         *     already shared in the Deal Room stays in the room's draft, but drops out of the
-         *     next release and of the buyer's download.
+         *     already shared in a Deal Room keeps its entry there for the seller to remove,
+         *     but stops being listed or downloadable for the buyer at once.
          *
          *     Needs update on the deal, and the file must be in the deal's Files area for
          *     this caller; anything else answers 404. Idempotent.
@@ -18181,7 +18182,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_decision" | "deal_room_document" | "deal_room_participant" | "deal_room_release" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_decision" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -19995,13 +19996,16 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description Where the room stands. Only `live` serves a buyer; `draft`, `building`, `ready`
-         *     and `publishing` are seller-side assembly, and the last four are terminal or
-         *     suspended.
+         * @description Where the room stands. A room is created `live`, and `live` and `closed` are
+         *     the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+         *     retired: no writer produces them, and the enum keeps them so an old audit
+         *     image still reads.
          *
-         *     `closed` freezes content while KEEPING access — the buyer still reads what
-         *     they were shown. `expired` is access lapsing on its own. `archived` ends the
-         *     room outright and frees the deal for another.
+         *     `closed` stops the room taking new work while KEEPING access — the buyer goes
+         *     on reading it, and neither side adds a document or a comment. It is not a
+         *     frozen copy: what the buyer reads is the live room, so a file later removed
+         *     from the deal stops being served here too. `expired` is access lapsing on its
+         *     own. `archived` ends the room outright and frees the deal for another.
          * @enum {string}
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";
@@ -20072,8 +20076,8 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description Any subset; omit a field to leave it unchanged. Edits the working copy — a live
-         *     room keeps serving its last release until someone publishes.
+         * @description Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
+         *     reads the new wording on their next load, with nothing staged in between.
          *
          *     `expires_at` is deliberately NOT here: moving the moment a buyer loses access
          *     is a change to what an outside party can reach, so it has its own human-only
@@ -20469,15 +20473,14 @@ export interface components {
             capability: components["schemas"]["DealRoomParticipantCapability"];
         };
         /**
-         * @description The latest release, and only that. Every field here was copied at publish
-         *     time; the live deal is never read on this path.
+         * @description What the buyer reads at the top of the room, as it stands now. A room is
+         *     live from creation, so there is no release between an edit and this: the
+         *     seller changes the wording and the buyer reads it on their next load.
+         *     The live DEAL is still never read on this path — only the room's own row.
          */
         BuyerRoomContent: {
             title: string;
             welcome_message?: string | null;
-            release_no: number;
-            /** Format: date-time */
-            released_at: string;
             /** @description The named person on the seller's side to contact. Null when the steward's seat is gone. */
             steward_name?: string | null;
             /** Format: date-time */
@@ -34452,7 +34455,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The new Deal Room, in draft. */
+            /** @description The new Deal Room, live and awaiting its first invitation. */
             201: {
                 headers: {
                     Location?: string;
