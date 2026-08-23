@@ -714,7 +714,7 @@
         "update": false
       }
     },
-    "row_scope": "team"
+    "row_scope": "own"
   },
   "ops": {
     "objects": {
@@ -1431,6 +1431,6 @@
         "update": false
       }
     },
-    "row_scope": "team"
+    "row_scope": "own"
   }
 }

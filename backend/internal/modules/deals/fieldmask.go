@@ -88,7 +88,17 @@ func maskDealForCaller(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (crm
 // so both are collected per row and applied once.
 func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
 	withheld := make([]withheldFields, len(deals))
-	if err := roleMaskedFields(ctx, tx, deals, withheld); err != nil {
+	// ONE statement answers which rows of the page the caller could change, and
+	// both consumers read it: the wire flag a client draws its edit affordances
+	// from, and the masks conditioned on write authority. Asking twice would be
+	// two round trips for one question, and two answers that can disagree.
+	writable, err := auth.StampWritable(ctx, tx, "deal", deals,
+		func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+		func(d *crmcontracts.Deal, may bool) { d.Writable = &may })
+	if err != nil {
+		return err
+	}
+	if err := roleMaskedFields(ctx, deals, withheld, writable); err != nil {
 		return err
 	}
 	if err := unreadableReferences(ctx, tx, deals, withheld); err != nil {
@@ -103,7 +113,9 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 // roleMaskedFields collects the columns the caller's role withholds on each
 // row. One statement answers which rows of the page the caller could change;
 // the masks conditioned on write authority lift on those.
-func roleMaskedFields(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal, withheld []withheldFields) error {
+func roleMaskedFields(ctx context.Context, deals []crmcontracts.Deal, withheld []withheldFields,
+	writable map[ids.UUID]bool,
+) error {
 	p, err := storekit.Actor(ctx)
 	if err != nil {
 		return err
@@ -111,14 +123,6 @@ func roleMaskedFields(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal,
 	// Cheap exit for the common case — no mask on deals at all.
 	if len(auth.MaskedFields(p, "deal", false)) == 0 {
 		return nil
-	}
-	rowIDs := make([]ids.UUID, 0, len(deals))
-	for _, d := range deals {
-		rowIDs = append(rowIDs, ids.UUID(d.Id))
-	}
-	writable, err := auth.WritableSubset(ctx, tx, "deal", rowIDs)
-	if err != nil {
-		return err
 	}
 	for i := range deals {
 		for _, field := range auth.MaskedFields(p, "deal", writable[ids.UUID(deals[i].Id)]) {

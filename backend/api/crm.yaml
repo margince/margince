@@ -17489,6 +17489,19 @@ components:
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         social:
           type: object
           additionalProperties: true
@@ -17696,6 +17709,19 @@ components:
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         parent_org_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
         merged_into_id: { type: [string, 'null'], format: uuid }
         computed_fields:
@@ -20741,6 +20767,19 @@ components:
             defaults it to `sourced`. Commission accrues on `sourced` only.
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         status: { type: string, enum: [open, won, lost], default: open }
         lost_reason: { type: [string, 'null'], description: Required when status=lost. }
         won_without_contract_reason:
@@ -21155,6 +21194,19 @@ components:
           format: uuid
           description: 'The anchor company — singular, and always set on the row. A company has many projects; a project has one company. Null on the wire when the caller may not read that company, in which case `masked_fields` names it: a project is readable across the workspace while the company it hangs off can still be an unpromoted capture.'
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         phase:
           type: string
           enum: [initiative, pursuing, delivering, closed]
@@ -22543,6 +22595,19 @@ components:
         score_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override (formulas §3.1) and recompute is suppressed; the machine value is retained in `score_computed`.' }
         score_computed: { type: [integer, 'null'], readOnly: true, description: 'Server-derived. The latest machine-computed §3 score, retained ONLY while an override is in force (else null, because score itself is the machine value).' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_person_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }

@@ -180,7 +180,13 @@ func (s *Store) readLeadQueuePage(ctx context.Context, query string, args []any,
 			leads = append(leads, lead)
 			ranks = append(ranks, rank)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		// The work queue is its own page path, not a filter over the list, so
+		// it stamps writability itself; a queue that reported every lead
+		// writable would put an edit affordance on a colleague's row.
+		return stampLeadsWritable(ctx, tx, leads)
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err

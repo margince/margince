@@ -51,8 +51,8 @@ the workspace but changes none of them.
 |---|---|---|
 | `admin` | Admin | all |
 | `management` | Management | all |
-| `manager` | Team Lead | team |
-| `rep` | Member | team |
+| `manager` | Team Lead | own |
+| `rep` | Member | own |
 | `read_only` | Read-only | all |
 | `ops` | Ops / Integrations | all |
 

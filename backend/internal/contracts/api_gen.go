@@ -15317,7 +15317,10 @@ type Deal struct {
 
 	// WonWithoutContractReason Why this deal was won with no contract behind it (ADR-0109 §6). NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 	WonWithoutContractReason *DealWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
-	AdditionalProperties     map[string]interface{}        `json:"-"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // DealForecastCategory defines model for Deal.ForecastCategory.
@@ -16941,7 +16944,10 @@ type Lead struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
 	// not only overlay mode.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -18140,7 +18146,10 @@ type Organization struct {
 	Version *RowVersion `json:"version,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
-	WebsiteUrl           *string                `json:"website_url,omitempty"`
+	WebsiteUrl *string `json:"website_url,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -19777,7 +19786,10 @@ type Person struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
 	// not only overlay mode.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -20769,7 +20781,10 @@ type Project struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
 	// not only overlay mode.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -30395,6 +30410,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "won_without_contract_reason")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -30617,6 +30640,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["won_without_contract_reason"], err = json.Marshal(a.WonWithoutContractReason)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'won_without_contract_reason': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 
@@ -32106,6 +32136,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -32388,6 +32426,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 
@@ -33150,6 +33195,14 @@ func (a *Organization) UnmarshalJSON(b []byte) error {
 		delete(object, "website_url")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -33374,6 +33427,13 @@ func (a Organization) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
 	for fieldName, field := range a.AdditionalProperties {
 		object[fieldName], err = json.Marshal(field)
 		if err != nil {
@@ -33592,6 +33652,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -33757,6 +33825,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 
@@ -34210,6 +34285,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -34352,6 +34435,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 

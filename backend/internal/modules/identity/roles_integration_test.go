@@ -112,8 +112,8 @@ func TestSettingOneGrantLeavesTheRestOfTheDocumentIntact(t *testing.T) {
 	}
 	// row_scope is not this endpoint's to touch and is not modelled by the
 	// grant map; a rewrite would have dropped it and silently narrowed the role.
-	if doc.RowScope != "team" {
-		t.Errorf("row_scope = %q, want the seeded rep scope 'team' — the write rewrote the document", doc.RowScope)
+	if doc.RowScope != "own" {
+		t.Errorf("row_scope = %q, want the seeded rep scope 'own' — the write rewrote the document", doc.RowScope)
 	}
 	if !doc.Objects["ext_gone_thing"].Read {
 		t.Error("the orphaned grant was erased; the write is not targeted")

@@ -27,6 +27,9 @@ type Organization = components["schemas"]["Organization"];
 // field and still compile, so the test would go on passing after the wire shape
 // moved under it — which is the one thing a fixture must not do.
 const ORG: Organization = {
+  // Absent reads as NOT writable, which is the fail-closed default a real
+  // response never relies on: the server answers this per row.
+  writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   lifecycle: "customer",

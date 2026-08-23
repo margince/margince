@@ -11923,6 +11923,8 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /** @description { linkedin, twitter, github, ... } */
             social?: {
                 [key: string]: unknown;
@@ -12106,6 +12108,8 @@ export interface components {
             address?: components["schemas"]["Address"];
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /**
              * Format: uuid
              * @description Single-level hierarchy FK; no cycles.
@@ -14562,6 +14566,8 @@ export interface components {
             project_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /**
              * @default open
              * @enum {string}
@@ -15025,6 +15031,8 @@ export interface components {
             organization_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /**
              * @description Read-only here — transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
              * @default initiative
@@ -16338,6 +16346,8 @@ export interface components {
             readonly score_computed?: number | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             source_system?: string | null;
             source_id?: string | null;
             /**

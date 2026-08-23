@@ -23,6 +23,9 @@ type Organization = components["schemas"]["Organization"];
 const page = { has_more: false, next_cursor: null };
 
 const org: Organization = {
+  // Absent reads as NOT writable, which is the fail-closed default a real
+  // response never relies on: the server answers this per row.
+  writable: true,
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",

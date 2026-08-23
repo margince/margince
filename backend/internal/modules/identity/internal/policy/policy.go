@@ -132,8 +132,17 @@ var defaults = map[string]Document{
 		RowScope: principal.RowScopeAll,
 	},
 	"manager": {
-		Objects:  managerObjects,
-		RowScope: principal.RowScopeTeam,
+		Objects: managerObjects,
+		// Own scope, not team: membership of a team is not by itself permission
+		// to rewrite a teammate's records. Writing somebody else's customer
+		// record takes an explicit share — a record_grant naming the user or
+		// one of their teams — or an unbounded seat.
+		//
+		// The team ARM survives in the write predicate and is not dead: a
+		// record_grant may name a team, and an operator may still author a
+		// custom role at team scope. What changed is only what the seeded
+		// roles claim by default.
+		RowScope: principal.RowScopeOwn,
 	},
 	"rep": {
 		// Reps create and work records but never delete them — except
@@ -218,7 +227,16 @@ var defaults = map[string]Document{
 			// create, publish, invite, revoke. Deleting one stays manager/admin,
 			// the same posture every other record the rep works carries.
 			grant{Create: true, Read: true, Update: true}),
-		RowScope: principal.RowScopeTeam,
+		// Own scope, not team: membership of a team is not by itself permission
+		// to rewrite a teammate's records. Writing somebody else's customer
+		// record takes an explicit share — a record_grant naming the user or
+		// one of their teams — or an unbounded seat.
+		//
+		// The team ARM survives in the write predicate and is not dead: a
+		// record_grant may name a team, and an operator may still author a
+		// custom role at team scope. What changed is only what the seeded
+		// roles claim by default.
+		RowScope: principal.RowScopeOwn,
 	},
 	"read_only": {
 		// A read-only role still owns its personal view state: saved views
