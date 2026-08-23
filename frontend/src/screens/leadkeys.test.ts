@@ -244,8 +244,12 @@ describe("a lead's cached reads", () => {
       1,
     ],
     [
+      // The name has to state what actually fired. This case said "non-null
+      // assertion" while its source carried none, so the `!` branch of
+      // isQueryKeyPosition was named by a passing test and exercised by
+      // nothing.
       "a key in parentheses, and one behind a non-null assertion",
-      'a({ queryKey: (["leads"]) }); b({ queryKey: ["lead", id] });',
+      'a({ queryKey: (["leads"]) }); b({ queryKey: ["lead", id]! });',
       2,
     ],
     [
