@@ -11359,10 +11359,39 @@ export interface components {
              *     says which was chosen rather than leaving it to be inferred.
              */
             source_key?: string;
+            on_duplicate?: components["schemas"]["ImportOnDuplicate"];
         };
+        /**
+         * @description What to do with a row naming a record the estate ALREADY holds — found
+         *     by the same dedupe ladder every create path runs, not by this
+         *     importer's own memory of what it once wrote.
+         *
+         *     `create` is the historical behaviour and stays the default: the row
+         *     lands and the pair goes on the dedupe review queue, exactly as a manual
+         *     create does. That is right for one company typed by a human and wrong
+         *     for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+         *
+         *     `skip` leaves the incumbent alone and reports the row as skipped.
+         *
+         *     The DRY RUN counts duplicates either way, so a person is told "100
+         *     companies, 94 duplicates" before deciding — which is the whole reason
+         *     the count is separate from `created`.
+         * @default create
+         * @enum {string}
+         */
+        ImportOnDuplicate: "create" | "skip";
         /** @description What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something. */
         ImportRunDisposition: {
             created: number;
+            /**
+             * @description Rows naming a record the estate already holds. NOT a fifth outcome
+             *     and never added to the other four — each duplicate is already
+             *     counted in `created` (it lands and files a review pair) or in
+             *     `skipped` (when the run asked for `on_duplicate: skip`). It is the
+             *     number a human needs before approving: "100 companies, 94 of them
+             *     already here" is a different decision from "100 new companies".
+             */
+            duplicates?: number;
             /** @description Rows matched to an existing record whose mapped values differ. An editable source re-imported after a correction lands here — this is not the frozen-snapshot case, where a match can never differ. */
             updated: number;
             /** @description Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail. */

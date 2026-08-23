@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 155266,
+    "tool_catalog_bytes": 155815,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39593,
+    "approx_wire_tokens_total": 39730,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 35597,
-      "input_schema_bytes": 33910,
-      "output_schema_bytes": 73721,
-      "description_plus_input_schema_bytes": 69507
+      "description_bytes": 35883,
+      "input_schema_bytes": 34139,
+      "output_schema_bytes": 73753,
+      "description_plus_input_schema_bytes": 70022
     }
   },
   "tools": {
@@ -5102,7 +5102,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. create_record for one record you already know. run_id. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates` and still created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates`. Give the user both numbers before committing — \"100 companies, 94 already here\" is their decision, not yours. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5126,6 +5126,14 @@
               "enum": [
                 "organization",
                 "lead"
+              ],
+              "type": "string"
+            },
+            "on_duplicate": {
+              "description": "A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way.",
+              "enum": [
+                "create",
+                "skip"
               ],
               "type": "string"
             }
@@ -6379,7 +6387,7 @@
           "readOnlyHint": true,
           "title": "Read an import report"
         },
-        "description": "What an import will do, or did: rows created, updated, failed, unusable. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "What an import will do, or did: rows created, updated, failed, unusable, and how many are already here (`duplicates`). These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6403,6 +6411,9 @@
                     "disposition": {
                       "properties": {
                         "created": {
+                          "type": "integer"
+                        },
+                        "duplicates": {
                           "type": "integer"
                         },
                         "skipped": {

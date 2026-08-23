@@ -57,10 +57,11 @@ type importRunDTO struct {
 }
 
 type importDispositionDTO struct {
-	Created   int `json:"created"`
-	Updated   int `json:"updated"`
-	Unchanged int `json:"unchanged"`
-	Skipped   int `json:"skipped"`
+	Created    int  `json:"created"`
+	Updated    int  `json:"updated"`
+	Unchanged  int  `json:"unchanged"`
+	Skipped    int  `json:"skipped"`
+	Duplicates *int `json:"duplicates"`
 }
 
 type importIssueDTO struct {
@@ -144,6 +145,21 @@ func uploadCSV(t *testing.T, e *apptest.AppEnv, object, body string) (importProf
 		}
 	}
 	return profile, resp.StatusCode
+}
+
+// createRunOnDuplicate is createRunWithMapping for a run that names a duplicate
+// policy. Separate rather than a variadic so every existing call site keeps
+// saying, in its own text, that it takes the default.
+func createRunOnDuplicate(t *testing.T, e *apptest.AppEnv, object, sourceRef string,
+	mapping map[string]string, onDuplicate string,
+) (importRunDTO, int) {
+	t.Helper()
+	var run importRunDTO
+	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+		"connector": "csv", "object": object, "source_ref": sourceRef,
+		"mapping": mapping, "on_duplicate": onDuplicate,
+	}, nil, &run)
+	return run, status
 }
 
 func createRunWithMapping(t *testing.T, e *apptest.AppEnv, object, sourceRef string, mapping map[string]string) (importRunDTO, int) {
@@ -598,5 +614,239 @@ func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
 	}
 	if _, status := uploadCSV(t, e, "lead", "Email,Email\na@x.test,b@x.test\n"); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a duplicate header → %d, want 422", status)
+	}
+}
+
+// What a CSV row does when a company of that name is ALREADY in the CRM, and
+// what an out-of-enum size_band does. Both were reported as import defects on
+// 2026-08-23 after a run through a chat host; this test is what settles each
+// against the running stack rather than against a reading of the code.
+func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
+	e := setupImportApp(t)
+
+	// The company arrives the way real ones do — created directly, NOT by a
+	// previous CSV run. That distinction is the whole test: the importer's
+	// identity map only remembers rows IT wrote, so a company captured from
+	// mail, a connector or a seed is invisible to it.
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent → %d, want 201", status)
+	}
+
+	// A spreadsheet naming that same company.
+	const second = "Company,Industry\nAkeneo,retail software\n"
+	profile2, _ := uploadCSV(t, e, "organization", second)
+	run2, _ := createRunWithMapping(t, e, "organization", profile2.SourceRef,
+		map[string]string{"Company": "display_name", "Industry": "industry"})
+
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run2.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	// The preview must SAY the company is already there. It does not refuse
+	// the row — the commit creates it and files a review pair, the same as a
+	// manual create — but "create 1" with nothing else said is what let a
+	// chat host report "no duplicates" to a user on 2026-08-23.
+	if got := report.Disposition.Created + report.Disposition.Updated +
+		report.Disposition.Unchanged + report.Disposition.Skipped; got != report.RowsRead {
+		t.Errorf("the disposition sums to %d for %d row(s) read; the contract's invariant is that the four sum to rows_read",
+			got, report.RowsRead)
+	}
+	if len(report.Issues) == 0 {
+		t.Errorf("the preview reported %d create(s) and no issue for a row naming a company "+
+			"the CRM already holds; a human approving this is told nothing about the duplicate",
+			report.Disposition.Created)
+	}
+	// The number a person decides on: "1 company, 1 already here".
+	if report.Disposition.Duplicates == nil || *report.Disposition.Duplicates != 1 {
+		t.Errorf("duplicates = %v, want 1 — this is the count the human is shown before approving",
+			report.Disposition.Duplicates)
+	}
+
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run2.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve 2 → %d, want 202", status)
+	}
+
+	named := 0
+	for _, o := range organizations(t, e).Data {
+		if o.DisplayName == "Akeneo" {
+			named++
+		}
+	}
+	// The duplicate IS created — that is the existing create-path policy, and
+	// changing it is a separate decision — but it must not be silent.
+	var pairs int
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'organization'`).Scan(&pairs)
+	}); err != nil {
+		t.Fatalf("counting dedupe pairs: %v", err)
+	}
+	if named != 2 || pairs != 1 {
+		t.Errorf("after importing a name the CRM already held: %d companies named Akeneo and %d review pair(s); "+
+			"want 2 and 1 — the row lands and the pair is filed for a human", named, pairs)
+	}
+
+	// size_band is a closed enum with a database CHECK constraint. A headcount
+	// column mapped onto it cannot be written, so the PREVIEW is the place to
+	// say so — a dry run that reports a clean create for a row the commit
+	// cannot land has told the user the opposite of what will happen.
+	const bands = "Company,Employees\nNordwind Logistik,240\n"
+	profile3, _ := uploadCSV(t, e, "organization", bands)
+	run3, status3 := createRunWithMapping(t, e, "organization", profile3.SourceRef,
+		map[string]string{"Company": "display_name", "Employees": "size_band"})
+
+	if status3 != http.StatusAccepted {
+		t.Fatalf("create run 3 → %d, want 202", status3)
+	}
+	var r3 importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run3.ID+"/report", nil, nil, &r3); status != http.StatusOK {
+		t.Fatalf("report 3 → %d, want 200", status)
+	}
+	if r3.Disposition.Created != 0 || r3.Disposition.Skipped != 1 || len(r3.Issues) != 1 {
+		t.Fatalf("a headcount mapped onto size_band previewed as created=%d skipped=%d issues=%d; "+
+			"want 0/1/1 — the CHECK constraint would refuse it, so the dry run must say so",
+			r3.Disposition.Created, r3.Disposition.Skipped, len(r3.Issues))
+	}
+
+	// And the commit must agree with the preview it showed.
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run3.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve 3 → %d, want 202", status)
+	}
+	for _, o := range organizations(t, e).Data {
+		if o.DisplayName == "Nordwind Logistik" {
+			t.Error("the commit landed a row the preview disclosed as skipped")
+		}
+	}
+}
+
+// Importing ONE address column must not erase the rest of a company's address.
+// The patch builder writes all six address columns whenever an Address is
+// given, so a file carrying only a City would otherwise blank the street,
+// postal code and country a human had entered.
+//
+// The re-import path is what exercises this: the row must MATCH the incumbent
+// rather than mint a twin, so the file is imported twice — the first landing
+// the company under this importer's own identity, the second carrying only a
+// City.
+func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
+	e := setupImportApp(t)
+
+	// Land the company through the import, with a full address.
+	const full = "Company,Street,City,Postal,Country\n" +
+		"Baqend,Stresemannstr. 23,Hamburg,22769,DE\n"
+	p1, _ := uploadCSV(t, e, "organization", full)
+	r1, _ := createRunWithMapping(t, e, "organization", p1.SourceRef, map[string]string{
+		"Company": "display_name", "Street": "address.line1", "City": "address.city",
+		"Postal": "address.postal_code", "Country": "address.country",
+	})
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+r1.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve 1 → %d, want 202", status)
+	}
+
+	// A corrected file carrying the company and ONE address field.
+	const partial = "Company,City\nBaqend,Berlin\n"
+	profile, _ := uploadCSV(t, e, "organization", partial)
+	run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		map[string]string{"Company": "display_name", "City": "address.city"})
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+
+	var orgs struct {
+		Data []struct {
+			DisplayName string `json:"display_name"`
+			Address     struct {
+				Line1      string `json:"line1"`
+				City       string `json:"city"`
+				PostalCode string `json:"postal_code"`
+				Country    string `json:"country"`
+			} `json:"address"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); status != http.StatusOK {
+		t.Fatalf("listing → %d, want 200", status)
+	}
+	for _, o := range orgs.Data {
+		if o.DisplayName != "Baqend" {
+			continue
+		}
+		if o.Address.City != "Berlin" {
+			t.Errorf("the corrected file did not reach the record: city=%q, want Berlin", o.Address.City)
+		}
+		if o.Address.Line1 == "" || o.Address.PostalCode == "" || o.Address.Country == "" {
+			t.Errorf("importing a City column erased the rest of the address: line1=%q postal=%q country=%q",
+				o.Address.Line1, o.Address.PostalCode, o.Address.Country)
+		}
+	}
+}
+
+// on_duplicate: skip — the preview and the commit must give the SAME answer.
+// A preview that says "create" while the approved run skips is the defect this
+// whole change set exists to remove, in a new place.
+func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
+	e := setupImportApp(t)
+
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent → %d, want 201", status)
+	}
+	orgsBefore := len(organizations(t, e).Data)
+
+	const file = "Company\nKestrel Data\nNordwind Logistik\n"
+	profile, _ := uploadCSV(t, e, "organization", file)
+	run, status := createRunOnDuplicate(t, e, "organization", profile.SourceRef,
+		map[string]string{"Company": "display_name"}, "skip")
+	if status != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", status)
+	}
+
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+		t.Fatalf("preview = created %d skipped %d, want 1 and 1 — the duplicate is skipped, the new company lands",
+			report.Disposition.Created, report.Disposition.Skipped)
+	}
+	if report.Disposition.Duplicates == nil || *report.Disposition.Duplicates != 1 {
+		t.Errorf("duplicates = %v, want 1", report.Disposition.Duplicates)
+	}
+	if got := report.Disposition.Created + report.Disposition.Updated +
+		report.Disposition.Unchanged + report.Disposition.Skipped; got != report.RowsRead {
+		t.Errorf("the disposition sums to %d for %d rows read", got, report.RowsRead)
+	}
+
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+
+	// Exactly one company added, and no second Kestrel.
+	after := organizations(t, e).Data
+	if len(after) != orgsBefore+1 {
+		t.Errorf("companies went from %d to %d; the preview promised one new company", orgsBefore, len(after))
+	}
+	kestrels := 0
+	for _, o := range after {
+		if o.DisplayName == "Kestrel Data" {
+			kestrels++
+		}
+	}
+	if kestrels != 1 {
+		t.Errorf("%d companies named Kestrel Data; the run was asked to skip duplicates", kestrels)
+	}
+}
+
+// An unknown policy is refused rather than silently treated as create.
+func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := uploadCSV(t, e, "organization", "Company\nInitech\n")
+	// Decoded into nothing: a refusal answers a problem document, not a run.
+	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+		"connector": "csv", "object": "organization", "source_ref": profile.SourceRef,
+		"mapping": map[string]string{"Company": "display_name"}, "on_duplicate": "merge",
+	}, nil, nil)
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
 	}
 }

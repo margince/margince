@@ -16881,6 +16881,28 @@ components:
             (IEM-AC-9) and an undo can find what one run created (S-E15.4c).
             Absent means the mapped natural key is used instead; the report
             says which was chosen rather than leaving it to be inferred.
+        on_duplicate:
+          $ref: '#/components/schemas/ImportOnDuplicate'
+
+    ImportOnDuplicate:
+      type: string
+      enum: [create, skip]
+      default: create
+      description: |
+        What to do with a row naming a record the estate ALREADY holds — found
+        by the same dedupe ladder every create path runs, not by this
+        importer's own memory of what it once wrote.
+
+        `create` is the historical behaviour and stays the default: the row
+        lands and the pair goes on the dedupe review queue, exactly as a manual
+        create does. That is right for one company typed by a human and wrong
+        for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+
+        `skip` leaves the incumbent alone and reports the row as skipped.
+
+        The DRY RUN counts duplicates either way, so a person is told "100
+        companies, 94 duplicates" before deciding — which is the whole reason
+        the count is separate from `created`.
 
     ImportRunDisposition:
       type: object
@@ -16888,6 +16910,16 @@ components:
       required: [created, updated, unchanged, skipped]
       properties:
         created:   { type: integer, minimum: 0 }
+        duplicates:
+          type: integer
+          minimum: 0
+          description: |
+            Rows naming a record the estate already holds. NOT a fifth outcome
+            and never added to the other four — each duplicate is already
+            counted in `created` (it lands and files a review pair) or in
+            `skipped` (when the run asked for `on_duplicate: skip`). It is the
+            number a human needs before approving: "100 companies, 94 of them
+            already here" is a different decision from "100 new companies".
         updated:   { type: integer, minimum: 0, description: 'Rows matched to an existing record whose mapped values differ. An editable source re-imported after a correction lands here — this is not the frozen-snapshot case, where a match can never differ.' }
         unchanged: { type: integer, minimum: 0, description: 'Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail.' }
         skipped:   { type: integer, minimum: 0 }

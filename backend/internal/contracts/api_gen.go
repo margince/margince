@@ -4819,6 +4819,24 @@ func (e ImportObject) Valid() bool {
 	}
 }
 
+// Defines values for ImportOnDuplicate.
+const (
+	Create ImportOnDuplicate = "create"
+	Skip   ImportOnDuplicate = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportOnDuplicate enum.
+func (e ImportOnDuplicate) Valid() bool {
+	switch e {
+	case Create:
+		return true
+	case Skip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportRunConnector.
 const (
 	ImportRunConnectorBundle     ImportRunConnector = "bundle"
@@ -14754,6 +14772,22 @@ type CreateImportRunRequest struct {
 	// past the qualification step by the choice of an enum value.
 	Object ImportObject `json:"object"`
 
+	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
+	// by the same dedupe ladder every create path runs, not by this
+	// importer's own memory of what it once wrote.
+	//
+	// `create` is the historical behaviour and stays the default: the row
+	// lands and the pair goes on the dedupe review queue, exactly as a manual
+	// create does. That is right for one company typed by a human and wrong
+	// for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+	//
+	// `skip` leaves the incumbent alone and reports the row as skipped.
+	//
+	// The DRY RUN counts duplicates either way, so a person is told "100
+	// companies, 94 duplicates" before deciding — which is the whole reason
+	// the count is separate from `created`.
+	OnDuplicate *ImportOnDuplicate `json:"on_duplicate,omitempty"`
+
 	// SourceKey The source column holding the row's stable id, written to the row's
 	// provenance so a re-uploaded file updates rather than duplicates
 	// (IEM-AC-9) and an undo can find what one run created (S-E15.4c).
@@ -16489,6 +16523,22 @@ type ImportColumn struct {
 // past the qualification step by the choice of an enum value.
 type ImportObject string
 
+// ImportOnDuplicate What to do with a row naming a record the estate ALREADY holds — found
+// by the same dedupe ladder every create path runs, not by this
+// importer's own memory of what it once wrote.
+//
+// `create` is the historical behaviour and stays the default: the row
+// lands and the pair goes on the dedupe review queue, exactly as a manual
+// create does. That is right for one company typed by a human and wrong
+// for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+//
+// `skip` leaves the incumbent alone and reports the row as skipped.
+//
+// The DRY RUN counts duplicates either way, so a person is told "100
+// companies, 94 duplicates" before deciding — which is the whole reason
+// the count is separate from `created`.
+type ImportOnDuplicate string
+
 // ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
 type ImportRowIssue struct {
 	// Column The offending column, when one is to blame.
@@ -16541,7 +16591,15 @@ type ImportRunConnector string
 // ImportRunDisposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 type ImportRunDisposition struct {
 	Created int `json:"created"`
-	Skipped int `json:"skipped"`
+
+	// Duplicates Rows naming a record the estate already holds. NOT a fifth outcome
+	// and never added to the other four — each duplicate is already
+	// counted in `created` (it lands and files a review pair) or in
+	// `skipped` (when the run asked for `on_duplicate: skip`). It is the
+	// number a human needs before approving: "100 companies, 94 of them
+	// already here" is a different decision from "100 new companies".
+	Duplicates *int `json:"duplicates,omitempty"`
+	Skipped    int  `json:"skipped"`
 
 	// Unchanged Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail.
 	Unchanged int `json:"unchanged"`
