@@ -1999,4 +1999,132 @@ describe("ComposeModal started from an account", () => {
     await screen.findByRole("button", { name: "Draft with AI" });
     expect(screen.queryByText(/will be filed under/)).toBeNull();
   });
+
+  // The case this behaviour was built for: a deal whose project was attached
+  // AFTER the conversation started, so the mail being answered names no
+  // project while the deal does.
+  it("falls back to the deal's project when the thread names none, and says why", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links: [{ entity_type: "deal", entity_id: "d-1" }],
+        }),
+      "GET /deals/d-1": () =>
+        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
+      "GET /projects/pr-9": () =>
+        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="deal"
+        entityId="d-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // It names the project AND the reason, because the rep never put this
+    // project on this conversation.
+    expect(
+      await screen.findByText(/filed under Netcare 2 project, this deal/),
+    ).toBeTruthy();
+    // And the key lands in the subject, where the customer's reply carries it
+    // back to the same project.
+    await waitFor(() =>
+      expect(
+        (screen.getByPlaceholderText("Subject") as HTMLInputElement).value,
+      ).toBe("[N2P-1]"),
+    );
+    expect(screen.getByText(/\[N2P-1\] is added to the subject/)).toBeTruthy();
+  });
+
+  it("takes the tag back out of the subject when the rep declines the filing", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links: [{ entity_type: "deal", entity_id: "d-1" }],
+        }),
+      "GET /deals/d-1": () =>
+        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
+      "GET /projects/pr-9": () =>
+        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="deal"
+        entityId="d-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const subject = () =>
+      screen.getByPlaceholderText("Subject") as HTMLInputElement;
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    await user.click(screen.getByLabelText("File under this project"));
+
+    // A tag promising a routing that will not happen is worse than no tag.
+    await waitFor(() => expect(subject().value).toBe(""));
+    expect(screen.queryByText(/is added to the subject/)).toBeNull();
+  });
+
+  it("leaves a tag the rep deleted by hand deleted", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links: [{ entity_type: "deal", entity_id: "d-1" }],
+        }),
+      "GET /deals/d-1": () =>
+        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
+      "GET /projects/pr-9": () =>
+        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="deal"
+        entityId="d-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const subject = () =>
+      screen.getByPlaceholderText("Subject") as HTMLInputElement;
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    // Deleting the tag is a second way to say "not this one". The composer
+    // must not put it back under the rep's cursor.
+    await user.clear(subject());
+    await user.type(subject(), "Re: ohne Tag");
+
+    await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
+    // And it stays gone rather than reappearing on the next render.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(subject().value).toBe("Re: ohne Tag");
+  });
 });
