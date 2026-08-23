@@ -49,21 +49,11 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterStatus:         storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Status = v }),
 }
 
-var projectListFilters = storekit.FilterSet[ListProjectsInput]{
-	filterKey: storekit.FilterWord(func(in *ListProjectsInput, v *string) { in.Key = v }),
-	filterOrganizationID: storekit.FilterID(
-		func(in *ListProjectsInput, id *ids.OrganizationID) { in.OrganizationID = id }),
-	filterOwnerID: storekit.FilterID(func(in *ListProjectsInput, id *ids.UserID) { in.OwnerID = id }),
-	filterPhase:   storekit.FilterWord(func(in *ListProjectsInput, v *string) { in.Phase = v }),
-}
-
 // ListFilters names what SearchEntity can narrow one entity type by.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
 	case datasource.EntityDeal:
 		return dealListFilters.Names()
-	case datasource.EntityProject:
-		return projectListFilters.Names()
 	default:
 		return nil
 	}

@@ -81,6 +81,13 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	// and TestSessionScopedStoreNeverConsultsTheSeatGates (dealrooms) hold the
 	// shape; the three anonymous operations are bounded by the credential digest
 	// itself, which is the authentication.
+	// Tx opens a transaction and runs the caller's function in it. It reads no
+	// row and writes none, so there is nothing here for a gate to admit or
+	// refuse: the gate belongs to the statements the caller then runs, and every
+	// one of them takes its own. Exported only because storekit's list helper
+	// takes the transaction opener rather than a database handle of its own.
+	"internal/modules/deals:Tx":                               "opens a transaction and runs the caller's function in it; reads and writes nothing itself, and every statement inside takes its own gate",
+	"internal/modules/projects:Tx":                            "opens a transaction and runs the caller's function in it; reads and writes nothing itself, and every statement inside takes its own gate",
 	"internal/modules/dealrooms:PeekCredential":               "anonymous by design: answers only whether a credential digest is exchangeable, one EXISTS over the invitation joined to its live participant and unarchived room; no row leaves the call",
 	"internal/modules/dealrooms:ExchangeCredential":           "the authentication itself: consumes the credential in one UPDATE whose WHERE is the exchangeable predicate, so the row it writes is the one the presented secret names; the session it opens is attributed to that participant",
 	"internal/modules/dealrooms:ResolveSession":               "the session lookup every buyer request runs: one SELECT keyed on the token digest, joined to the participant on (id, room_id); it is what BINDS the buyer's authority, so there is no earlier gate for it to take",

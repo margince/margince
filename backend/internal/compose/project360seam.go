@@ -31,6 +31,7 @@ func project360Reader(pool *pgxpool.Pool) agents.Project360Reader {
 	svc := project360.NewService(
 		pool,
 		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(catalog),
+		ProjectsStore(pool),
 		people.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
 		contracts.NewStore(InstallationDB(pool)),
 		activities.NewStore(InstallationDB(pool)),

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The project partial-update path. `phase` is deliberately absent from the
 // input: a transition moves through AdvanceProjectPhase so the row change
@@ -45,12 +45,12 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.activeColumnsFor(ctx, projectObject)
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
 	var out crmcontracts.Project
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}

@@ -108,11 +108,12 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 // directly would.
 func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	dealStore := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	projectStore := ProjectsStore(pool)
 	peopleStore := people.NewStore(InstallationDB(pool))
 	taskStore := activities.NewStore(InstallationDB(pool))
 	seats := identity.NewService(pool)
 	return func(ctx context.Context, projectID ids.UUID) (agents.HandoffFacts, error) {
-		project, err := dealStore.GetProject(ctx,
+		project, err := projectStore.GetProject(ctx,
 			ids.From[ids.ProjectKind](projectID), storekit.LiveOnly)
 		if err != nil {
 			return agents.HandoffFacts{}, err

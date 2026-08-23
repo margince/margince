@@ -18,7 +18,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -70,7 +70,7 @@ func TestAQuietProjectIsRaisedOncePerQuietEpisode(t *testing.T) {
 	now := time.Now().UTC()
 	org := e.SeedOrg(t, "Quiet Client", nil)
 	erp := seedProject(admin, t, e, "ERP replacement", strPtr("ERP-27"), org, &e.Rep1)
-	advanceProject(admin, t, e, erp.ID, deals.PhaseDelivering)
+	advanceProject(admin, t, e, erp.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "meeting", now.AddDate(0, 0, -45), &erp.ID)
 	// Not in flight: an initiative nobody has touched is not a finding.
 	idea := seedProject(admin, t, e, "Someday", nil, org, nil)
@@ -116,7 +116,7 @@ func TestAProjectSignalIsWithheldFromASeatWithoutTheProjectGrant(t *testing.T) {
 	now := time.Now().UTC()
 	org := e.SeedOrg(t, "Quiet Client", nil)
 	erp := seedProject(admin, t, e, "ERP replacement", nil, org, nil)
-	advanceProject(admin, t, e, erp.ID, deals.PhaseDelivering)
+	advanceProject(admin, t, e, erp.ID, projects.PhaseDelivering)
 	fileActivity(admin, t, e, "meeting", now.AddDate(0, 0, -45), &erp.ID)
 	if pass := quietProjectPass(t, e, now); pass.Raised != 1 {
 		t.Fatalf("raised %d, want 1", pass.Raised)

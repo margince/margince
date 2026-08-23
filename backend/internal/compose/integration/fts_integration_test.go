@@ -15,8 +15,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -131,13 +131,13 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Acme Tooling", &e.Rep1)
 	key := "ERP-27"
-	keyed, err := e.Deals.CreateProject(admin, deals.CreateProjectInput{
+	keyed, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
 		Name: "Cutover rehearsal", Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create keyed project: %v", err)
 	}
-	keyless, err := e.Deals.CreateProject(admin, deals.CreateProjectInput{
+	keyless, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
 		Name: "Cutover planning", OrganizationID: orgIDOf(org), Source: "manual",
 	})
 	if err != nil {
@@ -168,7 +168,7 @@ func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing
 	e := Setup(t)
 	org := e.SeedOrg(t, "Acme Tooling", &e.Rep1)
 	key := "ERP-27"
-	project, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
+	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
 		Name: "Cutover rehearsal", Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
 	})
 	if err != nil {

@@ -22,13 +22,21 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
 
-func projectProvider(e *Env) *deals.Provider {
+func projectProvider(e *Env) *projects.Provider {
+	return projects.NewProvider(e.DB())
+}
+
+// dealProvider is the deals half of the same seam. The advance verb and the
+// stage semantic below are a DEAL's, and deals is where they live — a project
+// has phases, not stages.
+func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
@@ -201,7 +209,7 @@ func principalReadOnlyProject() principal.Permissions {
 // here silently changes the autonomy tier of a real money-moving action.
 func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
 	e := Setup(t)
-	p := projectProvider(e)
+	p := dealProvider(e)
 	ctx := e.Admin()
 	pipeline, open, won := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Seam deal", pipeline, open, nil)
@@ -244,7 +252,7 @@ func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
 // that would resolve an unknown move to the most permissive tier.
 func TestTheAgentSeamRefusesToInventAStageSemantic(t *testing.T) {
 	e := Setup(t)
-	p := projectProvider(e)
+	p := dealProvider(e)
 	DealFixture(t, e)
 
 	semantic, _, err := p.StageSemantic(e.Admin(), ids.NewV7())

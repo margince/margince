@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // A required id the caller omitted must be named as a missing argument, not
 // discovered as a missing row.
 //
 // The defect this closes: oapi-codegen renders a REQUIRED body id as a
 // non-pointer openapi_types.UUID, and encoding/json leaves an absent key at the
-// zero value with no error. So `create_record` for a deal reached
-// ensureOpenBirthStage with two zero UUIDs, whose composite lookup matched
-// nothing and answered a bare apperrors.ErrNotFound — a 404 naming no argument
-// on REST and "not found" with nothing to fix on MCP. Both cases were reported
-// as "cannot create a deal or a project at all", and they were.
+// zero value with no error. So a create reached the store with a zero UUID,
+// whose lookup matched nothing and answered a bare apperrors.ErrNotFound — a
+// 404 naming no argument on REST and "not found" with nothing to fix on MCP.
+// The case was reported as "cannot create a project at all", and it was.
 //
 // The mapping is where this belongs, not the handler: the HTTP handlers and the
 // SoR provider (the MCP door) both decode the same crm.yaml shapes through these
@@ -101,44 +100,28 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 		call  func(t *testing.T, body []byte) error
 	}{
 		{
-			name:  "CreateDealRequest",
-			shape: reflect.TypeFor[crmcontracts.CreateDealRequest](),
+			name:  "CreateProjectRequest",
+			shape: reflect.TypeFor[crmcontracts.CreateProjectRequest](),
 			call: func(t *testing.T, body []byte) error {
 				t.Helper()
-				var req crmcontracts.CreateDealRequest
+				var req crmcontracts.CreateProjectRequest
 				if err := json.Unmarshal(body, &req); err != nil {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
-				_, err := dealCreateInput(req)
+				_, err := projectCreateInput(req)
 				return err
 			},
 		},
 		{
-			// advance_deal is guarded on the MCP side at Registry.Invoke, so this
-			// mapping is what keeps REST from answering a bare 404 for the
-			// identical mistake.
-			name:  "AdvanceDealRequest",
-			shape: reflect.TypeFor[crmcontracts.AdvanceDealRequest](),
+			name:  "TransferProjectOwnershipRequest",
+			shape: reflect.TypeFor[crmcontracts.TransferProjectOwnershipRequest](),
 			call: func(t *testing.T, body []byte) error {
 				t.Helper()
-				var req crmcontracts.AdvanceDealRequest
+				var req crmcontracts.TransferProjectOwnershipRequest
 				if err := json.Unmarshal(body, &req); err != nil {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
-				_, err := advanceDealInput(req, nil)
-				return err
-			},
-		},
-		{
-			name:  "CreateStageRequest",
-			shape: reflect.TypeFor[crmcontracts.CreateStageRequest](),
-			call: func(t *testing.T, body []byte) error {
-				t.Helper()
-				var req crmcontracts.CreateStageRequest
-				if err := json.Unmarshal(body, &req); err != nil {
-					t.Fatalf("probe body does not decode: %v", err)
-				}
-				_, err := stageCreateInput(req)
+				_, err := projectTransferInput(req)
 				return err
 			},
 		},

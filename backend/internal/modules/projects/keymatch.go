@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The subject-key lookup behind the capture ladder's third rung: which LIVE
 // project one of a subject's tokens is the key of. It lives here because
@@ -55,7 +55,7 @@ func (s *Store) MatchProjectKey(ctx context.Context, tokens []string) (ids.UUID,
 		where += " AND " + scope
 	}
 	var matched []ids.UUID
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		// LIMIT 2 because the query answers a yes/no/ambiguous question, not a
 		// list: one row is the match, two is enough to know it is ambiguous,
 		// and a third would only be read to be discarded.

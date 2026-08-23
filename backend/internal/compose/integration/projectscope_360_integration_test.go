@@ -141,7 +141,7 @@ func TestPerson360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 func TestOrganization360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	svc := org360.NewService(e.Pool, e.People, e.Deals, approvals.NewService(e.DB()),
+	svc := org360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
 	orgID := orgIDOf(f.org)
 
@@ -211,7 +211,7 @@ func TestAProjectScopeIsGatedLikeAReadOfTheProject(t *testing.T) {
 		t.Errorf("person page scoped to a project that does not exist: err = %v, want not found", err)
 	}
 
-	orgSvc := org360.NewService(e.Pool, e.People, e.Deals, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
+	orgSvc := org360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
 	if _, err := orgSvc.AssembleScoped(rep, orgIDOf(f.org), org360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("company page scoped without a project grant: err = %v, want permission denied", err)
 	}

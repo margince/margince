@@ -146,10 +146,12 @@ var tableOwners = map[string]string{
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
 	"deal_forecast_history": "internal/modules/deals",
-	// The project lives in the deals bounded context (ADR-0073): it is the
-	// body of work the deals hang off, not a context of its own.
-	"project":               "internal/modules/deals",
-	"project_phase_history": "internal/modules/deals",
+	// The project is its own bounded context, superseding ADR-0073 — see
+	// modules/projects/doc.go. This entry is what makes that a rule rather than
+	// a layout: a statement writing either table from any other package fails
+	// TestEveryPackageOnlyWritesTablesItOwns.
+	"project":               "internal/modules/projects",
+	"project_phase_history": "internal/modules/projects",
 	"fx_rate":               "internal/modules/deals",
 	"product":               "internal/modules/deals",
 	"offer":                 "internal/modules/deals",
@@ -429,6 +431,13 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	"internal/modules/deals:list_member":  "archiving a deal removes its list memberships in the archive transaction",
 	"internal/modules/deals:taggable":     "archiving a deal removes its tag rows in the archive transaction",
 	"internal/modules/deals:relationship": "archiving a deal archives its stakeholder relationships in the archive transaction — a live relationship to an archived deal would leak it into row-scope walks",
+	// The project's archive carries the same three, for the same reasons: the
+	// edges are attributes of the grouping being archived, and each must go in
+	// the SAME transaction or a reader sees a live edge to a record that no
+	// longer exists.
+	"internal/modules/projects:list_member":  "archiving a project removes its list memberships in the archive transaction",
+	"internal/modules/projects:taggable":     "archiving a project removes its tag rows in the archive transaction",
+	"internal/modules/projects:relationship": "archiving a project archives its stakeholder relationships in the archive transaction — a live relationship to an archived project would leak it into row-scope walks",
 
 	// privacy is the module whose JOB is crossing stores: a data-subject
 	// obligation (erasure Art. 17, retention ADR-0011) must reach every

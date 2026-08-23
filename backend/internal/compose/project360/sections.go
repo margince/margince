@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -55,7 +56,7 @@ func (a *assembly) readOrganization() error {
 // is effectively always present; it is still listed in sections_omitted's
 // vocabulary because the store gates it in its own right.
 func (a *assembly) readPhaseHistory() error {
-	history, err := a.svc.deals.ListProjectPhaseHistoryTx(a.ctx, a.tx, a.projectID)
+	history, err := a.svc.projects.ListProjectPhaseHistoryTx(a.ctx, a.tx, a.projectID)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (a *assembly) readPhaseHistory() error {
 		row.ChangedBy.DisplayName = t.ChangedByName
 		data = append(data, row)
 	}
-	durations := deals.FoldPhaseDurations(history, a.now)
+	durations := projects.FoldPhaseDurations(history, a.now)
 	folded := make([]crmcontracts.Project360PhaseDuration, 0, len(durations))
 	for _, d := range durations {
 		folded = append(folded, crmcontracts.Project360PhaseDuration{

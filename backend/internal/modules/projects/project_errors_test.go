@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The schema's business rules reach a caller through this mapping, so the
 // mapping is what decides whether a breach reads as "you broke rule X" or as
@@ -155,7 +155,6 @@ func TestProjectRefusalsKeepSchemaNamesOffTheWire(t *testing.T) {
 		&ClosedReasonRequiredError{},
 		&ProjectPhaseError{},
 		&ProjectDateRangeError{},
-		&DealProjectOrgMismatchError{},
 	} {
 		for _, leak := range append(projectCheckConstraints(t), "uq_", "SQLSTATE") {
 			if strings.Contains(err.Error(), leak) {

@@ -11,7 +11,7 @@ package compose
 // for themselves.
 //
 // It asks the SAME question the projects-gone-quiet report answers, through
-// the one predicate the deals module spells (deals.ProjectQuietSQL), so the
+// the one predicate the deals module spells (projects.ProjectQuietSQL), so the
 // report and the signal never name different projects.
 
 import (
@@ -21,7 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -50,13 +50,13 @@ type quietProject struct {
 // the default window, with the instant each fell silent.
 func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietProject, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.organization_id, p.name, `+deals.ProjectQuietAnchorSQL("p")+`
+		SELECT p.id, p.organization_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
 		  FROM project p
 		 WHERE p.archived_at IS NULL
-		   AND `+deals.ProjectInFlightSQL("p")+`
-		   AND `+deals.ProjectQuietSQL("p", "$1", 2)+`
-		 ORDER BY `+deals.ProjectQuietAnchorSQL("p")+`, p.id`,
-		now, deals.DefaultProjectQuietDays)
+		   AND `+projects.ProjectInFlightSQL("p")+`
+		   AND `+projects.ProjectQuietSQL("p", "$1", 2)+`
+		 ORDER BY `+projects.ProjectQuietAnchorSQL("p")+`, p.id`,
+		now, projects.DefaultProjectQuietDays)
 	if err != nil {
 		return nil, fmt.Errorf("scan quiet projects: %w", err)
 	}

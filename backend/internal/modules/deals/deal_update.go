@@ -61,7 +61,7 @@ func (s *Store) UpdateDeal(ctx context.Context, id ids.DealID, in UpdateDealInpu
 		return crmcontracts.Deal{}, err
 	}
 	var out crmcontracts.Deal
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = s.updateDealInTx(ctx, tx, id, in, active)
 		return err

@@ -25,13 +25,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	collectionsmod "github.com/gradionhq/margince/backend/internal/modules/collections"
 	customfieldsmod "github.com/gradionhq/margince/backend/internal/modules/customfields"
 	dealsmod "github.com/gradionhq/margince/backend/internal/modules/deals"
 	peoplemod "github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -72,7 +72,7 @@ type fixture struct {
 	ctx      context.Context
 	svc      *customfieldsmod.Service
 	people   *peoplemod.Store
-	projects *dealsmod.Store
+	projects *projects.Store
 	lists    *collectionsmod.Store
 }
 
@@ -89,7 +89,7 @@ func setupFixture(t *testing.T) fixture {
 		ctx:      e.As(e.Rep1, nil, testPerms),
 		svc:      svc,
 		people:   peoplemod.NewStore(e.DB()).WithFieldCatalog(svc),
-		projects: dealsmod.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(svc),
+		projects: projects.NewStore(e.DB()).WithFieldCatalog(svc),
 		lists:    collectionsmod.NewStore(e.DB()).WithFieldCatalog(svc),
 	}
 }
@@ -330,20 +330,20 @@ func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 	}
 	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
 
-	matching, err := f.projects.CreateProject(f.ctx, dealsmod.CreateProjectInput{
+	matching, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
 		Name: "Match", OrganizationID: orgID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create matching project: %v", err)
 	}
-	if _, err := f.projects.CreateProject(f.ctx, dealsmod.CreateProjectInput{
+	if _, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
 		Name: "Other", OrganizationID: orgID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("create non-matching project: %v", err)
 	}
 	// Set through the update path, not at create: a field a customer fills
 	// in later must filter exactly as one set at creation would.
-	if _, err := f.projects.UpdateProject(f.ctx, ids.From[ids.ProjectKind](ids.UUID(matching.Id)), dealsmod.UpdateProjectInput{
+	if _, err := f.projects.UpdateProject(f.ctx, ids.From[ids.ProjectKind](ids.UUID(matching.Id)), projects.UpdateProjectInput{
 		CustomFields: map[string]any{column: "retainer"},
 	}); err != nil {
 		t.Fatalf("setting the custom field through the update path: %v", err)

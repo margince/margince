@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The project write paths: create, archive, and the typed errors the
 // transport maps onto contract codes. A project is the body of work a
@@ -29,12 +29,6 @@ import (
 // projectObject is this record type's RBAC object and catalog object name,
 // spelled once.
 const projectObject = "project"
-
-// dealProjectSameOrgConstraint is the constraint trigger that enforces
-// "a deal and its project name the same company" — a rule spanning two
-// rows, so it cannot be a CHECK and its name is what the deal write paths
-// match on to answer 422 rather than 500.
-const dealProjectSameOrgConstraint = "deal_project_same_org"
 
 // PhaseInitiative is where every project is born: the ladder's head. A
 // project only ever leaves it through AdvanceProjectPhase, which is what
@@ -73,13 +67,13 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.activeColumnsFor(ctx, projectObject)
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
 
 	var out crmcontracts.Project
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = createProjectTx(ctx, tx, in, by, active)
 		return err
@@ -137,7 +131,7 @@ func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by s
 		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "create", projectObject, id.UUID, nil, map[string]any{dealNameColumn: in.Name})
+	auditID, err := storekit.Audit(ctx, tx, "create", projectObject, id.UUID, nil, map[string]any{projectNameField: in.Name})
 	if err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("audit project create: %w", err)
 	}
@@ -169,7 +163,7 @@ func (s *Store) RefuseArchiveProject(ctx context.Context, id ids.ProjectID) erro
 	if err := auth.Require(ctx, projectObject, principal.ActionDelete); err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
+	return s.Tx(ctx, func(tx pgx.Tx) error {
 		return auth.EnsureWritable(ctx, tx, projectObject, id.UUID)
 	})
 }
@@ -186,12 +180,12 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 	if err := auth.Require(ctx, projectObject, principal.ActionDelete); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.activeColumnsFor(ctx, projectObject)
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
 	var out crmcontracts.Project
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
@@ -413,19 +407,4 @@ func (e *ProjectDateRangeError) FieldFault() (field, code, message string) {
 		field = "ended_at"
 	}
 	return field, "invalid_date_range", e.Error()
-}
-
-// DealProjectOrgMismatchError maps to 422: a deal and the project it
-// belongs to must name the same company. Raised by the
-// deal_project_same_org constraint trigger, which is the only place the
-// cross-row rule can be enforced.
-type DealProjectOrgMismatchError struct{}
-
-func (e *DealProjectOrgMismatchError) Error() string {
-	return "a deal and its project must belong to the same company"
-}
-
-// FieldFault refuses linking a deal to a project under a different organization.
-func (e *DealProjectOrgMismatchError) FieldFault() (field, code, message string) {
-	return "project_id", "project_organization_mismatch", e.Error()
 }

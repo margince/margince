@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package storekit
 
-// The prelude every list read in this module shares: validate the sort
+// The prelude every keyset list read shares: validate the sort
 // against the record's vocabulary plus its live custom columns, clamp the
 // page size, and build the WHERE terms that are the same for every record
 // type — the caller's row scope, its custom-field equality filters, and the
@@ -18,34 +18,41 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// The column names the module's lists order by, spelled once so a
-// vocabulary entry and the clause reading it cannot drift apart.
-const (
-	listCreatedAtColumn = "created_at"
-	listUpdatedAtColumn = "updated_at"
-)
+// ListWhereSeed opens a list/read WHERE chain so every optional narrowing
+// below it can be appended unconditionally with " AND ".
+const ListWhereSeed = "1=1"
 
-// listPrelude is one list read's validated, scope-bounded starting point.
+// ListPrelude is one list read's validated, scope-bounded starting point.
 // It is passed by POINTER throughout: `arg` appends to args, and callers
 // keep registering arguments (their own filters) after it is built — a
 // value copy would leave those arguments on a dead struct and the query
 // short of placeholders.
-type listPrelude struct {
-	sorted *storekit.ListSort
+type ListPrelude struct {
+	sorted *ListSort
 	limit  int
 	where  []string
 	args   []any
 	arg    func(any) int
 }
 
-// buildListPrelude assembles it, or returns the first refusal — an
+// Where is the scope-bounded, cursor-bounded WHERE the prelude has assembled.
+// A caller appends its own record-specific terms to the returned slice.
+func (p *ListPrelude) Where() []string { return p.where }
+
+// Arg registers one query argument and answers its placeholder number, so a
+// caller never hand-numbers a $N. The prelude owns the argument slice because
+// its own clauses are already in it.
+//
+//craft:ignore naked-any v is one bind value on its way to pgx, which accepts any Go type its driver can encode (a typed id, a string, a bool, a time.Time, a slice for an ANY(...)); the encoding contract is pgx's, so there is no narrower type to give it here
+func (p *ListPrelude) Arg(v any) int { return p.arg(v) }
+
+// BuildListPrelude assembles it, or returns the first refusal — an
 // out-of-vocabulary sort field, an unknown cf_ filter, an unreadable cursor.
-func buildListPrelude(
+func BuildListPrelude(
 	ctx context.Context,
 	object string,
 	fields map[string]string,
@@ -54,13 +61,13 @@ func buildListPrelude(
 	limit *int,
 	cursor *string,
 	customFilters map[string]string,
-) (*listPrelude, error) {
-	sorted, err := storekit.ParseListSort(sort, storekit.SortVocabulary(fields, active))
+) (*ListPrelude, error) {
+	sorted, err := ParseListSort(sort, SortVocabulary(fields, active))
 	if err != nil {
 		return nil, err
 	}
 
-	p := &listPrelude{sorted: sorted, limit: storekit.ClampLimit(limit), where: []string{whereSeed}}
+	p := &ListPrelude{sorted: sorted, limit: ClampLimit(limit), where: []string{ListWhereSeed}}
 	p.arg = func(v any) int { p.args = append(p.args, v); return len(p.args) }
 
 	// A row-scoped record narrows to what this reader may see. The
@@ -77,7 +84,7 @@ func buildListPrelude(
 		}
 	}
 
-	cfClauses, err := storekit.CustomFilterClauses(active, customFilters, p.arg)
+	cfClauses, err := CustomFilterClauses(active, customFilters, p.arg)
 	if err != nil {
 		return nil, err
 	}
@@ -93,73 +100,80 @@ func buildListPrelude(
 	return p, nil
 }
 
-// runListPage executes one prepared list read and turns it into a page:
+// TxRunner opens the transaction a list read runs inside. A module's store
+// satisfies it with the pool it is already bound to, so this helper never holds
+// a database handle of its own and the workspace binding stays with the caller.
+type TxRunner interface {
+	Tx(ctx context.Context, fn func(pgx.Tx) error) error
+}
+
+// RunListPage executes one prepared list read and turns it into a page:
 // fetch limit+1 rows to learn whether another page exists, trim to the
 // page, and encode the next cursor from the last row kept. Generic over
 // the record type because the shape — not the record — is what repeats;
 // `scan` and `key` are the only genuinely per-record parts.
-func runListPage[T any](
+func RunListPage[T any](
 	ctx context.Context,
-	s *Store,
-	pre *listPrelude,
+	s TxRunner,
+	pre *ListPrelude,
 	table, columns string,
 	active []fieldcatalog.Column,
 	where []string,
-	scan func(pgx.Rows, []fieldcatalog.Column, *storekit.ListSort) ([]T, []*string, error),
+	scan func(pgx.Rows, []fieldcatalog.Column, *ListSort) ([]T, []*string, error),
 	key func(T) (time.Time, ids.UUID),
 	// finish runs over the trimmed page inside the same transaction — the
 	// field-mask pass, which needs one more statement over the page's ids.
 	finish ...func(pgx.Tx, []T) error,
-) ([]T, storekit.Page, error) {
+) ([]T, Page, error) {
 	var out []T
-	var page storekit.Page
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, page, err = runListPageTx(ctx, tx, pre, table, columns, active, where, scan, key, finish...)
+	var page Page
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		out, page, err = RunListPageTx(ctx, tx, pre, table, columns, active, where, scan, key, finish...)
 		return err
 	})
 	return out, page, err
 }
 
-// runListPageTx is runListPage inside a caller-opened transaction — the
+// RunListPageTx is RunListPage inside a caller-opened transaction — the
 // composite record reads, whose every section must describe one instant.
 // Same statement, same trim, same finish pass; only the transaction is
 // borrowed.
-func runListPageTx[T any](
+func RunListPageTx[T any](
 	ctx context.Context,
 	tx pgx.Tx,
-	pre *listPrelude,
+	pre *ListPrelude,
 	table, columns string,
 	active []fieldcatalog.Column,
 	where []string,
-	scan func(pgx.Rows, []fieldcatalog.Column, *storekit.ListSort) ([]T, []*string, error),
+	scan func(pgx.Rows, []fieldcatalog.Column, *ListSort) ([]T, []*string, error),
 	key func(T) (time.Time, ids.UUID),
 	finish ...func(pgx.Tx, []T) error,
-) ([]T, storekit.Page, error) {
+) ([]T, Page, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT `+columns+storekit.SelectSuffix(active)+pre.sorted.CursorKeySuffix()+
+		`SELECT `+columns+SelectSuffix(active)+pre.sorted.CursorKeySuffix()+
 			` FROM `+table+` WHERE `+strings.Join(where, " AND ")+
-			pre.sorted.OrderBy()+storekit.SQLf(` LIMIT %d`, pre.limit+1),
+			pre.sorted.OrderBy()+SQLf(` LIMIT %d`, pre.limit+1),
 		pre.args...)
 	if err != nil {
-		return nil, storekit.Page{}, err
+		return nil, Page{}, err
 	}
 	defer rows.Close()
 	out, cursorKeys, err := scan(rows, active, pre.sorted)
 	if err != nil {
-		return nil, storekit.Page{}, err
+		return nil, Page{}, err
 	}
-	var page storekit.Page
+	var page Page
 	if len(out) > pre.limit {
 		out = out[:pre.limit]
 		createdAt, id := key(out[len(out)-1])
-		page = storekit.Page{
+		page = Page{
 			HasMore:    true,
 			NextCursor: pre.sorted.EncodePageCursor(cursorKeys[pre.limit-1], createdAt, id),
 		}
 	}
 	for _, f := range finish {
 		if err := f(tx, out); err != nil {
-			return nil, storekit.Page{}, err
+			return nil, Page{}, err
 		}
 	}
 	if out == nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 )
 
 // Deals is the installation seam the deals module reads through.
@@ -31,5 +32,9 @@ func Deals() deals.Installation {
 		// people owns `partner`, so the "is this company a partner" read lives
 		// there and the edge is injected here for the same reason.
 		EnsurePartner: people.EnsureOrganizationIsPartner,
+		// projects owns `project`, so the attach check and the delivery advance
+		// live there and the edges are injected here for the same reason.
+		EnsureProjectAttachable: projects.EnsureAttachable,
+		StartDeliveryForWonDeal: projects.StartDeliveryForWonDeal,
 	}
 }

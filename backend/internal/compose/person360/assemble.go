@@ -28,6 +28,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/consent"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
@@ -44,10 +45,11 @@ const sectionCap = 25
 
 // Service assembles the composite read from the module stores it composes.
 type Service struct {
-	pool    *pgxpool.Pool
-	people  *people.Store
-	deals   *deals.Store
-	consent *consent.Store
+	pool     *pgxpool.Pool
+	people   *people.Store
+	deals    *deals.Store
+	projects *projects.Store
+	consent  *consent.Store
 	// feedback is the correction ledger, consulted so a moment a human
 	// dismissed does not come back.
 	feedback *ai.FeedbackStore
@@ -64,11 +66,15 @@ func NewService(
 	pool *pgxpool.Pool,
 	peopleStore *people.Store,
 	dealsStore *deals.Store,
+	projectStore *projects.Store,
 	consentStore *consent.Store,
 	feedbackStore *ai.FeedbackStore,
 	now func() time.Time,
 ) *Service {
-	return &Service{pool: pool, people: peopleStore, deals: dealsStore, consent: consentStore, feedback: feedbackStore, now: now}
+	return &Service{
+		pool: pool, people: peopleStore, deals: dealsStore, projects: projectStore,
+		consent: consentStore, feedback: feedbackStore, now: now,
+	}
 }
 
 // WithProviders binds the licensed-data-provider registry, which the provider

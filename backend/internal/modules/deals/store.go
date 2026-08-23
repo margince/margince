@@ -16,6 +16,13 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// The column names this module's lists order by, spelled once so a vocabulary
+// entry and the clause reading it cannot drift apart.
+const (
+	listCreatedAtColumn = "created_at"
+	listUpdatedAtColumn = "updated_at"
+)
+
 // whereSeed opens a list/read WHERE chain so every optional narrowing
 // appends uniformly — the chain is never empty even when no filter applies.
 const whereSeed = "1=1"
@@ -47,6 +54,11 @@ type Store struct {
 	// stampCorrespondence shields the correspondence a concluded deal turns
 	// into a Handelsbrief. Injected, because deals may not import activities.
 	stampCorrespondence StampCorrespondence
+
+	// The project edges (projectseam.go), injected because deals may not import
+	// the module that owns the project.
+	ensureProjectAttachable EnsureProjectAttachable
+	startDeliveryForWonDeal StartDeliveryForWonDeal
 }
 
 // InstallationValue resolves ONE installation-identity value inside a
@@ -71,6 +83,13 @@ type Installation struct {
 	// WithX setter because every construction site already passes this struct,
 	// and a seam a caller can forget is one that silently stops shielding.
 	StampCorrespondence StampCorrespondence
+	// EnsureProjectAttachable refuses a project_id this caller may not write
+	// to (projectseam.go). `projects` owns that table, so the edge is injected
+	// here rather than read across the module boundary (ADR-0054).
+	EnsureProjectAttachable EnsureProjectAttachable
+	// StartDeliveryForWonDeal moves a won deal's project into delivery, in the
+	// transaction that recorded the win (projectseam.go).
+	StartDeliveryForWonDeal StartDeliveryForWonDeal
 	// EnsurePartner refuses a partner_org_id that names a company with no
 	// partner programme. `people` owns that table, so the edge is injected
 	// here rather than read across the module boundary (ADR-0054).
@@ -88,7 +107,9 @@ func NewStore(db *database.DB, inst Installation) *Store {
 	inst = inst.orRefusing()
 	return &Store{
 		db: db, clock: time.Now, installation: inst,
-		stampCorrespondence: inst.StampCorrespondence,
+		stampCorrespondence:     inst.StampCorrespondence,
+		ensureProjectAttachable: inst.EnsureProjectAttachable,
+		startDeliveryForWonDeal: inst.StartDeliveryForWonDeal,
 	}
 }
 
@@ -108,6 +129,12 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.StampCorrespondence == nil {
 		i.StampCorrespondence = refusingStamp()
+	}
+	if i.EnsureProjectAttachable == nil {
+		i.EnsureProjectAttachable = refusingEnsureProjectAttachable()
+	}
+	if i.StartDeliveryForWonDeal == nil {
+		i.StartDeliveryForWonDeal = refusingStartDelivery()
 	}
 	if i.EnsurePartner == nil {
 		i.EnsurePartner = refusingEnsurePartner()
@@ -214,7 +241,10 @@ func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {
 	return CustomColumns{cols: cols}, nil
 }
 
-func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
+// Tx opens the transaction every read and write in this module runs inside,
+// bound to the workspace the store holds. Exported because storekit's list
+// helper takes the opener rather than a database handle of its own.
+func (s *Store) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 

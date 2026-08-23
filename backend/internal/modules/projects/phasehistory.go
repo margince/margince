@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package deals
+package projects
 
 // The project's phase history, read back: every transition in the order it
 // happened, and the fold that turns those rows into "how long were we
