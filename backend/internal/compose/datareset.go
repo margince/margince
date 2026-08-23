@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -230,11 +229,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// The provider platform's sealed API keys, collected the same way and
 		// for the same reason — its connection table carries no workspace_id,
 		// so neither the sweep above nor the collection above can see it.
-		providerRefs, err := providerCredentialRefs(ctx, tx)
-		if err != nil {
-			return err
-		}
-		counts.secretRefs = slices.Concat(secretRefs, providerRefs)
+		counts.secretRefs = secretRefs
 
 		if err := sweepWorkspaceData(ctx, tx, tables); err != nil {
 			return err

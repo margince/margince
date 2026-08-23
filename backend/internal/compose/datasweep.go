@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -99,32 +100,6 @@ var preservedResetTables = map[string]bool{
 	// takes the releases with it. Preserved here means "not a target", never
 	// "kept".
 	"deal_room_release": true,
-}
-
-// providerCredentialRefs collects the sealed API keys the provider
-// connections hold, BEFORE the sweep deletes the rows naming them. Same
-// reasoning as collectWorkspaceSecretRefs: the ciphertext lives in a table
-// with no workspace_id, so these handles are the only thing that will still
-// connect it to this installation once the rows are gone.
-func providerCredentialRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT credential_ref FROM provider_connection WHERE credential_ref IS NOT NULL`)
-	if err != nil {
-		return nil, fmt.Errorf("data reset: reading provider credential handles: %w", err)
-	}
-	defer rows.Close()
-	var refs []string
-	for rows.Next() {
-		var ref string
-		if err := rows.Scan(&ref); err != nil {
-			return nil, fmt.Errorf("data reset: reading a provider credential handle: %w", err)
-		}
-		refs = append(refs, ref)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("data reset: reading provider credential handles: %w", err)
-	}
-	return refs, nil
 }
 
 // resetTargetTables lists every public base table a reset sweeps: all of them,
@@ -328,6 +303,22 @@ func collectWorkspaceSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error
 	return refs, nil
 }
 
+// likeEscaped makes a literal safe as a LIKE pattern, using `!` as the escape
+// character rather than a backslash.
+//
+// `_` is a LIKE WILDCARD, so the suffix went in as "any character followed by
+// ref" — which finds `href` and `pref` as readily as `_ref`. Harmless only
+// because the vault decides what is a handle, and that is not a reason to ask
+// the wrong question.
+//
+// `!` and not `\`: a backslash has to survive a Go string, an SQL string and
+// LIKE itself, and Postgres rejects an ESCAPE that is not exactly one
+// character — which is what the first attempt produced. `!` cannot appear in a
+// pg_attribute name, so nothing needs escaping that is not being escaped here.
+func likeEscaped(s string) string {
+	return strings.NewReplacer("!", "!!", "_", "!_", "%", "!%").Replace(s)
+}
+
 // handleColumn is one place a keyvault handle can be written down.
 type handleColumn struct{ table, column string }
 
@@ -346,7 +337,10 @@ type handleColumn struct{ table, column string }
 // reference to one, and joining the table to itself would collect every secret
 // in the installation whether or not anything still points at it.
 func credentialHandleColumns(ctx context.Context, tx pgx.Tx) ([]handleColumn, error) {
-	rows, err := tx.Query(ctx, `
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	suffixPos := arg("%" + likeEscaped(credentialHandleSuffix))
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.relname, a.attname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -355,10 +349,10 @@ func credentialHandleColumns(ctx context.Context, tx pgx.Tx) ([]handleColumn, er
 		WHERE n.nspname = 'public'
 		  AND c.relkind = 'r'
 		  AND c.relname <> 'vault_secret'
-		  AND a.attname LIKE $1
+		  AND a.attname LIKE %s ESCAPE '!'
 		  AND t.typname IN ('text', 'varchar')
 		  AND a.attnum > 0 AND NOT a.attisdropped
-		ORDER BY c.relname, a.attname`, "%"+credentialHandleSuffix)
+		ORDER BY c.relname, a.attname`, suffixPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("data reset: listing columns that can hold a credential handle: %w", err)
 	}
