@@ -16,12 +16,19 @@ import {
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
+  liveProjects,
+  ProjectPicker,
+  type ProjectScope,
+  useSoleProjectDefault,
+} from "../design-system/projectpicker";
+import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select, type SelectOption } from "../design-system/select";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
+import { entityTimelineKeys } from "./activitykeys";
 import {
   isConsentNotGranted,
   ProblemError,
@@ -91,14 +98,21 @@ function useSearchTargets() {
 // A 🟢 internal association (no autonomy dot): move or also-link a captured
 // activity's typed link to the right person/org/deal/lead. Idempotent on the
 // backend — re-relinking the same target is a no-op that still answers 200.
+// `threadKey` is the activity's conversation key when it has one. With it the
+// dialog offers to move the whole thread through `relinkThread`, which applies
+// this same association to every message of the conversation the rep may
+// edit, in one transaction — a mis-filed conversation is usually mis-filed
+// whole.
 export function RelinkModal({
   activityId,
+  threadKey,
   entityType,
   entityId,
   open,
   onClose,
 }: Readonly<{
   activityId: string;
+  threadKey?: string | null;
   entityType: RelinkKind;
   entityId: string;
   open: boolean;
@@ -109,6 +123,7 @@ export function RelinkModal({
   const { search, kindOf } = useSearchTargets();
   const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
   const [replace, setReplace] = useState(false);
+  const [wholeThread, setWholeThread] = useState(false);
 
   // The picked target arrives as the mutation's variable: read through this
   // closure it would be the one from the render before the confirm was
@@ -121,6 +136,19 @@ export function RelinkModal({
       const kind = kindOf(target.id);
       if (!kind) {
         throwProblem({ title: t("compose.relinkTarget") });
+      }
+      if (threadKey && wholeThread) {
+        const { data, error } = await api.POST("/activities/relink-thread", {
+          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          body: {
+            thread_key: threadKey,
+            entity_type: kind,
+            entity_id: target.id,
+            replace_existing_of_type: replace,
+          },
+        });
+        if (error) throwProblem(error);
+        return data;
       }
       const { data, error } = await api.POST("/activities/{id}/relink", {
         params: {
@@ -137,9 +165,9 @@ export function RelinkModal({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["activities", entityType, entityId],
-      });
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       onClose();
     },
   });
@@ -169,6 +197,17 @@ export function RelinkModal({
           onChange={(event) => setReplace(event.target.checked)}
         />
         <p className="t-caption">{t("compose.relinkReplaceHint")}</p>
+        {threadKey && (
+          <>
+            <Checkbox
+              className="t-body"
+              label={t("compose.relinkThread")}
+              checked={wholeThread}
+              onChange={(event) => setWholeThread(event.target.checked)}
+            />
+            <p className="t-caption">{t("compose.relinkThreadHint")}</p>
+          </>
+        )}
       </div>
     </ConfirmModal>
   );
@@ -196,6 +235,7 @@ function fillFromDraft(
     setDraftRef: (next: string | null) => void;
     setProvenance: (next: DraftProvenance) => void;
     setReasoning: (next: components["schemas"]["AccountDraftReason"][]) => void;
+    setScope: (next: ProjectScope | undefined) => void;
   }>,
 ) {
   const drafted = result.draft;
@@ -214,6 +254,7 @@ function fillFromDraft(
       voice_profile_version: drafted.voice_profile_version,
     });
     form.setReasoning(result.reasoning ?? []);
+    form.setScope(result.scope);
   }
   if (form.toEmpty && drafted.to?.length) {
     form.setTo(drafted.to);
@@ -262,6 +303,7 @@ async function draftFromAccount({
   entityId,
   recipientId,
   dealId,
+  projectId,
   intent,
   t,
 }: Readonly<{
@@ -269,6 +311,7 @@ async function draftFromAccount({
   entityId: string;
   recipientId: string;
   dealId: string;
+  projectId: string;
   intent: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
@@ -285,6 +328,10 @@ async function draftFromAccount({
       body: {
         person_id: recipientId,
         ...(dealId ? { deal_id: dealId } : {}),
+        // The project the rep attributed the message to. The server grounds
+        // the draft in the 360 SCOPED to it, so the other projects'
+        // correspondence never reaches the model.
+        ...(projectId ? { project_id: projectId } : {}),
         ...(intent.trim() ? { intent: intent.trim() } : {}),
       },
     },
@@ -293,7 +340,12 @@ async function draftFromAccount({
   if (!response.ok || !data) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
-  return { available: true as const, draft: data, reasoning: data.reasoning };
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
 }
 
 // What either drafting path answers.
@@ -320,10 +372,14 @@ type DraftResult =
       // Present only on the account-started path; a reply explains itself by
       // the message it is answering.
       reasoning?: components["schemas"]["AccountDraftReason"][];
+      // Likewise account-only: what the scoped read kept, when a project was
+      // chosen.
+      scope?: ProjectScope;
     };
 
 // The account-started path's own state: who the draft is grounded on, which
-// open deal it is about, and what the server said it wrote from.
+// open deal and which project it is about, and what the server said it wrote
+// from.
 //
 // Held together because the three move together — a new recipient invalidates
 // the reasons as surely as an emptied body does — and held OUT of ComposeModal
@@ -335,9 +391,15 @@ function useAccountGrounding(
 ) {
   const [recipientId, setRecipientId] = useState(personId ?? "");
   const [dealId, setDealId] = useState("");
+  // One choice, two effects: the project scopes the draft's grounding AND
+  // files the sent message under the project (composedLinks).
+  const [projectId, setProjectId] = useState("");
   const [reasoning, setReasoning] = useState<
     components["schemas"]["AccountDraftReason"][]
   >([]);
+  // The server's scope report for the draft on screen; retired with the
+  // reasons, because it describes the same read.
+  const [scope, setScope] = useState<ProjectScope | undefined>(undefined);
   // Changing who the draft is to, or which deal it is about, retires the draft
   // that was written for the previous pair. Leaving it would show a message
   // addressed to B carrying A's words, A's disclosure and A's reasons — and
@@ -346,6 +408,7 @@ function useAccountGrounding(
   const reground = (apply: (next: string) => void) => (next: string) => {
     apply(next);
     setReasoning([]);
+    setScope(undefined);
     onGroundingChanged();
   };
   return {
@@ -353,8 +416,13 @@ function useAccountGrounding(
     setRecipientId: reground(setRecipientId),
     dealId,
     setDealId: reground(setDealId),
+    projectId,
+    setProjectId: reground(setProjectId),
+    grounding: { recipientId, dealId, projectId } satisfies Grounding,
     reasoning,
     setReasoning,
+    scope,
+    setScope,
   };
 }
 
@@ -379,9 +447,20 @@ function useAccountGrounding(
 // `chosen` is null on a reply, whose links are the thread's own business: the
 // rep picked nothing, and the recipient is already a participant on the
 // activity being answered.
+// Grounding is the three choices a rep made on the account-started path. It
+// travels as the mutation VARIABLE of both the draft and the send, never out
+// of the mutationFn's closure: the click handler belongs to the committed
+// render, so a selection it passes cannot be older than the picker that shows
+// it (see mutation-variable-coverage.test.ts for the stale-closure window).
+export type Grounding = {
+  recipientId: string;
+  dealId: string;
+  projectId: string;
+};
+
 function composedLinks(
   anchor: { entityType: RelinkKind; entityId: string },
-  chosen: { recipientId: string; dealId: string } | null,
+  chosen: Grounding | null,
 ): { entity_type: RelinkKind; entity_id: string }[] {
   const links: { entity_type: RelinkKind; entity_id: string }[] = [
     { entity_type: anchor.entityType, entity_id: anchor.entityId },
@@ -400,6 +479,7 @@ function composedLinks(
   };
   add("person", chosen.recipientId);
   add("deal", chosen.dealId);
+  add("project", chosen.projectId);
   return links;
 }
 
@@ -459,10 +539,10 @@ function RecipientField({
   );
 }
 
-// The account-started path's two choices: who this is to, and which open deal
-// it is about.
+// The account-started path's three choices: who this is to, which open deal
+// it is about, and which project it belongs to.
 //
-// Both are read off the account's own 360 rather than a fresh search, for the
+// All are read off the account's own 360 rather than a fresh search, for the
 // reason the whole draft is: the endpoint grounds itself in the caller's view
 // of the account, so a contact this picker offers that the view does not carry
 // would be one the draft then refuses.
@@ -472,12 +552,18 @@ function AccountDraftContext({
   onRecipientChange,
   dealId,
   onDealChange,
+  projectId,
+  onProjectChange,
+  scope,
 }: Readonly<{
   orgId: string;
   recipientId: string;
   onRecipientChange: (next: string) => void;
   dealId: string;
   onDealChange: (next: string) => void;
+  projectId: string;
+  onProjectChange: (next: string) => void;
+  scope?: ProjectScope;
 }>) {
   const t = useT();
   const query = useOrganization360(orgId);
@@ -486,6 +572,8 @@ function AccountDraftContext({
   const view = query.data?.state === "ready" ? query.data.view : undefined;
   const contacts = view?.people?.data ?? [];
   const deals = view?.deals?.data ?? [];
+  const projects = liveProjects(view?.projects);
+  useSoleProjectDefault(projects, projectId, onProjectChange);
   // No contact on the account is an honest dead end for a GROUNDED draft, and
   // saying so beats an empty picker the rep tries and cannot use. They can
   // still type an address into To and write the mail themselves.
@@ -526,6 +614,12 @@ function AccountDraftContext({
           />
         </label>
       )}
+      <ProjectPicker
+        projects={projects}
+        projectId={projectId}
+        onChange={onProjectChange}
+        scope={scope}
+      />
     </>
   );
 }
@@ -1060,7 +1154,6 @@ function useDraftMutation({
   entityType,
   entityId,
   intent,
-  account,
   onUnavailable,
   onDrafted,
   resetUnavailable,
@@ -1070,15 +1163,14 @@ function useDraftMutation({
   entityType: RelinkKind;
   entityId: string;
   intent: string;
-  account: ReturnType<typeof useAccountGrounding>;
   onUnavailable: () => void;
   onDrafted: (result: Extract<DraftResult, { available: true }>) => void;
   resetUnavailable: () => void;
   t: ReturnType<typeof useT>;
 }>) {
   return useMutation({
-    mutationKey: ["email", entityId],
-    mutationFn: async (): Promise<DraftResult> => {
+    mutationKey: ["email-draft", entityId],
+    mutationFn: async (grounding: Grounding): Promise<DraftResult> => {
       resetUnavailable();
       // A reply answers the message it is anchored to; an account-started
       // message has none, so it is grounded in the account itself and needs
@@ -1089,8 +1181,7 @@ function useDraftMutation({
       return draftFromAccount({
         entityType,
         entityId,
-        recipientId: account.recipientId,
-        dealId: account.dealId,
+        ...grounding,
         intent,
         t,
       });
@@ -1197,6 +1288,7 @@ export function ComposeModal({
     setDraftRef(null);
     setProvenance(null);
     account.setReasoning([]);
+    account.setScope(undefined);
   };
 
   const draft = useDraftMutation({
@@ -1204,7 +1296,6 @@ export function ComposeModal({
     entityType,
     entityId,
     intent,
-    account,
     onUnavailable: () => setDraftUnavailable(true),
     onDrafted: (result) =>
       fillFromDraft(result, {
@@ -1217,6 +1308,7 @@ export function ComposeModal({
         setDraftRef,
         setProvenance,
         setReasoning: account.setReasoning,
+        setScope: account.setScope,
       }),
     resetUnavailable: () => setDraftUnavailable(false),
     t,
@@ -1272,7 +1364,9 @@ export function ComposeModal({
 
   const send = useMutation({
     mutationKey: ["email", entityId],
-    mutationFn: async () => {
+    // The grounding is the variable, not a closure read: a stale closure
+    // could file the mail under a project the picker no longer shows.
+    mutationFn: async (grounding: Grounding | null) => {
       setSendUnavailable(false);
       // No X-Approval-Token, no Idempotency-Key on either path: the human's
       // own click IS the approval on the REST path (ADR-0055).
@@ -1290,12 +1384,7 @@ export function ComposeModal({
         isChannelReply,
         mail,
         channelBody: { body, consent_purpose: purpose },
-        links: composedLinks(
-          { entityType, entityId },
-          groundable
-            ? { recipientId: account.recipientId, dealId: account.dealId }
-            : null,
-        ),
+        links: composedLinks({ entityType, entityId }, grounding),
       });
       if (response.status === 501) return { sent: false as const };
       // Only a real 202 is a send. openapi-fetch returns a falsy `error` for a
@@ -1318,9 +1407,9 @@ export function ComposeModal({
         setSendUnavailable(true);
         return;
       }
-      queryClient.invalidateQueries({
-        queryKey: ["activities", entityType, entityId],
-      });
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       onClose();
     },
   });
@@ -1353,7 +1442,7 @@ export function ComposeModal({
   // picker directly above it, rather than running and coming back with a
   // refusal about a field already on screen.
   const draftControl = {
-    run: () => draft.mutate(),
+    run: () => draft.mutate(account.grounding),
     pending: draft.isPending,
     disabled:
       draft.isPending ||
@@ -1377,6 +1466,9 @@ export function ComposeModal({
       onRecipientChange={account.setRecipientId}
       dealId={account.dealId}
       onDealChange={account.setDealId}
+      projectId={account.projectId}
+      onProjectChange={account.setProjectId}
+      scope={account.scope}
     />
   ) : null;
   const accountReasons = (
@@ -1421,7 +1513,7 @@ export function ComposeModal({
       placement={groundable ? "right" : "center"}
       confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
       confirmDisabled={!canSend || rejectionInFlight}
-      onConfirm={() => send.mutate()}
+      onConfirm={() => send.mutate(groundable ? account.grounding : null)}
       pending={send.isPending}
       error={sendError}
     >
@@ -1652,6 +1744,7 @@ export function TimelineActions({
       {relink && (
         <RelinkModal
           activityId={activity.id}
+          threadKey={activity.thread_key}
           entityType={entityType}
           entityId={entityId}
           open={relink}
@@ -1703,9 +1796,9 @@ export function AudienceAction({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["activities", entityType, entityId],
-      });
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       setOpen(false);
     },
   });

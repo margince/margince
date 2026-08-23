@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
@@ -53,7 +54,15 @@ function useDealTarget() {
 export function NewDealAction({
   orgId,
   orgName,
-}: Readonly<{ orgId: string; orgName: string }>) {
+  projectId,
+}: Readonly<{
+  orgId: string;
+  orgName: string;
+  // The project the new deal is born into, when the verb is offered from a
+  // project page. The deal then names the project at birth, which is the only
+  // moment the deal and the project are guaranteed to share a company.
+  projectId?: string;
+}>) {
   const t = useT();
   const target = useDealTarget();
   const pipeline = target.data?.pipeline;
@@ -100,9 +109,12 @@ export function NewDealAction({
         // refuses a half-populated pair (amount_currency_pair), so sending a
         // currency beside an empty amount 422s the field the form presents as
         // optional.
-        amount_minor: amount ? Math.round(Number(amount) * 100) : null,
+        amount_minor: amount
+          ? toMinorUnits(Number(amount), values.currency || "EUR")
+          : null,
         currency: amount ? values.currency || "EUR" : null,
         organization_id: orgId,
+        project_id: projectId ?? null,
         expected_close_date: values.expected_close_date || null,
         source: "manual",
       },
@@ -116,7 +128,8 @@ export function NewDealAction({
   return (
     <CreateAction
       label={t("co.deal.new", { name: orgName })}
-      invalidate="organization360"
+      // The page that offered the verb is the page that has to show the deal.
+      invalidate={projectId ? "project" : "organization360"}
       screen="deals"
       create={createDeal}
       fields={fields}

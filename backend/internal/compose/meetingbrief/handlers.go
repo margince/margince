@@ -32,11 +32,19 @@ func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
 }
 
 // GetMeetingBrief implements GET /activities/{id}/meeting-brief.
-func (h Handlers) GetMeetingBrief(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) GetMeetingBrief(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetMeetingBriefParams) {
 	if !h.native(w, r) {
 		return
 	}
-	brief, err := h.svc.Get(r.Context(), ids.UUID(id))
+	var requested *ids.ProjectID
+	if params.ProjectId != nil {
+		project := ids.From[ids.ProjectKind](ids.UUID(*params.ProjectId))
+		requested = &project
+	}
+	// The reader's own language, so the model lane answers in it. The
+	// deterministic floor ignores it and is unaffected.
+	ctx := WithReaderLanguage(r.Context(), languageOf(r))
+	brief, err := h.svc.GetScoped(ctx, ids.UUID(id), requested)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

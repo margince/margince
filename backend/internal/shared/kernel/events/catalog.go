@@ -254,6 +254,13 @@ var catalog = map[string]struct {
 	"deal_room.participant_invited":             {dealStreamEntity, 1},
 	"deal_room.participant_revoked":             {dealStreamEntity, 1},
 	"deal_room.participant_credential_reissued": {dealStreamEntity, 1},
+	// Editorial content (documents, wording) reaches a buyer through
+	// deal_room.published and is not announced separately. The conversation is live on both sides and never waits for a publish, so
+	// each act announces itself: a comment (on a document or the room), the
+	// seller resolving a thread, and a buyer's decision on a document version.
+	"deal_room.comment_posted":    {dealStreamEntity, 1},
+	"deal_room.thread_resolved":   {dealStreamEntity, 1},
+	"deal_room.decision_recorded": {dealStreamEntity, 1},
 
 	"lead.created":      {leadStreamEntity, 1},
 	"lead.updated":      {leadStreamEntity, 1},

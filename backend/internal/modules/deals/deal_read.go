@@ -32,7 +32,7 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 		return crmcontracts.Deal{}, err
 	}
 	var out crmcontracts.Deal
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		if err := auth.EnsureVisible(ctx, tx, "deal", id.UUID); err != nil {
 			return err
 		}
@@ -110,22 +110,49 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	pre, err := buildListPrelude(ctx, "deal", dealListFields, active,
-		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
+	pre, where, err := dealListQuery(ctx, in, active)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where, err := appendDealFilters(ctx, pre.where, in, pre.arg)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-
-	return runListPage(ctx, s, pre, "deal", dealColumns, active, where, scanDealPage,
+	return storekit.RunListPage(ctx, s, pre, "deal", dealColumns, active, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
+}
+
+// ListDealsTx is ListDeals inside a caller-opened transaction — the composite
+// record reads, whose deal section must describe the same instant as its
+// siblings. Same gate, same filters, same field-mask pass; the catalog answer
+// is threaded in because a caller-opened read cannot fetch it without a
+// second connection (ActiveDealColumns).
+func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, active CustomColumns) ([]crmcontracts.Deal, storekit.Page, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	pre, where, err := dealListQuery(ctx, in, active.cols)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return storekit.RunListPageTx(ctx, tx, pre, "deal", dealColumns, active.cols, where, scanDealPage,
+		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
+		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
+}
+
+// dealListQuery is the half of a deal list both entry points share: the sort
+// refusal, the shared prelude and the deal's own filters.
+func dealListQuery(ctx context.Context, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
+	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
+		return nil, nil, err
+	}
+	pre, err := storekit.BuildListPrelude(ctx, "deal", dealListFields, active,
+		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
+	if err != nil {
+		return nil, nil, err
+	}
+	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pre, where, nil
 }
 
 // scanDealPage drains one list query's rows: each deal plus, under a

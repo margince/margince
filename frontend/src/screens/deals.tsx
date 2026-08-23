@@ -42,7 +42,12 @@ import {
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { FieldGuard } from "../design-system/rbac";
+import {
+  useRecordTimeline,
+  useTimelineFilters,
+} from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
+import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
 import {
@@ -51,9 +56,11 @@ import {
   formatMoney,
   formatMoneyOrAbsent,
 } from "../format/format";
+import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { ArchiveAction } from "./archive";
 import {
@@ -77,6 +84,37 @@ import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { DealBulkBar } from "./dealbulk";
+import { DealHealthCard } from "./dealhealth";
+import { DealNextAction } from "./dealnextaction";
+
+// The deal page's aside: the next move first, then the Deal Room when the deal
+// has one. Its own component so the screen's render stays readable.
+function DealAside({
+  dealId,
+  dealName,
+}: Readonly<{ dealId: string; dealName: string }>) {
+  return (
+    <>
+      <DealNextAction dealId={dealId} />
+      <DealNextMeeting dealId={dealId} />
+      <DealBriefCard dealId={dealId} />
+      <DealHealthCard dealId={dealId} />
+      <DealRoomAside dealId={dealId} dealName={dealName} />
+    </>
+  );
+}
+
+import { DealBriefCard } from "./dealbrief";
+import { DealFiles } from "./dealfiles";
+import { DealNextMeeting } from "./dealmeeting";
+import {
+  DealProjectChip,
+  dealProjectFields,
+  resolveDealProject,
+  StartDeliveryPrompt,
+  useOpenProjects,
+} from "./dealproject";
+import { DealRoomAside } from "./dealroom";
 import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
@@ -91,6 +129,7 @@ import { LogActivity } from "./logactivity";
 import { DealCoverageCard } from "./network";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { groupChronology } from "./timelinegroups";
 
 // Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance
 // (terminal stages are a 🟡 confirm, AC-deal-6), the board↔table segmented
@@ -446,7 +485,16 @@ function dealEditRecord(deal: Deal): Record<
     id: deal.id,
     version: deal.version,
     name: deal.name,
-    amount: deal.amount_minor != null ? String(deal.amount_minor / 100) : "",
+    // The currency's own scale, not a hundred. amount_minor and currency are
+    // NULL together (the deal_amount_currency_pair CHECK), so a priced deal
+    // always carries the code — but a row that WITHHELD the currency for row
+    // scope while sending the amount would be scaled at the two-digit default
+    // and shown wrong. There is no honest figure without its unit, so the field
+    // stays empty rather than guessing one.
+    amount:
+      deal.amount_minor != null && deal.currency
+        ? String(toMajorUnits(deal.amount_minor, deal.currency))
+        : "",
     currency: deal.currency ?? "",
     owner_id: deal.owner_id ?? "",
     organization_id: deal.organization_id ?? "",
@@ -455,7 +503,20 @@ function dealEditRecord(deal: Deal): Record<
     forecast_category: deal.forecast_category ?? "",
     expected_close_date: deal.expected_close_date ?? "",
     wait_until: deal.wait_until ?? "",
+    project_id: deal.project_id ?? "",
   };
+}
+
+// The edit form's values are typed `unknown` per key; the project resolver
+// reads the three it needs as strings, and anything else is not one.
+function stringValues(values: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === "string") {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 // The attribution the form may send, narrowed the same way the forecast
@@ -511,10 +572,11 @@ export function mapDealUpdate(
   const amount = str(values.amount);
   const owner = str(values.owner_id);
   const forecast = str(values.forecast_category);
+  const currency = str(values.currency);
   const patch: UpdateDealRequest = {
     name: str(values.name) || undefined,
-    amount_minor: amount ? Math.round(Number(amount) * 100) : null,
-    currency: str(values.currency) || undefined,
+    amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+    currency: currency || undefined,
     organization_id: str(values.organization_id) || null,
     owner_id: owner || null,
     partner_org_id: str(values.partner_org_id) || null,
@@ -522,6 +584,9 @@ export function mapDealUpdate(
     forecast_category: forecastCategory(forecast),
     expected_close_date: str(values.expected_close_date) || null,
     wait_until: str(values.wait_until) || null,
+    // Resolved by the screen before mapping: the "new project" answer has
+    // already become an id by the time the patch is built.
+    project_id: str(values.project_id) || null,
   };
   return withoutMasked(patch, masked);
 }
@@ -569,13 +634,16 @@ export function mapDealCreate(
 ): CreateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const amount = str(values.amount);
+  const currency = str(values.currency) || "EUR";
   return {
     name: str(values.name),
     pipeline_id: pipelineId,
     stage_id: str(values.stage_id),
-    // The UI takes major units; the wire is minor units.
-    amount_minor: amount ? Math.round(Number(amount) * 100) : null,
-    currency: str(values.currency) || "EUR",
+    // The UI takes major units; the wire is minor units, at the scale THIS
+    // currency carries — a dong has none, so multiplying by a hundred here
+    // priced the deal a hundredfold and nothing downstream could tell.
+    amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+    currency,
     organization_id: str(values.organization_id) || null,
     partner_org_id: str(values.partner_org_id) || null,
     // The empty option means the caller made no claim, and null is how that
@@ -584,6 +652,7 @@ export function mapDealCreate(
     // refused 422 rather than defaulted — there would be nobody to credit.
     partner_attribution: partnerAttribution(str(values.partner_attribution)),
     expected_close_date: str(values.expected_close_date) || null,
+    project_id: str(values.project_id) || null,
     source: "manual",
   };
 }
@@ -1369,6 +1438,15 @@ function useAdvanceDeal(toast: Toast) {
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
       queryClient.invalidateQueries({ queryKey: ["deal", input.dealId] });
+      // A win moves the deal's project into delivery in the same server
+      // write, so the project page and list are stale the moment this
+      // returns. Without this a reader who follows the project chip within
+      // the 30s stale window reads a won deal on a project still being
+      // pursued — the contradiction the server's one-transaction move exists
+      // to prevent.
+      for (const queryKey of dealWinKeys(deal)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       toast.show(t("deals.advanced", { stage: input.toStage.name }));
     },
   });
@@ -1624,13 +1702,28 @@ export function DealsScreen({
 
   const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
 
+  const openProjects = useOpenProjects();
+
   const createDeal = async (values: Record<string, string>) => {
     const pipeline = effectivePipeline;
     if (!pipeline) {
       throwProblem(null);
     }
+    // A project asked for on the form is born first, on the deal's company,
+    // so the deal can name it at birth.
+    const projectId = await resolveDealProject(
+      values,
+      values.organization_id?.trim() || null,
+      t,
+    );
     const { data, error } = await api.POST("/deals", {
-      body: { ...mapDealCreate(values, pipeline.id), ...cf.toBody(values) },
+      body: {
+        ...mapDealCreate(
+          { ...values, project_id: projectId ?? "" },
+          pipeline.id,
+        ),
+        ...cf.toBody(values),
+      },
     });
     if (error) {
       throwProblem(error, t);
@@ -1740,6 +1833,9 @@ export function DealsScreen({
             label: org.display_name,
           })),
         },
+        // The body of work this deal is about, chosen or started here: a
+        // project begins during the deal, in its initiative phase.
+        ...dealProjectFields(t, openProjects),
         // A deal brought by a partner is attributed at birth, not by editing
         // it afterwards: the win that pays them can come before anybody thinks
         // to revisit the record.
@@ -2575,9 +2671,15 @@ function DealBadges({
   // One fact refuses every write below, so it is named once. Undefined while
   // the deal is live, which is what leaves the verbs pressable.
   const refusedByArchive = deal.archived_at ? archivedReasonId : undefined;
+  const openProjects = useOpenProjects();
+  const projectById = useEntityName("project", deal.project_id);
+  const currentProject = deal.project_id
+    ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
+    : undefined;
   return (
     <>
       <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
+      <DealProjectChip deal={deal} />
       <EditAction
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
@@ -2596,17 +2698,31 @@ function DealBadges({
             // nobody has priced has none to put there.
             currency: deal.currency ?? "",
           }),
+          ...(masked.includes("project_id")
+            ? []
+            : dealProjectFields(t, openProjects, currentProject)),
           ...cf.formFields,
         ]}
         record={{ ...dealEditRecord(deal), ...cf.recordSlice(deal) }}
         update={async (values) => {
+          // The company the form SUBMITS, not the one the deal had: a
+          // project started here belongs to the company the save names.
+          const submitted = stringValues(values);
+          const projectId = await resolveDealProject(
+            submitted,
+            submitted.organization_id?.trim() || null,
+            t,
+          );
           const { data, error } = await api.PATCH("/deals/{id}", {
             params: {
               path: { id: deal.id },
               ...ifMatch(requireVersion(deal.version)),
             },
             body: {
-              ...mapDealUpdate(values, masked),
+              ...mapDealUpdate(
+                { ...values, project_id: projectId ?? "" },
+                masked,
+              ),
               ...cf.toBody(values),
             },
           });
@@ -2823,7 +2939,7 @@ export function OffersPanel({
   );
 }
 
-const DEAL_TABS = ["overview", "history"] as const;
+const DEAL_TABS = ["overview", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
 type Relationship = components["schemas"]["Relationship"];
@@ -2970,6 +3086,9 @@ function DealOverviewPane({
           locale={locale}
         />
       )}
+      {/* A won deal with no project, on a company with exactly one open
+          project, is offered that project once. Nothing else here asks. */}
+      {!overlay && <StartDeliveryPrompt deal={deal} />}
       {/* A group, not a nav: these buttons move the deal, they do not take the
           reader anywhere, and a landmark in the navigation list that writes
           when you press it misdescribes what it does. */}
@@ -3101,6 +3220,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // and the deal's stakeholders/offers sub-resources 422/404, and offer
   // creation would write to a mirrored deal. Gate all of it on this.
   const overlay = useSorMode() === "overlay";
+  // Asked here rather than inside the aside, because an element is truthy
+  // whatever it renders: a slot filled with a component that draws nothing
+  // still reserves the aside column and its landmark.
   const orgs = useQuery({
     queryKey: ["organizations"],
     queryFn: async () => {
@@ -3132,19 +3254,17 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // kept expired rows — so a visit here could silently cap the badge at 50 and
   // count approvals nobody can act on.
   const approvalsQuery = usePendingApprovals();
-  const timelineQuery = useQuery({
-    queryKey: ["activities", "deal", id],
-    enabled: !overlay,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: { query: { entity_type: "deal", entity_id: id, limit: 20 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
+  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
+  const timelineQuery = useRecordTimeline("deal", id, {
+    filters: timelineFilters,
   });
+  const timelineEntries = activityTimeline(
+    timelineQuery.activities,
+    viewerId,
+    (activity) => (
+      <TimelineActions activity={activity} entityType="deal" entityId={id} />
+    ),
+  );
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
     enabled: !overlay,
@@ -3221,25 +3341,30 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 />
               }
               band={archivedDealBand(deal, archivedReasonId, t)}
-              timeline={
-                timelineQuery.isSuccess
-                  ? activityTimeline(
-                      timelineQuery.data.data,
-                      viewerId,
-                      (activity) => (
-                        <TimelineActions
-                          activity={activity}
-                          entityType="deal"
-                          entityId={id}
-                        />
-                      ),
-                    )
-                  : []
+              timeline={timelineEntries}
+              timelineGroups={groupChronology(
+                timelineEntries,
+                timelineQuery.hasNextPage,
+              )}
+              timelineHeader={
+                overlay ? undefined : (
+                  <TimelineFilterBar
+                    value={timelineFilters}
+                    onChange={setTimelineFilters}
+                  />
+                )
               }
+              timelineFooter={<LoadMoreButton query={timelineQuery} />}
               timelineNotice={timelineZoneNotice(
                 { overlay, pending: timelineQuery.isPending },
                 t,
               )}
+              aside={
+                overlay ? undefined : (
+                  <DealAside dealId={id} dealName={deal.name} />
+                )
+              }
+              asideLabel={t("nba.title")}
             >
               <div style={{ marginBottom: 16 }}>
                 <SegmentedControl
@@ -3248,6 +3373,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   onChange={setTab}
                   labels={{
                     overview: t("tab.overview"),
+                    files: t("tab.documents"),
                     history: t("tab.history"),
                   }}
                 />
@@ -3298,6 +3424,8 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   }}
                 />
               )}
+              {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
+              {tab === "files" && overlay && <OverlayUnavailable />}
               {tab === "history" && !overlay && (
                 <RecordHistoryTab kind="deal" id={deal.id} />
               )}

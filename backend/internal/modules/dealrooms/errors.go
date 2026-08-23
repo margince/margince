@@ -65,6 +65,56 @@ func notAdmitting(current string) error {
 	}
 }
 
+// notContentEditable refuses every content change in a room that can no longer
+// reach a buyer — a comment as much as a document. A finished room is the
+// record of what the two sides shared, and a change months later would rewrite
+// that record rather than reflect work anybody is still doing.
+func notContentEditable(current string) error {
+	return &stateError{
+		code:    "deal_room_content_not_editable",
+		current: current,
+		wanted:  "this room is finished and is now a record: open a new Deal Room on the deal to share anything further",
+	}
+}
+
+// pausedForBuyer refuses a buyer's write while the seller has paused the room.
+// Unlike the finished states this one is reversible, and the buyer can do
+// nothing about it but wait — so the message says that, and never tells them
+// to open a room they cannot open.
+func pausedForBuyer() error {
+	return &stateError{
+		code:    "deal_room_paused",
+		current: statePaused,
+		wanted:  "your contact has paused this room; you can continue once they resume it",
+	}
+}
+
+// errViewerCannotWrite refuses a write from a participant admitted to read
+// only. The capability is the seller's decision about this person, so the
+// answer names it rather than the room's state.
+var errViewerCannotWrite = &fieldError{
+	field: fieldCapability,
+	code:  "view_only",
+	msg:   "your access to this room is read-only; ask your contact to let you comment",
+}
+
+// The fault code every over-long text refuses with, and the audit-image keys
+// three writers share; named once so they cannot drift into spellings a client
+// or a reader would have to special-case.
+const (
+	codeTooLong       = "too_long"
+	fieldAttachmentID = "attachment_id"
+	fieldSide         = "side"
+)
+
+// fieldCapability names the participant's capability in a fault and an audit image.
+const fieldCapability = "capability"
+
+// codeRequired is the fault code every "you left this out" refusal in this
+// module publishes, named once so the three that raise it cannot drift into
+// three spellings a client would have to special-case.
+const codeRequired = "required"
+
 func notPausable(current string) error {
 	return &stateError{
 		code:    "deal_room_not_pausable",
@@ -165,3 +215,23 @@ func (e *fieldError) Error() string { return e.msg }
 func (e *fieldError) FieldFault() (field, code, message string) {
 	return e.field, e.code, e.msg
 }
+
+// retiredError refuses an operation the product no longer performs.
+//
+// It carries its own code so a client can branch on the reason rather than
+// parsing prose, and unwraps to ErrConflict: the request is well-formed and the
+// caller is entitled to be here — the ACTION is what no longer exists, which is
+// a state of the product, not a fault in the request or in the server.
+type retiredError struct {
+	code string
+	msg  string
+}
+
+func (e *retiredError) Error() string { return e.msg }
+
+// MessageFault maps this to a 409 carrying the code.
+func (e *retiredError) MessageFault() (code, message string) {
+	return e.code, e.msg
+}
+
+func (e *retiredError) Unwrap() error { return apperrors.ErrConflict }

@@ -192,7 +192,11 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 			inner: search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder),
 		},
 	}
-	agents.RegisterIntentTools(registry, retriever)
+	// The brief seam takes no overlay guard of its own: nativeOnlyRetriever
+	// above refuses an overlay workspace before prep_for_meeting reaches
+	// either half, and a second guard on one tool would make two comments
+	// claim one refusal — which is what the guard census refuses.
+	agents.RegisterIntentTools(registry, retriever, meetingBriefReader(pool))
 	// The transport directory, read from this package's boot snapshot — the
 	// composed set is the composition root's fact, so the module takes it as a
 	// seam rather than enumerating connectors it may not reach.
@@ -234,6 +238,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// one wrong answer here that reads as good news.
 	agents.RegisterCommitmentTool(registry, nativeOnlyCommitments(sorMode, commitmentLister(pool)))
 	agents.RegisterHandoffTool(registry, nativeOnlyHandoff(sorMode, handoffReader(pool)))
+	// The project page, read by the tool through the SAME assembly the HTTP
+	// route serves (project360seam.go), under the same per-section gates.
+	agents.RegisterProject360Tool(registry, nativeOnlyProject360(sorMode, project360Reader(pool)))
 	// The relationship-graph reads (ADR-0078): who here knows this contact,
 	// how a deal is covered, who can get us into an account, and which of the
 	// caller's deals the coverage rules flag. All 🟢 — they name people, they

@@ -43,6 +43,23 @@ const (
 	// migrations/core/0171 is that reconciliation, and says what each widening
 	// does and does not open.
 	EntityRelationship EntityType = "relationship"
+	// EntityPartner is the partner EXTENSION on an organization, not a second
+	// kind of company: the row is 1:1 with `organization` and is addressed by
+	// that organization's id, which is why the seam's read verb takes the org
+	// id here and no partner id exists to take its place.
+	//
+	// It is deliberately absent from RecordType. Nothing points AT a partner —
+	// you tag, list, link and grant against the ORGANIZATION, and the partner
+	// row travels with it. Adding a RecordPartner would widen five polymorphic
+	// columns to hold a target every one of them already reaches by another
+	// name, and give two spellings for one company.
+	//
+	// Declaring it here obliges the four EntityType-bound schema CHECKs
+	// (attachment, embedding, field_provenance, custom_field) to carry
+	// 'partner' too — TestEveryDomainEnumMatchesItsSchemaCheck derives the Go
+	// set from this package's constants, so a half-widening fails the gate.
+	// Migration 1787444866 is that reconciliation.
+	EntityPartner EntityType = "partner"
 )
 
 // EntityTypes returns the vocabulary in a stable order, for the callers
@@ -59,7 +76,7 @@ const (
 func EntityTypes() []EntityType {
 	return []EntityType{
 		EntityPerson, EntityOrganization, EntityDeal, EntityLead,
-		EntityActivity, EntityProject, EntityRelationship,
+		EntityActivity, EntityProject, EntityRelationship, EntityPartner,
 	}
 }
 

@@ -139,14 +139,20 @@ var tableOwners = map[string]string{
 	"deal_room_participant": "internal/modules/dealrooms",
 	"deal_room_invitation":  "internal/modules/dealrooms",
 	"deal_room_session":     "internal/modules/dealrooms",
-	"deal_room_task":        "internal/modules/dealrooms",
+	"deal_room_document":    "internal/modules/dealrooms",
+	"deal_room_thread":      "internal/modules/dealrooms",
+	"deal_room_comment":     "internal/modules/dealrooms",
+	"deal_room_decision":    "internal/modules/dealrooms",
+	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
 	"deal_forecast_history": "internal/modules/deals",
-	// The project lives in the deals bounded context (ADR-0073): it is the
-	// body of work the deals hang off, not a context of its own.
-	"project":               "internal/modules/deals",
-	"project_phase_history": "internal/modules/deals",
+	// The project is its own bounded context, superseding ADR-0073 — see
+	// modules/projects/doc.go. This entry is what makes that a rule rather than
+	// a layout: a statement writing either table from any other package fails
+	// TestEveryPackageOnlyWritesTablesItOwns.
+	"project":               "internal/modules/projects",
+	"project_phase_history": "internal/modules/projects",
 	"fx_rate":               "internal/modules/deals",
 	"product":               "internal/modules/deals",
 	"offer":                 "internal/modules/deals",
@@ -180,6 +186,7 @@ var tableOwners = map[string]string{
 	"linkedin_account":    "internal/modules/people",
 	"linkedin_connection": "internal/modules/people",
 	"attachment":          "internal/modules/activities",
+	"deal_document_hide":  "internal/modules/activities",
 	"booking_page":        "internal/modules/activities",
 	// approvals (signing_key backs the approval-token JWS)
 	"approval":    "internal/modules/approvals",
@@ -212,6 +219,7 @@ var tableOwners = map[string]string{
 	"workspace_email_domain":       "internal/modules/capture",
 	"capture_exclusion":            "internal/modules/capture",
 	"capture_digest":               "internal/modules/capture",
+	"project_link_candidate":       "internal/modules/capture",
 	"capture_auto_enrich_state":    "internal/modules/capture",
 	"capture_pending_counterparty": "internal/modules/capture",
 	"capture_auto_enrich_budget":   "internal/modules/capture",
@@ -424,6 +432,13 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	"internal/modules/deals:list_member":  "archiving a deal removes its list memberships in the archive transaction",
 	"internal/modules/deals:taggable":     "archiving a deal removes its tag rows in the archive transaction",
 	"internal/modules/deals:relationship": "archiving a deal archives its stakeholder relationships in the archive transaction — a live relationship to an archived deal would leak it into row-scope walks",
+	// The project's archive carries the same three, for the same reasons: the
+	// edges are attributes of the grouping being archived, and each must go in
+	// the SAME transaction or a reader sees a live edge to a record that no
+	// longer exists.
+	"internal/modules/projects:list_member":  "archiving a project removes its list memberships in the archive transaction",
+	"internal/modules/projects:taggable":     "archiving a project removes its tag rows in the archive transaction",
+	"internal/modules/projects:relationship": "archiving a project archives its stakeholder relationships in the archive transaction — a live relationship to an archived project would leak it into row-scope walks",
 
 	// privacy is the module whose JOB is crossing stores: a data-subject
 	// obligation (erasure Art. 17, retention ADR-0011) must reach every
@@ -432,6 +447,9 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	// through the owning module's API would trade the atomicity that IS
 	// the guarantee for boundary hygiene.
 	"internal/modules/privacy:person":                       "erasure/retention anonymize the person row in place in the single erasure transaction (Art. 17)",
+	"internal/modules/privacy:deal_room_participant":        "erasure anonymizes the subject's Deal Room seat in place — the one named outside person stored without a person row — in the single erasure transaction",
+	"internal/modules/privacy:deal_room_session":            "erasure deletes the erased subject's live room credentials in the same transaction: access they did not consent to keep must not outlive the request",
+	"internal/modules/privacy:deal_room_engagement":         "erasure deletes the erased subject's room activity trail (when they signed in, what they took) in the same transaction",
 	"internal/modules/privacy:person_email":                 "erasure deletes the subject's email channel rows in the single erasure transaction",
 	"internal/modules/privacy:preference_token":             "erasure deletes the subject's preference-center token in the single erasure transaction — it is a live capability over their consent record on a session-less edge, and anonymize-in-place means 0048's ON DELETE CASCADE never fires, so an erased subject would keep accruing consent rows through the capability the erasure certifies destroyed",
 	"internal/modules/privacy:activity_participant":         "erasure nulls the subject's person and address arms on the interaction participants in the single erasure transaction — the address arm exists precisely for a party who never became a record, so it survives the person_email purge and would keep the erased address readable and re-matchable; the ROW is kept where other participants remain, because the other people in that conversation are not the subject",

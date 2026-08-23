@@ -22,7 +22,7 @@ import (
 // store should never have to re-check.
 func createInput(req crmcontracts.CreateDealRoomRequest) (CreateRoomInput, error) {
 	if req.Title == "" {
-		return CreateRoomInput{}, &fieldError{field: columnTitle, code: "required", msg: "title is required"}
+		return CreateRoomInput{}, &fieldError{field: columnTitle, code: codeRequired, msg: "title is required"}
 	}
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return CreateRoomInput{}, err
@@ -127,12 +127,12 @@ const nameLimit = 255
 
 func refuseOverlongName(name string) error {
 	if strings.TrimSpace(name) == "" {
-		return &fieldError{field: "full_name", code: "required", msg: "full_name is required"}
+		return &fieldError{field: "full_name", code: codeRequired, msg: "full_name is required"}
 	}
 	if len([]rune(name)) > nameLimit {
 		return &fieldError{
 			field: "full_name",
-			code:  "too_long",
+			code:  codeTooLong,
 			msg:   "full_name is longer than 255 characters",
 		}
 	}
@@ -158,7 +158,7 @@ func refuseUnknownCapability(capability string) error {
 		return nil
 	}
 	return &fieldError{
-		field: "capability",
+		field: fieldCapability,
 		code:  "unknown_capability",
 		msg:   "capability must be view, comment or reviewer",
 	}
@@ -180,6 +180,10 @@ func listInput(params crmcontracts.ListDealRoomsParams) ListRoomsInput {
 	if params.State != nil {
 		s := string(*params.State)
 		in.State = &s
+	}
+	if params.ParticipantEmail != nil {
+		email := strings.ToLower(strings.TrimSpace(string(*params.ParticipantEmail)))
+		in.ParticipantEmail = &email
 	}
 	return in
 }

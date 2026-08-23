@@ -31,7 +31,7 @@ const participantObject = "deal_room_participant"
 // neither reads as nulls, which the scanner turns into the `none` delivery
 // state rather than an absent field.
 const participantColumns = `p.id, p.room_id, p.full_name, p.email, p.capability,
-	p.invited_by, p.revoked_at, p.source, p.captured_by, p.created_at, p.updated_at,
+	p.invited_by, p.revoked_at, p.source, p.captured_by, p.created_at, p.updated_at, p.link_requested_at,
 	latest.expires_at, latest.sent_at, latest.delivered_at, latest.failed_at,
 	latest.consumed_at, latest.superseded_at,
 	(SELECT max(s.last_seen_at) FROM deal_room_session s
@@ -80,7 +80,15 @@ func (s *Store) ListParticipants(ctx context.Context, roomID ids.DealRoomID, act
 		}
 		var err error
 		out, err = participantRows(ctx, tx, roomID, activeOnly)
-		return err
+		if err != nil {
+			return err
+		}
+		seen, err := engagementByParticipant(ctx, tx, roomID)
+		if err != nil {
+			return err
+		}
+		out = withEngagement(out, seen)
+		return nil
 	})
 	// The roster is small and bounded by how many people a seller invites, so it
 	// answers whole rather than paged. The envelope still carries a page object
@@ -91,7 +99,8 @@ func (s *Store) ListParticipants(ctx context.Context, roomID ids.DealRoomID, act
 func participantRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, activeOnly bool) ([]crmcontracts.DealRoomParticipant, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where := storekit.SQLf("p.room_id = $%d", arg(roomID))
+	// A preview seat is the seller's own and never part of the roster.
+	where := storekit.SQLf("p.room_id = $%d AND NOT p.preview", arg(roomID))
 	if activeOnly {
 		where += " AND p.revoked_at IS NULL"
 	}
@@ -127,9 +136,11 @@ func readParticipant(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, id i
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	row := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT %s FROM %s WHERE p.id = $%d AND p.room_id = $%d`,
+		`SELECT %s FROM %s WHERE p.id = $%d AND p.room_id = $%d AND NOT p.preview`,
 		participantColumns, participantFrom, arg(id), arg(roomID)), args...)
 
+	// A preview seat is absent here on purpose: every participant write
+	// resolves the row through this read, so none of them can reach it.
 	out, err := scanParticipant(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.DealRoomParticipant{}, apperrors.ErrNotFound
@@ -151,7 +162,7 @@ func scanParticipant(row rowScanner) (crmcontracts.DealRoomParticipant, error) {
 		everSignedIn bool
 	)
 	if err := row.Scan(&id, &roomID, &out.FullName, &out.Email, &capability,
-		&invitedBy, &out.RevokedAt, &out.Source, &capturedBy, &out.CreatedAt, &out.UpdatedAt,
+		&invitedBy, &out.RevokedAt, &out.Source, &capturedBy, &out.CreatedAt, &out.UpdatedAt, &out.LinkRequestedAt,
 		&delivery.expiresAt, &delivery.sentAt, &delivery.deliveredAt, &delivery.failedAt,
 		&delivery.consumedAt, &delivery.supersededAt, &out.LastSeenAt, &everSignedIn); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err

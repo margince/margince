@@ -293,10 +293,15 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// What keeps it honest is that the type carries no entity ref and no shared
 	// MEANING to disagree about — it says "this occurrence of mine is now in
 	// this state", and `source` namespaces whose occurrence it is, so two
-	// emitters can never collide on one row. A third emitter is expected
-	// (capture sweeps); it belongs here, with its own line.
+	// emitters can never collide on one row.
+	//
+	// The third emitter is the router, and it is the reason the other two are
+	// the exception rather than the rule: it announces on behalf of every task
+	// no carrier claims, so a new AI task is reported without anybody adding a
+	// line here at all.
 	"ai_task.state_changed <- internal/modules/activities": "a document reading announces its own six transitions; source=attachment_extraction keys its occurrences",
 	"ai_task.state_changed <- internal/modules/agents":     "a scheduled run announces the same way; source=agent_runner keys its occurrences, and one trigger occurrence is one row because the key carries the spec and the trigger ref",
+	"ai_task.state_changed <- internal/modules/ai":         "the router announces the settled outcome of every task ai.RailOwner leaves to it; source=ai_router keys its occurrences, and one request or job pass is one row because the key carries the correlation id and the task",
 
 	// Structure 1 — the overlay write-back announces the NATIVE module's event.
 	// overlay/writeaudit.go switches on datasource.EntityRef and emits the
@@ -332,9 +337,9 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// the person and to the organization it joins; there is no relationship.*
 	// type, and inventing one would make every consumer of the anchor subscribe
 	// to a second name to learn that their record moved.
-	"deal.updated <- internal/modules/people":    "a relationship anchored on a deal moved, so the deal changed",
-	"project.updated <- internal/modules/people": "a relationship anchored on a project moved, so the project changed — the same anchor rule",
-	"project.updated <- internal/modules/deals":  "the record's own module: deals owns project",
+	"deal.updated <- internal/modules/people":      "a relationship anchored on a deal moved, so the deal changed",
+	"project.updated <- internal/modules/people":   "a relationship anchored on a project moved, so the project changed — the same anchor rule",
+	"project.updated <- internal/modules/projects": "the record's own module: projects owns project",
 
 	// Structure 3 — capture announces what it captured, as the RECORD's event.
 	// The capture path creates real leads and real activities, so the type is
@@ -389,12 +394,13 @@ func TestEveryEventTypeHasOneEmittingModule(t *testing.T) {
 // lands here instead, so a partial collapse fails on the entries it cannot
 // explain rather than passing on the ones it still can.
 var unemittedEventTypes = gatekit.Waive(map[string]string{
-	"audit.appended":             "deliberate and documented in the contract: no emit site and none planned. It exists so the catalog is completely covered by a payload schema, never carrying a subscribable type with no contract",
-	"deal.restored":              "documented in the contract as never emitted today — there is no restore path",
-	"person.restored":            "the same, for the person restore path that does not exist",
-	"pipeline.archived":          "documented in the contract as never emitted today — no archive path",
-	"mirror.write_rejected":      "documented in the contract as never emitted today, reserved for the overlay write-back's refusal case",
-	"conversation_claim.changed": "the odd one out, and filed rather than ratified quietly: unlike the four above, the contract does NOT mark this one unemitted — it describes it as published, because 'a correction is SHARED truth'. There is no correction path in people/conversationclaim.go to publish from; the module exposes RecordConversationClaim and nothing else. Waived here so the gate is green over a real state of the tree, not because the state is right",
+	"audit.appended":              "deliberate and documented in the contract: no emit site and none planned. It exists so the catalog is completely covered by a payload schema, never carrying a subscribable type with no contract",
+	"deal.restored":               "documented in the contract as never emitted today — there is no restore path",
+	"person.restored":             "the same, for the person restore path that does not exist",
+	"pipeline.archived":           "documented in the contract as never emitted today — no archive path",
+	"mirror.write_rejected":       "documented in the contract as never emitted today, reserved for the overlay write-back's refusal case",
+	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The type and the deal_room_decision rows stay: a decision somebody genuinely made is a record of what happened, and the seller's card still reads them. Bringing approvals back would restore the emit site; what that costs is written down in the issue the store's ErrDecisionsRetired names",
+	"conversation_claim.changed":  "the odd one out, and filed rather than ratified quietly: unlike the four above, the contract does NOT mark this one unemitted — it describes it as published, because 'a correction is SHARED truth'. There is no correction path in people/conversationclaim.go to publish from; the module exposes RecordConversationClaim and nothing else. Waived here so the gate is green over a real state of the tree, not because the state is right",
 })
 
 // A payload type nothing emits is either deliberate or a gap, and the contract

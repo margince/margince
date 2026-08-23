@@ -11,6 +11,7 @@ package people
 
 import (
 	"context"
+	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -22,7 +23,8 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// Provider answers the datasource verbs for person|organization|lead.
+// Provider answers the datasource verbs for person|organization|lead|
+// relationship|partner.
 type Provider struct {
 	store *Store
 }
@@ -78,6 +80,17 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 			return datasource.Record{}, err
 		}
 		return datasource.NewRecord(r, wireRelationship(row), &row.Version)
+	case datasource.EntityPartner:
+		// The ref carries the ORGANIZATION's id: a partner row is the 1:1
+		// extension of one company and has no id of its own to be addressed
+		// by. GetPartner gates on both the partner and organization objects
+		// and checks the organization is visible, so a caller who cannot open
+		// the company cannot read its partner terms either.
+		row, err := p.store.GetPartner(ctx, ids.From[ids.OrganizationKind](r.ID))
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, wirePartner(row), &row.Version)
 	default:
 		return datasource.Record{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
 	}
@@ -121,9 +134,42 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return pageOf(datasource.EntityLead, rows, page, err, func(v crmcontracts.Lead) (openapi_types.UUID, *int64) {
 			return v.Id, v.Version
 		})
+	case datasource.EntityPartner:
+		// ListPartners narrows by role and certification only — it has no text
+		// index — so a text query is refused rather than silently dropped,
+		// which would answer an unfiltered page and read as "no matches".
+		if text != nil && *text != "" {
+			return nil, "", false, fmt.Errorf(
+				"people: partner has no text index; narrow by partner_role or cert_status, or search organization instead")
+		}
+		in := ListPartnersInput{Limit: &limit}
+		if cursor != nil {
+			in.Cursor = *cursor
+		}
+		if err := partnerListFilters.Apply(&in, filters); err != nil {
+			return nil, "", false, err
+		}
+		rows, page, err := p.store.ListPartners(ctx, in)
+		if err != nil {
+			return nil, "", false, err
+		}
+		return pageOf(datasource.EntityPartner, mapRows(rows, wirePartner), page, nil,
+			func(v crmcontracts.Partner) (openapi_types.UUID, *int64) {
+				return v.OrganizationId, (*int64)(v.Version)
+			})
 	default:
 		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
 	}
+}
+
+// mapRows converts a store page's rows to their wire shape, so pageOf keeps
+// identifying one type rather than growing a second row-shape parameter.
+func mapRows[A, B any](in []A, f func(A) B) []B {
+	out := make([]B, 0, len(in))
+	for _, v := range in {
+		out = append(out, f(v))
+	}
+	return out
 }
 
 // pageOf turns one store page into seam records. The three list calls differ

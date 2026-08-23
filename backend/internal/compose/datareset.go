@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -227,14 +226,12 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		if err != nil {
 			return err
 		}
-		// The provider platform's sealed API keys, collected the same way and
-		// for the same reason — its connection table carries no workspace_id,
-		// so neither the sweep above nor the collection above can see it.
-		providerRefs, err := providerCredentialRefs(ctx, tx)
-		if err != nil {
-			return err
-		}
-		counts.secretRefs = slices.Concat(secretRefs, providerRefs)
+		// The provider platform's sealed API keys arrive in the same slice. They
+		// used to need a pass of their own, because the collection keyed on one
+		// column name and provider_connection carries no workspace_id; it keys
+		// on neither now, so that pass was a SECOND collector of the same rows
+		// and it double-counted them. Deleted.
+		counts.secretRefs = secretRefs
 
 		if err := sweepWorkspaceData(ctx, tx, tables); err != nil {
 			return err

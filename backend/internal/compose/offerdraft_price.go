@@ -14,7 +14,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -113,7 +112,6 @@ func validDecimal(s string, lo, hi float64) (string, float64, bool) {
 	return s, v, true
 }
 
-// currencyMinorDigits is the ISO 4217 decimal-places exception table.
 // priceEvidencedInSnippet is the conversation-price rung's evidence
 // check (OFFER-AC-14): the price the model claims the customer discussed
 // must actually appear in what it cited, not merely ride along with some
@@ -133,12 +131,7 @@ func priceEvidencedInSnippet(snippet string, priceMinor int64, currency string) 
 	if digits == 0 {
 		return false // the minor integer above IS the major form for a zero-decimal currency
 	}
-	scale := int64(1)
-	for i := 0; i < digits; i++ {
-		scale *= 10
-	}
-	whole, frac := priceMinor/scale, priceMinor%scale
-	plain := strconv.FormatInt(whole, 10)
-	full := fmt.Sprintf("%d.%0*d", whole, digits, frac)
+	plain := strconv.FormatInt(values.WholeMajorUnits(priceMinor, currency), 10)
+	full := values.MajorUnits(priceMinor, currency)
 	return strings.Contains(snippet, plain) || strings.Contains(snippet, full)
 }

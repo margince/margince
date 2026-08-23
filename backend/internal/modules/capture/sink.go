@@ -40,6 +40,18 @@ type Sink struct {
 	// ladder. Nil is a role that attributes nothing — messages still land, and
 	// none of them is filed under a project.
 	projectKeys ProjectKeyMatcher
+	// stampProject classifies the correspondence a project link qualifies. It
+	// arrives with projectKeys in one ProjectAttribution value, so the two are
+	// set together or neither is; attributeProject checks both anyway, because
+	// a ladder that files without classifying is the one outcome this must
+	// never reach.
+	stampProject StampProjectCorrespondence
+	// projectCandidates and proposeCandidate are the uncertain rung's two seams
+	// (projectcandidate.go), arriving in the same ProjectAttribution value and
+	// both optional together: unwired, the ladder stops at its deterministic
+	// rungs.
+	projectCandidates ProjectCandidateFinder
+	proposeCandidate  ProjectCandidateProposer
 	// tracePayloads is the deployment's capture.trace_payloads posture: with it
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.

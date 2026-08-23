@@ -435,7 +435,7 @@ func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
 		t.Fatalf("seeding the person: %v", err)
 	}
 	org := e.SeedOrg(t, "Project Owner GmbH", nil)
-	project := seedProject(ctx, t, e, "Edge project", nil, org, nil)
+	project := seedProject(ctx, t, e, "Edge project", org, nil)
 	projectID := project.ID.UUID
 
 	created, err := registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(

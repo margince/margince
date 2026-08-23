@@ -230,6 +230,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"confirmOrganizationProfileField": missingOperand(http.MethodPost, "/v1/organizations/%s/profile-fields//confirm", "field"),
 	"updateOrganizationProfileField":  missingOperand(http.MethodPatch, "/v1/organizations/%s/profile-fields/", "field"),
 	"removeProjectStakeholder":        missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
+	"removeProjectCompany":            missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "organization_id"),
 
 	"setProjectStakeholder": {
 		refusal: namedMember("person_id", "invalid",
@@ -238,6 +239,16 @@ var unrunnableCalls = map[string]unrunnableCall{
 			id := ids.NewV7().String()
 			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/stakeholders", id,
 				`{"person_id":"not-a-uuid","role":"champion"}`)
+		},
+	},
+
+	"setProjectCompany": {
+		refusal: namedMember("organization_id", "invalid",
+			"the organization_id in the body is not a uuid, so the edge names no company"),
+		build: func() (*http.Request, []byte) {
+			id := ids.NewV7().String()
+			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/companies", id,
+				`{"organization_id":"not-a-uuid","role":"partner"}`)
 		},
 	},
 }

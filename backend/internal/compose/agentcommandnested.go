@@ -3,10 +3,10 @@
 
 package compose
 
-// The REST door's half of the seven bespoke auto-execute commands
+// The REST door's half of the six bespoke auto-execute commands
 // (gradionhq/margince-poc-v1#928 task 6): a list member, a tag apply, an
-// offer line item add/update/remove, an offer created under a parent deal,
-// and a partner upsert. Unlike agentcommandoperand.go's confirm-first
+// offer line item add/update/remove, and an offer created under a parent
+// deal. Unlike agentcommandoperand.go's confirm-first
 // family, none of these carries body-derived VALUES into its command — the
 // body is the executor's own concern, never something Subject or Guards
 // reads (modules/agents/commandnested.go's own doc says why per command) —
@@ -110,13 +110,4 @@ func createOfferCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 		DealID: dealID,
 		Fields: json.RawMessage(body),
 	}), nil
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func upsertPartnerCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewUpsertPartnerCall(deps.records, agents.UpsertPartnerCommand{ID: id}), nil
 }

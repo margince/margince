@@ -14,39 +14,79 @@ package backendarch
 // contract and the read's own bounds at once.
 
 import (
+	"fmt"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
 )
 
 // documentReadingKind is the one kind that is not a scheduled spec: a human
-// asking for an attached document to be read. Named here rather than derived
-// because the emitter is a plain constant in another module, and this gate's
-// job is to notice when the two sets stop agreeing.
-const documentReadingKind = "document_extract"
+// asking for an attached document to be read.
+//
+// Read from the EMITTER's own exported constant rather than restated, so a
+// carrier that renames its kind fails here instead of leaving this gate
+// vouching for a name nothing writes. Its ai_task and its display kind are one
+// string for this carrier — the reading IS the task — which is why one constant
+// answers both.
+const documentReadingKind = activities.ExtractionAITask
 
 func TestEveryKindSomethingProducesIsOneTheContractCanExpress(t *testing.T) {
-	declared := crmYAMLEnum(t, "AiActivityItem", "kind")
+	declared := crmYAMLNamedEnum(t, "AiActivityKind")
 	if len(declared) == 0 {
-		t.Fatal("AiActivityItem declares no kind enum; this gate would pass vacuously")
+		t.Fatal("AiActivityKind declares no enum; this gate would pass vacuously")
 	}
+	var missing []string
 	for _, kind := range producedKinds() {
 		if !slices.Contains(declared, kind) {
+			missing = append(missing, kind)
 			t.Errorf("something announces kind %q and the contract's enum does not carry it — the wire "+
 				"cannot express it, and the rail would render nothing for AI work that really happened. "+
 				"Add it to the enum and ship its copy in en/de/vi", kind)
 		}
 	}
+	if len(missing) > 0 {
+		t.Log(alignEnum(missing))
+	}
 }
 
-// producedKinds is every kind an emitter can announce: the scheduled specs, and
-// the document reading a human asks for.
+// alignEnum names the file, the schema and exactly what to add.
+//
+// It deliberately does NOT render a replacement enum, and the reason is worth
+// keeping: crmYAMLNamedEnum SORTS what it reads, because its callers do set
+// comparisons. So no helper built on it can reproduce the contract's own order
+// — and that order is deliberate, opening with the three carrier kinds the
+// schema's own description explains. A "paste this" block built from a sorted
+// list would move every name in the enum in order to add one: a diff nobody can
+// review, and a grouping silently destroyed.
+//
+// Naming the file and the missing names is the part that was actually missing.
+// The per-kind errors above already say why each one matters.
+func alignEnum(missing []string) string {
+	out := append([]string{}, missing...)
+	sort.Strings(out)
+	return fmt.Sprintf(
+		"align: backend/api/crm.yaml — add %s to the AiActivityKind enum, keeping its existing order "+
+			"(the carrier kinds lead it on purpose), then ship each one's copy in en/de/vi",
+		strings.Join(out, ", "))
+}
+
+// producedKinds is every kind an emitter can announce.
+//
+// Three producers, and the third is why this function is derived rather than
+// listed: the ROUTER announces on behalf of every task the rail registry leaves
+// to it, under the task's own name. That set grows the moment somebody declares
+// a task in api/ai-tasks.yaml, so a list here would be one edit behind the
+// contract forever — which is the shape of the defect that left seventeen
+// shipped tasks reporting nothing at all.
 //
 // Both directions of this parity are checked against THIS list, which is why it
 // is one function rather than two inline slices — a producer named in only one
@@ -57,6 +97,11 @@ func producedKinds() []string {
 	for _, spec := range runner.Catalog() {
 		out = append(out, spec.Name)
 	}
+	for task, source := range ai.RailOwners() {
+		if source == ai.SourceRouter {
+			out = append(out, task)
+		}
+	}
 	return out
 }
 
@@ -64,7 +109,7 @@ func producedKinds() []string {
 // no reader will see, and a promise the server cannot keep.
 func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
 	produced := producedKinds()
-	for _, kind := range crmYAMLEnum(t, "AiActivityItem", "kind") {
+	for _, kind := range crmYAMLNamedEnum(t, "AiActivityKind") {
 		if !slices.Contains(produced, kind) {
 			t.Errorf("the contract declares kind %q and nothing announces it — either an emitter was "+
 				"removed and the enum kept its name, or the name is aspirational. Drop it, or point this "+

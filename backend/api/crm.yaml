@@ -930,6 +930,13 @@ paths:
 
         Native system-of-record only: a workspace reading from an incumbent mirror gets
         `422 unsupported_in_overlay_mode`.
+      parameters:
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            Narrow the timeline sections to one body of work: what is filed under this project
+            or under no project; correspondence filed under another project is left out.
       responses:
         '200':
           description: The person's 360 view.
@@ -1083,6 +1090,15 @@ paths:
                     Optional steering in the caller's own words ("shorter", "warmer", "ask for
                     Tuesday"). The one input that is NOT untrusted — the caller typed it — and
                     so the only one outside the fence.
+                project_id:
+                  type: [string, 'null']
+                  format: uuid
+                  description: >-
+                    Which body of work the message is about. When set, the draft is grounded in
+                    the 360 scoped to that project — correspondence filed under another project
+                    drops out — and the project's name, key, phase and target end date are facts
+                    the draft may use. Must be a live project the caller can read; an invisible
+                    or archived one is `404`, the same answer a direct read gives.
       responses:
         '200':
           description: The draft, and what it was written from.
@@ -1877,6 +1893,13 @@ paths:
         Native system-of-record only: a workspace reading from an incumbent mirror gets
         `422 unsupported_in_overlay_mode`, the same refusal entity-scoped activity reads
         give, because the mirror holds none of these relationships.
+      parameters:
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            Narrow the timeline sections to one body of work: what is filed under this project
+            or under no project; correspondence filed under another project is left out.
       responses:
         '200':
           description: The organization's 360 view.
@@ -2174,6 +2197,8 @@ paths:
 
         Human-only: a brief is a reading aid for a person, and an agent reading records
         through a passport has the records themselves.
+      parameters:
+        - $ref: '#/components/parameters/BriefProjectId'
       responses:
         '200':
           description: The account brief.
@@ -2193,6 +2218,8 @@ paths:
       description: |
         The explicit refresh behind the brief card's "outdated — refresh". It reads and
         writes only the cached brief: no record field changes, and nothing is sent.
+      parameters:
+        - $ref: '#/components/parameters/BriefProjectId'
       responses:
         '200':
           description: The regenerated brief.
@@ -2297,6 +2324,15 @@ paths:
               required: [question]
               properties:
                 question: { $ref: '#/components/schemas/OrganizationQuestion' }
+                project_id:
+                  type: [string, 'null']
+                  format: uuid
+                  description: >-
+                    Which body of work the question is about. When set, the answer is written
+                    from the 360 scoped to that project — activity filed under another project
+                    drops out, activity filed under none stays — and the answer's `scope` says so.
+                    Must be a live project the caller can read; an invisible or archived one is
+                    `404`, the same answer a direct read gives.
       responses:
         '200':
           description: The answer.
@@ -2371,6 +2407,15 @@ paths:
                   type: [string, 'null']
                   format: uuid
                   description: Which open deal the message is about. Absent draws on the account as a whole.
+                project_id:
+                  type: [string, 'null']
+                  format: uuid
+                  description: >-
+                    Which body of work the message is about. When set, the draft is grounded in
+                    the 360 scoped to that project — correspondence filed under another project
+                    drops out — and the project's name, key, phase and target end date are facts
+                    the draft may use. Must be a live project the caller can read; an invisible
+                    or archived one is `404`, the same answer a direct read gives.
                 intent:
                   type: [string, 'null']
                   maxLength: 400
@@ -2423,11 +2468,19 @@ paths:
     put:
       tags: [Organizations, Partners]
       operationId: upsertPartner
-      x-mcp-tool: { verb: update_record, record_type: partner, tier: auto_execute, scope: write }
-      summary: Create/update the partner extension on an org (sets classification='partner').
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Create/update the partner extension on an org (adds `partner` to its relationship types).
       description: |
         Promotes an org to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
-        setting `classification='partner'`. Company identity is never duplicated. 🟢 admin write.
+        adding `partner` to its `relationship_types`. (`classification` is retired and no longer
+        set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+        Company identity is never duplicated. Admin write, and a HUMAN one.
+
+        Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
+        commission ledger multiplies a won deal by, so this sets what a partner is paid on every
+        future deal. Reopening it to an agent is a deliberate act, and the tier is part of that
+        decision — a rate change is not an auto-execute shape.
       parameters:
         - $ref: '#/components/parameters/IfMatch'   # partner is versioned (data-model §4.3) — optimistic concurrency on update
       requestBody:
@@ -2447,6 +2500,7 @@ paths:
       tags: [Organizations, Partners]
       operationId: getPartner
       summary: Read the partner extension on an org (404 if the org is not a partner).
+      x-mcp-tool: { verb: read_record, record_type: partner, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The partner record.
@@ -3090,9 +3144,14 @@ paths:
       operationId: createProject
       summary: Create a project on a company.
       description: |
-        `organization_id` is required — a project has exactly one anchor company.
-        A `key` is optional but must match `^[A-Za-z][A-Za-z0-9_-]{1,23}$` and be unique
-        among live projects; a collision is `409` carrying the existing project's id.
+        `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+        work several companies do together, and the others are put on with
+        `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
+        The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
+        number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
+        subject line to file mail under this project, so a caller-chosen one is a matcher
+        a caller can get wrong. A collision is resolved by taking the next number, never
+        reported.
         The project starts in `initiative` and its creation row is appended to the phase history.
       x-mcp-tool: { verb: create_record, record_type: project, tier: confirmation_required, scope: write }
       parameters:
@@ -3118,6 +3177,37 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/transfer-ownership:
+    post:
+      tags: [Projects]
+      operationId: transferProjectOwnership
+      summary: Move every live project one user owns to another user, in one transaction.
+      description: |
+        The bulk twin of `updateProject.owner_id`, for a handover or a leaver. Every live
+        project owned by `from_owner_id` that the caller may write (own/team row scope or a
+        `write` share) moves to `to_owner_id`; archived projects and projects the caller cannot
+        write are left where they are and are not counted. Each moved project gets its own
+        `update` audit row with the `owner_id` before/after images, so its field history shows
+        the move, and its own `project.updated` event. `to_owner_id` must name an active user of
+        the workspace, else `422`.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferProjectOwnershipRequest' }
+      responses:
+        '200':
+          description: How many projects moved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferProjectOwnershipResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /projects/{id}:
@@ -3220,6 +3310,51 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /projects/{id}/360:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Projects]
+      operationId: getProject360
+      summary: The whole project page in one round trip — the project, its company, its phase history, its deals, stakeholders, contracts, documents, commitments, timeline and filing coverage.
+      description: |
+        One composite read assembled inside ONE workspace transaction, so the sections describe
+        one consistent moment rather than a stack of independently-timed round trips. `as_of`
+        stamps that moment; the isolation level is Read Committed, so a write committed mid-read
+        may land in a later section — the stamp is what makes that honest rather than hidden.
+
+        **Authorization is per section.** Reading the project itself is mandatory: a caller who
+        cannot see it gets the usual 403/404. Every other section needs its own object grant,
+        and a section the caller may not read is *omitted* and named in `sections_omitted` —
+        never returned empty, because empty and forbidden are different facts. Counts and
+        totals admit only rows the viewer can see.
+
+        **Nested collections are summaries, not paging surfaces.** Each carries at most 25
+        rows with `page.has_more` saying whether it was cut, and `page.next_cursor` is always
+        null: page two comes from the endpoint that owns that collection — `GET /deals`,
+        `GET /projects/{id}/stakeholders`, `GET /activities`, `GET /attachments` — each with
+        its own cursor vocabulary.
+
+        Agent-readable: every section is assembled from reads an agent already holds through
+        `read_record`, `list_records` and `search_records`, so withholding the assembled page
+        while granting all of its parts would be a distinction the surface cannot honestly
+        explain. It is governed exactly as those reads are — object RBAC and row scope apply
+        per section — and it writes nothing.
+
+        Native system-of-record only: a workspace reading from an incumbent mirror has no
+        project to assemble a page for and gets `422 unsupported_in_overlay_mode`.
+      x-mcp-tool: { verb: read_project_360, record_type: project, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The project's 360 view.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project360' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects/{id}/stakeholders:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3278,6 +3413,59 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /projects/{id}/companies:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Projects]
+      operationId: setProjectCompany
+      summary: Put a company on a project with a role (idempotent per company).
+      description: |
+        A project is work several companies do together — a customer, a partner, a subcontractor —
+        so a company is an edge (`relationship` of kind `project_company`), not the project's one
+        anchor. Sending a company already on the project re-roles the edge that exists rather than
+        adding a second one.
+      x-mcp-tool: { verb: update_record, record_type: project, tier: confirmation_required, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetProjectCompanyRequest' }
+      responses:
+        '200':
+          description: The companies on the project, after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectCompanyListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{id}/companies/{organization_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: organization_id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Projects]
+      operationId: removeProjectCompany
+      summary: Take a company off a project (archives the edge).
+      description: |
+        The company keeps every record it owns; only its place on this project ends. Taking the
+        LAST company off a project is refused: a project no company is on is work nobody is doing,
+        and it would vanish from every company page that could lead a reader back to it.
+      x-mcp-tool: { verb: update_record, record_type: project, tier: confirmation_required, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      responses:
+        '204': { description: Taken off. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ---------------------------- /pipelines ----------------------------------
   /pipelines:
@@ -3499,6 +3687,36 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   # ---------------------------- /activities ---------------------------------
+  /tasks:
+    post:
+      tags: [Activities]
+      operationId: createTask
+      summary: Create a task — a commitment with an owner, on the records it is about.
+      description: |
+        A task is an activity of kind `task`, and this is the one door that says so:
+        `POST /activities` with `kind: task` stores the same row, but a caller
+        (an agent above all) should not have to know that a to-do is a species of
+        timeline entry. Takes what a task needs and nothing a meeting does.
+      x-mcp-tool: { verb: create_task, record_type: activity, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTaskRequest' }
+      responses:
+        '201':
+          description: The task, as an activity.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /activities:
     get:
       tags: [Activities]
@@ -3534,6 +3752,12 @@ paths:
         - name: q
           in: query
           schema: { type: string }
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            Narrow the timeline sections to one body of work: what is filed under this project
+            or under no project; correspondence filed under another project is left out.
         - name: thread_key
           in: query
           schema: { type: string }
@@ -3541,6 +3765,18 @@ paths:
             One provider conversation. The company view's timeline groups by thread client-side over
             the page it holds, so a group cut off by that page completes itself through this rather
             than by widening the page for every account that has no long thread.
+        - name: occurred_after
+          in: query
+          schema: { type: string, format: date-time }
+          description: >-
+            Only activities that occurred at or after this instant (inclusive). Pairs with
+            `occurred_before` for a date range; either may stand alone.
+        - name: occurred_before
+          in: query
+          schema: { type: string, format: date-time }
+          description: >-
+            Only activities that occurred strictly before this instant (exclusive), so a day range
+            is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -3730,9 +3966,6 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingBrief
-      x-agent-access: human-only
-      # Session cookie only, matching auth.RequireHuman at runtime.
-      security: [{ cookieAuth: [] }]
       summary: The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
       description: |
         The prep dossier for a meeting, in the fixed eight-section order of ADR-0097 D5.
@@ -3757,6 +3990,23 @@ paths:
         Degrades rather than fails: with no model lane configured the model-written sections are
         a deterministic composition occupying the same place, and `generated_by` says which
         wrote them.
+
+        **One brief, both surfaces.** The `prep_for_meeting` tool serves THIS assembly for a
+        meeting anchor rather than composing its own, so an agent and the person it acts for
+        read the same eight sections rather than two answers to one question. The read was
+        human-only until that split was found; nothing about it widened when the gate came
+        off, because every gate that decides what a brief may say is the caller's own and a
+        passport is already capped by the granting human's live seat.
+      parameters:
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            The body of work to prepare for, for a meeting filed under NO project. A meeting
+            filed under a project scopes itself by that filing: naming the same project here
+            is accepted, naming a different one is `404` — the brief for a meeting about one
+            engagement is not available as a brief about another. Must be a live project the
+            caller can read.
       responses:
         '200':
           description: The pre-meeting brief.
@@ -3821,7 +4071,7 @@ paths:
         entity_id)` constraint). The activity's original `source`/`captured_by` provenance is **preserved**
         (the relink is a `human:*` or `agent:*` association event, not a re-capture). Writes one `audit_log`
         row (`activity_relink`). 🟢 — it is an internal association, not an outbound action.
-      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -3844,6 +4094,72 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/relink-thread:
+    post:
+      tags: [Activities]
+      operationId: relinkThread
+      summary: Re-associate every activity of one conversation thread to a chosen record, in one transaction.
+      description: |
+        The thread twin of `relinkActivity`: the same association applied to every non-archived
+        activity carrying `thread_key` that the caller may write. A mis-filed conversation is
+        usually mis-filed whole, and one call here is the remedy rather than one call per message.
+        Each moved activity gets its own `audit_log` row (`activity_relink`) and its own
+        `activity.updated` event, exactly as the single relink writes them; filing under a project
+        stamps each one as commercial correspondence the same way. An activity in the thread the
+        caller cannot write is left where it is and is not counted — the response says how many
+        moved. An activity already carrying the link is not counted either (the single
+        relink's idempotency, per row). All rows commit together or none do.
+      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RelinkThreadRequest' }
+      responses:
+        '200':
+          description: How many activities moved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RelinkBatchResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/relink-bulk:
+    post:
+      tags: [Activities]
+      operationId: relinkActivities
+      summary: Re-associate a named set of activities to a chosen record, in one transaction.
+      description: |
+        The explicit-id twin of `relinkThread`, for a selection that is not one conversation. The
+        caller names up to 500 activities; each is relinked exactly as `relinkActivity` would
+        relink it, with its own `audit_log` row and `activity.updated` event. Unlike the thread
+        form, every named id must be one the caller can see and write: an id outside the caller's
+        sight answers `404` and one they may read but not write answers `403`, and in either case
+        NOTHING moves — the whole set is one transaction. An activity already carrying the link is
+        left as it is and not counted.
+      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RelinkActivitiesRequest' }
+      responses:
+        '200':
+          description: How many activities moved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RelinkBatchResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -4440,6 +4756,294 @@ paths:
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+
+  # ---- Deal Room buyer edge ----
+  # The buyer's side of a Deal Room. No room id ever appears in a path: the
+  # credential (exchange, peek) or the session Bearer (everything else) is the
+  # only resolver, so the surface cannot be walked. Every refusal on the three
+  # anonymous operations reads identically — unknown, consumed, expired, revoked
+  # and superseded credentials take one path — so the edge is never an oracle
+  # for whether a credential maps to a real room, paused or otherwise.
+  /public/rooms/peek:
+    post:
+      tags: [Public]
+      operationId: peekDealRoomCredential
+      security: []   # anonymous: answers only whether the credential can be exchanged
+      x-agent-access: human-only
+      summary: Whether a Deal Room credential can still be exchanged (anonymous).
+      description: |
+        Lets the buyer screen tell "open the room" from "ask for a new link" before
+        the one-time exchange consumes the credential. Answers the same for a paused
+        room as for a live one — the paused message is delivered only after
+        authentication, to the person the link was sent to.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealRoomCredentialRequest' }
+      responses:
+        '200':
+          description: Whether the credential is exchangeable. Never 404 — absence is a false.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomPeekResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/exchange:
+    post:
+      tags: [Public]
+      operationId: exchangeDealRoomCredential
+      security: []   # anonymous: the credential IS the authentication
+      x-agent-access: human-only
+      summary: Exchange a one-time Deal Room credential for a room session (anonymous).
+      description: |
+        Consumes the credential — a second exchange of the same string is refused —
+        and issues a session token the buyer presents as a Bearer on every other
+        `/public/rooms` operation. The session is bound to ONE participant in ONE
+        room and is resolved fresh on every request, so revocation binds on the next
+        call. A paused room still exchanges: the session is established and the
+        room bootstrap then says access is paused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealRoomCredentialRequest' }
+      responses:
+        '200':
+          description: The session token, returned once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomSessionIssued' }
+        '404':
+          description: The credential admits nobody — unknown, already used, lapsed, retired or revoked; which one is deliberately not said.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/link-request:
+    post:
+      tags: [Public]
+      operationId: requestDealRoomLink
+      security: []   # anonymous: the only self-service recovery a buyer has
+      x-agent-access: human-only
+      summary: Ask for a fresh Deal Room link by email (anonymous, always 202).
+      description: |
+        A buyer whose link lapsed asks for another. If the address belongs to a live
+        participant of a room that can still admit them, a new credential is minted
+        and mailed, retiring the old one. The response is 202 whatever happened —
+        an address that is not in any room gets the same answer as one that is, so
+        the endpoint cannot be used to discover who was invited where.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealRoomLinkRequest' }
+      responses:
+        '202': { description: 'Accepted. If the address is known, a link is on its way.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/me:
+    get:
+      tags: [Public]
+      operationId: getBuyerRoom
+      security: [{ dealRoomSession: [] }]
+      summary: The room as its buyer sees it — the latest release, never the live deal.
+      description: |
+        What the session admits the caller to. `access` says whether content is
+        served: `live` and `closed` carry the room (closed is read-only), `paused`
+        and `expired` carry none — only the participant and whom to contact.
+        Everything editorial comes from the latest published release, so a change
+        the seller has not published is invisible here.
+      responses:
+        '200':
+          description: The buyer's view.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuyerRoomView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/documents:
+    get:
+      tags: [Public]
+      operationId: listBuyerRoomDocuments
+      security: [{ dealRoomSession: [] }]
+      summary: The documents as published, grouped.
+      description: |
+        The manifest frozen in the latest release. A document the seller added or
+        removed since is not reflected until they publish again. Empty while the
+        room is paused or expired.
+      responses:
+        '200':
+          description: The published documents.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuyerRoomDocumentListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/documents/{documentId}/file:
+    parameters:
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Public]
+      operationId: downloadBuyerRoomDocument
+      security: [{ dealRoomSession: [] }]
+      summary: The bytes of one published document.
+      description: |
+        Served only for a document named in the latest release of the session's room,
+        and only while the room serves content. The file is the exact version that
+        release froze.
+      responses:
+        '200':
+          description: The file bytes; Content-Disposition names the file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  /public/rooms/threads:
+    get:
+      tags: [Public]
+      operationId: listBuyerRoomThreads
+      security: [{ dealRoomSession: [] }]
+      summary: The room's conversation as the buyer sees it.
+      description: Optionally narrowed to one published document. Empty while the room serves no content.
+      parameters:
+        - name: document_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The threads.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThreadListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    post:
+      tags: [Public]
+      operationId: openBuyerRoomThread
+      security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
+      summary: Ask a question on a published document, or post a room-level update, as the buyer.
+      description: |
+        Needs the `comment` or `reviewer` capability. A document thread may be
+        marked `required_change`, which blocks confirming that document's version
+        until the seller resolves it. Refused while the room is paused, closed or
+        expired.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OpenDealRoomThreadRequest' }
+      responses:
+        '201':
+          description: The new thread.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThread' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/threads/{threadId}/comments:
+    parameters:
+      - { name: threadId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Public]
+      operationId: replyBuyerRoomThread
+      security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
+      summary: Reply in a thread as the buyer.
+      description: Needs the `comment` or `reviewer` capability. Refused on a resolved thread.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostDealRoomCommentRequest' }
+      responses:
+        '201':
+          description: The thread as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThread' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /public/rooms/documents/{documentId}/decision:
+    parameters:
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Public]
+      operationId: decideBuyerRoomDocument
+      security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
+      summary: Ask for changes to, or confirm, the published version of a document.
+      description: |
+        Needs the `reviewer` capability. `confirm_version` is refused with 422
+        `open_required_threads` while any required-change thread on the document is
+        open — the seller resolves those first. A confirmation is a working decision
+        inside the room, explicitly not a legal signature. Recorded against the exact
+        version the latest release names.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideBuyerRoomDocumentRequest' }
+      responses:
+        '201':
+          description: The recorded decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomDecision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  /public/rooms/sign-out:
+    post:
+      tags: [Public]
+      operationId: signOutBuyerRoom
+      security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
+      summary: End the room session.
+      description: |
+        Revokes this session only. The participant keeps their standing; a fresh
+        link admits them again. Works in every room state, because ending a session
+        is an access act, not a content one.
+      responses:
+        '204': { description: 'Signed out.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Rate-limited.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
   # ---- Buyer preference center + RFC 8058 one-click unsubscribe (B-E11.32) ----
   # A no-login public surface over the consent engine. The token in the path
   # is the recipient's unguessable preference token (carried in the
@@ -5377,7 +5981,7 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
         - name: person_id
           in: query
           schema: { type: string, format: uuid }
@@ -5675,7 +6279,7 @@ paths:
       parameters:
         - name: resource
           in: query
-          schema: { type: string, enum: [people, organizations, deals, activities, leads, partners, projects] }
+          schema: { $ref: '#/components/schemas/SavedViewResource' }
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
@@ -8348,7 +8952,7 @@ paths:
       - name: entity_type
         in: path
         required: true
-        schema: { type: string, enum: [person, organization, deal, lead, activity] }
+        schema: { type: string, enum: [person, organization, deal, lead, project, activity] }
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Compliance]
@@ -8440,7 +9044,7 @@ paths:
         One entry per field change, newest first, for the given `entity_type` + `entity_id`.
         A read-only projection over the append-only audit spine — no second history store.
         Only audit verbs whose before/after are honest field images project (create, update,
-        archive, restore, advance_stage); evidence-shaped rows (merge, promote, exports,
+        archive, restore, advance_stage, advance_phase); evidence-shaped rows (merge, promote, exports,
         tombstones) never fabricate field entries. The projection stops at the erasure
         boundary: after an Art. 17 erase or a retention anonymize, the scrub's tombstone row
         and everything older are withheld — the spine keeps its rows, the read refuses them —
@@ -8457,7 +9061,7 @@ paths:
         - name: entity_type
           in: query
           required: true
-          schema: { type: string, enum: [person, organization, deal, lead, activity] }
+          schema: { type: string, enum: [person, organization, deal, lead, project, activity] }
         - name: entity_id
           in: query
           required: true
@@ -8499,7 +9103,7 @@ paths:
         - name: object
           in: query
           required: true
-          schema: { type: string, enum: [person, organization, deal, lead, activity] }
+          schema: { type: string, enum: [person, organization, deal, lead, project] }
           description: Target core object (CUSTOM-FIELDS-PARAM-2).
         - name: status
           in: query
@@ -10614,6 +11218,12 @@ paths:
         - name: state
           in: query
           schema: { $ref: '#/components/schemas/DealRoomState' }
+        - name: participant_email
+          in: query
+          schema: { type: string, format: email }
+          description: >-
+            Only rooms this address may currently enter — a live, non-revoked seat.
+            The admin's path to "which rooms is this departed contact still in".
       responses:
         '200':
           description: A page of Deal Rooms.
@@ -10819,8 +11429,8 @@ paths:
       operationId: closeDealRoom
       summary: Freeze the room's content, keeping buyer access.
       description: |
-        Closing freezes CONTENT, not ACCESS. The buyer keeps reading documents,
-        to-dos and history; no comment, decision or task toggle is accepted after it.
+        Closing freezes CONTENT, not ACCESS. The buyer keeps reading documents and
+        history; no comment or decision is accepted after it.
 
         Access management deliberately keeps working on a closed room — a steward can
         still revoke a participant — because being unable to remove someone from a
@@ -10881,6 +11491,35 @@ paths:
   # access back — so unlike the room's draft text, none of this carries an
   # x-mcp-tool. Reading the roster is agent-readable: an agent summarising a
   # deal's state may say who is in the room.
+  /deal-rooms/{id}/preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: previewDealRoom
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: See the room as a buyer would — a real buyer session, minted for the caller.
+      description: |
+        Issues a one-time credential for a PREVIEW participant: the caller's own
+        seat, as a read-only buyer the real buyers never see. It goes through the
+        exact public edge a buyer uses, so what the rep sees is what the buyer gets
+        — only the latest release, the paused page, the closed page. The credential
+        lives ten minutes and the session one hour; every earlier preview session
+        of this rep is ended first. A preview session is refused by every public
+        write. Refused in `draft` (there is nothing published to see) and in
+        `archived`.
+      responses:
+        '201':
+          description: The one-time credential, returned exactly once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomPreviewIssued' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deal-rooms/{id}/participants:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -10890,7 +11529,7 @@ paths:
       summary: List the people admitted to a room.
       description: |
         Revoked participants are included by default and marked: their comments and
-        completed to-dos stay attributed to them, so a roster that hid them would
+        decisions stay attributed to them, so a roster that hid them would
         leave unexplained names on the room's history.
       x-mcp-tool: { verb: search_records, record_type: deal_room_participant, tier: auto_execute, scope: read }
       parameters:
@@ -11035,7 +11674,7 @@ paths:
         closed, so this is never frozen along with the room's content.
 
         Ends their live session immediately and retires any unconsumed credential. The
-        participant row survives, so their comments and completed to-dos stay
+        participant row survives, so their comments and decisions stay
         attributed. Revoking twice is accepted and changes nothing further.
       x-agent-access: human-only
       responses:
@@ -11044,6 +11683,250 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealRoomParticipant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /deal-rooms/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealRoomDocuments
+      summary: List the documents a room puts in front of its buyer.
+      description: |
+        Each entry points at an attachment already filed on the room's deal; the room
+        holds no bytes of its own. Grouped by one of four fixed groups and ordered
+        within each.
+      x-mcp-tool: { verb: search_records, record_type: deal_room_document, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The room's documents.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomDocumentListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Deals]
+      operationId: addDealRoomDocument
+      summary: Put an attachment of the deal in front of the buyer.
+      description: |
+        The attachment must be filed on THIS room's deal (`entity_type: deal`, the
+        room's `deal_id`); any other id is 404. The attachment row is the exact
+        version the buyer will be shown. Editorial: the buyer sees it at the next
+        publish. Refused once the room can no longer reach a buyer.
+      x-mcp-tool: { verb: create_record, record_type: deal_room_document, tier: auto_execute, scope: write }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddDealRoomDocumentRequest' }
+      responses:
+        '201':
+          description: The added document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomDocument' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deal-rooms/{id}/documents/{documentId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: documentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [Deals]
+      operationId: updateDealRoomDocument
+      summary: Rename, regroup or reorder a room document.
+      description: Editorial, like adding one — the buyer sees the change at the next publish.
+      x-mcp-tool: { verb: update_record, record_type: deal_room_document, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateDealRoomDocumentRequest' }
+      responses:
+        '200':
+          description: The updated document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomDocument' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Deals]
+      operationId: removeDealRoomDocument
+      summary: Take a document out of the room.
+      description: |
+        Marks the entry removed; the attachment itself is untouched. The buyer stops
+        seeing it at the next publish — a release already published keeps naming it,
+        because that release is what they were shown.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The removed document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomDocument' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /deal-rooms/{id}/threads:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealRoomThreads
+      summary: The room's conversation — every thread with its comments.
+      description: |
+        Live on both sides: nothing here waits for a publish. Optionally narrowed to
+        one document. A room-level thread has no `document_id`.
+      x-mcp-tool: { verb: search_records, record_type: deal_room_thread, tier: auto_execute, scope: read }
+      parameters:
+        - name: document_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The threads, oldest first, each with its comments oldest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThreadListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Deals]
+      operationId: openDealRoomThread
+      summary: Open a thread as the seller's side — a question on a document, or a room-level update.
+      description: |
+        The first comment is the body. Refused once the room can no longer reach a
+        buyer (closed, expired, archived). A document thread is pinned to the
+        document's current version.
+      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OpenDealRoomThreadRequest' }
+      responses:
+        '201':
+          description: The new thread with its first comment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThread' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deal-rooms/{id}/threads/{threadId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: threadId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Deals]
+      operationId: replyDealRoomThread
+      summary: Reply in a thread as the seller's side.
+      description: Refused on a resolved thread and in a room that can no longer reach a buyer.
+      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostDealRoomCommentRequest' }
+      responses:
+        '201':
+          description: The thread as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThread' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deal-rooms/{id}/threads/{threadId}/resolve:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: threadId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Deals]
+      operationId: resolveDealRoomThread
+      summary: Close a thread — the seller's side saying the point is settled.
+      description: |
+        Human-only: resolving a required-change thread is what unblocks the buyer's
+        confirmation of a document version, so a person stands behind it. Resolving
+        an already resolved thread answers 200 with the thread unchanged.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The resolved thread.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomThread' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /deal-rooms/{id}/decisions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealRoomDecisions
+      summary: Every decision a buyer recorded on a document version, newest first.
+      x-mcp-tool: { verb: search_records, record_type: deal_room_decision, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The decisions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomDecisionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /deal-rooms/{id}/changes:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealRoomChanges
+      summary: What the buyer would see differently if the room were published now.
+      description: |
+        The draft diffed against the latest release: the title or welcome text
+        changed, documents added, removed, retitled or regrouped, and documents that
+        are no longer eligible (archived, unlinked from the deal, or hidden from it)
+        and would drop out of the next release. A room never published reports every
+        document as added. This is what the Publish button is disabled on when empty.
+      responses:
+        '200':
+          description: The pending changes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomChanges' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -12219,7 +13102,7 @@ paths:
   # get, create, update (If-Match), archive — with schemas drawn 1:1 from the
   # §12.5 DDL. The contract-codegen + AC-MCP-3 lint MUST emit/verify these ops:
   #   /signals            (E08; now SPECIFIED above, B-E08.1–.4 — resolve via POST /signals/{id}/resolve, warm/cold via /signals/{id}/warmth + /signals/{id}/intro-path)
-  #   /deal-rooms         (E08/E12; the room + lifecycle + releases are now SPECIFIED above. Participants, documents, the shared to-do list and the public buyer edge still follow; engagement events are read via /deal-rooms/{id}/engagement)
+  #   /deal-rooms         (E08/E12; the room + lifecycle + releases are now SPECIFIED above. Participants, documents and the public buyer edge still follow; engagement events are read via /deal-rooms/{id}/engagement)
   #   /voice-profiles     (E07; now SPECIFIED above, B-E07.4/.5a — corpus sources via /voice-profiles/{id}/sources)
   #   /drafting-assets    (E07/E08; approval flips `approved` — admin/🟡)
   #   /agent-connections  (E10; revoke via POST /agent-connections/{id}/revoke; events read-only)
@@ -12427,6 +13310,155 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /deals/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Attachments]
+      operationId: listDealDocuments
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The deal's Files area — its own uploads and the files of every message linked to it.
+      description: |
+        Every attachment whose parent is the deal, plus every attachment of an activity
+        linked to the deal: that is where a captured email's files live, so without
+        this read an emailed contract is unreachable from the deal it is about.
+
+        **Each row is scoped through its own parent.** A captured file follows the
+        message's audience, so a colleague outside that audience sees a shorter list
+        than the mailbox owner — correct, and never widened here.
+
+        Inline mail images (small `image/*` parts of a captured message) are left out:
+        a logo in every signature would bury the one contract among thirty icons.
+        Files hidden from this deal are left out unless `include_hidden` is set, and
+        then carry `hidden: true`. Newest first.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: category
+          in: query
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+        - name: include_hidden
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: The deal's documents.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealDocumentListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/documents/{attachmentId}/hide:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: attachmentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Attachments]
+      operationId: hideDealDocument
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Stop listing a captured file on this deal without touching the file.
+      description: |
+        A captured attachment belongs to its message: it stays on the activity and in
+        the company library. Hiding only takes it off THIS deal's Files area. A file
+        already shared in the Deal Room stays in the room's draft, but drops out of the
+        next release and of the buyer's download.
+
+        Needs update on the deal, and the file must be in the deal's Files area for
+        this caller; anything else answers 404. Idempotent.
+      responses:
+        '204': { description: Hidden. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Attachments]
+      operationId: unhideDealDocument
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: List the file on this deal again.
+      responses:
+        '204': { description: Listed again. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /deals/{id}/brief:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealBrief
+      summary: The deal in a few cited sentences — where it stands, who is on it, what is open, what happened last.
+      description: |
+        Deterministic: every sentence restates a record the caller can open and
+        cites it, so the card renders the same whichever writer produced it. No
+        inference — a sentence nobody can check is worth less than the number it
+        paraphrases. Reads the deal, its health, its timeline, its open tasks and
+        its Deal Room through their own gated reads; a record the caller cannot
+        see never reaches a sentence.
+      responses:
+        '200':
+          description: The brief.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealBrief' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /deals/{id}/next-best-action:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealNextBestAction
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The one thing to do next on this deal, computed — never performed — on read.
+      description: |
+        A pure read: it COMPUTES a recommendation and returns it with the evidence
+        it rests on. Nothing executes here, because the deal page's reads retry and
+        re-run on remount, and a mutation hidden in a read would fire repeatedly and
+        skip the write shape. Performing it is the client's click, through the verb
+        the recommendation names: `draft_email` (`POST /activities/{id}/draft-email`),
+        `create_task` (`POST /tasks`, the arguments are its body), or
+        `open_meeting_brief` (navigation to the activity's brief). `none` says why
+        nothing is recommended. Deterministic: the same facts give the same answer.
+      responses:
+        '200':
+          description: The recommendation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealNextBestAction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /deals/{id}/health:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealHealth
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: How the deal stands — four named factors, each with the fact behind it.
+      description: |
+        The deal-health formula (recency × velocity × engagement × commitments) with
+        its evidence, so a reader can see what each factor was read from and
+        disagree. Computed on read; nothing is stored.
+      responses:
+        '200':
+          description: The health reading.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealHealthReading' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -12674,7 +13706,45 @@ paths:
         `recent` is BOUNDED (since local midnight, at most 10). An unbounded per-person
         history is a per-person activity ledger, which this installation does not keep.
 
+        `kinds` is how a client that renders only part of the record asks for its part.
+        Every AI task reports into this feed, so a caller that shows three kinds and is
+        served the newest ten of twenty-three can be handed ten it will draw nothing for
+        — the bound would fall on rows the reader never sees, and the rail would go blank
+        while its work was reported correctly. Naming the kinds moves the bound inside
+        the client's own set. Omit it to receive the complete record, which is what an
+        auditor or an operator's client wants.
+
         Read-only; no audit or event row (EVT-NOEVT-3).
+      parameters:
+        - name: kinds
+          in: query
+          required: false
+          description: |
+            Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
+            Omitted means every kind.
+
+            An empty list is a 422, and so is a name this enum does not carry. Both come
+            back as an empty feed, and an empty feed is the TRUE answer for an AI at rest —
+            so serving either would report "the AI did nothing" about a question the server
+            never actually asked. A client that lost its list and a client that typed the
+            vocabulary by hand both get told, rather than reassured.
+          schema:
+            type: array
+            # minItems: 1 — an empty list is a 422, so the schema must say so
+            # rather than admitting a value the handler then refuses. A contract
+            # that permits what the server rejects sends a generated client
+            # straight into an error it had no way to see coming.
+            minItems: 1
+            maxItems: 40
+            items: { $ref: '#/components/schemas/AiActivityKind' }
+          # explode: true — one `kinds=` per value, which is what the SPA's
+          # openapi-fetch client emits by default and what the generated server
+          # binder parses. The comma-joined form is equally legal OpenAPI and
+          # would have been silently wrong in exactly one direction: the client
+          # sends `kinds=a&kinds=b`, the server reads one value `a`, and the
+          # rail quietly loses a kind with no error anywhere.
+          style: form
+          explode: true
       responses:
         '200':
           description: The caller's own AI activity.
@@ -12682,6 +13752,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AiActivity' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /organizations/{id}/contracts:
     get:
@@ -13999,6 +15070,17 @@ components:
         never exceed its granting human's permissions. Mutations by this scheme ride the autonomy
         gate + approval staging (ADR-0055). Human interactive sessions use `cookieAuth`, not this
         scheme.
+    dealRoomSession:
+      type: http
+      scheme: bearer
+      description: |
+        A Deal Room BUYER session (the `/public/rooms` surface only). Exchanged once
+        from an invitation credential; the server stores only its SHA-256 and
+        resolves it on every request, so revocation and room pause bind on the next
+        call. It carries no CRM authority whatsoever: every platform/auth gate
+        refuses the `buyer` principal it binds, and the room's own store admits it
+        through methods that carry the session's room and participant as a
+        mandatory predicate. Presenting it on any other `/v1` route is a 401.
     cookieAuth:
       type: apiKey
       in: cookie
@@ -14013,6 +15095,16 @@ components:
 
   # --------------------------- shared parameters ----------------------------
   parameters:
+    BriefProjectId:
+      name: project_id
+      in: query
+      schema: { type: string, format: uuid }
+      description: >-
+        Narrow the brief to one body of work: it is written from the 360 scoped to that
+        project — activity filed under another project drops out, activity filed under none
+        stays — and the response's `scope` says so. The cache fingerprint carries the
+        project, so a scoped and an unscoped brief never serve each other. Must be a live
+        project the caller can read; an invisible or archived one is `404`.
     ProfileFieldKey:
       name: field
       in: path
@@ -15268,6 +16360,56 @@ components:
               status: { type: string, enum: [connected, disconnected, error, reauth_required] }
               last_synced_at: { type: [string, 'null'], format: date-time }
               last_sync_error_class: { type: [string, 'null'] }
+        projects:
+          type: object
+          description: |
+            What moved on the bodies of work in the window, and which have gone quiet. Absent
+            from a digest built without the section; each list is empty when nothing happened.
+            Workspace-level like the counts above: a project is read by every seat holding the
+            grant.
+          required: [phase_changes, new_commitments, gone_quiet]
+          properties:
+            phase_changes:
+              type: array
+              description: The ladder moves recorded in the window (from `project_phase_history`), newest first.
+              items:
+                type: object
+                required: [project_id, name, to_phase, occurred_at]
+                properties:
+                  project_id: { type: string, format: uuid }
+                  name: { type: string }
+                  key: { type: [string, 'null'] }
+                  from_phase: { type: [string, 'null'], description: 'A rung of the project ladder (initiative, pursuing, delivering, closed); null for the birth row.' }
+                  to_phase: { type: string, description: A rung of the project ladder. }
+                  occurred_at: { type: string, format: date-time }
+            new_commitments:
+              type: array
+              description: The projects that gained still-open tasks in the window, most first.
+              items:
+                type: object
+                required: [project_id, name, new_open_commitments]
+                properties:
+                  project_id: { type: string, format: uuid }
+                  name: { type: string }
+                  key: { type: [string, 'null'] }
+                  new_open_commitments: { type: integer }
+            gone_quiet:
+              type: array
+              description: |
+                The projects being pursued or delivered that nothing has been filed against for
+                30 days — the `projects-gone-quiet` report's rule, the same one the
+                `project_gone_quiet` signal is raised on — quietest first.
+              items:
+                type: object
+                required: [project_id, name, phase, quiet_since, days_quiet]
+                properties:
+                  project_id: { type: string, format: uuid }
+                  name: { type: string }
+                  key: { type: [string, 'null'] }
+                  phase: { type: string, description: 'A rung of the project ladder: pursuing or delivering, the two the quiet rule watches.' }
+                  quiet_since: { type: string, format: date-time, description: 'When the silence began: the last filed activity, or the project''s creation when nothing was ever filed.' }
+                  days_quiet: { type: integer }
+                  owner_id: { type: [string, 'null'], format: uuid }
     DedupeCandidate:
       type: object
       description: 'One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).'
@@ -16410,6 +17552,19 @@ components:
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         social:
           type: object
           additionalProperties: true
@@ -16617,6 +17772,19 @@ components:
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         parent_org_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
         merged_into_id: { type: [string, 'null'], format: uuid }
         computed_fields:
@@ -17049,6 +18217,25 @@ components:
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
 
+    ProjectScope:
+      type: object
+      description: |
+        What a read narrowed to one project reports about the narrowing, so a surface can
+        say "Scoped to KEY · N of M activities" from the server's own count rather than
+        guessing. Present only when the request named a `project_id`.
+
+        `in_scope` counts the activities the scoped read could see — filed under this
+        project or under none — and `total` the same anchor's activities unscoped, both
+        under the caller's own row scope. Both are ABSENT, not zero, when the caller holds
+        no activity grant: the project is still named, the count is not invented.
+      required: [project_id, name]
+      properties:
+        project_id: { type: string, format: uuid }
+        name: { type: string }
+        key: { type: [string, 'null'], description: 'The subject-line handle, when the project has one.' }
+        in_scope: { type: integer, minimum: 0 }
+        total: { type: integer, minimum: 0 }
+
     OrganizationBrief:
       type: object
       description: |
@@ -17060,6 +18247,9 @@ components:
         organization_id: { type: string, format: uuid }
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
         sections:
           type: array
           description: |
@@ -17120,6 +18310,9 @@ components:
         question: { $ref: '#/components/schemas/OrganizationQuestion' }
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
         sentences:
           type: array
           description: |
@@ -17686,6 +18879,30 @@ components:
         expected_close_date: { type: [string, 'null'], format: date }
         stalled: { type: boolean, description: No linked activity inside the 60-day stall window. }
 
+    Organization360ProjectPhase:
+      type: string
+      enum: [initiative, pursuing, delivering, closed]
+      description: Where a project stands on the record page; the same ladder the project's own `phase` walks.
+
+    Organization360Project:
+      type: object
+      description: >-
+        One body of work on the record page: enough to name it, say where it stands and who
+        holds it. The full row is `GET /projects/{id}`. Shared by the company page and the
+        person page, so a project reads the same on both.
+      required: [project_id, name, phase]
+      properties:
+        project_id: { type: string, format: uuid }
+        name: { type: string }
+        key: { type: [string, 'null'], description: 'The subject-line handle, when the project has one.' }
+        phase: { $ref: '#/components/schemas/Organization360ProjectPhase' }
+        last_activity_at: { type: [string, 'null'], format: date-time }
+        target_end_date: { type: [string, 'null'], format: date }
+        owner_id: { type: [string, 'null'], format: uuid }
+        owner_name:
+          type: [string, 'null']
+          description: The owner's display name; null when the project has no owner or the owner is no longer an active member.
+
     Organization360Deals:
       type: object
       description: The account's open deals plus the two lifetime figures the header needs.
@@ -17881,6 +19098,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         organization: { $ref: '#/components/schemas/Organization' }
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
         last_inbound_at:
           type: [string, 'null']
           format: date-time
@@ -17908,7 +19128,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [people, deals, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting]
+            enum: [people, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting]
         people:
           type: object
           required: [data, page]
@@ -17916,6 +19136,13 @@ components:
             data: { type: array, items: { $ref: '#/components/schemas/Organization360Contact' } }
             page: { $ref: '#/components/schemas/PageInfo' }
         deals: { $ref: '#/components/schemas/Organization360Deals' }
+        projects:
+          type: array
+          description: >-
+            The company's unarchived projects, work in motion first (delivering, pursuing,
+            initiative, then closed), under the caller's project row scope. Absent when the
+            caller has no project grant, named in `sections_omitted` as `projects`.
+          items: { $ref: '#/components/schemas/Organization360Project' }
         strength: { $ref: '#/components/schemas/OrganizationStrength' }
         activities: { $ref: '#/components/schemas/ActivityListResponse' }
         tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
@@ -18109,6 +19336,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         person: { $ref: '#/components/schemas/Person' }
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
         last_inbound_at:
           type: [string, 'null']
           format: date-time
@@ -18127,8 +19357,16 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [employments, deal_roles, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile]
+            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile]
         strength: { $ref: '#/components/schemas/RelationshipStrength' }
+        projects:
+          type: array
+          description: >-
+            The unarchived projects this person is part of: the ones they hold a live
+            stakeholder seat on, plus every project of the company they currently work for,
+            one row per project, work in motion first. Absent when the caller has no project
+            grant, named in `sections_omitted` as `projects`.
+          items: { $ref: '#/components/schemas/Organization360Project' }
         provider_profile:
           description: >-
             The purchased person-data snapshot (PO-EXT-9): what a connected provider
@@ -18548,6 +19786,9 @@ components:
           format: date-time
           description: The instant this read assembled the brief. Always now — nothing here is stored.
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
         sections:
           type: array
           description: >-
@@ -18555,23 +19796,48 @@ components:
             no surviving sentence is absent, never present-and-empty: `risks` in particular is
             specified as omitted when empty, and the same rule reads honestly for every other.
           items: { $ref: '#/components/schemas/MeetingBriefSection' }
+        omitted:
+          type: array
+          description: >-
+            What this reader's own grants kept OUT of the brief, named so a silence is
+            never mistaken for an absence. A brief that cannot see the Deal Room reads
+            exactly like a brief about a deal with no room, and a rep would walk in
+            believing the buyer had done nothing. Empty when the reader could see
+            everything the brief looks at.
+          items: { $ref: '#/components/schemas/MeetingBriefOmission' }
+
+    MeetingBriefOmission:
+      type: object
+      description: One source this reader may not see, and what that costs the brief.
+      required: [source, reason]
+      properties:
+        source:
+          type: string
+          description: '`deal_room` today. A machine key, so a client can render its own wording.'
+        reason:
+          type: string
+          description: One sentence a reader can act on, naming what is missing and why.
 
     MeetingBriefSection:
       type: object
-      description: One of the eight fixed sections, with its cited sentences.
+      description: One of the nine fixed sections, with its cited sentences.
       required: [kind, sentences]
       properties:
         kind:
           type: string
-          enum: [header, goal, attendees, commitments, deal_state, risks, talking_points, company_context]
+          enum: [header, goal, what_changed, attendees, commitments, deal_state, risks, talking_points, company_context]
           description: |
-            The eight of ADR-0097 D5, in the order a reader reads them. A closed enum rather
-            than a free-text heading, so a surface can label, order and collapse them and no
-            writer can invent a ninth.
+            The eight of ADR-0097 D5 plus `what_changed`, in the order a reader reads them. A
+            closed enum rather than a free-text heading, so a surface can label, order and
+            collapse them and no writer can invent a tenth.
 
             `header` — meeting, time, company, deal and how long since the last touch (deterministic).
             `goal` — the single next-step target; it leads because burying the ask is the
             canonical prep failure.
+            `what_changed` — what happened after the READER last dealt with this deal's people:
+            promises made, objections raised, decisions taken, conversations held, files that
+            changed hands. Its first line names the baseline; when the reader has never dealt
+            with them it says so ("first contact") rather than "nothing changed".
             `attendees` — who is in the room, with the first-timers flagged.
             `commitments` — what was promised, ours and theirs, each with its source and status.
             `deal_state` — where the deal stands: last conversation, objections, open questions.
@@ -19055,6 +20321,87 @@ components:
             60-day no-touch views (REPORT-PARAM-2) are the same finding filtered — a deal at
             61 days cannot appear on one surface and not the other.
 
+    DealBrief:
+      type: object
+      required: [deal_id, generated_at, generated_by, sections]
+      properties:
+        deal_id: { type: string, format: uuid }
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        sections:
+          type: array
+          items: { $ref: '#/components/schemas/DealBriefSection' }
+
+    DealBriefSection:
+      type: object
+      required: [kind, sentences]
+      properties:
+        kind:
+          type: string
+          enum: [standing, activity, open, room]
+          description: |
+            `standing` — stage, value, close date, health.
+            `activity` — what happened last and what is booked next.
+            `open` — the tasks still owed.
+            `room` — the Deal Room: state, what the buyer said, what they decided.
+        sentences:
+          type: array
+          items: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+
+    DealNextBestAction:
+      type: object
+      description: |
+        One recommendation for a deal. `action` is one of `draft_email`,
+        `create_task`, `open_meeting_brief`, `none` — a plain string for the reason
+        `DealRoomParticipantCapability` gives. `arguments` is the body or the operand the named
+        verb takes, ready to send; absent for `none`.
+      required: [deal_id, action, reason, evidence, computed_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        action: { type: string }
+        reason: { type: string, description: "One sentence, in the user's terms, saying why this and not something else." }
+        arguments:
+          type: object
+          additionalProperties: true
+          description: "`draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body."
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
+        computed_at: { type: string, format: date-time }
+      additionalProperties: false
+
+    DealNextBestActionEvidence:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        activity_id: { type: [string, 'null'], format: uuid }
+        occurred_at: { type: [string, 'null'], format: date-time }
+      additionalProperties: false
+    DealHealthReading:
+      type: object
+      required: [deal_id, health, at_risk, factors, computed_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        health: { type: number, description: 'The weighted reading, 0..1.' }
+        at_risk: { type: boolean, description: 'Below the at-risk threshold.' }
+        factors:
+          type: array
+          description: The four parts, in the order they weigh. Each names the fact it was read from.
+          items: { $ref: '#/components/schemas/DealHealthFactor' }
+        computed_at: { type: string, format: date-time }
+      additionalProperties: false
+
+    DealHealthFactor:
+      type: object
+      required: [key, value, weight, reason]
+      properties:
+        key: { type: string, description: '`activity_recency`, `stage_velocity`, `engagement` or `commitments`.' }
+        value: { type: number, description: 'The factor, 0..1.' }
+        weight: { type: number, description: Its share of the reading. }
+        reason: { type: string, description: 'The fact behind the number, in one sentence.' }
+        activity_id: { type: [string, 'null'], format: uuid, description: 'The activity the factor points at, where one does.' }
+      additionalProperties: false
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]
@@ -19388,19 +20735,22 @@ components:
       type: object
       description: |
         The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-        `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+        `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+        (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+        holds the two rules this surface cannot: write authority over the project ROW, and the
+        refusal that keeps a project's last company on it), `project_stakeholder`
         (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
         (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
         org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
       required: [id, kind, source, captured_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
         counterparty_org_id: { type: [string, 'null'], format: uuid, description: 'The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.' }
         deal_id: { type: [string, 'null'], format: uuid }
-        project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder edge. Null for every other kind.' }
+        project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder or project_company edge. Null for every other kind.' }
         role:
           type: [string, 'null']
           description: 'employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.'
@@ -19418,6 +20768,11 @@ components:
       type: object
       required: [kind, source]
       properties:
+        # project_company is deliberately ABSENT: a company's place on a project
+        # is written through /projects/{id}/companies, which holds two rules
+        # this generic surface cannot — write authority over the project ROW,
+        # and the refusal that keeps a project's last company on it. The server
+        # refuses the kind here, and the enum says so before a caller tries.
         kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
@@ -19483,6 +20838,19 @@ components:
             defaults it to `sourced`. Commission accrues on `sourced` only.
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         status: { type: string, enum: [open, won, lost], default: open }
         lost_reason: { type: [string, 'null'], description: Required when status=lost. }
         won_without_contract_reason:
@@ -19892,11 +21260,37 @@ components:
             The fields of THIS row the caller may not read (a field mask). A named field is null
             because it is withheld, not because it is empty; absent or empty means nothing is
             withheld.
+        organizations:
+          type: array
+          readOnly: true
+          items: { $ref: '#/components/schemas/ProjectCompany' }
+          description: >-
+            The companies working this project, in the order they were attached. A project is work
+            several companies do together — a customer, a partner, a subcontractor — so this is a
+            list rather than one anchor. A company the caller may not read is OMITTED rather than
+            named, so an empty list can mean either "no companies yet" or "none you can see".
         organization_id:
           type: [string, 'null']
           format: uuid
-          description: 'The anchor company — singular, and always set on the row. A company has many projects; a project has one company. Null on the wire when the caller may not read that company, in which case `masked_fields` names it: a project is readable across the workspace while the company it hangs off can still be an unpromoted capture.'
+          description: >-
+            The project's CUSTOMER — the first company attached with that role, or null when the
+            caller may not read it (in which case `masked_fields` names it) or when the project has
+            no customer. It is a view of `organizations`, kept because a project's client is the
+            one company most readers mean; the full picture is the list.
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         phase:
           type: string
           enum: [initiative, pursuing, delivering, closed]
@@ -19923,12 +21317,181 @@ components:
       additionalProperties: true
       x-extension: true
 
+    Project360:
+      type: object
+      description: |
+        The project page in one payload. Every section except `project` is optional: absent
+        means the caller lacks its grant, and `sections_omitted` names it. `documents` rides the
+        project grant itself, so it is present whenever the page is.
+      required: [as_of, project, sections_omitted]
+      properties:
+        as_of:
+          type: string
+          format: date-time
+          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+        project: { $ref: '#/components/schemas/Project' }
+        sections_omitted:
+          type: array
+          description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
+          items: { $ref: '#/components/schemas/Project360Section' }
+        organization:
+          $ref: '#/components/schemas/Project360Organization'
+        phase_history:
+          $ref: '#/components/schemas/Project360PhaseHistory'
+        deals:
+          type: object
+          description: The deals rolled up to the project, newest first, every status.
+          required: [data, page]
+          properties:
+            data: { type: array, items: { $ref: '#/components/schemas/Deal' } }
+            page: { $ref: '#/components/schemas/PageInfo' }
+        stakeholders:
+          type: object
+          description: The people seated on the project (`project_stakeholder` edges), each with the name the caller may read.
+          required: [data, page]
+          properties:
+            data: { type: array, items: { $ref: '#/components/schemas/Project360Stakeholder' } }
+            page: { $ref: '#/components/schemas/PageInfo' }
+        contracts: { $ref: '#/components/schemas/ContractListResponse' }
+        documents:
+          type: object
+          description: The files attached to the project itself, newest first.
+          required: [data, page]
+          properties:
+            data: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
+            page: { $ref: '#/components/schemas/PageInfo' }
+        commitments:
+          type: object
+          description: The open tasks filed under the project, soonest due first, undated last.
+          required: [data, page]
+          properties:
+            data: { type: array, items: { $ref: '#/components/schemas/Project360Commitment' } }
+            page: { $ref: '#/components/schemas/PageInfo' }
+        activities: { $ref: '#/components/schemas/ActivityListResponse' }
+        coverage: { $ref: '#/components/schemas/Project360Coverage' }
+        rollups: { $ref: '#/components/schemas/Project360Rollups' }
+
+    Project360Section:
+      type: string
+      description: One section of the project page, as `sections_omitted` names it.
+      enum: [organization, phase_history, deals, stakeholders, contracts, commitments, activities, coverage, rollups]
+
+    Project360Organization:
+      type: object
+      description: The company the project is for — the two fields a page header needs, read under the organization grant and row scope.
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    Project360PhaseHistory:
+      type: object
+      description: |
+        Every phase transition the project has made, oldest first — the birth row has
+        `from_phase` null — and the fold over them: how long the project has spent in each
+        phase so far, in the order the phases were first entered. A re-opened project visits a
+        phase twice; its seconds are summed.
+      required: [data, phase_durations]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Project360PhaseTransition' } }
+        phase_durations: { type: array, items: { $ref: '#/components/schemas/Project360PhaseDuration' } }
+
+    Project360PhaseTransition:
+      type: object
+      required: [id, from_phase, to_phase, reason, changed_at, changed_by]
+      properties:
+        id: { type: string, format: uuid }
+        from_phase: { type: [string, 'null'], description: Null on the birth row. }
+        to_phase: { type: string }
+        reason: { type: [string, 'null'] }
+        changed_at: { type: string, format: date-time }
+        changed_by:
+          type: object
+          description: The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user.
+          required: [id, display_name]
+          properties:
+            id: { type: string }
+            display_name: { type: [string, 'null'] }
+
+    Project360PhaseDuration:
+      type: object
+      required: [phase, seconds, current]
+      properties:
+        phase: { type: string }
+        seconds:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Time spent in the phase so far, summed over every visit, measured up to `as_of` for the current one.
+        current:
+          type: boolean
+          description: True for the phase the project is in at `as_of`.
+
+    Project360Stakeholder:
+      type: object
+      required: [relationship_id, person_id, person_name, role]
+      properties:
+        relationship_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        person_name:
+          type: [string, 'null']
+          description: Null when the caller may not read the person, or the person is archived; the seat is still reported.
+        role: { type: [string, 'null'] }
+
+    Project360Commitment:
+      type: object
+      required: [activity_id, subject, due_at, assignee_id, assignee_name, overdue]
+      properties:
+        activity_id: { type: string, format: uuid }
+        subject: { type: string }
+        due_at: { type: [string, 'null'], format: date-time }
+        assignee_id: { type: [string, 'null'], format: uuid }
+        assignee_name: { type: [string, 'null'] }
+        overdue: { type: boolean, description: Dated and already past at `as_of`. }
+
+    Project360Coverage:
+      type: object
+      description: |
+        How well the project's correspondence is filed, counted over the caller's activity row
+        scope. `attributed` is every live activity linked to the project (its whole lifecycle,
+        and the same number as `rollups.activity_count`); `unattributed_nearby` is every live
+        activity linked to one of the project's deals or stakeholder people that carries no
+        project link at all — the filing debt a rep can work down. `awaiting_decision` is every
+        live activity the attribution ladder proposed for this project and nobody has answered
+        yet: a `project_attribution` approval standing in an inbox, not a link.
+      required: [attributed, unattributed_nearby, awaiting_decision]
+      properties:
+        attributed: { type: integer, minimum: 0 }
+        unattributed_nearby: { type: integer, minimum: 0 }
+        awaiting_decision: { type: integer, minimum: 0 }
+
+    Project360Rollups:
+      type: object
+      description: |
+        The header figures. Money is in the installation's base currency at each deal's frozen
+        rate, summed over the caller's deal row scope; the counts are over the caller's
+        activity row scope. Present only when the caller holds both the deal and the activity
+        grant, since a header that showed one half would read as a project with no deals or
+        no work.
+      required: [open_deal_value, won_deal_value, open_commitments, last_activity_at, activity_count]
+      properties:
+        open_deal_value: { $ref: '#/components/schemas/Money' }
+        won_deal_value: { $ref: '#/components/schemas/Money' }
+        open_commitments:
+          type: integer
+          minimum: 0
+          description: Open tasks filed under the project, whole lifecycle.
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: The newest activity filed under the project; null when nothing is filed yet.
+        activity_count: { type: integer, minimum: 0, description: Every live activity filed under the project. }
+
     CreateProjectRequest:
       type: object
       required: [name, organization_id, source]
       properties:
         name: { type: string }
-        key: { type: [string, 'null'], pattern: '^[A-Za-z][A-Za-z0-9_-]{1,23}$' }
         organization_id: { type: string, format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
@@ -19938,12 +21501,51 @@ components:
       additionalProperties: true
       x-extension: true
 
+    SetProjectCompanyRequest:
+      type: object
+      required: [organization_id]
+      properties:
+        organization_id: { type: string, format: uuid }
+        role:
+          type: string
+          description: 'What this company is to the project; defaults to `customer` when omitted.'
+      additionalProperties: false
+
+    ProjectCompanyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectCompany' }
+      additionalProperties: false
+
+    ProjectCompany:
+      type: object
+      description: One company's place on a project.
+      required: [organization_id, display_name, role]
+      properties:
+        organization_id: { type: string, format: uuid }
+        display_name: { type: string }
+        role:
+          type: string
+          description: >-
+            What this company is to the project — `customer` is its client, and the rest name the
+            other sides of a joint delivery. Free text rather than an enum: an installation whose
+            deliveries have a shape this vocabulary does not carry should not have to rename it.
+      additionalProperties: false
+
     UpdateProjectRequest:
       type: object
-      description: 'Note `phase` is absent by design — it moves only through advanceProjectPhase.'
+      description: |
+        Note `phase` is absent by design — it moves only through advanceProjectPhase.
+        `key` is absent for a different reason: the server mints it from the name and
+        it is read-only thereafter. A key is what a human writes in a subject line to
+        file mail under a project, so a caller-chosen one is a matcher a caller can
+        get wrong — a project keyed after a person's name would claim every bracketed
+        mention of that word.
       properties:
         name: { type: string }
-        key: { type: [string, 'null'], pattern: '^[A-Za-z][A-Za-z0-9_-]{1,23}$' }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date }
@@ -19958,6 +21560,19 @@ components:
       properties:
         to_phase: { type: string, enum: [initiative, pursuing, delivering, closed] }
         reason: { type: [string, 'null'], description: 'Required when to_phase=closed (422 closed_reason_required); recorded on the phase-history row either way.' }
+
+    TransferProjectOwnershipRequest:
+      type: object
+      required: [from_owner_id, to_owner_id]
+      properties:
+        from_owner_id: { type: string, format: uuid }
+        to_owner_id: { type: string, format: uuid, description: 'An active user of the workspace (422 otherwise).' }
+
+    TransferProjectOwnershipResult:
+      type: object
+      required: [transferred]
+      properties:
+        transferred: { type: integer, description: 'Live projects the caller could write that moved; archived and unwritable ones are not counted.' }
 
     SetProjectStakeholderRequest:
       type: object
@@ -20068,6 +21683,56 @@ components:
         activity_id: { type: string, format: uuid }
         entity_type: { type: string, enum: [person, organization, deal, lead, project] }
         entity_id: { type: string, format: uuid }
+
+    RelinkThreadRequest:
+      type: object
+      description: |
+        The destination for every writable, non-archived activity of one conversation thread.
+        `entity_type`/`entity_id`/`replace_existing_of_type` mean exactly what they mean on
+        `relinkActivity`.
+      required: [thread_key, entity_type, entity_id]
+      properties:
+        thread_key: { type: string, minLength: 1, maxLength: 512, description: 'The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter).' }
+        entity_type: { $ref: '#/components/schemas/RelinkDestinationType' }
+        entity_id: { type: string, format: uuid }
+        replace_existing_of_type:
+          type: boolean
+          default: false
+          description: When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
+
+    RelinkActivitiesRequest:
+      type: object
+      description: |
+        The destination for a named set of activities. Every id must be one the caller can see and
+        write, or the whole request is refused and nothing moves.
+      required: [activity_ids, entity_type, entity_id]
+      properties:
+        activity_ids:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { type: string, format: uuid }
+        entity_type: { $ref: '#/components/schemas/RelinkDestinationType' }
+        entity_id: { type: string, format: uuid }
+        replace_existing_of_type:
+          type: boolean
+          default: false
+          description: When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
+
+    RelinkBatchResult:
+      type: object
+      description: |
+        A count and nothing else. The moved ids are deliberately not echoed: a replay of the same
+        Idempotency-Key, or an approval inbox showing the staged call, would otherwise hand back
+        rows the reader may since have lost sight of.
+      required: [relinked]
+      properties:
+        relinked: { type: integer, description: 'Activities that gained the link. One the caller could not write (thread form) or that already carried it is not counted.' }
+
+    RelinkDestinationType:
+      type: string
+      description: The record kinds an activity may be filed under.
+      enum: [person, organization, deal, lead, project]
 
     ActivityLinkInput:
       type: object
@@ -20290,6 +21955,26 @@ components:
                 a transport that sends text-with-files as a caption bounds it far below a
                 text-only message. Zero means no extra bound.
 
+    CreateTaskRequest:
+      type: object
+      description: What a task needs. Stored as an activity of kind `task`.
+      required: [subject, source]
+      properties:
+        subject: { type: string, minLength: 1, description: 'What has to be done, as one line.' }
+        body: { type: [string, 'null'], description: 'Detail, if one line is not enough.' }
+        due_at: { type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.' }
+        assignee_id: { type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.' }
+        links:
+          type: array
+          description: The records the task is about. Omit it and the task appears on no timeline.
+          items:
+            type: object
+            required: [entity_type, entity_id]
+            properties:
+              entity_type: { type: string, enum: [person, organization, deal, lead, project] }
+              entity_id: { type: string, format: uuid }
+        source: { type: string }
+      additionalProperties: false
     CreateActivityRequest:
       type: object
       required: [kind, source]
@@ -20465,6 +22150,37 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
+    DealDocument:
+      type: object
+      description: |
+        One file in a deal's Files area: the attachment, whether it is hidden from this
+        deal, and where a captured file came from, so a reader can tell "the contract
+        Laura mailed on the 12th" from "the draft I uploaded".
+      required: [attachment, hidden]
+      properties:
+        attachment: { $ref: '#/components/schemas/Attachment' }
+        hidden: { type: boolean }
+        origin:
+          $ref: '#/components/schemas/DealDocumentOrigin'
+
+    DealDocumentOrigin:
+      type: object
+      description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, description: 'The activity kind the file arrived with: email, message, meeting.' }
+        subject: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time }
+        counterparty_email: { type: [string, 'null'], format: email }
+
+    DealDocumentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealDocument' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
     ExtractedField:
       type: object
       description: One attempted grounded field from the staged AI-extraction read (RD-T10).
@@ -20607,6 +22323,9 @@ components:
             sanitiser and no HTML+text send pair, so a formatted draft would be a wire
             change rather than a toolbar.
         to: { type: array, items: { type: string, format: email } }
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
         reasoning:
           type: array
           description: |
@@ -20994,6 +22713,19 @@ components:
         score_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override (formulas §3.1) and recompute is suppressed; the machine value is retained in `score_computed`.' }
         score_computed: { type: [integer, 'null'], readOnly: true, description: 'Server-derived. The latest machine-computed §3 score, retained ONLY while an override is in force (else null, because score itself is the machine value).' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_person_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }
@@ -21437,13 +23169,18 @@ components:
         kind:
           type: string
           enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other,
-                 contract_ended, new_opportunity, commitment_made, ghosted_thread]
+                 contract_ended, new_opportunity, commitment_made, ghosted_thread,
+                 project_gone_quiet]
           description: |
-            The first six are what a human files by hand. The last four are what the producers
+            The first six are what a human files by hand. The rest are what the producers
             raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
             out of a settled conversation by the `signal_extract` site, each citing the message
             it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-            interaction is ours, nobody answered it, and the account is one worth chasing.
+            interaction is ours, nobody answered it, and the account is one worth chasing;
+            `project_gone_quiet` is the same kind of comparison on a project — it is being
+            pursued or delivered and nothing has been filed against it for 30 days (the
+            `projects-gone-quiet` report's own rule). Its subject is the project
+            (`entity_type: project`), attributed to the project's company.
         source_channel:
           type: string
           enum: [derived, inbound, web, social, deal_room_engagement]
@@ -21452,7 +23189,7 @@ components:
         raw_ref: { type: [string, 'null'], description: 'Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.' }
         entity_type:
           type: [string, 'null']
-          enum: [deal, organization, person, null]
+          enum: [deal, organization, person, project, null]
           description: The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
         entity_id: { type: [string, 'null'], format: uuid }
         resolution_state:
@@ -21494,7 +23231,7 @@ components:
         raw_ref: { type: [string, 'null'] }
         entity_type:
           type: [string, 'null']
-          enum: [deal, organization, person, null]
+          enum: [deal, organization, person, project, null]
           description: 'Subject record, both entity fields together or neither: with a subject the signal enters `resolved`; without one it enters `unresolved` (a raw item needing a raw_ref for POST /signals/{id}/resolve).'
         entity_id: { type: [string, 'null'], format: uuid }
         severity: { type: string, enum: [info, warn, urgent], default: info }
@@ -21852,6 +23589,11 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Tag' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
+    SavedViewResource:
+      type: string
+      description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
+      enum: [people, organizations, deals, activities, leads, partners, projects]
+
     SavedView:
       type: object
       description: >-
@@ -21863,7 +23605,7 @@ components:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
         shared_scope: { type: string, enum: [private, team, workspace], default: private, description: V1 enforces private. }
-        resource: { type: string, enum: [people, organizations, deals, activities, leads, partners, projects] }
+        resource: { $ref: '#/components/schemas/SavedViewResource' }
         name: { type: string }
         query:
           type: object
@@ -21878,7 +23620,7 @@ components:
       type: object
       required: [resource, name, query]
       properties:
-        resource: { type: string, enum: [people, organizations, deals, activities, leads, partners, projects] }
+        resource: { $ref: '#/components/schemas/SavedViewResource' }
         name: { type: string }
         query: { type: object, additionalProperties: true }
 
@@ -22661,7 +24403,7 @@ components:
       required: [id, entity_type, entity_id, field, changed_at, actor_type, actor_id]
       properties:
         id: { type: string, format: uuid }
-        entity_type: { type: string, enum: [person, organization, deal, lead, activity] }
+        entity_type: { type: string, enum: [person, organization, deal, lead, project, activity] }
         entity_id: { type: string, format: uuid }
         field: { type: string }
         old_value: { type: [string, 'null'] }
@@ -22696,7 +24438,7 @@ components:
         id: { type: string, format: uuid }
         object:
           type: string
-          enum: [person, organization, deal, lead, activity]
+          enum: [person, organization, deal, lead, project]
           description: The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
         label: { type: string, description: Display label; the only thing a rename updates. }
         slug: { type: string, description: Admin-facing key the column_name derives from. }
@@ -22754,7 +24496,7 @@ components:
       properties:
         object:
           type: string
-          enum: [person, organization, deal, lead, activity]
+          enum: [person, organization, deal, lead, project]
         label: { type: string }
         type:
           type: string
@@ -23005,21 +24747,41 @@ components:
           maxItems: 10
           items: { $ref: '#/components/schemas/AiActivityItem' }
           description: 'Occurrences that SETTLED since midnight in the server''s own timezone (not the reader''s, and not UTC unless the server runs on it), newest-settled first, at most 10.'
+    AiActivityKind:
+      type: string
+      enum:
+        [morning_brief, overnight_at_risk_sweep, document_extract,
+         brief_ranking, capture_classify, capture_counterparty_verdict, cert_judge,
+         cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
+         offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
+         site_triage, summarize, transcript, transcript_propose, voice_build]
+      description: |
+        What kind of AI work an occurrence is. Every AI task this build can run reports here,
+        because a task that reports nothing is AI work the product performed and then denied.
+        What a reader is SHOWN is a separate decision and belongs to the client: a complete
+        record is the server's obligation, an edited one is the interface's.
+
+        Three names come from a durable carrier that owns its own occurrence and can say
+        queued and running: the two scheduled kinds match a name in runner.Catalog(), and
+        `document_extract` is a reading of an attached document a human asked for. Every other
+        name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
+        settled when it appears, because the router learns of a call once the call is over.
+
+        Its own schema because the item that reports a kind and the query that asks for kinds
+        must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
+        edits one.
     AiActivityItem:
       type: object
       additionalProperties: false
       required: [id, kind, state, started_at]
       properties:
         id: { type: string, format: uuid }
-        kind:
-          type: string
-          enum: [morning_brief, overnight_at_risk_sweep, document_extract]
-          description: |
-            What kind of AI work this occurrence is. A kind absent here renders no line, which
-            is a better answer than a server that silently omits work the AI really did.
-
-            The scheduled kinds match a name in runner.Catalog(); `document_extract` is a
-            reading of an attached document, requested by a human from the record it hangs on.
+        # A bare $ref, never allOf-with-a-sibling-description: wrapping it hides the
+        # underlying `type` from the contract-breaking checker, which reads the
+        # property as having gone from `string` to `any` and calls it breaking.
+        # The description belongs on the shared schema anyway — it describes the
+        # vocabulary, not this one use of it.
+        kind: { $ref: '#/components/schemas/AiActivityKind' }
         state:
           type: string
           enum: [queued, running, stalled, done, degraded, failed]
@@ -23130,8 +24892,12 @@ components:
             - data_subject_request
             - deal
             - deal_room
+            - deal_room_comment
+            - deal_room_decision
+            - deal_room_document
             - deal_room_participant
             - deal_room_release
+            - deal_room_thread
             - import_run
             - lead
             - list
@@ -24371,12 +26137,28 @@ components:
         deals:
           type: array
           description: >-
-            Every transaction the record qualifies through, by name. Both id
+            Every deal the record qualifies through, by name. Both id
             and name are required, so a qualification whose deal has since
             been deleted — and a controller pin that never named one
             (germany-package DEPACK-AC-5h: supplier correspondence has no deal
             in this product) — is reported through `reason` rather than as a
-            half-populated entry.
+            half-populated entry. Empty is also the ordinary answer for a
+            record held by a project alone; see `projects`.
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+        projects:
+          type: array
+          description: >-
+            Every project the record qualifies through, by name, on the same
+            terms as `deals`. A project qualifies its correspondence by
+            existing — it is a commercial engagement, so the mail filed under
+            it is about an actual transaction whether or not a deal on it has
+            closed. A record can qualify through both a deal and a project;
+            neither list is a summary of the other.
           items:
             type: object
             required: [id, name]
@@ -25197,10 +26979,9 @@ components:
         snapshot:
           type: object
           description: |
-            The frozen buyer projection — status sentence, next step, welcome text,
-            seller display fields and the task definitions as they read at publish time.
-            Task COMPLETION is deliberately absent: it is live collaboration state, not
-            editorial content, so a checkbox never needs a republish.
+            The frozen buyer projection — title, welcome text, steward and the document
+            manifest as they read at publish time. Comments and decisions are deliberately
+            absent: they are live collaboration state, not editorial content.
           additionalProperties: true
         release_note: { type: [string, 'null'] }
         published_by:
@@ -25269,6 +27050,20 @@ components:
           type: [string, 'null']
           format: date-time
           description: When they last made a request. Null if they have never signed in.
+        download_count:
+          type: [integer, 'null']
+          readOnly: true
+          description: |
+            How many documents this person has taken out of the room, counting each
+            download. Absent until they take one.
+
+            A seller previewing their own room as a buyer is never counted: the panel
+            would otherwise report the buyer opening what the rep opened.
+        documents_downloaded:
+          type: [array, 'null']
+          readOnly: true
+          items: { type: string }
+          description: The titles of the documents they downloaded, each named once.
         has_signed_in:
           type: boolean
           readOnly: true
@@ -25280,12 +27075,20 @@ components:
             move: it is what fixes their address, because redirecting a link somebody
             has already signed in with would hand their standing access to whoever the
             new address belongs to.
+        link_requested_at:
+          type: [string, 'null']
+          format: date-time
+          readOnly: true
+          description: |
+            When this person last asked for a new link from the public page. The
+            seller sees it beside the row so a buyer whose mail never arrived (no
+            relay configured, or a link still standing) can be handed one by hand.
         revoked_at:
           type: [string, 'null']
           format: date-time
           description: |
             When their access was taken away. The row survives revocation so their
-            comments and completed to-dos stay attributed to a name.
+            comments and decisions stay attributed to a name.
         source: { type: string }
         captured_by: { type: string, readOnly: true }
         created_at: { type: string, format: date-time }
@@ -25353,12 +27156,334 @@ components:
             link itself rather than being told the invitation failed.
       additionalProperties: false
 
+    DealRoomChanges:
+      type: object
+      required: [has_changes, changes]
+      properties:
+        has_changes: { type: boolean }
+        release_no:
+          type: [integer, 'null']
+          description: The release the draft was compared against; null when the room was never published.
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/DealRoomChange' }
+
+    DealRoomChange:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          description: >-
+            One of title_changed, welcome_changed, document_added, document_removed,
+            document_retitled, document_regrouped, document_reordered,
+            document_ineligible. A plain string
+            for the reason DealRoomParticipantCapability gives.
+        document_id: { type: [string, 'null'], format: uuid }
+        title: { type: [string, 'null'], description: 'The document title the sentence names: current, or as last published.' }
+
+    DealRoomPreviewIssued:
+      type: object
+      required: [credential, credential_expires_at]
+      properties:
+        credential:
+          type: string
+          description: The one-time `mdr_` credential. Shown once; the server keeps only its digest.
+        credential_expires_at: { type: string, format: date-time }
+
     DealRoomReleaseListResponse:
       type: object
       required: [data, page]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/DealRoomRelease' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    DealRoomDocumentGroup:
+      type: string
+      description: |
+        One of four fixed groups, as a machine key: `commercial`, `legal`,
+        `security_privacy`, `delivery_operations`. Labels are the client's i18n; the
+        key never carries a display string. Not configurable, not AI-assigned — the
+        person adding the document picks. A plain string rather than an inline enum
+        for the reason `DealRoomParticipantCapability` gives.
+
+    DealRoomDocument:
+      type: object
+      description: |
+        One document a room puts in front of its buyer: a pointer at an attachment
+        filed on the deal, with a buyer-facing title, a group and an order. The
+        attachment row is the exact version shown.
+      required: [id, room_id, attachment_id, group_key, title, position, filename, source, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        room_id: { type: string, format: uuid }
+        attachment_id: { type: string, format: uuid }
+        group_key: { $ref: '#/components/schemas/DealRoomDocumentGroup' }
+        title: { type: string }
+        position: { type: integer }
+        filename: { type: string, readOnly: true, description: "The attachment's stored filename, for the seller's reference." }
+        content_type: { type: [string, 'null'], readOnly: true }
+        byte_size: { type: [integer, 'null'], format: int64, readOnly: true }
+        archived_at: { type: [string, 'null'], format: date-time }
+        source: { type: string }
+        captured_by: { type: string, readOnly: true }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      additionalProperties: true
+      x-extension: true
+
+    DealRoomDocumentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealRoomDocument' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    AddDealRoomDocumentRequest:
+      type: object
+      required: [attachment_id, group_key, source]
+      properties:
+        attachment_id: { type: string, format: uuid, description: "An attachment filed on this room's deal." }
+        group_key: { $ref: '#/components/schemas/DealRoomDocumentGroup' }
+        title:
+          type: string
+          minLength: 1
+          description: The buyer-facing name. Defaults to the attachment's filename.
+        position: { type: integer, description: Order within the group. Defaults to 0. }
+        source: { type: string }
+      additionalProperties: true
+      x-extension: true
+
+    UpdateDealRoomDocumentRequest:
+      type: object
+      description: Any subset; omit a field to leave it unchanged.
+      properties:
+        group_key: { $ref: '#/components/schemas/DealRoomDocumentGroup' }
+        title: { type: string, minLength: 1 }
+        position: { type: integer }
+      additionalProperties: true
+      x-extension: true
+
+    BuyerRoomDocument:
+      type: object
+      description: One published document as the buyer sees it. No seller-side ids beyond its own.
+      required: [id, group_key, title, position, filename]
+      properties:
+        id: { type: string, format: uuid }
+        group_key: { $ref: '#/components/schemas/DealRoomDocumentGroup' }
+        title: { type: string }
+        position: { type: integer }
+        filename: { type: string }
+        content_type: { type: [string, 'null'] }
+        byte_size: { type: [integer, 'null'], format: int64 }
+      additionalProperties: false
+
+    BuyerRoomDocumentListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/BuyerRoomDocument' } }
+      additionalProperties: false
+    DealRoomAuthor:
+      type: object
+      description: Who spoke — which side, and the name that side knows them by.
+      required: [side, name]
+      properties:
+        side: { type: string, description: '`seller` or `buyer`.' }
+        name: { type: string }
+      additionalProperties: false
+
+    DealRoomComment:
+      type: object
+      required: [id, thread_id, body, author, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        thread_id: { type: string, format: uuid }
+        body: { type: string }
+        author: { $ref: '#/components/schemas/DealRoomAuthor' }
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
+
+    DealRoomThread:
+      type: object
+      description: |
+        One thread of the room's conversation, with its comments. Served to both
+        sides in the same shape: the buyer and the seller read the same
+        conversation, and neither side's ids beyond the thread's own are in it.
+      required: [id, room_id, required_change, state, author, created_at, comments]
+      properties:
+        id: { type: string, format: uuid }
+        room_id: { type: string, format: uuid }
+        document_id: { type: [string, 'null'], format: uuid, description: Null for a room-level thread. }
+        required_change: { type: boolean }
+        state: { type: string, description: '`open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives.' }
+        author: { $ref: '#/components/schemas/DealRoomAuthor' }
+        created_at: { type: string, format: date-time }
+        resolved_at: { type: [string, 'null'], format: date-time }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        comments:
+          type: array
+          items: { $ref: '#/components/schemas/DealRoomComment' }
+      additionalProperties: false
+
+    DealRoomThreadListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealRoomThread' } }
+      additionalProperties: false
+
+    OpenDealRoomThreadRequest:
+      type: object
+      required: [body]
+      properties:
+        document_id:
+          type: [string, 'null']
+          format: uuid
+          description: The room document the thread is about. Omit for a room-level exchange.
+        body: { type: string, minLength: 1, description: The first comment. }
+        required_change:
+          type: boolean
+          description: Only with a document. Marks the thread as blocking confirmation until resolved.
+        source: { type: string, description: Provenance. Defaults to `ui` on the public edge. }
+      additionalProperties: false
+
+    PostDealRoomCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1 }
+        source: { type: string }
+      additionalProperties: false
+
+    DealRoomDecision:
+      type: object
+      description: A buyer's decision about one document version. Insert-only; a later decision is a new row.
+      required: [id, room_id, document_id, attachment_id, participant_id, kind, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        room_id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        attachment_id: { type: string, format: uuid, description: The exact version decided on. }
+        participant_id: { type: string, format: uuid }
+        participant_name: { type: string, readOnly: true }
+        kind: { type: string, description: '`request_changes` or `confirm_version`.' }
+        note: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
+
+    DealRoomDecisionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealRoomDecision' } }
+      additionalProperties: false
+
+    DecideBuyerRoomDocumentRequest:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, description: '`request_changes` or `confirm_version`.' }
+        note: { type: [string, 'null'] }
+      additionalProperties: false
+    DealRoomCredentialRequest:
+      type: object
+      required: [credential]
+      properties:
+        credential:
+          type: string
+          minLength: 1
+          description: The one-time credential from the invitation link's fragment.
+      additionalProperties: false
+
+    DealRoomPeekResponse:
+      type: object
+      required: [exchangeable]
+      properties:
+        exchangeable:
+          type: boolean
+          description: True only for a credential that can be exchanged right now. Identical for a paused and a live room.
+      additionalProperties: false
+
+    DealRoomSessionIssued:
+      type: object
+      required: [session_token, expires_at]
+      properties:
+        session_token:
+          type: string
+          description: "Present as `Authorization: Bearer`. Returned once; only its hash is stored."
+        expires_at:
+          type: string
+          format: date-time
+          description: Absolute expiry. The buyer exchanges a fresh link after it.
+      additionalProperties: false
+
+    DealRoomLinkRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+      additionalProperties: false
+
+    BuyerRoomAccess:
+      type: string
+      description: |
+        Whether the session admits the caller to content right now. `live` — the room
+        is open and the list can be worked. `closed` — the deal is done; everything
+        reads, nothing writes. `paused` — the seller has paused access; the link
+        stays valid and nothing is served until it resumes. `expired` — access has
+        lapsed on its own; ask for a new link.
+
+        A plain string, not an inline enum, for the reason `DealRoomState` and its
+        siblings give: the same four words generated as package-scope constants
+        would collide with the lifecycle's.
+
+    BuyerRoomParticipant:
+      type: object
+      description: The caller, as the room knows them. Nothing about anyone else in the room.
+      required: [id, full_name, email, capability]
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        capability: { $ref: '#/components/schemas/DealRoomParticipantCapability' }
+      additionalProperties: false
+
+    BuyerRoomContent:
+      type: object
+      description: |
+        The latest release, and only that. Every field here was copied at publish
+        time; the live deal is never read on this path.
+      required: [title, release_no, released_at]
+      properties:
+        title: { type: string }
+        welcome_message: { type: [string, 'null'] }
+        release_no: { type: integer }
+        released_at: { type: string, format: date-time }
+        steward_name:
+          type: [string, 'null']
+          description: The named person on the seller's side to contact. Null when the steward's seat is gone.
+        closed_at: { type: [string, 'null'], format: date-time }
+      additionalProperties: false
+
+    BuyerRoomView:
+      type: object
+      required: [access, participant]
+      properties:
+        access: { $ref: '#/components/schemas/BuyerRoomAccess' }
+        participant: { $ref: '#/components/schemas/BuyerRoomParticipant' }
+        preview:
+          type: boolean
+          description: True when this session is a seller previewing the room as a buyer. Such a session can read and never write.
+        steward_name:
+          type: [string, 'null']
+          description: Whom to contact. Present in every access state, because a paused buyer needs it most.
+        room:
+          allOf:
+            - $ref: '#/components/schemas/BuyerRoomContent'
+          description: Omitted while access is `paused` or `expired`, and when nothing has been published yet.
+      additionalProperties: false
 
     OfferTemplate:
       type: object

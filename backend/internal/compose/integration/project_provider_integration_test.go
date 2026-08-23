@@ -18,18 +18,78 @@ package integration
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
 
-func projectProvider(e *Env) *deals.Provider {
+func projectProvider(e *Env) *projects.Provider {
+	// Built the way compose builds it, seams and all: a provider without the
+	// company edges refuses every create, and a test that wired its own would be
+	// proving something production never runs.
+	return projects.ProviderOver(projects.NewStore(e.DB()).
+		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)))
+}
+
+// dealProvider is the deals half of the same seam. The advance verb and the
+// stage semantic below are a DEAL's, and deals is where they live — a project
+// has phases, not stages.
+func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
+}
+
+// An agent that names a key is REFUSED, not quietly obeyed with a different
+// key. The create body carries custom fields, so a stray `key` would otherwise
+// land in that bag and be dropped in silence — and an agent told its create
+// succeeded would believe it chose the matcher that files a company's mail.
+//
+// The refusal is what stops that: a key an agent could choose is a key it could
+// point at every bracketed mention of a common word.
+func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
+	e := Setup(t)
+	p := projectProvider(e)
+	ctx := e.Admin()
+	org := e.SeedOrg(t, "Minted GmbH", nil)
+
+	_, err := p.Create(ctx, datasource.CreateInput{
+		EntityType: datasource.EntityProject,
+		Fields: map[string]any{
+			"name": "Warehouse rollout", "organization_id": org.String(), "key": "MINE",
+		},
+		Source: "agent",
+	})
+	if err == nil {
+		t.Fatal("the seam accepted a key the caller named; the agent would believe it chose the matcher")
+	}
+	if !strings.Contains(err.Error(), "cannot be set") {
+		t.Errorf("the refusal does not say the key is not the caller's to set: %v", err)
+	}
+
+	// And the ordinary create still mints one from the NAME.
+	created, err := p.Create(ctx, datasource.CreateInput{
+		EntityType: datasource.EntityProject,
+		Fields:     map[string]any{"name": "Warehouse rollout", "organization_id": org.String()},
+		Source:     "agent",
+	})
+	if err != nil {
+		t.Fatalf("create through the seam: %v", err)
+	}
+	got, err := e.Projects.GetProject(ctx, projectIDOf(created.ID), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Key == nil || !strings.HasPrefix(*got.Key, "WR-") {
+		t.Errorf("minted key %v does not carry the stem the name gives", got.Key)
+	}
 }
 
 // The seam's create-read-update-archive round trip, with the provenance the
@@ -129,7 +189,6 @@ func TestTheAgentSeamAppliesTheSameProjectRulesAsREST(t *testing.T) {
 	for name, fields := range map[string]map[string]any{
 		"no name":    {"organization_id": org.String()},
 		"blank name": {"name": "   ", "organization_id": org.String()},
-		"bad key":    {"name": "Keyed", "key": "1nvalid", "organization_id": org.String()},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := p.Create(e.Admin(), datasource.CreateInput{
@@ -201,7 +260,7 @@ func principalReadOnlyProject() principal.Permissions {
 // here silently changes the autonomy tier of a real money-moving action.
 func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
 	e := Setup(t)
-	p := projectProvider(e)
+	p := dealProvider(e)
 	ctx := e.Admin()
 	pipeline, open, won := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Seam deal", pipeline, open, nil)
@@ -244,7 +303,7 @@ func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
 // that would resolve an unknown move to the most permissive tier.
 func TestTheAgentSeamRefusesToInventAStageSemantic(t *testing.T) {
 	e := Setup(t)
-	p := projectProvider(e)
+	p := dealProvider(e)
 	DealFixture(t, e)
 
 	semantic, _, err := p.StageSemantic(e.Admin(), ids.NewV7())

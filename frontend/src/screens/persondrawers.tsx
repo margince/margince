@@ -13,6 +13,13 @@ import type { components } from "../api/schema";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { navigate } from "../app/router";
 import { Badge, Button, Modal, TextInput } from "../design-system/atoms";
+import {
+  liveProjects,
+  type PickableProject,
+  ProjectPicker,
+  ScopeLine,
+  useSoleProjectDefault,
+} from "../design-system/projectpicker";
 import { RichText } from "../design-system/richtext";
 import { Select } from "../design-system/select";
 import { webUrl } from "../format/weburl";
@@ -514,6 +521,37 @@ function ComposerHead({
   );
 }
 
+// What a person-started message files under: the recipient, and the project
+// the rep attributed it to when they chose one. The same id scoped the draft,
+// so the attribution and the grounding are one statement.
+function composerLinks(
+  personId: string,
+  projectId: string,
+): { entity_type: "person" | "project"; entity_id: string }[] {
+  const links: { entity_type: "person" | "project"; entity_id: string }[] = [
+    { entity_type: "person", entity_id: personId },
+  ];
+  if (projectId) {
+    links.push({ entity_type: "project", entity_id: projectId });
+  }
+  return links;
+}
+
+// A draft written about one project does not describe another, so changing
+// the project retires the words — but only DRAFTED words: a rep who typed
+// their own message, or edited the draft, keeps what they have. "Drafted" is
+// decided by comparison, because this composer keeps no provenance of its own.
+function retireUneditedDraft(
+  written: { subject: string; body: string } | undefined,
+  subject: string,
+  body: string,
+  clear: () => void,
+) {
+  if (written && subject === written.subject && body === written.body) {
+    clear();
+  }
+}
+
 export function PersonComposer({
   personId,
   view,
@@ -555,6 +593,13 @@ export function PersonComposer({
   // that sends formatted mail.
   const [bcc, setBcc] = useState("");
   const [sendAt, setSendAt] = useState("");
+  // The project the message belongs to — one choice, two effects: the draft
+  // is grounded in the person's page SCOPED to it, and the sent mail is
+  // filed under it. Offered only when the person is part of any; the sole
+  // live one is the default, shown in the picker rather than sent silently.
+  const [projectId, setProjectId] = useState("");
+  const projects = liveProjects(view.projects);
+  useSoleProjectDefault(projects, projectId, setProjectId);
   const { transports, transport, isChannel, setTransportId } =
     useTransportChoice(view);
 
@@ -576,6 +621,9 @@ export function PersonComposer({
   if (wroteFor !== personId) {
     setWroteFor(personId);
     clearMessage();
+    // The project belongs to the recipient too: a project chosen for A would
+    // otherwise ride along as a link on B's mail.
+    setProjectId("");
     // The transport belongs to the recipient too. Left alone, a composer
     // switched from a contact reachable on Dispact to one reachable only by
     // mail would keep a channel selected and send nowhere.
@@ -587,11 +635,17 @@ export function PersonComposer({
   // model budget, and a draft that arrives unasked is one the rep has to read
   // before they can ignore it. The company composer has always worked this way.
   const draft = useMutation({
-    mutationKey: ["email", personId],
-    mutationFn: async () => {
+    mutationKey: ["email-draft", personId],
+    // The project is the mutation's variable rather than a closure read, so
+    // a stale closure cannot ground the draft in a project the picker no
+    // longer shows (mutation-variable-coverage.test.ts).
+    mutationFn: async (project: string) => {
       const { data, error } = await api.POST("/people/{id}/draft-email", {
         params: { path: { id: personId } },
-        body: intent.trim() ? { intent: intent.trim() } : {},
+        body: {
+          ...(intent.trim() ? { intent: intent.trim() } : {}),
+          ...(project ? { project_id: project } : {}),
+        },
       });
       if (error) {
         throwProblem(error);
@@ -624,7 +678,9 @@ export function PersonComposer({
   // carries the person as its link.
   const send = useMutation({
     mutationKey: ["email", personId],
-    mutationFn: async () => {
+    // Same rule as the draft: the project the mail files under is passed in,
+    // never read off the closure.
+    mutationFn: async (project: string) => {
       // A channel reply is a different operation against a different shape —
       // see sendChannelReply.
       if (isChannel && transport?.anchorId) {
@@ -643,7 +699,7 @@ export function PersonComposer({
           // the rep would learn that from a 422 about a line they cannot see.
           bcc: addressList(bcc),
           consent_purpose: purpose,
-          links: [{ entity_type: "person" as const, entity_id: personId }],
+          links: composerLinks(personId, project),
           ...scheduleFields(sendAt),
         },
       });
@@ -717,17 +773,28 @@ export function PersonComposer({
         <PurposePicker purpose={purpose} onChange={setPurpose} />
 
         {!isChannel && (
-          <MailOnlyFields
-            sendAt={sendAt}
-            onSendAtChange={setSendAt}
-            subject={subject}
-            onSubjectChange={setSubject}
-            intent={intent}
-            onIntentChange={setIntent}
-            draftPending={draft.isPending}
-            draftError={draft.isError ? draft.error : null}
-            onDraft={() => draft.mutate()}
-          />
+          <>
+            <ProjectPicker
+              projects={projects}
+              projectId={projectId}
+              onChange={(next) => {
+                setProjectId(next);
+                retireUneditedDraft(draft.data, subject, body, clearMessage);
+              }}
+              scope={draft.data?.scope}
+            />
+            <MailOnlyFields
+              sendAt={sendAt}
+              onSendAtChange={setSendAt}
+              subject={subject}
+              onSubjectChange={setSubject}
+              intent={intent}
+              onIntentChange={setIntent}
+              draftPending={draft.isPending}
+              draftError={draft.isError ? draft.error : null}
+              onDraft={() => draft.mutate(projectId)}
+            />
+          </>
         )}
 
         <label className="pe-field-label" htmlFor="composer-body">
@@ -795,7 +862,7 @@ export function PersonComposer({
         <Button
           variant="primary"
           disabled={!sendable || send.isPending}
-          onClick={() => send.mutate()}
+          onClick={() => send.mutate(projectId)}
         >
           <Send size={15} aria-hidden="true" />
           {sendPhase(send, t)}
@@ -990,18 +1057,39 @@ export function PersonMeetingBrief({
   activityId,
   open,
   onClose,
+  projects = [],
 }: Readonly<{
   activityId: string | null;
   open: boolean;
   onClose: () => void;
+  // The person's live projects, for a meeting filed under none: the brief
+  // scopes itself by the meeting's own filing, and only an unattributed
+  // meeting needs to be told which body of work to prepare for.
+  projects?: readonly PickableProject[];
 }>) {
   const t = useT();
+  // The project the reader chose to prepare for. It belongs to ONE meeting:
+  // the same drawer is reused for the next meeting on the page, and a scope
+  // chosen for a room about the ERP rollout must not narrow the brief for a
+  // different room. No sole-project default here, unlike the composers — the
+  // first read has to be unscoped to learn whether the meeting is filed, and
+  // a default sent before that answer would refuse on a meeting filed
+  // elsewhere.
+  const [projectId, setProjectId] = useState("");
+  const [chosenFor, setChosenFor] = useState(activityId);
+  if (chosenFor !== activityId) {
+    setChosenFor(activityId);
+    setProjectId("");
+  }
   const brief = useQuery({
     enabled: open && activityId != null,
-    queryKey: ["meetingBrief", activityId],
+    queryKey: ["meetingBrief", activityId, projectId],
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}/meeting-brief", {
-        params: { path: { id: activityId ?? "" } },
+        params: {
+          path: { id: activityId ?? "" },
+          query: projectId ? { project_id: projectId } : undefined,
+        },
       });
       if (error) {
         throwProblem(error);
@@ -1009,6 +1097,10 @@ export function PersonMeetingBrief({
       return data;
     },
   });
+  // A scope the server reports while the reader chose none is the meeting's
+  // own filing: the brief is about that project whatever the reader picks,
+  // so the picker stands down and the line alone says so.
+  const filedByMeeting = brief.data?.scope != null && projectId === "";
 
   return (
     <Modal
@@ -1027,6 +1119,17 @@ export function PersonMeetingBrief({
         </div>
       </div>
       <div className="drawer-body">
+        {filedByMeeting && brief.data?.scope && (
+          <ScopeLine scope={brief.data.scope} />
+        )}
+        {!filedByMeeting && (brief.isSuccess || projectId !== "") && (
+          <ProjectPicker
+            projects={projects}
+            projectId={projectId}
+            onChange={setProjectId}
+            scope={brief.data?.scope}
+          />
+        )}
         {brief.isLoading && (
           <p className="pe-prose">{t("person.meeting.loading")}</p>
         )}
@@ -1056,6 +1159,14 @@ export function PersonMeetingBrief({
               onOpenRecord={openCitedRecord}
             />
           </section>
+        ))}
+        {/* What this reader's own grants kept out. Said plainly, because a
+            brief that silently omits the Deal Room reads exactly like a brief
+            about a deal whose buyer has done nothing. */}
+        {brief.data?.omitted?.map((omission) => (
+          <p className="pe-prose t-small" key={omission.source}>
+            {omission.reason}
+          </p>
         ))}
       </div>
       <div className="drawer-foot">

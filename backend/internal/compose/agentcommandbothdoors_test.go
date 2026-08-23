@@ -325,12 +325,12 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 // can nonetheless be asked to perform, because the operation carries an operand
 // the verb's arguments have no member for.
 //
-// Each of the six is one of the bespoke confirm-first operations
+// Each of the eight is one of the bespoke confirm-first operations
 // (agentcommandoperand.go): a second operand that update_record's
 // {record_type, id, fields} cannot express is exactly what put them there, and
-// it is the same reason they cannot be twinned here. The other two of the eight
-// ride a record type update_record does not serve at all, so the verb answers
-// for them before any of this is asked.
+// it is the same reason they cannot be twinned here. The other two ride a record
+// type update_record does not serve at all, so the verb answers for them before
+// any of this is asked.
 var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 	"confirmOrganizationFact": "the fact key is a path segment, and the confirm carries no body at all — " +
 		"an update_record call has no member to put it in and no fields to send",
@@ -344,6 +344,10 @@ var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 	"setProjectStakeholder": "the stakeholder is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
 	"removeProjectStakeholder": "the person is a second path parameter naming the edge to drop, and " +
+		"update_record has no argument for a record other than the one it patches",
+	"setProjectCompany": "the company is an edge to a second record carrying its own role, which " +
+		"update_record's fields cannot spell — they write columns of the project the route names",
+	"removeProjectCompany": "the company is a second path parameter naming the edge to drop, and " +
 		"update_record has no argument for a record other than the one it patches",
 })
 
@@ -603,6 +607,23 @@ var dynamicTierVerbs = gatekit.Waive(map[string]string{
 		"states produce — what the two doors do share is the command itself, both decoding into " +
 		"AdvanceDealCommand{DealID, ToStageID} (advanceDealCommand in agentcommandlifecycle.go, " +
 		"advanceDeal.StageInfo in tools.go), which no test compares door-to-door today",
+	"relink_activity": "the tier turns on the DESTINATION TYPE in the arguments, not on any record, so a " +
+		"person relink executes where a project relink stages and this lane's fixture would compare a " +
+		"staged row only one destination produces. Unlike the deal move, both doors ARE compared, each " +
+		"against the shape it actually receives: TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot " +
+		"(agentgate_dealreopen_test.go) drives the REST door through tierInput, and " +
+		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares (agents/tools_lifecycle_test.go) drives " +
+		"the MCP door through the tool's own InputSchema — that second one exists because relinkActivity is " +
+		"not a dynamicTool, so the registry hands the resolver raw tool arguments and the two spellings of " +
+		"`entity_type` are held together by nothing else",
+	"relink_thread": "the same destination-type tier as relink_activity, answered by the same resolver " +
+		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
+		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
+		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares the MCP door",
+	"relink_activities": "the same destination-type tier as relink_activity, answered by the same resolver " +
+		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
+		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
+		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares the MCP door",
 })
 
 // assertVerbResolvesItsTierPerCall holds an unwritten fixture to the one

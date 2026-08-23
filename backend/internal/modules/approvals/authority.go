@@ -55,6 +55,13 @@ type grantRequirement struct {
 // spelling; the compose-side waiver fitness tests bind the two together.
 const kindLinkedInMatch = "linkedin_match"
 
+// KindProjectAttribution is the staged kind for "this captured message belongs
+// to this project", raised by the attribution ladder's uncertain rung when no
+// deterministic rung could file the message. Exported because compose both
+// stages and releases it, and one spelling is what keeps those two the same
+// kind.
+const KindProjectAttribution = "project_attribution"
+
 // kindHeldDraft is an automation-composed reply held for the rep it was written
 // for. Named rather than spelled: this module makes three separate statements
 // about it — the grants deciding it needs, that approving it SENDS, and what
@@ -133,6 +140,28 @@ var decisionGrants = map[string][]grantRequirement{
 	// write, with the consent gate running in the handler whoever approved it.
 	"send_message": {{objectActivity, principal.ActionCreate}},
 	"book_meeting": {{objectActivity, principal.ActionCreate}},
+	// A relink moves an activity onto another record, which the store gates on
+	// activity.UPDATE — an association change, not a re-capture. It reaches a
+	// human at all only for one destination: filing under a PROJECT classifies
+	// the correspondence as a Handelsbrief, and that classification is
+	// write-once in the database and is not lifted by relinking away. Every
+	// other destination auto-executes, so a card here is always the six-year
+	// decision rather than an ordinary move.
+	//
+	// The grant is the one PERFORMING it takes, for the reason disqualify_lead
+	// states: anything less puts the control point with somebody who could not
+	// do the thing they are releasing.
+	"relink_activity": {{objectActivity, principal.ActionUpdate}},
+	// The thread and named-set forms are the same decision at scale — every
+	// row they move is gated on activity.UPDATE in the store — so deciding
+	// them takes the same grant.
+	"relink_thread":     {{objectActivity, principal.ActionUpdate}},
+	"relink_activities": {{objectActivity, principal.ActionUpdate}},
+	// Confirming a project_attribution proposal (the attribution ladder's
+	// uncertain rung offering the one project a captured message is probably
+	// about) files the activity under that project — the same relink write,
+	// so the same grant the relink doors take.
+	KindProjectAttribution: {{objectActivity, principal.ActionUpdate}},
 	// Accepting a cold-start read-back writes enrichment fields onto an
 	// organization; "enrich" is the same effect staged through the
 	// transport gate by an agent caller.
@@ -375,7 +404,11 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 			return false, nil
 		}
 	}
-	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
+	ok, err := targetDecidable(ctx, tx, a.TargetType, a.TargetID)
+	if err != nil || !ok {
+		return false, err
+	}
+	return payloadReferenceVisible(ctx, tx, a)
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

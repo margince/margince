@@ -80,7 +80,7 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontract
 	}
 
 	var out crmcontracts.Deal
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = s.createDealInTx(ctx, tx, in, born, active)
 		return err
@@ -201,7 +201,9 @@ func birthAttribution(in CreateDealInput) (*string, error) {
 //
 // Owner references point at app_user, which carries no row scope: any workspace
 // member may be an owner, so the FK check alone governs them.
-func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput) error {
+func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
+	ensureProjectAttachable EnsureProjectAttachable,
+) error {
 	// A link the deal does not name is not a read, so it is left out rather
 	// than checked as a zero id.
 	var links []recordLink
@@ -258,7 +260,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, err
 	}
 
-	if err := ensureBirthLinksVisible(ctx, tx, in); err != nil {
+	if err := ensureBirthLinksVisible(ctx, tx, in, s.ensureProjectAttachable); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	// Visible is not enough for the partner: it must actually BE one, or the

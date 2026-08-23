@@ -118,6 +118,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_link.lead_id":           "gated: auth.EnsureLinkTarget in LogActivity",
 	"activity_link.project_id":        "gated: auth.EnsureLinkTarget in LogActivity — the link target is probed by its wire entity_type, so project rides the same gate as its siblings",
 	"deal.project_id":                 "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1) — the anchor project is client-supplied, so naming it is a read of it",
+	"deal_document_hide.deal_id":      "gated: auth.EnsureWritable(deal) in activities.setDealDocumentHidden — the deal is the route's own {id}, and hiding a file from its Files area changes what that deal lists, so the caller must be able to change the deal, not merely see it; the attachment half is then checked against THIS caller's view of the area, so a miss of either reads as not-found",
 	"deal_room.deal_id":               "gated: auth.EnsureWritableLive in createRoomTx — STRONGER than the EnsureLinkTarget its siblings take, deliberately. The deal a room is opened on is client-supplied, so naming it is a read of it; but opening a room also starts showing that deal to an outside party, which visibility alone does not authorize. A room on a deal the caller could merely see would publish that deal's existence, and its editorial text, to buyers",
 	"contract.organization_id":        "gated: auth.EnsureLinkTarget in createContractTx (H1) — the counterparty is client-supplied, so naming it is a read of it",
 	// The deal and project links carry a SECOND obligation the sibling columns
@@ -244,6 +245,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// activity's own id — a connector principal supplies message bytes, never
 	// a record reference.
 	"capture_pending_counterparty.activity_id": "server-derived: stamped by the capture Sink from the activity it just wrote",
+	// The attribution ladder's candidate ledger: both ends are the ladder's
+	// own reads — the activity capture just wrote, and a project the rung read
+	// under the caller's project grant and row scope (readableProjectScope +
+	// the finder's ScopeClauseFor), never a request body.
+	"project_link_candidate.activity_id": "server-derived: stamped by the capture Sink's attribution ladder from the activity it just wrote",
+	"project_link_candidate.project_id":  "gated then stamped: read under the caller's project row scope by the uncertain rung's finder before the candidate is written",
 	// Client-supplied edge endpoints — every one probed at the store:
 	"relationship.person_id":                     "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.counterparty_org_id":           "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
@@ -353,8 +360,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// already linked to rather than from anything a caller sends. When the
 	// writer lands it must derive both from rows the actor could already see —
 	// this entry is the obligation, not a record of one already met.
-	"activity_retention_evidence.activity_id": "schema only, no writer yet (#1557): the evidence is written by the qualifying pass from the activity it substantiates, never from a request body — when that pass lands, the activity it names must be one the actor could already see",
-	"activity_retention_evidence.deal_id":     "schema only, no writer yet (#1557): the qualifying transaction is resolved from the activity's own link, not supplied — and it is ON DELETE SET NULL beside a frozen deal_name, so the evidence answers after the deal is gone",
+	"activity_retention_evidence.activity_id": "server-derived: every writer names the activity it is already writing — the deal stamp sweeps the activities linked to the concluding deal, the project stamp takes the one whose link it just wrote, and the erasure's legacy arm takes the rows it already selected. None of the three reads an activity id off a request body",
+	"activity_retention_evidence.deal_id":     "server-derived: the qualifying deal is the one whose own conclusion triggered the stamp, never supplied. ON DELETE SET NULL beside a frozen deal_name, so the evidence still answers after the deal is gone",
+	"activity_retention_evidence.project_id":  "server-derived: the qualifying project is the one whose link the same transaction just wrote, and that link's target went through auth.EnsureLinkTarget before it landed — so the reference is a read the writer already gated. ON DELETE SET NULL beside a frozen project_name, on the same terms as the deal pair beside it",
 	"finance_customer_link.organization_id":   "schema only, no writer yet (#725): the mapping write does not exist, and when it lands it must put the named company through auth.EnsureLinkTarget — this entry is the obligation, not a record of one already met",
 	"finance_invoice.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
 	"finance_payment.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",

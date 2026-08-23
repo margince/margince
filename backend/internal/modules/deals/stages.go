@@ -37,7 +37,7 @@ func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in Update
 		return crmcontracts.Pipeline{}, err
 	}
 	var out crmcontracts.Pipeline
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// The row lock makes the version read and the update below one
 		// race-free unit.
 		if _, err := storekit.LockRow(ctx, tx, "pipeline", id.UUID, storekit.LiveOnly); err != nil {
@@ -132,7 +132,7 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		probability = 100
 	}
 	var out crmcontracts.Stage
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx,
 			`SELECT EXISTS (SELECT 1 FROM pipeline WHERE id = $1 AND archived_at IS NULL)`,
@@ -190,7 +190,7 @@ func (s *Store) GetStage(ctx context.Context, id ids.StageID) (crmcontracts.Stag
 		return crmcontracts.Stage{}, err
 	}
 	var out crmcontracts.Stage
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = readStage(ctx, tx, id, storekit.IncludeArchived)
 		return err
 	})
@@ -202,7 +202,7 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 		return nil, err
 	}
 	var out []crmcontracts.Stage
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := predicateAlways
@@ -256,7 +256,7 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		return crmcontracts.Stage{}, err
 	}
 	var out crmcontracts.Stage
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// The pipeline row first, then the stage's own: a reorder and a
 		// removal both reshape this list, and taking the same row first
 		// on both paths is what keeps them queueing rather than

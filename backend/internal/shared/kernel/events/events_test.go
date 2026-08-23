@@ -80,8 +80,14 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"opened": true, "published": true, "paused": true, "resumed": true, "closed": true,
 		"participant_invited": true, "participant_revoked": true,
 		"participant_credential_reissued": true,
-		"state_changed":                   true,
-		"profile_created":                 true, "profile_updated": true, "profile_archived": true,
+		// Either side ticking a shared to-do off, or re-opening one. Past tense
+		// like the rest, and it names the CHANGE rather than the completion
+		// because un-ticking is the same event travelling the other way.
+		// The room's conversation: somebody spoke, the seller settled a thread,
+		// a reviewer decided on a version. All three name the act done.
+		"comment_posted": true, "thread_resolved": true, "decision_recorded": true,
+		"state_changed":   true,
+		"profile_created": true, "profile_updated": true, "profile_archived": true,
 		"corpus_changed": true, "build_changed": true, "version_changed": true,
 		"draft_outcome_recorded": true,
 		// engagement.reply is the §5.11 spec-pinned type name (EVT-SEM-14):
@@ -179,6 +185,10 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
 		"cg:commissions": {"gw:events:crm:deal"},
+		// What happened in a Deal Room, written onto the deal's timeline. Its
+		// own group because a room's traffic is live: a projection backlog must
+		// not delay the note saying the buyer just asked something.
+		"cg:deal-room-timeline": {"gw:events:crm:deal"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.
@@ -194,7 +204,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the commission accrual, and the AI-activity projection", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the commission accrual, the AI-activity projection, and the Deal Room timeline", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

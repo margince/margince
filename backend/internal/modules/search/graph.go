@@ -86,6 +86,11 @@ var anchorLinkColumn = map[string]string{
 func (s *Store) assembleGraph(ctx context.Context, anchorType string, anchorID ids.UUID, maxItems int, within projectScope) ([]graphSection, error) {
 	var sections []graphSection
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The scope is a read of the project it names, gated before any row
+		// of the walk is touched.
+		if err := within.require(ctx, tx); err != nil {
+			return err
+		}
 		var err error
 		if anchorType == string(datasource.EntityActivity) {
 			sections, err = s.assembleActivityWithin(ctx, tx, anchorID, maxItems, within)
@@ -341,12 +346,15 @@ func MemberNames(ctx context.Context, tx pgx.Tx, edges []InteractionEdge) (map[i
 // section for, in the order they are emitted.
 //
 // It is a SUBSET of activity_link's arms (activityLinkArms) and the walk skips
-// the rest: a project or a lead reached at hop 2 has nowhere to be reported, so
-// reading them would be a query whose result is discarded.
+// the rest: a lead reached at hop 2 has nowhere to be reported, so reading it
+// would be a query whose result is discarded. A project IS reported — the
+// bodies of work an account's correspondence is filed under are what a
+// catch-up on that account is about.
 var relatedSectionOrder = []string{
 	string(datasource.EntityPerson),
 	string(datasource.EntityOrganization),
 	string(datasource.EntityDeal),
+	string(datasource.EntityProject),
 }
 
 func (s *Store) relatedViaLinks(ctx context.Context, tx pgx.Tx, anchorType string, anchorID ids.UUID, activityIDs []ids.ActivityID, maxItems int) ([]graphSection, error) {

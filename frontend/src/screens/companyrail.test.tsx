@@ -23,6 +23,9 @@ type Organization360 = components["schemas"]["Organization360"];
 // field is a fact worth showing, not one this grid hides.
 
 const org = {
+  // Absent reads as NOT writable, which is the fail-closed default a real
+  // response never relies on: the server answers this per row.
+  writable: true,
   id: "o-1",
   workspace_id: "w",
   display_name: "Brandt Automotive GmbH",
@@ -204,7 +207,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/organizations/o-1": async (request) => {
         if (request.method === "PATCH") {
@@ -250,7 +258,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/users": () =>
         jsonResponse({
@@ -299,7 +312,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/users": () =>
         jsonResponse({
@@ -359,7 +377,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/organizations/o-1": async (request) => {
         if (request.method === "PATCH") {
@@ -407,7 +430,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/organizations/o-1": async (request) => {
         if (request.method === "PATCH") {
@@ -458,7 +486,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/organizations/o-1": async (request) => {
         if (request.method === "PATCH") {
@@ -496,7 +529,12 @@ describe("CompanyRail", () => {
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
-          authorization: { objects: { organization: { update: true } } },
+          authorization: {
+            objects: { organization: { update: true } },
+            // A full seat: the licensing ceiling is checked before RBAC, and the
+            // grid's controls issue a PATCH.
+            seat_type: "full",
+          },
         }),
       "/organizations/o-1": async (request) => {
         if (request.method === "PATCH") {

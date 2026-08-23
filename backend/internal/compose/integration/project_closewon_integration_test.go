@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -49,7 +50,7 @@ func seedCloseWonFixture(t *testing.T, e *Env, projectName string) closeWonFixtu
 	t.Helper()
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, projectName, nil, org, nil)
+	p := seedProject(e.Admin(), t, e, projectName, org, nil)
 
 	orgID := orgIDOf(org)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -72,13 +73,13 @@ func deliveringHistoryCount(t *testing.T, e *Env, project ids.ProjectID) int {
 	t.Helper()
 	return e.WsCount(t,
 		`SELECT count(*) FROM project_phase_history WHERE project_id = $1 AND to_phase = $2`,
-		project, deals.PhaseDelivering)
+		project, projects.PhaseDelivering)
 }
 
 // phaseOf reads the project's phase back through the real read path.
 func phaseOf(t *testing.T, e *Env, project ids.ProjectID) string {
 	t.Helper()
-	got, err := e.Deals.GetProject(e.Admin(), project, storekit.LiveOnly)
+	got, err := e.Projects.GetProject(e.Admin(), project, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("read project %s: %v", project.UUID, err)
 	}
@@ -97,8 +98,8 @@ func TestWinningADealStartsDeliveryOnItsProject(t *testing.T) {
 
 	// Pursuing is where a project sits while its deal is in flight, so that is
 	// the state the win actually finds in the field.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.project, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhasePursuing,
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhasePursuing,
 	}); err != nil {
 		t.Fatalf("move the project to pursuing: %v", err)
 	}
@@ -107,13 +108,13 @@ func TestWinningADealStartsDeliveryOnItsProject(t *testing.T) {
 		t.Fatalf("win the deal: %v", err)
 	}
 
-	if got := phaseOf(t, e, f.project); got != deals.PhaseDelivering {
-		t.Errorf("phase = %s after the win, want %s", got, deals.PhaseDelivering)
+	if got := phaseOf(t, e, f.project); got != projects.PhaseDelivering {
+		t.Errorf("phase = %s after the win, want %s", got, projects.PhaseDelivering)
 	}
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM project_phase_history
 		  WHERE project_id = $1 AND from_phase = $2 AND to_phase = $3`,
-		f.project, deals.PhasePursuing, deals.PhaseDelivering); n != 1 {
+		f.project, projects.PhasePursuing, projects.PhaseDelivering); n != 1 {
 		t.Errorf("pursuing→delivering history rows = %d, want exactly 1", n)
 	}
 	// The event is asserted on its payload, not merely on its type: the
@@ -125,7 +126,7 @@ func TestWinningADealStartsDeliveryOnItsProject(t *testing.T) {
 		    AND envelope->'entity'->>'id' = $1::text
 		    AND envelope->'payload'->>'from_phase' = $2
 		    AND envelope->'payload'->>'to_phase' = $3`,
-		f.project, deals.PhasePursuing, deals.PhaseDelivering); n != 1 {
+		f.project, projects.PhasePursuing, projects.PhaseDelivering); n != 1 {
 		t.Errorf("pursuing→delivering events = %d, want exactly 1", n)
 	}
 	// The audit row is the other half of the write shape, and the transition
@@ -135,7 +136,7 @@ func TestWinningADealStartsDeliveryOnItsProject(t *testing.T) {
 		`SELECT count(*) FROM audit_log
 		  WHERE entity_type = 'project' AND entity_id = $1 AND action = 'advance_phase'
 		    AND after->>'phase' = $2`,
-		f.project, deals.PhaseDelivering); n != 1 {
+		f.project, projects.PhaseDelivering); n != 1 {
 		t.Errorf("advance_phase audit rows into delivering = %d, want exactly 1", n)
 	}
 }
@@ -147,14 +148,14 @@ func TestWinningADealStartsDeliveryFromInitiativeToo(t *testing.T) {
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Validation")
 
-	if got := phaseOf(t, e, f.project); got != deals.PhaseInitiative {
-		t.Fatalf("the fixture project starts at %s, want %s", got, deals.PhaseInitiative)
+	if got := phaseOf(t, e, f.project); got != projects.PhaseInitiative {
+		t.Fatalf("the fixture project starts at %s, want %s", got, projects.PhaseInitiative)
 	}
 	if _, err := e.Deals.AdvanceDeal(e.Admin(), f.deal, wonInput(f.wonStage)); err != nil {
 		t.Fatalf("win the deal: %v", err)
 	}
-	if got := phaseOf(t, e, f.project); got != deals.PhaseDelivering {
-		t.Errorf("phase = %s after the win, want %s", got, deals.PhaseDelivering)
+	if got := phaseOf(t, e, f.project); got != projects.PhaseDelivering {
+		t.Errorf("phase = %s after the win, want %s", got, projects.PhaseDelivering)
 	}
 }
 
@@ -165,8 +166,8 @@ func TestWinningADealOnAnAlreadyDeliveringProjectWritesNothing(t *testing.T) {
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Rollout")
 
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.project, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseDelivering,
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseDelivering,
 	}); err != nil {
 		t.Fatalf("move the project to delivering: %v", err)
 	}
@@ -182,8 +183,8 @@ func TestWinningADealOnAnAlreadyDeliveringProjectWritesNothing(t *testing.T) {
 	if got := deliveringHistoryCount(t, e, f.project); got != before {
 		t.Errorf("delivering history rows = %d after the win, want %d — a no-op writes nothing", got, before)
 	}
-	if got := phaseOf(t, e, f.project); got != deals.PhaseDelivering {
-		t.Errorf("phase = %s, want it left at %s", got, deals.PhaseDelivering)
+	if got := phaseOf(t, e, f.project); got != projects.PhaseDelivering {
+		t.Errorf("phase = %s, want it left at %s", got, projects.PhaseDelivering)
 	}
 }
 
@@ -196,8 +197,8 @@ func TestWinningADealDoesNotReopenAClosedProject(t *testing.T) {
 	f := seedCloseWonFixture(t, e, "Support retainer")
 
 	reason := "Delivered and signed off."
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.project, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseClosed, Reason: &reason,
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: &reason,
 	}); err != nil {
 		t.Fatalf("close the project: %v", err)
 	}
@@ -206,15 +207,15 @@ func TestWinningADealDoesNotReopenAClosedProject(t *testing.T) {
 		t.Fatalf("winning a renewal on a closed project must still succeed: %v", err)
 	}
 
-	if got := phaseOf(t, e, f.project); got != deals.PhaseClosed {
-		t.Errorf("phase = %s after the renewal win, want it left %s", got, deals.PhaseClosed)
+	if got := phaseOf(t, e, f.project); got != projects.PhaseClosed {
+		t.Errorf("phase = %s after the renewal win, want it left %s", got, projects.PhaseClosed)
 	}
 	if n := deliveringHistoryCount(t, e, f.project); n != 0 {
 		t.Errorf("delivering history rows = %d, want 0 — the close was deliberate", n)
 	}
 	// And the close's own explanation survives: a re-open through the ordinary
 	// path clears it, so a lingering reason would be evidence the guard leaked.
-	got, err := e.Deals.GetProject(e.Admin(), f.project, storekit.LiveOnly)
+	got, err := e.Projects.GetProject(e.Admin(), f.project, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +231,7 @@ func TestWinningAProjectlessDealTouchesNoProject(t *testing.T) {
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	// A live project on the same company that the win must not reach for.
-	bystander := seedProject(e.Admin(), t, e, "Unrelated work", nil, org, nil)
+	bystander := seedProject(e.Admin(), t, e, "Unrelated work", org, nil)
 
 	orgID := orgIDOf(org)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -245,11 +246,11 @@ func TestWinningAProjectlessDealTouchesNoProject(t *testing.T) {
 		t.Fatalf("win the projectless deal: %v", err)
 	}
 
-	if got := phaseOf(t, e, bystander.ID); got != deals.PhaseInitiative {
+	if got := phaseOf(t, e, bystander.ID); got != projects.PhaseInitiative {
 		t.Errorf("the bystander project moved to %s — a projectless win reached for it", got)
 	}
 	if n := e.WsCount(t,
-		`SELECT count(*) FROM project_phase_history WHERE to_phase = $1`, deals.PhaseDelivering); n != 0 {
+		`SELECT count(*) FROM project_phase_history WHERE to_phase = $1`, projects.PhaseDelivering); n != 0 {
 		t.Errorf("delivering history rows = %d workspace-wide, want 0", n)
 	}
 }
@@ -294,14 +295,14 @@ func TestReAssertingAWonStageDoesNotDriveTheProjectBack(t *testing.T) {
 	if _, err := e.Deals.AdvanceDeal(e.Admin(), f.deal, wonInput(f.wonStage)); err != nil {
 		t.Fatalf("win the deal: %v", err)
 	}
-	if got := phaseOf(t, e, f.project); got != deals.PhaseDelivering {
-		t.Fatalf("phase = %s after the win, want %s", got, deals.PhaseDelivering)
+	if got := phaseOf(t, e, f.project); got != projects.PhaseDelivering {
+		t.Fatalf("phase = %s after the win, want %s", got, projects.PhaseDelivering)
 	}
 
 	// Somebody with authority over the project deliberately moves it back —
 	// the scope was cut, delivery has not started after all.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.project, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhasePursuing,
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhasePursuing,
 	}); err != nil {
 		t.Fatalf("move the project back to pursuing: %v", err)
 	}
@@ -312,9 +313,9 @@ func TestReAssertingAWonStageDoesNotDriveTheProjectBack(t *testing.T) {
 		t.Fatalf("re-assert the won stage: %v", err)
 	}
 
-	if got := phaseOf(t, e, f.project); got != deals.PhasePursuing {
+	if got := phaseOf(t, e, f.project); got != projects.PhasePursuing {
 		t.Errorf("phase = %s — re-asserting the win overrode a deliberate move to %s",
-			got, deals.PhasePursuing)
+			got, projects.PhasePursuing)
 	}
 	if n := deliveringHistoryCount(t, e, f.project); n != 1 {
 		t.Errorf("delivering history rows = %d, want the 1 the real win wrote", n)
@@ -329,7 +330,7 @@ func TestTwoDealsWinningOnOneProjectProduceOneTransition(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "Multi-phase programme", nil, org, nil)
+	p := seedProject(e.Admin(), t, e, "Multi-phase programme", org, nil)
 
 	orgID := orgIDOf(org)
 	var wonDeals []ids.DealID
@@ -367,7 +368,7 @@ func TestWinningADealWhoseProjectWasArchivedStillWins(t *testing.T) {
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Retired programme")
 
-	if _, err := e.Deals.ArchiveProject(e.Admin(), f.project, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), f.project, nil); err != nil {
 		t.Fatalf("archive the project: %v", err)
 	}
 
@@ -453,8 +454,8 @@ func blockedBy(ctx context.Context, probe pgx.Tx, holderPID int) (bool, error) {
 func TestTheDeliveryTransitionDecidesUnderTheProjectLock(t *testing.T) {
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Contended programme")
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.project, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhasePursuing,
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhasePursuing,
 	}); err != nil {
 		t.Fatalf("move the project to pursuing: %v", err)
 	}
@@ -494,7 +495,7 @@ func TestTheDeliveryTransitionDecidesUnderTheProjectLock(t *testing.T) {
 	closeReason := "Cancelled before delivery."
 	if _, err := holder.Exec(holderCtx,
 		`UPDATE project SET phase = $2, closed_reason = $3, version = version + 1 WHERE id = $1`,
-		f.project, deals.PhaseClosed, closeReason); err != nil {
+		f.project, projects.PhaseClosed, closeReason); err != nil {
 		t.Fatal(err)
 	}
 	if err := holder.Commit(holderCtx); err != nil {
@@ -505,13 +506,13 @@ func TestTheDeliveryTransitionDecidesUnderTheProjectLock(t *testing.T) {
 		t.Fatalf("the win failed against a concurrently closed project: %v", err)
 	}
 
-	if got := phaseOf(t, e, f.project); got != deals.PhaseClosed {
+	if got := phaseOf(t, e, f.project); got != projects.PhaseClosed {
 		t.Errorf("phase = %s — the win decided on a phase read before it held the lock", got)
 	}
 	if n := deliveringHistoryCount(t, e, f.project); n != 0 {
 		t.Errorf("delivering history rows = %d, want 0 — the close won the race", n)
 	}
-	got, err := e.Deals.GetProject(e.Admin(), f.project, storekit.LiveOnly)
+	got, err := e.Projects.GetProject(e.Admin(), f.project, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -545,8 +546,8 @@ func TestTheDeliveryTransitionRecordsWhatActuallyAuthorizedIt(t *testing.T) {
 
 	// And a human-driven advance, which DID check project.update, carries no
 	// such evidence — the marker means something only if it is not on every row.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), f.project, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseClosed, Reason: strPtr("Delivered."),
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: strPtr("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -554,7 +555,7 @@ func TestTheDeliveryTransitionRecordsWhatActuallyAuthorizedIt(t *testing.T) {
 		`SELECT count(*) FROM audit_log
 		  WHERE entity_type = 'project' AND entity_id = $1 AND action = 'advance_phase'
 		    AND after->>'phase' = $2 AND evidence->'authorized_by' IS NOT NULL`,
-		f.project, deals.PhaseClosed); n != 0 {
+		f.project, projects.PhaseClosed); n != 0 {
 		t.Errorf("human-driven advances carrying the cross-scope marker = %d, want 0", n)
 	}
 }
@@ -577,7 +578,7 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	// The project belongs to Rep1; the caller below is Rep3 in the other team,
 	// so neither own nor team scope reaches it — only the read class does.
 	owner := e.Rep1
-	theirProject := seedProject(e.Admin(), t, e, "Another team's delivery", nil, org, &owner)
+	theirProject := seedProject(e.Admin(), t, e, "Another team's delivery", org, &owner)
 
 	orgID := orgIDOf(org)
 	rep := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
@@ -594,7 +595,7 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 	// The rep can READ the project — that is the whole point of the read class,
 	// and it is what makes the refusal below about write authority rather than
 	// about the record being out of reach.
-	if _, err := e.Deals.GetProject(rep, theirProject.ID, storekit.LiveOnly); err != nil {
+	if _, err := e.Projects.GetProject(rep, theirProject.ID, storekit.LiveOnly); err != nil {
 		t.Fatalf("the rep cannot read the project, so this case is not testing what it claims: %v", err)
 	}
 
@@ -629,9 +630,9 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 		`SELECT count(*) FROM deal WHERE project_id = $1`, theirProject.ID); n != 0 {
 		t.Errorf("deals attached to the unwritable project = %d, want 0", n)
 	}
-	if phaseOf(t, e, theirProject.ID) != deals.PhaseInitiative {
+	if phaseOf(t, e, theirProject.ID) != projects.PhaseInitiative {
 		t.Errorf("the project moved phase = %s, want it untouched at %s",
-			phaseOf(t, e, theirProject.ID), deals.PhaseInitiative)
+			phaseOf(t, e, theirProject.ID), projects.PhaseInitiative)
 	}
 }
 
@@ -643,7 +644,7 @@ func TestTheProjectsOwnerStillAttachesAndWins(t *testing.T) {
 	pipeline, open, won := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	owner := e.Rep1
-	mine := seedProject(e.Admin(), t, e, "My delivery", nil, org, &owner)
+	mine := seedProject(e.Admin(), t, e, "My delivery", org, &owner)
 
 	orgID := orgIDOf(org)
 	rep := e.As(owner, []ids.UUID{e.Team1}, principal.Permissions{
@@ -668,7 +669,7 @@ func TestTheProjectsOwnerStillAttachesAndWins(t *testing.T) {
 		wonInput(won)); err != nil {
 		t.Fatalf("winning the deal: %v", err)
 	}
-	if got := phaseOf(t, e, mine.ID); got != deals.PhaseDelivering {
-		t.Errorf("phase after the win = %s, want %s", got, deals.PhaseDelivering)
+	if got := phaseOf(t, e, mine.ID); got != projects.PhaseDelivering {
+		t.Errorf("phase after the win = %s, want %s", got, projects.PhaseDelivering)
 	}
 }

@@ -214,3 +214,13 @@ func (DealRoomParticipantKind) kind() string { return "deal_room_participant" }
 // DealRoomParticipantID names one deal_room_participant row — one outside
 // person admitted to one room.
 type DealRoomParticipantID = ID[DealRoomParticipantKind]
+
+// DealRoomDocumentKind is the room-document entity tag. Declared out-of-line
+// for the reason given above OfferTemplateKind.
+type DealRoomDocumentKind struct{}
+
+func (DealRoomDocumentKind) kind() string { return "deal_room_document" }
+
+// DealRoomDocumentID names one deal_room_document row — one attachment a room
+// puts in front of its buyer.
+type DealRoomDocumentID = ID[DealRoomDocumentKind]

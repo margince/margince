@@ -43,8 +43,15 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 	claimed := map[string]string{}
 	for column, target := range req.Mapping {
 		if !allowed[target] {
+			// The set is closed, small, and invisible from where the caller
+			// stands. Naming the target that failed without naming the ones
+			// that would have worked leaves them guessing at a list this
+			// function is already holding. `city` is the case that forces it:
+			// it reads like an obvious field on a company, is not one, and the
+			// refusal alone gives no path to the answer.
 			return migration.RunMapping{}, httperr.Validation("mapping", "unknown_target",
-				fmt.Sprintf("%q is not a field a %s can receive.", target, object))
+				fmt.Sprintf("%q is not a field a %s can receive. It takes: %s.",
+					target, object, strings.Join(targets, ", ")))
 		}
 		if other, taken := claimed[target]; taken {
 			// Two columns onto one field: whichever the row builder happened to
@@ -57,8 +64,16 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		fields[column] = target
 	}
 	if len(fields) == 0 {
+		// Reached two ways that feel different to a caller: they sent no
+		// mapping and the proposal came back empty, or they sent one whose
+		// columns all fell away. Either way the next move is the same and it
+		// needs the vocabulary, because a header like "Company,Website,City"
+		// matches none of these by name and the proposal is deliberately
+		// timid about guessing (migration.SuggestMapping).
 		return migration.RunMapping{}, httperr.Validation("mapping", "empty",
-			"A run with no mapped column would import nothing.")
+			fmt.Sprintf("A run with no mapped column would import nothing. "+
+				"Map at least one column onto a field a %s can receive: %s.",
+				object, strings.Join(targets, ", ")))
 	}
 
 	sourceKey := csvSourceKeyDefault[object]

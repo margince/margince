@@ -184,6 +184,8 @@ export const en = {
   "record.archived": "Archived",
   "record.archivedReadOnly":
     "This company is archived. Restore it to change anything on it.",
+  "record.notYoursToChange":
+    "This company belongs to someone else. Ask its owner to share it with you if you need to make changes.",
   "record.share": "Share",
   "record.moreActions": "More actions",
   "record.fullHistory": "Full history",
@@ -302,6 +304,26 @@ export const en = {
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
   "commission.status.void": "Reversed",
+  "commission.outstanding": "Still owed",
+  "commission.column.actions": "Decision",
+  "commission.decide.withheld": "Not yours to decide",
+  "commission.decide.approve": "Approve",
+  "commission.decide.pay": "Mark as paid",
+  "commission.decide.void": "Reverse",
+  "commission.decide.approveConfirm":
+    "Approving records that this commission is agreed. It does not pay anything — settle the payment in your finance system, then mark it paid here.",
+  "commission.decide.payConfirm":
+    "Mark this as paid once your finance system has actually paid it. Margince records the fact; it does not move money.",
+  "commission.decide.voidConfirm":
+    "Reversing writes a cancelling row beside this one. Nothing is deleted, and the original stays readable.",
+  "commission.decide.reasonLabel": "Why is it reversed?",
+  "commission.decide.reasonRequired":
+    "A reversal needs a reason — it is what explains the entry to the partner later.",
+  "commission.decide.approved": "Commission approved",
+  "commission.decide.paid": "Commission marked as paid",
+  "commission.decide.voided": "Commission reversed",
+  "commission.decide.settledElsewhere":
+    "Paying happens in your finance system. This records what it did.",
   "partner.setup": "Make this a partner",
   "partner.edit": "Edit partner",
   "partner.none": "Not a partner yet",
@@ -354,6 +376,7 @@ export const en = {
   "rel.kind.employment": "Employment",
   "rel.kind.dealStakeholder": "Deal stakeholder",
   "rel.kind.projectStakeholder": "Project stakeholder",
+  "rel.kind.projectCompany": "Company on project",
   "rel.kind.partnerOf": "Partner of",
   "rel.kind.referredBy": "Referred by",
   "rel.kind.coSellWith": "Co-sell with",
@@ -748,6 +771,19 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View the whole thread",
   "timeline.group.mayContinue": "may continue earlier",
+  "timeline.filters.kind": "Activity kind",
+  "timeline.filters.kind.all": "All kinds",
+  "timeline.filters.kind.email": "Email",
+  "timeline.filters.kind.message": "Messages",
+  "timeline.filters.kind.call": "Calls",
+  "timeline.filters.kind.meeting": "Meetings",
+  "timeline.filters.kind.note": "Notes",
+  "timeline.filters.kind.task": "Tasks",
+  "timeline.filters.search": "Search this timeline",
+  "timeline.filters.from": "From",
+  "timeline.filters.to": "To",
+  "timeline.filters.searchOmitsLimited":
+    "Conversations whose content you may not open are left out of a search.",
   "tab.people": "People",
   "tab.deals": "Deals",
   "tab.tasks": "Tasks",
@@ -798,6 +834,7 @@ export const en = {
   "signal.kind.new_opportunity": "New opportunity",
   "signal.kind.commitment_made": "Something was promised",
   "signal.kind.ghosted_thread": "No answer",
+  "signal.kind.project_gone_quiet": "Project gone quiet",
   "co.routeIn.open": "Route in",
   "co.routeIn.title": "Who here talks to {name}",
   "co.routeIn.none": "Nobody here has written to them yet.",
@@ -811,6 +848,155 @@ export const en = {
   "co.routeIn.band.unknown": "contact on file, no pattern yet",
   "record.profile": "Profile",
   "record.context": "Context",
+  // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
+  // reason the other abbreviated namespaces give: the surface is named once at
+  // the top of the panel and every key under it is read in that context.
+  "room.editorial":
+    "Changes to the documents reach the buyer at the next publish. Comments are immediate.",
+  "room.readOnly": "You can read this room but not change it.",
+  "room.finished": "This room is finished, so what it shared is now a record.",
+  "room.card.title": "Deal Room",
+  "room.card.people": "{invited} invited · {active} signed in",
+  "room.card.unpublished": "unpublished changes",
+  "room.card.lastSeen": "Last seen by a buyer: {when}",
+  "room.card.open": "Open the Deal Room",
+  "room.create.sub":
+    "A space the buyer enters by link to read what you share and discuss it.",
+  "room.create.open": "Open a Deal Room",
+  "room.create.confirm": "Open",
+  "room.create.titleLabel": "Room title",
+  "room.create.titleHint":
+    "What the buyer sees as the heading. You can change it later.",
+  "room.create.defaultTitle": "{deal}",
+  "roompage.none":
+    "This deal has no Deal Room yet. Open one from the deal page.",
+  "roompage.backToDeal": "← Back to the deal",
+  "roompage.accessMenu": "Room access",
+  "roompage.pause": "Pause",
+  "roompage.pauseHint":
+    "Buyers keep their links but see a paused page until you resume.",
+  "roompage.resume": "Resume",
+  "roompage.close": "Close the room",
+  "roompage.closeHint": "Buyers keep reading; nothing can be added or said.",
+  "roompage.setExpiry": "Set an end date",
+  "roompage.setExpiryHint": "Access stops on that day.",
+  "roompage.closeTitle": "Close this Deal Room?",
+  "roompage.closeBody":
+    "Buyers keep reading what was published. No document, comment or decision is accepted afterwards. You can still revoke people and issue links.",
+  "roompage.expiryLabel": "Access ends on",
+  "roompage.expiryHint": "Leave empty for no end date.",
+  "roompage.banner.draft":
+    "Not published yet. Buyers see nothing until you publish.",
+  "roompage.banner.paused":
+    "Paused. Buyers see a paused page until you resume.",
+  "roompage.banner.closed":
+    "Closed. Buyers can still read what was published; nothing more is accepted.",
+  "roompage.banner.expired": "Expired. Buyer links no longer work.",
+  "roompage.banner.archived": "Archived. Nobody can enter this room.",
+  "roompage.banner.liveUntil": "Live. Access ends on {when}.",
+  "roompage.text.title": "Title and welcome",
+  "roompage.text.sub":
+    "What the buyer reads first. Reaches them at the next publish.",
+  "roompage.text.titleLabel": "Room title",
+  "roompage.text.welcomeLabel": "Welcome message",
+  "roompage.viewAsBuyer": "View as buyer",
+  "roompage.previewDraft":
+    "Publish first — a buyer only ever sees a published release.",
+  "roompage.previewArchived": "An archived room has nothing to preview.",
+  "roompage.publish": "Publish",
+  "roompage.publishFinished":
+    "This room is finished and takes no more releases.",
+  "roompage.publishNothing": "Nothing has changed since the last release.",
+  "roompage.publishChecking": "Checking what has changed…",
+  "roompage.publishUnknown":
+    "Could not read what has changed; reload the page.",
+  "roompage.publishTitle": "Publish these changes to the buyer?",
+  "roompage.publishNoteLabel": "Note for the record (optional)",
+  "publish.title": "Publish",
+  "publish.sub":
+    "What the buyer would see differently, and what has gone out so far.",
+  "publish.pendingBadge": "Unpublished changes",
+  "publish.noChanges": "Nothing has changed since the last release.",
+  "publish.release": "Release {no}",
+  "publish.readers": "{count} buyer(s) have signed in.",
+  "publish.change.title": "The title changed.",
+  "publish.change.welcome": "The welcome message changed.",
+  "publish.change.added": "Added: {title}",
+  "publish.change.removed": "Removed: {title}",
+  "publish.change.retitled": "Renamed: {title}",
+  "publish.change.regrouped": "Moved to another group: {title}",
+  "publish.change.reordered": "Reordered: {title}",
+  "publish.change.ineligible":
+    "Will drop out (hidden, unlinked or deleted on the deal): {title}",
+  "publish.change.other": "Changed: {title}",
+  "access.title": "Access",
+  "access.sub": "Who may enter, and what each person may do.",
+  "access.invite": "Invite",
+  "access.empty": "Nobody has been invited yet.",
+  "access.cap.view": "Read only",
+  "access.cap.viewHint": "Can read the documents and the conversation.",
+  "access.cap.comment": "Read and comment",
+  "access.cap.commentHint": "Can also ask questions and reply.",
+  "access.cap.reviewer": "Read and comment",
+  "access.cap.reviewerHint":
+    "The same as commenting today. Kept as a separate seat so a future approval step has somewhere to land.",
+  "access.state.invited": "invited",
+  "access.state.active": "signed in",
+  "access.state.revoked": "revoked",
+  "access.lastSeen": "last seen {when}",
+  "access.downloads": "Downloaded {count} document(s)",
+  "access.linkRequested":
+    "Asked for a new link {when}. Issue one and send it yourself.",
+  "access.rowActions": "Actions for {name}",
+  "access.issueLink": "Issue new link",
+  "access.changeCapability": "Change what they may do",
+  "access.revoke": "Revoke access",
+  "access.inviteTitle": "Invite someone to the Deal Room",
+  "access.inviteConfirm": "Invite",
+  "access.done": "Done",
+  "access.save": "Save",
+  "access.nameLabel": "Name",
+  "access.emailLabel": "Email",
+  "access.capabilityLegend": "What may they do?",
+  "access.inviteBeforePublish":
+    "This room has never been published, so whoever you invite will see an empty page until you press Publish.",
+  "access.inviteNote":
+    "You will get the link to copy. If a mail relay is configured it is also sent to them.",
+  "access.issued.title": "Link for {name}",
+  "access.issued.mailed": "Sent to {email}. You can also copy it below.",
+  "access.issued.notMailed":
+    "No mail was sent. Copy the link and send it yourself.",
+  "access.issued.linkLabel": "Their link",
+  "access.issued.copy": "Copy link",
+  "access.issued.copied": "Copied",
+  "access.issued.copyFailed": "Could not copy; select the link and copy it.",
+  "access.issued.oneTime":
+    "Personal, one-time link. It works once, on one device. Each person needs their own invitation.",
+  "access.issueLinkTitle": "Issue a new link for {name}",
+  "access.issueLinkBody":
+    "The link they have now stops working. You will get the new one to copy.",
+  "access.revokeTitle": "Revoke access for {name}?",
+  "access.neverSignedIn": "never signed in",
+  "access.revokeBody":
+    "Their session ends now and their link stops working. Their comments stay visible and attributed. Access cannot be restored by them asking for a link.",
+  "access.changeCapabilityTitle": "What may {name} do?",
+  "persondealrooms.title": "Deal Rooms",
+  "persondealrooms.sub": "Rooms this contact can still enter.",
+  "persondealrooms.open": "Open",
+  "persondealrooms.seatGone":
+    "This address no longer holds a seat in that room.",
+  "persondealrooms.cut":
+    "Only the first rooms are shown; this contact sits in more.",
+  "persondealrooms.revokeTitle": "Revoke access to {room}?",
+  "room.state.draft": "Draft",
+  "room.state.building": "Building",
+  "room.state.ready": "Ready",
+  "room.state.publishing": "Publishing",
+  "room.state.live": "Live",
+  "room.state.paused": "Paused",
+  "room.state.closed": "Closed",
+  "room.state.expired": "Expired",
+  "room.state.archived": "Archived",
   "co.pulse.created": "Created {when}",
   // The later of the two directions \u2014 which side wrote last moved to the
   // daily brief's own detail line, so the header states only that the
@@ -1052,6 +1238,7 @@ export const en = {
   "approval.kind.site_lead": "Add a person found on the site",
   "approval.kind.capture_counterparty": "Add someone from your mail",
   "approval.kind.org_name_promotion": "Rename an account",
+  "approval.kind.project_attribution": "File under a project",
   "approval.kind.lifecycle_change": "Account stage",
   "approval.kind.transcript_proposal": "Add a next step from a transcript",
   "approval.kind.fx_rate_proposal": "Refresh exchange rates",
@@ -1163,6 +1350,7 @@ export const en = {
   "co.connections.group.our_side": "who here is connected",
   "co.signals.title": "Signals",
   "co.signals.empty": "No open signal on this account.",
+  "co.signals.openProject": "Open the project",
   "chronology.label": "What to show in the timeline",
   "chronology.activities": "Activities",
   "chronology.changes": "Changes",
@@ -1811,6 +1999,13 @@ export const en = {
   "home.digestDedupe": "Duplicates to review",
   "home.digestClassify":
     "Classified overnight: {commitments} commitments · {meetings} meetings · {noise} noise",
+  "home.digestProjects": "Projects",
+  "home.digestPhaseChanges": "Phase moves",
+  "home.digestNewCommitments": "New commitments",
+  "home.digestGoneQuiet": "Gone quiet",
+  "home.digestPhaseChange": "{from} → {to}",
+  "home.digestCommitmentCount": "{count} new open commitments",
+  "home.digestQuietDays": "quiet for {days} days",
 
   "enrich.title": "Read from the website",
   "enrich.sub":
@@ -1963,7 +2158,7 @@ export const en = {
   "today.source.nextSteps": "open tasks",
   "today.source.nextMeeting": "the calendar",
   "today.source.deals": "deals",
-  "today.meeting.prepare": "Write to the room",
+  "today.meeting.prepare": "Prepare meeting",
   "today.source.people": "the contacts",
   "today.source.standing": "whose move it is and the signals",
   "today.source.activities": "what was said",
@@ -2099,6 +2294,27 @@ export const en = {
   "docs.category.email": "Email attachment",
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
+  "files.title": "Files",
+  "files.sub":
+    "What you uploaded on this deal, and what arrived with its emails and messages.",
+  "files.empty":
+    "No files on this deal yet. Upload one, or link an email that carries one.",
+  "files.origin": "Attachment of a message from {who}, {when}",
+  "files.originUnknown": "an unknown sender",
+  "files.uploaded": "Uploaded {when}",
+  "files.hiddenBadge": "Hidden",
+  "files.rowActions": "Actions for {name}",
+  "files.hide": "Hide from this deal",
+  "files.unhide": "Show on this deal again",
+  "files.delete": "Delete",
+  "files.hideTitle": "Hide {name} from this deal?",
+  "files.hideBody":
+    "The message and its attachment stay on the activity and in the company library. Only this deal stops listing it.",
+  "files.deleteTitle": "Delete {name}?",
+  "files.deleteBody":
+    "The file is removed from this deal. A Deal Room release that names it keeps serving it until the room is published again.",
+  "files.showHidden": "Show hidden files",
+  "files.hideHidden": "Hide the hidden files",
   "docs.state.draft": "Draft",
   "docs.state.current": "Current",
   "docs.state.final": "Final",
@@ -2149,6 +2365,11 @@ export const en = {
   "compose.draftToUnset": "Choose a contact",
   "compose.relatedTo": "Related to",
   "compose.relatedToNone": "The account in general",
+  "compose.project": "Project",
+  "compose.projectNone": "No project",
+  "compose.scopedToCounted":
+    "Scoped to {key} · {inScope} of {total} activities",
+  "compose.scopedTo": "Scoped to {key}",
   "compose.basedOn": "Based on: {inputs}",
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
@@ -2194,6 +2415,9 @@ export const en = {
   "compose.relinkReplaceHint":
     "Replaces the existing link of the same type rather than adding another.",
   "compose.relinkConfirm": "Relink",
+  "compose.relinkThread": "Also move the rest of this conversation",
+  "compose.relinkThreadHint":
+    "Every message in this thread you can edit moves with it, in one step.",
   "compose.emptyRecipients": "Add at least one recipient.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
@@ -2337,6 +2561,39 @@ export const en = {
   "agent.activity.documentExtract.degraded":
     "I got partway through your document and stopped.",
   "agent.activity.documentExtract.failed": "I couldn't read your document.",
+  // The AI work a person ASKS for and then waits on. Same rules as the
+  // scheduled lines above — first person, result first, and never a word that
+  // reads as finished on a run that stopped part-way.
+  //
+  // These four were deliberately not narrated until the router could say
+  // `running`: reporting them settled-only meant a line that appeared already
+  // finished, which tells a waiting reader nothing they did not already know.
+  "agent.activity.summarize.queued": "Reading up on this company is queued.",
+  "agent.activity.summarize.running":
+    "I'm pulling together what I know about this company.",
+  "agent.activity.summarize.done": "What I know about this company is ready.",
+  "agent.activity.summarize.degraded":
+    "I gathered some of what I know about this company and stopped.",
+  "agent.activity.summarize.failed":
+    "I couldn't finish reading up on this company.",
+  "agent.activity.summarize.stalled":
+    "Reading up on this company has taken unusually long. It may have stopped.",
+  "agent.activity.draftReply.queued": "Your reply is queued to be drafted.",
+  "agent.activity.draftReply.running": "I'm drafting your reply.",
+  "agent.activity.draftReply.done": "Your draft reply is ready.",
+  "agent.activity.draftReply.degraded":
+    "I got partway through your reply and stopped.",
+  "agent.activity.draftReply.failed": "I couldn't draft your reply.",
+  "agent.activity.draftReply.stalled":
+    "Drafting your reply has taken unusually long. It may have stopped.",
+  "agent.activity.offerDraft.queued": "Your offer is queued to be drafted.",
+  "agent.activity.offerDraft.running": "I'm drafting your offer.",
+  "agent.activity.offerDraft.done": "Your draft offer is ready.",
+  "agent.activity.offerDraft.degraded":
+    "I got partway through your offer and stopped.",
+  "agent.activity.offerDraft.failed": "I couldn't draft your offer.",
+  "agent.activity.offerDraft.stalled":
+    "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
   "agent.panel.finishedToday": "Finished today",
   "agent.panel.stoppedEarly": "Why it stopped",
@@ -3784,6 +4041,9 @@ export const en = {
   "ob.payoff.seats":
     "The one thing left is your colleagues. Seats are billed, so you create them in Settings → People.",
   "ob.payoff.understood": "Understood",
+  "ob.payoff.projects":
+    "When a deal turns into work, open a project for it: a project starts during the deal and outlives close-won, so delivery keeps its own timeline.",
+  "ob.payoff.projectsLink": "See projects",
 
   // --- the handoff into the app -----------------------------------------
   "ob.enter.cta": "Enter Margince",
@@ -4066,6 +4326,111 @@ export const en = {
     "Each purpose is separate — this isn't all-or-nothing. Transactional messages can't be switched off here, because you need them; everything else is yours to control.",
   "prefs.invalidLink":
     "This link is no longer valid. Preference links expire and can be withdrawn — ask for a fresh one from any recent email.",
+  "buyer.opening": "Opening your Deal Room…",
+  "buyer.deadTitle": "This link no longer works",
+  "buyer.linkDead":
+    "The link you used has already been opened, has lapsed, or was replaced by a newer one. Ask for a fresh link below.",
+  "buyer.noLink":
+    "Open this page from the link you were sent. If you no longer have it, ask for a fresh one below.",
+  "buyer.emailLabel": "Your email address",
+  "buyer.emailHint": "The address the invitation was sent to.",
+  "buyer.requestLink": "Send me a new link",
+  "buyer.linkRequested":
+    "If that address was invited, a new link is on its way.",
+  "buyer.pausedTitle": "Access is paused",
+  "buyer.pausedBody":
+    "{steward} has paused this room for now. Your link stays valid; you will be able to continue once they resume it.",
+  "buyer.expiredTitle": "Access has ended",
+  "buyer.expiredBody":
+    "Access to this room has lapsed. Contact {steward}, or ask for a fresh link below.",
+  "buyer.notYetTitle": "Nothing published yet",
+  "buyer.notYetBody":
+    "{steward} has not published anything to this room yet. Check back soon.",
+  "buyer.eyebrow": "Deal Room",
+  "buyer.contact": "Your contact: {steward}.",
+  "buyer.closed": "This room is closed; what it shared is a record now.",
+  "buyer.previewBanner":
+    "You are previewing this room as a buyer would see it. You can read everything and change nothing.",
+  "buyer.previewReadOnly":
+    "A preview cannot write. Close this tab to return to the Deal Room page.",
+  "buyer.closedNote": "This room is now read-only.",
+  "buyer.stewardUnknown": "your contact",
+  "buyer.signOut": "Sign out",
+  "room.docs.title": "Documents",
+  "room.docs.sub":
+    "What the buyer can read, with the conversation about each document under it.",
+  "room.docs.empty": "No documents in the room yet.",
+  "room.docs.fileLabel": "File from this deal",
+  "room.docs.fileHint":
+    "Anything in the deal's Files area can go in: uploads and the files its emails carried.",
+  "room.docs.pickFile": "Pick a file",
+  "room.docs.noFiles": "The deal's Files area is empty",
+  "room.docs.groupLabel": "Group",
+  "room.docs.add": "Add to room",
+  "room.docs.remove": "Remove {title} from the room",
+  "room.docs.group.commercial": "Commercial",
+  "room.docs.group.legal": "Legal",
+  "room.docs.group.security_privacy": "Security & Privacy",
+  "room.docs.group.delivery_operations": "Delivery & Operations",
+  "buyer.docs.title": "Documents",
+  "buyer.docs.sub":
+    "What has been shared with you, with the conversation about each document under it.",
+  "buyer.docs.empty": "No documents yet.",
+  "buyer.docs.download": "Download {title}",
+  "buyer.docs.downloadFailed":
+    "The download did not start. Try again, or ask your contact.",
+  "room.docs.unshared": "Not yet shared — publish to share",
+  "room.docs.changed": "Changed since last published",
+  "room.docs.shared": "Shared with the buyer",
+  "room.docs.ineligible": "Cannot be shared — the file left the deal",
+  "buyer.docs.downloadShort": "Download",
+  "buyer.poweredBy": "Powered by",
+  "buyer.poweredByMargince": "Powered by Margince",
+  "threads.roomTitle": "The room as a whole",
+  "threads.roomSub":
+    "Anything not about one document — live, no publish needed.",
+  "threads.aboutThis": "{count} thread(s) about this document",
+  "threads.askAbout": "Ask about this document",
+  "threads.cancel": "Cancel",
+  "threads.empty": "Nothing said yet.",
+  "threads.requiredChange": "Change required",
+  "threads.resolved": "Resolved",
+  "threads.sideBuyer": "buyer",
+  "threads.sideSeller": "seller",
+  "threads.replyLabel": "Reply",
+  "threads.reply": "Reply",
+  "threads.resolve": "Resolve",
+  "threads.newLabel": "New thread",
+  "threads.requireChangeLabel": "This document needs a change",
+  "threads.open": "Post",
+  "threads.readOnly": "Your access is read-only.",
+  "room.decisions.confirm_version": "confirmed the version",
+  "room.decisions.request_changes": "asked for changes",
+  "dealbrief.title": "Deal brief",
+  "dealbrief.sub": "Where it stands, in sentences you can check.",
+  "dealbrief.empty": "Nothing on the record yet.",
+  "dealbrief.standing": "Where it stands",
+  "dealbrief.activity": "Last and next",
+  "dealbrief.open": "Still owed",
+  "dealbrief.room": "Deal Room",
+  "dealmeeting.title": "Next meeting",
+  "dealmeeting.untitled": "Meeting",
+  "dealmeeting.openBrief": "Open the brief",
+  "nba.title": "Next move",
+  "nba.sub": "One thing to do on this deal, and why.",
+  "nba.createTask": "Add this task",
+  "nba.draftReply": "Draft the reply",
+  "nba.openBrief": "Open the meeting brief",
+  "nba.nothingToDo": "Nothing to add right now.",
+  "pulse.title": "Deal pulse",
+  "pulse.sub": "Four things the deal's health is read from.",
+  "pulse.atRisk": "At risk",
+  "pulse.onTrack": "On track",
+  "pulse.recency": "Recent activity",
+  "pulse.velocity": "Pace in stage",
+  "pulse.engagement": "Engagement",
+  "pulse.commitments": "Commitments kept",
+  "pulse.total": "Overall reading: {value} of 100.",
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
   "prefs.subscribed": "Subscribed",
@@ -4968,7 +5333,7 @@ export const en = {
   "quotas.team": "Team",
   "quotas.pickOwner": "Select an owner…",
   "quotas.pickTeam": "Select a team…",
-  "quotas.amountHint": "Whole euros — no decimals",
+  "quotas.amountHint": "Whole units of the currency below. No decimals.",
   "quotas.periodStart": "Period start",
   "quotas.periodEnd": "Period end",
   "quotas.amount": "Target amount",
@@ -5202,10 +5567,6 @@ export const en = {
   "person.thin.remediation.employer":
     "Add their employer and Margince can read that company's site for their role.",
   "person.thin.logFirst": "Log the first interaction",
-  "person.timeline.all": "All",
-  "person.timeline.messages": "Messages",
-  "person.timeline.meetings": "Meetings",
-  "person.timeline.tasks": "Tasks",
   "person.enriched.title": "What Margince read",
   "person.enriched.sub":
     "Each value with the text it was read from. Correct one and the correction stands.",
@@ -5535,6 +5896,7 @@ export const en = {
   "person.meeting.loading": "Assembling the brief…",
   "person.meeting.assembledNow": "Assembled just now, from the latest data",
   "person.meeting.header": "At a glance",
+  "person.meeting.what_changed": "Since you last spoke",
   "person.meeting.goal": "Goal for this meeting",
   "person.meeting.attendees": "Attendees",
   "person.meeting.commitments": "Open commitments",
@@ -5792,6 +6154,131 @@ export const en = {
   "sched.skew":
     "This list is out of date: the message you acted on had already gone, been withdrawn, or been moved somewhere else. Read the list again.",
   "sched.reload": "Read it again",
+  // Projects — the body of work a deal is about. It starts during the deal,
+  // in the initiative phase, and outlives close-won; this namespace is every
+  // word the list, the page and the deal form's picker say about one.
+  "nav.projects": "Projects",
+  "unit.projects": "projects",
+  "companyProjects.title": "Projects",
+  "companyProjects.empty":
+    "A project is the body of work a deal is about. This company appears here once it is on one — as the client, a partner, or a subcontractor.",
+  "projectCompanies.title": "Companies",
+  "projectCompanies.empty":
+    "A project is work several companies do together — the client, and any partner or subcontractor delivering it.",
+  "projectCompanies.attach": "Attach company",
+  "projectCompanies.detachTitle": "Take this company off?",
+  "projectCompanies.searchLabel": "Search companies by name",
+  "personProjects.title": "Projects",
+  "personProjects.empty":
+    "This contact appears here once they are on a delivery — as a sponsor, a contact, or whoever else is working it.",
+  "projectRole.customer": "Customer",
+  "projectRole.partner": "Partner",
+  "projectRole.subcontractor": "Subcontractor",
+  "personRole.sponsor": "Sponsor",
+  "personRole.projectLead": "Project lead",
+  "personRole.deliveryLead": "Delivery lead",
+  "personRole.expert": "Subject-matter expert",
+  "personRole.user": "User",
+  "projectLinks.new": "New project",
+  "projectLinks.attach": "Attach project",
+  "projectLinks.move": "Move to another project",
+  "projectLinks.detach": "Detach",
+  "projectLinks.detachConfirm": "Detach it",
+  "projectLinks.detachNamed": "Detach {name}",
+  "projectLinks.roleLabel": "As",
+  "projectLinks.detachTitle": "Detach this project?",
+  "projectLinks.detachBody":
+    "{name} stays as it is. Only its link to this record ends — nothing is deleted.",
+  "projectLinks.emptyTitle": "No projects yet",
+  "projectLinks.searchLabel": "Search projects by name or key",
+  "project.name": "Project name",
+  "project.keyMinted":
+    "Margince gives each project a short key. Write [{key}] in an email subject and the mail is filed under this project.",
+  "project.company": "Company",
+  "project.owner": "Owner",
+  "project.ownerKeep": "Keep current owner",
+  "project.ownerMe": "Me",
+  "project.ownerUnassign": "Unassign",
+  "project.description": "Description",
+  "project.targetEnd": "Target end date",
+  "project.targetEndShort": "target {date}",
+  "project.new": "New project",
+  "project.edit": "Edit project",
+  "project.archive": "Archive project",
+  "project.archiveConfirm":
+    "Archiving removes this project from the live list and frees its key. This cannot be undone from the UI.",
+  "project.archivedReadOnly": "This project is archived and takes no changes.",
+  "project.railLabel": "Project profile",
+  "project.phaseLabel": "Phase",
+  "project.filterPhaseAll": "All phases",
+  "project.viewDelivering": "In delivery",
+  "project.phase.initiative": "Initiative",
+  "project.phase.pursuing": "Pursuing",
+  "project.phase.delivering": "Delivering",
+  "project.phase.closed": "Closed",
+  "project.emptyTitle": "No projects yet",
+  "project.emptyBody":
+    "A project is the body of work a deal is about. It starts during the deal, in the initiative phase, and outlives close-won: once the deal is won, delivery is tracked here.",
+  "project.emptyKey":
+    "Give a project a key and any email whose subject carries [KEY] is filed under it automatically.",
+  "project.rollups.empty": "No figures for this project yet.",
+  "project.rollups.openValue": "Open deal value",
+  "project.rollups.wonValue": "Won deal value",
+  "project.rollups.openCommitments": "Open commitments",
+  "project.rollups.lastActivity": "Last activity",
+  "project.rollups.never": "nothing yet",
+  "project.rollups.activityCount": "Activities",
+  "project.coverage":
+    "{attributed} attributed · {awaiting} awaiting a decision · {nearby} on this project's people and deals not attributed",
+  "project.history.title": "Phase history",
+  "project.history.empty": "No phase change recorded yet.",
+  "project.history.current": "current",
+  "project.history.moved": "{from} → {to}",
+  "project.history.born": "Started in {phase}",
+  "project.history.bySystem": "System",
+  "project.deals.title": "Deals",
+  "project.deals.empty":
+    "No deal names this project yet. A deal picks its project on its own form.",
+  "project.deals.more": "More deals than shown here — open the pipeline.",
+  "project.stakeholders.title": "Stakeholders",
+  "project.stakeholders.empty":
+    "Nobody is seated on this project yet. A stakeholder is a person with a role here — a sponsor, a project lead, a champion.",
+  "project.role.sponsor": "Sponsor",
+  "project.role.project_lead": "Project lead",
+  "project.role.delivery_lead": "Delivery lead",
+  "project.role.subject_matter_expert": "Subject-matter expert",
+  "project.contracts.title": "Contracts",
+  "project.contracts.empty":
+    "No agreement is filed under this project. A contract names its project when it is recorded.",
+  "project.documents.title": "Documents",
+  "project.documents.empty":
+    "No file is attached to this project. Files attached to its deals stay on the deals.",
+  "project.commitments.title": "Open commitments",
+  "project.commitments.empty":
+    "No open task is filed under this project. Tasks linked to it land here, soonest due first.",
+  "project.commitments.overdue": "overdue",
+  "project.timeline.empty":
+    "Nothing is filed under this project yet. Mail carrying the key in its subject, and activities linked to it, land here.",
+  "project.advance.title": "Move to {phase}",
+  "project.advance.confirm": "Move",
+  "project.advance.close": "Close project",
+  "project.advance.body":
+    "The move is recorded in the phase history with the reason you give.",
+  "project.advance.closeBody":
+    "Closing ends the project's delivery. It can be reopened later, and the reason stays on record.",
+  "project.advance.reason": "Reason",
+  "project.advance.reasonRequired": "A closed project needs a reason.",
+  "deal.project": "Project",
+  "deal.projectNew": "New project…",
+  "deal.projectNeedsCompany":
+    "Choose the deal's company first — a project is started on a company.",
+  "deal.projectUnnamed": "Project",
+  "deal.startDeliveryTitle": "Start delivery",
+  "deal.startDelivery": "Start delivery",
+  "deal.startDeliveryAttached":
+    "This deal is attached to {project}, but the project is not in delivery yet. Move it now?",
+  "deal.startDeliveryBody":
+    "This deal is won and names no project. Attach it to {project} and move the project into delivery?",
 } as const;
 
 export type MessageKey = keyof typeof en;

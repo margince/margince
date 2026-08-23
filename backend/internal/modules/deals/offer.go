@@ -80,7 +80,7 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 	}
 
 	var out crmcontracts.Offer
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = createOfferTx(ctx, tx, dealID, in, by)
 		return err
@@ -325,7 +325,7 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -382,7 +382,7 @@ func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		if _, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return err
 		}

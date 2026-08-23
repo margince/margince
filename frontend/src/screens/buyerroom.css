@@ -1,0 +1,79 @@
+/* The buyer's Deal Room — a standalone page reached from an invitation link,
+   not a de-chromed app screen: its own centered reading column and ground,
+   like the preference center. Tokens only (make ds-purity). */
+
+.buyer-page {
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-16) var(--space-5) var(--space-16);
+  background: var(--bgCard);
+}
+
+.buyer-column {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.buyer-header h1 {
+  margin: var(--space-2) 0 0;
+}
+
+.buyer-header p {
+  margin-top: var(--space-3);
+}
+
+.buyer-meta {
+  color: var(--textMeta);
+}
+
+.buyer-linkrequest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.buyer-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* The actions beside a shared document. One button today; the row exists so a
+   second never has to re-lay-out the card. */
+.buyer-doc-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* "Powered by Margince", pinned to the page's bottom-right corner: the one
+   mark on the buyer's page that is the product's rather than the seller's. */
+
+.buyer-page {
+  position: relative;
+}
+
+.buyer-powered {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--textMeta);
+}
+
+.buyer-powered-mark {
+  display: inline-grid;
+  place-items: center;
+}
+
+.buyer-powered-mark img {
+  width: 84px;
+  height: auto;
+}

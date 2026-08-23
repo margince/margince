@@ -404,6 +404,15 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  /* The column widths are computed from this box's clientWidth, and with
+   * classic (non-overlay) scrollbars a vertical bar takes part of that width.
+   * Without a reserved gutter the two feed each other: widths → horizontal
+   * bar → less height → vertical bar → less width → new widths → no bar …
+   * until React gives up with "Maximum update depth exceeded" and the list is
+   * an error plate. Reserving the gutter makes the width independent of
+   * whether the bar is showing. Overlay scrollbars reserve nothing, so the
+   * default macOS look is unchanged. */
+  scrollbar-gutter: stable;
 }
 
 /* The table is as wide as its columns need, not as wide as the viewport. Widening

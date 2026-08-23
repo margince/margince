@@ -66,6 +66,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(createRecord{p: p})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals})
 	r.Register(logActivity{p: p})
+	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages})
 	r.Register(progressDeal{p: p, stages: stages})
 	r.Register(qualifyLead{p: p})
@@ -120,8 +121,8 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		// tools claiming one operation family between them.
 		OpenAPIOp: "search",
 		InputSchema: schema(`{"type":"object","properties":{
-			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched."},
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","project"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these"},
+			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
+			"record_type":{"type":"string","enum":["person","organization","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
 			"additionalProperties":false}`),
@@ -205,9 +206,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
 		Description:   readRecordCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getPerson/getOrganization/getDeal/getLead/getActivity/getProject",
+		OpenAPIOp: "getPerson/getOrganization/getDeal/getLead/getActivity/getProject/getPartner",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project"]},
+			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project","partner"],"description":"partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
@@ -360,7 +361,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Which messaging transport carried this — required when kind is \"message\", and not allowed otherwise. Name a provider this installation has registered; list_channel_providers reports them."},
+			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider list_channel_providers names."},
 			"subject":{"type":"string"},"body":{"type":"string"},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
@@ -368,7 +369,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"What the activity is about. Omit it and the activity is stored unattached to any record — it will not appear on a person's, company's or deal's timeline."},
+				"description":"What it is about; unlinked, it appears on no timeline."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

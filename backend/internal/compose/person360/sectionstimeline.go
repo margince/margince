@@ -18,9 +18,11 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/network"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -60,30 +62,41 @@ func activityScopeUnder(ctx context.Context, arg func(any) int,
 	return clause, nil
 }
 
+// projectScope renders the body-of-work narrowing as one more WHERE term, or
+// nothing when the page is unscoped. Every timeline section of this page goes
+// through it, so the recent rows, the open tasks, the last-touch dates and the
+// since-last-visit count cannot disagree about which project they describe.
+func projectScope(opts AssembleOptions, arg func(any) int) string {
+	if opts.ProjectID == nil {
+		return ""
+	}
+	return " AND " + activities.ActivityWithinProject(arg(*opts.ProjectID))
+}
+
 // activitiesSection is the recent timeline — a summary, not a paging
 // surface: page two comes from GET /activities with its own cursor.
-func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, out *crmcontracts.Person360) error {
+func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, out *crmcontracts.Person360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, personID, "")
+	rows, hasMore, err := s.readActivities(ctx, tx, personID, opts, "")
 	if err != nil {
 		return err
 	}
 	out.Activities = &struct {
 		Data []crmcontracts.Activity `json:"data"`
 		Page crmcontracts.PageInfo   `json:"page"`
-	}{Data: rows, Page: crmcontracts.PageInfo{HasMore: hasMore}}
+	}{Data: rows, Page: sectionPage(rows, hasMore)}
 	return nil
 }
 
 // nextStepsSection is the open work filed against this person: tasks not
 // yet done. A task with no due date still counts — it is owed either way.
-func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, out *crmcontracts.Person360) error {
+func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, out *crmcontracts.Person360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, personID,
+	rows, hasMore, err := s.readActivities(ctx, tx, personID, opts,
 		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`)
 	if err != nil {
 		return err
@@ -91,8 +104,22 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, personID ids.
 	out.NextSteps = &struct {
 		Data []crmcontracts.Activity `json:"data"`
 		Page crmcontracts.PageInfo   `json:"page"`
-	}{Data: rows, Page: crmcontracts.PageInfo{HasMore: hasMore}}
+	}{Data: rows, Page: sectionPage(rows, hasMore)}
 	return nil
+}
+
+// sectionPage is the section's edge in the activities list's own cursor
+// vocabulary: the same (occurred_at, id) keyset GET /activities orders by, so
+// the record page continues from this page's last row rather than fetching
+// page one again and showing every row twice.
+func sectionPage(rows []crmcontracts.Activity, hasMore bool) crmcontracts.PageInfo {
+	info := crmcontracts.PageInfo{HasMore: hasMore}
+	if hasMore && len(rows) > 0 {
+		last := rows[len(rows)-1]
+		cursor := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		info.NextCursor = &cursor
+	}
+	return info
 }
 
 // readActivities is the shared body of the timeline and next-step reads.
@@ -105,7 +132,7 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, personID ids.
 // column for a whole slice — the narrowing added it there and nothing pointed
 // at the copy. TestThePerson360TimelineNamesTheTransportThatCarriedAMessage is
 // the guard that says so out loud.
-func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, extra string) ([]crmcontracts.Activity, bool, error) {
+func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, extra string) ([]crmcontracts.Activity, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	personPos := arg(personID)
@@ -124,12 +151,12 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
 		       a.occurred_at, a.due_at, a.is_done, a.source, a.captured_by, a.created_at,
-		       a.audience, (%s) AS content_available
+		       a.thread_key, a.bulk_mail_attested, a.audience, (%s) AS content_available
 		FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s) %s
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT %d`,
-		contentArm, fmt.Sprintf(personLinkedActivity, personPos), scope, extra, sectionCap+1), args...)
+		contentArm, fmt.Sprintf(personLinkedActivity, personPos), scope, projectScope(opts, arg), extra, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -139,19 +166,26 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		var a crmcontracts.Activity
 		var id ids.UUID
 		var audience string
-		var contentAvailable bool
+		var contentAvailable, bulkMailAttested bool
+		var threadKey *string
 		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
 			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.Source, &a.CapturedBy,
-			&a.CreatedAt, &audience, &contentAvailable); err != nil {
+			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &contentAvailable); err != nil {
 			return nil, false, err
 		}
 		a.Id = openapi_types.UUID(id)
 		aud := crmcontracts.ActivityAudience(audience)
 		a.Audience = &aud
+		// The thread key and the bulk attestation are what lets the record
+		// page fold this page into conversations the way the list's page
+		// folds; the key identifies the message at the provider, so it is
+		// withheld with the content, exactly as the list's scan withholds it.
+		a.BulkMailAttested = &bulkMailAttested
+		a.ThreadKey = threadKey
 		state := crmcontracts.ActivityContentStateAvailable
 		if !contentAvailable {
 			state = crmcontracts.ActivityContentStateWithheld
-			a.Subject, a.Body = nil, nil
+			a.Subject, a.Body, a.ThreadKey = nil, nil, nil
 		}
 		a.ContentState = &state
 		// The link is implied by the read — every row here is linked to this
@@ -177,7 +211,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 // one "last touch" hides the only distinction a reader acts on: a contact
 // we mailed a fortnight ago with no reply and one who wrote to us this
 // morning have the same last-touch date and opposite meanings.
-func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, out *crmcontracts.Person360) error {
+func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, out *crmcontracts.Person360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
@@ -192,8 +226,8 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.
 		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
 		FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)`,
-		fmt.Sprintf(personLinkedActivity, personPos), scope), args...).
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s`,
+		fmt.Sprintf(personLinkedActivity, personPos), scope, projectScope(opts, arg)), args...).
 		Scan(&out.LastInboundAt, &out.LastOutboundAt)
 }
 
@@ -276,14 +310,31 @@ func (s *Service) profileFieldsSection(ctx context.Context, tx pgx.Tx, personID 
 // would silently lose every correction.
 func profileFieldClaimPath(field string) string { return "profile_field:" + field }
 
-// readProfileFields is EVERY read of person_profile_field — the 360 section
-// and the standalone sidecar endpoint both come through here.
+// readProfileFields is every read of person_profile_field that RENDERS it to a
+// reader — the 360 section and the standalone sidecar endpoint both come
+// through here.
 //
 // That matters because the human's verdict is folded in below. A corrected
 // value rendered without its marker reads as the machine's assertion, which is
 // exactly the claim the human overrode, so consulting the ledger cannot be one
 // caller's job: a second read path that skipped it would keep serving the
 // rejected value on a surface nobody thought to check.
+//
+// Other statements touch the table — an existence probe, a merge relink, the
+// writers — but exactly one other SERVES values out of it, and it deliberately
+// does not come through here: privacy/sar.go's Article 15 export.
+//
+// That is not a gap. An export owes the subject what this installation HOLDS,
+// and it holds two facts: the machine's assertion and the verdict recorded
+// against it. So it exports the stored columns and ai_feedback beside them as
+// its own section, and the subject sees both. Overlaying the verdict there
+// would hand them one merged value and conceal that the override exists — the
+// opposite of what an export is for. The two also cannot share this function:
+// privacy is a module and may not import compose.
+//
+// TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger holds this
+// paragraph, so a third reader that serves values without the overlay fails
+// rather than quietly making the sentence above false.
 func (s *Service) readProfileFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]crmcontracts.PersonProfileField, error) {
 	rows, err := tx.Query(ctx, `
 		-- updated_at, not created_at: this is when the value took its CURRENT
@@ -350,7 +401,7 @@ func (s *Service) applyFieldVerdicts(
 // baseline. READ-ONLY: nothing here advances the mark — only view-ack does,
 // because a GET that moved it would destroy the answer the caller opened
 // the page to read.
-func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, out *crmcontracts.Person360) error {
+func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, out *crmcontracts.Person360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
@@ -372,8 +423,8 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, personID
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
-		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)`,
-		sincePos, fmt.Sprintf(personLinkedActivity, personPos), scope), args...).
+		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
+		sincePos, fmt.Sprintf(personLinkedActivity, personPos), scope, projectScope(opts, arg)), args...).
 		Scan(&view.NewActivities); err != nil {
 		return fmt.Errorf("count new activities: %w", err)
 	}

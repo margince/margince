@@ -189,3 +189,150 @@ func removeStakeholderCommand(_ agentPolicy, deps restCommandDeps, r *http.Reque
 	}
 	return agents.NewRemoveStakeholderCall(deps.records, agents.RemoveStakeholderCommand{ID: id, PersonID: personID}), nil
 }
+
+// createRoomItemCommand decodes POST /v1/deal-rooms/{id}/documents and the
+// thread-opening and reply POSTs through the same code: the routed room is
+// folded into the body so the staged approval names where the item lands, and
+// the policy's record type says which kind of item it is.
+//
+// The routed {id} names the ROOM, and the record being created is the item, so
+// this cannot be the plain createCommand: that one carries only the body, and an
+// approval of it would say nothing about which room the item lands in. The room
+// travels in the fields, where the staged proposed_change shows it beside the
+// wording a human is being asked to release.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func createRoomItemCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	roomID, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	fields, err := withRoomID(body, roomID)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewCreateCall(agents.CreateCommand{
+		RecordType: string(pol.RecordType),
+		Fields:     fields,
+	}), nil
+}
+
+// updateDealRoomDocumentCommand decodes PATCH
+// /v1/deal-rooms/{id}/documents/{documentId}. It is a roomItemPatch, which
+// binds to the ITEM rather than the routed {id}:
+// patchCommand would bind to the room, so the approval a human released would
+// name a different record than the one the call goes on to write — and the
+// item id it did carry would never be checked at all.
+var updateDealRoomDocumentCommand = roomItemPatch("documentId")
+
+// roomItemPatch is the decoder for a PATCH on one item under a room, keyed by
+// the path parameter that names the item.
+func roomItemPatch(param string) func(agentPolicy, restCommandDeps, *http.Request, []byte) (agents.GovernedCall, error) {
+	return func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+		return roomItemPatchCommand(pol, deps, r, body, param)
+	}
+}
+
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func roomItemPatchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte, param string) (agents.GovernedCall, error) {
+	if _, err := routedID(r); err != nil {
+		return nil, err
+	}
+	raw, err := pathOperand(r, param)
+	if err != nil {
+		return nil, err
+	}
+	// The existence-hiding 404 routedID gives, not the 422 person_id gives.
+	// The item id names a ROW rather than an edge, so "that is not a uuid" and
+	// "there is no such item" must read alike, or the shape of a caller's id
+	// tells them which of a room's items exist. It is also not a contract field,
+	// so it has no name a validation fault could legitimately publish.
+	itemID, perr := ids.Parse(raw)
+	if perr != nil {
+		return nil, apperrors.ErrNotFound
+	}
+	return agents.NewPatchCall(deps.records, agents.PatchCommand{
+		RecordType: string(pol.RecordType),
+		ID:         itemID,
+		Fields:     json.RawMessage(body),
+	}), nil
+}
+
+// withRoomID folds the routed room into a create body so the staged approval
+// names where the item lands. A body that is not an object is refused here
+// rather than reaching the handler, because a create whose fields cannot carry
+// the room would stage an item belonging to no room at all.
+func withRoomID(body []byte, roomID ids.UUID) (json.RawMessage, error) {
+	fields := map[string]json.RawMessage{}
+	if len(body) > 0 {
+		if err := json.Unmarshal(body, &fields); err != nil {
+			return nil, httperr.Validation("body", "invalid", "the request body must be a JSON object")
+		}
+	}
+	encoded, err := json.Marshal(roomID)
+	if err != nil {
+		return nil, httperr.Validation("id", "invalid", "the room in the path is not a uuid")
+	}
+	fields["room_id"] = encoded
+	merged, err := json.Marshal(fields)
+	if err != nil {
+		return nil, httperr.Validation("body", "invalid", "the request body could not be read as fields")
+	}
+	return merged, nil
+}
+
+// setCompanyCommand decodes PUT /v1/projects/{id}/companies. The body's
+// organization_id is held here for the same reason the stakeholder attach holds
+// person_id: an attach that names no company cannot run, and refusing at
+// staging tells the caller that rather than staging an approval that will fail
+// when it is redeemed.
+//
+//nolint:ireturn // the call IS the product: a concrete resolver here is exactly the thing that must not leave the agents package
+func setCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireCompanyOrganization(body); err != nil {
+		return nil, err
+	}
+	return agents.NewSetCompanyCall(deps.records, agents.SetCompanyCommand{ID: id}), nil
+}
+
+// requireCompanyOrganization holds the body to the one member the attach cannot
+// run without. A body that is not even an object is answered as the same
+// missing organization_id, since neither carries one.
+func requireCompanyOrganization(body []byte) error {
+	var payload struct {
+		OrganizationID string `json:"organization_id"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil || payload.OrganizationID == "" {
+		return httperr.Validation("organization_id", "missing", "organization_id is required")
+	}
+	if _, err := ids.Parse(payload.OrganizationID); err != nil {
+		return httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+	}
+	return nil
+}
+
+// removeCompanyCommand decodes DELETE
+// /v1/projects/{id}/companies/{organization_id} — the company is a second PATH
+// operand, so it is read from the route rather than a body.
+//
+//nolint:ireturn // the call IS the product: a concrete resolver here is exactly the thing that must not leave the agents package
+func removeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := pathOperand(r, "organization_id")
+	if err != nil {
+		return nil, err
+	}
+	organizationID, perr := ids.Parse(raw)
+	if perr != nil {
+		return nil, httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+	}
+	return agents.NewRemoveCompanyCall(deps.records,
+		agents.RemoveCompanyCommand{ID: id, OrganizationID: organizationID}), nil
+}

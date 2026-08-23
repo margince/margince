@@ -28,6 +28,14 @@ type Input struct {
 	// several places that could straddle a midnight.
 	Now time.Time
 
+	// Language is the BCP-47 tag the reader reads in, carried so the model lane
+	// answers in it. A brief about a German conversation, read by a German rep,
+	// answering in English is a translation task handed back to the person who
+	// asked for a summary. The deterministic floor ignores it: its sentences
+	// are English templates, and pretending otherwise would ship half a
+	// translation.
+	Language string
+
 	Company string
 	Deal    *DealIn
 	// Project is the body of work the meeting belongs to, when it is filed
@@ -46,9 +54,22 @@ type Input struct {
 	// what a recurring delivery review opens wanting: not the state of play,
 	// but what was agreed here last time.
 	PriorMeetings []PriorMeetingIn
+	// LastSpokeAt is when the READER last dealt with anyone in the room — the
+	// baseline "what changed" is measured from. Nil is first contact.
+	LastSpokeAt *time.Time
 	// LastTouchAt is the newest conversation with anyone in the room before
 	// this meeting. Nil means nothing was ever captured with any of them.
 	LastTouchAt *time.Time
+	// DealMoves are what happened to the DEAL since LastSpokeAt — stage moves,
+	// offers issued, what the buyer did in the Deal Room. Empty when nothing
+	// moved, when the meeting is about no deal, or when this reader may not
+	// see the part that moved.
+	DealMoves []DealMoveIn
+	// RoomHidden says this reader holds no deal_room grant, so whatever the
+	// buyer did in the room is missing from DealMoves. Rendered as an omission
+	// rather than left silent: a brief that cannot see the room reads exactly
+	// like a brief about a deal with no room.
+	RoomHidden bool
 }
 
 // DealIn is the deal this meeting is about.
@@ -111,6 +132,8 @@ type ClaimIn struct {
 	// the promise was made without pasting a record id into the text.
 	SourceLabel string
 	DueAt       *time.Time
+	// OccurredAt is when the claim was made, for ranking the newer first.
+	OccurredAt *time.Time
 }
 
 // ActIn is one recent conversation as the brief reads it.
@@ -183,6 +206,7 @@ func foldClaims(personName string, found []crmcontracts.ConversationClaim) []Cla
 			Status:     string(claim.Status),
 			SourceID:   ids.UUID(claim.SourceActivityId).String(),
 			DueAt:      claim.DueAt,
+			OccurredAt: claim.OccurredAt,
 		}
 		if claim.SourceLabel != nil {
 			folded.SourceLabel = *claim.SourceLabel

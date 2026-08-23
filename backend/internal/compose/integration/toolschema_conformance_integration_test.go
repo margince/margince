@@ -163,6 +163,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// caller acts on, and the one where a missing `gaps` member would read
 		// as work cleared for handover.
 		{"prepare_handoff", `{"project_id":"` + project.String() + `"}`},
+		// The project page read as a tool. The fixture project has no deal, no
+		// seat and no task, so this is the answer with every list EMPTY — the
+		// shape where a null list would read as "unknown".
+		{"read_project_360", `{"project_id":"` + project.String() + `"}`},
 		{"at_risk_relationships", `{}`},
 		{"who_knows", `{"person_id":"` + person.String() + `"}`},
 		{"account_coverage", `{"deal_id":"` + deal.String() + `"}`},
@@ -175,8 +179,17 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"check_availability", `{"from":"2026-01-05T09:00:00Z","to":"2026-01-05T17:00:00Z"}`},
 		{"relink_activity", `{"activity_id":"` + activity.String() + `","entity_type":"person","entity_id":"` +
 			person.String() + `"}`},
+		// The batch forms answer a count-and-ids shape of their own. The thread
+		// one names a key no activity carries, which is a well-formed empty
+		// answer; the set one names the activity above, onto an organization.
+		{"relink_thread", `{"thread_key":"thread:conformance","entity_type":"person","entity_id":"` +
+			person.String() + `"}`},
+		{"relink_activities", `{"activity_ids":["` + activity.String() + `"],"entity_type":"organization","entity_id":"` +
+			org.String() + `"}`},
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		{"log_activity", `{"kind":"note","body":"conformance","links":[{"entity_type":"deal","entity_id":"` +
+			deal.String() + `"}]}`},
+		{"create_task", `{"subject":"conformance","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
 		{"update_record", `{"record_type":"person","id":"` + person.String() +
 			`","fields":{"title":"Head of Conformance"}}`},

@@ -9,7 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
+	"github.com/gradionhq/margince/backend/internal/compose/dealbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
+	"github.com/gradionhq/margince/backend/internal/compose/nextaction"
 	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
@@ -18,6 +20,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/persondraft"
 	"github.com/gradionhq/margince/backend/internal/compose/personresearch"
 	"github.com/gradionhq/margince/backend/internal/compose/pipelinetrace"
+	"github.com/gradionhq/margince/backend/internal/compose/project360"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
@@ -36,6 +39,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/overlay"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/quotas"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
@@ -52,6 +56,7 @@ type (
 	pipelineTraceHandlers  = pipelinetrace.Handlers
 	peopleHandlers         = people.Handlers
 	dealsHandlers          = deals.Handlers
+	projectsHandlers       = projects.Handlers
 	contractsHandlers      = contracts.Handlers
 	dealroomsHandlers      = dealrooms.Handlers
 	commissionsHandlers    = commissions.Handlers
@@ -70,9 +75,12 @@ type (
 	webhooksHandlers       = webhooks.Handlers
 	org360Handlers         = org360.Handlers
 	person360Handlers      = person360.Handlers
+	project360Handlers     = project360.Handlers
 	personBriefHandlers    = personbrief.Handlers
 	personResearchHandlers = personresearch.Handlers
 	meetingBriefHandlers   = meetingbrief.Handlers
+	nextActionHandlers     = nextaction.Handlers
+	dealBriefHandlers      = dealbrief.Handlers
 	orgBriefHandlers       = orgbrief.Handlers
 	orgDossierHandlers     = orgdossier.Handlers
 	accountDraftHandlers   = accountdraft.Handlers
@@ -86,7 +94,7 @@ type (
 // same overlay refusal. Its own function so the composition root reads as a
 // list of what is wired rather than how each piece is built.
 func (s *Server) wirePerson360(pool *pgxpool.Pool) {
-	s.person360Svc = person360.NewService(pool, s.peopleStore, consent.NewStore(InstallationDB(pool)), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
+	s.person360Svc = person360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
 	s.person360Handlers = person360.NewHandlers(s.person360Svc, s.sorDispatch.isOverlay)
 	// The relationship brief is assembled from the SAME composite read the page
 	// serves, so the two cannot disagree about what this caller may see. No
@@ -101,9 +109,18 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// opened minutes before a meeting, so a stored artifact would be the one
 	// thing it must not be. Same deterministic floor and the same
 	// generated_by honesty as the brief above.
-	s.meetingBriefHandlers = meetingbrief.NewHandlers(
-		meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now),
-		s.sorDispatch.isOverlay,
+	s.meetingBriefSvc = meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now)
+	s.meetingBriefHandlers = meetingbrief.NewHandlers(s.meetingBriefSvc, s.sorDispatch.isOverlay)
+	// The deal's next best action reads the deal and its timeline through
+	// their own gated stores and performs nothing; the click goes through the
+	// verb the answer names.
+	s.nextActionHandlers = nextaction.NewHandlers(
+		nextaction.NewService(s.dealsStore, activities.NewStore(InstallationDB(pool)), time.Now),
+	)
+	// The deal brief reads the same deal, its health, timeline and tasks,
+	// plus its Deal Room, all through their own gates, and writes nothing.
+	s.dealBriefHandlers = dealbrief.NewHandlers(
+		dealbrief.NewService(s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now),
 	)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
@@ -119,4 +136,23 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	s.personDraftHandlers = persondraft.NewHandlers(
 		persondraft.NewService(s.person360Svc, nil).
 			WithEnvelope(draftEnvelope(pool, s.log)), s.sorDispatch.isOverlay)
+}
+
+// wireProject360 assembles the project page from the module stores the
+// handler sets already serve — the deals store with its field catalog, the
+// shared people store, the contracts and activities stores — so the page and
+// the per-record endpoints read the same columns under the same gates. It
+// rides the same dispatch the company and person pages do: a workspace on
+// the incumbent mirror refuses all three the same way.
+func (s *Server) wireProject360(pool *pgxpool.Pool) {
+	svc := project360.NewService(
+		pool,
+		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
+		ProjectsStore(pool),
+		s.peopleStore,
+		contracts.NewStore(InstallationDB(pool)),
+		activities.NewStore(InstallationDB(pool)),
+		time.Now,
+	)
+	s.project360Handlers = project360.NewHandlers(svc, s.sorDispatch.isOverlay)
 }

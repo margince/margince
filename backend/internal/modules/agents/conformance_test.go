@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -168,7 +169,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterCoreTools(r, nil, nil, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog)
-	RegisterIntentTools(r, inertRetriever{})
+	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, nil },
@@ -178,6 +179,9 @@ func fullRegistry(t *testing.T) *Registry {
 	})
 	RegisterHandoffTool(r, func(context.Context, ids.UUID) (HandoffFacts, error) {
 		return HandoffFacts{}, nil
+	})
+	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
+		return crmcontracts.Project360{}, nil
 	})
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, nil },
@@ -210,6 +214,14 @@ func fullRegistry(t *testing.T) *Registry {
 type inertLifecycle struct{}
 
 func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) RelinkThread(context.Context, string, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
 	return nil, nil
 }
 

@@ -221,7 +221,7 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -264,7 +264,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -377,7 +377,7 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -426,7 +426,7 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		return crmcontracts.Offer{}, err
 	}
 	var out crmcontracts.Offer
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err

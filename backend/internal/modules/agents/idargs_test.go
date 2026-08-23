@@ -36,6 +36,7 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -174,6 +175,14 @@ func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.
 	return nil, errSeamReached
 }
 
+func (seamProbeLifecycle) RelinkThread(context.Context, string, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
@@ -218,7 +227,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	}, probeReportCatalog)
-	RegisterIntentTools(r, inertRetriever{})
+	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, errSeamReached },
@@ -228,6 +237,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	})
 	RegisterHandoffTool(r, func(context.Context, ids.UUID) (HandoffFacts, error) {
 		return HandoffFacts{}, errSeamReached
+	})
+	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
+		return crmcontracts.Project360{}, errSeamReached
 	})
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, errSeamReached },

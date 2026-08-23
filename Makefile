@@ -32,7 +32,7 @@ SEED_DSN ?= postgres://margince_owner:dev@localhost:15432/margince
 # every company renders as a placeholder initial.
 MINIO_PORT ?= 29000
 
-.PHONY: help install ai-routing-local dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install ai-routing-local dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -74,7 +74,7 @@ ai-routing-local:
 ## #1639 is about: a backend-only author never runs the lane that would
 ## otherwise catch a stranded frontend schema. On a pull request CI covers the
 ## same ground from the other side, through fe-quality's fe-drift.
-check-backend: check-craft-doc craft-test test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction pkg-freeze
+check-backend: check-craft-doc craft-test test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze
 	$(MAKE) -C backend check
 
 ## check — the full merge gate: backend + frontend
@@ -218,10 +218,14 @@ fe-test-ext: composition
 	@# (pnpm-workspace.yaml says why), so without this a unit's screen resolves
 	@# neither its test renderer nor its peers at all.
 	@#
-	@# No --frozen-lockfile: this lockfile is GENERATED, under ignored build
-	@# output, and regenerating it is the point. The root install above keeps
+	@# --no-frozen-lockfile, and EXPLICITLY: this lockfile is GENERATED, under
+	@# ignored build output, and regenerating it is the point. Omitting the flag
+	@# relies on pnpm's default, which flips to frozen when CI=true — so a fresh
+	@# checkout passed while any environment that REUSES build/ failed with
+	@# ERR_PNPM_OUTDATED_LOCKFILE the moment the member set changed. That is a
+	@# persistent runner, or a laptop with CI set. The root install above keeps
 	@# --frozen-lockfile, which is the property this whole change buys.
-	cd build/composition-frontend/workspace && pnpm install
+	cd build/composition-frontend/workspace && pnpm install --no-frozen-lockfile
 	cd frontend && pnpm build && \
 		MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext
 
@@ -453,10 +457,14 @@ fe-typecheck-composed: composition
 	@# (pnpm-workspace.yaml says why), so without this a unit's screen resolves
 	@# neither its test renderer nor its peers at all.
 	@#
-	@# No --frozen-lockfile: this lockfile is GENERATED, under ignored build
-	@# output, and regenerating it is the point. The root install above keeps
+	@# --no-frozen-lockfile, and EXPLICITLY: this lockfile is GENERATED, under
+	@# ignored build output, and regenerating it is the point. Omitting the flag
+	@# relies on pnpm's default, which flips to frozen when CI=true — so a fresh
+	@# checkout passed while any environment that REUSES build/ failed with
+	@# ERR_PNPM_OUTDATED_LOCKFILE the moment the member set changed. That is a
+	@# persistent runner, or a laptop with CI set. The root install above keeps
 	@# --frozen-lockfile, which is the property this whole change buys.
-	cd build/composition-frontend/workspace && pnpm install
+	cd build/composition-frontend/workspace && pnpm install --no-frozen-lockfile
 	@[ -f build/composition/api/crm.yaml ] || { echo "fe-typecheck-composed: build/composition/api/crm.yaml is missing after 'make composition' — the composed lane has no merged contract to type the client against" >&2; exit 1; }
 	cd frontend && pnpm gen:composed-types
 	@[ -f build/composition-frontend/schema.d.ts ] || { echo "fe-typecheck-composed: pnpm gen:composed-types produced no schema.d.ts — the composed lane would silently typecheck against the committed contract" >&2; exit 1; }
@@ -717,6 +725,38 @@ go-file-length:
 ## A genuinely cross-workspace query carries a `// rls-exempt: <reason>` line.
 rls-store-path:
 	@./scripts/check-rls-store-path.sh
+
+## one-spelling — choke-point gate: SQLSTATEs are named in storekit, a CHECK
+## breach is answered by httperr's constraint net rather than a module's copy
+## of it, and the ISO-4217 shape is values.ValidCurrency.
+one-spelling:
+	@./scripts/check-one-spelling.sh
+
+## test-one-spelling — prove that gate fires on each defect it names and stays
+## silent on the lookalikes, by planting each in the scanned tree. A scanner
+## nobody has watched fail is a scanner nobody knows the shape of.
+test-one-spelling:
+	@./scripts/test-check-one-spelling.sh
+
+## money-scale — an amount in minor units is converted by the ONE owner of the
+## ISO minor-unit table (Go: shared/kernel/values; TypeScript:
+## src/format/minorunits), never by a hard-coded power of ten. The only gate
+## that reads both languages, because the scale is a contract between them.
+money-scale:
+	@./scripts/check-money-scale.sh
+
+## test-money-scale — prove that gate fires in each language, refuses only
+## money, and honours a line-scoped waiver.
+test-money-scale:
+	@./scripts/test-check-money-scale.sh
+
+## test-selfdir — the two gates each resolve $$0 through its symlinks before
+## deriving their directory, and that block cannot be shared: finding a library
+## needs the answer it produces. So it is duplicated deliberately, and this
+## asserts the copies are byte-identical — which is what makes deliberate
+## duplication safe rather than merely explained.
+test-selfdir:
+	@./scripts/test-selfdir-identical.sh
 
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears

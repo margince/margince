@@ -171,9 +171,9 @@ BEGIN
     WHERE r.key = 'rep'
   ON CONFLICT (key) DO NOTHING;
 
-  -- Rep Two: an individual contributor — own-scoped, in NO team. Contrast with
-  -- Rep One (team-scoped, in DACH Sales): Rep One sees the team's records by
-  -- scope, Rep Two sees nothing until a record is explicitly shared with them.
+  -- Rep Two: an individual contributor — own-scoped, in NO team. Both reps read
+  -- the whole workspace and own nothing in it; the difference is the GRANT below,
+  -- which is handed to Rep One and not to Rep Two.
   INSERT INTO app_user (email, password_hash, display_name, seat_type, status)
   VALUES ('rep2@demo.test', admin_hash, 'Rep Two', 'full', 'active')
   ON CONFLICT (lower(email)) DO NOTHING;
@@ -191,7 +191,26 @@ BEGIN
         WHERE ra.user_id = rep2_id AND ra.role_id = r.id AND ra.team_id IS NULL
       );
 
-  RAISE NOTICE 'seed-dev.sql: rep@demo.test (rep, team DACH Sales) + rep2@demo.test (individual, own-scope) seeded for demo-workspace';
+  -- ONE of Demo Admin's people, shared with Rep One at `write`.
+  --
+  -- This is what makes sharing observable now that team membership does not
+  -- grant it. Rep One and Rep Two are both own-scoped and own nothing, so they
+  -- read the same workspace and edit the same nothing — except this one record,
+  -- whose only reason for being editable is the grant. Take the grant away and
+  -- the two seats are identical.
+  --
+  -- granted_by is the admin: a grant is passed on by somebody who could change
+  -- the row themselves, which is the rule CreateRecordGrant enforces.
+  INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by, reason)
+  SELECT 'person', p.id, 'user', rep_id, 'write', admin_id,
+         'seed-dev: the one record that makes a write share observable'
+    FROM person p
+   WHERE p.owner_id = admin_id AND p.archived_at IS NULL
+   ORDER BY p.created_at, p.id
+   LIMIT 1
+  ON CONFLICT DO NOTHING;
+
+  RAISE NOTICE 'seed-dev.sql: rep@demo.test (rep, own-scope, one write grant) + rep2@demo.test (individual, own-scope, no grant) seeded for demo-workspace';
 END $$;
 
 -- The finance mirror's demo source (ADR-0083/A128).

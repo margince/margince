@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
+import { useCan, useCanWriteRecord } from "../app/capability";
 import { navigate } from "../app/router";
 import {
   Avatar,
@@ -26,7 +26,14 @@ import {
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
 import type { ListChip } from "../design-system/listsurface";
+import { liveProjects } from "../design-system/projectpicker";
+import {
+  hasTimelineFilters,
+  useRecordTimeline,
+  useTimelineFilters,
+} from "../design-system/recordtimeline";
 import { sectionState } from "../design-system/surfacestate";
+import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import {
   AutonomyDot,
   ConfidenceMeter,
@@ -85,6 +92,7 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { TodayOnThisAccount } from "./companytoday";
 import { ComposeModal, TimelineActions } from "./compose";
@@ -113,11 +121,11 @@ import {
   useOwnerChips,
 } from "./listquery";
 import { PartnerTab } from "./partners";
+import { PersonMeetingBrief } from "./persondrawers";
 import {
-  CHRONOLOGY_EMPTY_KEYS,
   ChronologyFilter,
   ChronologyFooter,
-  type TimelineFilter,
+  chronologyNotice,
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
@@ -1806,13 +1814,21 @@ function useChronologySlots({
 } {
   const t = useT();
   const [filter, setFilter] = useChronologyFilter(org.id);
+  const [filters, setFilters] = useTimelineFilters(org.id);
+  // The 360's own page seeds the list; older pages and every narrowed read
+  // come from the activity list itself.
+  const timeline = useRecordTimeline("organization", org.id, {
+    filters,
+    firstPage: view?.activities,
+  });
 
   const history = useRecordChronology({
     kind: "organization",
     recordId: org.id,
     filter,
-    activities: view?.activities?.data ?? [],
-    activitiesHaveMore: view?.activities?.page.has_more ?? false,
+    activities: timeline.activities,
+    activitiesHaveMore: timeline.hasNextPage,
+    loadMore: timeline,
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -1845,23 +1861,38 @@ function useChronologySlots({
       // Conversations, not messages. The account's timeline is where the same
       // exchange showed up three times — a product update to three contacts
       // was three rows, and a five-message thread was five.
-      timelineGroups: groupChronology(
-        history.entries,
-        view?.activities?.page.has_more ?? false,
+      timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
+      timelineHeader: (
+        <>
+          <ChronologyFilter filter={filter} onFilter={setFilter} />
+          {filter !== "changes" && (
+            <TimelineFilterBar value={filters} onChange={setFilters} />
+          )}
+        </>
       ),
-      timelineHeader: <ChronologyFilter filter={filter} onFilter={setFilter} />,
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
       timelineNotice: chronologyNotice(
+        "co.timeline.empty",
         {
           // Per filter, because the two feeds fail independently. A 360 that
           // omitted its activities section says nothing about the change
           // feed, and reporting the Changes view as unavailable on that
           // basis hid rows that had loaded perfectly well.
           loading:
-            filter === "changes" ? history.loading : loading || history.loading,
+            filter === "changes"
+              ? history.loading
+              : loading || history.loading || timeline.isPending,
           failed:
-            filter === "changes" ? history.failed : failed || history.failed,
-          assembled: filter === "changes" ? true : Boolean(view?.activities),
+            filter === "changes"
+              ? history.failed
+              : failed || history.failed || timeline.isError,
+          // A narrowed read is the list's own and is assembled once it
+          // answers; the unfiltered one is the 360's section.
+          assembled:
+            filter === "changes" ||
+            (hasTimelineFilters(filters)
+              ? timeline.isSuccess
+              : Boolean(view?.activities)),
           filter,
         },
         history.entries.length,
@@ -2284,6 +2315,16 @@ function CompanyRecordBody({
   taskUpdate: ReturnType<typeof useTaskUpdate>;
   onOpenHistory: () => void;
 }>) {
+  // Whether this company is this reader's to change. It used to be
+  // `!org.archived_at`, which answered a different question: an archived
+  // company is read-only for everyone, but a LIVE company somebody else owns is
+  // read-only too, and the page had no way to know that until the record
+  // started carrying the answer.
+  const orgWritable = useCanWriteRecord("organization", org);
+  // The meeting whose brief is open. "Prepare meeting" used to open the
+  // composer on the meeting, which is a reply to a room nobody has sat in
+  // yet; the brief drawer is what prepares a reader for one.
+  const [preparing, setPreparing] = useState<string | null>(null);
   return (
     <>
       {/* The bar that chooses which part of the account to read sits at the
@@ -2317,9 +2358,25 @@ function CompanyRecordBody({
           onOpenHistory={onOpenHistory}
           onOpenRecord={receipt.open}
           onOpenTasks={() => onTab("tasks")}
-          onCompose={(id) => onCompose({ kind: "reply", id })}
+          onPrepareMeeting={setPreparing}
           onDraftTo={(id) => onCompose({ kind: "account", id })}
           onPerform={onPerform}
+        />
+      )}
+      <PersonMeetingBrief
+        activityId={preparing}
+        open={preparing !== null}
+        onClose={() => setPreparing(null)}
+        projects={liveProjects(view?.projects)}
+      />
+      {/* The deliveries this company is part of — as the client, a partner or a
+          subcontractor. It sits with Deals and Tasks because all three answer
+          "what is in flight with this account". */}
+      {!overlay && (
+        <CompanyProjects
+          organizationId={org.id}
+          projects={view?.projects}
+          readOnly={readOnly}
         />
       )}
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
@@ -2354,7 +2411,7 @@ function CompanyRecordBody({
       {tab === "people" && (
         <PeopleCard
           view={view}
-          writable={!org.archived_at}
+          writable={orgWritable}
           orgId={org.id}
           loading={loading}
         />
@@ -2424,7 +2481,7 @@ function CompanyOverviewStack({
   onOpenHistory,
   onOpenRecord,
   onOpenTasks,
-  onCompose,
+  onPrepareMeeting,
   onDraftTo,
   onPerform,
 }: Readonly<{
@@ -2444,7 +2501,8 @@ function CompanyOverviewStack({
   // other.
   onOpenRecord: (entityType: string, entityId: string) => void;
   onOpenTasks: () => void;
-  onCompose: (activityId: string) => void;
+  // Opens the meeting brief for the day's meeting — not the composer.
+  onPrepareMeeting: (activityId: string) => void;
   onDraftTo: (personId: string) => void;
   onPerform: (action: SuggestionAction) => void;
 }>) {
@@ -2460,7 +2518,7 @@ function CompanyOverviewStack({
           view={view}
           loading={loading}
           failed={failed}
-          onPrepareMeeting={onCompose}
+          onPrepareMeeting={onPrepareMeeting}
           onDraftTo={onDraftTo}
           onOpenRecord={onOpenRecord}
           onPerform={onPerform}
@@ -2489,6 +2547,7 @@ function CompanyOverviewStack({
         orgId={org.id}
         enabled={!overlay}
         onOpenRecord={onOpenRecord}
+        projects={view?.projects}
       />
       {!overlay && (
         <>
@@ -2807,44 +2866,5 @@ function ReferenceDisclosures({
         <DeepReadCard orgId={org.id} />
       </Disclosure>
     </>
-  );
-}
-
-// chronologyNotice keeps four things apart that all render as an empty
-// list if you let them: still loading, the read failed, the section was
-// never in the payload, and the account genuinely has nothing to show. Only
-// the last one may say so — the other three would have a rep conclude
-// nobody has ever touched this account.
-//
-// The empty sentence names what the filter was looking for. "Nothing logged
-// on this account" under the Changes filter would be a claim about the
-// activity feed the reader is not looking at.
-function chronologyNotice(
-  timeline: {
-    loading: boolean;
-    failed: boolean;
-    assembled: boolean;
-    filter: TimelineFilter;
-  },
-  count: number,
-  t: ReturnType<typeof useT>,
-): ReactNode {
-  if (timeline.loading) {
-    return <Skeleton width="100%" height={48} />;
-  }
-  if (timeline.failed || !timeline.assembled) {
-    return <EmptyState>{t("co.section.unavailable")}</EmptyState>;
-  }
-  if (count > 0) {
-    return undefined;
-  }
-  return (
-    <EmptyState>
-      {t(
-        timeline.filter === "activities"
-          ? "co.timeline.empty"
-          : CHRONOLOGY_EMPTY_KEYS[timeline.filter],
-      )}
-    </EmptyState>
   );
 }

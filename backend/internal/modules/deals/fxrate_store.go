@@ -59,19 +59,6 @@ func fxInvalid(field, code, message string) error {
 	return &FxRateValidationError{Field: field, Code: code, Message: message}
 }
 
-// isISO4217 answers whether s is a 3-letter uppercase ISO-4217-shaped code.
-func isISO4217(s string) bool {
-	if len(s) != 3 {
-		return false
-	}
-	for _, r := range s {
-		if r < 'A' || r > 'Z' {
-			return false
-		}
-	}
-	return true
-}
-
 func (s *Store) todayUTC() time.Time {
 	return s.clock().UTC().Truncate(24 * time.Hour)
 }
@@ -89,7 +76,7 @@ func (s *Store) SetFxRate(ctx context.Context, in SetFxRateInput) (FxRateRow, er
 		return FxRateRow{}, err
 	}
 	var out FxRateRow
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var e error
 		out, e = s.writeFxRate(ctx, tx, from, in)
 		return e
@@ -246,7 +233,7 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 // needs the base currency and lives in the tx.
 func normalizeFxCurrencyRate(in SetFxRateInput) (from string, err error) {
 	from = strings.ToUpper(strings.TrimSpace(in.FromCurrency))
-	if !isISO4217(from) {
+	if !values.ValidCurrency(from) {
 		return "", fxInvalid("from_currency", "fx_rate_currency", "from_currency must be a 3-letter ISO code")
 	}
 	rate := strings.TrimSpace(in.Rate)
@@ -271,7 +258,7 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 		return nil, err
 	}
 	var rows []FxRateRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		base, err := s.installation.BaseCurrency(ctx, tx)
 		if err != nil {
 			return err
@@ -301,7 +288,7 @@ func (s *Store) ListEffectiveFxRates(ctx context.Context) ([]FxRateRow, error) {
 		return nil, err
 	}
 	var rows []FxRateRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		base, err := s.installation.BaseCurrency(ctx, tx)
 		if err != nil {
 			return err
@@ -365,7 +352,7 @@ func (s *Store) BaseCurrency(ctx context.Context) (string, error) {
 		return "", err
 	}
 	var base string
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		base, err = s.installation.BaseCurrency(ctx, tx)
 		return err
@@ -389,7 +376,7 @@ func (s *Store) FxRateHistory(ctx context.Context, fromCurrency string) ([]FxRat
 	}
 	from := strings.ToUpper(strings.TrimSpace(fromCurrency))
 	var rows []FxRateRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
 			SELECT from_currency, to_currency, rate::text, rate_date
 			FROM fx_rate WHERE from_currency = $1

@@ -105,7 +105,9 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			return scanLeadPage(rows, active, sorted, policy)
 		},
 		// A lead is one flat row: no child tables to load alongside the page.
-		attach: func(context.Context, pgx.Tx, []crmcontracts.Lead) error { return nil },
+		// The one thing the page still owes each row is whether it is this
+		// caller's to change, which is one statement for the whole page.
+		attach: stampLeadsWritable,
 		cursorKey: func(last crmcontracts.Lead) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)
 		},

@@ -2,7 +2,9 @@
 
 Documentation for building and operating **Margince** — a governed, multi-tenant CRM (a Go `/v1` API
 backend; the Vite/React web UI ships separately). The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
-**how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*.
+**how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*, plus
+**[principles](principles/README.md)** — the handful of statements about this codebase's shape that
+settle a class of arguments before they start.
 
 **New to the backend? Start with [tutorials/getting-started.md](tutorials/getting-started.md), then
 [explanation/backend-onboarding.md](explanation/backend-onboarding.md)** — the orientation hub that
@@ -10,9 +12,20 @@ maps the codebase and links everything below.
 
 ## Map
 
+### Principles — how this codebase decides things
+
+- [principles/README.md](principles/README.md) — the index. Each page carries the statement, the method for checking the tree still holds it, and what it explicitly does not ask for.
+- [one-source-of-truth.md](principles/one-source-of-truth.md) — one place decides each topic, and module boundaries decide where that place may live. Carries the six-probe duplication scan.
+- [the-record-is-the-code.md](principles/the-record-is-the-code.md) — what outranks what when two sources disagree.
+- [every-mutation-leaves-a-trace.md](principles/every-mutation-leaves-a-trace.md) — domain row, audit row and event commit together.
+- [legibility-is-the-product.md](principles/legibility-is-the-product.md) — why the craft bar is a gate rather than taste.
+- [derive-the-obligation.md](principles/derive-the-obligation.md) — how to write a fitness function that actually holds.
+- [nothing-here-is-private.md](principles/nothing-here-is-private.md) — the public reader, and why a working exploit takes the private path.
+
 ### Tutorials — learn by doing
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 - [run-a-partner-program.md](tutorials/run-a-partner-program.md) — what partner programs are and what you can do with them, then one deal from the introduction to the money it earns; no code.
+- [run-your-first-project.md](tutorials/run-your-first-project.md) — for the rep or delivery lead who works accounts in the app: one ERP rollout followed from the deal through delivery to close, with the key that files email and the AI scoped to the project; no code.
 
 ### How-to — accomplish a task
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
@@ -38,6 +51,8 @@ maps the codebase and links everything below.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
 - [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the pipeline numbers; no code.
 - [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline; no code. Learning it for the first time? [tutorials/run-a-partner-program.md](tutorials/run-a-partner-program.md) walks one deal end to end.
+- [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
+- [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
 
 ### Reference — look it up
@@ -81,6 +96,7 @@ maps the codebase and links everything below.
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
+- [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a person, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md) — the lexical and hybrid lanes, row scope inside the query, embedding identity, and the two kinds of staleness with their two different answers.
 - [relationship-graph.md](explanation/relationship-graph.md) — who on our team knows this contact: participants, the interaction projection, warmth, deal coverage and its risk rules.
 - [company-context.md](explanation/company-context.md) — the cold start, the governed company profile (profile fields, facts, site reads), and how bounded company context reaches AI tasks. This is the *installation's own* company; for the company **record** page see below.

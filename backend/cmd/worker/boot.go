@@ -21,7 +21,6 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
-	"github.com/gradionhq/margince/backend/internal/modules/commissions"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/integrations"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
@@ -415,15 +414,9 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	_, _ = fmt.Fprintln(stdout, "worker matching LinkedIn connections as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:linkedin-match", matcher.HandleEvent, logger, 0) })
 
-	// Turning a won deal into what its partner earned, and reversing it when a
-	// win is undone. Deterministic like the projections above, so it runs on
-	// every worker: a workspace where nobody accrues is indistinguishable from
-	// one where no partner ever brought a deal.
-	accrual := compose.NewCommissionGen(pool,
-		commissions.NewStore(compose.InstallationDB(pool)),
-		people.NewStore(compose.InstallationDB(pool)), logger)
-	_, _ = fmt.Fprintln(stdout, "worker accruing partner commission on won deals")
-	background.Go(func() { runSubscriber(ctx, rdb, "cg:commissions", accrual.HandleEvent, logger, 0) })
+	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
+
+	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
 
 	// What the AI is doing for one person, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every
