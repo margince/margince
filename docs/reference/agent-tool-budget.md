@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4.1% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2190 | 9.1% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 16829 | 70.1% | — | — | — |
+| _whole served catalog, for scale_ | 56 | 16841 | 70.2% | — | — | — |
 
 ### `morning_brief`
 
@@ -116,7 +116,7 @@ Median 275 tokens, mean 300, across 56 served tools.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1201 | 3 scenarios |
+| `run_report` | 1213 | 3 scenarios |
 | `update_record` | 565 | 4 scenarios |
 | `send_account_email` | 546 | — |
 | `resolve_entities` | 513 | — |

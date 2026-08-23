@@ -5,7 +5,7 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 16829,
+    "tokens": 16841,
     "median_tool_tokens": 275,
     "mean_tool_tokens": 300
   },
@@ -66,7 +66,7 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1201
+      "tokens": 1213
     },
     {
       "name": "update_record",
