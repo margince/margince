@@ -1813,6 +1813,8 @@ export const en = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
   "deals.filterOwnerMe": "My deals",
+  "deals.filterPartner": "Partner",
+  "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterPartnerSourced": "Partner-sourced",
   "deals.filterStageAll": "All stages",
   "deals.filterOrgAll": "All companies",

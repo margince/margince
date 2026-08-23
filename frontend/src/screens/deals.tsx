@@ -229,6 +229,7 @@ function dealsQueryParams(f: DealFilters) {
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
     organization_id: filters.organization_id || undefined,
+    partner_org_id: filters.partner_org_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
   };
@@ -282,6 +283,7 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
   if (filters.organization_id) out.organization_id = filters.organization_id;
+  if (filters.partner_org_id) out.partner_org_id = filters.partner_org_id;
   if (filters.stalled === "true") out.stalled = true;
   if (filters.partner_sourced === "true") out.partner_sourced = true;
   return out;
@@ -2077,6 +2079,32 @@ export function DealsScreen({
               allLabel: "deals.filterPartnerAll",
               options: [{ value: "true", label: "deals.filterPartnerSourced" }],
             },
+            // Which partner, not just whether there is one. Absent entirely
+            // when the installation has made no company a partner: a picker
+            // with nothing in it asks a question that has no answers, the same
+            // rule the deal form's own partner fields follow.
+            //
+            // The options come from usePartnerOptions, so a partner whose
+            // company this reader cannot open is not offered — picking it
+            // would name a company the screen could not then show them.
+            ...(partnerOptions.length > 0
+              ? [
+                  {
+                    key: "partner_org_id" as const,
+                    label: "deals.filterPartner" as const,
+                    allLabel: "deals.filterPartnerAnyOne" as const,
+                    // `text`, not `label`: a partner's name is the server's
+                    // data, not this screen's vocabulary, and FilterOption's
+                    // union exists for exactly that. Every other chip here
+                    // names a message key because its options are a fixed set
+                    // somebody wrote; a company name has nothing to translate.
+                    options: partnerOptions.map((option) => ({
+                      value: option.value,
+                      text: option.label,
+                    })),
+                  },
+                ]
+              : []),
           ]}
           views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
         />

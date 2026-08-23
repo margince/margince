@@ -2159,3 +2159,67 @@ describe("DealScreen — History tab", () => {
     );
   });
 });
+
+// Which partner, not just whether there is one.
+//
+// The boolean partner_sourced chip could say "these came from some partner"
+// and never say which — the same gap the deals-by-stage report had before it
+// gained the dimension. The picker's options come from usePartnerOptions, so
+// a partner whose company this reader cannot open is not offered: picking it
+// would name a company the screen could not then show them.
+describe("the partner filter", () => {
+  it("narrows the list to one named partner", async () => {
+    const urls: string[] = [];
+    const d = deal({ id: "d1", name: "Fleet retrofit" });
+    vi.stubGlobal("fetch", (request: Request) => {
+      urls.push(request.url);
+      if (request.url.includes("/partners")) {
+        return Promise.resolve(
+          jsonResponse({
+            data: [{ organization_id: "o1", cert_status: "certified" }],
+            page: { next_cursor: null },
+          }),
+        );
+      }
+      return Promise.resolve(stubBackend([d], { single: d })(request));
+    });
+
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const menu = screen.getByRole("group", { name: "Filter" });
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Partner" }),
+    );
+    // The option is the company's NAME, resolved from the organization list —
+    // never the bare id, which names nothing to a reader.
+    await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
+
+    await waitFor(() =>
+      expect(urls.some((u) => u.includes("partner_org_id=o1"))).toBe(true),
+    );
+  });
+
+  it("offers no partner filter when the installation has no partners", async () => {
+    const d = deal({ id: "d1", name: "Fleet retrofit" });
+    vi.stubGlobal("fetch", (request: Request) => {
+      if (request.url.includes("/partners")) {
+        return Promise.resolve(
+          jsonResponse({ data: [], page: { next_cursor: null } }),
+        );
+      }
+      return Promise.resolve(stubBackend([d], { single: d })(request));
+    });
+
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+
+    // A picker with nothing in it asks a question that has no answers.
+    const menu = screen.getByRole("group", { name: "Filter" });
+    expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
+  });
+});
