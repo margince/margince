@@ -184,6 +184,8 @@ export const en = {
   "record.archived": "Archived",
   "record.archivedReadOnly":
     "This company is archived. Restore it to change anything on it.",
+  "record.notYoursToChange":
+    "This company belongs to someone else. Ask its owner to share it with you if you need to make changes.",
   "record.share": "Share",
   "record.moreActions": "More actions",
   "record.fullHistory": "Full history",

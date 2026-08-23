@@ -234,11 +234,22 @@ export function useCompanyReadOnlyReason(
 ): string | undefined {
   const t = useT();
   const overlay = useSorMode() === "overlay";
+  // The per-ROW question only. The object grant and the seat ceiling are the
+  // caller's to apply — every mount point here already ANDs `useCan` with this
+  // reason, and folding them in again would answer "no grant" as though it were
+  // a fact about the record.
+  const mine = org.writable ?? false;
+  // Archived first: it is the reason a reader can act on, by restoring the
+  // record. Ownership comes last because it is the standing state — a company
+  // that is simply somebody else's is not a problem to solve, it is who owns it.
   if (org.archived_at) {
     return t("record.archivedReadOnly");
   }
   if (overlay) {
     return t("overlay.partialWriteBack");
+  }
+  if (!mine) {
+    return t("record.notYoursToChange");
   }
   return undefined;
 }

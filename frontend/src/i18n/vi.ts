@@ -174,6 +174,8 @@ export const vi = {
   "record.archived": "Đã lưu trữ",
   "record.archivedReadOnly":
     "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
+  "record.notYoursToChange":
+    "Công ty này thuộc về người khác. Hãy đề nghị chủ sở hữu chia sẻ nếu bạn cần thay đổi.",
   "record.share": "Chia sẻ",
   "record.moreActions": "Thêm thao tác",
   "record.fullHistory": "Lịch sử đầy đủ",

@@ -39,6 +39,13 @@ func attachOrgCounts(ctx context.Context, tx pgx.Tx, orgs []crmcontracts.Organiz
 	if len(orgs) == 0 {
 		return nil
 	}
+	// Whether each company is this caller's to change, one statement for the
+	// page, stamped at the seam the list and the single read already share.
+	if _, err := auth.StampWritable(ctx, tx, "organization", orgs,
+		func(o crmcontracts.Organization) ids.UUID { return ids.UUID(o.Id) },
+		func(o *crmcontracts.Organization, may bool) { o.Writable = &may }); err != nil {
+		return err
+	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Organization, len(orgs))
 	orgIDs := make([]ids.UUID, len(orgs))
 	// The object grant comes first, as it does on the two lists themselves: a

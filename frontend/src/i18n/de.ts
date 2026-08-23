@@ -167,6 +167,8 @@ export const de = {
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
+  "record.notYoursToChange":
+    "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.fullHistory": "Vollständiger Verlauf",

@@ -11,6 +11,7 @@ import {
   useCanMutate,
   useCanUpsert,
   useCanWrite,
+  useCanWriteRecord,
   useHoldsConsentAdminRole,
   useHoldsOperatorSeat,
 } from "./capability";
@@ -49,6 +50,21 @@ function wrapper({ children }: { children: ReactNode }) {
 async function can(object: RbacObject, action: RbacAction): Promise<boolean> {
   const { result } = renderHook(
     () => ({ me: useMe(), allowed: useCan(object, action) }),
+    { wrapper },
+  );
+  await waitFor(() => {
+    expect(result.current.me.isPending).toBe(false);
+  });
+  return result.current.allowed;
+}
+
+// The three-axis answer for ONE record, asked the same way.
+async function canWriteRecord(
+  object: RbacObject,
+  record: { readonly writable?: boolean } | undefined,
+): Promise<boolean> {
+  const { result } = renderHook(
+    () => ({ me: useMe(), allowed: useCanWriteRecord(object, record) }),
     { wrapper },
   );
   await waitFor(() => {
@@ -309,5 +325,53 @@ describe("useHoldsOperatorSeat — the Admin settings section's gate", () => {
     stubMe(meFixture({ roles: [] }));
 
     expect(await operator()).toBe(false);
+  });
+});
+
+describe("useCanWriteRecord", () => {
+  // Each case holds the object grant AND a full seat, so the only thing moving
+  // is the row. A test that varied two axes at once could not say which one
+  // produced the answer.
+  const granted = { allow: { organization: ["read", "update"] } } as const;
+
+  it("admits a record the server marked writable", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", { writable: true })).toBe(true);
+  });
+
+  it("refuses a record the server marked not writable, grant and seat notwithstanding", async () => {
+    // The case the whole field exists for: a rep holds organization.update on
+    // the OBJECT and still may not edit a colleague's company.
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", { writable: false })).toBe(
+      false,
+    );
+  });
+
+  it("refuses a record carrying no writable flag at all", async () => {
+    // A server too old to send it, or a projection that does not carry it.
+    // Absence is not authority — the same fail-closed answer every predicate
+    // in this file gives.
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", {})).toBe(false);
+  });
+
+  it("refuses while the record has not arrived", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", undefined)).toBe(false);
+  });
+
+  it("refuses a writable record when the OBJECT grant is missing", async () => {
+    // The row half cannot buy the object half. A seat with no
+    // organization.update writes no company, however the row is marked.
+    stubMe(meFixture({ allow: { organization: ["read"] } } as const));
+
+    expect(await canWriteRecord("organization", { writable: true })).toBe(
+      false,
+    );
   });
 });

@@ -92,7 +92,13 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
-	return l, err
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := stampLeadWritable(ctx, tx, &l); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	return l, nil
 }
 
 // scanLead scans core + active custom columns, plus whatever trailing

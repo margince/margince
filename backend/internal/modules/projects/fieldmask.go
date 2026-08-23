@@ -42,6 +42,15 @@ func maskProjectForCaller(ctx context.Context, tx pgx.Tx, p crmcontracts.Project
 // maskProjects withholds, per row, the anchor company this reader may not
 // open. ONE statement answers the whole page, never a probe per row.
 func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Project) error {
+	// Whether each project is this caller's to change, one statement for the
+	// page. A project keeps the owner scope on writes even though every seat
+	// reads it, so the flag is the only thing a client can draw its edit
+	// affordances from without guessing.
+	if _, err := auth.StampWritable(ctx, tx, "project", projects,
+		func(p crmcontracts.Project) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Project, may bool) { p.Writable = &may }); err != nil {
+		return err
+	}
 	orgIDs := make([]ids.UUID, 0, len(projects))
 	for _, p := range projects {
 		if p.OrganizationId != nil {

@@ -150,6 +150,10 @@ var personBindings = EntityBinding{
 	Entity: "person",
 	Armed:  true,
 	Bindings: append([]FieldBinding{
+		{
+			WireSlot: "writable", Disposition: DispositionNativeOnly,
+			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",
+		},
 		{WireSlot: "first_name", CanonicalKey: "first_name", Incumbent: []string{"firstname"}, Disposition: DispositionMapped},
 		{WireSlot: "last_name", CanonicalKey: "last_name", Incumbent: []string{"lastname"}, Disposition: DispositionMapped},
 		{WireSlot: "full_name", CanonicalKey: "full_name", Incumbent: []string{"firstname", "lastname", "email"}, Transform: "full_name", Disposition: DispositionMapped},
@@ -194,6 +198,10 @@ var organizationBindings = EntityBinding{
 	Entity: "organization",
 	Armed:  true,
 	Bindings: append([]FieldBinding{
+		{
+			WireSlot: "writable", Disposition: DispositionNativeOnly,
+			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",
+		},
 		{WireSlot: "display_name", CanonicalKey: "display_name", Incumbent: []string{"name"}, Disposition: DispositionMapped},
 		{WireSlot: "industry", CanonicalKey: "industry", Incumbent: []string{"industry"}, Disposition: DispositionMapped},
 		{WireSlot: "size_band", CanonicalKey: "size_band", Incumbent: []string{"numberofemployees"}, Transform: "employees_to_size_band", Disposition: DispositionMapped},

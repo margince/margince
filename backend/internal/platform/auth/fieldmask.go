@@ -116,6 +116,43 @@ func WritableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.U
 	return out, rows.Err()
 }
 
+// StampWritable answers, for a page of rows of one shareable table, which of
+// them the caller may CHANGE — the boolean the contract's `writable` carries —
+// in ONE statement for the whole page.
+//
+// It is WritableSubset plus the id-collection and write-back loop that five
+// record types would otherwise each spell, and it exists for that reason alone.
+// The authority question is WritableSubset's and must never grow a second
+// answer here: this walks a page, it does not decide anything.
+//
+// What it produces is what a CLIENT is told, never what the server enforces.
+// EnsureWritable is the authority and stays the only gate a mutation passes; a
+// caller that ignored this flag and sent the write anyway is refused exactly as
+// before.
+// It returns the subset it computed, so a caller that needs the same answer for
+// something else — the field masks conditioned on write authority are the case —
+// reads it rather than asking the database the same question twice.
+func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
+	rows []T, id func(T) ids.UUID, set func(*T, bool),
+) (map[ids.UUID]bool, error) {
+	if len(rows) == 0 {
+		return map[ids.UUID]bool{}, nil
+	}
+	rowIDs := make([]ids.UUID, 0, len(rows))
+	for _, row := range rows {
+		rowIDs = append(rowIDs, id(row))
+	}
+	writable, err := WritableSubset(ctx, tx, table, rowIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		may := writable[id(rows[i])]
+		set(&rows[i], may)
+	}
+	return writable, nil
+}
+
 // sqlNoRow is the clause that admits nothing, for an arm that is closed to
 // this caller outright.
 const sqlNoRow = "FALSE"

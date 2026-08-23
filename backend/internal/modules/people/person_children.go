@@ -228,6 +228,15 @@ func attachPersonChildren(ctx context.Context, tx pgx.Tx, people []crmcontracts.
 	if len(people) == 0 {
 		return nil
 	}
+	// Whether each row is this caller's to change, one statement for the page.
+	// It is stamped HERE because this is the seam the list and the single read
+	// already share: a client is otherwise left inferring write access from the
+	// object grant alone, which says nothing about who owns the row.
+	if _, err := auth.StampWritable(ctx, tx, "person", people,
+		func(p crmcontracts.Person) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Person, may bool) { p.Writable = &may }); err != nil {
+		return err
+	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Person, len(people))
 	personIDs := make([]ids.UUID, len(people))
 	for i := range people {
