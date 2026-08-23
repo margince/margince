@@ -216,6 +216,15 @@ export function LocaleProvider({
   const [adopted, setAdopted] = useState<Locale | undefined>(initial);
   const adoptLocale = useCallback(
     (next: Locale) => {
+      // Validated for the same reason the stored pick is: this value comes off
+      // the wire, and a locale we do not ship — an older release's, a regional
+      // tag, a server that widened the field — would otherwise reach `catalogs`
+      // as a key it has no entry for. Every lookup then throws, including the
+      // error boundary's own, so a single unknown string costs the reader the
+      // whole application rather than just their language.
+      if (!isLocale(next)) {
+        return;
+      }
       if (next === adopted) {
         return;
       }
