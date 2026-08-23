@@ -20,6 +20,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	"errors"
 
@@ -83,16 +85,17 @@ func RegisterTagTools(r *Registry, tags Tags) {
 // record_type enum comes from the seam rather than a literal here, so the
 // schema advertises what the store admits by construction.
 func taggingSchema(taggableTypes []string) string {
-	enum, err := json.Marshal(taggableTypes)
-	if err != nil {
-		// A []string cannot fail to marshal; a seam answering something that
-		// does is a programming error worth stopping on, not serving.
-		panic(err)
+	quoted := make([]string, len(taggableTypes))
+	for i, t := range taggableTypes {
+		// strconv.Quote, not raw splicing: Go and JSON string quoting agree on
+		// every character these plain type names carry, and quoting has no
+		// error path where a marshal call would invite one.
+		quoted[i] = strconv.Quote(t)
 	}
 	return `{"type":"object","required":["record_type","record_id"],"properties":{
 	"tag_id":{"type":"string","format":"uuid"},
 	"tag_name":{"type":"string","maxLength":120,"description":"Instead of tag_id: the tag is created if the workspace has no such word"},
-	"record_type":{"type":"string","enum":` + string(enum) + `},
+	"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
 	"record_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`
 }
 

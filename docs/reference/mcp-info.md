@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 8 |
 | Tool catalog | 152.0 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39689 |
+| Approx. wire tokens | 39696 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,7 +31,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.7 KB | 22% | Yes, every step |
-| Input schemas | 33.5 KB | 22% | Yes, every step |
+| Input schemas | 33.6 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
 | **Description + input schema** | **68.2 KB** | **44%** | **the recurring cost** |
 
@@ -837,7 +837,7 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
 
 **Apply a tag to a record**
 
-Tag a person, company, deal or lead by tag_id, or by tag_name, which reuses the workspace's word or coins it. Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss makes a NEW word. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
+Tag a person, company, deal, lead or project by tag_id, or by tag_name, which reuses the workspace's word or coins it. Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss makes a NEW word. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -859,7 +859,8 @@ Tag a person, company, deal or lead by tag_id, or by tag_name, which reuses the 
         "person",
         "organization",
         "deal",
-        "lead"
+        "lead",
+        "project"
       ],
       "type": "string"
     },
@@ -8634,7 +8635,8 @@ Take one tag off one record — by tag_id or tag_name — leaving the word itsel
         "person",
         "organization",
         "deal",
-        "lead"
+        "lead",
+        "project"
       ],
       "type": "string"
     },
