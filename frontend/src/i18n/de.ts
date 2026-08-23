@@ -2359,7 +2359,8 @@ export const de = {
   "compose.subjectTagged":
     "{tag} wird dem Betreff hinzugefügt, damit die Antwort sich hier einordnet.",
   "compose.fileUnderProject": "Unter diesem Projekt ablegen",
-  "compose.relinkTarget": "Person, Organisation, Deal oder Lead suchen",
+  "compose.relinkTarget":
+    "Person, Organisation, Deal, Lead oder Projekt suchen",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",
   "compose.relinkReplaceHint":
     "Ersetzt die bestehende Verknüpfung desselben Typs, statt eine weitere hinzuzufügen.",
@@ -6118,7 +6119,7 @@ export const de = {
   "project.emptyBody":
     "Ein Projekt ist das Vorhaben, um das es in einem Deal geht. Es beginnt während des Deals in der Phase Initiative und überlebt den Abschluss: Ist der Deal gewonnen, wird die Umsetzung hier verfolgt.",
   "project.emptyKey":
-    "Gib einem Projekt ein Kürzel, und jede E-Mail mit [KÜRZEL] im Betreff wird ihm automatisch zugeordnet.",
+    "Jedes Projekt bekommt ein kurzes Kürzel. Jede E-Mail, die es in eckigen Klammern im Betreff trägt, wird dem Projekt automatisch zugeordnet.",
   "project.rollups.empty": "Noch keine Kennzahlen zu diesem Projekt.",
   "project.rollups.openValue": "Offenes Dealvolumen",
   "project.rollups.wonValue": "Gewonnenes Dealvolumen",

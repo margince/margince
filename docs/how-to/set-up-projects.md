@@ -13,9 +13,9 @@ project) see [run-a-project.md](run-a-project.md).
 
 ## What a project is in Margince
 
-A project is **the body of work a deal is about**. It is started on a company,
-it carries several deals over time, and it outlives any one of them: it exists
-before the first deal is won and keeps running through delivery after it.
+A project is **the body of work a deal is about**. It carries several deals
+over time and outlives any one of them: it exists before the first deal is won
+and keeps running through delivery after it.
 
 It is not a folder you create at close-won. It is born in the **Initiative**
 phase while the deal is still open, so the early conversations are already
@@ -23,9 +23,15 @@ filed where the delivery team will look. Everything filed under it — mail,
 notes, tasks, contracts, documents, stakeholders — shows on one page, and the
 page carries the project's whole phase history with the reason for every move.
 
-A project has at most one company. A deal has at most one project, and the two
-must name the same company — attaching a deal to a project on another company
-is refused.
+**A project is worked by several companies.** One is its customer; the others
+are the partners and subcontractors delivering it. A project keeps at least one
+company at all times, and each company on it carries a role — **Customer**,
+**Partner** or **Subcontractor**.
+
+A deal has at most one project, and the deal's company must be **one of the
+companies on that project** — in any role. A partner's deal on a project it
+subcontracts is ordinary; a deal on a company the project has never heard of is
+refused.
 
 ## Who can do what
 
@@ -58,32 +64,71 @@ there shows, under **What this member sees**, what their role grants on
 **Projects**. The grants themselves are seeded per role and are not editable
 in the app.
 
-## Key conventions
+## Keys
 
-A key is the short handle written in email subjects — `[NW-ERP]` — and shown
-next to the project's name everywhere. The rules the product enforces:
+Every project gets a key — a short handle like `NER-1` that appears beside its
+name and, in square brackets, in email subjects. **You do not choose it.**
+Margince mints it from the project's name when the project is created, and it
+cannot be edited afterwards. An API caller that sends a `key` is refused with
+**422 `read_only`**.
 
-- Starts with a letter; then 1–23 more characters from letters, digits, `_`
-  and `-` (2–24 characters in total).
-- Unique across the installation, compared case-insensitively.
-- Optional. A project with no key is still filed by the other rules in
-  [run-a-project.md](run-a-project.md#referencing-a-project-from-email), but
-  nobody can address it from a subject line.
-- Archiving a project frees its key for reuse.
+### How a key is built
 
-Conventions the product does not enforce but that make keys work in practice:
+The **stem** comes from the name: the initials of a multi-word name, or the
+first eight letters of a single-word one. Then a hyphen and the **lowest free
+number** for that stem.
 
-- **Customer first, then the work:** `NW-ERP`, `NW-WMS`, `BRANDT-FLEET`. A
-  key is read by people who were not in the conversation.
-- **Never a common word.** Keys are matched only inside square brackets, so a
-  key like `RE` or `STATUS` cannot swallow ordinary mail — but it will still
-  confuse a reader. Keep them distinctive.
-- **Decide the key before the first email goes out.** Mail captured before
-  the key existed is not re-filed afterwards; it stays wherever the other
-  rules put it until somebody relinks it.
-- **Tell the customer.** The key only files mail when it is in the subject.
-  One line in the kickoff mail — *please keep `[NW-ERP]` in the subject* —
-  is what makes the rest automatic.
+| Project name | Key |
+|---|---|
+| `Nordwind ERP rollout` | `NER-1` |
+| `ERP rollout Acme` | `ERA-1` |
+| a second `ERP rollout Acme` | `ERA-2` |
+| `Datenmigration` | `DATENMIG-1` |
+| `7 Eleven Rollout` | `ER-1` |
+| `2026` | `PRJ-1` |
+
+Only ASCII letters and digits contribute, and leading digits are dropped so a
+name opening with a year still yields a usable stem. A name leaving fewer than
+two usable characters falls back to the stem `PRJ`.
+
+The number is the lowest one **free**, not the next one up — archiving a
+project releases its key, and the next project with that stem takes the number
+back.
+
+### The rules the product enforces
+
+- **Every live project has one.** There is no such thing as a project without a
+  key, and no way to create one.
+- **Unique among live projects**, compared case-insensitively: `ner-1` and
+  `NER-1` are the same key.
+- **Read-only** on create and on update.
+- **2–24 characters**, starting with a letter. This is the storage shape; since
+  you cannot type a key, it only matters when you read one.
+
+### Naming a project so its key reads well
+
+The key is the one thing your customer sees in every subject line, and the
+project's **name** is your only lever on it. Two habits are worth having:
+
+- **Lead with the customer, then the work.** `Nordwind ERP rollout` gives
+  `NER-1`. `ERP rollout` gives `ER-1`, which tells a reader nothing about
+  whose rollout it is once a second customer buys the same thing.
+- **Three or four words beats one.** A single-word name spends its whole key on
+  the opening letters of that word — `Datenmigration` becomes `DATENMIG-1`,
+  which is long and still says nothing about the customer.
+
+You cannot change a key by renaming the project later: the key is minted once,
+at creation. If a key is genuinely wrong, the honest fix is to archive the
+project and create it again under a better name — which also frees the old key.
+
+### Telling the customer
+
+The key only files their mail when it is in the subject, and the surest way to
+get it there is to let them reply to a message that already carries it.
+Margince puts the key in the subject of what you send from a deal or a project
+(see [run-a-project.md](run-a-project.md#sending)), and most mail clients keep
+it on the reply. One line in the kickoff mail — *please keep `[NER-1]` in the
+subject* — covers the rest.
 
 ## When to create a project
 
@@ -109,6 +154,53 @@ project moves into **Delivering** by itself — but only from **Initiative** or
 **Pursuing**. A project already delivering stays as it is, and a **Closed**
 project is never reopened silently by a win; reopening is a human move with a
 reason.
+
+## Putting companies and people on a project
+
+The same section appears on four pages, with the same two verbs, so the flow is
+learned once:
+
+| Page | Section | What it attaches |
+|---|---|---|
+| A project | **Companies** | companies onto this project |
+| A company | **Projects** | this company onto a project |
+| A contact | **Projects** | this person onto a project |
+| A deal | *(a chip, not a section)* | see below |
+
+**To attach**, press **Attach project** (or **Attach company** on a project
+page), search, pick, choose the role under **As**, and confirm. The role list
+opens on **Partner** rather than Customer, because a project already has its
+customer by the time you are adding anyone.
+
+**To detach**, press **Detach** on the row. The dialog is explicit that nothing
+is destroyed: *{name} stays as it is. Only its link to this record ends —
+nothing is deleted.* Detaching is not archiving; archiving a project is done on
+the project itself.
+
+**Attaching a company that is already on the project changes its role** rather
+than adding it twice. That is how you promote a subcontractor to a partner:
+attach it again with the new role.
+
+**Two removals are refused**, both with an explanation on screen:
+
+- **The last company.** *A project keeps at least one company; add another
+  before taking this one off.* A project belonging to nobody has no customer to
+  bill and no timeline that means anything.
+- **A company that still has deals here.** *This company still has N deal(s) on
+  the project; move or close them before taking the company off.* Otherwise the
+  deals would be left pointing at a project their company is no longer on.
+
+**A deal is different** and deliberately so: a deal carries at most **one**
+project, so it names it as a field on the deal form and shows it as a chip on
+the deal page. There is no attach/detach section, because a second control
+writing the same single value would be two ways to do one thing.
+
+### Seating a stakeholder
+
+Open the **contact**, not the project. The contact page's **Projects** section
+attaches them with a role: **Sponsor**, **Project lead**, **Delivery lead**,
+**Subject-matter expert** or **User**. The project page's **Stakeholders** card
+shows the result and is read-only.
 
 ## Visibility and sharing
 
@@ -141,10 +233,18 @@ direction is allowed; only closing needs a reason.
 | **Delivering** | a deal is won and the work is owed. Winning a deal puts the project here by itself. |
 | **Closed** | the work has ended, with a reason on record. Can be reopened later. |
 
-**Stakeholder role** — what a person is to this project. The project page
-lists the seats; seating somebody is an API write today
-(`PUT /projects/{id}/stakeholders`), not a form in the app, and no MCP tool
-offers it.
+**Company role** — what a company is to this project. The picker offers three;
+a project keeps at least one company at all times.
+
+| Role | You are here when… |
+|---|---|
+| **Customer** | they are buying the work. Usually one, and set when the project is created. |
+| **Partner** | they are delivering part of it alongside you, on their own commercial footing. |
+| **Subcontractor** | they are delivering part of it under you. |
+
+**Stakeholder role** — what a person is to this project. Seat somebody from the
+**contact's** page, in its **Projects** section; the project page's
+**Stakeholders** card shows the result and is read-only.
 
 | Role | You are here when… |
 |---|---|
@@ -152,6 +252,7 @@ offers it.
 | **Project lead** | they run it on the customer side. |
 | **Delivery lead** | they run it on your side. |
 | **Subject-matter expert** | they are consulted on a part of it. |
+| **User** | they will use what is delivered, and are consulted as one. |
 
 Neither list has a settings screen. Both are enforced end to end — in the API
 contract ([`backend/api/crm.yaml`](../../backend/api/crm.yaml), the `Project`
@@ -163,10 +264,13 @@ value is a small code change plus a migration, not a workaround.
 An agent connected over MCP works under the same grants as the person whose
 passport it carries. It can read a project (`read_project_360`, `read_record`
 with record type `project`), create or update one through the generic record
-tools, and move a phase with `advance_project_phase` — the last is staged
-for a person to approve before it runs. It can also archive one through
-`archive_record` — confirmation-required, so a person approves that too. It
-cannot transfer ownership; that endpoint is human-only.
+tools, move a phase with `advance_project_phase`, and archive one through
+`archive_record`.
+
+Those writes **execute immediately** under a passport whose grants admit them —
+they are not staged for approval. What confines an agent here is the passport's
+own scopes and the seat behind it, not a confirmation step. It cannot transfer
+ownership; that endpoint is human-only.
 
 ## What you can't change from the UI
 

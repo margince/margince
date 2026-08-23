@@ -28,33 +28,30 @@ knowing how the automatic filing decides.
 **Projects** in the left navigation lists every live project: name and key,
 company, phase, owner, last activity.
 
-- **All / In delivery** at the top switch between every project and the ones
-  in the **Delivering** phase.
-- **Filter** narrows by phase (**All phases** or one of the four).
+- **All / In delivery / A–Z** at the top switch between every project, the ones
+  in the **Delivering** phase, and an alphabetical listing.
+- **Phase** narrows by phase (**All phases** or one of the four).
 - **Search** matches names and keys.
 - **Show archived** includes archived projects, marked **Archived**.
-- **New project** opens the create form: **Project name**, **Key**,
-  **Company** (required), **Owner**, **Description**, **Target end date**.
+- **New project** opens the create form: **Project name**, **Company**
+  (required), **Description**, **Target end date**. There is no key field —
+  the key is minted from the name — and no owner field: a new project belongs
+  to whoever creates it, and is reassigned later on the edit form.
 
 ## The project page, section by section
 
-**Header** — name, company (click it to open the company), owner, phase and
-key. The verbs beside it: **Edit project**, **Archive project**, **Share**.
+**Header** — name, the customer company (click it to open the company), owner,
+phase and key. The verbs beside it: **Edit project**, **Archive project**, **Share**.
 
 **Phase** — the four phases in a row with the current one highlighted. Press
 another to move; see *Moving the phase* below.
 
 **Figures** — **Open deal value**, **Won deal value**, **Open commitments**,
-**Last activity**, **Activities**. Under them, the **coverage line**:
+**Last activity**, **Activities**.
 
-> *N attributed · N awaiting a decision · N on this project's people and deals
-> not attributed*
-
-Read it as: how much mail is filed under this project, how many filing offers
-are waiting in **Approvals** for somebody to confirm or decline, and how much
-mail sits on the project's contacts and deals without being filed under the
-project. A large third number on a project with a key usually means the key is
-not in the subjects.
+**Companies** (right, first card) — every company on this project with its
+role, and the **Attach company** / **Detach** verbs. See
+[set-up-projects.md](set-up-projects.md#putting-companies-and-people-on-a-project).
 
 **Phase history** (right) — every phase the project has been in, with time
 spent, and each move with date, who moved it and the reason. A move made by
@@ -103,9 +100,14 @@ project is archived and takes no changes.*
 
 ## Editing, archiving, sharing
 
-**Edit project** changes name, key, owner, description and target end date.
-The company cannot be changed after creation. **Owner** offers *Me*,
-*Unassign*, and — when somebody else owns it — *Keep current owner*.
+**Edit project** changes name, owner, description and target end date. The key
+is **not** editable: it was minted from the name at creation and stays as it
+is, even if you rename the project. **Owner** offers *Me*, *Unassign*, and —
+when somebody else owns it — *Keep current owner*.
+
+The project's **customer** company cannot be changed after creation, but the
+companies working the project can: attach and detach them in the **Companies**
+section on the project page.
 
 **Archive project** asks for confirmation: *Archiving removes this project
 from the live list and frees its key. This cannot be undone from the UI.* The
@@ -120,49 +122,90 @@ see who already has access. A share never widens anything beyond this project.
 
 ### Sending
 
-Open the composer from a company or contact page (**Write email**) or reply
-from a timeline. Beneath **Draft to** is the **Project** picker: **No
-project**, then every live project on the account as `KEY · Name`. When the
-account has exactly one live project, it is pre-selected; with several, you
-choose. Closed projects are not offered — a new message is not about history.
+Two composers, two behaviours.
 
-Picking one shows **Scoped to KEY** under the picker, and does two things:
+**Replying (from a project, a deal or any timeline).** The composer works the
+filing out and tells you, above the Subject field:
+
+> ☑ **File under this project**
+> This will be filed under *Name*, this deal's project.
+> [KEY] is added to the subject so their reply files itself here.
+
+It derives the project in the same order the inbound ladder uses: the thread's
+own project first — the line then reads *…like the rest of this conversation* —
+and the **deal's** project when the thread has none. If neither names one,
+nothing is shown at all.
+
+The **Subject** field is stamped with `[KEY]`. Untick the box and both lines go
+and the tag is removed; tick it again and the tag comes back in front of
+whatever you have typed. A tag you delete by hand stays deleted.
+
+If the subject already carries a **different** project's key, sending under this
+one removes it — two keys in a subject make the inbound rule ambiguous, so it
+files under neither. Bracketed text that could not be a key (`[FYI]`) is left
+alone.
+
+> **On a reply, the subject tag is the only thing carrying the project.** The
+> reply itself inherits the links of the message it answers, because the reply
+> endpoint takes none of its own. So your sent copy may not appear on the
+> project's timeline until the customer's tagged reply comes back and is filed.
+> Tracked as [issue #2422](https://github.com/margince/margince/issues/2422).
+
+**Writing to an account (company page → Write email).** A new conversation has
+no thread to inherit from, so this composer asks. Under **Draft to** — and
+under **Related to**, when the account has deals — is the **Project** picker:
+**No project**, then the account's live projects as `KEY · Name`. One live
+project is pre-selected; several start at **No project**. Closed projects are
+not offered.
+
+Picking one shows **Scoped to KEY** and does two things:
 
 1. **Draft with AI** reads only what is filed under that project or under no
-   project. Mail filed under another project on the same account is left out
-   of the draft and of its **Based on:** line.
-2. The sent message is filed under the project, so it appears on the project's
-   timeline and replies to it inherit the filing.
+   project. Mail filed under another project on the same account is left out of
+   the draft and of its **Based on:** line.
+2. The sent message is **linked** to the project — this composer does send the
+   link — so it appears on the project's timeline straight away.
 
-You can also file without the picker: put the key in square brackets in the
-subject — `[NW-ERP] kickoff agenda` — and the rule below does the rest.
+You can also file without either control: put the key in square brackets in the
+subject — `[NER-1] kickoff agenda` — and the rule below does the rest.
 
 ### Receiving
 
 Every captured email is run through a fixed ladder, in this order, and the
-first rule that answers wins. No model is involved; these rules are exact.
+first rule that answers wins. **No model is involved in rungs 1–3; these rules
+are exact.** A rung that finds a project the reader may not use — archived, or
+outside their access — counts as no match, and the ladder carries on to the
+next rung rather than stopping.
+
+The ladder runs just after the message is captured, not during. A message that
+arrives before its project exists is not re-filed later on its own; relink it,
+or let the next message in the thread carry the filing.
 
 1. **The thread.** A reply to a conversation already filed under a project is
-   filed under the same project.
+   filed under the same project. Matched **within one medium only** — a mail
+   thread cannot inherit from a Telegram conversation, which stops a forged
+   `References` header from filing mail onto a chat the sender was never in.
+   Siblings under legal hold or archived settle nothing, and where siblings
+   disagree the most recently filed one wins.
 2. **The deal.** A message linked to a deal is filed under the deal's project.
+   Two deals on the message rolling up to two *different* projects cancel out,
+   the same way two keys do.
 3. **The key in the subject.** A subject carrying the key **in square
    brackets** — `[ERP-27] status` — is filed under that project. A bare
    `ERP-27` in the subject is not a reference; the brackets are what stops a
    project keyed `RE` from swallowing every reply in the installation. Two
    different keys in one subject cancel out: the message says nothing reliable
    and is not filed.
-4. **An offer to a person.** When none of the above answers and the message
-   reaches an account with exactly one live project (or with several, one of
-   which is clearly the closest match by content), Margince does not file it.
-   It stages an approval — **File under a project** — in **Approvals**. A
-   person confirms or declines. Confirm files the message exactly as a manual
+4. **An offer to a person.** When none of the above answers, Margince does not
+   file the message. It stages an approval — **File under a project** — in
+   **Approvals**, and a person confirms or declines. Confirm files the message exactly as a manual
    relink would; decline means the same message-and-project pairing is not
    offered again. An offer nobody answers expires, and the next message in the
    thread opens a fresh one.
 
 Most mail belongs to no project, and that is the correct answer. A message
 that reaches none of the four rungs stays on the contact's and company's
-timeline unfiled, and the coverage line counts it in its third number.
+timeline unfiled, which is where it belongs.
 
 ### When nothing matched, or the wrong thing did
 
@@ -198,8 +241,7 @@ exact or confirmed by a person.
 
 ## Reports
 
-*Available from the next release.* Three project reports are being added to
-**Reports**:
+Three project reports live in **Reports**:
 
 - **Projects by phase** — how many projects sit in each phase, and their won
   and open deal value.
@@ -212,11 +254,13 @@ exact or confirmed by a person.
 
 An agent connected over MCP sees a project exactly as the person whose
 passport it holds would. `read_project_360` returns the page above, section by
-section, with the coverage figures. `catch_me_up_on` with a `project_id`
+section. `catch_me_up_on` with a `project_id`
 answers "what has been happening?" from what is filed under the project or
 under none. `prepare_handoff` assembles the sales-to-delivery handover and
 names each gap the records leave. `advance_project_phase` moves a phase under
-the same rules as the page, with a person approving the move before it runs.
+the same rules as the page, and runs straight away under a passport whose
+scopes admit it — the passport and the seat behind it are the confinement,
+not an approval step.
 
 ## What you can't change from the UI
 
@@ -225,7 +269,6 @@ the same rules as the page, with a person approving the move before it runs.
   switch in the app.
 - **Bulk owner transfer** — `POST /projects/transfer-ownership`, API only and
   human-only.
-- **Seating a stakeholder** — `PUT /projects/{id}/stakeholders`, API only.
 - **Un-archiving** a project.
 - **The phase and stakeholder-role lists** — fixed vocabulary; see
   [set-up-projects.md](set-up-projects.md#the-fixed-vocabularies).

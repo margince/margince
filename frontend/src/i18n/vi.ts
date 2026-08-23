@@ -2334,7 +2334,7 @@ export const vi = {
   "compose.subjectTagged":
     "{tag} được thêm vào tiêu đề để thư trả lời tự động vào đúng dự án.",
   "compose.fileUnderProject": "Lưu vào dự án này",
-  "compose.relinkTarget": "Tìm một người, tổ chức, deal hay lead",
+  "compose.relinkTarget": "Tìm một người, tổ chức, deal, lead hay dự án",
   "compose.relinkReplace": "Chuyển hẳn thay vì liên kết thêm",
   "compose.relinkReplaceHint":
     "Thay liên kết cùng loại đang có thay vì thêm một liên kết nữa.",
@@ -6066,7 +6066,7 @@ export const vi = {
   "project.emptyBody":
     "Dự án là phần việc mà một thương vụ hướng tới. Nó bắt đầu trong thương vụ, ở giai đoạn khởi xướng, và tiếp tục sau khi thắng: khi thương vụ đã thắng, việc triển khai được theo dõi ở đây.",
   "project.emptyKey":
-    "Đặt mã cho dự án thì mọi email có [MÃ] trong tiêu đề sẽ tự động được xếp vào dự án đó.",
+    "Mỗi dự án đều được cấp một mã ngắn. Mọi email có mã đó trong ngoặc vuông ở tiêu đề sẽ tự động được xếp vào dự án.",
   "project.rollups.empty": "Chưa có số liệu cho dự án này.",
   "project.rollups.openValue": "Giá trị thương vụ đang mở",
   "project.rollups.wonValue": "Giá trị thương vụ đã thắng",

@@ -2392,7 +2392,8 @@ export const en = {
   // The opt-out. Not "remove" or "delete": nothing is destroyed, the message
   // simply is not filed under this project.
   "compose.fileUnderProject": "File under this project",
-  "compose.relinkTarget": "Search a person, organization, deal, or lead",
+  "compose.relinkTarget":
+    "Search a person, organization, deal, lead, or project",
   "compose.relinkReplace": "Move instead of also-link",
   "compose.relinkReplaceHint":
     "Replaces the existing link of the same type rather than adding another.",
@@ -6197,7 +6198,7 @@ export const en = {
   "project.emptyBody":
     "A project is the body of work a deal is about. It starts during the deal, in the initiative phase, and outlives close-won: once the deal is won, delivery is tracked here.",
   "project.emptyKey":
-    "Give a project a key and any email whose subject carries [KEY] is filed under it automatically.",
+    "Every project gets a short key. Any email whose subject carries it in brackets is filed under that project automatically.",
   "project.rollups.empty": "No figures for this project yet.",
   "project.rollups.openValue": "Open deal value",
   "project.rollups.wonValue": "Won deal value",
