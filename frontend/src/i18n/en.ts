@@ -4401,8 +4401,7 @@ export const en = {
   "threads.reply": "Reply",
   "threads.resolve": "Resolve",
   "threads.newLabel": "New thread",
-  "threads.requireChangeLabel":
-    "This requires a change before I can confirm the document",
+  "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
   "room.decisions.confirm_version": "confirmed the version",

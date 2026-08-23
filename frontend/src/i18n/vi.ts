@@ -4309,8 +4309,7 @@ export const vi = {
   "threads.reply": "Trả lời",
   "threads.resolve": "Giải quyết",
   "threads.newLabel": "Chủ đề mới",
-  "threads.requireChangeLabel":
-    "Cần thay đổi trước khi tôi có thể xác nhận tài liệu",
+  "threads.requireChangeLabel": "Tài liệu này cần được sửa",
   "threads.open": "Đăng",
   "threads.readOnly": "Quyền truy cập của bạn chỉ đọc.",
   "room.decisions.confirm_version": "đã xác nhận phiên bản",

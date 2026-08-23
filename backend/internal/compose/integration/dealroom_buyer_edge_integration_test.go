@@ -367,7 +367,7 @@ func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 	}
 }
 
-func TestTheConversationFlowsBothWaysAndAConfirmationWaitsForOpenChanges(t *testing.T) {
+func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
 	room := openPublishedRoom(t, e)
@@ -417,41 +417,57 @@ func TestTheConversationFlowsBothWaysAndAConfirmationWaitsForOpenChanges(t *test
 		t.Fatalf("reply author = %v", author)
 	}
 
-	// A required change from the reviewer blocks confirmation until resolved.
+	// A required-change thread is still how a buyer says a document needs work.
 	var required apptest.AnyMap
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", apptest.AnyMap{
 		"document_id": docID, "body": "Please shorten the cure period.", "required_change": true,
 	}, bearer(rita), &required); status != http.StatusCreated {
 		t.Fatalf("required-change thread = %d %v", status, required)
 	}
-	var refused apptest.AnyMap
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision", apptest.AnyMap{"kind": "confirm_version"}, bearer(rita), &refused); status != http.StatusUnprocessableEntity || refused["code"] != "open_required_threads" {
-		t.Fatalf("confirm with an open change = %d %v, want 422 open_required_threads", status, refused)
+
+	// What they can no longer do is formally accept the document. Sharing a
+	// document is sharing it, and the refusal is the STORE's rather than the
+	// screen's: a reviewer holds a live credential and reaches the endpoint
+	// directly, so hiding the button would leave the authority standing.
+	for _, seat := range []struct {
+		who   string
+		token string
+		kind  string
+	}{
+		{"a reviewer", rita, "confirm_version"},
+		{"a commenter", laura, "request_changes"},
+	} {
+		var refused apptest.AnyMap
+		status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision",
+			apptest.AnyMap{"kind": seat.kind}, bearer(seat.token), &refused)
+		if status != http.StatusUnprocessableEntity || refused["code"] != "document_decisions_retired" {
+			t.Fatalf("%s sending %s = %d %v, want 422 document_decisions_retired",
+				seat.who, seat.kind, status, refused)
+		}
 	}
-	// Laura is not a reviewer: no decision at all.
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision", apptest.AnyMap{"kind": "request_changes"}, bearer(laura), nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("decision by a commenter = %d, want 422", status)
-	}
+
 	requiredID, _ := required["id"].(string)
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads/"+requiredID+"/resolve", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("resolve = %d", status)
 	}
-	var decision apptest.AnyMap
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision", apptest.AnyMap{"kind": "confirm_version"}, bearer(rita), &decision); status != http.StatusCreated || decision["kind"] != "confirm_version" || decision["attachment_id"] != attachmentID {
-		t.Fatalf("confirm after resolve = %d %v", status, decision)
+	// Resolving changes nothing about the refusal: there is no confirmation
+	// waiting behind it any more.
+	var stillRefused apptest.AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision",
+		apptest.AnyMap{"kind": "confirm_version"}, bearer(rita), &stillRefused); status != http.StatusUnprocessableEntity {
+		t.Fatalf("confirm after resolve = %d %v, want the same refusal", status, stillRefused)
 	}
 	// A resolved thread takes no more replies.
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads/"+requiredID+"/comments", apptest.AnyMap{"body": "one more"}, bearer(rita), nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("reply on resolved = %d, want 422", status)
 	}
 
-	// The seller reads the decision with the reviewer's name.
+	// The seller's decisions read still answers, and answers empty: the rows
+	// that exist are history, and no new one can be written.
 	var decisions apptest.AnyMap
 	e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/decisions", nil, nil, &decisions)
-	list, _ := decisions["data"].([]any)
-	first, _ := list[0].(map[string]any)
-	if len(list) != 1 || first["participant_name"] != "Rita Reviewer" {
-		t.Fatalf("decisions = %v", list)
+	if list, _ := decisions["data"].([]any); len(list) != 0 {
+		t.Fatalf("decisions = %v, want none recorded", list)
 	}
 
 	// A thread on a document the seller has not published stays the seller's.

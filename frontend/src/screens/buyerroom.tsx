@@ -161,28 +161,42 @@ export function BuyerRoomScreen() {
   // the replayed mount unsubscribes the first observer, and an option callback
   // on an observer nobody listens to never runs.
   const exchangeAsync = exchange.mutateAsync;
-  // Keyed on the credential itself rather than a bare bool: a second link is a
-  // second credential, and a flag that only says "we have exchanged once"
-  // would refuse to exchange it.
-  const exchanged = useRef<string | null>(null);
+  // Every credential this tab has ALREADY spent, not merely the last one. A
+  // link is single-use, so A → B → A must not send A a second time: the server
+  // refuses the replay, and the refusal would then displace the working session
+  // B had just opened.
+  const spent = useRef(new Set<string>());
+  // Which credential the tab is currently exchanging. A reply that arrives for
+  // anything else is a superseded link answering late, and must not touch the
+  // session — two links pasted in quick succession would otherwise race, and
+  // whichever answered last would win regardless of which the person meant.
+  const awaiting = useRef<string | null>(null);
   useEffect(() => {
-    if (!credential || exchanged.current === credential) {
+    if (!credential || spent.current.has(credential)) {
       return;
     }
-    exchanged.current = credential;
-    // The link in hand outranks whatever this tab was showing: drop the old
-    // session before the exchange answers, so a dead one cannot render a
-    // "nothing here" page over a room the new link opens.
-    setToken(null);
+    spent.current.add(credential);
+    awaiting.current = credential;
+    // The session the tab already holds is KEPT while the new link is checked.
+    // Clearing it first showed the dead-link page over a room the person could
+    // still read whenever the new link turned out to be expired — and a refresh
+    // then brought that room back from storage, which is a different answer to
+    // the same question a moment apart.
     setRefusal(null);
     exchangeAsync(credential).then(
       (issued) => {
-        if (issued) {
-          writeSession(issued.session_token);
-          setToken(issued.session_token);
+        if (awaiting.current !== credential || !issued) {
+          return;
         }
+        awaiting.current = null;
+        writeSession(issued.session_token);
+        setToken(issued.session_token);
       },
       (error: unknown) => {
+        if (awaiting.current !== credential) {
+          return;
+        }
+        awaiting.current = null;
         setRefusal(error instanceof Error ? error : new Error(String(error)));
       },
     );
@@ -475,7 +489,7 @@ function BuyerDocumentVerbs({
     },
   });
   return (
-    <div className="buyer-decide">
+    <div className="buyer-doc-actions">
       <Button
         small
         aria-label={t("buyer.docs.download", { title: doc.title })}
@@ -495,8 +509,8 @@ function BuyerDocumentVerbs({
 }
 
 // The buyer's board: the shared documents, each with the threads about it,
-// and the room-wide conversation. The verbs are the buyer's — download,
-// decide, open, reply — and never resolve.
+// and the room-wide conversation. The verbs are the buyer's — download, open,
+// reply — and never resolve.
 function BuyerBoard({
   token,
   onSessionLost,

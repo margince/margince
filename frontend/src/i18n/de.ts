@@ -4348,8 +4348,7 @@ export const de = {
   "threads.reply": "Antworten",
   "threads.resolve": "Erledigen",
   "threads.newLabel": "Neuer Thread",
-  "threads.requireChangeLabel":
-    "Das muss geändert werden, bevor ich das Dokument bestätigen kann",
+  "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
   "room.decisions.confirm_version": "hat die Version bestätigt",

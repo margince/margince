@@ -160,78 +160,33 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 	return out, err
 }
 
-// errOpenRequiredThreads refuses a confirmation while a required-change thread
-// on the document is still open. Named so the client can branch to "show me
-// the threads" rather than parsing prose.
-var errOpenRequiredThreads = &stateError{
-	code:    "open_required_threads",
-	current: threadOpen,
-	wanted:  "a change you asked for is still open on this document; once your contact resolves it you can confirm",
+// ErrDecisionsRetired refuses a buyer decision on a document version.
+//
+// Sharing a document with a buyer is sharing it. The product no longer asks
+// them to formally accept each file — a buyer reading "confirm this version"
+// under a call transcript cannot tell what they would be agreeing to, and what
+// they want to say about a document they say in the thread under it.
+//
+// The refusal lives HERE rather than in the client, because hiding a button is
+// not removing an authority: a reviewer seat holds a live credential and can
+// call the endpoint directly. The operation stays on the contract and the
+// existing deal_room_decision rows stay readable — a decision somebody
+// genuinely made is a record of what happened — but no new one is written.
+//
+// The WRITER is gone with it — the lint bar refuses dead code, and a retired
+// path kept "just in case" is how a removed feature quietly comes back. What
+// bringing approvals back would cost is written down in
+// https://github.com/margince/margince/issues/2382.
+var ErrDecisionsRetired = &retiredError{
+	code: "document_decisions_retired",
+	msg: "deal room documents are shared rather than submitted for approval: " +
+		"say what you need in the document's own thread instead",
 }
 
-// DecideAsBuyer records a decision on the published version of a document.
-func (s *Store) DecideAsBuyer(ctx context.Context, sess Session, documentID ids.UUID, kind string, note *string) (crmcontracts.DealRoomDecision, error) {
+// DecideAsBuyer refuses every decision: see ErrDecisionsRetired.
+func (s *Store) DecideAsBuyer(_ context.Context, sess Session, _ ids.UUID, _ string, _ *string) (crmcontracts.DealRoomDecision, error) {
 	if sess.ID == ids.Nil {
 		return crmcontracts.DealRoomDecision{}, apperrors.ErrPermissionDenied
 	}
-	if kind != decisionRequestChanges && kind != decisionConfirmVersion {
-		return crmcontracts.DealRoomDecision{}, &fieldError{field: "kind", code: "unknown_kind", msg: "kind must be request_changes or confirm_version"}
-	}
-	var out crmcontracts.DealRoomDecision
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		room, err := liveRoomForBuyerWrite(ctx, tx, sess, capabilityReviewer)
-		if err != nil {
-			return err
-		}
-		attachmentID, err := publishedDocumentVersion(ctx, tx, sess.RoomID, documentID)
-		if err != nil {
-			return err
-		}
-		if kind == decisionConfirmVersion {
-			blocking, err := openRequiredThreads(ctx, tx, sess.RoomID, documentID)
-			if err != nil {
-				return err
-			}
-			if blocking > 0 {
-				return errOpenRequiredThreads
-			}
-		}
-		out, err = recordDecisionTx(ctx, tx, room, sess, documentID, attachmentID, kind, note)
-		return err
-	})
-	return out, err
-}
-
-func recordDecisionTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, sess Session, documentID, attachmentID ids.UUID, kind string, note *string) (crmcontracts.DealRoomDecision, error) {
-	capturedBy, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return crmcontracts.DealRoomDecision{}, err
-	}
-	id := ids.NewV7()
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_room_decision (id, room_id, document_id, attachment_id, participant_id, kind, note, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		id, sess.RoomID, documentID, attachmentID, sess.ParticipantID, kind, note, sourceCredential, capturedBy); err != nil {
-		return crmcontracts.DealRoomDecision{}, fmt.Errorf("insert deal room decision: %w", err)
-	}
-	auditID, err := storekit.Audit(ctx, tx, "create", decisionObject, id, nil,
-		map[string]any{fieldRoomID: sess.RoomID.UUID, "document_id": documentID, fieldAttachmentID: attachmentID, "kind": kind})
-	if err != nil {
-		return crmcontracts.DealRoomDecision{}, fmt.Errorf("audit deal room decision: %w", err)
-	}
-	recorded := crmcontracts.PublicEventDealRoomDecisionRecorded{
-		DealId:       room.DealId,
-		DecisionId:   openapi_types.UUID(id),
-		DocumentId:   openapi_types.UUID(documentID),
-		AttachmentId: openapi_types.UUID(attachmentID),
-		Kind:         kind,
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, sess.RoomID.UUID, recorded); err != nil {
-		return crmcontracts.DealRoomDecision{}, fmt.Errorf("emit deal_room.decision_recorded: %w", err)
-	}
-	row := tx.QueryRow(ctx,
-		`SELECT d.id, d.room_id, d.document_id, d.attachment_id, d.participant_id, p.full_name, d.kind, d.note, d.created_at
-		   FROM deal_room_decision d JOIN deal_room_participant p ON p.id = d.participant_id
-		  WHERE d.id = $1 AND d.room_id = $2`, id, sess.RoomID)
-	return scanDecision(row)
+	return crmcontracts.DealRoomDecision{}, ErrDecisionsRetired
 }
