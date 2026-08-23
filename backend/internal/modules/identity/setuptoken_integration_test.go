@@ -32,10 +32,14 @@ func newSetupService(t *testing.T) *Service {
 	return NewService(pool)
 }
 
+// A claim names what the installation is measured in. Both values are required
+// on this path — the form asks for them, so an absent one is a client that
+// stopped asking rather than an operator who declined to answer.
 func claimInput(org string) InstallationBootstrap {
 	return InstallationBootstrap{
 		OrganizationName: org,
 		BaseCurrency:     "EUR",
+		BaseLanguage:     "en",
 		Timezone:         "Europe/Berlin",
 		AdminEmail:       "admin@" + org + ".test",
 		AdminName:        "Admin",

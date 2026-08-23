@@ -91,6 +91,7 @@ components:
         - engagement.reply
         - consent.changed
         - email_signature.changed
+        - user_locale.changed
         - linkedin_account.changed
         - linkedin_network.imported
         - linkedin_match.decided
@@ -1857,6 +1858,30 @@ components:
           description: >-
             Whether mail from this member now carries a sign-off. False after a
             member empties the field, which is a deliberate "send unsigned".
+      additionalProperties: false
+
+    PublicEventUserLocaleChanged:
+      type: object
+      x-event-type: user_locale.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_locale.changed — a member chose the language their own
+        interface is rendered in (identity/userlocale.go's SaveMyLocale). It is
+        a change to the member's own seat rather than to anything the
+        installation is measured in: the language AI writes for the whole team
+        is the installation's base_language, which is an admin setting and
+        publishes separately. A subscriber that renders anything for this person
+        needs to know which catalog to reach for.
+      required:
+        - locale
+      properties:
+        locale:
+          type: string
+          description: >-
+            The language now chosen — one of the catalogs the product ships.
+            Never empty: this event fires on a choice, and a member who has
+            never chosen has no row and produces no event.
       additionalProperties: false
 
     PublicEventLinkedinAccountChanged:

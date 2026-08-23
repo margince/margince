@@ -8897,6 +8897,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/locale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the language your own interface is in.
+         * @description Always the CALLER's own, never anybody else's — an admin does not pick a
+         *     colleague's display language through this API.
+         *
+         *     This is a person's own interface, not the installation's basis. It does
+         *     not change what AI writes for the whole team, which is the installation's
+         *     `base_language` and is admin/ops to set.
+         *
+         *     Stored so the choice follows the person to their next browser. Until they
+         *     make one there is no row and no value, which is not the same as `en`:
+         *     somebody who never chose follows whatever their browser asks for, and
+         *     writing a choice they did not make would freeze one browser's guess
+         *     forever.
+         */
+        put: operations["saveMyLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -14162,6 +14193,16 @@ export interface components {
              */
             body: string;
         };
+        SaveMyLocaleRequest: {
+            /**
+             * @description The language to render this person's own interface in. One of the
+             *     languages the product ships a catalog for — a tag it does not
+             *     (`en-GB`, `fr`) is refused rather than approximated, because a locale
+             *     with no catalog renders as raw message keys.
+             * @enum {string}
+             */
+            locale: "en" | "de" | "vi";
+        };
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
             connected: boolean;
@@ -17330,6 +17371,12 @@ export interface components {
              * @default UTC
              */
             timezone: string;
+            /**
+             * @description The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+             *     Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
             /**
              * @default active
              * @enum {string}
@@ -36997,6 +37044,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyLocaleRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the chosen locale. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             401: components["responses"]["Unauthorized"];

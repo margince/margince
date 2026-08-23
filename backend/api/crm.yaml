@@ -13548,6 +13548,40 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /me/locale:
+    put:
+      tags: [Identity]
+      operationId: saveMyLocale
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Choose the language your own interface is in.
+      description: |
+        Always the CALLER's own, never anybody else's — an admin does not pick a
+        colleague's display language through this API.
+
+        This is a person's own interface, not the installation's basis. It does
+        not change what AI writes for the whole team, which is the installation's
+        `base_language` and is admin/ops to set.
+
+        Stored so the choice follows the person to their next browser. Until they
+        make one there is no row and no value, which is not the same as `en`:
+        somebody who never chose follows whatever their browser asks for, and
+        writing a choice they did not make would freeze one browser's guess
+        forever.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMyLocaleRequest' }
+      responses:
+        '200':
+          description: The caller's seat, with the chosen locale.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/ai-activity:
     get:
       tags: [AI]
@@ -20381,6 +20415,19 @@ components:
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
 
+    SaveMyLocaleRequest:
+      type: object
+      required: [locale]
+      properties:
+        locale:
+          type: string
+          enum: [en, de, vi]
+          description: |
+            The language to render this person's own interface in. One of the
+            languages the product ships a catalog for — a tag it does not
+            (`en-GB`, `fr`) is refused rather than approximated, because a locale
+            with no catalog renders as raw message keys.
+
     LinkedInAccount:
       type: object
       required: [connected, connections]
@@ -23604,6 +23651,17 @@ components:
         email: { type: string, format: email }
         display_name: { type: string }
         timezone: { type: string, default: UTC, description: IANA name. }
+        locale:
+          type: string
+          enum: [en, de, vi]
+          description: >
+            The language this person chose for their own interface, absent when they never
+            chose one. Distinct from the installation's `base_language`, which is what AI
+            writes in for the whole team: this one changes only what THIS person sees.
+
+            Absent is not the same as `en`. A person who never chose follows their browser,
+            and storing a choice they did not make would freeze whatever their browser said
+            on the day they signed up.
         status: { type: string, enum: [active, suspended, deactivated], default: active }
         is_agent: { type: boolean, default: false, description: First-party Agent Runner identity vs a human seat. }
         roles:

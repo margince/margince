@@ -38,7 +38,7 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
-import { useT } from "./i18n";
+import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import {
   type AuthNotice,
@@ -705,6 +705,17 @@ function AuthedApp({
   // signed in" and carries no notice.
   const hadSession = useRef(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
+  // The signed-in person's own language, handed up to the provider that sits
+  // above this component. It cannot ask for `/me` itself, and this is the first
+  // place the answer exists — so a choice made on another browser reaches the
+  // catalog here or nowhere.
+  const { adoptLocale } = useLocale();
+  useEffect(() => {
+    const chosen = me.data?.user?.locale;
+    if (chosen) {
+      adoptLocale(chosen);
+    }
+  }, [me.data, adoptLocale]);
   useEffect(() => {
     if (me.data) {
       hadSession.current = true;

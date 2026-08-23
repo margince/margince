@@ -59,6 +59,9 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      {/* Inside the query provider so it can follow the signed-in person's own
+          locale from `/me` — the choice has to survive moving browsers, and
+          localStorage alone cannot do that. */}
       <LocaleProvider>
         {/* Inside the locale provider: the fallback is translated copy like
             every other user-facing string, so it cannot render above the

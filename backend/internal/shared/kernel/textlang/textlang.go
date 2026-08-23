@@ -49,9 +49,11 @@ const (
 // them. Unknown is absent: it is the detector's honest shrug, never a language
 // anyone selects.
 //
-// This is the ONE list. The installation's base language, the UI catalogs and
-// the drafting floor all answer to it, so widening the product to a fourth
-// language is one edit here rather than four in agreement.
+// The Go side answers to this list — the installation's base language and the
+// per-member display language both validate against it. The contract's enums
+// and the frontend's own LOCALES are separate declarations of the same set, and
+// nothing yet fails when the three disagree, so widening the product to a
+// fourth language means editing all three by hand.
 var Shipped = []Lang{English, German, Vietnamese}
 
 // Known reports whether a code names a language the product speaks.
@@ -66,27 +68,6 @@ func Known(code string) bool {
 		}
 	}
 	return false
-}
-
-// EnglishName is the language's name in English, which is what a prompt uses
-// to tell a model what to write in. Models follow "write in German" reliably;
-// they follow a bare "de" less so.
-//
-// An unknown code answers "" rather than guessing, so a caller composing a
-// prompt refuses instead of instructing the model in a language nobody named.
-func EnglishName(l Lang) string {
-	switch l {
-	case English:
-		return "English"
-	case German:
-		return "German"
-	case Vietnamese:
-		return "Vietnamese"
-	case Unknown:
-		return ""
-	default:
-		return ""
-	}
 }
 
 // The bar a winner clears.

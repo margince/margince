@@ -250,14 +250,15 @@ function InstallationSettingsForm({
   // unchanged base currency would ask the server to write a value that may be
   // frozen — refused, for a field the operator never touched.
   const submit = () => {
+    // Walks EDITABLE_FACTS rather than naming the fields again: the wire names
+    // and the draft's keys are the same names, so a fact added to that list is
+    // sent by this without a second edit. Enumerating them here is how a field
+    // ends up dirty-checked, drawn, and never actually submitted.
     const patch: Patch = {};
-    if (draft.name !== settings.name) patch.name = draft.name;
-    if (draft.timezone !== settings.timezone) patch.timezone = draft.timezone;
-    if (draft.base_currency !== settings.base_currency) {
-      patch.base_currency = draft.base_currency;
-    }
-    if (draft.base_language !== settings.base_language) {
-      patch.base_language = draft.base_language;
+    for (const fact of EDITABLE_FACTS) {
+      if (draft[fact] !== settings[fact]) {
+        Object.assign(patch, { [fact]: draft[fact] });
+      }
     }
     update.mutate(patch);
   };
@@ -384,23 +385,24 @@ function InstallationProfileDialog({
   // a11y lint's blanket rule against autofocus stays intact.
   const asked = useRef<HTMLInputElement>(null);
   // The language field is a `Select` — a button and a portalled listbox, not an
-  // input — so it cannot take the same ref the three text fields share. Focus
-  // reaches it by id instead, which is the same promise ("the verb beside a
-  // fact leads to the fact") kept through the one handle a Select does expose.
-  const languageFieldId = useId();
+  // input — so it takes neither the ref the three text fields share nor one of
+  // its own. Its trigger is found through the form, which keeps the same
+  // promise the other three keep: the verb beside a fact leads to the fact.
+  const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (focus === "base_language") {
-      document.getElementById(languageFieldId)?.focus();
+      form.current?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
       return;
     }
     asked.current?.focus();
-  }, [focus, languageFieldId]);
+  }, [focus]);
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <h2 id={titleId} className="t-h2 modal-title">
         {t("installationSettings.orgTitle")}
       </h2>
       <form
+        ref={form}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -479,7 +481,10 @@ function InstallationProfileDialog({
           {(control) => (
             <Select
               {...control}
-              id={languageFieldId}
+              // `control.id` is spread through UNCHANGED: `Field` renders its
+              // label with `htmlFor` pointing at it, so replacing it would
+              // leave the combobox with no accessible name. The focus effect
+              // reads that same id back out of the DOM.
               aria-describedby={describe(control)}
               value={draft.base_language}
               disabled={!canManage}

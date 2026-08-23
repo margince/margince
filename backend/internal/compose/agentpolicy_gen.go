@@ -502,6 +502,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/leads/{id}/manual-signals":                                  {Op: "setLeadManualSignal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/email-signature":                                         {Op: "saveMyEmailSignature", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/me/linkedin-account":                                        {Op: "saveMyLinkedInAccount", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/me/locale":                                                  {Op: "saveMyLocale", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/offer-templates/{id}":                                       {Op: "updateOfferTemplate", Access: "tool", Tool: "update_record", RecordType: "offer_template", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/onboarding/state":                                           {Op: "putOnboardingState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/organizations/{id}/partner":                                 {Op: "upsertPartner", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
