@@ -49,6 +49,8 @@ func judgeSystemFor(fence promptfence.Fence) string {
 // The fence is minted here, per request. Its scope is this one grading
 // call, so a retry re-enters this function rather than re-sending a
 // request whose marker the failed attempt has already been shown.
+//
+//promptlang:exempt the certification judge scores another prompt's output against a rubric; it grades rather than writing anything an installation reads
 func JudgeRequest(rubric, scenarioInput, candidateOutput string) model.Request {
 	fence := promptfence.New()
 	return model.Request{

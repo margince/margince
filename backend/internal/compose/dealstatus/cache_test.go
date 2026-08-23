@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The fingerprint is what decides freshness, so these prove the two things a
@@ -17,12 +18,12 @@ import (
 func TestTheFingerprintMovesWhenTheFactsDo(t *testing.T) {
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	before, err := Fingerprint(in, reader, "routing-1", testNow)
+	before, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
 	in.Timeline = append(in.Timeline, ActIn{ID: "act-3", Kind: "email", At: "2026-08-22"})
-	after, err := Fingerprint(in, reader, "routing-1", testNow)
+	after, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -33,11 +34,11 @@ func TestTheFingerprintMovesWhenTheFactsDo(t *testing.T) {
 
 func TestTheSameFactsFingerprintTheSame(t *testing.T) {
 	reader := ids.NewV7()
-	first, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow)
+	first, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	second, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow)
+	second, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -52,11 +53,11 @@ func TestTheCardGoesStaleWhenTheDayTurns(t *testing.T) {
 	// card written on Monday still says "4 days ago" on Friday.
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	monday, err := Fingerprint(in, reader, "routing-1", testNow)
+	monday, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	friday, err := Fingerprint(in, reader, "routing-1", testNow.AddDate(0, 0, 4))
+	friday, err := Fingerprint(in, reader, "routing-1", testNow.AddDate(0, 0, 4), string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -70,11 +71,11 @@ func TestTheSameDayDoesNotRewriteAQuietDeal(t *testing.T) {
 	// would rewrite a deal nobody touched, for prose that reads identically.
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	morning, err := Fingerprint(in, reader, "routing-1", testNow)
+	morning, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	evening, err := Fingerprint(in, reader, "routing-1", testNow.Add(7*time.Hour))
+	evening, err := Fingerprint(in, reader, "routing-1", testNow.Add(7*time.Hour), string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -86,11 +87,11 @@ func TestTheSameDayDoesNotRewriteAQuietDeal(t *testing.T) {
 func TestANewRoutingVersionRewritesTheCard(t *testing.T) {
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	old, err := Fingerprint(in, reader, "routing-1", testNow)
+	old, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	fresh, err := Fingerprint(in, reader, "routing-2", testNow)
+	fresh, err := Fingerprint(in, reader, "routing-2", testNow, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}

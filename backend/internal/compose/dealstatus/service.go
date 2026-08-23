@@ -18,11 +18,13 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/dealrooms"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // timelineWindow bounds how much of the timeline the card reads. The timeline
@@ -82,6 +84,11 @@ type facts struct {
 	room      *crmcontracts.DealRoom
 	threads   []crmcontracts.DealRoomThread
 	now       time.Time
+	// lang is the installation's base language, which the card is written in.
+	// A status card is filed on the deal and read by anyone who opens it, so it
+	// takes the shared language rather than the reader's — the same rule that
+	// separates a record from a piece of correspondence.
+	lang string
 }
 
 // stored is the cached envelope: the card in the payload column, and the three
@@ -115,7 +122,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	}
 	mv := decideMove(f)
 	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.lang)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
@@ -178,7 +185,7 @@ func (s *Service) write(
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)
 	defer cancel()
-	written, err := s.ask(laneCtx, in)
+	written, err := s.ask(laneCtx, in, f.lang)
 	if err != nil {
 		// The degrade is declared, but a SILENT one is indistinguishable from
 		// a lane nobody wired: the reader sees a deterministic card either
@@ -191,8 +198,8 @@ func (s *Service) write(
 	return foldWritten(floor, written, f, mv)
 }
 
-func (s *Service) ask(ctx context.Context, in StatusInput) (WrittenStatus, error) {
-	resp, err := s.lane.Complete(ctx, StatusRequest(in))
+func (s *Service) ask(ctx context.Context, in StatusInput, lang string) (WrittenStatus, error) {
+	resp, err := s.lane.Complete(ctx, StatusRequest(in, lang))
 	if err != nil {
 		return WrittenStatus{}, err
 	}
@@ -230,7 +237,34 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
 	}
+	f.lang = s.baseLanguage(ctx)
 	return f, nil
+}
+
+// baseLanguage resolves the language this installation's shared writing is in.
+//
+// It never fails the read. The card has a deterministic floor that needs no
+// model at all, so refusing the whole deal page because a settings row could
+// not be read would trade a working page for a formatting preference. English
+// is what these cards were written in before the setting existed, and a German
+// installation suddenly reading English is a visible complaint rather than a
+// silent one.
+func (s *Service) baseLanguage(ctx context.Context) string {
+	lang := string(textlang.English)
+	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		resolved, err := identity.BaseLanguageOf(ctx, tx)
+		if err != nil {
+			return err
+		}
+		lang = resolved
+		return nil
+	})
+	if err != nil {
+		slog.WarnContext(ctx, "deal status could not read the base language and wrote in English",
+			"reason", err)
+		return string(textlang.English)
+	}
+	return lang
 }
 
 // gatherRoom reads the deal's room, when there is one, with its conversation.

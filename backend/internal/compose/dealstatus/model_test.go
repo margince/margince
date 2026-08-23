@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // inputWithTimeline is one deal and two timeline rows, the shape every filter
@@ -242,7 +244,7 @@ func TestTheRequestFencesTheSummaryItCarries(t *testing.T) {
 	// close the span and be read as instruction.
 	in := inputWithTimeline()
 	in.Timeline[0].Subject = "Re: pricing"
-	req := StatusRequest(in)
+	req := StatusRequest(in, string(textlang.English))
 	if len(req.Messages) != 1 {
 		t.Fatalf("request carries %d messages, want one", len(req.Messages))
 	}

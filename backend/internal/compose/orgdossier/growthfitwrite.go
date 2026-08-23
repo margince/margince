@@ -60,6 +60,8 @@ func growthFitSystemFor(fence promptfence.Fence) string {
 
 // GrowthFitRequest builds the one-shot call. Exported so the AI cert case
 // measures the request production actually sends rather than a copy of it.
+//
+//promptlang:exempt DEFERRED, not exempt on the merits: the growth fit is cached against growthFitFingerprint, so the language has to enter that key with the rule or a language change serves the old assessment indefinitely. That fingerprint is being rewritten concurrently to derive its prompt version from the prompt text; the two edits belong in one change rather than as a conflict.
 func GrowthFitRequest(in Input) model.Request {
 	fence := promptfence.New()
 	return model.Request{

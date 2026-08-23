@@ -6,6 +6,8 @@ package compose
 import (
 	"strings"
 	"testing"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestTriageVerdictStopsTheCrawlOnlyWhenItIsSureAndNegative(t *testing.T) {
@@ -81,7 +83,7 @@ func TestTriageRequestFencesThePageAndBoundsIt(t *testing.T) {
 	// A rune that appears nowhere else in the request, so the count below
 	// measures the page text and not the url or the fence nonce.
 	long := strings.Repeat("Ω", triageExcerptRunes*2)
-	req := triageRequest(crawlPage{URL: "https://acme.example", Text: long})
+	req := triageRequest(crawlPage{URL: "https://acme.example", Text: long}, string(textlang.English))
 
 	if len(req.Messages) != 1 {
 		t.Fatalf("%d messages, want the page alone", len(req.Messages))

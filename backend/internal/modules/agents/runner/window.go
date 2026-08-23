@@ -83,7 +83,7 @@ const perCallOutputCeiling = 4096
 // on its author's CURRENT authority — see windowFromSnapshot.
 func newWindow(job Job, offered, known []mcp.ToolSpec) *window {
 	fence := promptfence.New()
-	w := &window{system: systemPrompt(offered, fence), fence: fence, knownSources: sourceVocabulary(known)}
+	w := &window{system: systemPrompt(offered, fence, job.LanguageRule), fence: fence, knownSources: sourceVocabulary(known)}
 	w.msgs = append(w.msgs, model.Message{Role: roleUser, Content: goalPrompt(job, fence)})
 	return w
 }
@@ -121,7 +121,7 @@ func windowFromSnapshot(job Job, offered, known []mcp.ToolSpec, snapshot []model
 	// what the run was told, after the fact, because its author's authority
 	// changed afterwards. What may be CALLED from here is narrowed; what was
 	// already answered keeps its name.
-	w := &window{system: systemPrompt(offered, fence), fence: fence, knownSources: sourceVocabulary(known)}
+	w := &window{system: systemPrompt(offered, fence, job.LanguageRule), fence: fence, knownSources: sourceVocabulary(known)}
 	w.msgs = append(w.msgs, snapshot...)
 	return w, nil
 }
@@ -182,6 +182,7 @@ func (w *window) snapshot() []model.Message {
 	return append([]model.Message(nil), w.msgs...)
 }
 
+//promptlang:exempt the rule IS present and is not visible here: it reaches this prompt as Job.LanguageRule, rendered by promptlang.Rule in compose/runnerservice.go, because a module may not import compose. The gate reads one file at a time and cannot follow a string across that boundary, so this waiver stands in for what it cannot see — systemPrompt writes the block it is given, and TestTheRunnerPromptCarriesTheLanguageItWasGiven holds that.
 func (w *window) asRequest(remainingOutputTokens int) model.Request {
 	maxTokens := perCallOutputCeiling
 	if remainingOutputTokens < maxTokens {
@@ -227,7 +228,7 @@ func estimateTokens(system string, msgs []model.Message) int {
 
 // systemPrompt is the §2.0 shared frame plus the tool surface: JSON-only
 // output, the evidence rule, and untrusted-content handling.
-func systemPrompt(specs []mcp.ToolSpec, fence promptfence.Fence) string {
+func systemPrompt(specs []mcp.ToolSpec, fence promptfence.Fence, languageRule string) string {
 	var b strings.Builder
 	b.WriteString(`You are the Margince agent runner, a CRM reasoning component, not a chatbot.
 You work toward the stated goal by calling tools, one per turn.
@@ -243,6 +244,13 @@ Rules:
 - Actions needing human approval are staged automatically; never fabricate their outcome.
 - `)
 	b.WriteString(fence.Rule("captured external"))
+	// The rule governs the run's final summary, which is filed on a record the
+	// whole team reads. Empty when the caller passed none — the certification
+	// lane — and an empty block writes nothing rather than a blank line.
+	if languageRule != "" {
+		b.WriteString("\n\n")
+		b.WriteString(languageRule)
+	}
 	b.WriteString(`
 
 Available tools:

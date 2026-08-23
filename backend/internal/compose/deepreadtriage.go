@@ -295,7 +295,7 @@ func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (
 			Reason: "the landing page carries no readable text",
 		}, nil
 	}
-	req := triageRequest(seed)
+	req := triageRequest(seed, BaseLanguageForPrompt(ctx, w.pool))
 	var resp model.Response
 	var err error
 	if structured, ok := w.triageBrain.(validatedBrain); ok {

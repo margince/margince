@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
@@ -74,8 +75,12 @@ unclear  — the page does not say. Prefer unclear over guessing; a wrong compan
 Judge only what the page states. Do not infer from the domain name.`
 
 // triageSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func triageSystemFor(fence promptfence.Fence) string {
-	return triageSystem + "\n" + fence.Rule("page")
+// The language rule governs the "reason" field. The kind is an enum, and
+// promptlang.Rule excludes enum values from translation — but the reason is
+// stored as a skip explanation on the record and read by whoever asks why a
+// domain was never crawled.
+func triageSystemFor(fence promptfence.Fence, lang string) string {
+	return triageSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("page")
 }
 
 // siteTriageVerdict is the classifier's reply.
@@ -127,11 +132,11 @@ func triageSchema() json.RawMessage {
 // triageRequest builds the ONE classification call. The fence is minted per
 // request: the page text inside it is a crawled site's own writing, and a
 // boundary reused across calls is one some site has already been shown.
-func triageRequest(page crawlPage) model.Request {
+func triageRequest(page crawlPage, lang string) model.Request {
 	fence := promptfence.New()
 	body := fmt.Sprintf("url: %s\n\n%s", page.URL, triageExcerpt(page.Text))
 	return model.Request{
-		System:         triageSystemFor(fence),
+		System:         triageSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(body)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: triageSchema(),

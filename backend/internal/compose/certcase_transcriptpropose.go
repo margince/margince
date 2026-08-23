@@ -34,6 +34,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -144,7 +145,13 @@ type transcriptProposeCase struct {
 // request in the shape-retry when the brain supports one, and a case that did
 // too would certify the answer a model gives after being told to try again.
 func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := transcriptRequest(c.lines)
+	// English, pinned, rather than the installation's base language: a
+	// certification record grades a fixed corpus, and a score that moved with a
+	// settings row would not be comparable between two installations or across
+	// one that changed its mind. The rule is PRESENT in the graded request for
+	// the same reason — production sends one, so a case that left it out would
+	// grade a prompt the product does not send.
+	req := transcriptRequest(c.lines, string(textlang.English))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

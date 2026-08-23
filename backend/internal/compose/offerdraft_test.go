@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The deal's context is the counterparty's own words and the rate card is the
@@ -31,6 +32,7 @@ func TestOfferDraftRequestFencesEveryReadItIsHandedUnderTheMarkerItDeclares(t *t
 	req := offerDraftRequest(
 		[]dealContextItem{{SourceID: "activity:1", Snippet: hostile}},
 		[]crmcontracts.Product{{Name: "Support Plan", UnitPriceMinor: 5000, Currency: "EUR"}},
+		string(textlang.English),
 	)
 
 	marker, declared := promptfence.MarkerIn(req.System)
@@ -58,11 +60,11 @@ func TestOfferDraftRequestFencesEveryReadItIsHandedUnderTheMarkerItDeclares(t *t
 func TestOfferDraftRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 	items := []dealContextItem{{SourceID: "activity:1", Snippet: "Client wants a workshop."}}
 
-	first, declared := promptfence.MarkerIn(offerDraftRequest(items, nil).System)
+	first, declared := promptfence.MarkerIn(offerDraftRequest(items, nil, string(textlang.English)).System)
 	if !declared {
 		t.Fatal("the offer-draft system prompt declares no data boundary")
 	}
-	second, declared := promptfence.MarkerIn(offerDraftRequest(items, nil).System)
+	second, declared := promptfence.MarkerIn(offerDraftRequest(items, nil, string(textlang.English)).System)
 	if !declared {
 		t.Fatal("the second offer-draft system prompt declares no data boundary")
 	}

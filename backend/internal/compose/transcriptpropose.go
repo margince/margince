@@ -31,6 +31,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
@@ -71,8 +72,11 @@ what people said, not what should happen to the account. Cite the line numbers t
 commitment is stated on. Reporting nothing is the correct answer for many transcripts.`
 
 // transcriptSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func transcriptSystemFor(fence promptfence.Fence) string {
-	return transcriptSystem + "\n" + fence.Rule("line")
+// The language rule governs the "summary" field. "owner" is excluded by
+// promptlang.Rule's own carve-out for people's names — it is the party as the
+// transcript names them, and a translated name is a different person.
+func transcriptSystemFor(fence promptfence.Fence, lang string) string {
+	return transcriptSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("line")
 }
 
 // TranscriptProposer reads a transcript and stages what it says was promised.
@@ -126,7 +130,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // It is a PURE function of the lines so the certification case can issue the
 // SHIPPING request rather than a copy of it — a cert that grades a
 // hand-rewritten prompt certifies nothing about what runs.
-func transcriptRequest(lines []string) model.Request {
+func transcriptRequest(lines []string, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
@@ -142,7 +146,7 @@ func transcriptRequest(lines []string) model.Request {
 		maxTranscriptProposals, len(lines))
 
 	return model.Request{
-		System:         transcriptSystemFor(fence),
+		System:         transcriptSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: transcriptSchema(),
@@ -239,7 +243,7 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 
 // ask puts one transcript to the model and returns what it may act on.
 func (p *TranscriptProposer) ask(ctx context.Context, lines []string) ([]proposedStep, error) {
-	req := transcriptRequest(lines)
+	req := transcriptRequest(lines, BaseLanguageForPrompt(ctx, p.pool))
 	validate := transcriptShapeValid(len(lines))
 	var resp model.Response
 	var err error

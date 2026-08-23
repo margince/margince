@@ -45,6 +45,8 @@ func dossierSystemFor(fence promptfence.Fence) string {
 
 // DossierRequest builds the one-shot call. Exported so the AI cert case
 // measures the request production actually sends rather than a copy of it.
+//
+//promptlang:exempt DEFERRED, not exempt on the merits: the dossier is cached against Fingerprint, so the language has to enter that key with the rule or a language change serves the old dossier indefinitely. Fingerprint is being rewritten concurrently to derive its prompt version from the prompt text; the two edits belong in one change rather than as a conflict.
 func DossierRequest(in Input) model.Request {
 	fence := promptfence.New()
 	return model.Request{

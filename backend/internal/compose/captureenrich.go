@@ -188,6 +188,8 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 // The fence is minted here, per request: a boundary reused across calls is one a
 // previous sender has already been shown, and every field of this prompt is
 // their own writing.
+//
+//promptlang:exempt the fields are a title and a phone number copied out of the person's own signature block, each carrying an evidence_snippet checked against those lines — a job title is written the way its holder writes it, and translating one would both change the fact and fail the snippet check.
 func signatureEnrichRequest(cand people.SignatureCandidate, lines string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder

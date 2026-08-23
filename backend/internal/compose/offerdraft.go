@@ -47,6 +47,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
@@ -89,8 +90,10 @@ Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate
 - OMIT any line you cannot evidence — never guess a line into existence.`
 
 // offerDraftSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func offerDraftSystemFor(fence promptfence.Fence) string {
-	return offerDraftSystem + "\n" + fence.Rule("workspace")
+// The line descriptions are prose on a document the customer receives and the
+// team reads, so they take the installation's base language.
+func offerDraftSystemFor(fence promptfence.Fence, lang string) string {
+	return offerDraftSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("workspace")
 }
 
 // offerLineCandidate is the JSON shape the drafting prompt demands, one
@@ -147,6 +150,12 @@ type offerDrafter struct {
 	deals    *deals.Store
 	rateCard rateCardLookup
 	context  retrieval.Retriever
+	// pool reads the installation's base language, which the drafted line
+	// descriptions are written in. An offer is a shared document — it goes to a
+	// customer and every colleague on the deal reads it — so it takes the
+	// installation's language rather than whatever language the captured deal
+	// context happened to be in.
+	pool *pgxpool.Pool
 }
 
 // WithOfferDraft enables AI-drafted offer regeneration (arc 4b) over the
@@ -156,7 +165,7 @@ type offerDrafter struct {
 func WithOfferDraft(brain completer, retriever retrieval.Retriever) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-		s.offerDrafter = &offerDrafter{brain: brain, deals: store, rateCard: store, context: retriever}
+		s.offerDrafter = &offerDrafter{brain: brain, deals: store, rateCard: store, context: retriever, pool: pool}
 	}
 }
 
@@ -274,14 +283,14 @@ func (d offerDrafter) gatherDealContext(ctx context.Context, dealID ids.DealID) 
 // It is a function of what it is handed, so the prompt this site sends
 // can be built — and certified — from either read's own data, while the
 // reads themselves stay where the orchestrator makes every other read.
-func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Product) model.Request {
+func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Product, lang string) model.Request {
 	// The deal context is captured counterparty text — the customer wrote it —
 	// so the span it sits in has to be one the customer cannot close. Both
 	// blocks go inside the same span: separately wrapped, the seam between them
 	// is a boundary two halves of a marker could be assembled across.
 	fence := promptfence.New()
 	return model.Request{
-		System: offerDraftSystemFor(fence),
+		System: offerDraftSystemFor(fence, lang),
 		Messages: []model.Message{{
 			Role:    "user",
 			Content: fence.Wrap(renderContextBlock(dealContext) + "\n" + renderCatalogBlock(catalog)),
@@ -294,7 +303,7 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 // draftCandidates asks the model for offer-line candidates over the
 // gathered context and the rate card the caller read for it.
 func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product) ([]offerLineCandidate, error) {
-	req := offerDraftRequest(dealContext, catalog)
+	req := offerDraftRequest(dealContext, catalog, BaseLanguageForPrompt(ctx, d.pool))
 
 	var (
 		resp model.Response
