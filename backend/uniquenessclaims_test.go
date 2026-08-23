@@ -32,10 +32,11 @@ package backendarch
 // Organisation, Deal, Lead oder Projekt suchen". Projects joined the searchable
 // kinds, the string grew a fifth, and nothing derived either the sentence or
 // the spec's copy of it from the set they both describe. It surfaced five
-// merges later, in an unrelated lane. That is the same defect wearing a
-// literal's clothes instead of a comment's — a claim about a set, with no
-// deriver — which is why the rule below is about claims nothing holds rather
-// than about comments specifically.
+// merges later, in an unrelated lane.
+//
+// So the rule below is about claims that nothing HOLDS, not about comments
+// specifically: a literal asserting a set's contents with no deriver is the
+// same defect as a uniqueness comment with no test behind it.
 //
 // THIS GATE DOES NOT AUDIT THE CLAIMS. It cannot: whether a claim is true is a
 // question about the whole tree, and there are 649 of them. What it does is
@@ -244,6 +245,13 @@ type claim struct {
 	line   int
 	held   string // the test named by `Held by:`, empty when none
 	heldIn string // the file that test is claimed to live in
+	// bindingOpens is true when `Held by:` is the FIRST line of the doc
+	// comment, which Go's own convention forbids: a doc comment opens with the
+	// identifier it documents. Recorded rather than merely discouraged because
+	// this file already learned that stating a convention is not holding it —
+	// revive caught one instance, the docblock wrote the rule down, and the
+	// very next binding written broke it in a file revive does not check.
+	bindingOpens bool
 }
 
 // key is what the register is keyed by: the file and the declaration, never the
@@ -338,6 +346,7 @@ func findClaims(root string) ([]claim, error) {
 				}
 				if binding := heldBy.FindStringSubmatch(text); binding != nil {
 					c.held, c.heldIn = binding[1], strings.TrimSpace(binding[2])
+					c.bindingOpens = strings.HasPrefix(strings.TrimSpace(text), "Held by:")
 				}
 				found = append(found, c)
 				return
@@ -665,6 +674,26 @@ func namesTheFile(paths []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func TestABindingDoesNotOpenTheDocCommentItSitsIn(t *testing.T) {
+	// Go's convention — and revive's `exported` rule — is that a doc comment
+	// opens with the identifier it documents. A binding written above that
+	// sentence turns the claim's own documentation into a footnote and fails
+	// the linter on any EXPORTED declaration.
+	//
+	// Held here rather than left as advice, because advice already failed: the
+	// linter caught one instance, this file wrote the rule into its own
+	// docblock, and the next binding written broke it again on an UNEXPORTED
+	// method, which revive does not check. A convention a gate can hold and
+	// does not is the shape this whole change is about.
+	for _, c := range allClaims(t) {
+		if c.bindingOpens {
+			t.Errorf("%s:%d %s opens its doc comment with `Held by:` — put the claim first "+
+				"and the binding below it, so the comment still opens with the identifier "+
+				"it documents", c.path, c.line, c.decl)
+		}
+	}
 }
 
 func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
