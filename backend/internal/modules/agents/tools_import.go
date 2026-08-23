@@ -116,7 +116,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way."}},
+			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
@@ -294,7 +294,7 @@ func (t commitImport) Spec() mcp.ToolSpec {
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{
 			"run_id":{"type":"string","format":"uuid"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportRunResult](),
 	}

@@ -57,7 +57,7 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
 			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}
@@ -114,7 +114,7 @@ func (t relinkActivities) Spec() mcp.ToolSpec {
 			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
 			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}

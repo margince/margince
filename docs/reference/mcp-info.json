@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 155913,
+    "tool_catalog_bytes": 155648,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39755,
+    "approx_wire_tokens_total": 39689,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 35613,
-      "input_schema_bytes": 34507,
+      "description_bytes": 35511,
+      "input_schema_bytes": 34346,
       "output_schema_bytes": 73753,
-      "description_plus_input_schema_bytes": 70120
+      "description_plus_input_schema_bytes": 69857
     }
   },
   "tools": {
@@ -424,7 +424,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -719,7 +719,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -1034,7 +1034,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -1564,7 +1564,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -1703,7 +1703,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -2442,7 +2442,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -2916,7 +2916,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -4354,7 +4354,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -5107,7 +5107,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates` and still created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates`. Give the user both numbers before committing — \"100 companies, 94 already here\" is their decision, not yours. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5135,7 +5135,7 @@
               "type": "string"
             },
             "on_duplicate": {
-              "description": "A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way.",
+              "description": "A company already here: create (default) lands a second; skip leaves the incumbent.",
               "enum": [
                 "create",
                 "skip"
@@ -5465,7 +5465,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -6392,7 +6392,7 @@
           "readOnlyHint": true,
           "title": "Read an import report"
         },
-        "description": "What an import will do, or did: rows created, updated, failed, unusable, and how many are already here (`duplicates`). These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -7522,7 +7522,7 @@
               "type": "array"
             },
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -7668,7 +7668,7 @@
               "type": "string"
             },
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -7811,7 +7811,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -9102,7 +9102,7 @@
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -9305,7 +9305,7 @@
               "type": "string"
             },
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -9479,7 +9479,7 @@
               "type": "string"
             },
             "approval_id": {
-              "description": "Set on retry after approval",
+              "description": "Set on approved retry",
               "format": "uuid",
               "type": "string"
             },

@@ -247,7 +247,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 			"consent_purpose":{"type":"string","description":"Purpose key the recipients must have granted"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendEmailResult](),
 	}
@@ -324,7 +324,7 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 			"activity_id":{"type":"string","format":"uuid","description":"The captured conversation being replied to"},
 			"body":{"type":"string","minLength":1},
 			"consent_purpose":{"type":"string","description":"Purpose key the recipient must have granted"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendMessageResult](),
 	}

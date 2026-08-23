@@ -87,7 +87,7 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},"maxItems":25,
 				"description":"Who and what the meeting is about; at least one. The booking is refused without it."},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PassthroughEntityResult](),
 	}

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 152.3 KB |
+| Tool catalog | 152.0 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39755 |
+| Approx. wire tokens | 39689 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
-| Input schemas | 33.7 KB | 22% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.7 KB | 22% | Yes, every step |
+| Input schemas | 33.5 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **68.5 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **68.2 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -89,7 +89,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 2.7 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 2.5 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
@@ -693,7 +693,7 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -1008,7 +1008,7 @@ Retire a record that should no longer be worked — a duplicate, a dead account,
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -1343,7 +1343,7 @@ Hold a slot in the host's calendar and record the meeting against the records it
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -1903,7 +1903,7 @@ Write a checked import into the workspace, once a person approves. Only from awa
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -2052,7 +2052,7 @@ Create a person, organization, deal, lead, project, activity or relationship tha
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -2831,7 +2831,7 @@ Close out a lead that is not going anywhere, so it stops appearing as live work.
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -3335,7 +3335,7 @@ Learn about an organization by reading its public website, and propose what was 
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -4863,7 +4863,7 @@ Collapse two records for the same real person or company into one, moving the so
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -5635,7 +5635,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates` and still created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates`. Give the user both numbers before committing — "100 companies, 94 already here" is their decision, not yours. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -5667,7 +5667,7 @@ Bring a spreadsheet in: send the CSV as text and this checks every row against t
       "type": "string"
     },
     "on_duplicate": {
-      "description": "A row naming a company already here: create (default) lands it and files the pair for review; skip leaves the incumbent. Counted in duplicates either way.",
+      "description": "A company already here: create (default) lands a second; skip leaves the incumbent.",
       "enum": [
         "create",
         "skip"
@@ -6017,7 +6017,7 @@ Turn a lead who has genuinely engaged into a person record, carrying their histo
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -6983,7 +6983,7 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable, and how many are already here (`duplicates`). These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a person approves. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -8157,7 +8157,7 @@ Move up to 500 named activities onto one record, all or nothing. Each id must be
       "type": "array"
     },
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -8313,7 +8313,7 @@ Fix what a recorded activity is about, when a captured mail or meeting landed on
       "type": "string"
     },
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -8466,7 +8466,7 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -9820,7 +9820,7 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -10033,7 +10033,7 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
       "type": "string"
     },
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -10217,7 +10217,7 @@ Reply on a captured chat conversation — the channels this workspace has connec
       "type": "string"
     },
     "approval_id": {
-      "description": "Set on retry after approval",
+      "description": "Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
