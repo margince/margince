@@ -18,6 +18,8 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // projectionVersion changes when the PROJECTION changes — the shape the facts
@@ -29,7 +31,16 @@ const projectionVersion = "deal-status-projection-1"
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
 // remembers to bump anything.
-var promptVersion = ai.PromptDigest(statusSystemFor)
+//
+// Digested at ONE fixed language rather than the installation's. The language
+// is its own component of Fingerprint below, so folding it in here too would
+// say the same thing twice; worse, the digest is a package-level var computed
+// at init, where no installation's setting is readable at all. What this has to
+// capture is the WORDING, and English captures every change to it — a reword
+// moves this digest whichever language the prompt is later asked for.
+var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
+	return statusSystemFor(fence, string(textlang.English))
+})
 
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,
