@@ -69,13 +69,8 @@ func (s *Service) Acknowledge(ctx context.Context, orgID ids.OrganizationID) (cr
 		if err := auth.EnsureVisible(ctx, tx, "organization", orgID.UUID); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `
-			INSERT INTO user_record_view (user_id, entity_type, entity_id, last_viewed_at)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (user_id, entity_type, entity_id)
-			DO UPDATE SET last_viewed_at = GREATEST(user_record_view.last_viewed_at, EXCLUDED.last_viewed_at)
-			RETURNING last_viewed_at`,
-			userID, entityTypeOrganization, orgID, now).Scan(&stored)
+		stored, err = RecordVisit(ctx, tx, userID, entityTypeOrganization, orgID.UUID, now)
+		return err
 	})
 	if err != nil {
 		return crmcontracts.RecordViewAck{}, err
@@ -85,6 +80,48 @@ func (s *Service) Acknowledge(ctx context.Context, orgID ids.OrganizationID) (cr
 		EntityId:     openapi_types.UUID(orgID.UUID),
 		LastViewedAt: stored,
 	}, nil
+}
+
+// RecordVisit moves one (user, record) baseline forward, and is the only
+// statement in this product that writes user_record_view.
+//
+// Exported because a SECOND record type acknowledges visits — person360 — and
+// it held a byte-identical copy of this upsert. Two writers of one table's
+// write shape drift silently: `GREATEST` is the whole correctness argument, and
+// a copy that lost it would rewind a baseline on a late-arriving ack from a
+// slow tab, consuming an unread marker nobody consumed. Nothing in the two
+// statements differed, so nothing signalled that they had to stay the same.
+//
+// What the callers keep is the part that legitimately differs: their own
+// visibility gate. org360 asks `EnsureVisible`, person360 asks
+// `EnsureVisibleLive`, because an anonymized person keeps their owner_id and
+// the plain probe would still admit them. That difference is a ruling per
+// record type; the upsert is not.
+//
+// Held by: TestUserRecordViewHasOneWriter (backend/userrecordviewwriter_test.go)
+// — it censuses every statement in the tree that writes this table and fails on
+// a second one.
+//
+// It takes the transaction rather than opening one: the caller's gate and this
+// write have to be the same transaction, or a record that stopped being visible
+// between them would still get a baseline.
+func RecordVisit(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID ids.UserID,
+	entityType string,
+	entityID ids.UUID,
+	at time.Time,
+) (time.Time, error) {
+	var stored time.Time
+	err := tx.QueryRow(ctx, `
+		INSERT INTO user_record_view (user_id, entity_type, entity_id, last_viewed_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id, entity_type, entity_id)
+		DO UPDATE SET last_viewed_at = GREATEST(user_record_view.last_viewed_at, EXCLUDED.last_viewed_at)
+		RETURNING last_viewed_at`,
+		userID, entityType, entityID, at).Scan(&stored)
+	return stored, err
 }
 
 // sinceLastVisit counts what changed on the account since the caller's own

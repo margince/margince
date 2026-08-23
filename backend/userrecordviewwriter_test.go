@@ -1,0 +1,179 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package backendarch
+
+// user_record_view carries one fact per (user, record): the moment that human
+// last said "I have seen this". Every 360 surface reports its since-last-visit
+// counts against it, so the mark is the baseline every "new since you were
+// here" answer is measured from.
+//
+// It was written by TWO byte-identical statements — org360's, which owns the
+// table, and person360's, which acknowledges the person view. Nothing differed
+// between them, which is exactly why nothing signalled that they had to stay
+// the same.
+//
+// THE CORRECTNESS IS IN ONE WORD. `GREATEST(stored, EXCLUDED)` is what stops a
+// slow tab's late-arriving acknowledgement rewinding a newer one: two tabs open
+// on the same record converge on the later visit instead of racing the baseline
+// backwards. A copy that lost it — by being written from memory, by being
+// simplified, by a merge resolving the wrong way — would silently hand a reader
+// back an unread marker they had already consumed, on a surface where "3 new"
+// and "0 new" are both plausible and neither looks like a bug.
+//
+// So the rule is that the statement lives once, and this is the test that holds
+// it. What the callers keep is the part that legitimately differs: their own
+// visibility gate. org360 asks `EnsureVisible`; person360 asks
+// `EnsureVisibleLive`, because Art. 17 anonymizes a person in place while
+// leaving owner_id alone and the plain probe would still admit them. That is a
+// ruling per record type. The upsert is not.
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+)
+
+// viewBaselineOwner is the file that may write the table. Keyed to the FILE and
+// not the package: a second file in org360 writing its own upsert is the same
+// defect wearing the right import path.
+const viewBaselineOwner = "internal/compose/org360/viewbaseline.go"
+
+// writesViewBaseline matches a statement that INSERTs or UPDATEs the table.
+//
+// Both verbs, because the defect is not "a second INSERT" — it is a second
+// answer to "how does this mark move". A bare `UPDATE user_record_view SET
+// last_viewed_at = $1` carries no GREATEST at all and is the worst possible
+// second writer: it rewinds unconditionally.
+var writesViewBaseline = regexp.MustCompile(
+	`(?is)(INSERT\s+INTO|UPDATE)\s+user_record_view\b`)
+
+// TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
+// comment names.
+func TestUserRecordViewHasOneWriter(t *testing.T) {
+	var findings []string
+	judged := 0
+	for _, root := range []string{".", "../extensions", "../fixtures"} {
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() {
+				if name := entry.Name(); name == "node_modules" || name == "testdata" {
+					return fs.SkipDir
+				}
+				return nil
+			}
+			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
+				return nil
+			}
+			rel := filepath.ToSlash(path)
+			if rel == viewBaselineOwner {
+				return nil
+			}
+			// This file spells the statement out in its own probes below;
+			// judging them would report the gate's own evidence as a finding.
+			if filepath.Base(path) == "userrecordviewwriter_test.go" {
+				return nil
+			}
+			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			if readErr != nil {
+				return readErr
+			}
+			judged++
+			for _, line := range statementsIn(t, path, string(source)) {
+				if writesViewBaseline.MatchString(line) {
+					findings = append(findings, rel+": "+firstLine(line))
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+	}
+	// A walk that reads nothing passes exactly like a clean tree.
+	if judged < 500 {
+		t.Fatalf("the census read only %d Go files, so it covered almost nothing", judged)
+	}
+	if len(findings) > 0 {
+		t.Errorf("%d statement(s) write user_record_view outside %s.\n\n"+
+			"The mark's correctness is one word — GREATEST(stored, EXCLUDED) — and a second "+
+			"statement that loses it rewinds a baseline on a late-arriving ack, handing a reader "+
+			"back an unread marker they had already consumed. Call org360.RecordVisit inside your "+
+			"own transaction, after your own visibility gate:\n\n\t%s",
+			len(findings), viewBaselineOwner, strings.Join(findings, "\n\t"))
+	}
+}
+
+// statementsIn returns every string literal in the file, joined per literal so
+// a statement wrapped across source lines is still one subject.
+//
+// Per LITERAL and not per line: the upsert this gate is about spans six source
+// lines, and a line-scoped census would see `INSERT INTO user_record_view` and
+// `DO UPDATE SET …` as unrelated fragments — matching the first and never
+// asking whether the second carried GREATEST.
+func statementsIn(t *testing.T, path, source string) []string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), path, source, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	var out []string
+	ast.Inspect(file, func(node ast.Node) bool {
+		if lit, ok := node.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+			out = append(out, lit.Value)
+		}
+		return true
+	})
+	return out
+}
+
+func firstLine(statement string) string {
+	for _, line := range strings.Split(statement, "\n") {
+		if trimmed := strings.TrimSpace(strings.Trim(line, "`\"")); trimmed != "" {
+			return trimmed
+		}
+	}
+	return strings.TrimSpace(statement)
+}
+
+// TestTheViewBaselineCensusSeesWhatItClaimsTo plants what the census must
+// catch, and what it must not.
+//
+// A gate asserting a shape is ABSENT passes identically over a clean tree and
+// over a detector that has stopped detecting, so the detector needs its own
+// evidence.
+func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
+	caught := []string{
+		"INSERT INTO user_record_view (user_id, entity_type, entity_id, last_viewed_at)",
+		// The worst second writer: no GREATEST at all, so it rewinds.
+		"UPDATE user_record_view SET last_viewed_at = $1 WHERE user_id = $2",
+		// Case and whitespace are not the subject.
+		"insert   into\n\t\tuser_record_view (user_id)",
+	}
+	for _, statement := range caught {
+		if !writesViewBaseline.MatchString(statement) {
+			t.Errorf("the census does not see a write it must:\n\t%s", statement)
+		}
+	}
+	missed := []string{
+		// A READ is not a write. Every 360 reads this table to compute its
+		// since-last-visit counts, and reporting those would bury the finding.
+		"SELECT last_viewed_at FROM user_record_view WHERE user_id = $1",
+		// A different table whose name merely contains this one's would be a
+		// false positive; the word boundary is what stops it.
+		"INSERT INTO user_record_view_archive (user_id) VALUES ($1)",
+	}
+	for _, statement := range missed {
+		if writesViewBaseline.MatchString(statement) {
+			t.Errorf("the census reports something that is not a second writer:\n\t%s", statement)
+		}
+	}
+}
