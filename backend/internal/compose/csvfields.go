@@ -105,11 +105,38 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
-		if textOf(current[field]) != canonicalFor(field, incoming) {
+		if textOf(storedValue(current, field)) != canonicalFor(field, incoming) {
 			changed[field] = incoming
 		}
 	}
 	return changed, nil
+}
+
+// storedValue reads one target's current value out of the record's JSON,
+// following a dotted path one level down.
+//
+// A flat lookup was enough while every target was a top-level field. The
+// address targets are not: the record encodes them under a nested `address`
+// object, so `current["address.city"]` is always absent and EVERY address
+// value compared as changed — which, on the update path, rewrote the whole
+// address on every re-import of an unchanged file.
+func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
+	parent, child, nested := strings.Cut(field, ".")
+	if !nested {
+		return current[field]
+	}
+	raw, ok := current[parent]
+	if !ok {
+		return nil
+	}
+	var inner map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &inner); err != nil {
+		// The parent is not an object, so it holds no such child. Absent
+		// rather than an error: a target naming a path the record does not
+		// have compares as empty, exactly as a missing top-level field does.
+		return nil
+	}
+	return inner[child]
 }
 
 // canonicalFor renders an imported value the way the STORE will hold it, so
@@ -182,6 +209,55 @@ func organizationCreateFrom(fields map[string]string, source string) people.Crea
 	in.SizeBand = importString(fields, "size_band")
 	in.Address = addressFrom(fields)
 	return in
+}
+
+// addressMergedOnto folds the file's address components onto the ones the
+// record already holds, so an import that carries a City does not blank the
+// street beside it.
+//
+// The store's address patch is all-or-nothing by design — buildOrganizationPatch
+// assigns all six columns whenever an Address is present — which is right for a
+// form that always submits the whole address, and wrong for a spreadsheet whose
+// columns are whatever the customer happened to export. Merging here rather
+// than changing the patch keeps that door's contract intact: every other caller
+// still sends a complete address and still means it.
+//
+// The bool reports whether the file carried an address at all. A caller that
+// gets false must leave the record's address alone rather than send nil, which
+// the patch builder cannot distinguish from "no address given".
+func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontracts.Address, bool, error) {
+	if mapped == nil {
+		return nil, false, nil
+	}
+	var record struct {
+		Address *crmcontracts.Address `json:"address"`
+	}
+	if err := json.Unmarshal(current, &record); err != nil {
+		return nil, false, fmt.Errorf("import: reading the stored address: %w", err)
+	}
+	if record.Address == nil {
+		return mapped, true, nil
+	}
+	merged := *record.Address
+	if mapped.Line1 != nil {
+		merged.Line1 = mapped.Line1
+	}
+	if mapped.Line2 != nil {
+		merged.Line2 = mapped.Line2
+	}
+	if mapped.City != nil {
+		merged.City = mapped.City
+	}
+	if mapped.Region != nil {
+		merged.Region = mapped.Region
+	}
+	if mapped.PostalCode != nil {
+		merged.PostalCode = mapped.PostalCode
+	}
+	if mapped.Country != nil {
+		merged.Country = mapped.Country
+	}
+	return &merged, true, nil
 }
 
 // unwritableReason names why the store will refuse this row, or "" when it

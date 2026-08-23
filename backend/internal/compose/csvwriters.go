@@ -39,6 +39,11 @@ type csvWriters struct {
 	identities *migration.RunStore
 	runID      migration.RunID
 	object     string
+	// onDuplicate is the run's answer for a row naming a record the estate
+	// already holds: "" or "create" lands it and files a review pair, "skip"
+	// leaves the incumbent alone. Read from the stored mapping, so the commit
+	// honours whatever the dry run reported on.
+	onDuplicate string
 
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
@@ -52,14 +57,15 @@ type csvWriters struct {
 
 var _ migration.Writers = (*csvWriters)(nil)
 
-func newCSVWriters(db *database.DB, runID migration.RunID, object string) *csvWriters {
+func newCSVWriters(db *database.DB, runID migration.RunID, object, onDuplicate string) *csvWriters {
 	return &csvWriters{
-		pool:       db.Pool(),
-		people:     people.NewStore(db),
-		identities: migration.NewRunStore(db),
-		runID:      runID,
-		object:     object,
-		nativeIDs:  map[string]ids.UUID{},
+		pool:        db.Pool(),
+		people:      people.NewStore(db),
+		identities:  migration.NewRunStore(db),
+		runID:       runID,
+		object:      object,
+		onDuplicate: onDuplicate,
+		nativeIDs:   map[string]ids.UUID{},
 	}
 }
 
@@ -238,6 +244,18 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	if found {
 		return w.reconcile(ctx, id, row)
 	}
+	// Not a row this importer has landed before — but the estate may hold the
+	// record anyway, and the run says what to do about that. The check runs on
+	// the commit as well as the dry run so the two cannot disagree.
+	if w.onDuplicate == string(crmcontracts.Skip) {
+		collides, err := w.collidesWithExisting(ctx, row)
+		if err != nil {
+			return migration.EnsureResult{}, err
+		}
+		if collides {
+			return migration.EnsureResult{Skipped: true, SkipReason: duplicateSkipReason}, nil
+		}
+	}
 	switch object {
 	case migration.ObjectLead:
 		return w.createLead(ctx, row)
@@ -263,7 +281,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// happened would inflate both the disposition table and the audit log.
 		return migration.EnsureResult{Unchanged: true}, nil
 	}
-	if err := w.apply(ctx, id, changed); err != nil {
+	if err := w.apply(ctx, id, changed, current); err != nil {
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
@@ -301,13 +319,27 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization](record T) ([]
 	return encoded, nil
 }
 
-func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string) error {
+// apply writes the changed fields. `current` is the stored record's JSON, which
+// the organization path needs because an address patch is all-or-nothing: the
+// store assigns all six address columns whenever an Address is given, so a file
+// carrying only a City would blank the street, postal code and country a human
+// entered. The mapped components are merged onto what is stored, and only then
+// sent.
+func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte) error {
 	switch w.object {
 	case migration.ObjectLead:
 		_, err := w.people.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
 		return err
 	case migration.ObjectOrganization:
-		_, err := w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), organizationUpdateFrom(changed))
+		in := organizationUpdateFrom(changed)
+		merged, given, err := addressMergedOnto(current, in.Address)
+		if err != nil {
+			return err
+		}
+		if given {
+			in.Address = merged
+		}
+		_, err = w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), in)
 		return err
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)

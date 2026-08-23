@@ -57,10 +57,11 @@ type importRunDTO struct {
 }
 
 type importDispositionDTO struct {
-	Created   int `json:"created"`
-	Updated   int `json:"updated"`
-	Unchanged int `json:"unchanged"`
-	Skipped   int `json:"skipped"`
+	Created    int  `json:"created"`
+	Updated    int  `json:"updated"`
+	Unchanged  int  `json:"unchanged"`
+	Skipped    int  `json:"skipped"`
+	Duplicates *int `json:"duplicates"`
 }
 
 type importIssueDTO struct {
@@ -631,10 +632,20 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	// the row — the commit creates it and files a review pair, the same as a
 	// manual create — but "create 1" with nothing else said is what let a
 	// chat host report "no duplicates" to a user on 2026-08-23.
+	if got := report.Disposition.Created + report.Disposition.Updated +
+		report.Disposition.Unchanged + report.Disposition.Skipped; got != report.RowsRead {
+		t.Errorf("the disposition sums to %d for %d row(s) read; the contract's invariant is that the four sum to rows_read",
+			got, report.RowsRead)
+	}
 	if len(report.Issues) == 0 {
 		t.Errorf("the preview reported %d create(s) and no issue for a row naming a company "+
 			"the CRM already holds; a human approving this is told nothing about the duplicate",
 			report.Disposition.Created)
+	}
+	// The number a person decides on: "1 company, 1 already here".
+	if report.Disposition.Duplicates == nil || *report.Disposition.Duplicates != 1 {
+		t.Errorf("duplicates = %v, want 1 — this is the count the human is shown before approving",
+			report.Disposition.Duplicates)
 	}
 
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run2.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
@@ -690,6 +701,67 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	for _, o := range organizations(t, e).Data {
 		if o.DisplayName == "Nordwind Logistik" {
 			t.Error("the commit landed a row the preview disclosed as skipped")
+		}
+	}
+}
+
+// Importing ONE address column must not erase the rest of a company's address.
+// The patch builder writes all six address columns whenever an Address is
+// given, so a file carrying only a City would otherwise blank the street,
+// postal code and country a human had entered.
+//
+// The re-import path is what exercises this: the row must MATCH the incumbent
+// rather than mint a twin, so the file is imported twice — the first landing
+// the company under this importer's own identity, the second carrying only a
+// City.
+func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
+	e := setupImportApp(t)
+
+	// Land the company through the import, with a full address.
+	const full = "Company,Street,City,Postal,Country\n" +
+		"Baqend,Stresemannstr. 23,Hamburg,22769,DE\n"
+	p1, _ := uploadCSV(t, e, "organization", full)
+	r1, _ := createRunWithMapping(t, e, "organization", p1.SourceRef, map[string]string{
+		"Company": "display_name", "Street": "address.line1", "City": "address.city",
+		"Postal": "address.postal_code", "Country": "address.country",
+	})
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+r1.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve 1 → %d, want 202", status)
+	}
+
+	// A corrected file carrying the company and ONE address field.
+	const partial = "Company,City\nBaqend,Berlin\n"
+	profile, _ := uploadCSV(t, e, "organization", partial)
+	run, _ := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		map[string]string{"Company": "display_name", "City": "address.city"})
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+
+	var orgs struct {
+		Data []struct {
+			DisplayName string `json:"display_name"`
+			Address     struct {
+				Line1      string `json:"line1"`
+				City       string `json:"city"`
+				PostalCode string `json:"postal_code"`
+				Country    string `json:"country"`
+			} `json:"address"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); status != http.StatusOK {
+		t.Fatalf("listing → %d, want 200", status)
+	}
+	for _, o := range orgs.Data {
+		if o.DisplayName != "Baqend" {
+			continue
+		}
+		if o.Address.City != "Berlin" {
+			t.Errorf("the corrected file did not reach the record: city=%q, want Berlin", o.Address.City)
+		}
+		if o.Address.Line1 == "" || o.Address.PostalCode == "" || o.Address.Country == "" {
+			t.Errorf("importing a City column erased the rest of the address: line1=%q postal=%q country=%q",
+				o.Address.Line1, o.Address.PostalCode, o.Address.Country)
 		}
 	}
 }

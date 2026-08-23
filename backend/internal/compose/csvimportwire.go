@@ -92,7 +92,17 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		return migration.RunMapping{}, httperr.Validation("source_key", "unmapped_column",
 			fmt.Sprintf("%q is not one of the mapped columns.", sourceKey))
 	}
-	return migration.RunMapping{Object: object, Fields: fields, SourceKey: sourceKey}, nil
+	onDuplicate := string(crmcontracts.Create)
+	if req.OnDuplicate != nil {
+		if !req.OnDuplicate.Valid() {
+			return migration.RunMapping{}, httperr.Validation("on_duplicate", "invalid_enum",
+				fmt.Sprintf("%q is not a duplicate policy; it takes create or skip.", string(*req.OnDuplicate)))
+		}
+		onDuplicate = string(*req.OnDuplicate)
+	}
+	return migration.RunMapping{
+		Object: object, Fields: fields, SourceKey: sourceKey, OnDuplicate: onDuplicate,
+	}, nil
 }
 
 // columnFor answers which source column was mapped onto a target field.
@@ -198,6 +208,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	committed := run.Status == migration.StatusComplete || run.Status == migration.StatusFailed ||
 		run.Status == migration.StatusUndoing || run.Status == migration.StatusUndone
 	seen := map[int]bool{}
+	duplicates := 0
 	for _, o := range run.Report.Objects {
 		out.RowsRead += o.MirrorCount
 		if committed {
@@ -207,6 +218,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			out.Disposition.Created += o.WillCreate
 			out.Disposition.Updated += o.WillUpdate
 		}
+		duplicates += o.Duplicates
 		for _, s := range o.Skipped {
 			// The same row skipped by the dry run and again by the commit is
 			// ONE row the human must go fix, named by its line.
@@ -221,7 +233,27 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 				Reason: s.Reason,
 			})
 		}
+		// A collision is reported the same way a skip is — by line, in the
+		// file's own terms — but it does NOT touch Disposition.Skipped: the
+		// row is counted in Created, and adding it here too would report two
+		// outcomes for one row and leave `unchanged` short by the difference.
+		for _, c := range o.Collisions {
+			line := lineOf(c.ExternalID)
+			if seen[line] {
+				continue
+			}
+			seen[line] = true
+			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
+				Line:   line,
+				Reason: c.Reason,
+			})
+		}
 	}
+
+	// Reported even when zero: "0 duplicates" is the answer to the question a
+	// person is asking before they approve, and an omitted field reads as "not
+	// checked" rather than "none found".
+	out.Disposition.Duplicates = &duplicates
 
 	// Unchanged is DERIVED, never carried: it is the rows that were read and
 	// then neither created, updated nor skipped. Carrying the stored figure
@@ -360,6 +392,8 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		report.Objects[i].WillUpdate = p.updated
 		report.Objects[i].Unchanged = p.unchanged
 		report.Objects[i].Skipped = append(report.Objects[i].Skipped, p.skipped...)
+		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
+		report.Objects[i].Duplicates += p.duplicates
 	}
 	return report, nil
 }
@@ -393,11 +427,15 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 					Reason:     unwritableReason(object, textFields(row.Fields)),
 				})
 			case predictCollides:
+				p.duplicates++
 				// Still a create — the commit lands it and files a review pair
-				// — but a human approving "create 3" deserves to know one of
-				// the three names a company already in the CRM.
+				// — so it is counted as one. The warning rides separately:
+				// Skipped is load-bearing arithmetic (the contract's four
+				// counts sum to rows_read, and `unchanged` is derived by
+				// subtracting them), so a row counted as BOTH created and
+				// skipped would report two outcomes for one row.
 				p.created++
-				p.skipped = append(p.skipped, migration.SkippedRow{
+				p.collisions = append(p.collisions, migration.SkippedRow{
 					ExternalID: row.ExternalID,
 					Reason:     collisionDisclosure,
 				})
@@ -417,6 +455,10 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 const collisionDisclosure = "a company of this name is already in the CRM; " +
 	"importing this row creates a second one and files the pair for review"
 
+// duplicateSkipReason is what the report says about a row the run chose to
+// leave alone, under `on_duplicate: skip`.
+const duplicateSkipReason = "a company of this name is already in the CRM, and this run was asked to skip duplicates"
+
 // prediction is what one walk of the source concluded: the three outcomes a
 // commit can have, plus the rows it will refuse outright.
 type prediction struct {
@@ -424,4 +466,11 @@ type prediction struct {
 	updated   int
 	unchanged int
 	skipped   []migration.SkippedRow
+	// collisions are rows that WILL land and also name a company the CRM
+	// already holds. Kept apart from skipped because each is counted in
+	// created — see the disposition arithmetic above.
+	collisions []migration.SkippedRow
+	// duplicates counts the same rows. It is reported to the human as its own
+	// number ("100 companies, 94 duplicates") and never summed with the four.
+	duplicates int
 }

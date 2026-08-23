@@ -203,7 +203,7 @@ func (h importHandlers) stageRun(
 	}
 
 	source := migration.NewCSVSource(h.blobs, req.SourceRef, object, mapping.Fields, mapping.SourceKey)
-	writers := newCSVWriters(h.db, run.ID, object)
+	writers := newCSVWriters(h.db, run.ID, object, mapping.OnDuplicate)
 	report, err := migration.NewEngine(runs, writers).DryRun(ctx, source)
 	if err != nil {
 		// The run row already exists. Left alone it would sit in `validating`
@@ -299,7 +299,7 @@ func (h importHandlers) commitRun(
 
 	object := run.Mapping.Object
 	source := migration.NewCSVSource(h.blobs, run.SourceRef, object, run.Mapping.Fields, run.Mapping.SourceKey)
-	writers := newCSVWriters(h.db, approved.ID, object)
+	writers := newCSVWriters(h.db, approved.ID, object, run.Mapping.OnDuplicate)
 	// The commit outlives the request deliberately. Cancelling it when the
 	// browser goes away would leave the run `running` with rows already
 	// committed and nothing able to record the failure — a state neither
@@ -335,7 +335,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	}
 
 	runs := migration.NewRunStore(h.db)
-	writers := newCSVWriters(h.db, run.ID, run.Mapping.Object)
+	writers := newCSVWriters(h.db, run.ID, run.Mapping.Object, run.Mapping.OnDuplicate)
 	// The reversal outlives the request deliberately, the same reason the
 	// commit does (ApproveImportRun): cancelling it when the browser goes
 	// away must not leave the run `undoing` with rows already reversed and

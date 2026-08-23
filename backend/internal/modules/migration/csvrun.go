@@ -38,6 +38,12 @@ type RunMapping struct {
 	Object    string            `json:"object"`
 	Fields    map[string]string `json:"fields"`
 	SourceKey string            `json:"source_key"`
+	// OnDuplicate is what to do with a row naming a record the estate already
+	// holds. It rides with the mapping so the commit honours the same choice
+	// the dry run reported on — a run approved as "skip the 94 duplicates"
+	// must not create them because the decision lived only in the request.
+	// Empty means the contract's default, `create`.
+	OnDuplicate string `json:"on_duplicate,omitempty"`
 }
 
 // CreateStagedRunInput opens a run that must be approved before it writes.

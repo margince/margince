@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package people
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// Every path that mints an organization runs the dedupe ladder first.
+//
+// `createOrganization` is the one INSERT INTO organization, and it takes the
+// match as an argument rather than computing it — which makes the agreement
+// checkable but does not enforce it: a caller may pass a zero OrganizationMatch
+// and mint a twin nobody detected. That is not hypothetical. The CSV import was
+// believed for most of a day to have bypassed this seam entirely, and settling
+// the question took reading four call sites by hand.
+//
+// So the rule is held here instead of in a comment: a caller of the one INSERT
+// must obtain its match from the ladder, in the same function. CLAUDE.md's own
+// reuse rule is that a uniqueness claim without a test is worth nothing.
+func TestEveryOrganizationCreatePathRunsTheDedupeLadder(t *testing.T) {
+	const (
+		theInsert = "createOrganization"
+		ladder    = "DedupeOrganization"
+		ladderTx  = "DedupeOrganizationForCreate"
+	)
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("reading the package directory: %v", err)
+	}
+	fset := token.NewFileSet()
+	files := map[string]*ast.File{}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		parsed, err := parser.ParseFile(fset, filepath.Join(".", name), nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", name, err)
+		}
+		files[name] = parsed
+	}
+
+	{
+		for path, file := range files {
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Body == nil || fn.Name.Name == theInsert {
+					continue
+				}
+				var callsInsert, callsLadder bool
+				ast.Inspect(fn.Body, func(n ast.Node) bool {
+					call, ok := n.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					switch fun := call.Fun.(type) {
+					case *ast.Ident:
+						switch fun.Name {
+						case theInsert:
+							callsInsert = true
+						case ladder, ladderTx:
+							callsLadder = true
+						}
+					case *ast.SelectorExpr:
+						// manualDedupeOrganization and friends wrap the ladder;
+						// a name carrying "Dedupe" is the seam being used.
+						if sel := fun.Sel.Name; sel == ladder || sel == ladderTx {
+							callsLadder = true
+						}
+					}
+					return true
+				})
+				// A wrapper whose own name says it dedupes counts as the ladder.
+				if !callsLadder {
+					ast.Inspect(fn.Body, func(n ast.Node) bool {
+						id, ok := n.(*ast.Ident)
+						if ok && strings.Contains(id.Name, "Dedupe") {
+							callsLadder = true
+						}
+						return true
+					})
+				}
+				if callsInsert && !callsLadder {
+					t.Errorf("%s: %s calls %s without running the dedupe ladder in the same function; "+
+						"every path that mints an organization must obtain its match from %s",
+						path, fn.Name.Name, theInsert, ladderTx)
+				}
+			}
+		}
+	}
+}
