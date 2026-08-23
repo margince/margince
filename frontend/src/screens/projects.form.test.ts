@@ -45,14 +45,16 @@ describe("projectFields", () => {
       currentOwner: "u-other",
       mode: "edit",
     });
+    // No owner picker at birth: the server stamps the creator, and the only
+    // choices a create could offer would both resolve to them anyway.
     expect(create.map((field) => field.key)).toEqual([
       "name",
       "organization_id",
-      "owner_id",
       "description",
       "target_end_date",
     ]);
     expect(edit.map((field) => field.key)).not.toContain("organization_id");
+    expect(edit.map((field) => field.key)).toContain("owner_id");
   });
 
   it("lets an edit keep an owner who is not the reader", () => {

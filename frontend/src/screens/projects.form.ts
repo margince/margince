@@ -87,12 +87,21 @@ export function projectFields(
           },
         ]
       : []),
-    {
-      key: "owner_id",
-      label: "project.owner",
-      type: "select",
-      options: ownerOptions,
-    },
+    // Owner is an edit-only field. On create the server stamps the creator
+    // (an unowned project would be nobody's to change, so the write gate
+    // could never attach it to a deal), and the only choices a create could
+    // offer — "Me" and "Unassign" — would both resolve to the creator, a
+    // choice that is no choice. Reassigning and unassigning stay on edit.
+    ...(opts.mode === "edit"
+      ? [
+          {
+            key: "owner_id",
+            label: "project.owner" as const,
+            type: "select" as const,
+            options: ownerOptions,
+          },
+        ]
+      : []),
     { key: "description", label: "project.description", type: "textarea" },
     { key: "target_end_date", label: "project.targetEnd", type: "date" },
   ];

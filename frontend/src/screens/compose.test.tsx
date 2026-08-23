@@ -1877,4 +1877,55 @@ describe("ComposeModal started from an account", () => {
     expect(screen.queryByText(/Based on/)).toBeNull();
     expect(screen.queryByText(/AI assistance/)).toBeNull();
   });
+
+  // A check-in mail to an account nobody has spoken to in a while is the FIRST
+  // message on a delivery: no thread exists, so nothing files it automatically,
+  // and it is exactly the message that needs a project chosen. The account
+  // having no contact yet is a dead end for the DRAFT — the model has no
+  // relationship to write from — and it used to take the project picker with
+  // it, so the mail landed unfiled and the ladder asked about it afterwards.
+  it("still offers the project when the account has no contact yet", async () => {
+    stubRoutes({
+      "GET /organizations/org-1/360": () =>
+        jsonResponse({
+          state: "ready",
+          as_of: "2026-08-09T09:00:00Z",
+          organization: {
+            id: "org-1",
+            display_name: "Acme",
+            source: "manual",
+            captured_by: "human:u1",
+            created_at: "2026-08-01T00:00:00Z",
+            updated_at: "2026-08-01T00:00:00Z",
+          },
+          sections_omitted: [],
+          people: { data: [], page: { has_more: false } },
+          projects: [
+            {
+              project_id: "pr-1",
+              name: "Zeta migration",
+              key: "ZM-1",
+              phase: "initiative",
+            },
+          ],
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/No contact on this account yet/),
+    ).toBeTruthy();
+    // The dead end is about the DRAFT, not about which body of work the
+    // message is for.
+    expect(
+      await screen.findByRole("combobox", { name: /Project/ }),
+    ).toBeTruthy();
+  });
 });
