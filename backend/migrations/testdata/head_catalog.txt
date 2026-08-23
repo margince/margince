@@ -549,11 +549,13 @@ BEGIN
     RETURN NULL;
   END IF;
   IF NOT EXISTS (
-    SELECT 1 FROM project p
-    WHERE p.id = NEW.project_id
-      AND p.organization_id IS NOT DISTINCT FROM NEW.organization_id
+    SELECT 1 FROM relationship r
+    WHERE r.kind = 'project_company'
+      AND r.project_id = NEW.project_id
+      AND r.organization_id IS NOT DISTINCT FROM NEW.organization_id
+      AND r.archived_at IS NULL
   ) THEN
-    RAISE EXCEPTION 'deal and project belong to different companies'
+    RAISE EXCEPTION 'the deal names a company that is not on this project'
       USING ERRCODE = 'check_violation', CONSTRAINT = 'deal_project_same_org';
   END IF;
   RETURN NULL;
@@ -2025,6 +2027,7 @@ public.idx_quota_owner CREATE INDEX idx_quota_owner ON public.quota USING btree 
 public.idx_quota_team CREATE INDEX idx_quota_team ON public.quota USING btree (team_id) WHERE (team_id IS NOT NULL)
 public.idx_record_grant_record CREATE INDEX idx_record_grant_record ON public.record_grant USING btree (record_type, record_id)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
+public.idx_rel_company_projects CREATE INDEX idx_rel_company_projects ON public.relationship USING btree (organization_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.idx_rel_deal_stakeholders CREATE INDEX idx_rel_deal_stakeholders ON public.relationship USING btree (deal_id) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
 public.idx_rel_employer_people CREATE INDEX idx_rel_employer_people ON public.relationship USING btree (organization_id, person_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
 public.idx_rel_org_people CREATE INDEX idx_rel_org_people ON public.relationship USING btree (organization_id) WHERE ((kind = 'employment'::text) AND (archived_at IS NULL))
@@ -2032,6 +2035,7 @@ public.idx_rel_partner_counterparty CREATE INDEX idx_rel_partner_counterparty ON
 public.idx_rel_partner_org CREATE INDEX idx_rel_partner_org ON public.relationship USING btree (organization_id) WHERE ((kind = ANY (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) AND (archived_at IS NULL))
 public.idx_rel_person_orgs CREATE INDEX idx_rel_person_orgs ON public.relationship USING btree (person_id) WHERE ((kind = 'employment'::text) AND (archived_at IS NULL))
 public.idx_rel_person_projects CREATE INDEX idx_rel_person_projects ON public.relationship USING btree (person_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
+public.idx_rel_project_companies CREATE INDEX idx_rel_project_companies ON public.relationship USING btree (project_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.idx_rel_project_stakeholders CREATE INDEX idx_rel_project_stakeholders ON public.relationship USING btree (project_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.idx_rel_stakeholder_deals CREATE INDEX idx_rel_stakeholder_deals ON public.relationship USING btree (person_id) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
 public.idx_rel_traverse_deal CREATE INDEX idx_rel_traverse_deal ON public.relationship USING btree (deal_id) WHERE (archived_at IS NULL)
@@ -3277,7 +3281,7 @@ public.project.key text gen=- def=-
 public.project.last_activity_at timestamp with time zone gen=- def=-
 public.project.legal_hold boolean NOT NULL gen=- def=false
 public.project.name text NOT NULL gen=- def=-
-public.project.organization_id uuid NOT NULL gen=- def=-
+public.project.organization_id uuid gen=- def=-
 public.project.owner_id uuid gen=- def=-
 public.project.phase text NOT NULL gen=- def='initiative'::text
 public.project.project_closed_reason CHECK (((phase <> 'closed'::text) OR (closed_reason IS NOT NULL)))
@@ -3529,11 +3533,12 @@ public.relationship.project_id uuid gen=- def=-
 public.relationship.rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
 public.relationship.rel_employment_shape CHECK (((kind <> 'employment'::text) OR ((person_id IS NOT NULL) AND (organization_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL))))
 public.relationship.rel_partner_shape CHECK (((kind <> ALL (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) OR ((organization_id IS NOT NULL) AND (counterparty_org_id IS NOT NULL) AND (organization_id <> counterparty_org_id) AND (person_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL))))
+public.relationship.rel_project_company_shape CHECK (((kind <> 'project_company'::text) OR ((project_id IS NOT NULL) AND (organization_id IS NOT NULL) AND (person_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL))))
 public.relationship.rel_project_stakeholder_shape CHECK (((kind <> 'project_stakeholder'::text) OR ((project_id IS NOT NULL) AND (person_id IS NOT NULL) AND (organization_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL))))
 public.relationship.rel_stakeholder_shape CHECK (((kind <> 'deal_stakeholder'::text) OR ((deal_id IS NOT NULL) AND (person_id IS NOT NULL) AND (organization_id IS NULL) AND (project_id IS NULL))))
 public.relationship.relationship_counterparty_org_id_fkey FOREIGN KEY (counterparty_org_id) REFERENCES organization(id) ON DELETE CASCADE
 public.relationship.relationship_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
-public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text])))
+public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text])))
 public.relationship.relationship_last_activity CREATE TRIGGER relationship_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION trg_relationship_last_activity()
 public.relationship.relationship_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.relationship.relationship_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
@@ -4072,6 +4077,7 @@ public.uq_project_ws_id CREATE UNIQUE INDEX uq_project_ws_id ON public.project U
 public.uq_rel_current_primary_employer CREATE UNIQUE INDEX uq_rel_current_primary_employer ON public.relationship USING btree (person_id) WHERE ((kind = 'employment'::text) AND is_current_primary AND (archived_at IS NULL))
 public.uq_rel_deal_person_role CREATE UNIQUE INDEX uq_rel_deal_person_role ON public.relationship USING btree (deal_id, person_id, role) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (person_id, organization_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
+public.uq_rel_project_company CREATE UNIQUE INDEX uq_rel_project_company ON public.relationship USING btree (project_id, organization_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.uq_rel_project_stakeholder CREATE UNIQUE INDEX uq_rel_project_stakeholder ON public.relationship USING btree (project_id, person_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))
 public.uq_signal_fingerprint CREATE UNIQUE INDEX uq_signal_fingerprint ON public.signal USING btree (fingerprint) WHERE ((fingerprint IS NOT NULL) AND (archived_at IS NULL))

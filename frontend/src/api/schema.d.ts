@@ -2042,7 +2042,9 @@ export interface paths {
         put?: never;
         /**
          * Create a project on a company.
-         * @description `organization_id` is required — a project has exactly one anchor company.
+         * @description `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+         *     work several companies do together, and the others are put on with
+         *     `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
          *     The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
          *     number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
          *     subject line to file mail under this project, so a caller-chosen one is a matcher
@@ -2228,6 +2230,58 @@ export interface paths {
         post?: never;
         /** Detach a person from a project (archives the edge). */
         delete: operations["removeProjectStakeholder"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a company on a project with a role (idempotent per company).
+         * @description A project is work several companies do together — a customer, a partner, a subcontractor —
+         *     so a company is an edge (`relationship` of kind `project_company`), not the project's one
+         *     anchor. Sending a company already on the project re-roles the edge that exists rather than
+         *     adding a second one.
+         */
+        put: operations["setProjectCompany"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/companies/{organization_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a company off a project (archives the edge).
+         * @description The company keeps every record it owns; only its place on this project ends. Taking the
+         *     LAST company off a project is refused: a project no company is on is work nobody is doing,
+         *     and it would vanish from every company page that could lead a reader back to it.
+         */
+        delete: operations["removeProjectCompany"];
         options?: never;
         head?: never;
         patch?: never;
@@ -14443,7 +14497,10 @@ export interface components {
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+         *     (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+         *     holds the two rules this surface cannot: write authority over the project ROW, and the
+         *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
          *     (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
          *     org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
@@ -14452,7 +14509,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
@@ -14466,7 +14523,7 @@ export interface components {
             deal_id?: string | null;
             /**
              * Format: uuid
-             * @description The project on a project_stakeholder edge. Null for every other kind.
+             * @description The project on a project_stakeholder or project_company edge. Null for every other kind.
              */
             project_id?: string | null;
             /** @description employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project. */
@@ -15031,9 +15088,11 @@ export interface components {
             key?: string | null;
             /** @description The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
             readonly masked_fields?: string[];
+            /** @description The companies working this project, in the order they were attached. A project is work several companies do together — a customer, a partner, a subcontractor — so this is a list rather than one anchor. A company the caller may not read is OMITTED rather than named, so an empty list can mean either "no companies yet" or "none you can see". */
+            readonly organizations?: components["schemas"]["ProjectCompany"][];
             /**
              * Format: uuid
-             * @description The anchor company — singular, and always set on the row. A company has many projects; a project has one company. Null on the wire when the caller may not read that company, in which case `masked_fields` names it: a project is readable across the workspace while the company it hangs off can still be an unpromoted capture.
+             * @description The project's CUSTOMER — the first company attached with that role, or null when the caller may not read it (in which case `masked_fields` names it) or when the project has no customer. It is a view of `organizations`, kept because a project's client is the one company most readers mean; the full picture is the list.
              */
             organization_id?: string | null;
             /** Format: uuid */
@@ -15232,6 +15291,23 @@ export interface components {
             source: string;
         } & {
             [key: string]: unknown;
+        };
+        SetProjectCompanyRequest: {
+            /** Format: uuid */
+            organization_id: string;
+            /** @description What this company is to the project; defaults to `customer` when omitted. */
+            role?: string;
+        };
+        ProjectCompanyListResponse: {
+            data: components["schemas"]["ProjectCompany"][];
+        };
+        /** @description One company's place on a project. */
+        ProjectCompany: {
+            /** Format: uuid */
+            organization_id: string;
+            display_name: string;
+            /** @description What this company is to the project — `customer` is its client, and the rest name the other sides of a joint delivery. Free text rather than an enum: an installation whose deliveries have a shape this vocabulary does not carry should not have to rename it. */
+            role: string;
         };
         /**
          * @description Note `phase` is absent by design — it moves only through advanceProjectPhase.
@@ -25100,6 +25176,85 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    setProjectCompany: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProjectCompanyRequest"];
+            };
+        };
+        responses: {
+            /** @description The companies on the project, after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCompanyListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeProjectCompany: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Taken off. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listPipelines: {
         parameters: {
             query?: {
@@ -28409,7 +28564,7 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
                 person_id?: string;
                 organization_id?: string;
                 deal_id?: string;

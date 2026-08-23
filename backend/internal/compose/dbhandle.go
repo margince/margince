@@ -11,6 +11,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/customfields"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -54,6 +55,14 @@ func actingWorkspaceDB(ctx context.Context, pool *pgxpool.Pool) (*database.DB, e
 // Spelled once here because five composition sites need the same store and a
 // second spelling is a second answer to one question.
 func ProjectsStore(pool *pgxpool.Pool) *projects.Store {
-	return projects.NewStore(InstallationDB(pool)).
-		WithFieldCatalog(customfields.NewService(pool, nil))
+	return ProjectsStoreOver(InstallationDB(pool))
+}
+
+// ProjectsStoreOver is ProjectsStore over a handle whose workspace is already
+// decided — the datasource provider's path, and a suite that names its own
+// workspace rather than resolving the installation's singleton.
+func ProjectsStoreOver(db *database.DB) *projects.Store {
+	return projects.NewStore(db).
+		WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
+		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx))
 }

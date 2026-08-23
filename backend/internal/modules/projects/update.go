@@ -87,7 +87,7 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		if err != nil {
 			return fmt.Errorf("read updated project: %w", err)
 		}
-		out, err = maskProjectForCaller(ctx, tx, updated)
+		out, err = s.maskProjectForCaller(ctx, tx, updated)
 		return err
 	})
 	return out, err

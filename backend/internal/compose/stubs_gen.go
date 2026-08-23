@@ -1431,6 +1431,14 @@ func (stubs) AdvanceProjectPhase(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "AdvanceProjectPhase")
 }
 
+func (stubs) SetProjectCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SetProjectCompanyParams) {
+	httperr.NotImplemented(w, r, "SetProjectCompany")
+}
+
+func (stubs) RemoveProjectCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, organizationId openapi_types.UUID, params crmcontracts.RemoveProjectCompanyParams) {
+	httperr.NotImplemented(w, r, "RemoveProjectCompany")
+}
+
 func (stubs) ListProjectStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListProjectStakeholders")
 }

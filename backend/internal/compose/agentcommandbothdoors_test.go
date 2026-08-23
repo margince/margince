@@ -325,12 +325,12 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 // can nonetheless be asked to perform, because the operation carries an operand
 // the verb's arguments have no member for.
 //
-// Each of the six is one of the bespoke confirm-first operations
+// Each of the eight is one of the bespoke confirm-first operations
 // (agentcommandoperand.go): a second operand that update_record's
 // {record_type, id, fields} cannot express is exactly what put them there, and
-// it is the same reason they cannot be twinned here. The other two of the eight
-// ride a record type update_record does not serve at all, so the verb answers
-// for them before any of this is asked.
+// it is the same reason they cannot be twinned here. The other two ride a record
+// type update_record does not serve at all, so the verb answers for them before
+// any of this is asked.
 var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 	"confirmOrganizationFact": "the fact key is a path segment, and the confirm carries no body at all — " +
 		"an update_record call has no member to put it in and no fields to send",
@@ -344,6 +344,10 @@ var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 	"setProjectStakeholder": "the stakeholder is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
 	"removeProjectStakeholder": "the person is a second path parameter naming the edge to drop, and " +
+		"update_record has no argument for a record other than the one it patches",
+	"setProjectCompany": "the company is an edge to a second record carrying its own role, which " +
+		"update_record's fields cannot spell — they write columns of the project the route names",
+	"removeProjectCompany": "the company is a second path parameter naming the edge to drop, and " +
 		"update_record has no argument for a record other than the one it patches",
 })
 

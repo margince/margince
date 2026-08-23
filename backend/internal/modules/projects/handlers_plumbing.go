@@ -25,8 +25,21 @@ type Handlers struct {
 }
 
 // NewHandlers binds the transport to a store on the given pool.
+//
+// The store it builds carries the module's refusing seam defaults, so a
+// composition that forgets WithCompanyEdges fails closed rather than creating
+// projects no company page can find. HandlersOver is how compose hands in the
+// store it has already wired.
 func NewHandlers(db *database.DB) Handlers {
 	return Handlers{store: NewStore(db)}
+}
+
+// HandlersOver binds the transport to a store the caller has already built, so
+// the HTTP surface and every other reader share ONE store rather than two
+// spellings of one — the second of which would be the one nobody remembered to
+// wire.
+func HandlersOver(store *Store) Handlers {
+	return Handlers{store: store}
 }
 
 // WithFieldCatalog wires the workspace custom-field catalog into the

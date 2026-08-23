@@ -23,6 +23,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -93,9 +94,10 @@ func newProjectSeeder(t *testing.T, e *integration.SearchEnv) projectSeeder {
 		t.Fatalf("seeding the pipeline a deal is born on: %v", err)
 	}
 	return projectSeeder{
-		pool:       e.Pool,
-		store:      deals.NewStore(e.DB(), compose.DealsInstallation()),
-		projects:   projects.NewStore(e.DB()),
+		pool:  e.Pool,
+		store: deals.NewStore(e.DB(), compose.DealsInstallation()),
+		projects: projects.NewStore(e.DB()).
+			WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx)),
 		ctx:        ctx,
 		orgID:      orgID,
 		pipelineID: ids.From[ids.PipelineKind](pipelineID),

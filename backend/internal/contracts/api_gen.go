@@ -8203,6 +8203,7 @@ const (
 	RelationshipKindDealStakeholder    RelationshipKind = "deal_stakeholder"
 	RelationshipKindEmployment         RelationshipKind = "employment"
 	RelationshipKindPartnerOf          RelationshipKind = "partner_of"
+	RelationshipKindProjectCompany     RelationshipKind = "project_company"
 	RelationshipKindProjectStakeholder RelationshipKind = "project_stakeholder"
 	RelationshipKindReferredBy         RelationshipKind = "referred_by"
 )
@@ -8217,6 +8218,8 @@ func (e RelationshipKind) Valid() bool {
 	case RelationshipKindEmployment:
 		return true
 	case RelationshipKindPartnerOf:
+		return true
+	case RelationshipKindProjectCompany:
 		return true
 	case RelationshipKindProjectStakeholder:
 		return true
@@ -11433,28 +11436,31 @@ func (e ListRecordGrantsParamsSubjectType) Valid() bool {
 
 // Defines values for ListRelationshipsParamsKind.
 const (
-	CoSellWith         ListRelationshipsParamsKind = "co_sell_with"
-	DealStakeholder    ListRelationshipsParamsKind = "deal_stakeholder"
-	Employment         ListRelationshipsParamsKind = "employment"
-	PartnerOf          ListRelationshipsParamsKind = "partner_of"
-	ProjectStakeholder ListRelationshipsParamsKind = "project_stakeholder"
-	ReferredBy         ListRelationshipsParamsKind = "referred_by"
+	ListRelationshipsParamsKindCoSellWith         ListRelationshipsParamsKind = "co_sell_with"
+	ListRelationshipsParamsKindDealStakeholder    ListRelationshipsParamsKind = "deal_stakeholder"
+	ListRelationshipsParamsKindEmployment         ListRelationshipsParamsKind = "employment"
+	ListRelationshipsParamsKindPartnerOf          ListRelationshipsParamsKind = "partner_of"
+	ListRelationshipsParamsKindProjectCompany     ListRelationshipsParamsKind = "project_company"
+	ListRelationshipsParamsKindProjectStakeholder ListRelationshipsParamsKind = "project_stakeholder"
+	ListRelationshipsParamsKindReferredBy         ListRelationshipsParamsKind = "referred_by"
 )
 
 // Valid indicates whether the value is a known member of the ListRelationshipsParamsKind enum.
 func (e ListRelationshipsParamsKind) Valid() bool {
 	switch e {
-	case CoSellWith:
+	case ListRelationshipsParamsKindCoSellWith:
 		return true
-	case DealStakeholder:
+	case ListRelationshipsParamsKindDealStakeholder:
 		return true
-	case Employment:
+	case ListRelationshipsParamsKindEmployment:
 		return true
-	case PartnerOf:
+	case ListRelationshipsParamsKindPartnerOf:
 		return true
-	case ProjectStakeholder:
+	case ListRelationshipsParamsKindProjectCompany:
 		return true
-	case ReferredBy:
+	case ListRelationshipsParamsKindProjectStakeholder:
+		return true
+	case ListRelationshipsParamsKindReferredBy:
 		return true
 	default:
 		return false
@@ -20764,9 +20770,12 @@ type Project struct {
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
 	Name         string    `json:"name"`
 
-	// OrganizationId The anchor company — singular, and always set on the row. A company has many projects; a project has one company. Null on the wire when the caller may not read that company, in which case `masked_fields` names it: a project is readable across the workspace while the company it hangs off can still be an unpromoted capture.
+	// OrganizationId The project's CUSTOMER — the first company attached with that role, or null when the caller may not read it (in which case `masked_fields` names it) or when the project has no customer. It is a view of `organizations`, kept because a project's client is the one company most readers mean; the full picture is the list.
 	OrganizationId *openapi_types.UUID `json:"organization_id,omitempty"`
-	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Organizations The companies working this project, in the order they were attached. A project is work several companies do together — a customer, a partner, a subcontractor — so this is a list rather than one anchor. A company the caller may not read is OMITTED rather than named, so an empty list can mean either "no companies yet" or "none you can see".
+	Organizations *[]ProjectCompany   `json:"organizations,omitempty"`
+	OwnerId       *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase Read-only here — transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
 	Phase         *ProjectPhase           `json:"phase,omitempty"`
@@ -20957,6 +20966,20 @@ type Project360Stakeholder struct {
 	PersonName     *string            `json:"person_name"`
 	RelationshipId openapi_types.UUID `json:"relationship_id"`
 	Role           *string            `json:"role"`
+}
+
+// ProjectCompany One company's place on a project.
+type ProjectCompany struct {
+	DisplayName    string             `json:"display_name"`
+	OrganizationId openapi_types.UUID `json:"organization_id"`
+
+	// Role What this company is to the project — `customer` is its client, and the rest name the other sides of a joint delivery. Free text rather than an enum: an installation whose deliveries have a shape this vocabulary does not carry should not have to rename it.
+	Role string `json:"role"`
+}
+
+// ProjectCompanyListResponse defines model for ProjectCompanyListResponse.
+type ProjectCompanyListResponse struct {
+	Data []ProjectCompany `json:"data"`
 }
 
 // ProjectListResponse defines model for ProjectListResponse.
@@ -21533,7 +21556,10 @@ type RejectVoiceDraftRequest struct {
 }
 
 // Relationship The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-// `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+// `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+// (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+// holds the two rules this surface cannot: write authority over the project ROW, and the
+// refusal that keeps a project's last company on it), `project_stakeholder`
 // (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
 // (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
 // org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
@@ -21558,7 +21584,7 @@ type Relationship struct {
 	OrganizationId   *openapi_types.UUID `json:"organization_id,omitempty"`
 	PersonId         *openapi_types.UUID `json:"person_id,omitempty"`
 
-	// ProjectId The project on a project_stakeholder edge. Null for every other kind.
+	// ProjectId The project on a project_stakeholder or project_company edge. Null for every other kind.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Role employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.
@@ -22360,6 +22386,14 @@ type SetLeadManualSignalRequestFactor string
 // SetOverlayUserMapRequest defines model for SetOverlayUserMapRequest.
 type SetOverlayUserMapRequest struct {
 	IncumbentUserId string `json:"incumbent_user_id"`
+}
+
+// SetProjectCompanyRequest defines model for SetProjectCompanyRequest.
+type SetProjectCompanyRequest struct {
+	OrganizationId openapi_types.UUID `json:"organization_id"`
+
+	// Role What this company is to the project; defaults to `customer` when omitted.
+	Role *string `json:"role,omitempty"`
 }
 
 // SetProjectStakeholderRequest defines model for SetProjectStakeholderRequest.
@@ -26803,6 +26837,30 @@ type AdvanceProjectPhaseParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SetProjectCompanyParams defines parameters for SetProjectCompany.
+type SetProjectCompanyParams struct {
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// RemoveProjectCompanyParams defines parameters for RemoveProjectCompany.
+type RemoveProjectCompanyParams struct {
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // SetProjectStakeholderParams defines parameters for SetProjectStakeholder.
 type SetProjectStakeholderParams struct {
 	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
@@ -28224,6 +28282,9 @@ type UpdateProjectJSONRequestBody = UpdateProjectRequest
 
 // AdvanceProjectPhaseJSONRequestBody defines body for AdvanceProjectPhase for application/json ContentType.
 type AdvanceProjectPhaseJSONRequestBody = AdvanceProjectPhaseRequest
+
+// SetProjectCompanyJSONRequestBody defines body for SetProjectCompany for application/json ContentType.
+type SetProjectCompanyJSONRequestBody = SetProjectCompanyRequest
 
 // SetProjectStakeholderJSONRequestBody defines body for SetProjectStakeholder for application/json ContentType.
 type SetProjectStakeholderJSONRequestBody = SetProjectStakeholderRequest
@@ -34221,6 +34282,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "organization_id")
 	}
 
+	if raw, found := object["organizations"]; found {
+		err = json.Unmarshal(raw, &a.Organizations)
+		if err != nil {
+			return fmt.Errorf("error reading 'organizations': %w", err)
+		}
+		delete(object, "organizations")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -34385,6 +34454,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["organization_id"], err = json.Marshal(a.OrganizationId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'organization_id': %w", err)
+		}
+	}
+
+	if a.Organizations != nil {
+		object["organizations"], err = json.Marshal(a.Organizations)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'organizations': %w", err)
 		}
 	}
 
@@ -37302,6 +37378,12 @@ type ServerInterface interface {
 	// Move a project along the phase ladder (audit-logged with prior + next phase).
 	// (POST /projects/{id}/advance)
 	AdvanceProjectPhase(w http.ResponseWriter, r *http.Request, id Id, params AdvanceProjectPhaseParams)
+	// Put a company on a project with a role (idempotent per company).
+	// (PUT /projects/{id}/companies)
+	SetProjectCompany(w http.ResponseWriter, r *http.Request, id Id, params SetProjectCompanyParams)
+	// Take a company off a project (archives the edge).
+	// (DELETE /projects/{id}/companies/{organization_id})
+	RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id Id, organizationId openapi_types.UUID, params RemoveProjectCompanyParams)
 	// List a project's stakeholders (project↔person relationships).
 	// (GET /projects/{id}/stakeholders)
 	ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -39786,6 +39868,18 @@ func (_ Unimplemented) GetProject360(w http.ResponseWriter, r *http.Request, id 
 // Move a project along the phase ladder (audit-logged with prior + next phase).
 // (POST /projects/{id}/advance)
 func (_ Unimplemented) AdvanceProjectPhase(w http.ResponseWriter, r *http.Request, id Id, params AdvanceProjectPhaseParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a company on a project with a role (idempotent per company).
+// (PUT /projects/{id}/companies)
+func (_ Unimplemented) SetProjectCompany(w http.ResponseWriter, r *http.Request, id Id, params SetProjectCompanyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a company off a project (archives the edge).
+// (DELETE /projects/{id}/companies/{organization_id})
+func (_ Unimplemented) RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id Id, organizationId openapi_types.UUID, params RemoveProjectCompanyParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56325,6 +56419,131 @@ func (siw *ServerInterfaceWrapper) AdvanceProjectPhase(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SetProjectCompany operation middleware
+func (siw *ServerInterfaceWrapper) SetProjectCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetProjectCompanyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProjectCompany(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveProjectCompany operation middleware
+func (siw *ServerInterfaceWrapper) RemoveProjectCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "organization_id" -------------
+	var organizationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "organization_id", chi.URLParam(r, "organization_id"), &organizationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveProjectCompanyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveProjectCompany(w, r, id, organizationId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -63111,6 +63330,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/{id}/advance", wrapper.AdvanceProjectPhase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/projects/{id}/companies", wrapper.SetProjectCompany)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/projects/{id}/companies/{organization_id}", wrapper.RemoveProjectCompany)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects/{id}/stakeholders", wrapper.ListProjectStakeholders)
