@@ -176,7 +176,7 @@ export function VoiceInsights({
               a mean sentence length of 12.5 reads "12.5" to every reader on a
               line whose other two figures are localized. The three sit in one
               sentence; two spellings inside it is the drift this whole change
-              is about. #2463 is the same defect across the rest of the app. */}
+              is about. Issue 2463 carries the same defect app-wide. */}
           {data.words !== null &&
             t("voice.insights.statWords", {
               count: formatNumber(data.words, locale),
