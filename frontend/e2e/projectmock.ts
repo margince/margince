@@ -74,6 +74,10 @@ export function projectMock(input: {
 }) {
   const projects: MockProject[] = [{ ...input.seeded }];
   const history = new Map<string, Transition[]>();
+  // What this fake hands back as a newly minted key. Any well-formed key does:
+  // the assertion it serves is that the client SHOWS the key the server chose,
+  // not that this file can rederive the server's stem.
+  const MOCK_MINTED_KEY = "BE-1";
   let minted = 0;
 
   const record = (
@@ -188,7 +192,13 @@ export function projectMock(input: {
           ...input.seeded,
           id: `pr-new-${minted}`,
           name: String(body.name),
-          key: body.key ?? null,
+          // The SERVER mints this now (projects/keymint.go): a create carries
+          // no key at all, and the stem-plus-lowest-free-number rule is the
+          // server's to own. The fake deliberately does not reproduce that
+          // rule — it returns A key so the spec can prove the client renders
+          // what it was handed, and a second implementation of the stem
+          // algorithm here would drift from the real one silently.
+          key: body.key ?? MOCK_MINTED_KEY,
           organization_id: String(body.organization_id),
           owner_id: body.owner_id ?? null,
           description: body.description ?? null,
