@@ -19,4 +19,4 @@ a019622d248461265b2df0e473e5e132842aa64d 049e5eaf3ce1b9eb6c906ab677864ab347085ff
 88b8e4c19de07fd7bd576b58752704c8713f7e08 77f4eb252830a8b0e07b0b1f5e6794a1ed3276c9 ratified-a-project-is-worked-by-several-companies-not-owned-by-one
 ebba6a86f90624338680763bbae9cbeb0397637c 0d6f0de48c8ab32e50ffa70dde5befc602c91826 ratified-a-deal-room-is-live-from-creation-the-invitation-is-the-gate
 0d6f0de48c8ab32e50ffa70dde5befc602c91826 59347057cece7cb424d587a1cd4925349ba70f2d ratified-a-buyer-does-not-confirm-a-document-version-the-reviewer-seat-collapses-into-comment
-6f6398ca46583a8e1feec91e9d911064c03604f3 4376cd83f8912d8fef7f79b884d1ac50ce3946c3 ratified-one-written-deal-status-card-replaces-the-brief-health-and-next-move-trio
+6f6398ca46583a8e1feec91e9d911064c03604f3 322cc91aa48c220f7572558bad686b43d93e5c38 ratified-one-written-deal-status-card-replaces-the-brief-health-and-next-move-trio

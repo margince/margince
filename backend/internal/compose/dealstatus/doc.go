@@ -24,9 +24,12 @@
 // and paying for a deal nobody opened.
 //
 // The one thing a fingerprint cannot bound is a deal whose facts churn on
-// every read, so a floor holds the rewrite to once per refreshFloor per
-// reader. Below that floor the cached card is served even when the
-// fingerprint has moved.
+// every read, so a floor holds the MODEL CALL to once per modelCallFloor per
+// reader. Inside that floor a moved fingerprint still rewrites the card, just
+// deterministically: the reader sees what changed, and generated_by says a
+// composition wrote it. Serving the stale card instead would be the mistake an
+// hourly refresh makes — describing the deal as it was before the thing that
+// just happened.
 //
 // DEGRADES RATHER THAN FAILS. With no model lane, an exhausted budget, or a
 // reply the grounding filter refuses, the same card is composed

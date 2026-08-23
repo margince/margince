@@ -1483,6 +1483,16 @@ public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_stage_history.to_stage_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.win_probability_at_change smallint gen=- def=-
 public.deal_stage_history_pkey CREATE UNIQUE INDEX deal_stage_history_pkey ON public.deal_stage_history USING btree (id)
+public.deal_status_card acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_status_card.deal_id uuid NOT NULL gen=- def=-
+public.deal_status_card.deal_status_card_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+public.deal_status_card.deal_status_card_pkey PRIMARY KEY (user_id, deal_id)
+public.deal_status_card.fingerprint text NOT NULL gen=- def=-
+public.deal_status_card.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_status_card.generated_by text NOT NULL gen=- def=-
+public.deal_status_card.payload jsonb NOT NULL gen=- def=-
+public.deal_status_card.user_id uuid NOT NULL gen=- def=-
+public.deal_status_card_pkey CREATE UNIQUE INDEX deal_status_card_pkey ON public.deal_status_card USING btree (user_id, deal_id)
 public.deal_won_without_contract_ix CREATE INDEX deal_won_without_contract_ix ON public.deal USING btree (won_without_contract_reason) WHERE (won_without_contract_reason IS NOT NULL)
 public.dedupe_candidate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.dedupe_candidate.archived_at timestamp with time zone gen=- def=-

@@ -29,11 +29,16 @@ import (
 // rows first and then the most recent past ones.
 const timelineWindow = 25
 
-// refreshFloor is the one clock in an otherwise fact-keyed cache. A deal whose
-// facts churn on every read — a live mail thread, a room somebody is typing in
-// — would otherwise rewrite on every page load. Below this age the cached card
-// is served even when the fingerprint has moved.
-const refreshFloor = 5 * time.Minute
+// modelCallFloor is the one clock in an otherwise fact-keyed cache, and it
+// bounds MODEL CALLS rather than the card's freshness.
+//
+// A deal whose facts churn on every read — a live mail thread, a room somebody
+// is typing in — would otherwise pay for a model call on every page load. Below
+// this age the card is rewritten deterministically instead: the reader still
+// sees the change immediately, and generated_by tells them a composition wrote
+// it. Serving the STALE card here would be the mistake an hourly refresh makes,
+// which is describing the deal as it was before the thing that just happened.
+const modelCallFloor = 5 * time.Minute
 
 // laneDeadline caps the model call. The card is read inline on the deal page
 // and the API's write window is 30s, so the lane must give up early enough
@@ -110,10 +115,11 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
-	if card, ok := s.serveCached(ctx, userID, dealID, fingerprint, refresh, f.now); ok {
-		return card, nil
+	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, refresh, f.now)
+	if verdict.serve {
+		return verdict.card, nil
 	}
-	card := s.write(ctx, f, mv, in)
+	card := s.write(ctx, f, mv, in, verdict.askModel)
 	if err := s.save(ctx, userID, dealID, stored{
 		Fingerprint: fingerprint,
 		GeneratedAt: card.GeneratedAt,
@@ -125,25 +131,34 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	return card, nil
 }
 
-// serveCached decides whether the stored card still stands. Two ways it does:
-// its fingerprint matches the facts, or it is younger than the refresh floor
-// and so not worth rewriting yet.
-func (s *Service) serveCached(
+// cacheVerdict says what to do with the stored card.
+type cacheVerdict struct {
+	// card is served as-is when serve is true: the facts have not moved.
+	card  crmcontracts.DealStatusCard
+	serve bool
+	// askModel is false when the facts moved but a model call is inside the
+	// floor. The card is still rewritten — deterministically — so the reader
+	// sees the change rather than the world as it was.
+	askModel bool
+}
+
+// decideFromCache reads the stored card and says whether it still stands.
+func (s *Service) decideFromCache(
 	ctx context.Context, userID ids.UserID, dealID ids.DealID, fingerprint string, refresh bool, now time.Time,
-) (crmcontracts.DealStatusCard, bool) {
+) cacheVerdict {
 	if refresh {
-		return crmcontracts.DealStatusCard{}, false
+		return cacheVerdict{askModel: true}
 	}
 	cached, found, err := s.cached(ctx, userID, dealID)
 	if err != nil || !found {
 		// A cache that cannot be read is a miss, never a failed request: the
 		// card is derived content and writing it again is the whole fallback.
-		return crmcontracts.DealStatusCard{}, false
+		return cacheVerdict{askModel: true}
 	}
-	if cached.Fingerprint == fingerprint || now.Sub(cached.GeneratedAt) < refreshFloor {
-		return cached.Card, true
+	if cached.Fingerprint == fingerprint {
+		return cacheVerdict{card: cached.Card, serve: true}
 	}
-	return crmcontracts.DealStatusCard{}, false
+	return cacheVerdict{askModel: now.Sub(cached.GeneratedAt) >= modelCallFloor}
 }
 
 // write asks the lane for the card's words and falls back to the floor. A
@@ -151,10 +166,10 @@ func (s *Service) serveCached(
 // error to surface: the reader gets the deterministic card and generated_by
 // says so.
 func (s *Service) write(
-	ctx context.Context, f facts, mv crmcontracts.DealStatusCardMove, in StatusInput,
+	ctx context.Context, f facts, mv crmcontracts.DealStatusCardMove, in StatusInput, askModel bool,
 ) crmcontracts.DealStatusCard {
 	floor := composeDeterministic(f, mv)
-	if s.lane == nil {
+	if s.lane == nil || !askModel {
 		return floor
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)

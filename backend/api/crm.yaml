@@ -13286,8 +13286,9 @@ paths:
         CACHED ON THE FACTS, not on a clock. The key is a fingerprint over the
         assembled input plus the prompt and routing versions, so a deal nobody
         touched costs one model call ever, and a deal that just moved is rewritten
-        before the request answers rather than served stale. A floor of five minutes
-        caps a deal whose facts churn on every page load.
+        before the request answers rather than served stale. A five-minute floor caps
+        how often the MODEL is asked, not how fresh the card is: inside it a changed
+        deal is still rewritten, deterministically, and `generated_by` says so.
 
         DEGRADES RATHER THAN FAILS. With no model lane, an exhausted budget, or a
         reply the grounding filter refuses, the same card is composed
