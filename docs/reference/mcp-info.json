@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 155677,
+    "tool_catalog_bytes": 155796,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39696,
+    "approx_wire_tokens_total": 39726,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 35520,
-      "input_schema_bytes": 34366,
+      "description_bytes": 35572,
+      "input_schema_bytes": 34433,
       "output_schema_bytes": 73753,
-      "description_plus_input_schema_bytes": 69886
+      "description_plus_input_schema_bytes": 70005
     }
   },
   "tools": {
@@ -5108,7 +5108,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`; on_duplicate says whether it lands a second (default), is skipped, or updates the incumbent. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5136,10 +5136,11 @@
               "type": "string"
             },
             "on_duplicate": {
-              "description": "A company already here: create (default) lands a second; skip leaves the incumbent.",
+              "description": "A company already here: create (default) lands a second; skip leaves the incumbent; update writes this row onto it (exact name matches only).",
               "enum": [
                 "create",
-                "skip"
+                "skip",
+                "update"
               ],
               "type": "string"
             }

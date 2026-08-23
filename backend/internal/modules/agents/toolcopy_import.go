@@ -12,8 +12,8 @@ var previewImportCopy = toolCopy{
 	Purpose: "Bring a spreadsheet in: send the CSV as text and this checks every row " +
 		"against the workspace and reports what importing it would do.",
 	Limits: "Writes nothing. People arrive as leads, so `object` is lead or organization. " +
-		"A row naming a company already here is counted in `duplicates`, and created unless " +
-		"on_duplicate is skip.",
+		"A row naming a company already here is counted in `duplicates`; on_duplicate says " +
+		"whether it lands a second (default), is skipped, or updates the incumbent.",
 	Instead: "create_record for one record you already know.",
 	Retain:  "run_id, and `duplicates` — give the user both numbers before committing.",
 }

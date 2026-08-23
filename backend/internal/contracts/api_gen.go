@@ -4799,6 +4799,7 @@ func (e ImportObject) Valid() bool {
 const (
 	Create ImportOnDuplicate = "create"
 	Skip   ImportOnDuplicate = "skip"
+	Update ImportOnDuplicate = "update"
 )
 
 // Valid indicates whether the value is a known member of the ImportOnDuplicate enum.
@@ -4807,6 +4808,8 @@ func (e ImportOnDuplicate) Valid() bool {
 	case Create:
 		return true
 	case Skip:
+		return true
+	case Update:
 		return true
 	default:
 		return false
@@ -14841,9 +14844,59 @@ type CreateImportRunRequest struct {
 	//
 	// `skip` leaves the incumbent alone and reports the row as skipped.
 	//
-	// The DRY RUN counts duplicates either way, so a person is told "100
-	// companies, 94 duplicates" before deciding — which is the whole reason
-	// the count is separate from `created`.
+	// `update` writes the row's mapped values ONTO the incumbent, reported as
+	// `updated` like any other matched row. This is the correction case: a
+	// spreadsheet of companies the CRM already holds — captured from mail,
+	// typed in by hand, or landed by a different import — where the file is
+	// the better copy. Without it the only ways to apply such a file were to
+	// mint twins or to leave the estate stale.
+	//
+	// It overwrites only where the row names EXACTLY ONE company and matches
+	// its name outright — legal form included, and on the same axis, so a
+	// trading name is compared with a trading name and a registered name with a
+	// registered one.
+	//
+	// Three refusals make that bar, and each closes a way to overwrite the
+	// wrong record:
+	//
+	// * The ladder strips the trailing legal suffix before scoring, so
+	//   `Acme Inc` and `Acme GmbH` reach it as one string and score a perfect
+	//   match. It routes them to a human precisely because different legal
+	//   entities are a person's call; writing on that score performs the merge
+	//   it refused.
+	// * The name axis has no unique index — two organizations may legitimately
+	//   share a name (see DedupeOrganizationForCreate) — and the ladder breaks
+	//   the tie on the lowest uuid. That is fine for proposing a review pair
+	//   and no basis for choosing which of two records to overwrite.
+	// * bestOrgNamePairing scores all four combinations of the two names on
+	//   each side, so a trading name can match somebody's REGISTERED name. A
+	//   reason to show a human two records, not a statement that the two names
+	//   are the same name.
+	//
+	// The asymmetry that sets the bar: `undo` reverses the rows a run CREATED,
+	// so a bad `create` is repairable by merging. An `update` writes over a
+	// company the run did not create, its previous values are gone, and nothing
+	// restores them.
+	//
+	// Everything short of that is reported as a skipped row naming why, so the
+	// near misses are surfaced rather than lost — the decision just stays with
+	// the person holding the file.
+	//
+	// It also writes only where the caller could write ANYWAY: a match the
+	// caller cannot see is not disclosed and not written, so an import cannot
+	// become a blind edit of a colleague's owner-private capture.
+	//
+	// The DRY RUN counts duplicates whichever mode is chosen, so a person is
+	// told "100 companies, 94 duplicates" before deciding — which is the whole
+	// reason the count is separate from `created`.
+	//
+	// A collision with a record the CALLER MAY NOT SEE is neither counted nor
+	// named, in the dry run or in the finished report: row scope governs what a
+	// report may say as much as what a record may show, and an importer that
+	// answered would be an existence oracle for a colleague's owner-private
+	// capture, one row at a time. Such a row previews as a create and is left
+	// alone on commit — the preview understating what a run leaves alone is the
+	// only safe direction for the two passes to differ.
 	OnDuplicate *ImportOnDuplicate `json:"on_duplicate,omitempty"`
 
 	// SourceKey The source column holding the row's stable id, written to the row's
@@ -16477,9 +16530,59 @@ type ImportObject string
 //
 // `skip` leaves the incumbent alone and reports the row as skipped.
 //
-// The DRY RUN counts duplicates either way, so a person is told "100
-// companies, 94 duplicates" before deciding — which is the whole reason
-// the count is separate from `created`.
+// `update` writes the row's mapped values ONTO the incumbent, reported as
+// `updated` like any other matched row. This is the correction case: a
+// spreadsheet of companies the CRM already holds — captured from mail,
+// typed in by hand, or landed by a different import — where the file is
+// the better copy. Without it the only ways to apply such a file were to
+// mint twins or to leave the estate stale.
+//
+// It overwrites only where the row names EXACTLY ONE company and matches
+// its name outright — legal form included, and on the same axis, so a
+// trading name is compared with a trading name and a registered name with a
+// registered one.
+//
+// Three refusals make that bar, and each closes a way to overwrite the
+// wrong record:
+//
+//   - The ladder strips the trailing legal suffix before scoring, so
+//     `Acme Inc` and `Acme GmbH` reach it as one string and score a perfect
+//     match. It routes them to a human precisely because different legal
+//     entities are a person's call; writing on that score performs the merge
+//     it refused.
+//   - The name axis has no unique index — two organizations may legitimately
+//     share a name (see DedupeOrganizationForCreate) — and the ladder breaks
+//     the tie on the lowest uuid. That is fine for proposing a review pair
+//     and no basis for choosing which of two records to overwrite.
+//   - bestOrgNamePairing scores all four combinations of the two names on
+//     each side, so a trading name can match somebody's REGISTERED name. A
+//     reason to show a human two records, not a statement that the two names
+//     are the same name.
+//
+// The asymmetry that sets the bar: `undo` reverses the rows a run CREATED,
+// so a bad `create` is repairable by merging. An `update` writes over a
+// company the run did not create, its previous values are gone, and nothing
+// restores them.
+//
+// Everything short of that is reported as a skipped row naming why, so the
+// near misses are surfaced rather than lost — the decision just stays with
+// the person holding the file.
+//
+// It also writes only where the caller could write ANYWAY: a match the
+// caller cannot see is not disclosed and not written, so an import cannot
+// become a blind edit of a colleague's owner-private capture.
+//
+// The DRY RUN counts duplicates whichever mode is chosen, so a person is
+// told "100 companies, 94 duplicates" before deciding — which is the whole
+// reason the count is separate from `created`.
+//
+// A collision with a record the CALLER MAY NOT SEE is neither counted nor
+// named, in the dry run or in the finished report: row scope governs what a
+// report may say as much as what a record may show, and an importer that
+// answered would be an existence oracle for a colleague's owner-private
+// capture, one row at a time. Such a row previews as a create and is left
+// alone on commit — the preview understating what a run leaves alone is the
+// only safe direction for the two passes to differ.
 type ImportOnDuplicate string
 
 // ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
@@ -16537,8 +16640,10 @@ type ImportRunDisposition struct {
 
 	// Duplicates Rows naming a record the estate already holds. NOT a fifth outcome
 	// and never added to the other four — each duplicate is already
-	// counted in `created` (it lands and files a review pair) or in
-	// `skipped` (when the run asked for `on_duplicate: skip`). It is the
+	// counted in `created` (it lands and files a review pair), in
+	// `skipped` (when the run asked for `on_duplicate: skip`) or in
+	// `updated`/`unchanged` (when it asked for `on_duplicate: update`,
+	// which writes the file's values onto the incumbent). It is the
 	// number a human needs before approving: "100 companies, 94 of them
 	// already here" is a different decision from "100 new companies".
 	Duplicates *int `json:"duplicates,omitempty"`

@@ -90,6 +90,50 @@ func NormalizeOrgName(s string) string {
 	return strings.Join(fields, " ")
 }
 
+// SameOrganizationName reports whether two organisation names are the SAME
+// NAME — not merely similar, and not merely equal once their legal suffixes are
+// discarded.
+//
+// It exists for one caller: a path deciding whether a match is safe to OVERWRITE
+// rather than to propose. That is a stricter question than the dedupe ladder's,
+// and deliberately so.
+//
+// The ladder strips the trailing legal suffix before scoring, which is right for
+// its own job — "Acme Inc" and "Acme GmbH" ARE candidates worth showing a human
+// — and the comment on fuzzyOrganization says exactly why they are not a merge:
+// different legal entities are a human's call. A caller that overwrote on that
+// score would perform the merge the ladder refused to, silently.
+//
+// So the suffix is kept. Everything else NormalizeOrgName folds is folded here
+// too — case, accents, commas, and runs of whitespace — because none of those
+// change which company is meant, and refusing "Acme, Inc" against "Acme Inc"
+// would refuse the correction case for a typist's comma. The one difference
+// between the two functions is the suffix, which is the whole point.
+//
+// The 256-rune cap inside nameSimilarity is also stepped around: it makes two
+// names sharing a long prefix score 1.0, which is a capped score rather than a
+// statement about identity. Equality here is exact over the whole string.
+//
+// Answering true is necessary for an overwrite and NOT sufficient: the name axis
+// has no unique index, so two organisations may legitimately share a name (see
+// DedupeOrganizationForCreate). The caller must also establish that only ONE
+// candidate matched.
+func SameOrganizationName(a, b string) bool {
+	left, right := foldOrgNameKeepingSuffix(a), foldOrgNameKeepingSuffix(b)
+	return left != "" && left == right
+}
+
+// foldOrgNameKeepingSuffix is NormalizeOrgName's folding without its suffix
+// strip: casefold, unaccent, commas to spaces, and internal whitespace
+// collapsed. Trailing periods go too, so "Acme GmbH." meets "Acme GmbH".
+func foldOrgNameKeepingSuffix(s string) string {
+	fields := strings.Fields(normalizeName(strings.ReplaceAll(s, ",", " ")))
+	for i, f := range fields {
+		fields[i] = strings.Trim(f, ".")
+	}
+	return strings.Join(fields, " ")
+}
+
 // nameSimilarity is `name_sim`: Jaro-Winkler over normalized input,
 // in [0,1].
 func nameSimilarity(a, b string) float64 {

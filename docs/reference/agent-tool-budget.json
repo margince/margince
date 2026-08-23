@@ -5,7 +5,7 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 17004,
+    "tokens": 17033,
     "median_tool_tokens": 281,
     "mean_tool_tokens": 303
   },
@@ -133,6 +133,10 @@
       "tokens": 323
     },
     {
+      "name": "preview_import",
+      "tokens": 323
+    },
+    {
       "name": "draft_email",
       "tokens": 317
     },
@@ -163,10 +167,6 @@
     {
       "name": "promote_lead",
       "tokens": 301
-    },
-    {
-      "name": "preview_import",
-      "tokens": 294
     },
     {
       "name": "archive_record",

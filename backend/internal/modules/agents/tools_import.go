@@ -115,8 +115,8 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make."},
-			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent."}},
+			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `","` + importOnDuplicateUpdate + `"],
+			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent; update writes this row onto it (exact name matches only)."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
@@ -189,11 +189,12 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 // arrived differs.
 const importConnectorCSV = "csv"
 
-// The two duplicate policies, spelled here so the tool schema and the contract
-// enum cannot drift apart.
+// The duplicate policies, spelled here so the tool schema and the contract enum
+// cannot drift apart.
 const (
 	importOnDuplicateCreate = string(crmcontracts.Create)
 	importOnDuplicateSkip   = string(crmcontracts.Skip)
+	importOnDuplicateUpdate = string(crmcontracts.Update)
 )
 
 // refuseUnimportableObject holds `object` to the vocabulary, naming the whole

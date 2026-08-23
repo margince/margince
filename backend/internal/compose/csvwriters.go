@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,7 +15,6 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/migration"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -152,6 +150,21 @@ const (
 	// asked for on_duplicate: skip. Separate from predictCollides so the
 	// preview reports the same outcome the commit will produce.
 	predictCollidesSkipped
+	// predictCollidesUpdate is a duplicate this run will write ONTO, because it
+	// asked for on_duplicate: update and the ladder matched exactly. It counts
+	// as an update in the disposition — the effect is a patch of an existing
+	// record — while still counting as a duplicate in the disclosure, which is
+	// the number a human weighs before approving.
+	predictCollidesUpdate
+	// predictCollidesUnchanged is the same match whose mapped values are already
+	// equal. Reported apart for the reason predictUnchanged exists: work that
+	// never happens must not inflate the report.
+	predictCollidesUnchanged
+	// predictCollidesUnfit is a duplicate an update run will NOT write onto,
+	// because the ladder only reached fuzzy_review. It is an issue rather than a
+	// silent skip: the file's author is the one who can tell whether two similar
+	// names are one company, and the run refuses to guess for them.
+	predictCollidesUnfit
 )
 
 // Predict answers what Ensure would do, without writing.
@@ -174,15 +187,14 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 		// seeded. The identity map cannot see any of those, so the create the
 		// engine is about to report gets the same dedupe read the create path
 		// itself performs.
-		collides, err := w.collidesWithExisting(ctx, row, w.onDuplicate != string(crmcontracts.Skip))
+		// Always disclosure-filtered: a preview REPORTS the match, whichever mode
+		// asked for it. See the note in csvduplicatepolicy.go.
+		collides, err := w.collidesWithExisting(ctx, row, true)
 		if err != nil {
 			return predictCreate, err
 		}
-		if collides {
-			if w.onDuplicate == string(crmcontracts.Skip) {
-				return predictCollidesSkipped, nil
-			}
-			return predictCollides, nil
+		if collides.hit {
+			return w.predictCollision(ctx, collides, row)
 		}
 		return predictCreate, nil
 	}
@@ -198,68 +210,6 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 		return predictUnchanged, nil
 	}
 	return predictUpdate, nil
-}
-
-// collidesWithExisting asks whether the CRM already holds the company this row
-// names, through the SAME ladder the create path runs (PO-F-2). It reads and
-// writes nothing.
-//
-// discloseOnly separates the two questions this answers. The PREVIEW asks it to
-// tell a person something, so a match they cannot see must not be mentioned.
-// The `on_duplicate: skip` path asks it to DECIDE, and there visibility is
-// irrelevant — see the branch below.
-//
-// Only organizations: a lead's identity is its email, which the store's own
-// unique key already refuses, so there is no silent twin to warn about.
-//
-// A read-only transaction, and NOT DedupeOrganizationForCreate — that one takes
-// a write lock to serialize concurrent creates, which a preview has no business
-// holding. The answer can therefore go stale between the preview and the
-// commit; that is correct, because the commit runs the locking version and its
-// answer is the one that decides.
-func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row, discloseOnly bool) (bool, error) {
-	if w.object != migration.ObjectOrganization {
-		return false, nil
-	}
-	fields := textFields(row.Fields)
-	candidate := people.OrganizationCandidate{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		LegalName:   strings.TrimSpace(fields["legal_name"]),
-	}
-	if candidate.DisplayName == "" && candidate.LegalName == "" {
-		return false, nil
-	}
-	var visible bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		match, err := people.DedupeOrganization(ctx, tx, candidate)
-		if err != nil || match.Decision == people.DecisionNoMatch {
-			return err
-		}
-		// The ladder reads every organization, by design — it is the write
-		// path's collision check, and a create must not mint a twin of a row
-		// the caller happens not to be allowed to see. A DISCLOSURE is the
-		// opposite: telling this caller "that company is already here" about a
-		// row they cannot read turns the preview into an oracle for a
-		// colleague's owner-private capture, which even an admin may not read
-		// (rowscope.go). So a match the caller cannot see discloses nothing.
-		//
-		// The COMMIT is unaffected: it still refuses or files the review pair
-		// on the ladder's own answer, visible or not.
-		if !discloseOnly {
-			// Deciding whether to SKIP the row, not whether to mention it. The
-			// incumbent's visibility is beside the point: creating a twin of a
-			// row this caller cannot see is exactly the duplicate the run asked
-			// to avoid, and skipping it reveals nothing the caller did not
-			// already put in their own file.
-			visible = true
-			return nil
-		}
-		visible, err = auth.VisibleTo(ctx, tx, "organization", match.OrganizationID.UUID)
-		return err
-	}); err != nil {
-		return false, fmt.Errorf("import: checking %q against the companies already held: %w", candidate.DisplayName, err)
-	}
-	return visible, nil
 }
 
 // Ensure lands one row: created the first time, updated when the file has
@@ -282,15 +232,58 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
 	// the commit as well as the dry run so the two cannot disagree.
-	if w.onDuplicate == string(crmcontracts.Skip) {
+	switch w.onDuplicate {
+	case string(crmcontracts.Skip):
+		// DECIDED without the visibility filter and REPORTED with it. Skipping a
+		// row turns on the incumbent existing, whoever may read it — creating a
+		// twin of a record the caller cannot see is exactly the duplicate this
+		// mode was asked to avoid. But the reason travels into a report readable
+		// on the import_run grant alone, so naming an invisible company there
+		// would move the existence oracle from the preview to the finished run
+		// rather than closing it.
 		collides, err := w.collidesWithExisting(ctx, row, false)
 		if err != nil {
 			return migration.EnsureResult{}, err
 		}
-		if collides {
-			return migration.EnsureResult{Skipped: true, SkipReason: duplicateSkipReason}, nil
+		if collides.hit {
+			reason := duplicateSkipReason
+			if !collides.visible {
+				reason = opaqueSkipReason
+			}
+			return migration.EnsureResult{Skipped: true, SkipReason: reason}, nil
+		}
+	case string(crmcontracts.Update):
+		// discloseOnly, so a match this caller cannot see is not one this run
+		// writes onto — an import must never become a blind edit of a
+		// colleague's owner-private record. It creates instead, which is the
+		// same thing `create` does and is repairable by merging.
+		collides, err := w.collidesWithExisting(ctx, row, true)
+		if err != nil {
+			return migration.EnsureResult{}, err
+		}
+		if collides.writable() {
+			// Straight into reconcile, the same path a row this importer wrote
+			// before takes. The incumbent arrived some other way — mail capture,
+			// a human, another import — and that changes who to write onto, not
+			// how: same field comparison, same patch, same unchanged accounting.
+			//
+			// The dedupe read happens HERE rather than being replayed from the
+			// preview, so a company created between the two passes is seen for
+			// the first time now: the preview reported this row as a create and
+			// the commit updates instead. That window is real and is not closed
+			// by this change — closing it needs the run to persist a per-row
+			// prediction, which it does not have (the engine stores aggregate
+			// counts only). What bounds it is that the write still goes through
+			// writable(), so the surprise is an edit of the RIGHT company, not
+			// of a wrong one.
+			return w.reconcile(ctx, collides.writableID(), row)
+		}
+		if collides.hit {
+			return migration.EnsureResult{Skipped: true, SkipReason: fuzzyUpdateSkipReason}, nil
 		}
 	}
+	// Falls through to a CREATE: no identity map hit, and no writable or
+	// disclosable collision.
 	switch object {
 	case migration.ObjectLead:
 		return w.createLead(ctx, row)
