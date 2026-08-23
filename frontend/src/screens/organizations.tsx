@@ -92,6 +92,7 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { TodayOnThisAccount } from "./companytoday";
 import { ComposeModal, TimelineActions } from "./compose";
@@ -2368,6 +2369,16 @@ function CompanyRecordBody({
         onClose={() => setPreparing(null)}
         projects={liveProjects(view?.projects)}
       />
+      {/* The deliveries this company is part of — as the client, a partner or a
+          subcontractor. It sits with Deals and Tasks because all three answer
+          "what is in flight with this account". */}
+      {!overlay && (
+        <CompanyProjects
+          organizationId={org.id}
+          projects={view?.projects}
+          readOnly={readOnly}
+        />
+      )}
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
           commercial picture or the open work should not scroll past the
           day's brief to find either. */}
