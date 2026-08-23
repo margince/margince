@@ -137,14 +137,28 @@ function stubFetch(refuse: Readonly<Record<string, () => Response>> = {}): {
 }
 
 function render(ui: ReactNode) {
+  return renderWithClient(ui).rendered;
+}
+
+// The same render, handing back the client so a case can read what the run
+// invalidated. Separate rather than folded in, so the existing cases keep
+// reading as a reader's story rather than a cache one.
+function renderWithClient(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const invalidated: unknown[] = [];
+  const real = client.invalidateQueries.bind(client);
+  client.invalidateQueries = ((filters?: { queryKey?: unknown }) => {
+    invalidated.push(filters?.queryKey);
+    return real(filters as Parameters<typeof real>[0]);
+  }) as typeof client.invalidateQueries;
+  const rendered = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return { rendered, invalidated };
 }
 
 const disqualifyButton = () =>
@@ -244,5 +258,44 @@ describe("LeadBulkBar — disqualify", () => {
       ["l-1", false],
       ["l-2", true],
     ]);
+  });
+
+  // A bulk run writes MANY leads, and each of them has an open detail page
+  // somewhere. The list is `["leads", query]`; the detail page is the sibling
+  // `["lead", id]`, which prefix invalidation does not walk to — so naming
+  // only the list left forty pages showing the owner the run had just changed.
+  it("invalidates every lead it actually wrote, and not the one that refused", async () => {
+    const { deletions } = stubFetch({
+      "l-2": () =>
+        new Response(
+          JSON.stringify({
+            code: "version_conflict",
+            detail: "Somebody else changed this lead.",
+          }),
+          { status: 409, headers: { "content-type": "application/json" } },
+        ),
+    });
+    const user = userEvent.setup();
+    const { invalidated } = renderWithClient(
+      <LeadBulkBar leads={leads} onDone={() => undefined} />,
+    );
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    await waitFor(() => expect(deletions).toHaveLength(2));
+
+    await waitFor(() => expect(invalidated).toContainEqual(["lead", "l-1"]));
+    expect(invalidated).toContainEqual(["leads"]);
+    expect(invalidated).toContainEqual(["record-history", "lead", "l-1"]);
+    // The refused row is skipped: nothing about it changed, and invalidating
+    // it would refetch a page that is already right.
+    expect(invalidated).not.toContainEqual(["lead", "l-2"]);
   });
 });

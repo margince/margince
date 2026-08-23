@@ -26,6 +26,7 @@ import {
   useUpdateLeadSettings,
 } from "./leadsources";
 import "./leadvocab.css";
+import { LEAD_LIST_KEY } from "./leadkeys";
 
 // Settings › Data model: the two administered lead vocabularies and the
 // lead-handling posture. Every role reads them — the leads list needs the
@@ -57,7 +58,7 @@ function useSourceMutations() {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: LEAD_SOURCES_KEY });
     // The list and the create form render labels off this list.
-    void queryClient.invalidateQueries({ queryKey: ["leads"] });
+    void queryClient.invalidateQueries({ queryKey: LEAD_LIST_KEY });
   };
   const create = useMutation({
     mutationFn: async (body: {

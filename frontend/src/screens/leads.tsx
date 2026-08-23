@@ -91,6 +91,9 @@ export {
   scoreTone,
   terminalBadge,
 } from "./leadpresentation";
+
+import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+
 export { LeadsScreen } from "./leads.list";
 
 // The recorded trigger, as the outcome card names it — the wire token never
@@ -203,7 +206,7 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const t = useT();
   const explain = useQuery({
-    queryKey: ["lead", id, "score"],
+    queryKey: leadScoreKey(id),
     queryFn: async () => {
       const { data, error } = await api.GET("/leads/{id}/score", {
         params: { path: { id } },
@@ -1085,11 +1088,9 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead", id] });
-      queryClient.invalidateQueries({
-        queryKey: ["record-history", "lead", id],
-      });
+      for (const key of leadWriteKeys(id)) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
       setOpen(false);
       setReason("");
     },
@@ -1269,11 +1270,9 @@ function useLadderRefresh(id: string): () => void {
     for (const delay of [1500, 4000, 8000]) {
       timers.current.push(
         window.setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ["lead", id] });
-          queryClient.invalidateQueries({ queryKey: ["leads"] });
-          queryClient.invalidateQueries({
-            queryKey: ["record-history", "lead", id],
-          });
+          for (const key of leadWriteKeys(id)) {
+            queryClient.invalidateQueries({ queryKey: key });
+          }
         }, delay),
       );
     }
@@ -1514,7 +1513,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   // mirror lead has no row in — see deals.tsx's DealBadges).
   const overlay = useSorMode() === "overlay";
   const leadQuery = useQuery({
-    queryKey: ["lead", id],
+    queryKey: leadKey(id),
     queryFn: async () => {
       const { data, error } = await api.GET("/leads/{id}", {
         params: { path: { id } },
@@ -1661,8 +1660,9 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
                 onQualify={() => setDialog("qualify")}
                 onDisqualify={() => setDialog("disqualify")}
                 onLifecycleChanged={() => {
-                  queryClient.invalidateQueries({ queryKey: ["leads"] });
-                  queryClient.invalidateQueries({ queryKey: ["lead", id] });
+                  for (const key of leadWriteKeys(id)) {
+                    queryClient.invalidateQueries({ queryKey: key });
+                  }
                 }}
                 onTouchLogged={refreshAfterTouch}
               />

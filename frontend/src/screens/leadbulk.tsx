@@ -8,6 +8,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { useRoster } from "./entityref";
+import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
@@ -118,7 +119,15 @@ export function LeadBulkBar({
       // retried, and a retry that fired before the refetch landed would
       // resend the very version that just conflicted. The run stays pending
       // — and the verbs disabled — until the list holds fresh versions.
-      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      // Every lead the run actually wrote, not just the list. A bulk assign
+      // moved forty owners and left forty detail pages showing the old one;
+      // the row that refused is skipped because nothing about it changed.
+      await Promise.all(
+        result
+          .filter((row) => row.error === undefined)
+          .flatMap((row) => leadWriteKeys(row.id))
+          .map((key) => queryClient.invalidateQueries({ queryKey: key })),
+      );
       setOutcomes(result);
       onDone(result, action);
     },
