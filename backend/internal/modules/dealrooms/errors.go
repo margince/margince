@@ -215,23 +215,3 @@ func (e *fieldError) Error() string { return e.msg }
 func (e *fieldError) FieldFault() (field, code, message string) {
 	return e.field, e.code, e.msg
 }
-
-// retiredError refuses an operation the product no longer performs.
-//
-// It carries its own code so a client can branch on the reason rather than
-// parsing prose, and unwraps to ErrConflict: the request is well-formed and the
-// caller is entitled to be here — the ACTION is what no longer exists, which is
-// a state of the product, not a fault in the request or in the server.
-type retiredError struct {
-	code string
-	msg  string
-}
-
-func (e *retiredError) Error() string { return e.msg }
-
-// MessageFault maps this to a 409 carrying the code.
-func (e *retiredError) MessageFault() (code, message string) {
-	return e.code, e.msg
-}
-
-func (e *retiredError) Unwrap() error { return apperrors.ErrConflict }

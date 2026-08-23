@@ -13138,15 +13138,13 @@ type BuyerRoomParticipant struct {
 	// Capability What a participant may do in the room. Coarse and room-wide on purpose — a
 	// per-document permission matrix is a product nobody asked for.
 	//
-	// `view` reads. `comment` also writes comments and messages. `reviewer` also
-	// confirms a document version, which is the only one that carries weight in a
-	// negotiation, so it is granted deliberately and never by default.
+	// `view` reads. `comment` also writes comments and messages.
 	//
-	// Typed as a plain string rather than an inline enum: `view`, `comment` and
-	// `reviewer` would generate package-scope Go constants named `View`, `Comment`
-	// and `Reviewer` in the shared contracts package, which collide with — and
-	// silently rename — the constants of any other schema declaring the same value.
-	// The closed set is stated here and held by the writer and the schema CHECK.
+	// Typed as a plain string rather than an inline enum: `view` and `comment`
+	// would generate package-scope Go constants named `View` and `Comment` in the
+	// shared contracts package, which collide with — and silently rename — the
+	// constants of any other schema declaring the same value. The closed set is
+	// stated here and held by the writer and the schema CHECK.
 	Capability DealRoomParticipantCapability `json:"capability"`
 	Email      openapi_types.Email           `json:"email"`
 	FullName   string                        `json:"full_name"`
@@ -15538,6 +15536,13 @@ type DealNextBestAction struct {
 	DealId     openapi_types.UUID           `json:"deal_id"`
 	Evidence   []DealNextBestActionEvidence `json:"evidence"`
 
+	// GeneratedBy Which writer produced the recommendation. `model` only on the `create_task`
+	// fallback, where the deal_health lane proposes the concrete next step; every
+	// rule-matched answer — and the fallback whenever the lane is absent, over
+	// budget, or refused — is `deterministic`. Absent means `deterministic`, so a
+	// client reading an older server fails honest.
+	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
+
 	// Reason One sentence, in the user's terms, saying why this and not something else.
 	Reason string `json:"reason"`
 }
@@ -15623,27 +15628,6 @@ type DealRoomComment struct {
 type DealRoomCredentialRequest struct {
 	// Credential The one-time credential from the invitation link's fragment.
 	Credential string `json:"credential"`
-}
-
-// DealRoomDecision A buyer's decision about one document version. Insert-only; a later decision is a new row.
-type DealRoomDecision struct {
-	// AttachmentId The exact version decided on.
-	AttachmentId openapi_types.UUID `json:"attachment_id"`
-	CreatedAt    time.Time          `json:"created_at"`
-	DocumentId   openapi_types.UUID `json:"document_id"`
-	Id           openapi_types.UUID `json:"id"`
-
-	// Kind `request_changes` or `confirm_version`.
-	Kind            string             `json:"kind"`
-	Note            *string            `json:"note,omitempty"`
-	ParticipantId   openapi_types.UUID `json:"participant_id"`
-	ParticipantName *string            `json:"participant_name,omitempty"`
-	RoomId          openapi_types.UUID `json:"room_id"`
-}
-
-// DealRoomDecisionListResponse defines model for DealRoomDecisionListResponse.
-type DealRoomDecisionListResponse struct {
-	Data []DealRoomDecision `json:"data"`
 }
 
 // DealRoomDeliveryState What happened to the credential we last sent this person — delivery, modelled
@@ -15744,15 +15728,13 @@ type DealRoomParticipant struct {
 	// Capability What a participant may do in the room. Coarse and room-wide on purpose — a
 	// per-document permission matrix is a product nobody asked for.
 	//
-	// `view` reads. `comment` also writes comments and messages. `reviewer` also
-	// confirms a document version, which is the only one that carries weight in a
-	// negotiation, so it is granted deliberately and never by default.
+	// `view` reads. `comment` also writes comments and messages.
 	//
-	// Typed as a plain string rather than an inline enum: `view`, `comment` and
-	// `reviewer` would generate package-scope Go constants named `View`, `Comment`
-	// and `Reviewer` in the shared contracts package, which collide with — and
-	// silently rename — the constants of any other schema declaring the same value.
-	// The closed set is stated here and held by the writer and the schema CHECK.
+	// Typed as a plain string rather than an inline enum: `view` and `comment`
+	// would generate package-scope Go constants named `View` and `Comment` in the
+	// shared contracts package, which collide with — and silently rename — the
+	// constants of any other schema declaring the same value. The closed set is
+	// stated here and held by the writer and the schema CHECK.
 	Capability DealRoomParticipantCapability `json:"capability"`
 	CapturedBy *string                       `json:"captured_by,omitempty"`
 	CreatedAt  time.Time                     `json:"created_at"`
@@ -15807,7 +15789,7 @@ type DealRoomParticipant struct {
 	LinkRequestedAt *time.Time `json:"link_requested_at,omitempty"`
 
 	// RevokedAt When their access was taken away. The row survives revocation so their
-	// comments and decisions stay attributed to a name.
+	// comments stay attributed to a name.
 	RevokedAt            *time.Time             `json:"revoked_at,omitempty"`
 	RoomId               openapi_types.UUID     `json:"room_id"`
 	Source               string                 `json:"source"`
@@ -15818,15 +15800,13 @@ type DealRoomParticipant struct {
 // DealRoomParticipantCapability What a participant may do in the room. Coarse and room-wide on purpose — a
 // per-document permission matrix is a product nobody asked for.
 //
-// `view` reads. `comment` also writes comments and messages. `reviewer` also
-// confirms a document version, which is the only one that carries weight in a
-// negotiation, so it is granted deliberately and never by default.
+// `view` reads. `comment` also writes comments and messages.
 //
-// Typed as a plain string rather than an inline enum: `view`, `comment` and
-// `reviewer` would generate package-scope Go constants named `View`, `Comment`
-// and `Reviewer` in the shared contracts package, which collide with — and
-// silently rename — the constants of any other schema declaring the same value.
-// The closed set is stated here and held by the writer and the schema CHECK.
+// Typed as a plain string rather than an inline enum: `view` and `comment`
+// would generate package-scope Go constants named `View` and `Comment` in the
+// shared contracts package, which collide with — and silently rename — the
+// constants of any other schema declaring the same value. The closed set is
+// stated here and held by the writer and the schema CHECK.
 type DealRoomParticipantCapability = string
 
 // DealRoomParticipantListResponse defines model for DealRoomParticipantListResponse.
@@ -15899,13 +15879,6 @@ type DealRoomThread struct {
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
 type DealRoomThreadListResponse struct {
 	Data []DealRoomThread `json:"data"`
-}
-
-// DecideBuyerRoomDocumentRequest defines model for DecideBuyerRoomDocumentRequest.
-type DecideBuyerRoomDocumentRequest struct {
-	// Kind `request_changes` or `confirm_version`.
-	Kind string  `json:"kind"`
-	Note *string `json:"note,omitempty"`
 }
 
 // DecideCommissionRequest defines model for DecideCommissionRequest.
@@ -18065,7 +18038,7 @@ type OpenDealRoomThreadRequest struct {
 	// DocumentId The room document the thread is about. Omit for a room-level exchange.
 	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
 
-	// RequiredChange Only with a document. Marks the thread as blocking confirmation until resolved.
+	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
 	// Source Provenance. Defaults to `ui` on the public edge.
@@ -22948,15 +22921,13 @@ type UpdateDealRoomParticipantRequest struct {
 	// Capability What a participant may do in the room. Coarse and room-wide on purpose — a
 	// per-document permission matrix is a product nobody asked for.
 	//
-	// `view` reads. `comment` also writes comments and messages. `reviewer` also
-	// confirms a document version, which is the only one that carries weight in a
-	// negotiation, so it is granted deliberately and never by default.
+	// `view` reads. `comment` also writes comments and messages.
 	//
-	// Typed as a plain string rather than an inline enum: `view`, `comment` and
-	// `reviewer` would generate package-scope Go constants named `View`, `Comment`
-	// and `Reviewer` in the shared contracts package, which collide with — and
-	// silently rename — the constants of any other schema declaring the same value.
-	// The closed set is stated here and held by the writer and the schema CHECK.
+	// Typed as a plain string rather than an inline enum: `view` and `comment`
+	// would generate package-scope Go constants named `View` and `Comment` in the
+	// shared contracts package, which collide with — and silently rename — the
+	// constants of any other schema declaring the same value. The closed set is
+	// stated here and held by the writer and the schema CHECK.
 	Capability *DealRoomParticipantCapability `json:"capability,omitempty"`
 
 	// Email Only while their credential is unconsumed. Changing it invalidates the link
@@ -28282,9 +28253,6 @@ type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
 
 // UpdatePreferencesJSONRequestBody defines body for UpdatePreferences for application/json ContentType.
 type UpdatePreferencesJSONRequestBody UpdatePreferencesJSONBody
-
-// DecideBuyerRoomDocumentJSONRequestBody defines body for DecideBuyerRoomDocument for application/json ContentType.
-type DecideBuyerRoomDocumentJSONRequestBody = DecideBuyerRoomDocumentRequest
 
 // ExchangeDealRoomCredentialJSONRequestBody defines body for ExchangeDealRoomCredential for application/json ContentType.
 type ExchangeDealRoomCredentialJSONRequestBody = DealRoomCredentialRequest
@@ -36490,9 +36458,6 @@ type ServerInterface interface {
 	// Freeze the room's content, keeping buyer access.
 	// (POST /deal-rooms/{id}/close)
 	CloseDealRoom(w http.ResponseWriter, r *http.Request, id Id)
-	// Every decision a buyer recorded on a document version, newest first.
-	// (GET /deal-rooms/{id}/decisions)
-	ListDealRoomDecisions(w http.ResponseWriter, r *http.Request, id Id)
 	// List the documents a room puts in front of its buyer.
 	// (GET /deal-rooms/{id}/documents)
 	ListDealRoomDocuments(w http.ResponseWriter, r *http.Request, id Id)
@@ -37180,9 +37145,6 @@ type ServerInterface interface {
 	// The documents as published, grouped.
 	// (GET /public/rooms/documents)
 	ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request)
-	// Ask for changes to, or confirm, the published version of a document.
-	// (POST /public/rooms/documents/{documentId}/decision)
-	DecideBuyerRoomDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
 	// The bytes of one published document.
 	// (GET /public/rooms/documents/{documentId}/file)
 	DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
@@ -38320,12 +38282,6 @@ func (_ Unimplemented) UpdateDealRoom(w http.ResponseWriter, r *http.Request, id
 // Freeze the room's content, keeping buyer access.
 // (POST /deal-rooms/{id}/close)
 func (_ Unimplemented) CloseDealRoom(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Every decision a buyer recorded on a document version, newest first.
-// (GET /deal-rooms/{id}/decisions)
-func (_ Unimplemented) ListDealRoomDecisions(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -39700,12 +39656,6 @@ func (_ Unimplemented) OneClickUnsubscribe(w http.ResponseWriter, r *http.Reques
 // The documents as published, grouped.
 // (GET /public/rooms/documents)
 func (_ Unimplemented) ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Ask for changes to, or confirm, the published version of a document.
-// (POST /public/rooms/documents/{documentId}/decision)
-func (_ Unimplemented) DecideBuyerRoomDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45943,40 +45893,6 @@ func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CloseDealRoom(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListDealRoomDecisions operation middleware
-func (siw *ServerInterfaceWrapper) ListDealRoomDecisions(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListDealRoomDecisions(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -56755,38 +56671,6 @@ func (siw *ServerInterfaceWrapper) ListBuyerRoomDocuments(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
-// DecideBuyerRoomDocument operation middleware
-func (siw *ServerInterfaceWrapper) DecideBuyerRoomDocument(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "documentId" -------------
-	var documentId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "documentId", chi.URLParam(r, "documentId"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "documentId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, DealRoomSessionScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DecideBuyerRoomDocument(w, r, documentId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // DownloadBuyerRoomDocument operation middleware
 func (siw *ServerInterfaceWrapper) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Request) {
 
@@ -62286,9 +62170,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deal-rooms/{id}/close", wrapper.CloseDealRoom)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deal-rooms/{id}/decisions", wrapper.ListDealRoomDecisions)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-rooms/{id}/documents", wrapper.ListDealRoomDocuments)
 	})
 	r.Group(func(r chi.Router) {
@@ -62974,9 +62855,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/rooms/documents", wrapper.ListBuyerRoomDocuments)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/public/rooms/documents/{documentId}/decision", wrapper.DecideBuyerRoomDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/rooms/documents/{documentId}/file", wrapper.DownloadBuyerRoomDocument)

@@ -28,26 +28,24 @@ import "./dealroomaccess.css";
 // fallback.
 //
 // Capability is a required, explained choice. The API defaults to `view`,
-// and a lawyer invited with the default could read the contract and never
-// confirm it — which the rep would discover a week later.
+// and a buyer invited with the default could read the documents and never be
+// able to say anything about them.
 
 type DealRoom = components["schemas"]["DealRoom"];
 type Participant = components["schemas"]["DealRoomParticipant"];
 type Capability = components["schemas"]["DealRoomParticipantCapability"];
 type Issued = components["schemas"]["DealRoomInvitationIssued"];
 
-const CAPABILITIES: readonly Capability[] = ["view", "comment", "reviewer"];
+const CAPABILITIES: readonly Capability[] = ["view", "comment"];
 
 const CAPABILITY_LABELS: Record<Capability, MessageKey> = {
   view: "access.cap.view",
   comment: "access.cap.comment",
-  reviewer: "access.cap.reviewer",
 };
 
 const CAPABILITY_HINTS: Record<Capability, MessageKey> = {
   view: "access.cap.viewHint",
   comment: "access.cap.commentHint",
-  reviewer: "access.cap.reviewerHint",
 };
 
 export function participantsKey(roomId: string) {

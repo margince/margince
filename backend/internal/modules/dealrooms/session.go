@@ -28,7 +28,7 @@ type Session struct {
 	ParticipantID ids.DealRoomParticipantID
 	RoomID        ids.DealRoomID
 	// Capability is the seller's decision about this person: `view` reads
-	// only, `comment` and `reviewer` may also work the list. Read at every
+	// only, `comment` may also write in the conversation. Read at every
 	// write, so a capability lowered after sign-in binds on the next request.
 	Capability string
 	// Preview marks a seller looking at their own room as a buyer. Reads

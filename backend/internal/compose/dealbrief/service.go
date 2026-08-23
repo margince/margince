@@ -58,7 +58,6 @@ type facts struct {
 	moreTasks bool
 	room      *crmcontracts.DealRoom
 	threads   []crmcontracts.DealRoomThread
-	decisions []crmcontracts.DealRoomDecision
 	now       time.Time
 }
 
@@ -110,9 +109,9 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	return f, nil
 }
 
-// gatherRoom reads the deal's room, when there is one, with its conversation
-// and decisions. A caller without the deal_room grant reads no room; the
-// brief then simply has no room section, which is the truth for them.
+// gatherRoom reads the deal's room, when there is one, with its conversation.
+// A caller without the deal_room grant reads no room; the brief then simply
+// has no room section, which is the truth for them.
 func (s *Service) gatherRoom(ctx context.Context, dealID ids.DealID, f *facts) error {
 	rooms, _, err := s.rooms.ListRooms(ctx, dealrooms.ListRoomsInput{DealID: &dealID})
 	if err != nil {
@@ -132,10 +131,5 @@ func (s *Service) gatherRoom(ctx context.Context, dealID ids.DealID, f *facts) e
 		return fmt.Errorf("deal brief: reading the room's conversation: %w", err)
 	}
 	f.threads = threads
-	decisions, err := s.rooms.ListDecisions(ctx, roomID)
-	if err != nil {
-		return fmt.Errorf("deal brief: reading the room's decisions: %w", err)
-	}
-	f.decisions = decisions
 	return nil
 }

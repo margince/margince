@@ -387,7 +387,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
 
 - **Its own frontend** — a `frontend/` directory whose screen is aliased into the SPA and rendered at
   the unit's route. Removing a unit is a one-place operation again: delete the unit directory. An
-  import gate (`frontend/scripts/check-ext-imports.sh`) holds a unit screen to the published surface,
+  import gate (`frontend/scripts/ext-imports.test.ts`) holds a unit screen to the published surface,
   the same way the Go marker gate holds its handlers.
 
 **The one upstream-owned file a unit may edit: `pnpm-lock.yaml`.** A unit frontend that declares npm
@@ -461,8 +461,9 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | A declaration the composer cannot honour is refused rather than discarded — an unknown job role, governance declared on the wrong half of a pair, a `$ref` in an advertised schema, a multi-document base contract | `backend/tools/gen-composition` |
 | Every declared extension operation is mounted, and every mounted route was declared | `backend/internal/compose/extparity_test.go` |
 | A unit's served tool is dispatched only by that unit's own route — one unit cannot inherit another's handler by naming its verb | `backend/internal/compose/extparity_test.go` |
-| A unit's SCREEN reaches the core only through the published surface (`frontend/package.json`'s `exports`), and npm only through what its own package declares | `frontend/scripts/check-ext-imports.sh`, itself tested by `check-ext-imports.test.sh` |
-| A unit's screen is held to the same design system as core — tokens, icons, spacing, no native dropdown | the four `frontend/scripts/check-*.sh` gates, which sweep `extensions/*/frontend` as well as `frontend/src` |
+| A unit's SCREEN reaches the core only through the published surface (`frontend/package.json`'s `exports`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts` — a vitest fitness function over the TypeScript AST, carrying its own fixture suite |
+| A unit's screen is held to the same design system as core — tokens, icons, spacing | `check-ds-purity.sh`, `check-icon-glyph.sh` and `check-ds-spacing.sh`, which sweep `extensions/*/frontend` as well as `frontend/src`. **`check-font-lock.sh` and `check-space-tokens.sh` read `frontend/src` only**, so a unit's fonts and spacing tokens are ungated ([#2407](https://github.com/margince/margince/issues/2407)) |
+| …and renders no native dropdown | `frontend/src/design-system/native-controls.test.ts` — a vitest fitness function over the TypeScript AST, reaching every extension frontend layer at any depth |
 | A unit cannot ship a second copy of state the host owns (React's hook dispatcher, react-query's QueryClient) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches a transitive one |
 | A unit's copy is namespaced to that unit and cannot rewrite a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | A unit screen's own test suite is RUN, not merely typechecked | `frontend/vitest.ext.config.ts` via `make fe-test-ext`, which `make check-fe` calls |

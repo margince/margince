@@ -7,6 +7,7 @@ import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { WrittenBy } from "./company360";
 import { ComposeModal } from "./compose";
 import { PersonMeetingBrief } from "./persondrawers";
 import "./dealnextaction.css";
@@ -58,6 +59,7 @@ function Recommendation({
             ))}
           </ul>
         ) : null}
+        <WrittenBy by={nba.generated_by ?? "deterministic"} />
       </div>
     </PanelBody>
   );

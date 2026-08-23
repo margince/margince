@@ -63,8 +63,8 @@ func TestAnInviteNormalizesTheAddressItAccepts(t *testing.T) {
 }
 
 func TestAnInviteWithoutACapabilityGetsTheLeastOne(t *testing.T) {
-	// Defaulting up would hand a reviewer's authority — the only capability that
-	// carries weight in a negotiation — to somebody nobody granted it to.
+	// Defaulting up would let somebody nobody granted a voice write into the
+	// room's conversation under their own name.
 	in, err := inviteInput(crmcontracts.InviteDealRoomParticipantRequest{
 		FullName: "Buyer",
 		Email:    openapi_types.Email("buyer@example.com"),

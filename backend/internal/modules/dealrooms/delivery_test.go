@@ -104,11 +104,11 @@ func TestDeliveryStateReadsTheMostDecidedOutcome(t *testing.T) {
 	}
 }
 
-func TestOnlyTheThreeNamedCapabilitiesAreAccepted(t *testing.T) {
+func TestOnlyTheTwoNamedCapabilitiesAreAccepted(t *testing.T) {
 	// The schema CHECK would refuse an unknown one too, but as a constraint
 	// violation: a 500 carrying a table name, telling the caller nothing about
 	// which values are legal.
-	for _, capability := range []string{capabilityView, capabilityComment, capabilityReviewer} {
+	for _, capability := range []string{capabilityView, capabilityComment} {
 		if err := refuseUnknownCapability(capability); err != nil {
 			t.Errorf("%q must be accepted: %v", capability, err)
 		}

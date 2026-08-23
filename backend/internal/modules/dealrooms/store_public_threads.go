@@ -3,10 +3,9 @@
 
 package dealrooms
 
-// The buyer's side of the conversation: reading it, opening a thread,
-// replying, and deciding on a document version. Every write needs the room
-// LIVE and a capability that admits it; every statement is predicated on the
-// session's room.
+// The buyer's side of the conversation: reading it, opening a thread and
+// replying. Every write needs the room LIVE and a capability that admits it;
+// every statement is predicated on the session's room.
 
 import (
 	"context"
@@ -65,14 +64,11 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 // liveRoomForBuyerWrite settles what every buyer write needs: the room is
 // live (paused refuses reversibly, the finished states as a record) and the
 // capability admits writing. Returns the room as the transaction bodies want it.
-func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session, needs string) (crmcontracts.DealRoom, error) {
+func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session) (crmcontracts.DealRoom, error) {
 	if sess.Preview {
 		return crmcontracts.DealRoom{}, errPreviewSession
 	}
-	if sess.Capability == capabilityView || (needs == capabilityReviewer && sess.Capability != capabilityReviewer) {
-		if needs == capabilityReviewer {
-			return crmcontracts.DealRoom{}, errNotReviewer
-		}
+	if sess.Capability == capabilityView {
 		return crmcontracts.DealRoom{}, errViewerCannotWrite
 	}
 	st, err := readStanding(ctx, tx, sess.RoomID)
@@ -95,15 +91,6 @@ func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session, needs s
 		return crmcontracts.DealRoom{}, fmt.Errorf("read deal room for a buyer write: %w", err)
 	}
 	return room, nil
-}
-
-// errNotReviewer refuses a decision from a participant the seller did not make
-// a reviewer. A confirmation carries weight in a negotiation, so it is granted
-// deliberately and never by default.
-var errNotReviewer = &fieldError{
-	field: fieldCapability,
-	code:  "reviewer_required",
-	msg:   "only a reviewer can decide on a document; ask your contact to make you one",
 }
 
 // requireBuyerVisibleDocument refuses a document this buyer cannot see: one
@@ -129,7 +116,7 @@ func (s *Store) OpenBuyerThread(ctx context.Context, sess Session, in OpenThread
 	}
 	var out crmcontracts.DealRoomThread
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		room, err := liveRoomForBuyerWrite(ctx, tx, sess, capabilityComment)
+		room, err := liveRoomForBuyerWrite(ctx, tx, sess)
 		if err != nil {
 			return err
 		}
@@ -151,7 +138,7 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 	}
 	var out crmcontracts.DealRoomThread
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		room, err := liveRoomForBuyerWrite(ctx, tx, sess, capabilityComment)
+		room, err := liveRoomForBuyerWrite(ctx, tx, sess)
 		if err != nil {
 			return err
 		}
@@ -167,37 +154,6 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 		return err
 	})
 	return out, err
-}
-
-// ErrDecisionsRetired refuses a buyer decision on a document version.
-//
-// Sharing a document with a buyer is sharing it. The product no longer asks
-// them to formally accept each file — a buyer reading "confirm this version"
-// under a call transcript cannot tell what they would be agreeing to, and what
-// they want to say about a document they say in the thread under it.
-//
-// The refusal lives HERE rather than in the client, because hiding a button is
-// not removing an authority: a reviewer seat holds a live credential and can
-// call the endpoint directly. The operation stays on the contract and the
-// existing deal_room_decision rows stay readable — a decision somebody
-// genuinely made is a record of what happened — but no new one is written.
-//
-// The WRITER is gone with it — the lint bar refuses dead code, and a retired
-// path kept "just in case" is how a removed feature quietly comes back. What
-// bringing approvals back would cost is written down in
-// https://github.com/margince/margince/issues/2382.
-var ErrDecisionsRetired = &retiredError{
-	code: "document_decisions_retired",
-	msg: "deal room documents are shared rather than submitted for approval: " +
-		"say what you need in the document's own thread instead",
-}
-
-// DecideAsBuyer refuses every decision: see ErrDecisionsRetired.
-func (s *Store) DecideAsBuyer(_ context.Context, sess Session, _ ids.UUID, _ string, _ *string) (crmcontracts.DealRoomDecision, error) {
-	if sess.ID == ids.Nil {
-		return crmcontracts.DealRoomDecision{}, apperrors.ErrPermissionDenied
-	}
-	return crmcontracts.DealRoomDecision{}, ErrDecisionsRetired
 }
 
 // ensureThreadStillVisible refuses a thread the buyer's own list would not show

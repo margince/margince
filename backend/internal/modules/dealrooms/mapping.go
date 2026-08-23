@@ -137,12 +137,11 @@ func refuseOverlongName(name string) error {
 
 // The capabilities a participant may hold, spelled here because the contract
 // carries them as a plain string — an inline enum would generate package-scope
-// Go constants named View, Comment and Reviewer in the shared contracts package
-// and silently rename any other schema declaring the same values.
+// Go constants named View and Comment in the shared contracts package and
+// silently rename any other schema declaring the same values.
 const (
-	capabilityView     = "view"
-	capabilityComment  = "comment"
-	capabilityReviewer = "reviewer"
+	capabilityView    = "view"
+	capabilityComment = "comment"
 )
 
 // refuseUnknownCapability names the closed set rather than letting the schema
@@ -150,13 +149,13 @@ const (
 // it, and the caller learns nothing about which values are legal.
 func refuseUnknownCapability(capability string) error {
 	switch capability {
-	case capabilityView, capabilityComment, capabilityReviewer:
+	case capabilityView, capabilityComment:
 		return nil
 	}
 	return &fieldError{
 		field: fieldCapability,
 		code:  "unknown_capability",
-		msg:   "capability must be view, comment or reviewer",
+		msg:   "capability must be view or comment",
 	}
 }
 

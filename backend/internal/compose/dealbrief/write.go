@@ -148,7 +148,7 @@ func open(f facts) []sentence {
 	}}
 }
 
-// room: the Deal Room's state, the buyer's open questions, their decisions.
+// room: the Deal Room's state and the buyer's open questions.
 func room(f facts) []sentence {
 	if f.room == nil {
 		return nil
@@ -170,30 +170,7 @@ func room(f facts) []sentence {
 			Evidence: dealCite(f),
 		})
 	}
-	if len(f.decisions) > 0 {
-		latest := f.decisions[0]
-		for _, d := range f.decisions[1:] {
-			if d.CreatedAt.After(latest.CreatedAt) {
-				latest = d
-			}
-		}
-		who := "a reviewer"
-		if latest.ParticipantName != nil && *latest.ParticipantName != "" {
-			who = *latest.ParticipantName
-		}
-		lines = append(lines, sentence{
-			Text:     fmt.Sprintf("Latest decision: %s %s a document, %s.", who, decisionVerb(latest.Kind), daysAgo(f.now, latest.CreatedAt)),
-			Evidence: dealCite(f),
-		})
-	}
 	return lines
-}
-
-func decisionVerb(kind string) string {
-	if kind == "confirm_version" {
-		return "confirmed"
-	}
-	return "asked for changes to"
 }
 
 func lastContact(f facts) (crmcontracts.Activity, bool) {
