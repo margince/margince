@@ -56,7 +56,17 @@
 //
 // The comments themselves come from the parser's trivia, not from a regex
 // hunting `//`: a `//` inside a string is not a comment, and hand-written
-// answers to that question are what this refactor exists to stop writing.
+// answers to that question are what this refactor exists to stop writing. And
+// each comment's BODY is parsed by the SAME extractor as the code, rather than
+// matched for the words an import happens to contain — asking "is there a
+// `from` near a quote" reports `// ported from '../legacy'` as an escape, and
+// the fix for that is another guess about which prose is innocent.
+//
+// What that costs, stated here rather than discovered later: prose embedding a
+// whole import STATEMENT is reported, because TypeScript's error recovery finds
+// the statement inside it. Demanding the comment parse cleanly end to end would
+// fix that and lose a doc comment quoting the old wiring under a line of prose
+// — a miss, in the direction this gate must not be wrong in.
 
 import {
   existsSync,
@@ -118,31 +128,42 @@ function scriptKindFor(path: string): ts.ScriptKind {
 // the leading trivia of exactly one token — the end-of-file token carries the
 // tail — so walking down to tokens reaches all of them, and `//` inside a
 // string is not one of them for free.
-function commentTexts(source: ts.SourceFile, text: string): Specifier[] {
-  const out: Specifier[] = [];
+function commentRanges(source: ts.SourceFile, text: string): ts.CommentRange[] {
+  const out: ts.CommentRange[] = [];
   const seen = new Set<number>();
   const collect = (node: ts.Node): void => {
     for (const range of ts.getLeadingCommentRanges(text, node.getFullStart()) ??
       []) {
       if (seen.has(range.pos)) continue;
       seen.add(range.pos);
-      const body = text.slice(range.pos, range.end);
-      for (const m of body.matchAll(
-        /(?:from|import|require)\s*\(?\s*["'`]([^"'`]+)["'`]/g,
-      )) {
-        const ahead = body.slice(0, m.index).split("\n").length - 1;
-        out.push({
-          text: m[1],
-          line:
-            source.getLineAndCharacterOfPosition(range.pos).line + 1 + ahead,
-          inComment: true,
-        });
-      }
+      out.push(range);
     }
     for (const child of node.getChildren(source)) collect(child);
   };
   collect(source);
   return out;
+}
+
+// unmarked blanks a comment's OPENING delimiter — `//` or `/*` — so what is
+// left parses as source. It becomes a SPACE of the same width, never nothing,
+// so every offset inside the comment stays exactly where the reader will find
+// it.
+//
+// Only the opener, and that asymmetry is the interesting part. Leaving `/*` in
+// place makes the whole body one unterminated comment and yields ZERO nodes —
+// a silent miss, and a mutant removing it fails the suite. The CLOSING `*/`,
+// and the `*` a block comment puts at the head of each line, are deliberately
+// left alone: both looked equally necessary, both were here, and mutants
+// removing them changed no verdict. TypeScript's error recovery steps over a
+// stray `*` and finds the statement behind it — measured across eleven comment
+// shapes (plain, star and named re-export, import-equals, require, dynamic,
+// bare, two on two lines, single-line, no trailing space, expression tail).
+//
+// A line no test can fail without is a line the next reader has to reason about
+// for nothing, so the rule is the one this suite applies to everything else:
+// keep what a mutant kills.
+function unmarked(raw: string): string {
+  return raw.replace(/^\/\//, "  ").replace(/^\/\*/, "  ");
 }
 
 // specifiersIn returns every module specifier the file resolves, plus every one
@@ -156,6 +177,43 @@ function specifiersIn(path: string, text: string): Specifier[] {
     ts.ScriptTarget.ES2022,
     true,
     scriptKindFor(path),
+  );
+  // A comment is not an AST node, and the shell gate deliberately did not strip
+  // them: a commented-out bad import is a bad import somebody is about to
+  // uncomment. Dropping that silently is the regression this file exists not to
+  // repeat.
+  //
+  // Each comment's body is PARSED with the same extractor, rather than matched
+  // for the words an import happens to contain. Asking "does this text contain
+  // `from` near a quote" reports `// ported from '../legacy'` as an escape, and
+  // then the fix is another guess about which prose is innocent. The question
+  // the rule actually asks is whether the text IS an import statement, and the
+  // parser is the thing that knows.
+  const inComments = commentRanges(source, text).flatMap((range) => {
+    const at = source.getLineAndCharacterOfPosition(range.pos).line;
+    return astSpecifiers(
+      `${path}.comment`,
+      unmarked(text.slice(range.pos, range.end)),
+      scriptKindFor(path),
+    ).map((s) => ({ ...s, line: at + s.line, inComment: true }));
+  });
+  return [...astSpecifiers(path, text, scriptKindFor(path)), ...inComments];
+}
+
+// astSpecifiers is the ONE reading of "what does this source import". It is
+// called twice — once on the file, once on each comment's body — because two
+// readings of that question are two answers that drift.
+function astSpecifiers(
+  path: string,
+  text: string,
+  kind: ts.ScriptKind,
+): Specifier[] {
+  const source = ts.createSourceFile(
+    path,
+    text,
+    ts.ScriptTarget.ES2022,
+    true,
+    kind,
   );
   const out: Specifier[] = [];
   const push = (node: ts.Node, spec: string) =>
@@ -205,7 +263,7 @@ function specifiersIn(path: string, text: string): Specifier[] {
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(source, visit);
-  return [...out, ...commentTexts(source, text)];
+  return out;
 }
 
 // judge applies the three rules to one file's specifiers. `file` is absolute
@@ -456,6 +514,48 @@ describe("the extension-import detector sees what it claims to", () => {
         "screen.tsx": `// import { session } from "${ESCAPE}";\nexport default function S() { return null }`,
       },
     },
+    // Prose is not an import. Matching the WORDS an import contains reported
+    // every one of these, and the fix for that is not a better word list — it
+    // is asking the parser whether the text is an import statement at all.
+    {
+      name: "a comment saying where something was ported from",
+      want: null,
+      files: {
+        "screen.tsx":
+          "// ported from '../../../frontend/src/app/session'\nexport default function S() { return null }",
+      },
+    },
+    {
+      name: "a comment naming a package in prose",
+      want: null,
+      files: {
+        "screen.tsx":
+          '// we read the date from "dayjs" here once, and stopped\nexport default function S() { return null }',
+      },
+    },
+    // And the line this rule DOES draw, stated rather than discovered: prose
+    // that embeds a whole import STATEMENT is reported. `drop import "dayjs"
+    // when the shim goes` does not parse, but TypeScript's error recovery finds
+    // the real `import "dayjs"` inside it, and that is the honest answer — the
+    // text is an import statement with words around it.
+    {
+      name: "prose that embeds a whole import statement",
+      want: "is not declared by",
+      files: {
+        "screen.tsx":
+          '/* drop import "dayjs" when the shim goes */\nexport default function S() { return null }',
+      },
+    },
+    // A doc comment's leading `*` must not stop the body parsing, or the rule
+    // above holds for `//` and quietly does not for `/** */`.
+    {
+      name: "a doc comment holding a real commented-out escape",
+      want: "commented out",
+      files: {
+        "screen.tsx":
+          '/**\n * import { session } from "../../../frontend/src/app/session";\n */\nexport default function S() { return null }',
+      },
+    },
     // The spellings the collapsed-line regex could not see. Each resolves at
     // bundle time exactly like an import.
     {
@@ -557,6 +657,26 @@ describe("the extension-import detector sees what it claims to", () => {
       expect(hits.join("\n")).toContain(tc.want);
     });
   }
+
+  it("names the line inside a multi-line comment, not the comment's first", () => {
+    // A comment's body is parsed on its own, so its line numbers start at 1 and
+    // have to be shifted back onto the file. Without the shift every hit in a
+    // block comment names the line the comment OPENED on.
+    //
+    // The two lines of code above the comment are the whole point: with the
+    // comment opening on line 1 the shift adds zero, and this case passed
+    // identically with the shift removed. A fixture that cannot fail on the
+    // rule it is named for is the defect this suite exists to stop shipping.
+    const hits = audit(
+      scaffold({
+        "screen.tsx":
+          'export const a = 1;\nexport const b = 2;\n/*\n * a note\n * import { session } from "../../../frontend/src/app/session";\n */\nexport default function S() { return null }',
+      }),
+    );
+    expect(hits).toEqual([
+      `extensions/probe/frontend/screen.tsx:5 (commented out, and an import somebody is about to uncomment): relative import '${ESCAPE}' leaves the unit's own frontend/ — reach the core through @margince/frontend/<subpath>, never by path`,
+    ]);
+  });
 
   it("names the line the reader has to open", () => {
     // A report that fires on the right file and names the wrong line sends its
