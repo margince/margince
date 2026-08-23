@@ -95,6 +95,17 @@ type relinkActivity struct {
 	p datasource.SystemOfRecordProvider
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+//
+// This verb resolves its tier dynamically, and a floor is not the same lever: the
+// resolver RAISES a particular call on that call's own facts, where the floor
+// tightens EVERY call of the verb for a record type. An installation that wants
+// the whole verb confirmed cannot get there by waiting for the resolver to agree.
+func (relinkActivity) RecordTypeOf(json.RawMessage) string { return "activity" }
+
+func (relinkActivity) ServesRecordType(recordType string) bool { return recordType == "activity" }
+
 func (t relinkActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_activity", Title: "Re-associate an activity to a record", Version: toolVersionV1,
@@ -160,6 +171,12 @@ type disqualifyLead struct {
 	disqualifier LeadDisqualifier
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (disqualifyLead) RecordTypeOf(json.RawMessage) string { return "lead" }
+
+func (disqualifyLead) ServesRecordType(recordType string) bool { return recordType == "lead" }
+
 func (t disqualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
@@ -219,6 +236,12 @@ type advanceProjectPhase struct {
 	p        datasource.SystemOfRecordProvider
 	advancer ProjectPhaseAdvancer
 }
+
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (advanceProjectPhase) RecordTypeOf(json.RawMessage) string { return "project" }
+
+func (advanceProjectPhase) ServesRecordType(recordType string) bool { return recordType == "project" }
 
 func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{

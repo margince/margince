@@ -58,6 +58,23 @@ type recordTypedTool interface {
 	ServesRecordType(recordType string) bool
 }
 
+// A SINGLE-record-type verb answers recordTypedTool with a constant.
+//
+// promote_lead, send_email and their six siblings take no `record_type` argument,
+// because there is nothing to choose: the contract declares one record type for
+// each and the verb performs that effect and no other. Each states its type in its
+// own two methods below rather than embedding a shared field, because every one of
+// these tools is built as a keyed composite literal — an embedded field would be
+// left at its zero value at some construction site and answer "", which silently
+// removes that door from the floor rather than failing.
+//
+// Without the pair, those verbs are not recordTypedTool at all, and
+// Registry.tightened returns their declared tier untouched — indistinguishable
+// from "the contract declares no floor here" when the truth is "this door cannot
+// be floored". That gap was invisible while the whole family staged
+// unconditionally, and became the only thing standing between an installation and
+// an unconfirmable send the moment they began executing directly.
+
 // recordTypeArg reads the `record_type` argument the generic verbs share.
 func recordTypeArg(args json.RawMessage) string {
 	var a struct {

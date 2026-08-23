@@ -286,6 +286,12 @@ func (t readImportReport) Handle(ctx context.Context, in json.RawMessage) (json.
 
 type commitImport struct{ imports Imports }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (commitImport) RecordTypeOf(json.RawMessage) string { return "import_run" }
+
+func (commitImport) ServesRecordType(recordType string) bool { return recordType == "import_run" }
+
 func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
@@ -317,6 +323,14 @@ func (t commitImport) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	id, err := importRunArg(in)
 	if err != nil {
 		return nil, err
+	}
+	// The seam is checked here, not only where an approval used to be staged.
+	// A deployment with no object store still SERVES this verb — the contract
+	// declares it, so the registry advertises it — and a nil seam reached by a
+	// direct call panics on the read below rather than naming what is missing.
+	if t.imports == nil {
+		return nil, fmt.Errorf(
+			"no import seam is wired, so run %s cannot be committed here", id)
 	}
 	// Checked again on the approved retry. StageInfo's check is the courtesy
 	// that avoids spending an approval; this one is the rule, because Handle

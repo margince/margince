@@ -399,7 +399,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/fx-rates/propose-refresh":                                  {Op: "proposeFxRateRefresh", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/imports":                                                   {Op: "createImportRun", Access: "tool", Tool: "preview_import", RecordType: "import_run", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/imports/sources":                                           {Op: "uploadImportSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/imports/{id}/approve":                                      {Op: "approveImportRun", Access: "tool", Tool: "commit_import", RecordType: "import_run", Tier: "confirmation_required", Scope: "write"},
+	"POST /v1/imports/{id}/approve":                                      {Op: "approveImportRun", Access: "tool", Tool: "commit_import", RecordType: "import_run", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/imports/{id}/undo":                                         {Op: "undoImportRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/lead-disqualify-reasons":                                   {Op: "createLeadDisqualifyReason", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/lead-sources":                                              {Op: "createLeadSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

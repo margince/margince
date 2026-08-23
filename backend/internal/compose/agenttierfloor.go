@@ -51,17 +51,49 @@ type toolRecordType struct{ tool, recordType string }
 // there rather than wrong here, and it is the tool that knows.
 var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 	floors := map[toolRecordType]mcp.RiskTier{}
+	routes := routesPerToolRecordType()
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
 			continue
 		}
-		if !isCanonicalRecordRoute(route) {
+		pair := toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}
+		if routes[pair] > 1 && !isCanonicalRecordRoute(route) {
 			continue
 		}
-		floors[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] = mcp.TierConfirmationRequired
+		floors[pair] = mcp.TierConfirmationRequired
 	}
 	return floors
 }()
+
+// routesPerToolRecordType counts how many operations declare each (verb, record
+// type) pair, which is what decides whether isCanonicalRecordRoute has a question
+// to answer.
+//
+// Canonicality exists to pick ONE operation out of several sharing a pair:
+// `update_record`+`organization` is declared by five routes, and only
+// `PATCH /v1/organizations/{id}` is the field patch the verb performs. Where a pair
+// is declared by exactly ONE route, there is nothing to pick — that route IS the
+// operation, whatever its shape.
+//
+// Applying the canonical filter unconditionally silently dropped every
+// action-shaped verb from the floor table: `promote_lead` lives at
+// `POST /v1/leads/{id}/promote`, `send_email` at
+// `POST /v1/activities/{id}/send-email`, `merge_records` at
+// `POST /v1/people/{id}/merge` — three segments each, so none of them could be
+// floored at all. That was invisible while those verbs were statically
+// confirm-first and became load-bearing the moment they started executing
+// directly, because the floor is the whole of what an installation has to tighten
+// them back.
+func routesPerToolRecordType() map[toolRecordType]int {
+	counts := map[toolRecordType]int{}
+	for _, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.RecordType == "" {
+			continue
+		}
+		counts[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}]++
+	}
+	return counts
+}
 
 // isCanonicalRecordRoute reports whether a route is a whole-record write on the
 // record's own collection — `/v1/<collection>` or `/v1/<collection>/{id}` — which

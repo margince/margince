@@ -84,12 +84,13 @@ An action's autonomy tier is **declared once in the contract** (`x-mcp-tool: { t
 - **🟡 `confirmation_required`** — kept for the calls whose destination the credential-holder did **not**
   choose. `enrich` is the standing case: the MODEL names the URL the server fetches, so persuading the
   model reaches an address nobody with the credential picked, which is an egress question rather than an
-  authority one. An installation can also **floor** any verb back to confirm-first per record type, and
-  the staging machinery every verb still carries is what makes that work.
-- **Human-only** routes are unchanged, and remain the boundary that matters: they are the things a
-  credential must not widen, not the things its holder can already do.
+  authority one. An installation can also **floor** a verb back to confirm-first per record type by
+  declaring `tier: confirmation_required` on the operation, and every verb still carries the staging
+  machinery that makes the floor land in a human's inbox rather than dead-ending as a refusal.
 - **Human-only** routes (consent, DSR, passport issuance, pipeline configuration) **refuse an agent
-  principal outright** — each one would let a credential widen what a credential may do.
+  principal outright** — each one would let a credential widen what a credential may do. This is the
+  boundary that matters: the things a credential must not widen, not the things its holder can already
+  do.
 - A mutating operation carrying **no tier is default-denied** for agents (the agent-policy generator
   refuses to ship an un-tiered mutation in the first place — see
   [contract-first.md](contract-first.md)).

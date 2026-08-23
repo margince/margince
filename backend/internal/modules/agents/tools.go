@@ -407,6 +407,17 @@ type advanceDeal struct {
 	stages StageResolver
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+//
+// This verb resolves its tier dynamically, and a floor is not the same lever: the
+// resolver RAISES a particular call on that call's own facts, where the floor
+// tightens EVERY call of the verb for a record type. An installation that wants
+// the whole verb confirmed cannot get there by waiting for the resolver to agree.
+func (advanceDeal) RecordTypeOf(json.RawMessage) string { return "deal" }
+
+func (advanceDeal) ServesRecordType(recordType string) bool { return recordType == "deal" }
+
 func (t advanceDeal) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_deal", Title: "Advance a deal to a stage", Version: toolVersionV1,

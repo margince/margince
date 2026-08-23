@@ -42,6 +42,7 @@ import (
 func tightenedPairs(t *testing.T) map[toolRecordType]string {
 	t.Helper()
 	registry := NewRegistry(nil, SendPath{})
+	routes := routesPerToolRecordType()
 	pairs := map[toolRecordType]string{}
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
@@ -51,7 +52,11 @@ func tightenedPairs(t *testing.T) map[toolRecordType]string {
 		if !registered || spec.Tier == mcp.TierConfirmationRequired {
 			continue
 		}
-		if !isCanonicalRecordRoute(route) || !registry.Performs(pol.Tool, string(pol.RecordType)) {
+		if routes[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] > 1 &&
+			!isCanonicalRecordRoute(route) {
+			continue
+		}
+		if !registry.Performs(pol.Tool, string(pol.RecordType)) {
 			continue
 		}
 		pairs[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] = route
@@ -114,11 +119,13 @@ func TestEveryVerbTheFloorTightensNamesItsRecordType(t *testing.T) {
 // it is invisible to every gate above, all of which only ask whether the floor
 // knows ENOUGH.
 func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
+	routes := routesPerToolRecordType()
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierAutoExecute {
 			continue
 		}
-		if !isCanonicalRecordRoute(route) {
+		if routes[toolRecordType{tool: pol.Tool, recordType: string(pol.RecordType)}] > 1 &&
+			!isCanonicalRecordRoute(route) {
 			continue
 		}
 		if _, declared := tierFloor(pol.Tool, string(pol.RecordType)); declared {
@@ -126,5 +133,58 @@ func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
 				"tightens that pair anyway, so the tool door stages what the REST door runs unattended",
 				route, pol.Tool, pol.RecordType)
 		}
+	}
+}
+
+// Every verb that CAN stage must also be reachable by a floor.
+//
+// This is the gate the tier-parity change was missing, and its absence is what
+// made a claim in that change's own commit message untrue. Ten consequential
+// verbs stopped staging by default — archive, the three sends, the booking, the
+// two merges, both lead transitions, the import commit — on the argument that a
+// passport carries its holder's own authority, and that an installation wanting
+// one confirmed sets a tier floor for it (ADR-0055).
+//
+// The floor could not reach nine of them. Registry.tightened resolves a floor only
+// through recordTypedTool, and only the two generic verbs implemented it: nothing
+// else had ever needed to, because nothing else had ever been anything but
+// confirm-first. So "an installation can floor it back" was documentation, not
+// behaviour, and every gate above stayed green because each one walks the pairs
+// the contract tightens TODAY — an empty set.
+//
+// This walks the other direction. A verb that stages is a verb an installation may
+// want confirmed; if the floor cannot resolve a call to it, that wish has no way
+// to be expressed, and the default becomes the only setting there is.
+func TestEveryStageableVerbCanBeFlooredBack(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	seen := map[string]bool{}
+	for _, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.RecordType == "" || seen[pol.Tool] {
+			continue
+		}
+		spec, registered := registry.Spec(pol.Tool)
+		if !registered || !registry.Stageable(pol.Tool) {
+			continue
+		}
+		seen[pol.Tool] = true
+		if spec.Tier == mcp.TierConfirmationRequired {
+			// Already confirm-first for every call, so there is nothing a floor
+			// could add and nothing an installation has to reach for.
+			continue
+		}
+		if !registry.NamesRecordType(pol.Tool) {
+			t.Errorf("%s executes directly and can stage, so an installation may want it confirmed — "+
+				"but it does not report the record type of a call, so no tier floor can reach it and "+
+				"the default is the only setting there is", pol.Tool)
+			continue
+		}
+		// Whether the verb PERFORMS this particular record type is deliberately not
+		// asserted. A route may borrow a verb's annotation for an effect the verb
+		// does not have — `replyDealRoomThread` is annotated `create_record` for
+		// `deal_room_comment`, which create_record does not create — and
+		// Registry.tightened is built to leave such a pair alone rather than stage
+		// a call that would die at the provider. What this gate is about is
+		// narrower and unconditional: can a floor be resolved for this verb AT
+		// ALL.
 	}
 }

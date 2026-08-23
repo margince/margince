@@ -232,6 +232,12 @@ type sendEmailTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (sendEmailTool) RecordTypeOf(json.RawMessage) string { return "activity" }
+
+func (sendEmailTool) ServesRecordType(recordType string) bool { return recordType == "activity" }
+
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
@@ -314,6 +320,12 @@ type sendMessageTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (sendMessageTool) RecordTypeOf(json.RawMessage) string { return "activity" }
+
+func (sendMessageTool) ServesRecordType(recordType string) bool { return recordType == "activity" }
+
 func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
@@ -360,6 +372,14 @@ func (t sendMessageTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
 		return nil, err
 	}
+	// NOT carried over from the resolver's Guards: CanSendOnProvider, which
+	// refused a transport this installation composed no sender for. It was
+	// there because staging spends a human's one-shot approval and a message
+	// on an uncomposed transport would have been approved and then failed.
+	// With no approval to spend, the executor's own refusal arrives at the same
+	// moment and names the same thing — ChannelNotSendCapableError, by provider
+	// (activities/channelsend.go). Repeating it here would need ChannelKinds
+	// threaded through the comms registrar for an answer the send already gives.
 	noteEvidence(ctx, datasource.EntityActivity, args.ActivityID)
 	return marshalResult(t.comms.SendMessage(ctx, args.ActivityID, args.SendMessageArgs))
 }

@@ -18,8 +18,10 @@ package agents
 //
 // What still bounds a call is what bounds the human: RBAC, row scope, the seat
 // ceiling, expiry, and the passport scope its holder chose to lend. An
-// installation that wants a verb confirmed sets a tier floor for it; the
-// default is now what the person can already do.
+// installation that wants a verb confirmed sets a tier floor for it — which is
+// only true because every tool in this family answers recordTypedTool
+// (tierfloor.go); a verb that cannot say which record type a call names takes no
+// floor at all, and the default would be the only setting there is.
 
 import (
 	"context"
@@ -178,6 +180,27 @@ func refuseUnarchivableType(ctx context.Context, p datasource.SystemOfRecordProv
 	return nil
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb.
+//
+// Every tool in this family gained them together with the move to executing
+// directly, and for one reason: the floor is now the ONLY way an installation
+// asks for one of these verbs to be confirmed. While they staged unconditionally
+// there was nothing for a floor to add, so none of them implemented the seam and
+// nobody noticed — Registry.tightened simply returns the declared spec for a tool
+// that is not recordTypedTool, which reads as "no tightening declared" and is
+// indistinguishable from "this verb cannot be tightened at all".
+//
+// ServesRecordType asks the STATIC list rather than archivableHere, which needs a
+// context and a provider round-trip this seam does not have. The narrower,
+// provider-aware refusal still runs in StageInfo and Handle; a floor entry for a
+// type the routed executor will not archive is inert there, which is the same
+// outcome the wider answer produces.
+func (archiveRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
+
+func (archiveRecord) ServesRecordType(recordType string) bool {
+	return slices.Contains(archivableRecordTypes, recordType)
+}
+
 func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args archiveArgs
 	if err := decodeArgs(in, &args); err != nil {
@@ -212,6 +235,12 @@ type promoteLead struct {
 	p        datasource.SystemOfRecordProvider
 	promoter LeadPromoter
 }
+
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (promoteLead) RecordTypeOf(json.RawMessage) string { return "lead" }
+
+func (promoteLead) ServesRecordType(recordType string) bool { return recordType == "lead" }
 
 func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -293,6 +322,12 @@ func mergeableTypeNames() []string {
 	sort.Strings(names)
 	return names
 }
+
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note on archiveRecord's pair for why the whole family needed them.
+func (mergeRecords) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
+
+func (mergeRecords) ServesRecordType(recordType string) bool { return mergeableTypes[recordType] }
 
 type mergeRecords struct {
 	p datasource.SystemOfRecordProvider

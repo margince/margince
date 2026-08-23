@@ -30,6 +30,12 @@ type sendAccountEmailTool struct {
 	p     datasource.SystemOfRecordProvider
 }
 
+// RecordTypeOf and ServesRecordType let a workspace tier floor reach this verb;
+// see the note in tierfloor.go for why a single-record-type verb states it here.
+func (sendAccountEmailTool) RecordTypeOf(json.RawMessage) string { return "activity" }
+
+func (sendAccountEmailTool) ServesRecordType(recordType string) bool { return recordType == "activity" }
+
 // SendAccountEmailArgs is one account-started send: the reply's arguments,
 // minus the anchor, plus the records the new conversation is filed under.
 type SendAccountEmailArgs struct {
