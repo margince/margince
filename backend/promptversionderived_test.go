@@ -39,10 +39,10 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"io/fs"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -77,14 +77,25 @@ var uncachedPrompts = gatekit.Waive(map[string]string{
 	"internal/compose/orgbrief:askSystem": "Ask answers are not cached (orgbrief.Service.Ask says so and explains why: a question is asked once and read once). Binding the ask prompt to the BRIEF's key would rewrite every cached brief for a change that cannot affect one.",
 })
 
-// promptSurfaceFiles returns the product files of each prompt surface, grouped
-// by package directory.
+// promptPackage is one package directory: its product files, and the string
+// constants they declare, resolved once.
 //
-// Grouped rather than visited one at a time because Go constants are
-// package-scoped: a prompt lives in `write.go` while the version that caches its
-// output lives in `input.go`, and a census that resolved names file by file
-// would not see across that.
-func promptSurfaceFiles(t *testing.T) map[string][]*ast.File {
+// Grouped by package rather than visited file by file because Go constants are
+// package-scoped — a prompt lives in `write.go` while the version caching its
+// output lives in `input.go`, and a census resolving names per file cannot see
+// across that.
+type promptPackage struct {
+	dir    string
+	files  []*ast.File
+	consts map[string]string
+}
+
+// promptSurfacePackages returns every package under the prompt surfaces.
+//
+// The traversal lives here alone. Each census below states only its own check;
+// a walk copied into three of them is three chances for one to drift into
+// reading a smaller tree than its siblings and reporting clean.
+func promptSurfacePackages(t *testing.T) []promptPackage {
 	t.Helper()
 	byDir := map[string][]*ast.File{}
 	fset := token.NewFileSet()
@@ -107,164 +118,220 @@ func promptSurfaceFiles(t *testing.T) map[string][]*ast.File {
 			if parseErr != nil {
 				return parseErr
 			}
-			dir := filepath.ToSlash(filepath.Dir(path))
-			byDir[dir] = append(byDir[dir], file)
+			byDir[filepath.ToSlash(filepath.Dir(path))] = append(byDir[filepath.ToSlash(filepath.Dir(path))], file)
 			return nil
 		})
 		if err != nil {
 			t.Fatalf("walking %s: %v", root, err)
 		}
 	}
-	return byDir
+	packages := make([]promptPackage, 0, len(byDir))
+	for dir, files := range byDir {
+		packages = append(packages, promptPackage{dir: dir, files: files, consts: stringConstants(files)})
+	}
+	sort.Slice(packages, func(i, j int) bool { return packages[i].dir < packages[j].dir })
+	return packages
 }
 
-// declaredPrompts returns, per package directory, the prompt constants it
-// declares.
-func declaredPrompts(t *testing.T) map[string][]string {
-	t.Helper()
-	prompts := map[string][]string{}
-	for dir, files := range promptSurfaceFiles(t) {
-		consts := stringConstants(files)
-		for _, file := range files {
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.CONST {
+// eachDeclaredString calls visit once per NAME a package binds, at the grain Go
+// declares them.
+//
+// `const unused, briefSystem = "x", theLongPrompt` binds two names in one spec,
+// and reading only the first hides the second — which is a way to declare a
+// prompt, or a hand-typed version, that a census keyed on `Names[0]` cannot see.
+//
+// A spec whose names and values do not align one-to-one (a multi-return call, an
+// iota run) binds no string this can read. Such a spec is reported to unreadable
+// rather than skipped, so a shape this cannot judge fails loudly instead of
+// passing quietly.
+func eachDeclaredString(
+	pkg promptPackage, allow func(token.Token) bool,
+	visit func(name string, value ast.Expr), unreadable func(name string),
+) {
+	for _, file := range pkg.files {
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || !allow(gen.Tok) {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, ok := spec.(*ast.ValueSpec)
+				if !ok || len(value.Values) == 0 {
 					continue
 				}
-				for _, spec := range gen.Specs {
-					value, ok := spec.(*ast.ValueSpec)
-					if !ok || len(value.Names) == 0 || len(value.Values) == 0 {
-						continue
+				if len(value.Names) != len(value.Values) {
+					for _, name := range value.Names {
+						unreadable(name.Name)
 					}
-					text, ok := stringValue(value.Values[0], consts)
-					if !ok || len(text) < promptFloor {
-						continue
-					}
-					if promptConstantName.MatchString(value.Names[0].Name) {
-						prompts[dir] = append(prompts[dir], value.Names[0].Name)
-					}
+					continue
+				}
+				for i, name := range value.Names {
+					visit(name.Name, value.Values[i])
 				}
 			}
 		}
 	}
+}
+
+func isConst(tok token.Token) bool { return tok == token.CONST }
+
+func isConstOrVar(tok token.Token) bool { return tok == token.CONST || tok == token.VAR }
+
+func namesAVersion(name string) bool {
+	return strings.Contains(strings.ToLower(name), "promptversion")
+}
+
+// declaredPrompts returns the prompt constants a package declares.
+func declaredPrompts(pkg promptPackage) []string {
+	var prompts []string
+	eachDeclaredString(pkg, isConst, func(name string, value ast.Expr) {
+		if !promptConstantName.MatchString(name) {
+			return
+		}
+		if text, ok := stringValue(value, pkg.consts); ok && len(text) >= promptFloor {
+			prompts = append(prompts, name)
+		}
+	}, func(string) {})
+	sort.Strings(prompts)
 	return prompts
 }
 
-// handTypedPromptVersions are the directories declaring a `promptVersion` as a
-// hand-typed STRING, whether spelled `const` or `var`.
+// hasHandTypedVersion reports whether a package declares a `promptVersion` bound
+// to a string this can read, whether spelled `const` or `var`.
 //
-// Both spellings, because the compliant form is a `var` — so `var
-// promptVersion = "v2"` is the shape a regression naturally takes, and a census
-// that only read `const` would be blind to exactly the thing it guards.
-func handTypedPromptVersions(t *testing.T) map[string]bool {
-	t.Helper()
-	out := map[string]bool{}
-	for dir, files := range promptSurfaceFiles(t) {
-		consts := stringConstants(files)
-		for _, file := range files {
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
-					continue
-				}
-				for _, spec := range gen.Specs {
-					value, ok := spec.(*ast.ValueSpec)
-					if !ok || len(value.Names) == 0 || len(value.Values) == 0 {
-						continue
-					}
-					if !strings.Contains(strings.ToLower(value.Names[0].Name), "promptversion") {
-						continue
-					}
-					if _, resolved := stringValue(value.Values[0], consts); resolved {
-						out[dir] = true
-					}
-				}
-			}
+// Both spellings, because the compliant form is a `var` — so `var promptVersion
+// = "v2"` is the shape a regression naturally takes, and a census reading only
+// `const` would be blind to exactly the thing it guards.
+func hasHandTypedVersion(pkg promptPackage) bool {
+	handTyped := false
+	eachDeclaredString(pkg, isConstOrVar, func(name string, value ast.Expr) {
+		if !namesAVersion(name) {
+			return
 		}
-	}
-	return out
+		if _, resolved := stringValue(value, pkg.consts); resolved {
+			handTyped = true
+		}
+	}, func(string) {})
+	return handTyped
 }
 
-// digestedBuilders returns, per package directory, the identifiers handed to
-// ai.PromptDigest there.
-func digestedBuilders(t *testing.T) map[string][]string {
-	t.Helper()
-	out := map[string][]string{}
-	for dir, files := range promptSurfaceFiles(t) {
-		for _, file := range files {
-			ast.Inspect(file, func(node ast.Node) bool {
-				call, ok := node.(*ast.CallExpr)
-				if !ok {
-					return true
-				}
-				sel, ok := call.Fun.(*ast.SelectorExpr)
-				if !ok || sel.Sel.Name != "PromptDigest" {
-					return true
-				}
-				if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "ai" {
-					return true
-				}
-				for _, arg := range call.Args {
-					if ident, ok := arg.(*ast.Ident); ok {
-						out[dir] = append(out[dir], ident.Name)
-					}
-				}
+// digestCoverage reports which prompts a package's ai.PromptDigest calls reach,
+// and whether it makes any such call at all.
+//
+// Resolved through the BUILDER rather than by trusting an argument's name: the
+// digest takes a function, and what that function sends is the only thing that
+// says which prompt it covered. A named builder is followed to its declaration;
+// a function literal is read where it stands.
+//
+// unsupported names an argument of neither shape, so a spelling this cannot
+// follow fails loudly rather than silently covering nothing.
+func digestCoverage(pkg promptPackage) (reached map[string]bool, derives bool, unsupported []string) {
+	reached = map[string]bool{}
+	for _, file := range pkg.files {
+		ast.Inspect(file, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
 				return true
-			})
-		}
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "PromptDigest" {
+				return true
+			}
+			if pkgName, ok := sel.X.(*ast.Ident); !ok || pkgName.Name != "ai" {
+				return true
+			}
+			derives = true
+			if call.Ellipsis.IsValid() {
+				// A spread hands over a slice built elsewhere; its elements are
+				// not in this call to follow.
+				unsupported = append(unsupported, types.ExprString(call.Args[len(call.Args)-1])+"...")
+				return true
+			}
+			for _, arg := range call.Args {
+				switch builder := arg.(type) {
+				case *ast.Ident:
+					reached[builder.Name] = true
+				case *ast.FuncLit:
+					collectIdents(builder.Body, reached)
+				default:
+					unsupported = append(unsupported, types.ExprString(arg))
+				}
+			}
+			return true
+		})
 	}
-	return out
+	followFunctions(pkg, reached)
+	return reached, derives, unsupported
 }
 
-// promptsReachedByDigest returns, per directory, the prompt constants the
-// digested builders actually name in their bodies.
+// followFunctions widens reached through the package's own functions, to a
+// fixed point.
 //
-// Resolved through the builder rather than by trusting its name: the digest
-// takes a function, and what that function sends is the only thing that says
-// which prompt got covered.
-func promptsReachedByDigest(t *testing.T, builders map[string][]string) map[string]map[string]bool {
-	t.Helper()
-	reached := map[string]map[string]bool{}
-	for dir, files := range promptSurfaceFiles(t) {
-		wanted := builders[dir]
-		if len(wanted) == 0 {
-			continue
-		}
-		reached[dir] = map[string]bool{}
-		for _, file := range files {
-			for _, decl := range file.Decls {
-				fn, ok := decl.(*ast.FuncDecl)
-				if !ok || fn.Body == nil || !slices.Contains(wanted, fn.Name.Name) {
-					continue
-				}
-				ast.Inspect(fn.Body, func(node ast.Node) bool {
-					if ident, ok := node.(*ast.Ident); ok {
-						reached[dir][ident.Name] = true
-					}
-					return true
-				})
+// A builder is free to delegate — a literal that calls a named builder, a named
+// builder that calls another — and the prompt is sent at the bottom of that
+// chain, not at the top. Following one hop would clear the shape this tree
+// happens to write today and miss the next one; following to a fixed point
+// answers "does this digest send that prompt" whatever the chain.
+func followFunctions(pkg promptPackage, reached map[string]bool) {
+	bodies := map[string]*ast.BlockStmt{}
+	for _, file := range pkg.files {
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+				bodies[fn.Name.Name] = fn.Body
 			}
 		}
 	}
-	return reached
+	for {
+		widened := false
+		for name := range reached {
+			body, isFunction := bodies[name]
+			if !isFunction {
+				continue
+			}
+			delete(bodies, name) // each body contributes once
+			collectIdents(body, reached)
+			widened = true
+			break // reached was mutated; restart the scan
+		}
+		if !widened {
+			return
+		}
+	}
+}
+
+func collectIdents(node ast.Node, into map[string]bool) {
+	ast.Inspect(node, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok {
+			into[ident.Name] = true
+		}
+		return true
+	})
 }
 
 func TestEveryPromptVersionIsDerivedFromItsPrompt(t *testing.T) {
-	prompts := declaredPrompts(t)
-	if len(prompts) == 0 {
-		t.Fatal("the census found no prompt constant at all, so it is judging nothing")
-	}
-	handTyped := handTypedPromptVersions(t)
-
-	var findings []string
-	for dir := range handTyped {
-		if len(prompts[dir]) == 0 {
+	packages := promptSurfacePackages(t)
+	var findings, unreadable []string
+	declaring := 0
+	for _, pkg := range packages {
+		prompts := declaredPrompts(pkg)
+		if len(prompts) == 0 {
 			// No prompt to digest: the declaration versions something a digest
 			// cannot see, which is a legitimate reason to keep it by hand.
 			continue
 		}
-		findings = append(findings, dir+": promptVersion is hand-typed beside "+
-			strings.Join(prompts[dir], ", "))
+		declaring++
+		eachDeclaredString(pkg, isConstOrVar, func(string, ast.Expr) {}, func(name string) {
+			if namesAVersion(name) || promptConstantName.MatchString(name) {
+				unreadable = append(unreadable, pkg.dir+": "+name)
+			}
+		})
+		if hasHandTypedVersion(pkg) {
+			findings = append(findings, pkg.dir+": promptVersion is hand-typed beside "+
+				strings.Join(prompts, ", "))
+		}
+	}
+	if declaring == 0 {
+		t.Fatal("the census found no package declaring a prompt, so it is judging nothing")
 	}
 	sort.Strings(findings)
 	if len(findings) > 0 {
@@ -275,6 +342,14 @@ func TestEveryPromptVersionIsDerivedFromItsPrompt(t *testing.T) {
 			"and keep a separate constant for any wording built in Go code, which a digest cannot "+
 			"reach.\n\n\t%s", len(findings), strings.Join(findings, "\n\t"))
 	}
+	// A declaration this cannot read is not a declaration this has cleared.
+	if len(unreadable) > 0 {
+		sort.Strings(unreadable)
+		t.Errorf("%d prompt-or-version declaration(s) bind names and values that do not align "+
+			"one-to-one, so the census cannot read them and cannot vouch for them. Split the "+
+			"declaration, or teach eachDeclaredString the shape:\n\n\t%s",
+			len(unreadable), strings.Join(unreadable, "\n\t"))
+	}
 }
 
 func TestEveryPromptOfADerivingPackageRidesItsDigest(t *testing.T) {
@@ -282,21 +357,26 @@ func TestEveryPromptOfADerivingPackageRidesItsDigest(t *testing.T) {
 	// been folded in, and leaving it quietly re-exempts whatever takes its name.
 	defer uncachedPrompts.AssertAllMatched(t)
 
-	prompts := declaredPrompts(t)
-	builders := digestedBuilders(t)
-	if len(builders) == 0 {
-		t.Fatal("no package derives a prompt version, so this census is vouching for nothing")
-	}
-	reached := promptsReachedByDigest(t, builders)
-
-	var findings []string
-	for dir := range builders {
-		for _, prompt := range prompts[dir] {
-			if reached[dir][prompt] || uncachedPrompts.Waived(t, dir+":"+prompt) {
+	var findings, unsupported []string
+	deriving := 0
+	for _, pkg := range promptSurfacePackages(t) {
+		reached, derives, unreadableArgs := digestCoverage(pkg)
+		if !derives {
+			continue
+		}
+		deriving++
+		for _, arg := range unreadableArgs {
+			unsupported = append(unsupported, pkg.dir+": ai.PromptDigest("+arg+")")
+		}
+		for _, prompt := range declaredPrompts(pkg) {
+			if reached[prompt] || uncachedPrompts.Waived(t, pkg.dir+":"+prompt) {
 				continue
 			}
-			findings = append(findings, dir+": "+prompt)
+			findings = append(findings, pkg.dir+": "+prompt)
 		}
+	}
+	if deriving == 0 {
+		t.Fatal("no package derives a prompt version, so this census is vouching for nothing")
 	}
 	sort.Strings(findings)
 	if len(findings) > 0 {
@@ -306,6 +386,14 @@ func TestEveryPromptOfADerivingPackageRidesItsDigest(t *testing.T) {
 			"sibling: rewording it moves nothing, and its cached output is served unchanged. Add its "+
 			"builder to the ai.PromptDigest call, or ratify it in uncachedPrompts with the reason its "+
 			"output is not cached.\n\n\t%s", len(findings), strings.Join(findings, "\n\t"))
+	}
+	// An argument this cannot follow covers nothing, and silence would read as
+	// coverage.
+	if len(unsupported) > 0 {
+		sort.Strings(unsupported)
+		t.Errorf("%d ai.PromptDigest argument(s) are neither a named builder nor a function "+
+			"literal, so the census cannot tell which prompt they send:\n\n\t%s",
+			len(unsupported), strings.Join(unsupported, "\n\t"))
 	}
 }
 
@@ -327,8 +415,8 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 	}
 	// A `+` chain is one prompt. The shared reader in this package handles that
 	// (and parenthesised and `string(...)` spellings); this asserts the census
-	// actually goes through it, since reading only the first fragment would let
-	// a prompt escape by being split across lines.
+	// goes through it, since reading only the first fragment would let a prompt
+	// escape by being split across lines.
 	joined, ok := stringValue(&ast.BinaryExpr{
 		Op: token.ADD,
 		X:  &ast.BasicLit{Kind: token.STRING, Value: `"You write "`},
@@ -339,10 +427,9 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 	}
 	// The tree really does hold the constants the rule is written for, so the
 	// naming it keys on is the tree's rather than an invention.
-	prompts := declaredPrompts(t)
 	found := map[string]bool{}
-	for _, names := range prompts {
-		for _, name := range names {
+	for _, pkg := range promptSurfacePackages(t) {
+		for _, name := range declaredPrompts(pkg) {
 			found[name] = true
 		}
 	}
