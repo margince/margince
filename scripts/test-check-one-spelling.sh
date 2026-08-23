@@ -8,6 +8,11 @@
 # stops matching, or starts matching a bystander, fails here rather than in
 # somebody's push six weeks later.
 set -uo pipefail
+# Resolved BEFORE the cd. `$0` is whatever the caller typed, so after changing
+# directory it can name a path that does not exist — and the census below then
+# reads zero cases and reports a fully passing run as a failure. Launching the
+# suite from `scripts/` did exactly that.
+SELF="$(cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 cd "$(dirname "$0")/.."
 
 GATE=./scripts/check-one-spelling.sh
@@ -265,8 +270,11 @@ echo
 # time until only the floor's worth is left, which is the same silent shrinkage
 # in slow motion. Derived from the file rather than typed, so adding a case
 # cannot leave a stale number behind.
-expected=$(grep -cE '^expect (fires|silent|unclosed) ' "$0")
-if [[ $ran -ne $expected ]]; then
+expected=$(grep -cE '^expect (fires|silent|unclosed) ' "$SELF")
+# Only when nothing else failed. `ran` counts cases that passed, so a genuine
+# assertion failure shortens it too — and reporting "some were skipped" on top
+# of a real finding sends the reader after the wrong thing.
+if [[ $fails -eq 0 && $ran -ne $expected ]]; then
   echo "FAIL: $ran cases ran but $expected are written — some were skipped before they planted anything"
   exit 1
 fi

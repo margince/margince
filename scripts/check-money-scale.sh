@@ -46,7 +46,14 @@ set -euo pipefail
 # libraries are. `readlink -f` is GNU-only, so the loop is the portable form.
 CDPATH=
 self="$0"
+# Bounded: a symlink cycle (a -> b -> a) would otherwise spin here forever, and
+# a merge gate that hangs is worse than one that refuses — nobody can tell it
+# from a slow runner. Every other failure here (dangling link, missing file) is
+# already caught loudly by the existence check below.
+hops=0
 while [[ -L "$self" ]]; do
+  hops=$((hops + 1))
+  [[ $hops -le 32 ]] || { echo "FAIL: $0 resolves through more than 32 symlinks — a cycle, most likely"; exit 1; }
   link="$(readlink -- "$self")"
   case "$link" in
     /*) self="$link" ;;

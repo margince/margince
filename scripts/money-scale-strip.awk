@@ -72,7 +72,16 @@ FNR == 1 { closeFile(); flush() }
   # `[^A-Za-z0-9_]` and not `\b`: POSIX ERE has no word boundary, and awk reads
   # `\b` as a backspace — the guard matched nothing and the case label went on
   # joining the arm below it.
-  if (t ~ /^(case|default)([^A-Za-z0-9_]|$)/) { if (depth <= 0 || lines >= 6) flush(); next }
+  # A label spanning an open bracket — `case pick(` / `valueMinor):` — is still
+  # a label, and its closing `):` used to join the arm below it. `labelOpen`
+  # carries the fact across the lines the label takes.
+  if (t ~ /^(case|default)([^A-Za-z0-9_]|$)/) { labelOpen = 1 }
+  if (labelOpen) {
+    trimmed = c; sub(/[[:space:]]+$/, "", trimmed)
+    if (trimmed ~ /:$/) labelOpen = 0
+    flush()
+    next
+  }
   if (trailing ~ /(=|\+|-|\*|\/|%|:|&&|\|\|)$/ && lines < 6) next
   # Bounded at SIX lines. Four was the first bound and it missed the shape
   # this gate exists for, one line longer: biome wraps
