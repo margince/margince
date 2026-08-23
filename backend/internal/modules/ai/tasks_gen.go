@@ -18,7 +18,7 @@ const (
 	TaskCertJudge Task = "cert_judge"
 	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074.
 	TaskColdStart Task = "cold_start"
-	// TaskDealHealth is Declared, not built (ADR-0074).
+	// TaskDealHealth is next_move — the deal card's one next step, proposed as a concrete task when no rule already names the move: the model reads the deal's own timeline (subjects, directions, bounded excerpts the CALLER may read — the facts are assembled under the caller's row scope) and writes the task's subject and the why. The verb never moves: the answer is always create_task, the deterministic rules (booked meeting, unanswered inbound, existing open task) run first, and a missing lane, an over-budget call or a reply the grounding filter refuses degrades to the deterministic fallback task with generated_by saying so.
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
 	TaskDocumentExtract Task = "document_extract"
@@ -75,7 +75,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "f14023a33138c094bb0b911d3a905f482702ce40ab757aed94227f8fbd2d4d96"
+const TaskContractHash = "95a58934674cb0122426d36ed42aad211d3cf822fa63e7c35d05a58bf80a3d61"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -197,7 +197,7 @@ var taskStatus = map[Task]string{
 	TaskCaptureCounterpartyVerdict: "shipped",
 	TaskCertJudge:                  "shipped",
 	TaskColdStart:                  "shipped",
-	TaskDealHealth:                 "planned",
+	TaskDealHealth:                 "shipped",
 	TaskDocumentExtract:            "shipped",
 	TaskDraftReply:                 "shipped",
 	TaskEnrich:                     "shipped",
@@ -255,6 +255,9 @@ var taskSites = map[Task][]Site{
 		{Name: "sitereadmessage", Kind: "multi_turn"},
 		{Name: "acts", Kind: "multi_turn"},
 		{Name: "field_extract", Kind: "one_shot"},
+	},
+	TaskDealHealth: {
+		{Name: "next_move", Kind: "one_shot"},
 	},
 	TaskDocumentExtract: {
 		{Name: "fields", Kind: "one_shot"},

@@ -24,6 +24,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
 	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
+	"github.com/gradionhq/margince/backend/internal/compose/nextaction"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
 )
@@ -124,5 +125,21 @@ func WithMeetingBriefWriter(brain completer) Option {
 		}
 		s.meetingBriefHandlers = meetingbrief.NewHandlers(
 			s.meetingBriefSvc.WithLane(brain), s.sorDispatch.isOverlay)
+	}
+}
+
+// WithNextMoveWriter binds the deal_health lane that turns the Next-move
+// card's fallback task into a concrete one.
+//
+// Without it the card serves its deterministic fallback rather than failing: a
+// role that runs no model still answers the endpoint, and generated_by tells
+// the reader which writer they have. Nothing is cached, so there is no routing
+// version to carry.
+func WithNextMoveWriter(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.nextActionSvc == nil {
+			return
+		}
+		s.nextActionHandlers = nextaction.NewHandlers(s.nextActionSvc.WithLane(brain))
 	}
 }

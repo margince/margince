@@ -1,0 +1,29 @@
+name: next_move_empty_deal_opens_from_the_deals_own_fields
+task: deal_health
+site: next_move
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  deal:
+    name: "Kessler GmbH — WMS Pilot"
+    status: open
+    stage: Qualified
+    amount: "1200000 EUR (minor units)"
+    expected_close: "2026-10-15"
+  timeline: []
+expect:
+  outcome: accepted
+  # No timeline, so no citation is owed: the deal's own fields are the
+  # grounding, and the filter accepts an uncited proposal here.
+  answer: []
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the proposed task is a real opening move for THIS deal —
+    anchored in what the fixture states (a qualified WMS pilot at Kessler
+    GmbH, closing mid-October), such as arranging the first conversation
+    about the pilot's scope. A generic checklist item that fits every deal
+    scores low. Any invented contact name, meeting or prior conversation
+    fails the scenario: the timeline is empty and the summary says so.

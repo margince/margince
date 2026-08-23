@@ -15538,6 +15538,13 @@ type DealNextBestAction struct {
 	DealId     openapi_types.UUID           `json:"deal_id"`
 	Evidence   []DealNextBestActionEvidence `json:"evidence"`
 
+	// GeneratedBy Which writer produced the recommendation. `model` only on the `create_task`
+	// fallback, where the deal_health lane proposes the concrete next step; every
+	// rule-matched answer — and the fallback whenever the lane is absent, over
+	// budget, or refused — is `deterministic`. Absent means `deterministic`, so a
+	// client reading an older server fails honest.
+	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
+
 	// Reason One sentence, in the user's terms, saying why this and not something else.
 	Reason string `json:"reason"`
 }

@@ -20318,6 +20318,14 @@ components:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
         computed_at: { type: string, format: date-time }
+        generated_by:
+          allOf: [{ $ref: '#/components/schemas/WrittenBy' }]
+          description: |
+            Which writer produced the recommendation. `model` only on the `create_task`
+            fallback, where the deal_health lane proposes the concrete next step; every
+            rule-matched answer — and the fallback whenever the lane is absent, over
+            budget, or refused — is `deterministic`. Absent means `deterministic`, so a
+            client reading an older server fails honest.
       additionalProperties: false
 
     DealNextBestActionEvidence:

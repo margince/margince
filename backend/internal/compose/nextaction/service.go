@@ -43,12 +43,21 @@ type Service struct {
 	deals      *deals.Store
 	activities *activities.Store
 	now        func() time.Time
+	lane       Completer
 }
 
 // NewService binds the reads. Both stores carry their own gates, so a deal
 // the caller cannot see is absent here exactly as it is on its own routes.
 func NewService(d *deals.Store, a *activities.Store, now func() time.Time) *Service {
 	return &Service{deals: d, activities: a, now: now}
+}
+
+// WithLane binds the deal_health lane that makes the fallback task concrete.
+// Without it the fallback stays deterministic rather than failing: a role
+// that runs no model still answers the endpoint.
+func (s *Service) WithLane(lane Completer) *Service {
+	s.lane = lane
+	return s
 }
 
 // facts are the inputs the rules fold. Gathered once, so the rules are a pure
@@ -80,7 +89,27 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID) (crmcontracts.Deal
 	if err != nil {
 		return crmcontracts.DealNextBestAction{}, fmt.Errorf("next action: reading the deal's open tasks: %w", err)
 	}
-	return decide(facts{deal: deal, timeline: timeline, openTasks: open, now: s.now().UTC()}), nil
+	f := facts{deal: deal, timeline: timeline, openTasks: open, now: s.now().UTC()}
+	return s.answer(ctx, f), nil
+}
+
+// answer runs the rules and, on the one arm whose task the rules can only
+// title generically, offers the lane a rewrite. Every path stamps who wrote
+// it: the rule-matched answers are deterministic by construction, and the
+// fallback is deterministic unless the lane's proposal survived the filter.
+func (s *Service) answer(ctx context.Context, f facts) crmcontracts.DealNextBestAction {
+	out := decide(f)
+	by := crmcontracts.Deterministic
+	if s.lane != nil && out.Action == ActionCreateTask {
+		if written, err := writeNextMove(ctx, s.lane, f, out); err == nil {
+			// A refused lane is the declared degrade posture, not a swallowed
+			// error: unavailable, over budget, or a reply the grounding filter
+			// emptied all serve the deterministic fallback unchanged.
+			out, by = written, crmcontracts.Model
+		}
+	}
+	out.GeneratedBy = &by
+	return out
 }
 
 // decide is the rule set, in priority order. The first rule whose facts hold
