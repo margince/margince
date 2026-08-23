@@ -60,37 +60,7 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 	b.WriteString("// planned task returns none.\n")
 	b.WriteString("func SitesFor(t Task) []Site { return taskSites[t] }\n\n")
 
-	b.WriteString("// Agent is one scheduled agent of a tool-fed task, and Tools is what it\n")
-	b.WriteString("// attaches. The listing rides in EVERY step of that agent's window, so\n")
-	b.WriteString("// this list is both what the run may call and what it pays for in prompt.\n")
-	b.WriteString("//\n")
-	b.WriteString("// It NARROWS and never grants: every call still passes the same admission\n")
-	b.WriteString("// gate against the same passport. A name here the passport does not admit\n")
-	b.WriteString("// stays refused.\n")
-	b.WriteString("type Agent struct {\n\tName  string\n\tTools []string\n}\n\n")
-	b.WriteString("var taskAgents = map[Task][]Agent{\n")
-	for _, name := range taskNames {
-		agents := c.Tasks[name].Agents
-		if len(agents) == 0 {
-			continue
-		}
-		fmt.Fprintf(b, "\t%s: {\n", taskConst(name))
-		for _, agent := range sortedAgentNames(agents) {
-			fmt.Fprintf(b, "\t\t{Name: %q, Tools: []string{", agent)
-			for i, tool := range agents[agent].Tools {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				fmt.Fprintf(b, "%q", tool)
-			}
-			b.WriteString("}},\n")
-		}
-		b.WriteString("\t},\n")
-	}
-	b.WriteString("}\n\n")
-	b.WriteString("// AgentsFor returns the task's declared agents in sorted name order. A\n")
-	b.WriteString("// task that schedules none returns none.\n")
-	b.WriteString("func AgentsFor(t Task) []Agent { return taskAgents[t] }\n\n")
+	writeAgentTable(b, c, taskNames)
 
 	b.WriteString("// noPayloadTasks are the tasks whose content must NEVER reach\n")
 	b.WriteString("// ai_call_payload, whatever the deployment's capture posture says. The\n")
@@ -162,4 +132,41 @@ func writeCompanyContextTable(b *strings.Builder, c contract, taskNames []string
 	b.WriteString("// whether the contract DECLARES one at all — an undeclared policy is a\n")
 	b.WriteString("// contract defect, distinct from a declared empty one.\n")
 	b.WriteString("func CompanyContextFor(t Task) (CompanyContextPolicy, bool) {\n\tp, ok := taskCompanyContext[t]\n\treturn p, ok\n}\n\n")
+}
+
+// writeAgentTable emits the per-task scheduled-agent allowlists. It is its own
+// function because the declaration tables it sits beside are already at the
+// length a reader can hold, not because an agent table is a thing apart.
+func writeAgentTable(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// Agent is one scheduled agent of a tool-fed task, and Tools is what it\n")
+	b.WriteString("// attaches. The listing rides in EVERY step of that agent's window, so\n")
+	b.WriteString("// this list is both what the run may call and what it pays for in prompt.\n")
+	b.WriteString("//\n")
+	b.WriteString("// It NARROWS and never grants: every call still passes the same admission\n")
+	b.WriteString("// gate against the same passport. A name here the passport does not admit\n")
+	b.WriteString("// stays refused.\n")
+	b.WriteString("type Agent struct {\n\tName  string\n\tTools []string\n}\n\n")
+	b.WriteString("var taskAgents = map[Task][]Agent{\n")
+	for _, name := range taskNames {
+		agents := c.Tasks[name].Agents
+		if len(agents) == 0 {
+			continue
+		}
+		fmt.Fprintf(b, "\t%s: {\n", taskConst(name))
+		for _, agent := range sortedAgentNames(agents) {
+			fmt.Fprintf(b, "\t\t{Name: %q, Tools: []string{", agent)
+			for i, tool := range agents[agent].Tools {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				fmt.Fprintf(b, "%q", tool)
+			}
+			b.WriteString("}},\n")
+		}
+		b.WriteString("\t},\n")
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// AgentsFor returns the task's declared agents in sorted name order. A\n")
+	b.WriteString("// task that schedules none returns none.\n")
+	b.WriteString("func AgentsFor(t Task) []Agent { return taskAgents[t] }\n\n")
 }
