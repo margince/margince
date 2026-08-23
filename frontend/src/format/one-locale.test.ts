@@ -63,7 +63,8 @@ import { INTL_LOCALE } from "./format";
 // direction — a machine key must sort identically for every reader, so a
 // pinned "en" is CORRECT there, while a human-readable label must not. That is
 // a ruling per call site rather than a sweep. Tracked in the issue named in
-// `COLLATION_ISSUE`.
+// `COLLATION_ISSUE`; once each site there has a ruling, `isRenderingMethod`
+// stops excluding them and this gate holds both halves.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(here, "..");
@@ -74,7 +75,8 @@ const formatModule = here;
 
 // Named so a reader of a finding can reach the open question rather than
 // guessing that collation was overlooked.
-const COLLATION_ISSUE = "the collation half of this rule is filed separately";
+const COLLATION_ISSUE =
+  "#2455 — collation and locale-sensitive casing, 17 + 2 sites needing a per-site ruling";
 
 /**
  * The members of `Intl` that take a locales argument, asked of the runtime.
@@ -282,7 +284,10 @@ describe("one locale for every rendered value", () => {
   it("reads the tree it is meant to sweep", () => {
     // A miswired walk passes every assertion below by inspecting nothing.
     expect(files.length).toBeGreaterThan(200);
-    expect(COLLATION_ISSUE.length).toBeGreaterThan(0);
+    // The excluded half names where it went. A gate that narrows its own
+    // subject and says nothing about it reads exactly like a gate that found
+    // the tree clean.
+    expect(COLLATION_ISSUE).toMatch(/#\d+/);
   });
 
   it("derives the Intl formatters it gates, reaching the two it is about", () => {
