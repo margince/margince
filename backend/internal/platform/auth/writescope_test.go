@@ -150,7 +150,10 @@ func TestEveryGrantIsProbedBeforeItIsGranted(t *testing.T) {
 
 func TestTheWriteArmKeepsTheOwnerScopeItNarrows(t *testing.T) {
 	// The grant arm is added to the owner scope, never substituted for it: a
-	// caller who owns the row, or a teammate, needs no grant. An ownerless
+	// caller who owns the row, or a teammate, needs no grant. No SEEDED role is
+	// team-scoped any more — that is what makes a share the ordinary way to hand
+	// a colleague write access — but the arm is not dead: a record_grant may name
+	// a team, and an operator may author a custom role at team scope. An ownerless
 	// row is the one exception — it is nobody's to change until claimed, so
 	// the write arm has no `owner_id IS NULL` branch while the read arm keeps
 	// it (an unowned row is still the workspace's to see).

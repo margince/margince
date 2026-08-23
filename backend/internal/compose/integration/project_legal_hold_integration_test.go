@@ -41,16 +41,16 @@ type projectHoldFixture struct {
 func seedProjectHoldFixture(t *testing.T, e *Env) projectHoldFixture {
 	t.Helper()
 	org := e.SeedOrg(t, "Acme GmbH", nil)
-	create := func(name, key string) ids.UUID {
+	create := func(name string) ids.UUID {
 		p, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-			Name: name, Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
+			Name: name, OrganizationID: orgIDOf(org), Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("create project %q: %v", name, err)
 		}
 		return ids.UUID(p.Id)
 	}
-	f := projectHoldFixture{held: create("Disputed rollout", "DR-1"), free: create("Routine rollout", "RR-1")}
+	f := projectHoldFixture{held: create("Disputed rollout"), free: create("Routine rollout")}
 	e.WsExec(t, `UPDATE project SET legal_hold = true WHERE id = $1`, f.held)
 	return f
 }

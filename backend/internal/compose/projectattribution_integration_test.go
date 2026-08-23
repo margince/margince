@@ -83,6 +83,15 @@ func seedAttributionAccount(t *testing.T, e *integration.Env) attributionAccount
 				"organization": {Create: true, Read: true},
 				"project":      {Read: true},
 				"deal":         {Read: true},
+				// The candidate set is reached THROUGH the project's company
+				// edge, so naming a project is an edge read. A real connector
+				// carries the mailbox owner's RBAC verbatim (extingress.go
+				// copies rbac.Permissions onto it), and every seeded rep role
+				// grants relationship — see integration.RepPerms. Leaving it
+				// out modelled a connector production does not issue, and this
+				// suite passed only while attribution reached projects without
+				// the edge.
+				"relationship": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -92,10 +101,10 @@ func seedAttributionAccount(t *testing.T, e *integration.Env) attributionAccount
 
 // project opens one live project on the account through the store that owns
 // the table.
-func (a attributionAccount) project(t *testing.T, name, key string) ids.UUID {
+func (a attributionAccount) project(t *testing.T, name string) ids.UUID {
 	t.Helper()
 	created, err := a.e.Projects.CreateProject(a.e.Admin(), projects.CreateProjectInput{
-		Name: name, Key: &key, OrganizationID: ids.From[ids.OrganizationKind](a.orgID), Source: "manual",
+		Name: name, OrganizationID: ids.From[ids.OrganizationKind](a.orgID), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating project %q: %v", name, err)
@@ -229,7 +238,7 @@ func awaitingDecision(t *testing.T, e *integration.Env, projectID ids.UUID) (awa
 func TestUncertainRungOffersTheSoleLiveProjectAndConfirmFilesIt(t *testing.T) {
 	e := integration.Setup(t)
 	account := seedAttributionAccount(t, e)
-	erp := account.project(t, "ERP replacement", "ERP")
+	erp := account.project(t, "ERP replacement")
 
 	activityID := account.capture(t, "t2-sole@acme.example", "", "weekly status")
 
@@ -281,7 +290,7 @@ func TestUncertainRungOffersTheSoleLiveProjectAndConfirmFilesIt(t *testing.T) {
 func TestDecliningTheOfferLeavesTheMessageUnfiledAndIsNotAskedAgain(t *testing.T) {
 	e := integration.Setup(t)
 	account := seedAttributionAccount(t, e)
-	erp := account.project(t, "ERP replacement", "ERP")
+	erp := account.project(t, "ERP replacement")
 
 	activityID := account.capture(t, "t2-decline@acme.example", "", "weekly status")
 	approvalID := stagedAttribution(t, e, activityID)
@@ -330,8 +339,8 @@ func TestDecliningTheOfferLeavesTheMessageUnfiledAndIsNotAskedAgain(t *testing.T
 func TestUncertainRungAsksNothingBetweenSeveralProjectsWithoutEmbeddings(t *testing.T) {
 	e := integration.Setup(t)
 	account := seedAttributionAccount(t, e)
-	account.project(t, "ERP replacement", "ERP")
-	account.project(t, "CRM rollout", "CRM")
+	account.project(t, "ERP replacement")
+	account.project(t, "CRM rollout")
 
 	activityID := account.capture(t, "t2-two@acme.example", "", "weekly status")
 
@@ -350,7 +359,7 @@ func TestUncertainRungAsksNothingBetweenSeveralProjectsWithoutEmbeddings(t *test
 func TestConfirmStandsDownWhenAHumanFiledTheMessageElsewhere(t *testing.T) {
 	e := integration.Setup(t)
 	account := seedAttributionAccount(t, e)
-	account.project(t, "ERP replacement", "ERP")
+	account.project(t, "ERP replacement")
 	activityID := account.capture(t, "t2-moved@acme.example", "", "weekly status")
 	approvalID := stagedAttribution(t, e, activityID)
 	if approvalID.IsZero() {
@@ -358,7 +367,7 @@ func TestConfirmStandsDownWhenAHumanFiledTheMessageElsewhere(t *testing.T) {
 	}
 	// A second project, opened after the offer, and the human files the
 	// message there by hand through the relink door.
-	crm := account.project(t, "CRM rollout", "CRM")
+	crm := account.project(t, "CRM rollout")
 	if _, err := e.Activities.RelinkActivity(e.Admin(), ids.From[ids.ActivityKind](activityID),
 		activities.RelinkActivityInput{EntityType: string(datasource.EntityProject), EntityID: crm}); err != nil {
 		t.Fatalf("filing the message by hand: %v", err)
@@ -388,7 +397,7 @@ func TestConfirmStandsDownWhenAHumanFiledTheMessageElsewhere(t *testing.T) {
 func stageSoleOffer(t *testing.T, e *integration.Env, sourceID string) (attributionAccount, ids.UUID, ids.UUID, ids.UUID) {
 	t.Helper()
 	account := seedAttributionAccount(t, e)
-	erp := account.project(t, "ERP replacement", "ERP")
+	erp := account.project(t, "ERP replacement")
 	activityID := account.capture(t, sourceID, "", "weekly status")
 	approvalID := stagedAttribution(t, e, activityID)
 	if approvalID.IsZero() {

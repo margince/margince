@@ -73,8 +73,8 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
 	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	project := seedProject(admin, t, e, "ERP rollout", strPtr("ERP-27"), org, &e.Rep1).ID
-	other := seedProject(admin, t, e, "Datacentre migration", strPtr("DC-4"), org, &e.Rep1).ID
+	project := seedProject(admin, t, e, "ERP rollout", org, &e.Rep1).ID
+	other := seedProject(admin, t, e, "Datacentre migration", org, &e.Rep1).ID
 	if _, err := e.Projects.AdvanceProjectPhase(admin, project, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestProject360RefusesACallerWithNoSightOfTheProject(t *testing.T) {
 		t.Errorf("assemble on an archived project → %v, want ErrNotFound (the live-only anchor read)", err)
 	}
 	// The positive control: the same call served the page a moment ago.
-	if _, err := project360Service(e, time.Now().UTC()).Assemble(ctx, seedProject(e.Admin(), t, e, "Fresh", nil, e.SeedOrg(t, "Beta", &e.Rep1), nil).ID); err != nil {
+	if _, err := project360Service(e, time.Now().UTC()).Assemble(ctx, seedProject(e.Admin(), t, e, "Fresh", e.SeedOrg(t, "Beta", &e.Rep1), nil).ID); err != nil {
 		t.Errorf("assemble on a live project the caller may read: %v", err)
 	}
 }

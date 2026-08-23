@@ -126,10 +126,28 @@ func Setup(t *testing.T) *Env {
 	e.Pool = pool
 	e.People = people.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
-	e.Projects = projects.NewStore(harnessDB(pool, e.WS))
+	e.Projects = ProjectsStore(harnessDB(pool, e.WS))
 	e.Contracts = contracts.NewStore(harnessDB(pool, e.WS))
 	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
 	return e
+}
+
+// ProjectsStore builds the projects store the way compose builds it, and is the
+// ONLY spelling a test should use.
+//
+// The company edges are the reason it exists. A store without them refuses
+// every create — deliberately, since a seam that failed open would produce
+// projects no company page can find — so a suite that calls projects.NewStore
+// directly is not testing a weaker store, it is testing one production never
+// builds. Five suites did, and every one of them broke the day the create path
+// started using the seam.
+//
+// The catalog is left to the caller: a suite that needs its own customfields
+// service chains WithFieldCatalog on the result, which is the only thing about
+// this store that legitimately varies between them.
+func ProjectsStore(db *database.DB) *projects.Store {
+	return projects.NewStore(db).
+		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx))
 }
 
 // SchemaPool opens the owner-privileged schema-change pool the

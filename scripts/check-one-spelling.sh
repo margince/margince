@@ -44,7 +44,53 @@
 # already uses. scripts/test-check-one-spelling.sh proves each arm fires, each
 # arm's waiver works, and the named non-money lookalikes stay silent.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+# THE ONE PLACE IN THIS PAIR THAT IS DUPLICATED ON PURPOSE, and the rulebook's
+# own instruction for that case is to say why beside it rather than in a pull
+# request nobody re-reads.
+#
+# It cannot be sourced from a library: finding the library needs the answer this
+# block produces. Invoked through a symlink, `dirname "$0"` is the link's
+# directory, which holds no library.
+#
+# scripts/test-selfdir-identical.sh asserts the two copies are BYTE-IDENTICAL,
+# and that assertion is what makes the duplication safe rather than merely
+# explained. Edit one, edit both.
+# Resolve $0 through any symlinks BEFORE deriving the directory: `cd -P` on
+# `dirname "$0"` canonicalizes the LINK's directory, which is not where the
+# libraries are. `readlink -f` is GNU-only, so the loop is the portable form.
+CDPATH=
+self="$0"
+# Terminating: a symlink CYCLE (a -> b -> a) would otherwise spin here forever,
+# and a merge gate that hangs is worse than one that refuses — nobody can tell
+# it from a slow runner. The stop condition is a path seen twice, not a hop
+# count: a cap refuses a long-but-valid chain, which is a gate failing on
+# somebody's directory layout rather than on their code. Every other failure
+# here (dangling link, missing file) is already caught by the existence check
+# below.
+# An ARRAY and not a delimited string: a path may legally contain any character
+# except NUL and `/`, so framing each visited path inside a `|…|` in one string
+# lets a path holding a `|` collide with a different one — a valid chain
+# refused as cyclic, which is a gate failing on somebody's directory name.
+seen=()
+while [[ -L "$self" ]]; do
+  for prior in ${seen+"${seen[@]}"}; do
+    [[ "$prior" == "$self" ]] && { echo "FAIL: $0 resolves through a symlink cycle at $self"; exit 1; }
+  done
+  seen+=("$self")
+  link="$(readlink -- "$self")"
+  case "$link" in
+    /*) self="$link" ;;
+     *) self="$(cd -P -- "$(dirname -- "$self")" && pwd)/$link" ;;
+  esac
+done
+SELF_DIR="$(cd -P -- "$(dirname -- "$self")" && pwd)"
+# Resolved BEFORE the cd, so they are found however the script is invoked.
+COMMENT_SCAN="$SELF_DIR/lib-commentscan.awk"
+STRIP_PROG="$SELF_DIR/one-spelling-strip.awk"
+cd "$SELF_DIR/.."
+for lib in "$COMMENT_SCAN" "$STRIP_PROG"; do
+  [[ -f "$lib" ]] || { echo "FAIL: $lib is missing — this gate cannot read code without it"; exit 1; }
+done
 
 # Every hand-written Go tree. extensions/ and fixtures/ are separate modules but
 # the same product; backend/tools is a separate module too and its generators
@@ -77,28 +123,50 @@ waiver='one-spelling-exempt:'
 # and the interior of a multi-line block. A line carrying the waiver marker is
 # dropped whole.
 #
-# The residue, stated rather than hidden: a `/*` inside a STRING literal opens a
-# block this cannot tell from a real one, and everything to the next `*/` stops
-# being scanned. That is a false NEGATIVE in code no author writes by accident,
-# and the alternative is lexing Go in awk. The space before // avoids eating a
-# `scheme://…` inside a string.
+# There is no residue paragraph here any more, and that is the point. The three
+# holes this file used to state — a `/*` inside a string opening a block, a `//`
+# inside one truncating the line, a waiver marker inside one silencing it — are
+# all closed by scripts/lib-commentscan.awk, which reads a string as a string.
+#
+# What is left is not stated, it is DETECTED. A construct the scanner cannot
+# follow leaves it inside a string at the end of the file, and the run refuses
+# by name rather than reporting OK over code it never read. A residue paragraph
+# asks the reader to trust that the hole is small; the assertion below does not
+# need trusting.
 corpus="$(mktemp)"
 trap 'rm -f "$corpus"' EXIT
 find "${scan[@]}" -type f -name '*.go' \
      ! -name '*_test.go' ! -name '*_gen.go' ! -name '*.gen.go' -print0 \
-  | xargs -0 awk -v waiver="$waiver" '
-      FNR == 1 { inblock = 0 }
-      {
-        c = $0
-        if (index(c, waiver) > 0) next
-        if (inblock) { if (match(c, /\*\//)) { inblock = 0; c = substr(c, RSTART + RLENGTH) } else next }
-        t = c; sub(/^[[:space:]]+/, "", t)
-        if (t ~ /^(\/\/|\*)/) next
-        while (match(c, /\/\*[^*]*\*+([^\/*][^*]*\*+)*\//)) { c = substr(c, 1, RSTART - 1) substr(c, RSTART + RLENGTH) }
-        if (match(c, /\/\*/)) { inblock = 1; c = substr(c, 1, RSTART - 1) }
-        sub(/[[:space:]]+\/\/.*$/, "", c)
-        print FILENAME ":" FNR ":" c
-      }' > "$corpus"
+  | xargs -0 awk -f "$COMMENT_SCAN" -f "$STRIP_PROG" -v waiver="$waiver" > "$corpus"
+
+# A file the scanner left mid-string or mid-comment is a file it stopped reading
+# correctly, so an OK over it means nothing. Refusing here rather than stating
+# it as residue: this is the one failure mode where the gate cannot tell the
+# difference between clean and blind.
+# `|| true` would swallow status 2 as well, which is grep saying it could not
+# READ the corpus — and a gate that cannot read its own corpus must not go on to
+# report it clean. Only status 1, "no matches", is the ordinary answer.
+# `set +e` around it and not `|| true`: the fallback would swallow status 2 as
+# well, which is grep saying it could not READ the corpus — and a gate that
+# cannot read its own corpus must not go on to report it clean. Only status 1,
+# "no matches", is an ordinary answer. `$?` is read here and not inside an
+# `if !`, where the negation has already replaced it with 0.
+set +e
+unclosed="$(grep '^commentscan-unclosed:' "$corpus")"
+grep_status=$?
+set -e
+[[ $grep_status -le 1 ]] || { echo "FAIL: could not read the scanned corpus (grep exited $grep_status)"; exit 1; }
+if [[ -n "$unclosed" ]]; then
+  echo "FAIL: the comment scanner reached the end of a file still inside a string or a block comment,"
+  echo "      so everything after that point was read as something it is not and this gate saw none of it."
+  echo "$unclosed" | sed 's/^commentscan-unclosed:/  /'
+  echo "      Usually a backtick inside a TypeScript regex literal (/[\`]/), which opens a template"
+  echo "      literal the language never closes. Rewrite it as a character escape, or if the construct"
+  echo "      is genuinely needed, teach scripts/lib-commentscan.awk about it — do not waive the file."
+  exit 1
+fi
+grep -v '^commentscan-unclosed:' "$corpus" > "$corpus.clean" && mv "$corpus.clean" "$corpus"
+
 
 # scan_for <regex> [exclude-path-regex]: matching CODE rows, or nothing.
 scan_for() {

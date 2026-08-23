@@ -366,3 +366,31 @@ func dealsByStageRow(t *testing.T, result reportResultWire, stageID string) map[
 	t.Fatalf("no row for stage_id %q in %+v", stageID, result.Rows)
 	return nil
 }
+
+// The board's own totals are read from this report with the deals screen's
+// filter dials, so every dial the screen offers must be one this report
+// accepts. A dial it refuses answers 422 and the board falls back to counting
+// the cards it happens to have loaded — which looks exactly like a working
+// total and is not one.
+func TestDealsByStageNarrowsToOnePartner(t *testing.T) {
+	e := setupForecast(t)
+	wanted := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)
+	other := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+		VALUES ($1, 'Theirs', $2, $3, $4, 'sourced', 40000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], wanted)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, source, captured_by)
+		VALUES ($1, 'Somebody else', $2, $3, $4, 'sourced', 90000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], other)
+
+	result := e.runReport(e.Admin(), t, "deals-by-stage",
+		fmt.Sprintf(`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_org_id":%q}}`, wanted.String()))
+
+	// One partner's deals only. Both would read as a working narrow to anyone
+	// who checked the partner they asked for and stopped.
+	var total int64
+	for _, row := range result.Rows {
+		total += wireInt(t, row, "amount_minor_sum")
+	}
+	if total != 40000 {
+		t.Errorf("total = %d, want 40000 — the filter did not narrow to the partner asked for", total)
+	}
+}

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
@@ -31,17 +32,69 @@ const filterOrganizationIDOnProject = "organization_id"
 
 // maskProjectForCaller applies the read mask to ONE row about to leave the
 // store.
-func maskProjectForCaller(ctx context.Context, tx pgx.Tx, p crmcontracts.Project) (crmcontracts.Project, error) {
+// It is a METHOD rather than a free function so every single-project answer
+// carries the company list without each of the six call sites remembering to
+// ask: a project read whose companies were missing looks exactly like a project
+// with no companies, and there is no field a reader could check to tell.
+func (s *Store) maskProjectForCaller(ctx context.Context, tx pgx.Tx, p crmcontracts.Project) (crmcontracts.Project, error) {
 	one := []crmcontracts.Project{p}
 	if err := maskProjects(ctx, tx, one); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	return one[0], nil
+	return s.withCompanies(ctx, tx, one[0])
+}
+
+// withCompanies fills a single project's company list from the edges, and
+// derives organization_id from it: the customer edge is what that field has
+// always meant, and deriving it here is what keeps the two from disagreeing.
+//
+// Only the single-project reads carry the list. A list page would need one more
+// statement per page for a field no list column renders, and a page that
+// answered it per row would be a probe per row — the thing maskProjects exists
+// to avoid.
+func (s *Store) withCompanies(ctx context.Context, tx pgx.Tx, p crmcontracts.Project) (crmcontracts.Project, error) {
+	return fillCompanies(ctx, tx, p, s.projectCompanies)
+}
+
+// fillCompanies is withCompanies for a caller that holds the seam itself — the
+// create path, which runs inside a transaction the store did not open.
+func fillCompanies(
+	ctx context.Context, tx pgx.Tx, p crmcontracts.Project, companies ProjectCompanies,
+) (crmcontracts.Project, error) {
+	on, err := companies(ctx, tx, ids.From[ids.ProjectKind](ids.UUID(p.Id)))
+	if err != nil {
+		return crmcontracts.Project{}, err
+	}
+	listed := make([]crmcontracts.ProjectCompany, 0, len(on))
+	var customer *openapi_types.UUID
+	for _, one := range on {
+		listed = append(listed, crmcontracts.ProjectCompany{
+			OrganizationId: openapi_types.UUID(one.OrganizationID.UUID),
+			DisplayName:    one.DisplayName,
+			Role:           one.Role,
+		})
+		if customer == nil && one.Role == CompanyRoleCustomer {
+			id := openapi_types.UUID(one.OrganizationID.UUID)
+			customer = &id
+		}
+	}
+	p.Organizations = &listed
+	p.OrganizationId = customer
+	return p, nil
 }
 
 // maskProjects withholds, per row, the anchor company this reader may not
 // open. ONE statement answers the whole page, never a probe per row.
 func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Project) error {
+	// Whether each project is this caller's to change, one statement for the
+	// page. A project keeps the owner scope on writes even though every seat
+	// reads it, so the flag is the only thing a client can draw its edit
+	// affordances from without guessing.
+	if _, err := auth.StampWritable(ctx, tx, "project", projects,
+		func(p crmcontracts.Project) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Project, may bool) { p.Writable = &may }); err != nil {
+		return err
+	}
 	orgIDs := make([]ids.UUID, 0, len(projects))
 	for _, p := range projects {
 		if p.OrganizationId != nil {

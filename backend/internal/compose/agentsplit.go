@@ -42,10 +42,7 @@ const opUpdateDealRoomDocument = "updateDealRoomDocument"
 // The remaining five action-shaped ops named below are ALSO both this
 // file's and agentcommand.go's restCommands table's
 // (agentcommandnested.go): named once here so the two do not spell an
-// operationId twice each. opUpsertPartner is named alongside them for the
-// same reason — agentcommand.go's restCommands entry needs the identical
-// spelling — even though (its own comment below says why) upsertPartner is
-// NOT a member of the map these five populate.
+// operationId twice each.
 const (
 	opAddListMember       = "addListMember"
 	opApplyTag            = "applyTag"
@@ -53,7 +50,6 @@ const (
 	opAddOfferLineItem    = "addOfferLineItem"
 	opUpdateOfferLineItem = "updateOfferLineItem"
 	opRemoveOfferLineItem = "removeOfferLineItem"
-	opUpsertPartner       = "upsertPartner"
 )
 
 // actionShapedUpdateOps are the update_record twins whose body is a
@@ -64,16 +60,12 @@ const (
 // call runs 🟢 by design. Membership is earned by that one test; an op
 // absent here gets the full split instead.
 //
-// upsertPartner LOOKS like it belongs — PUT .../partner, a body naming
-// partner fields — but is deliberately ABSENT: the resolver
-// (commandnested.go) maps partner→organization, so this patch really IS a
-// field patch on the routed record (the organization), which is exactly
-// the case this map exists to exclude. An agent overwriting a human-typed
-// partner field (cert_status, margin_tier, …) has to stage, the same §2.1
-// precedence protection every ordinary organization field patch gets —
-// adding upsertPartner here would silently disable that protection for
-// this one operation. TestUpsertPartnerStagesAHumanOwnedPartnerField pins
-// the split running for it.
+// The test for membership is the BODY's shape, not the route's. An operation
+// whose path ends in a sub-resource can still be a field patch on the routed
+// record — if its resolver maps the sub-resource back to the parent row, the
+// human-typed fields at risk are the parent's, and the call must take the full
+// §2.1 split. Reading the URL and stopping there is how such an operation ends
+// up here and silently loses that protection.
 //
 // renameCustomField is here for a different reason: its target is a
 // catalog CONFIG row, not record data — §2.1 human-edit precedence
@@ -105,8 +97,8 @@ var actionShapedUpdateOps = map[string]bool{
 //
 // Adding such a route to actionShapedUpdateOps would NOT be the fix — that map
 // is for calls with no human-typed field of their target at all, and a to-do's
-// wording is exactly such a field. This is the upsertPartner trap in a
-// different shape, and its comment above says why.
+// wording is exactly such a field. It is the same trap actionShapedUpdateOps'
+// own comment describes, in a different shape.
 var patchTargetParam = map[string]string{
 	opUpdateDealRoomDocument: "documentId",
 }
@@ -245,16 +237,16 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 	}
 	// The staged target is resolved through the SAME seam stageRefusal uses
 	// (stagedTarget, which is resolveStagedTarget plus the untyped-target
-	// check), not read off pol.RecordType directly:
-	// upsertPartner's declared record_type is "partner", but its resolver
-	// (modules/agents/commandnested.go) stages "organization" — the row a
-	// human's decision and the approvals surface's own visibility probe
-	// actually depend on. Staging target_entity_type="partner" here would
-	// have named a pair neither targetProbes nor existenceProbes
-	// (approvals/targetvisibility.go) has a rule for, so the approval fails
-	// closed as invisible and undecidable — the zombie authority object
-	// this whole seam exists to prevent, for the one write this branch is
-	// supposed to protect. body is split.Staged, the sub-patch this
+	// check), not read off pol.RecordType directly. A route's declared
+	// record_type is what the CONTRACT calls the thing; the resolver names the
+	// ROW a human's decision and the approvals surface's visibility probe
+	// actually depend on, and the two differ wherever a sidecar row is patched
+	// through its parent. Staging a target_entity_type neither targetProbes
+	// nor existenceProbes (approvals/targetvisibility.go) has a rule for makes
+	// the approval fail closed as invisible and undecidable — the zombie
+	// authority object this whole seam exists to prevent, for exactly the
+	// write this branch is supposed to protect. body is split.Staged, the
+	// sub-patch this
 	// approval actually binds to (canonicalRESTCall's own argument, above),
 	// not the full original request half of which already ran.
 	info, ok := stagedTarget(w, r, commands, pol, split.Staged)

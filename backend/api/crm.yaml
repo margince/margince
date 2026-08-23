@@ -2468,11 +2468,19 @@ paths:
     put:
       tags: [Organizations, Partners]
       operationId: upsertPartner
-      x-mcp-tool: { verb: update_record, record_type: partner, tier: auto_execute, scope: write }
-      summary: Create/update the partner extension on an org (sets classification='partner').
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Create/update the partner extension on an org (adds `partner` to its relationship types).
       description: |
         Promotes an org to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
-        setting `classification='partner'`. Company identity is never duplicated. 🟢 admin write.
+        adding `partner` to its `relationship_types`. (`classification` is retired and no longer
+        set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+        Company identity is never duplicated. Admin write, and a HUMAN one.
+
+        Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
+        commission ledger multiplies a won deal by, so this sets what a partner is paid on every
+        future deal. Reopening it to an agent is a deliberate act, and the tier is part of that
+        decision — a rate change is not an auto-execute shape.
       parameters:
         - $ref: '#/components/parameters/IfMatch'   # partner is versioned (data-model §4.3) — optimistic concurrency on update
       requestBody:
@@ -2492,6 +2500,7 @@ paths:
       tags: [Organizations, Partners]
       operationId: getPartner
       summary: Read the partner extension on an org (404 if the org is not a partner).
+      x-mcp-tool: { verb: read_record, record_type: partner, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The partner record.
@@ -3135,9 +3144,14 @@ paths:
       operationId: createProject
       summary: Create a project on a company.
       description: |
-        `organization_id` is required — a project has exactly one anchor company.
-        A `key` is optional but must match `^[A-Za-z][A-Za-z0-9_-]{1,23}$` and be unique
-        among live projects; a collision is `409` carrying the existing project's id.
+        `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+        work several companies do together, and the others are put on with
+        `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
+        The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
+        number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
+        subject line to file mail under this project, so a caller-chosen one is a matcher
+        a caller can get wrong. A collision is resolved by taking the next number, never
+        reported.
         The project starts in `initiative` and its creation row is appended to the phase history.
       x-mcp-tool: { verb: create_record, record_type: project, tier: confirmation_required, scope: write }
       parameters:
@@ -3399,6 +3413,59 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /projects/{id}/companies:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Projects]
+      operationId: setProjectCompany
+      summary: Put a company on a project with a role (idempotent per company).
+      description: |
+        A project is work several companies do together — a customer, a partner, a subcontractor —
+        so a company is an edge (`relationship` of kind `project_company`), not the project's one
+        anchor. Sending a company already on the project re-roles the edge that exists rather than
+        adding a second one.
+      x-mcp-tool: { verb: update_record, record_type: project, tier: confirmation_required, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetProjectCompanyRequest' }
+      responses:
+        '200':
+          description: The companies on the project, after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectCompanyListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{id}/companies/{organization_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: organization_id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Projects]
+      operationId: removeProjectCompany
+      summary: Take a company off a project (archives the edge).
+      description: |
+        The company keeps every record it owns; only its place on this project ends. Taking the
+        LAST company off a project is refused: a project no company is on is work nobody is doing,
+        and it would vanish from every company page that could lead a reader back to it.
+      x-mcp-tool: { verb: update_record, record_type: project, tier: confirmation_required, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      responses:
+        '204': { description: Taken off. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ---------------------------- /pipelines ----------------------------------
   /pipelines:
@@ -5914,7 +5981,7 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
         - name: person_id
           in: query
           schema: { type: string, format: uuid }
@@ -17485,6 +17552,19 @@ components:
         full_name: { type: string, description: Always present (display name). }
         title: { type: [string, 'null'], description: Denormalized current title; authoritative title is on the employment relationship. }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         social:
           type: object
           additionalProperties: true
@@ -17692,6 +17772,19 @@ components:
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         parent_org_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
         merged_into_id: { type: [string, 'null'], format: uuid }
         computed_fields:
@@ -19703,6 +19796,27 @@ components:
             no surviving sentence is absent, never present-and-empty: `risks` in particular is
             specified as omitted when empty, and the same rule reads honestly for every other.
           items: { $ref: '#/components/schemas/MeetingBriefSection' }
+        omitted:
+          type: array
+          description: >-
+            What this reader's own grants kept OUT of the brief, named so a silence is
+            never mistaken for an absence. A brief that cannot see the Deal Room reads
+            exactly like a brief about a deal with no room, and a rep would walk in
+            believing the buyer had done nothing. Empty when the reader could see
+            everything the brief looks at.
+          items: { $ref: '#/components/schemas/MeetingBriefOmission' }
+
+    MeetingBriefOmission:
+      type: object
+      description: One source this reader may not see, and what that costs the brief.
+      required: [source, reason]
+      properties:
+        source:
+          type: string
+          description: '`deal_room` today. A machine key, so a client can render its own wording.'
+        reason:
+          type: string
+          description: One sentence a reader can act on, naming what is missing and why.
 
     MeetingBriefSection:
       type: object
@@ -20621,19 +20735,22 @@ components:
       type: object
       description: |
         The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-        `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+        `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+        (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+        holds the two rules this surface cannot: write authority over the project ROW, and the
+        refusal that keeps a project's last company on it), `project_stakeholder`
         (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
         (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
         org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
       required: [id, kind, source, captured_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
         counterparty_org_id: { type: [string, 'null'], format: uuid, description: 'The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.' }
         deal_id: { type: [string, 'null'], format: uuid }
-        project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder edge. Null for every other kind.' }
+        project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder or project_company edge. Null for every other kind.' }
         role:
           type: [string, 'null']
           description: 'employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.'
@@ -20651,6 +20768,11 @@ components:
       type: object
       required: [kind, source]
       properties:
+        # project_company is deliberately ABSENT: a company's place on a project
+        # is written through /projects/{id}/companies, which holds two rules
+        # this generic surface cannot — write authority over the project ROW,
+        # and the refusal that keeps a project's last company on it. The server
+        # refuses the kind here, and the enum says so before a caller tries.
         kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
@@ -20716,6 +20838,19 @@ components:
             defaults it to `sourced`. Commission accrues on `sourced` only.
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         status: { type: string, enum: [open, won, lost], default: open }
         lost_reason: { type: [string, 'null'], description: Required when status=lost. }
         won_without_contract_reason:
@@ -21125,11 +21260,37 @@ components:
             The fields of THIS row the caller may not read (a field mask). A named field is null
             because it is withheld, not because it is empty; absent or empty means nothing is
             withheld.
+        organizations:
+          type: array
+          readOnly: true
+          items: { $ref: '#/components/schemas/ProjectCompany' }
+          description: >-
+            The companies working this project, in the order they were attached. A project is work
+            several companies do together — a customer, a partner, a subcontractor — so this is a
+            list rather than one anchor. A company the caller may not read is OMITTED rather than
+            named, so an empty list can mean either "no companies yet" or "none you can see".
         organization_id:
           type: [string, 'null']
           format: uuid
-          description: 'The anchor company — singular, and always set on the row. A company has many projects; a project has one company. Null on the wire when the caller may not read that company, in which case `masked_fields` names it: a project is readable across the workspace while the company it hangs off can still be an unpromoted capture.'
+          description: >-
+            The project's CUSTOMER — the first company attached with that role, or null when the
+            caller may not read it (in which case `masked_fields` names it) or when the project has
+            no customer. It is a view of `organizations`, kept because a project's client is the
+            one company most readers mean; the full picture is the list.
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         phase:
           type: string
           enum: [initiative, pursuing, delivering, closed]
@@ -21331,7 +21492,6 @@ components:
       required: [name, organization_id, source]
       properties:
         name: { type: string }
-        key: { type: [string, 'null'], pattern: '^[A-Za-z][A-Za-z0-9_-]{1,23}$' }
         organization_id: { type: string, format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
@@ -21341,12 +21501,51 @@ components:
       additionalProperties: true
       x-extension: true
 
+    SetProjectCompanyRequest:
+      type: object
+      required: [organization_id]
+      properties:
+        organization_id: { type: string, format: uuid }
+        role:
+          type: string
+          description: 'What this company is to the project; defaults to `customer` when omitted.'
+      additionalProperties: false
+
+    ProjectCompanyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectCompany' }
+      additionalProperties: false
+
+    ProjectCompany:
+      type: object
+      description: One company's place on a project.
+      required: [organization_id, display_name, role]
+      properties:
+        organization_id: { type: string, format: uuid }
+        display_name: { type: string }
+        role:
+          type: string
+          description: >-
+            What this company is to the project — `customer` is its client, and the rest name the
+            other sides of a joint delivery. Free text rather than an enum: an installation whose
+            deliveries have a shape this vocabulary does not carry should not have to rename it.
+      additionalProperties: false
+
     UpdateProjectRequest:
       type: object
-      description: 'Note `phase` is absent by design — it moves only through advanceProjectPhase.'
+      description: |
+        Note `phase` is absent by design — it moves only through advanceProjectPhase.
+        `key` is absent for a different reason: the server mints it from the name and
+        it is read-only thereafter. A key is what a human writes in a subject line to
+        file mail under a project, so a caller-chosen one is a matcher a caller can
+        get wrong — a project keyed after a person's name would claim every bracketed
+        mention of that word.
       properties:
         name: { type: string }
-        key: { type: [string, 'null'], pattern: '^[A-Za-z][A-Za-z0-9_-]{1,23}$' }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date }
@@ -22514,6 +22713,19 @@ components:
         score_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override (formulas §3.1) and recompute is suppressed; the machine value is retained in `score_computed`.' }
         score_computed: { type: [integer, 'null'], readOnly: true, description: 'Server-derived. The latest machine-computed §3 score, retained ONLY while an override is in force (else null, because score itself is the machine value).' }
         owner_id: { type: [string, 'null'], format: uuid }
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS row: the same question the server's write
+            gate answers on a mutation — the owner, the owner's team where the role is
+            team-scoped, a live `write` record grant, or an unbounded seat. Server-computed
+            per row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_person_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }
@@ -26838,6 +27050,20 @@ components:
           type: [string, 'null']
           format: date-time
           description: When they last made a request. Null if they have never signed in.
+        download_count:
+          type: [integer, 'null']
+          readOnly: true
+          description: |
+            How many documents this person has taken out of the room, counting each
+            download. Absent until they take one.
+
+            A seller previewing their own room as a buyer is never counted: the panel
+            would otherwise report the buyer opening what the rep opened.
+        documents_downloaded:
+          type: [array, 'null']
+          readOnly: true
+          items: { type: string }
+          description: The titles of the documents they downloaded, each named once.
         has_signed_in:
           type: boolean
           readOnly: true

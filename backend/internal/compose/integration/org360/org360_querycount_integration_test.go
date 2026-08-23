@@ -32,7 +32,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -103,7 +102,7 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	pool := tracedPool(t, tracer)
 	traced := database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))
 	svc := org360svc.NewService(pool, people.NewStore(traced),
-		deals.NewStore(traced, installseam.Deals()), projects.NewStore(traced),
+		deals.NewStore(traced, installseam.Deals()), integration.ProjectsStore(traced),
 		approvals.NewService(traced), func() time.Time { return org360Clock })
 	ctx := e.Admin()
 
@@ -180,7 +179,16 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// 35 since the projects section: one read of the account's unarchived
 	// projects under the caller's project row scope, capped at 25 rows and
 	// flat in the size of the account.
-	const budget = 35
+	//
+	// 39 since the writable flag: the organization, its people, its deals and
+	// its projects each answer "may this caller change this row" for their whole
+	// page in ONE statement — auth.StampWritable over the page's ids, plus the
+	// live filter that keeps an archived row from being reported as editable.
+	// Four reads, one per record type on the page rather than one per row, so
+	// they are flat in the size of the account exactly like every section above.
+	// The flatness assertion higher up is what actually protects that; this
+	// number only records where the flat cost now sits.
+	const budget = 39
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

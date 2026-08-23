@@ -572,12 +572,33 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 
 	vault := resetTestVault(t, e)
 	wsID := ids.From[ids.WorkspaceKind](e.WS)
-	mine, err := vault.Put(ctx, wsID, []byte("an incumbent's oauth refresh token"))
-	if err != nil {
-		t.Fatalf("sealing the credential under test: %v", err)
+	seal := func(what string) string {
+		t.Helper()
+		ref, err := vault.Put(ctx, wsID, []byte(what))
+		if err != nil {
+			t.Fatalf("sealing %s: %v", what, err)
+		}
+		return string(ref)
 	}
+
+	// One per SPELLING, not one per table. The handle column is called
+	// `credential_ref` on the connection tables, `vault_ref` on
+	// extension_secret and `signing_secret_ref` on webhook_subscription — and
+	// this test used to seed only the first, which is exactly why the
+	// collection could be written against one name and look correct. A test
+	// that exercises the spelling the code already knows about cannot fail on
+	// the spellings it does not.
+	mine := seal("an incumbent's oauth refresh token")
+	extension := seal("an extension's api key")
+	signing := seal("a webhook's signing secret")
+
 	e.WsExec(t, `INSERT INTO incumbent_connection (id, incumbent, region, status, credential_ref)
-		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), string(mine))
+		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), mine)
+	e.WsExec(t, `INSERT INTO extension_secret (id, extension_name, key, vault_ref)
+		VALUES ($1, 'relay-probe', 'api_key', $2)`, ids.NewV7(), extension)
+	e.WsExec(t, `INSERT INTO webhook_subscription (id, owner_id, target_url, event_types, signing_secret_ref)
+		VALUES ($1, $2, 'https://example.test/hook', ARRAY['person.created'], $3)`,
+		ids.NewV7(), e.AdminUser, signing)
 
 	h := dataResetHandlers{
 		pool:             e.Pool,
@@ -590,12 +611,18 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	if _, err := vault.Get(ctx, wsID, mine); !errors.Is(err, keyvault.ErrNotFound) {
-		t.Errorf("the sealed credential outlived the reset (Get returned %v) — a wipe that leaves credential material resident is not a clean slate", err)
+	for _, c := range []struct{ what, ref string }{
+		{"the incumbent connection's credential_ref", mine},
+		{"the extension secret's vault_ref", extension},
+		{"the webhook subscription's signing_secret_ref", signing},
+	} {
+		if _, err := vault.Get(ctx, wsID, keyvault.Ref(c.ref)); !errors.Is(err, keyvault.ErrNotFound) {
+			t.Errorf("%s outlived the reset (Get returned %v) — a wipe that leaves credential material resident is not a clean slate", c.what, err)
+		}
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE action = 'reset_data' AND evidence->>'secrets_purged' = '1'`); got != 1 {
-		t.Errorf("reset_data rows recording one purged secret = %d, want 1", got)
+		WHERE action = 'reset_data' AND evidence->>'secrets_purged' = '3'`); got != 1 {
+		t.Errorf("reset_data rows recording three purged secrets = %d, want 1", got)
 	}
 }
 

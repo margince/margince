@@ -26,16 +26,11 @@ import (
 // added outside the engine (a fork migration racing a create).
 const pgDuplicateColumn = "42701"
 
-// pgLockNotAvailable is SQLSTATE 55P03: a lock wait exceeded the
-// transaction's SET LOCAL lock_timeout — the retryable ErrTableBusy
-// answer, never a 500.
-const pgLockNotAvailable = "55P03"
-
-// lockTimedOut reports whether err is the bounded lock wait firing
-// (SQLSTATE 55P03).
+// lockTimedOut reports whether err is the bounded lock wait firing — the
+// retryable ErrTableBusy answer, never a 500. The SQLSTATE itself is storekit's
+// to name, so this module reads the classification rather than the code.
 func lockTimedOut(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == pgLockNotAvailable
+	return storekit.IsLockTimeout(err)
 }
 
 // Create is the single chokepoint allowed to run a runtime ALTER TABLE

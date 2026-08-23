@@ -57,6 +57,7 @@ import {
 import { EnrichedFields } from "./personcorrections";
 import { PersonDealRooms } from "./persondealrooms";
 import { PersonGraphPanel } from "./persongraph";
+import { PersonProjects } from "./personprojects";
 import {
   createdColumn,
   lastActivityColumn,
@@ -310,6 +311,11 @@ function PersonAside({
   return (
     <>
       <RelationshipPulse view={view} />
+      <PersonProjects
+        personId={view.person.id}
+        projects={view.projects}
+        readOnly={Boolean(view.person.archived_at)}
+      />
       <WhoKnowsThem view={view} />
       {emails.length > 0 ? <PersonDealRooms emails={emails} /> : null}
     </>

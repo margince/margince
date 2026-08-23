@@ -80,7 +80,15 @@ func (s *Store) ListParticipants(ctx context.Context, roomID ids.DealRoomID, act
 		}
 		var err error
 		out, err = participantRows(ctx, tx, roomID, activeOnly)
-		return err
+		if err != nil {
+			return err
+		}
+		seen, err := engagementByParticipant(ctx, tx, roomID)
+		if err != nil {
+			return err
+		}
+		out = withEngagement(out, seen)
+		return nil
 	})
 	// The roster is small and bounded by how many people a seller invites, so it
 	// answers whole rather than paged. The envelope still carries a page object

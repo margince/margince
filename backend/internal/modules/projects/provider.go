@@ -32,6 +32,13 @@ func NewProvider(db *database.DB) *Provider {
 	return &Provider{store: NewStore(db)}
 }
 
+// ProviderOver binds the datasource verbs to a store the caller has already
+// built. Identical in purpose to HandlersOver: a tool call and an HTTP call must
+// reach ONE store, or the seams wired on one of them are missing from the other.
+func ProviderOver(store *Store) *Provider {
+	return &Provider{store: store}
+}
+
 // WithFieldCatalog wires the workspace custom-field catalog into the provider's
 // store (see Store.WithFieldCatalog), so the MCP surface's record verbs carry
 // cf values exactly like REST.

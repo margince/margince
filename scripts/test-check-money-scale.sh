@@ -5,12 +5,18 @@
 # Probes live outside the repository and the gate is pointed at them, so a
 # planted defect can never collide with a concurrent `make -j` job.
 set -uo pipefail
+# Resolved BEFORE the cd. `$0` is whatever the caller typed, so after changing
+# directory it can name a path that does not exist — and the census below then
+# reads zero cases and reports a fully passing run as a failure. Launching the
+# suite from `scripts/` did exactly that.
+SELF="$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 cd "$(dirname "$0")/.."
 
 GATE=./scripts/check-money-scale.sh
 PROBE="$(mktemp -d)"
 trap 'rm -rf "$PROBE"' EXIT
 fails=0
+ran=0
 
 # expect <fires|silent> <go|ts> <name> <body>
 expect() {
@@ -36,9 +42,31 @@ expect() {
   if [[ "$want" == fires && $rc -eq 0 ]]; then
     echo "FAIL: $name — the gate passed over it"; echo "$out" | sed 's/^/    /'; fails=1; return
   fi
+  # `unclosed` is its own expectation and not a flavour of `fires`, because the
+  # two refusals mean opposite things about the run: `fires` says the gate READ
+  # the code and found the defect, `unclosed` says it could not read the code at
+  # all and refused rather than pretend. Scoring one as the other would let a
+  # scanner that has stopped working satisfy every detection case in the suite.
+  if [[ "$want" == unclosed ]] && ! grep -q "still inside a string or a block comment" <<< "$out"; then
+    echo "FAIL: $name — the gate did not refuse the unreadable file (exit $rc)"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  # And it must NAME the file. The whole point of refusing rather than passing
+  # is that the reader can go and look, so the diagnostic contract is the path,
+  # not the sentence around it — a refusal that says only "some file somewhere"
+  # tells them nothing they can act on.
+  if [[ "$want" == unclosed ]] && ! grep -qF -- "$file" <<< "$out"; then
+    echo "FAIL: $name — the gate refused but did not say WHICH file it could not read"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
+  if [[ "$want" == unclosed && $rc -eq 0 ]]; then
+    echo "FAIL: $name — the gate reported OK over a file it never finished reading"
+    echo "$out" | sed 's/^/    /'; fails=1; return
+  fi
   if [[ "$want" == silent && $rc -ne 0 ]]; then
     echo "FAIL: $name — the gate refused it"; echo "$out" | sed 's/^/    /'; fails=1; return
   fi
+  ran=$((ran + 1))
   echo "ok: $name"
 }
 
@@ -100,6 +128,150 @@ expect fires ts "a regex literal does not hide the defect after it" \
 expect fires ts "a grouped 1_000"  'export const m = (kwdMinor: number) => kwdMinor / 1_000;'
 expect fires go "a grouped 10_000" 'func probe(amountMinor int64) int64 { return amountMinor / 10_000 }'
 
+# A `${…}` on a continuation line used to reset the statement accumulator to
+# zero, because blankStrings tracked its braces in a variable it had forgotten
+# to declare local — and awk has no other way to declare one, so it was the
+# SAME global the strip pass counts brackets in. The buffer flushed mid-
+# statement and the two halves of the defect were judged apart.
+expect fires ts "a wrapped defect after a template interpolation" 'const amountMinor = toMinor(
+  `${label}`,
+  major * 100,
+);'
+# ...and the inverse: an interpolation must not GLUE unrelated statements
+# either, which the same collision did in the other direction.
+expect silent ts "an open interpolation does not glue later statements" 'const s = `${
+  x}`;
+const valueMinor = 1;
+const ageMs = 2 * 100;'
+
+# The same two library holes on the money side: a backslash inside a Go raw
+# string blanked the rest of the line as string content, and a `/*` inside a
+# string opened a block comment that never closed.
+expect fires go "a defect after a backslash in a Go raw string" 'func windows(path string, amountMinor int64) string {
+	return strings.TrimPrefix(path, `\`) + fmt.Sprint(amountMinor/100)
+}'
+expect fires go "a defect after a /* inside a string" 'var globPattern = "**/*.go"
+
+func probe(amountMinor int64) int64 { return amountMinor / 100 }'
+
+# The same one character of lookahead, on the blanking side. Without it the
+# scanner leaves the string at the escaped quote and reads the PROSE after it
+# as code — so a line explaining the defect becomes the defect.
+expect silent ts "prose quoting the shape, after an escaped quote" 'const help = "write \"amountMinor / 100\" instead";'
+
+# A Go raw string spans lines, and its interior is string content on EVERY one
+# of them. Blanking only the line the backtick opens on leaves the rest read as
+# code, so a query that mentions the shape becomes the shape.
+expect silent go "the shape inside a multi-line raw string" 'const explain = `the old code did
+	amountMinor / 100
+and that was the bug`'
+
+# TypeScript has three string delimiters and the scanner has to honour all
+# three. A single-quoted path carrying a `//` used to end the line there and
+# throw the defect after it away...
+expect fires ts "a  //  inside a single-quoted string" "const path = '/oauth // token'; const amountMinor = major * 100;"
+# ...and a template literal's contents are contents, so a line quoting the
+# shape inside one is prose, not arithmetic.
+expect silent ts "the shape inside a template literal" 'const help = `amountMinor / 100`;'
+
+# The same last line of defence. A backtick inside a regex literal opens a
+# template literal the language never closes, so the scanner runs off the end
+# of the file — and the run says which file rather than saying OK.
+expect unclosed ts "a file that ends inside an unclosed template literal" 'const re = /[`]/;
+const amountMinor = major * 100;'
+
+echo
+echo "== what review found in the shared scanner, each direction =="
+# A Go backtick string is RAW and never interpolates, so `${…}` written inside
+# one is prose. Keeping it as executable text reported a comment describing the
+# old bug as the bug.
+expect silent go 'an interpolation inside a Go raw string is prose' 'const explain = `see ${amountMinor / 100} in the old code`'
+# In TypeScript it IS executable, on one line and across several.
+expect fires ts "a defect inside an interpolation" 'const s = `${amountMinor / 100}`;'
+expect fires ts "a defect inside a multi-line interpolation" 'const s = `${
+  amountMinor / 100
+}`;'
+# A remainder is how the cents half is taken, and it was the one shape in this
+# gate's own vocabulary its continuation rule could not rejoin.
+expect fires ts "a remainder split after a trailing %" 'const centsPart = amountMinor %
+  100;'
+# A comment-only line is not a statement boundary; treating it as one judged
+# the two halves of a wrapped expression apart.
+expect fires ts "a comment line between a name and its power" 'const amountMinor =
+  /* a note */
+  major * 100;'
+# A line ending ON a colon has its value on the next one — how biome wraps a
+# long object property, and the write direction this gate exists for.
+expect fires ts "an object property breaking after the colon" 'const body = {
+  amountMinor:
+    major * 100,
+};'
+# ...while a member ending in a COMMA still ends its statement, which is the
+# case the old rule was written for and got right.
+expect silent ts "a comma-terminated member near an unrelated power" 'const row = {
+  valueMinor: 1,
+  label: "x",
+  ageMs: seconds * 1000,
+};'
+
+# Inside an interpolation the contents are CODE, so a `//` there is a real
+# comment — and the interpolation is still open after it. Zeroing that state
+# read the closing `}` as ordinary code and the backtick after it as a NEW
+# template, leaving the scanner inside a string for the rest of the file.
+expect silent ts "a // inside an interpolation is a comment" 'const s = `${x // amountMinor / 100
+}`;'
+expect fires ts "and the interpolation still closes afterwards" 'const s = `${x // a note
+}`;
+const amountMinor = major * 100;'
+# A nested string inside an interpolation is still a string.
+expect silent ts "a nested string inside an interpolation" 'const s = `${label("see amountMinor / 100 here")}`;'
+expect fires ts "a defect beside that nested string" 'const s = `${label("a note") + amountMinor / 100}`;'
+# A statement buffered at end of file must be reported under ITS file, not the
+# next one, and must not be joined to that file's first line.
+expect silent ts "a dangling continuation at end of file" 'const amountMinor ='
+
+# The contexts NEST, and a pair of counters cannot say so. `${`x`}` opens a
+# template, an interpolation and a second template; a flat "am I in a template"
+# flag was overwritten by the inner one and its contents read as code.
+expect silent ts "a nested template inside an interpolation" 'const s = `${`amountMinor / 100`}`;'
+expect fires ts "a defect past a nested template" 'const s = `${`x` + amountMinor / 100}`;'
+# A `case x:` or a bare label ends with a colon and does NOT continue — its body
+# is a separate statement, and joining it paired a `case valueMinor:` with an
+# unrelated `ratio * 100` in the arm below.
+expect silent ts "a case label over unrelated arithmetic" 'switch (k) {
+  case valueMinor:
+    widthPct = ratio * 100;
+}'
+expect silent ts "a default arm over unrelated arithmetic" 'switch (k) {
+  default:
+    widthPct = ratio * 100;
+}'
+expect fires ts "a case arm that IS a defect" 'switch (k) {
+  case "eur":
+    amountMinor = major * 100;
+}'
+# A label may span an open bracket, and its closing `):` is still the label's
+# end rather than a continuation into the arm.
+expect silent ts "a case label spanning a bracket" 'switch (k) {
+  case pick(
+    valueMinor):
+    widthPct = ratio * 100;
+}'
+# A label with code ON it is still just a label line. This is here because the
+# first version of the rule carried "am I in a label" across lines, and a label
+# like this never cleared it — so every later line in the file was flushed on
+# its own and nothing below the switch was judged at all.
+expect fires ts "code on the label line, defect below the switch" 'switch (k) {
+  case "eur": doThing();
+}
+const amountMinor =
+  major * 100;'
+# A quoted string cannot legally span a line, so it does not carry — carrying it
+# would blind the rest of the FILE over a typo, which is the one direction a
+# scanner must not fail in.
+expect fires ts "an unterminated quote does not blind the next line" 'const broken = "oops;
+const amountMinor = major * 100;'
+
 expect fires ts "a multiply on the write path, wrapped" 'export const toWire = (amount: string) => ({
   amount_minor: Math.round(Number(amount) * 100),
 });'
@@ -152,6 +324,20 @@ expect silent ts "the shape described in a TS comment" \
   '// Not `(valueMinor / 100).toFixed(2)` — the scale is the currency'"'"'s.'
 
 echo
+# A case whose own shell quoting is wrong prints an error and is SKIPPED, and
+# the suite would go on to report OK over a case that never planted anything.
+# The count is EXACT and not a floor: a floor lets probes disappear one at a
+# time until only the floor's worth is left, which is the same silent shrinkage
+# in slow motion. Derived from the file rather than typed, so adding a case
+# cannot leave a stale number behind.
+expected=$(grep -cE '^expect (fires|silent|unclosed) ' "$SELF")
+# Only when nothing else failed. `ran` counts cases that passed, so a genuine
+# assertion failure shortens it too — and reporting "some were skipped" on top
+# of a real finding sends the reader after the wrong thing.
+if [[ $fails -eq 0 && $ran -ne $expected ]]; then
+  echo "FAIL: $ran cases ran but $expected are written — some were skipped before they planted anything"
+  exit 1
+fi
 if [[ $fails -eq 1 ]]; then
   echo "FAIL: check-money-scale.sh does not behave as its header claims"
   exit 1

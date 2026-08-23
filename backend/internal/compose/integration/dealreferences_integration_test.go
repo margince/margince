@@ -57,7 +57,7 @@ func seedDealReferenceFixture(t *testing.T, e *Env) dealReferenceFixture {
 	// The project is Team2's; a deal and its project must name the same
 	// company, so the anchor org stays workspace-visible and only the project
 	// is out of Rep1's reach.
-	project := seedProject(admin, t, e, "Kestrel rollout", strPtr("KES-1"), openOrg, &e.Rep3)
+	project := seedProject(admin, t, e, "Kestrel rollout", openOrg, &e.Rep3)
 	hiddenProj := ids.From[ids.DealKind](e.SeedDeal(t, "Kestrel expansion", pipeline, open, &e.Rep1))
 	openOrgID := orgIDOf(openOrg)
 	if _, err := e.Deals.UpdateDeal(admin, hiddenProj, deals.UpdateDealInput{

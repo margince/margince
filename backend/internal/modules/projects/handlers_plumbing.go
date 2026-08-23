@@ -25,8 +25,21 @@ type Handlers struct {
 }
 
 // NewHandlers binds the transport to a store on the given pool.
+//
+// The store it builds carries the module's refusing seam defaults, so a
+// composition that forgets WithCompanyEdges fails closed rather than creating
+// projects no company page can find. HandlersOver is how compose hands in the
+// store it has already wired.
 func NewHandlers(db *database.DB) Handlers {
 	return Handlers{store: NewStore(db)}
+}
+
+// HandlersOver binds the transport to a store the caller has already built, so
+// the HTTP surface and every other reader share ONE store rather than two
+// spellings of one — the second of which would be the one nobody remembered to
+// wire.
+func HandlersOver(store *Store) Handlers {
+	return Handlers{store: store}
 }
 
 // WithFieldCatalog wires the workspace custom-field catalog into the
@@ -117,12 +130,8 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 }
 
 // writeStoreErr maps a store error onto the wire the same way for every handler
-// in this package: the project-specific typed errors first, then the
-// defence-in-depth net below, then the sentinel registry.
+// in this package: the defence-in-depth net below, then the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	if writeProjectErr(w, r, err) {
-		return
-	}
 	// A CHECK constraint is a business rule, so a breach that slipped past the
 	// per-path validations still answers a typed 422 — never an opaque 500. The
 	// constraint's NAME stays out of the body: it is schema, and the one a

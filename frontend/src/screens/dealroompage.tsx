@@ -29,8 +29,8 @@ import {
   useDealRoom,
 } from "./dealroom";
 import { buyerLink, DealRoomAccess, useParticipants } from "./dealroomaccess";
+import { changesKey, useRoomChanges } from "./dealroomchanges";
 import { DealRoomConversation } from "./dealroomconversation";
-import { DealRoomDocuments, useRoomDocuments } from "./dealroomdocuments";
 import "./dealroompage.css";
 
 // The seller's Deal Room page: one place to decide who may enter, what they
@@ -56,26 +56,6 @@ const CHANGE_LABELS: Record<string, MessageKey> = {
   document_ineligible: "publish.change.ineligible",
 };
 
-export function changesKey(roomId: string) {
-  return ["deal-room-changes", roomId] as const;
-}
-
-export function useRoomChanges(roomId: string, enabled = true) {
-  return useQuery({
-    queryKey: changesKey(roomId),
-    enabled,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/changes", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
 export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
   const roomQuery = useDealRoom(dealId);
@@ -99,8 +79,6 @@ function RoomPage({
   const mayWrite = useCanWrite("deal_room", "update");
   const finished = FINISHED_STATES.has(room.state);
   const refusal = refusalFor(finished, mayWrite, t);
-  const docs = useRoomDocuments(room.id);
-  const hasDocuments = (docs.data?.data?.length ?? 0) > 0;
   return (
     <div className="roompage">
       <header className="roompage-head">
@@ -127,15 +105,10 @@ function RoomPage({
       <div className="roompage-grid">
         <div className="roompage-main">
           <RoomText room={room} refusal={refusal} />
-          <DealRoomDocuments room={room} state={null} refusal={refusal} />
           <DealRoomConversation room={room} refusal={refusal} />
         </div>
         <div className="roompage-side">
-          <DealRoomAccess
-            room={room}
-            mayManage={mayWrite}
-            hasDocuments={hasDocuments}
-          />
+          <DealRoomAccess room={room} mayManage={mayWrite} />
           <PublishPanel room={room} />
         </div>
       </div>

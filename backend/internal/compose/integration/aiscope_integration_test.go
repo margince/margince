@@ -82,8 +82,8 @@ func TestAskScopedToOneProjectDropsTheOtherEngagementAndReportsTheScope(t *testi
 	if answer.Scope == nil {
 		t.Fatal("scope = nil, want the project the answer was narrowed to")
 	}
-	if answer.Scope.ProjectId != crmcontracts.Id(f.erp.UUID) || answer.Scope.Key == nil || *answer.Scope.Key != "ERP-27" {
-		t.Errorf("scope = %+v, want ERP-27", *answer.Scope)
+	if answer.Scope.ProjectId != crmcontracts.Id(f.erp.UUID) || answer.Scope.Key == nil || *answer.Scope.Key != f.erpKey {
+		t.Errorf("scope = %+v, want %s", *answer.Scope, f.erpKey)
 	}
 	// Eight activities on the account; the scope drops the other
 	// engagement's mail, task and meeting.
@@ -128,11 +128,11 @@ func TestOrganizationBriefScopedToOneProjectWritesFromTheScopedSummaryOnly(t *te
 	if strings.Contains(lane.prompt, "Rack decommissioning") || strings.Contains(lane.prompt, "rack haulier") {
 		t.Errorf("scoped summary carries the other engagement:\n%s", lane.prompt)
 	}
-	if !strings.Contains(lane.prompt, "Invoice question") || !strings.Contains(lane.prompt, "ERP-27") {
+	if !strings.Contains(lane.prompt, "Invoice question") || !strings.Contains(lane.prompt, f.erpKey) {
 		t.Errorf("scoped summary = %q; want the unfiled mail kept and the project named", lane.prompt)
 	}
 	if scoped.Scope == nil || scoped.Scope.ProjectId != crmcontracts.Id(f.erp.UUID) {
-		t.Fatalf("scope = %+v, want ERP-27", scoped.Scope)
+		t.Fatalf("scope = %+v, want %s", scoped.Scope, f.erpKey)
 	}
 	if scoped.Scope.InScope == nil || scoped.Scope.Total == nil || *scoped.Scope.InScope != 4 || *scoped.Scope.Total != 7 {
 		t.Errorf("scope counts = %v of %v, want 4 of 7", scoped.Scope.InScope, scoped.Scope.Total)

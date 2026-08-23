@@ -1160,6 +1160,14 @@ export function PersonMeetingBrief({
             />
           </section>
         ))}
+        {/* What this reader's own grants kept out. Said plainly, because a
+            brief that silently omits the Deal Room reads exactly like a brief
+            about a deal whose buyer has done nothing. */}
+        {brief.data?.omitted?.map((omission) => (
+          <p className="pe-prose t-small" key={omission.source}>
+            {omission.reason}
+          </p>
+        ))}
       </div>
       <div className="drawer-foot">
         <span className="pe-disclosure">

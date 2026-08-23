@@ -103,42 +103,27 @@ func TestEveryNamedProjectCheckHasItsOwnRefusal(t *testing.T) {
 	}
 }
 
-// projectKeyConflict speaks only for the key index. Claiming another
-// constraint's violation would report the wrong rule to the caller and
-// swallow the real one.
-func TestProjectKeyConflictClaimsOnlyItsOwnIndex(t *testing.T) {
-	key := "WHR"
+// keyRaceLost speaks only for the key index. Reading another constraint's
+// violation as a lost race would retry a write that can only fail again, and
+// swallow the real refusal while doing it.
+func TestOnlyTheKeyIndexCountsAsALostRace(t *testing.T) {
 	for name, tc := range map[string]struct {
 		err    error
-		key    *string
 		wantIt bool
 	}{
-		"its own index":      {&pgconn.PgError{Code: "23505", ConstraintName: "uq_project_key"}, &key, true},
-		"another index":      {&pgconn.PgError{Code: "23505", ConstraintName: "uq_rel_project_stakeholder"}, &key, false},
-		"not a uniqueness":   {&pgconn.PgError{Code: "23514", ConstraintName: "project_dates"}, &key, false},
-		"no key was sent":    {&pgconn.PgError{Code: "23505", ConstraintName: "uq_project_key"}, nil, false},
-		"an ordinary error":  {errors.New("connection reset"), &key, false},
-		"nothing went wrong": {nil, &key, false},
+		"its own index":      {&pgconn.PgError{Code: "23505", ConstraintName: "uq_project_key"}, true},
+		"another index":      {&pgconn.PgError{Code: "23505", ConstraintName: "uq_rel_project_stakeholder"}, false},
+		"not a uniqueness":   {&pgconn.PgError{Code: "23514", ConstraintName: "project_dates"}, false},
+		"an ordinary error":  {errors.New("connection reset"), false},
+		"nothing went wrong": {nil, false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := projectKeyConflict(tc.err, tc.key)
-			if tc.wantIt {
-				var taken *ProjectKeyTakenError
-				if !errors.As(got, &taken) {
-					t.Fatalf("got %v, want the key-taken refusal", got)
-				}
-				if taken.Key != key {
-					t.Errorf("refusal names key %q, want %q", taken.Key, key)
-				}
-				// The pre-check names the id when it can; this fallback runs
-				// when the row appeared underneath it, so there is none.
-				if taken.ExistingID != nil {
-					t.Error("the race fallback named an existing id it never read")
-				}
-				return
-			}
-			if got != nil {
-				t.Fatalf("claimed %v for a refusal that is not its own", got)
+			// A lost race means the mint loop takes the next number; anything
+			// else is a refusal the caller has to be told about, so reading one
+			// as the other either hides a real error behind a retry or turns a
+			// retryable race into a 500.
+			if got := keyRaceLost(tc.err); got != tc.wantIt {
+				t.Fatalf("keyRaceLost(%v) = %v, want %v", tc.err, got, tc.wantIt)
 			}
 		})
 	}
@@ -148,9 +133,7 @@ func TestProjectKeyConflictClaimsOnlyItsOwnIndex(t *testing.T) {
 // or constraint name describes our tables and tells a caller nothing it can
 // act on.
 func TestProjectRefusalsKeepSchemaNamesOffTheWire(t *testing.T) {
-	key := "WHR"
 	for _, err := range []error{
-		&ProjectKeyTakenError{Key: key},
 		&ProjectKeyShapeError{},
 		&ClosedReasonRequiredError{},
 		&ProjectPhaseError{},

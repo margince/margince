@@ -80,6 +80,20 @@ var specOrder = map[crmcontracts.MeetingBriefSectionKind]int{
 	crmcontracts.MeetingBriefSectionKindCompanyContext: 8,
 }
 
+// specSequence is specOrder read as a list: the same order, for the writer that
+// builds sections BY kind rather than sorting the ones it filled. Derived from
+// the map above so the two cannot disagree about where a section sits.
+var specSequence = orderedKinds()
+
+func orderedKinds() []crmcontracts.MeetingBriefSectionKind {
+	out := make([]crmcontracts.MeetingBriefSectionKind, 0, len(specOrder))
+	for kind := range specOrder {
+		out = append(out, kind)
+	}
+	sort.Slice(out, func(i, j int) bool { return specOrder[out[i]] < specOrder[out[j]] })
+	return out
+}
+
 // Section is one heading with its lines, before the grounding filter runs.
 type Section struct {
 	Kind      crmcontracts.MeetingBriefSectionKind

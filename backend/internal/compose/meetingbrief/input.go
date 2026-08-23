@@ -28,6 +28,14 @@ type Input struct {
 	// several places that could straddle a midnight.
 	Now time.Time
 
+	// Language is the BCP-47 tag the reader reads in, carried so the model lane
+	// answers in it. A brief about a German conversation, read by a German rep,
+	// answering in English is a translation task handed back to the person who
+	// asked for a summary. The deterministic floor ignores it: its sentences
+	// are English templates, and pretending otherwise would ship half a
+	// translation.
+	Language string
+
 	Company string
 	Deal    *DealIn
 	// Project is the body of work the meeting belongs to, when it is filed
@@ -52,6 +60,16 @@ type Input struct {
 	// LastTouchAt is the newest conversation with anyone in the room before
 	// this meeting. Nil means nothing was ever captured with any of them.
 	LastTouchAt *time.Time
+	// DealMoves are what happened to the DEAL since LastSpokeAt — stage moves,
+	// offers issued, what the buyer did in the Deal Room. Empty when nothing
+	// moved, when the meeting is about no deal, or when this reader may not
+	// see the part that moved.
+	DealMoves []DealMoveIn
+	// RoomHidden says this reader holds no deal_room grant, so whatever the
+	// buyer did in the room is missing from DealMoves. Rendered as an omission
+	// rather than left silent: a brief that cannot see the room reads exactly
+	// like a brief about a deal with no room.
+	RoomHidden bool
 }
 
 // DealIn is the deal this meeting is about.

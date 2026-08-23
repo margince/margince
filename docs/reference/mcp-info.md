@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 151.3 KB |
+| Tool catalog | 151.6 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39514 |
+| Approx. wire tokens | 39593 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,9 +30,9 @@ budget in `agenttooldescriptions_test.go`.
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
-| Input schemas | 32.8 KB | 21% | Yes, every step |
+| Input schemas | 33.1 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **67.6 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **67.9 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -98,7 +98,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.5 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.3 KB |
-| [`read_record`](#read_record) | Read a record | yes |  | 1.9 KB |
+| [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.2 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 1.9 KB |
@@ -107,7 +107,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 2.9 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 6.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes |  | 2.7 KB |
+| [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
@@ -7982,13 +7982,15 @@ Read one record's own stored fields — the values a person would see on its det
       "type": "string"
     },
     "record_type": {
+      "description": "partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record.",
       "enum": [
         "person",
         "organization",
         "deal",
         "lead",
         "activity",
-        "project"
+        "project",
+        "partner"
       ],
       "type": "string"
     }
@@ -9224,7 +9226,7 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` alone to get its defaults; the three plan arguments accept ONLY the names listed for that report. activities-by-kind — group_by: direction, kind, project, project_id; filters: direction, kind, project_id; aggregates: (none); default: count as activities grouped by kind; note: project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded. deals-by-stage — group_by: currency, partner_org_id, pipeline_id, stage_id, status, win_probability; filters: currency, organization_id, owner_id, partner_sourced, pipeline_id, project_id, stalled, status; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast — group_by: currency, forecast_category, owner_id, pipeline_id, stage_id, win_probability; filters: currency, forecast_category, owner_id, pipeline_id, project_id, stage_id; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company — group_by: currency, organization_id, owner_id; filters: currency, owner_id, pipeline_id, project_id; aggregates: amount_minor; default: count as open_deals grouped by organization_id. project-commitments — group_by: key, name, organization_id, owner_id, phase, project_id; filters: organization_id, owner_id, phase; aggregates: open_commitments, overdue_commitments; default: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id; note: rows are ordered most overdue first. projects-by-phase — group_by: organization_id, owner_id, phase; filters: organization_id, owner_id, phase; aggregates: open_deal_value_minor, won_deal_value_minor; default: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase; note: deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes. projects-gone-quiet — group_by: key, last_activity_at, name, organization_id, owner_id, phase, project_id, quiet_since; filters: days, organization_id, owner_id, phase; aggregates: (none); default: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since; note: `days` is a whole number of days of silence, default 30; quiet_since is when the silence began. win-loss — group_by: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, source, status; filters: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, project_id, source, status; aggregates: amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. A `pipeline_id` or `stage_id` used here comes from list_pipelines — no other tool on this surface yields one.",
+      "description": "The prebuilt report to run. Send `report` alone to get its defaults; the three plan arguments accept ONLY the names listed for that report. activities-by-kind — group_by: direction, kind, project, project_id; filters: direction, kind, project_id; aggregates: (none); default: count as activities grouped by kind; note: project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded. deals-by-stage — group_by: currency, partner_org_id, pipeline_id, stage_id, status, win_probability; filters: currency, organization_id, owner_id, partner_org_id, partner_sourced, pipeline_id, project_id, stalled, status; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast — group_by: currency, forecast_category, owner_id, partner_org_id, pipeline_id, stage_id, win_probability; filters: currency, forecast_category, owner_id, partner_org_id, pipeline_id, project_id, stage_id; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company — group_by: currency, organization_id, owner_id; filters: currency, owner_id, pipeline_id, project_id; aggregates: amount_minor; default: count as open_deals grouped by organization_id. project-commitments — group_by: key, name, organization_id, owner_id, phase, project_id; filters: organization_id, owner_id, phase; aggregates: open_commitments, overdue_commitments; default: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id; note: rows are ordered most overdue first. projects-by-phase — group_by: organization_id, owner_id, phase; filters: organization_id, owner_id, phase; aggregates: open_deal_value_minor, won_deal_value_minor; default: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase; note: deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes. projects-gone-quiet — group_by: key, last_activity_at, name, organization_id, owner_id, phase, project_id, quiet_since; filters: days, organization_id, owner_id, phase; aggregates: (none); default: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since; note: `days` is a whole number of days of silence, default 30; quiet_since is when the silence began. win-loss — group_by: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, source, status; filters: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, project_id, source, status; aggregates: amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. A `pipeline_id` or `stage_id` used here comes from list_pipelines — no other tool on this surface yields one.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -9624,17 +9626,18 @@ Find people, organizations, deals, leads and projects when you know roughly what
       "type": "integer"
     },
     "q": {
-      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched.",
+      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own.",
       "type": "string"
     },
     "record_type": {
-      "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these",
+      "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one.",
       "enum": [
         "person",
         "organization",
         "deal",
         "lead",
-        "project"
+        "project",
+        "partner"
       ],
       "type": "string"
     }

@@ -14,7 +14,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { useEntityName } from "./entityref";
-import { type Project, projectKeyRefusal } from "./projects.form";
+import type { Project } from "./projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the
 // inline "new project" it can grow), the chip on the deal page, and the one
@@ -97,16 +97,6 @@ export function dealProjectFields(
       required: true,
       showWhen: (values) => values.project_id === NEW_PROJECT,
     },
-    {
-      key: "new_project_key",
-      label: "project.key",
-      hint: t("project.keyHint"),
-      validate: (value) => {
-        const refusal = projectKeyRefusal(value);
-        return refusal ? t(refusal) : undefined;
-      },
-      showWhen: (values) => values.project_id === NEW_PROJECT,
-    },
   ];
 }
 
@@ -130,7 +120,6 @@ export async function resolveDealProject(
   const { data, error } = await api.POST("/projects", {
     body: {
       name: values.new_project_name?.trim() ?? "",
-      key: values.new_project_key?.trim() || null,
       organization_id: organizationId,
       source: "manual",
     },
@@ -142,6 +131,15 @@ export async function resolveDealProject(
 }
 
 /** The deal's project as a linked chip, or nothing when it has none. */
+// A deal shows its project as a CHIP rather than as the ProjectLinks section
+// every other record draws, and deliberately so: a deal carries at most one
+// project, names it on the form that creates it, and changes it on the form
+// that edits it. A section offering "attach" beside a field that already sets
+// the same pointer would be two controls writing one column — the duplication
+// ProjectLinks exists to end, reintroduced from the other side.
+//
+// If a deal ever carries several projects, this becomes a ProjectLinks with
+// allowsMany and the form field goes.
 export function DealProjectChip({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { name } = useEntityName("project", deal.project_id);

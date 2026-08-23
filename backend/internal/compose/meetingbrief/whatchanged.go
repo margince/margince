@@ -116,6 +116,12 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
 	}
+	for _, move := range in.DealMoves {
+		out = append(out, Sentence{
+			Text:     move.Text,
+			Evidence: []Evidence{{EntityType: citeDeal, EntityID: move.DealID}},
+		})
+	}
 	conversations := 0
 	var newest *ActIn
 	for i := range in.Recent {

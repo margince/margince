@@ -48,14 +48,21 @@ type quietProject struct {
 
 // scanQuietProjects lists the projects in flight that have been silent for
 // the default window, with the instant each fell silent.
+//
+// One row per (project, company): a signal is raised ON a company, and a
+// project several companies work together has gone quiet for each of them. A
+// project with no company edge yields no row — a signal with nowhere to land is
+// a finding nobody can act on.
 func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietProject, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.organization_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
+		SELECT p.id, pc.organization_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
 		  FROM project p
+		  JOIN relationship pc ON pc.kind = 'project_company' AND pc.project_id = p.id
+		                      AND pc.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND `+projects.ProjectInFlightSQL("p")+`
 		   AND `+projects.ProjectQuietSQL("p", "$1", 2)+`
-		 ORDER BY `+projects.ProjectQuietAnchorSQL("p")+`, p.id`,
+		 ORDER BY `+projects.ProjectQuietAnchorSQL("p")+`, p.id, pc.organization_id`,
 		now, projects.DefaultProjectQuietDays)
 	if err != nil {
 		return nil, fmt.Errorf("scan quiet projects: %w", err)

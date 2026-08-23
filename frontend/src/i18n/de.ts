@@ -167,6 +167,8 @@ export const de = {
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
+  "record.notYoursToChange":
+    "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.fullHistory": "Vollständiger Verlauf",
@@ -288,6 +290,26 @@ export const de = {
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.outstanding": "Noch offen",
+  "commission.column.actions": "Entscheidung",
+  "commission.decide.withheld": "Nicht Ihre Entscheidung",
+  "commission.decide.approve": "Freigeben",
+  "commission.decide.pay": "Als ausgezahlt markieren",
+  "commission.decide.void": "Stornieren",
+  "commission.decide.approveConfirm":
+    "Mit der Freigabe halten Sie fest, dass diese Provision vereinbart ist. Ausgezahlt wird dadurch nichts — zahlen Sie in Ihrem Finanzsystem und markieren Sie es danach hier.",
+  "commission.decide.payConfirm":
+    "Markieren Sie erst als ausgezahlt, wenn Ihr Finanzsystem tatsächlich gezahlt hat. Margince hält die Tatsache fest und bewegt kein Geld.",
+  "commission.decide.voidConfirm":
+    "Eine Stornierung schreibt eine Gegenbuchung daneben. Nichts wird gelöscht, der ursprüngliche Eintrag bleibt lesbar.",
+  "commission.decide.reasonLabel": "Warum wird storniert?",
+  "commission.decide.reasonRequired":
+    "Eine Stornierung braucht einen Grund — damit lässt sie sich dem Partner später erklären.",
+  "commission.decide.approved": "Provision freigegeben",
+  "commission.decide.paid": "Provision als ausgezahlt markiert",
+  "commission.decide.voided": "Provision storniert",
+  "commission.decide.settledElsewhere":
+    "Ausgezahlt wird im Finanzsystem. Hier wird festgehalten, was dort passiert ist.",
   "partner.setup": "Zum Partner machen",
   "partner.edit": "Partner bearbeiten",
   "partner.none": "Noch kein Partner",
@@ -340,6 +362,7 @@ export const de = {
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Beteiligter",
   "rel.kind.projectStakeholder": "Projekt-Beteiligter",
+  "rel.kind.projectCompany": "Unternehmen im Projekt",
   "rel.kind.partnerOf": "Partner von",
   "rel.kind.referredBy": "Empfohlen von",
   "rel.kind.coSellWith": "Co-Sell mit",
@@ -871,19 +894,18 @@ export const de = {
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
   "access.empty": "Noch niemand eingeladen.",
-  "access.noReviewer":
-    "Es gibt Dokumente, aber niemanden, der sie bestätigen kann. Laden Sie einen Prüfer ein oder machen Sie jemanden zum Prüfer.",
   "access.cap.view": "Nur lesen",
   "access.cap.viewHint": "Kann Dokumente und Unterhaltung lesen.",
   "access.cap.comment": "Lesen und kommentieren",
   "access.cap.commentHint": "Kann außerdem Fragen stellen und antworten.",
-  "access.cap.reviewer": "Lesen, kommentieren und Dokumente bestätigen",
+  "access.cap.reviewer": "Lesen und kommentieren",
   "access.cap.reviewerHint":
-    "Kann außerdem Änderungen an einem Dokument anfordern oder eine Version bestätigen.",
+    "Heute dasselbe wie Kommentieren. Bleibt ein eigener Platz, damit ein späterer Freigabeschritt einen Ort hat.",
   "access.state.invited": "eingeladen",
   "access.state.active": "angemeldet",
   "access.state.revoked": "entzogen",
   "access.lastSeen": "zuletzt gesehen {when}",
+  "access.downloads": "{count} Dokument(e) heruntergeladen",
   "access.linkRequested":
     "Hat {when} um einen neuen Link gebeten. Stellen Sie einen aus und senden Sie ihn selbst.",
   "access.rowActions": "Aktionen für {name}",
@@ -897,6 +919,8 @@ export const de = {
   "access.nameLabel": "Name",
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
+  "access.inviteBeforePublish":
+    "Dieser Raum wurde noch nie veröffentlicht. Wen Sie jetzt einladen, sieht eine leere Seite, bis Sie auf Veröffentlichen klicken.",
   "access.inviteNote":
     "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
   "access.issued.title": "Link für {name}",
@@ -1763,6 +1787,8 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur ins Stocken geraten",
   "deals.filterOwnerMe": "Meine Deals",
+  "deals.filterPartner": "Partner",
+  "deals.filterPartnerAnyOne": "Alle Partner",
   "deals.filterPartnerSourced": "Über Partner",
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterOrgAll": "Alle Firmen",
@@ -4279,7 +4305,8 @@ export const de = {
   "buyer.stewardUnknown": "Ihr Ansprechpartner",
   "buyer.signOut": "Abmelden",
   "room.docs.title": "Dokumente",
-  "room.docs.sub": "Was der Käufer lesen kann, in vier festen Gruppen.",
+  "room.docs.sub":
+    "Was der Käufer lesen kann, mit dem Gespräch zu jedem Dokument darunter.",
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
@@ -4294,17 +4321,27 @@ export const de = {
   "room.docs.group.security_privacy": "Sicherheit & Datenschutz",
   "room.docs.group.delivery_operations": "Lieferung & Betrieb",
   "buyer.docs.title": "Dokumente",
-  "buyer.docs.sub": "Was mit Ihnen geteilt wurde.",
+  "buyer.docs.sub":
+    "Was mit Ihnen geteilt wurde, mit dem Gespräch zu jedem Dokument darunter.",
   "buyer.docs.empty": "Noch keine Dokumente.",
   "buyer.docs.download": "{title} herunterladen",
   "buyer.docs.downloadFailed":
     "Der Download hat nicht begonnen. Versuchen Sie es erneut oder wenden Sie sich an Ihren Ansprechpartner.",
-  "threads.title": "Gespräch",
-  "threads.sub":
-    "Fragen und Antworten zwischen beiden Seiten — live, ohne Veröffentlichung.",
+  "room.docs.unshared": "Noch nicht geteilt – zum Teilen veröffentlichen",
+  "room.docs.changed": "Seit der letzten Veröffentlichung geändert",
+  "room.docs.shared": "Mit dem Käufer geteilt",
+  "room.docs.ineligible":
+    "Kann nicht geteilt werden – die Datei ist nicht mehr im Deal",
+  "buyer.docs.downloadShort": "Herunterladen",
+  "buyer.poweredBy": "Powered by",
+  "buyer.poweredByMargince": "Powered by Margince",
+  "threads.roomTitle": "Der Raum als Ganzes",
+  "threads.roomSub":
+    "Alles, was nicht ein einzelnes Dokument betrifft – live, ohne Veröffentlichung.",
+  "threads.aboutThis": "{count} Thread(s) zu diesem Dokument",
+  "threads.askAbout": "Zu diesem Dokument fragen",
+  "threads.cancel": "Abbrechen",
   "threads.empty": "Noch nichts gesagt.",
-  "threads.about": "Betrifft: {title}",
-  "threads.room": "Den Raum insgesamt",
   "threads.requiredChange": "Änderung nötig",
   "threads.resolved": "Erledigt",
   "threads.sideBuyer": "Käufer",
@@ -4312,20 +4349,10 @@ export const de = {
   "threads.replyLabel": "Antwort",
   "threads.reply": "Antworten",
   "threads.resolve": "Erledigen",
-  "threads.aboutLabel": "Es geht um",
   "threads.newLabel": "Neuer Thread",
-  "threads.requireChangeLabel":
-    "Das muss geändert werden, bevor ich das Dokument bestätigen kann",
+  "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
-  "buyer.decide.requestChanges": "Änderungen anfordern",
-  "buyer.decide.confirm": "Diese Version bestätigen",
-  "buyer.decide.confirmed":
-    "Sie haben diese Version bestätigt. Das ist eine Arbeitsentscheidung im Raum, keine Unterschrift.",
-  "buyer.decide.requested":
-    "Sie haben Änderungen an dieser Version angefordert.",
-  "room.decisions.title": "Entscheidungen des Käufers",
-  "room.decisions.empty": "Noch keine Entscheidungen.",
   "room.decisions.confirm_version": "hat die Version bestätigt",
   "room.decisions.request_changes": "hat Änderungen angefordert",
   "dealbrief.title": "Deal-Briefing",
@@ -6066,12 +6093,41 @@ export const de = {
   "sched.reload": "Erneut lesen",
   "nav.projects": "Projekte",
   "unit.projects": "Projekte",
+  "companyProjects.title": "Projekte",
+  "companyProjects.empty":
+    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist — als Kunde, Partner oder Subunternehmer.",
+  "projectCompanies.title": "Unternehmen",
+  "projectCompanies.empty":
+    "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",
+  "projectCompanies.attach": "Unternehmen verknüpfen",
+  "projectCompanies.detachTitle": "Dieses Unternehmen entfernen?",
+  "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
+  "personProjects.title": "Projekte",
+  "personProjects.empty":
+    "Dieser Kontakt erscheint hier, sobald er an einer Lieferung beteiligt ist — als Sponsor, Ansprechpartner oder wer sonst daran arbeitet.",
+  "projectRole.customer": "Kunde",
+  "projectRole.partner": "Partner",
+  "projectRole.subcontractor": "Subunternehmer",
+  "personRole.sponsor": "Sponsor",
+  "personRole.projectLead": "Projektleitung",
+  "personRole.deliveryLead": "Lieferverantwortung",
+  "personRole.expert": "Fachexperte",
+  "personRole.user": "Anwender",
+  "projectLinks.new": "Neues Projekt",
+  "projectLinks.attach": "Projekt verknüpfen",
+  "projectLinks.move": "Zu anderem Projekt verschieben",
+  "projectLinks.detach": "Verknüpfung lösen",
+  "projectLinks.detachConfirm": "Verknüpfung lösen",
+  "projectLinks.detachNamed": "{name} lösen",
+  "projectLinks.roleLabel": "Als",
+  "projectLinks.detachTitle": "Verknüpfung zu diesem Projekt lösen?",
+  "projectLinks.detachBody":
+    "{name} bleibt unverändert. Nur die Verknüpfung zu diesem Datensatz endet — es wird nichts gelöscht.",
+  "projectLinks.emptyTitle": "Noch keine Projekte",
+  "projectLinks.searchLabel": "Projekte nach Name oder Kürzel suchen",
   "project.name": "Projektname",
-  "project.key": "Kürzel",
-  "project.keyHint":
-    "Optionales Kürzel, z. B. ACME-CRM. Steht [KÜRZEL] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
-  "project.keyInvalid":
-    "Ein Kürzel beginnt mit einem Buchstaben und hat 2–24 Buchstaben, Ziffern, _ oder -.",
+  "project.keyMinted":
+    "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
   "project.ownerKeep": "Aktuelle Verantwortung behalten",

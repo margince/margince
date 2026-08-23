@@ -168,8 +168,10 @@ func TestAnAgentWritesExactlyWhatItsHumanWrites(t *testing.T) {
 			}{
 				{"owned by rep1", mine, verdictAdmitted, verdictAdmitted, verdictDenied},
 				{"owned by rep3", theirs, verdictDenied, verdictDenied, verdictAdmitted},
-				{"owned by rep3, shared to rep1 at write", sharedWithMe,
-					verdictAdmitted, verdictAdmitted, verdictAdmitted},
+				{
+					"owned by rep3, shared to rep1 at write", sharedWithMe,
+					verdictAdmitted, verdictAdmitted, verdictAdmitted,
+				},
 			} {
 				human := classifyWrite(tc.write(e.As(e.Rep1, rep1Team, tc.perms), e, row.id))
 				agent := classifyWrite(tc.write(e.AgentFor(t, e.Rep1, rep1Team, tc.perms), e, row.id))

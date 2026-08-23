@@ -89,15 +89,11 @@ export function buyerLink(credential: string): string {
 export function DealRoomAccess({
   room,
   mayManage,
-  hasDocuments,
-}: Readonly<{ room: DealRoom; mayManage: boolean; hasDocuments: boolean }>) {
+}: Readonly<{ room: DealRoom; mayManage: boolean }>) {
   const t = useT();
   const [inviting, setInviting] = useState(false);
   const participants = useParticipants(room.id);
   const rows = participants.data?.data ?? [];
-  const live = rows.filter((p) => !p.revoked_at);
-  const noReviewer =
-    hasDocuments && live.every((p) => p.capability !== "reviewer");
   return (
     <Panel
       title={t("access.title")}
@@ -110,11 +106,6 @@ export function DealRoomAccess({
         ) : undefined
       }
     >
-      {noReviewer ? (
-        <PanelBody>
-          <Callout tone="warn">{t("access.noReviewer")}</Callout>
-        </PanelBody>
-      ) : null}
       <QueryStates query={participants} pendingLines={2}>
         {rows.length === 0 ? (
           <PanelBody>
@@ -137,6 +128,25 @@ export function DealRoomAccess({
         onClose={() => setInviting(false)}
       />
     </Panel>
+  );
+}
+
+// What this person has actually done in the room, under the line that says
+// whether they have been here. A seat that has taken nothing says nothing:
+// "0 documents" reads as a judgement about the buyer, and the honest state
+// early in a room's life is simply that there is nothing to report yet.
+function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
+  const t = useT();
+  const downloads = participant.download_count ?? 0;
+  if (downloads === 0) {
+    return null;
+  }
+  const titles = participant.documents_downloaded ?? [];
+  return (
+    <p className="t-small access-row-facts">
+      {t("access.downloads", { count: String(downloads) })}
+      {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
+    </p>
   );
 }
 
@@ -176,6 +186,7 @@ function ParticipantRow({
             ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, RECORD_ZONE) })}`
             : ""}
         </p>
+        <ReadingSoFar participant={participant} />
         {participant.link_requested_at && !revoked ? (
           <p className="t-small access-row-request">
             <Link2 aria-hidden />
@@ -389,6 +400,9 @@ function InviteDialog({
             }))}
           />
           <p className="t-small">{t("access.inviteNote")}</p>
+          {room.published_at ? null : (
+            <Callout tone="warn">{t("access.inviteBeforePublish")}</Callout>
+          )}
         </div>
       )}
     </ConfirmModal>

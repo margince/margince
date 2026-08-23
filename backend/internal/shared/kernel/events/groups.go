@@ -67,6 +67,12 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// What happened in a Deal Room, written onto the deal's timeline. Its own
+		// group because a room's traffic is live and conversational while the
+		// projections above are batchy: a backlog of embeddings must not delay the
+		// note that says the buyer just asked something. It listens on the deal
+		// stream, where every deal_room event rides.
+		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
 		// The AI-activity projection (ai_task_run): what the rail and the
 		// activity feed read. Its own group because a projection backlog must
 		// not be able to stall anything that spends money or moves a record,

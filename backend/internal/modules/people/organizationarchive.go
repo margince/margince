@@ -70,6 +70,11 @@ func (s *Store) ArchiveOrganization(ctx context.Context, id ids.OrganizationID, 
 		if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {
 			return err
 		}
+		// The cascade below takes this company off every project it is on. A
+		// project that would be left with none is refused rather than stranded.
+		if err := refuseIfSoleCompanyOnALiveProject(ctx, tx, id); err != nil {
+			return err
+		}
 		if _, err := readOrganization(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return err
 		}

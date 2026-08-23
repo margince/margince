@@ -163,6 +163,20 @@ var relationshipTypeField = storekit.Field{
 // policy, which is why this says so rather than claiming one.
 const customerLink = "EXISTS (SELECT 1 FROM organization o WHERE o.id = t.organization_id AND %s)"
 
+// projectCompanyField matches a project against ANY of the live companies
+// working it. A Link rather than a scalar expression precisely because a
+// project has several: a subquery picking one would answer "no" for a filter
+// naming the partner on a project the partner is genuinely on.
+func projectCompanyField() storekit.Field {
+	return storekit.Field{
+		Expr:       "c.organization_id",
+		Type:       storekit.FieldID,
+		References: storekit.RefOrganization,
+		Link: "EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'" +
+			" AND c.project_id = t.id AND c.archived_at IS NULL AND %s)",
+	}
+}
+
 // customerField types one organization column as a deal-side filter leaf. The
 // operators it advertises narrow themselves — OperatorsFor reads Link — so an
 // industry reached this way offers everything text does except `contains`.
@@ -288,9 +302,14 @@ var segmentEngines = map[string]storekit.Query{
 		Table:     projectEntity,
 		BaseWhere: whereArchivedNull,
 		Fields: map[string]storekit.Field{
-			ownerIDField:      {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
-			ownerTeamIDField:  ownerTeamField,
-			"organization_id": {Expr: "t.organization_id", Type: storekit.FieldID, References: storekit.RefOrganization},
+			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
+			ownerTeamIDField: ownerTeamField,
+			// The COMPANIES the project is worked by, not the legacy anchor
+			// column: a project is work several companies do together, and a
+			// saved view that filtered on the column would answer for whichever
+			// one happened to be written there — including a company that was
+			// taken off the project.
+			"organization_id": projectCompanyField(),
 			"phase":           {Expr: "t.phase", Type: storekit.FieldPicklist, Options: projectPhaseValues},
 			tagFilterField:    tagLinkFor(projectEntity),
 		},

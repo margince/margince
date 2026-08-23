@@ -27,11 +27,36 @@ type Store struct {
 	// clock is the "today" a phase transition is stamped against; injected so
 	// duration folding is deterministic in tests.
 	clock func() time.Time
+
+	// The company edges (companyseam.go), injected because `people` owns the
+	// relationship table a project's companies ride on.
+	attachCompany    AttachCompany
+	projectCompanies ProjectCompanies
 }
 
 // NewStore binds the store to the pool every tenant query runs through.
+//
+// The company seams default to refusing rather than to nil: an un-injected seam
+// that failed OPEN would create projects with no company edge, which looks
+// exactly like the project not existing on every company page that reads one.
 func NewStore(db *database.DB) *Store {
-	return &Store{db: db, clock: time.Now}
+	return &Store{
+		db: db, clock: time.Now,
+		attachCompany:    refusingAttachCompany(),
+		projectCompanies: refusingProjectCompanies(),
+	}
+}
+
+// WithCompanyEdges wires the seams that put a company on a project and read the
+// companies back. Compose binds them to modules/people, which owns the table.
+func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies) *Store {
+	if attach != nil {
+		s.attachCompany = attach
+	}
+	if list != nil {
+		s.projectCompanies = list
+	}
+	return s
 }
 
 // WithFieldCatalog wires the custom-field seam. Without it the store runs

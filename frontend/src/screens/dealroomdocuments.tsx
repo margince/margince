@@ -1,23 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { Button, EmptyState, Field } from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Button, Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import "./dealroomdocuments.css";
 
-// The seller's side of a Deal Room's documents: which of the deal's files the
-// buyer gets to read, under which of the four fixed groups. Editorial like the
-// to-do list — nothing here reaches the buyer until the room is published.
+// The seller's verbs on a Deal Room's documents: which of the deal's files the
+// buyer gets to read, under which of the four fixed groups. The board that
+// draws them lives in dealroomthreads.tsx; nothing added here reaches the
+// buyer until the room is published.
 
 type DealRoom = components["schemas"]["DealRoom"];
-type DealRoomDocument = components["schemas"]["DealRoomDocument"];
 
 // The four groups are machine keys on the wire; these are their names.
 export const DOCUMENT_GROUPS: readonly {
@@ -55,111 +53,7 @@ export function useRoomDocuments(roomId: string) {
   });
 }
 
-export function DealRoomDocuments({
-  room,
-  state,
-  refusal,
-}: Readonly<{
-  room: DealRoom;
-  state: ReactNode;
-  refusal: string | undefined;
-}>) {
-  const t = useT();
-  const docs = useRoomDocuments(room.id);
-  return (
-    <Panel
-      title={t("room.docs.title")}
-      sub={t("room.docs.sub")}
-      titleAction={state ?? undefined}
-    >
-      <QueryStates query={docs} pendingLines={3}>
-        {docs.data ? (
-          <DocumentList
-            room={room}
-            docs={docs.data.data ?? []}
-            refusal={refusal}
-          />
-        ) : null}
-      </QueryStates>
-      <PanelBody>
-        <AddDocument room={room} refusal={refusal} />
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function DocumentList({
-  room,
-  docs,
-  refusal,
-}: Readonly<{
-  room: DealRoom;
-  docs: DealRoomDocument[];
-  refusal: string | undefined;
-}>) {
-  const t = useT();
-  if (docs.length === 0) {
-    return (
-      <PanelBody>
-        <EmptyState>
-          <p className="t-small">{t("room.docs.empty")}</p>
-        </EmptyState>
-      </PanelBody>
-    );
-  }
-  return (
-    <>
-      {docs.map((doc) => (
-        <DocumentRow key={doc.id} room={room} doc={doc} refusal={refusal} />
-      ))}
-    </>
-  );
-}
-
-function DocumentRow({
-  room,
-  doc,
-  refusal,
-}: Readonly<{
-  room: DealRoom;
-  doc: DealRoomDocument;
-  refusal: string | undefined;
-}>) {
-  const t = useT();
-  const remove = useRemoveDocument(room.id);
-  return (
-    <PanelRow>
-      <div className="room-doc">
-        <div>
-          <p>{doc.title}</p>
-          <p className="t-small">
-            {t(groupLabelKey(doc.group_key))}
-            {doc.filename && doc.filename !== doc.title
-              ? ` · ${doc.filename}`
-              : ""}
-          </p>
-        </div>
-        <Button
-          small
-          iconOnly
-          aria-label={t("room.docs.remove", { title: doc.title })}
-          reason={refusal}
-          pending={remove.isPending}
-          onClick={() =>
-            remove.mutate({ documentId: doc.id, version: doc.version })
-          }
-        >
-          <Trash2 aria-hidden />
-        </Button>
-      </div>
-      {remove.isError ? (
-        <p className="t-small t-danger">{problemMessageOf(remove.error, t)}</p>
-      ) : null}
-    </PanelRow>
-  );
-}
-
-function AddDocument({
+export function AddDocument({
   room,
   refusal,
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
@@ -274,7 +168,7 @@ function useAddDocument(roomId: string) {
   });
 }
 
-function useRemoveDocument(roomId: string) {
+export function useRemoveDocument(roomId: string) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({

@@ -24,7 +24,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { useParticipants } from "./dealroomaccess";
-import { useRoomChanges } from "./dealroompage";
+import { useRoomChanges } from "./dealroomchanges";
 
 type DealRoom = components["schemas"]["DealRoom"];
 type DealRoomState = components["schemas"]["DealRoomState"];

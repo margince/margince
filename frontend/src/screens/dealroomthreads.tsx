@@ -1,5 +1,5 @@
 import { CheckCheck, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
 import {
   Badge,
@@ -8,16 +8,20 @@ import {
   Field,
   Textarea,
 } from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { Select } from "../design-system/select";
+import { Eyebrow } from "../design-system/eyebrow";
+import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import "./dealroomthreads.css";
 
-// The conversation, drawn once for both sides. Seller and buyer read the same
-// threads in the same shape (the contract serves one projection), so this
-// file holds the rendering and takes the verbs as callbacks: who may reply,
-// who may resolve, and what a new thread may be about are the caller's
-// decisions, and the only things that differ between the two screens.
+// The document board, drawn once for both sides. A thread is about one
+// document or about the room, and the board keeps each thread under the
+// thing it is about: every document is a card that carries its own threads
+// and its own composer, and the room-wide threads sit in one panel below.
+// Seller and buyer read the same threads in the same shape (the contract
+// serves one projection), so this file holds the rendering and takes the
+// verbs as callbacks: who may reply, who may resolve, who may open a thread
+// are the caller's decisions, and the only things that differ between the
+// two screens.
 
 export type DealRoomThread = components["schemas"]["DealRoomThread"];
 
@@ -32,60 +36,184 @@ export type ThreadVerbs = Readonly<{
     body: string;
     requiredChange: boolean;
   }) => Promise<unknown>;
-  /** The documents a new thread may be about, by id → title. */
-  documents: readonly { id: string; title: string }[];
   /** Whether the composer offers "requires a change" (the buyer's mark). */
   mayRequireChange: boolean;
   /** A sentence saying why writing is refused, when it is. */
   refusal?: string;
 }>;
 
-export function ThreadPanel({
+/** One document as the board draws it; what the sides know differs. */
+export type BoardDocument = Readonly<{
+  id: string;
+  groupKey: string;
+  title: string;
+  /** The filename, group, or both, under the title. */
+  meta: string;
+  /** The share state the seller sees (the buyer only sees shared ones). */
+  status?: ReactNode;
+  /** Download, remove, decide — the side's own verbs on the document. */
+  actions?: ReactNode;
+  /** A sentence under the actions: a decision made, a download error. */
+  note?: ReactNode;
+}>;
+
+export type BoardGroup = Readonly<{ key: string; label: string }>;
+
+export function DocumentBoard({
+  title,
+  sub,
+  titleAction,
+  groups,
+  documents,
   threads,
   verbs,
-  documentTitles,
+  empty,
+  footer,
 }: Readonly<{
-  threads: DealRoomThread[];
+  title: string;
+  sub: string;
+  titleAction?: ReactNode;
+  groups: readonly BoardGroup[];
+  documents: readonly BoardDocument[];
+  threads: readonly DealRoomThread[];
   verbs: ThreadVerbs;
-  documentTitles: Record<string, string>;
+  empty: string;
+  /** Drawn after the documents: the seller's "add a document" form. */
+  footer?: ReactNode;
+}>) {
+  const t = useT();
+  const byDocument = new Map<string, DealRoomThread[]>();
+  for (const thread of threads) {
+    if (thread.document_id) {
+      const list = byDocument.get(thread.document_id) ?? [];
+      list.push(thread);
+      byDocument.set(thread.document_id, list);
+    }
+  }
+  // A thread about a document the list no longer carries still has to be
+  // readable and answerable: a seller who removed a document before publishing
+  // it can otherwise no longer see, answer or resolve the question the buyer
+  // asked about it, while the buyer — still on the last release — can. It joins
+  // the room-wide panel rather than disappearing.
+  const shown = new Set(documents.map((doc) => doc.id));
+  const roomThreads = threads.filter(
+    (thread) => !thread.document_id || !shown.has(thread.document_id),
+  );
+  return (
+    <>
+      <Panel title={title} sub={sub} titleAction={titleAction}>
+        {documents.length === 0 ? (
+          <PanelBody>
+            <p className="t-small">{empty}</p>
+          </PanelBody>
+        ) : (
+          groups.map((group) => {
+            const inGroup = documents.filter((d) => d.groupKey === group.key);
+            if (inGroup.length === 0) {
+              return null;
+            }
+            return (
+              <PanelBody key={group.key}>
+                <Eyebrow as="h3">{group.label}</Eyebrow>
+                <div className="board-group">
+                  {inGroup.map((doc) => (
+                    <DocumentCard
+                      key={doc.id}
+                      doc={doc}
+                      threads={byDocument.get(doc.id) ?? []}
+                      verbs={verbs}
+                    />
+                  ))}
+                </div>
+              </PanelBody>
+            );
+          })
+        )}
+        {footer ? <PanelBody>{footer}</PanelBody> : null}
+      </Panel>
+      <Panel
+        title={t("threads.roomTitle")}
+        sub={t("threads.roomSub")}
+        titleAction={<Badge>{String(roomThreads.length)}</Badge>}
+      >
+        <PanelBody>
+          {roomThreads.length === 0 ? (
+            <p className="t-small">{t("threads.empty")}</p>
+          ) : null}
+          <ThreadList threads={roomThreads} verbs={verbs} />
+          <ThreadComposer
+            verbs={verbs}
+            documentId={null}
+            label={t("threads.newLabel")}
+          />
+        </PanelBody>
+      </Panel>
+    </>
+  );
+}
+
+// A document card: the document, then what has been said about it, then the
+// place to say more. A reader never has to work out which document a thread
+// belongs to, because the thread is inside the document.
+function DocumentCard({
+  doc,
+  threads,
+  verbs,
+}: Readonly<{
+  doc: BoardDocument;
+  threads: readonly DealRoomThread[];
+  verbs: ThreadVerbs;
 }>) {
   const t = useT();
   return (
-    <Panel
-      title={t("threads.title")}
-      sub={t("threads.sub")}
-      titleAction={<Badge>{String(threads.length)}</Badge>}
-    >
-      {threads.length === 0 ? (
-        <PanelBody>
-          <p className="t-small">{t("threads.empty")}</p>
-        </PanelBody>
-      ) : (
-        threads.map((thread) => (
-          <ThreadRow
-            key={thread.id}
-            thread={thread}
-            verbs={verbs}
-            about={
-              thread.document_id
-                ? documentTitles[thread.document_id]
-                : undefined
-            }
-          />
-        ))
-      )}
-      <PanelBody>
-        <ThreadComposer verbs={verbs} />
-      </PanelBody>
-    </Panel>
+    <article className="board-doc" aria-label={doc.title}>
+      <div className="room-doc">
+        <div>
+          <p className="board-doc-title">{doc.title}</p>
+          <p className="t-small">{doc.meta}</p>
+          {doc.status ? (
+            <div className="board-doc-status">{doc.status}</div>
+          ) : null}
+        </div>
+        {doc.actions ? <div className="card-actions">{doc.actions}</div> : null}
+      </div>
+      {doc.note}
+      {threads.length > 0 ? (
+        <div className="board-doc-threads">
+          <span className="t-small board-doc-threads-head">
+            <MessageSquare aria-hidden />
+            {t("threads.aboutThis", { count: String(threads.length) })}
+          </span>
+          <ThreadList threads={threads} verbs={verbs} />
+        </div>
+      ) : null}
+      <ThreadComposer
+        verbs={verbs}
+        documentId={doc.id}
+        label={t("threads.askAbout")}
+        collapsible
+      />
+    </article>
+  );
+}
+
+function ThreadList({
+  threads,
+  verbs,
+}: Readonly<{ threads: readonly DealRoomThread[]; verbs: ThreadVerbs }>) {
+  return (
+    <div className="board-threads">
+      {threads.map((thread) => (
+        <ThreadRow key={thread.id} thread={thread} verbs={verbs} />
+      ))}
+    </div>
   );
 }
 
 function ThreadRow({
   thread,
   verbs,
-  about,
-}: Readonly<{ thread: DealRoomThread; verbs: ThreadVerbs; about?: string }>) {
+}: Readonly<{ thread: DealRoomThread; verbs: ThreadVerbs }>) {
   const t = useT();
   const [reply, setReply] = useState("");
   const [pending, setPending] = useState<"reply" | "resolve" | null>(null);
@@ -109,109 +237,139 @@ function ThreadRow({
     }
   };
   return (
-    <PanelRow>
-      <div className="thread">
+    <div className="thread">
+      {thread.required_change || resolved ? (
         <div className="thread-head">
-          <MessageSquare aria-hidden />
-          <span className="t-small">
-            {about ? t("threads.about", { title: about }) : t("threads.room")}
-          </span>
           {thread.required_change ? (
-            <Badge>{t("threads.requiredChange")}</Badge>
+            <Badge tone="warn">{t("threads.requiredChange")}</Badge>
           ) : null}
-          {resolved ? <Badge>{t("threads.resolved")}</Badge> : null}
+          {resolved ? (
+            <Badge tone="success">{t("threads.resolved")}</Badge>
+          ) : null}
         </div>
-        <ol className="thread-comments">
-          {(thread.comments ?? []).map((comment) => (
-            <li key={comment.id}>
-              <span className="t-small thread-author">
-                {comment.author.name} ·{" "}
-                {t(
-                  comment.author.side === "buyer"
-                    ? "threads.sideBuyer"
-                    : "threads.sideSeller",
-                )}
-              </span>
-              <p>{comment.body}</p>
-            </li>
-          ))}
-        </ol>
-        {!resolved && verbs.reply ? (
-          <div className="thread-reply">
-            <Field label={t("threads.replyLabel")}>
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={2}
-                  value={reply}
-                  onChange={(event) => setReply(event.target.value)}
-                />
+      ) : null}
+      <ol className="thread-comments">
+        {(thread.comments ?? []).map((comment) => (
+          <li
+            key={comment.id}
+            className={
+              comment.author.side === "buyer" ? "thread-buyer" : "thread-seller"
+            }
+          >
+            <span className="t-small thread-author">
+              {comment.author.name} ·{" "}
+              {t(
+                comment.author.side === "buyer"
+                  ? "threads.sideBuyer"
+                  : "threads.sideSeller",
               )}
-            </Field>
-            <div className="card-actions">
+            </span>
+            <p>{comment.body}</p>
+          </li>
+        ))}
+      </ol>
+      {!resolved && verbs.reply ? (
+        <div className="thread-reply">
+          <Field label={t("threads.replyLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={2}
+                value={reply}
+                onChange={(event) => setReply(event.target.value)}
+              />
+            )}
+          </Field>
+          <div className="card-actions">
+            <Button
+              small
+              disabled={reply.trim() === ""}
+              pending={pending === "reply"}
+              onClick={() => {
+                const run = verbs.reply;
+                if (run) {
+                  act("reply", () => run(thread.id, reply.trim()));
+                }
+              }}
+            >
+              {t("threads.reply")}
+            </Button>
+            {verbs.resolve ? (
               <Button
                 small
-                disabled={reply.trim() === ""}
-                pending={pending === "reply"}
+                variant="ghost"
+                pending={pending === "resolve"}
                 onClick={() => {
-                  const run = verbs.reply;
+                  const run = verbs.resolve;
                   if (run) {
-                    act("reply", () => run(thread.id, reply.trim()));
+                    act("resolve", () => run(thread.id));
                   }
                 }}
               >
-                {t("threads.reply")}
+                <CheckCheck aria-hidden />
+                {t("threads.resolve")}
               </Button>
-              {verbs.resolve ? (
-                <Button
-                  small
-                  variant="ghost"
-                  pending={pending === "resolve"}
-                  onClick={() => {
-                    const run = verbs.resolve;
-                    if (run) {
-                      act("resolve", () => run(thread.id));
-                    }
-                  }}
-                >
-                  <CheckCheck aria-hidden />
-                  {t("threads.resolve")}
-                </Button>
-              ) : null}
-            </div>
+            ) : null}
           </div>
-        ) : null}
-        {!resolved && !verbs.reply && verbs.refusal ? (
-          <p className="t-small">{verbs.refusal}</p>
-        ) : null}
-        {error ? <p className="t-small t-danger">{error}</p> : null}
-      </div>
-    </PanelRow>
+        </div>
+      ) : null}
+      {error ? <p className="t-small t-danger">{error}</p> : null}
+    </div>
   );
 }
 
-function ThreadComposer({ verbs }: Readonly<{ verbs: ThreadVerbs }>) {
+// The composer is bound to what it is about: a document's composer opens a
+// thread about that document and nothing else, so there is no "this is
+// about" picker to get wrong. On a document it starts folded to one button,
+// so a card with nothing said yet stays a document and not a form.
+function ThreadComposer({
+  verbs,
+  documentId,
+  label,
+  collapsible = false,
+}: Readonly<{
+  verbs: ThreadVerbs;
+  documentId: string | null;
+  label: string;
+  collapsible?: boolean;
+}>) {
   const t = useT();
-  const [documentId, setDocumentId] = useState("");
+  const [openForm, setOpenForm] = useState(!collapsible);
   const [body, setBody] = useState("");
   const [requiredChange, setRequiredChange] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!verbs.open) {
-    return verbs.refusal ? <p className="t-small">{verbs.refusal}</p> : null;
+    // The refusal is said once, on the room panel, not under every document.
+    return !collapsible && verbs.refusal ? (
+      <p className="t-small">{verbs.refusal}</p>
+    ) : null;
   }
   const open = verbs.open;
+  if (!openForm) {
+    return (
+      <div className="card-actions">
+        <Button small variant="ghost" onClick={() => setOpenForm(true)}>
+          <MessageSquare aria-hidden />
+          {label}
+        </Button>
+      </div>
+    );
+  }
   const submit = async () => {
     setPending(true);
     setError(null);
     try {
       await open({
-        documentId: documentId === "" ? null : documentId,
+        documentId,
         body: body.trim(),
-        requiredChange: documentId !== "" && requiredChange,
+        requiredChange: documentId !== null && requiredChange,
       });
       setBody("");
       setRequiredChange(false);
+      if (collapsible) {
+        setOpenForm(false);
+      }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -220,20 +378,7 @@ function ThreadComposer({ verbs }: Readonly<{ verbs: ThreadVerbs }>) {
   };
   return (
     <div className="thread-composer">
-      <Field label={t("threads.aboutLabel")}>
-        {(control) => (
-          <Select
-            id={control.id}
-            options={[
-              { value: "", label: t("threads.room") },
-              ...verbs.documents.map((d) => ({ value: d.id, label: d.title })),
-            ]}
-            value={documentId}
-            onChange={setDocumentId}
-          />
-        )}
-      </Field>
-      <Field label={t("threads.newLabel")}>
+      <Field label={label}>
         {(control) => (
           <Textarea
             {...control}
@@ -243,7 +388,7 @@ function ThreadComposer({ verbs }: Readonly<{ verbs: ThreadVerbs }>) {
           />
         )}
       </Field>
-      {verbs.mayRequireChange && documentId !== "" ? (
+      {verbs.mayRequireChange && documentId !== null ? (
         <Checkbox
           label={t("threads.requireChangeLabel")}
           checked={requiredChange}
@@ -259,6 +404,11 @@ function ThreadComposer({ verbs }: Readonly<{ verbs: ThreadVerbs }>) {
         >
           {t("threads.open")}
         </Button>
+        {collapsible ? (
+          <Button small variant="ghost" onClick={() => setOpenForm(false)}>
+            {t("threads.cancel")}
+          </Button>
+        ) : null}
       </div>
       {error ? <p className="t-small t-danger">{error}</p> : null}
     </div>

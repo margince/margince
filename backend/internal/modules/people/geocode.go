@@ -268,6 +268,12 @@ func (s *Store) recordGeocodeAfter(
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		// The geocode sweep runs unbounded, so this returns nil without a
+		// query today. It is here so the write is scoped the day anything
+		// human-facing asks for a company to be re-geocoded.
+		if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
+			return err
+		}
 		// CONDITIONAL ON THE ADDRESS NOT HAVING MOVED, and this is the whole
 		// point of the input hash.
 		//

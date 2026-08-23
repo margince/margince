@@ -11,7 +11,6 @@ package projects
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,7 +25,6 @@ import (
 // UpdateProjectInput is one project partial update: every field optional.
 type UpdateProjectInput struct {
 	Name          *string
-	Key           *string
 	OwnerID       *ids.UserID
 	Description   *string
 	StartedAt     *time.Time
@@ -61,10 +59,6 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			return fmt.Errorf("read project before update: %w", err)
 		}
 
-		if err := ensureRenamedKeyFree(ctx, tx, current, in); err != nil {
-			return err
-		}
-
 		p := projectUpdatePatch(current, in)
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
 		if p.Empty() {
@@ -72,9 +66,6 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			return nil
 		}
 		if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
-			if conflict := projectKeyConflict(err, in.Key); conflict != nil {
-				return conflict
-			}
 			if constraint, ok := storekit.CheckViolation(err); ok {
 				if refusal := projectCheckError(constraint, submittedDateField(in.StartedAt, in.TargetEndDate, in.EndedAt)); refusal != nil {
 					return refusal
@@ -96,24 +87,10 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		if err != nil {
 			return fmt.Errorf("read updated project: %w", err)
 		}
-		out, err = maskProjectForCaller(ctx, tx, updated)
+		out, err = s.maskProjectForCaller(ctx, tx, updated)
 		return err
 	})
 	return out, err
-}
-
-// ensureRenamedKeyFree runs the collision pre-check only when the update
-// actually moves the key. Re-sending the key a project already holds is not
-// a rename, and treating it as one would have every no-op PATCH conflict
-// with the project itself.
-func ensureRenamedKeyFree(ctx context.Context, tx pgx.Tx, current crmcontracts.Project, in UpdateProjectInput) error {
-	if in.Key == nil {
-		return nil
-	}
-	if current.Key != nil && strings.EqualFold(*current.Key, *in.Key) {
-		return nil
-	}
-	return ensureProjectKeyFree(ctx, tx, in.Key)
 }
 
 // projectUpdatePatch builds the column patch. Every FK it can set points
@@ -125,9 +102,6 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) *st
 	p := storekit.NewPatch()
 	if in.Name != nil {
 		p.Set("name", current.Name, *in.Name)
-	}
-	if in.Key != nil {
-		p.Set("key", current.Key, *in.Key)
 	}
 	if in.OwnerID != nil {
 		p.Set("owner_id", current.OwnerId, *in.OwnerID)

@@ -129,6 +129,9 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err != nil {
 			return err
 		}
+		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
+			return err
+		}
 		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor)
 		if err != nil {
 			return err
@@ -301,6 +304,9 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		WHERE id = $1`, nullColumnAssignments(personCustom)), personID, erasedName); err != nil {
 		return nil, err
 	}
+	// BEFORE the identifier rows go, and for the same reason the provider
+	// purge is: a Deal Room seat holds no person id and is resolved by
+	// address, which the delete below destroys.
 	linkedInHandles, err := deleteSubjectIdentifierRows(ctx, tx, personID, emails)
 	if err != nil {
 		return nil, err

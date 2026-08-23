@@ -37,6 +37,10 @@ import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
 const org = {
   id: "o-1",
+  // The server answers this per row; a fixture without it reads as NOT
+  // writable, which is the correct fail-closed default and would strip the
+  // edit affordances these tests are about.
+  writable: true,
   display_name: "Brandt Automotive GmbH",
   industry: "Automotive",
   captured_by: "human:u1",

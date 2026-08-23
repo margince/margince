@@ -112,6 +112,37 @@ export function useCanWrite(object: RbacObject, action: RbacAction): boolean {
 }
 
 /**
+ * Whether this caller may change THIS record: the object grant, the seat
+ * ceiling, and the server's own per-row answer, all three.
+ *
+ * The axes are independent and each is necessary. A rep holds
+ * `organization.update` on the OBJECT and still may not write a colleague's
+ * company; a full seat with the grant still may not write an archived one. The
+ * per-row half comes from the server as `record.writable`, because ownership,
+ * team membership and record grants are not in the /me snapshot — re-deriving
+ * them here would be a second implementation of the write gate, which is the
+ * defect this hook exists to prevent rather than one to commit while preventing
+ * it.
+ *
+ * UX HONESTY, never enforcement, exactly like the rest of this file: the server
+ * refuses a write it did not authorize whatever this returns. All it buys is
+ * that a reader is not shown a control the save would refuse.
+ *
+ * An absent `writable` denies. A response from a server too old to send it, or
+ * a projection that does not carry it, reads as not-writable — the same
+ * fail-closed answer every other predicate here gives.
+ */
+export function useCanWriteRecord(
+  object: RbacObject,
+  record: { readonly writable?: boolean } | undefined,
+): boolean {
+  // Runs unconditionally: the number of hooks a render performs must not
+  // depend on whether the record has arrived yet.
+  const granted = useCanWrite(object, "update");
+  return granted && (record?.writable ?? false);
+}
+
+/**
  * Both axes, for a control whose request is an UPSERT — one endpoint that
  * inserts or replaces, so which grant it needs is not knowable until the server
  * has read the row.

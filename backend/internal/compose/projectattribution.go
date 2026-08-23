@@ -91,10 +91,25 @@ func (projectCandidateFinder) LiveProjectsReached(ctx context.Context, tx pgx.Tx
 	if scope != "" {
 		scope = " AND " + scope
 	}
+	// The candidate set is reached THROUGH the company edge, and a proposal
+	// naming a project discloses that this sender's company works it — the pair
+	// the edge's own admission governs. A connector acting under a human whose
+	// grants exclude relationship reads must not learn it here.
+	edge, err := auth.EdgeReadScope(ctx, "pc", arg)
+	if err != nil {
+		return nil, err
+	}
+	if edge == "" {
+		edge = jsonTrue
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id, p.name, coalesce(p.key, '')
 		  FROM (`+activities.OrgReachSet()+`) ro
-		  JOIN project p ON p.organization_id = ro.organization_id
+		  JOIN relationship pc ON pc.kind = 'project_company'
+		                      AND pc.organization_id = ro.organization_id
+		                      AND pc.archived_at IS NULL
+		                      AND (`+edge+`)
+		  JOIN project p ON p.id = pc.project_id
 		 WHERE ro.activity_id = $1
 		   AND p.archived_at IS NULL AND p.phase <> 'closed'`+scope+`
 		 ORDER BY p.id`, args...)

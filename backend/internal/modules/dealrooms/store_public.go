@@ -102,7 +102,7 @@ func (s *Store) ExchangeCredential(ctx context.Context, raw string) (IssuedSessi
 			// A rep's tab, not a buyer's week: bounded like the credential was.
 			expiresAt = time.Now().UTC().Add(previewSessionTTL)
 		}
-		return openSession(ctx, tx, participantID, roomID, digest, expiresAt)
+		return openSession(ctx, tx, participantID, roomID, digest, expiresAt, preview)
 	})
 	if err != nil {
 		return IssuedSession{}, err
@@ -111,7 +111,7 @@ func (s *Store) ExchangeCredential(ctx context.Context, raw string) (IssuedSessi
 }
 
 // openSession inserts the session row and records that somebody signed in.
-func openSession(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomParticipantID, roomID ids.DealRoomID, digest []byte, expiresAt time.Time) error {
+func openSession(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomParticipantID, roomID ids.DealRoomID, digest []byte, expiresAt time.Time, preview bool) error {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -129,7 +129,11 @@ func openSession(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomParti
 		map[string]any{fieldRoomID: roomID.UUID, "participant_id": participantID.UUID, "expires_at": expiresAt}); err != nil {
 		return fmt.Errorf("audit deal room sign-in: %w", err)
 	}
-	return nil
+	if preview {
+		// A seller looking at their own room is not the buyer arriving.
+		return nil
+	}
+	return recordEngagement(ctx, tx, roomID, participantID, nil, engagementSignedIn)
 }
 
 // mintSessionToken is mintCredential with the session prefix. The strength and

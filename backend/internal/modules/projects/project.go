@@ -10,7 +10,6 @@ package projects
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -20,7 +19,6 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
@@ -43,7 +41,10 @@ const PhaseClosed = "closed"
 // CreateProjectInput is one new body of work. Phase and captured_by are
 // absent by design: both are the server's to decide.
 type CreateProjectInput struct {
-	Name           string
+	Name string
+	// Key is NOT an input: the server mints it from the name (keymint.go) and
+	// createProjectTx fills this in for the response. A caller-chosen key is a
+	// subject-line matcher a caller can get wrong.
 	Key            *string
 	OrganizationID ids.OrganizationID
 	OwnerID        *ids.UserID
@@ -75,7 +76,7 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	var out crmcontracts.Project
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createProjectTx(ctx, tx, in, by, active)
+		out, err = createProjectTx(ctx, tx, in, by, active, s.attachCompany, s.projectCompanies)
 		return err
 	})
 	return out, err
@@ -83,7 +84,10 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 
 // createProjectTx inserts the project with its birth phase-history row and
 // runs the write shape, all inside the caller's transaction.
-func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string, active []fieldcatalog.Column) (crmcontracts.Project, error) {
+func createProjectTx(
+	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
+	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
+) (crmcontracts.Project, error) {
 	// The anchor company is a client-supplied reference to a row-scoped
 	// record, so naming it is a read of it: the caller must be able to see
 	// the company before a project can be hung off it. The composite FK
@@ -92,34 +96,18 @@ func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by s
 		return crmcontracts.Project{}, err
 	}
 
-	if err := ensureProjectKeyFree(ctx, tx, in.Key); err != nil {
+	id := ids.New[ids.ProjectKind]()
+	key, err := insertProjectRow(ctx, tx, id, in, by, active)
+	if err != nil {
 		return crmcontracts.Project{}, err
 	}
+	in.Key = &key
 
-	id := ids.New[ids.ProjectKind]()
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
-		id, in.Name, in.Key, in.OrganizationID, in.OwnerID,
-		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
-	})
-	_, err := tx.Exec(ctx,
-		`INSERT INTO project (id, name, key, organization_id, owner_id,
-		                      description, started_at, target_end_date, source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10`+cfHolders+`)`,
-		args...)
-	if err != nil {
-		if conflict := projectKeyConflict(err, in.Key); conflict != nil {
-			return crmcontracts.Project{}, conflict
-		}
-		// Covers the owner FK; the organization target was pre-checked.
-		if storekit.IsForeignKeyViolation(err) {
-			return crmcontracts.Project{}, apperrors.ErrNotFound
-		}
-		if constraint, ok := storekit.CheckViolation(err); ok {
-			if refusal := projectCheckError(constraint, submittedDateField(in.StartedAt, in.TargetEndDate, nil)); refusal != nil {
-				return crmcontracts.Project{}, refusal
-			}
-		}
-		return crmcontracts.Project{}, fmt.Errorf("insert project: %w", err)
+	// The company rides the SAME transaction as the row, so a project whose
+	// company edge failed to land cannot commit alone — a project no company
+	// page shows is a project a reader cannot find.
+	if err := attachCompany(ctx, tx, id, in.OrganizationID, CompanyRoleCustomer, by); err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("put the project's company on it: %w", err)
 	}
 
 	// The birth row: from_phase NULL, exactly as deal_stage_history records
@@ -154,7 +142,14 @@ func createProjectTx(ctx context.Context, tx pgx.Tx, in CreateProjectInput, by s
 	if err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("read created project: %w", err)
 	}
-	return maskProjectForCaller(ctx, tx, out)
+	// The created project answers with its companies like every other single
+	// read. The store-bound spelling is unavailable here because this runs
+	// inside a caller-opened transaction, so the seam is threaded in.
+	one := []crmcontracts.Project{out}
+	if err := maskProjects(ctx, tx, one); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	return fillCompanies(ctx, tx, one[0], companies)
 }
 
 // RefuseArchiveProject answers every authority refusal ArchiveProject would
@@ -232,62 +227,24 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 		if err != nil {
 			return fmt.Errorf("read archived project: %w", err)
 		}
-		out, err = maskProjectForCaller(ctx, tx, archivedRow)
+		out, err = s.maskProjectForCaller(ctx, tx, archivedRow)
 		return err
 	})
 	return out, err
 }
 
-// ensureProjectKeyFree resolves a VISIBLE key collision BEFORE the write, so
-// the 409 can carry the id of the project already holding the key — a caller
-// that collided wants to open that project, not to be told "taken" and left
-// hunting for it. When the holder is outside the caller's scope the probe
-// finds nothing and the unique index refuses the write instead, naming no id.
-// It has to run first: once a unique violation has aborted the transaction,
-// no further query in it can answer anything.
-func ensureProjectKeyFree(ctx context.Context, tx pgx.Tx, key *string) error {
-	if key == nil || *key == "" {
-		return nil
+// keyRaceLost answers whether this insert failed because another transaction
+// took the minted key in between. It is not a user-facing refusal: the caller
+// never chose the key, so losing the race means the mint loop tries the next
+// number rather than reporting a conflict.
+func keyRaceLost(err error) bool {
+	if constraint, ok := storekit.UniqueViolation(err); ok {
+		return constraint == "uq_project_key"
 	}
-	// Naming the colliding id is a READ of that project, so the probe carries
-	// the row-scope clause like any other read. Without it the conflict path
-	// hands a caller the exact id of a row it may not see — the key is
-	// workspace-unique, so an invisible owner's project would still answer.
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	keyPos := arg(*key)
-	scope, err := auth.ScopeClauseFor(ctx, projectObject, "", arg)
-	if err != nil {
-		return err
-	}
-	where := storekit.SQLf("lower(key) = lower($%d) AND archived_at IS NULL", keyPos)
-	if scope != "" {
-		where += " AND " + scope
-	}
-	var existing ids.UUID
-	err = tx.QueryRow(ctx, storekit.SQLf(`SELECT id FROM project WHERE %s`, where), args...).Scan(&existing)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// Either the key is free, or it is held by a project this caller
-		// cannot see. Both answer the same way here: the unique index is the
-		// authority, and projectKeyConflict reports the refusal without an id.
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("check project key availability: %w", err)
-	}
-	return &ProjectKeyTakenError{Key: *key, ExistingID: &existing}
-}
-
-// projectKeyConflict maps the index's own refusal. The pre-check above
-// answers the ordinary case with an id; this covers the narrow race where
-// a concurrent write took the key in between, where there is no id to
-// name — a conflict without the pointer beats turning a 409 into a 500.
-func projectKeyConflict(err error, key *string) error {
-	constraint, ok := storekit.UniqueViolation(err)
-	if !ok || constraint != "uq_project_key" || key == nil {
-		return nil
-	}
-	return &ProjectKeyTakenError{Key: *key}
+	// A lock timeout on the insert is the SAME race seen from the other side:
+	// the holder of this key has not committed yet, so waiting longer would only
+	// hold a pool connection to learn what the next number already answers.
+	return storekit.IsLockTimeout(err)
 }
 
 // submittedDateField names the date input a request carried, preferring the
@@ -320,6 +277,12 @@ func submittedDateField(startedAt, targetEnd, endedAt *time.Time) string {
 // is what keeps that net from being the answer for a rule a request can reach.
 func projectCheckError(constraint string, dateField string) error {
 	switch constraint {
+	// Unreachable through a request now that the server mints the key
+	// (keymint.go) and TestEveryMintedKeyFitsTheColumnsShape holds every stem
+	// this generator can produce to the same shape. It stays because the
+	// constraint stays: a CHECK with no refusal of its own answers as an
+	// anonymous 422, and the fitness test over the named checks would be
+	// satisfied by a net that tells the caller nothing.
 	case "project_key_shape":
 		return &ProjectKeyShapeError{}
 	case "project_closed_reason":
@@ -331,16 +294,6 @@ func projectCheckError(constraint string, dateField string) error {
 	default:
 		return nil
 	}
-}
-
-// ProjectKeyTakenError maps to 409 project_key_taken.
-type ProjectKeyTakenError struct {
-	Key        string
-	ExistingID *ids.UUID
-}
-
-func (e *ProjectKeyTakenError) Error() string {
-	return "a live project already uses the key " + e.Key
 }
 
 // ProjectKeyShapeError maps to 422: the key must be letter-led so it can

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
+import { useCan, useCanWriteRecord } from "../app/capability";
 import { navigate } from "../app/router";
 import {
   Avatar,
@@ -92,6 +92,7 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { TodayOnThisAccount } from "./companytoday";
 import { ComposeModal, TimelineActions } from "./compose";
@@ -2314,6 +2315,12 @@ function CompanyRecordBody({
   taskUpdate: ReturnType<typeof useTaskUpdate>;
   onOpenHistory: () => void;
 }>) {
+  // Whether this company is this reader's to change. It used to be
+  // `!org.archived_at`, which answered a different question: an archived
+  // company is read-only for everyone, but a LIVE company somebody else owns is
+  // read-only too, and the page had no way to know that until the record
+  // started carrying the answer.
+  const orgWritable = useCanWriteRecord("organization", org);
   // The meeting whose brief is open. "Prepare meeting" used to open the
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
@@ -2362,6 +2369,16 @@ function CompanyRecordBody({
         onClose={() => setPreparing(null)}
         projects={liveProjects(view?.projects)}
       />
+      {/* The deliveries this company is part of — as the client, a partner or a
+          subcontractor. It sits with Deals and Tasks because all three answer
+          "what is in flight with this account". */}
+      {!overlay && (
+        <CompanyProjects
+          organizationId={org.id}
+          projects={view?.projects}
+          readOnly={readOnly}
+        />
+      )}
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
           commercial picture or the open work should not scroll past the
           day's brief to find either. */}
@@ -2394,7 +2411,7 @@ function CompanyRecordBody({
       {tab === "people" && (
         <PeopleCard
           view={view}
-          writable={!org.archived_at}
+          writable={orgWritable}
           orgId={org.id}
           loading={loading}
         />

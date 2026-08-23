@@ -130,19 +130,26 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Acme Tooling", &e.Rep1)
-	key := "ERP-27"
 	keyed, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
-		Name: "Cutover rehearsal", Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
+		Name: "Cutover rehearsal", OrganizationID: orgIDOf(org), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create keyed project: %v", err)
 	}
+	if keyed.Key == nil {
+		t.Fatal("the server minted no key, so the snippet assertion below proves nothing")
+	}
+	key := *keyed.Key
 	keyless, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
 		Name: "Cutover planning", OrganizationID: orgIDOf(org), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create keyless project: %v", err)
 	}
+	// Every project the store opens now carries a minted key, so the keyless
+	// case — a row from before the server minted them — is made by clearing
+	// the column directly.
+	e.WsExec(t, `UPDATE project SET key = NULL WHERE id = $1`, ids.UUID(keyless.Id))
 
 	page, err := search.NewStore(e.DB()).Search(admin, search.Input{Query: "Cutover", Types: []string{"project"}})
 	if err != nil {
@@ -152,8 +159,8 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 	for _, hit := range page.Hits {
 		snippets[hit.ID] = hit.Snippet
 	}
-	if got := snippets[ids.UUID(keyed.Id)]; got != "ERP-27 · Acme Tooling" {
-		t.Errorf("keyed project snippet = %q, want \"ERP-27 · Acme Tooling\"", got)
+	if want := key + " · Acme Tooling"; snippets[ids.UUID(keyed.Id)] != want {
+		t.Errorf("keyed project snippet = %q, want %q", snippets[ids.UUID(keyed.Id)], want)
 	}
 	if got := snippets[ids.UUID(keyless.Id)]; got != "Acme Tooling" {
 		t.Errorf("keyless project snippet = %q, want the company alone", got)
@@ -167,13 +174,16 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "Acme Tooling", &e.Rep1)
-	key := "ERP-27"
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: "Cutover rehearsal", Key: &key, OrganizationID: orgIDOf(org), Source: "manual",
+		Name: "Cutover rehearsal", OrganizationID: orgIDOf(org), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create project: %v", err)
 	}
+	if project.Key == nil {
+		t.Fatal("the server minted no key, so the snippet assertions below prove nothing")
+	}
+	key := *project.Key
 	// Owner-private AFTER the project exists: creating one is a read of the
 	// company, and a private company is out of even the admin's scope.
 	e.MakeCapturePrivate(t, "organization", org, e.Rep1)
@@ -192,13 +202,13 @@ func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing
 		return ""
 	}
 
-	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)); got != "ERP-27 · Acme Tooling" {
+	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)); got != key+" · Acme Tooling" {
 		t.Errorf("owner's snippet = %q, want the company named", got)
 	}
-	if got := snippetFor(e.As(e.Rep3, []ids.UUID{e.Team2}, roomPerms)); got != "ERP-27" {
+	if got := snippetFor(e.As(e.Rep3, []ids.UUID{e.Team2}, roomPerms)); got != key {
 		t.Errorf("another rep's snippet = %q, want the key alone — the company is capture-private to Rep1", got)
 	}
-	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "organization"))); got != "ERP-27" {
+	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "organization"))); got != key {
 		t.Errorf("snippet without the organization grant = %q, want the key alone", got)
 	}
 }

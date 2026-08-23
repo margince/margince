@@ -14,6 +14,13 @@ import type { Route } from "@playwright/test";
 
 type Json = (body: unknown, status?: number) => Promise<void>;
 
+// What this fake hands back as a newly minted key. Any well-formed key does:
+// the assertion it serves is that the client SHOWS the key the server chose,
+// not that this file can rederive the server's stem (projects/keymint.go owns
+// that rule). Exported because the spec asserts on it: one spelling, so a
+// change here cannot leave the assertion quietly matching nothing.
+export const MOCK_MINTED_KEY = "BE-1";
+
 export type MockProject = {
   id: string;
   workspace_id: string;
@@ -188,7 +195,13 @@ export function projectMock(input: {
           ...input.seeded,
           id: `pr-new-${minted}`,
           name: String(body.name),
-          key: body.key ?? null,
+          // The SERVER mints this now (projects/keymint.go): a create carries
+          // no key at all, and the stem-plus-lowest-free-number rule is the
+          // server's to own. The fake deliberately does not reproduce that
+          // rule — it returns A key so the spec can prove the client renders
+          // what it was handed, and a second implementation of the stem
+          // algorithm here would drift from the real one silently.
+          key: body.key ?? MOCK_MINTED_KEY,
           organization_id: String(body.organization_id),
           owner_id: body.owner_id ?? null,
           description: body.description ?? null,
