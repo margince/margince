@@ -21,7 +21,11 @@ export function useProjectRecord(id?: string): {
   settled: boolean;
 } {
   const query = useQuery({
-    queryKey: ["project", "record", id],
+    // Under the ["project", id] prefix the edit and archive paths already
+    // invalidate, so a renamed or archived project reaches this reader too. A
+    // key outside that prefix would keep serving the old record for its whole
+    // freshness window.
+    queryKey: ["project", id, "record"],
     queryFn: async () => {
       const { data, error } = await api.GET("/projects/{id}", {
         params: { path: { id: id ?? "" } },
@@ -55,7 +59,14 @@ export function useProjectRecord(id?: string): {
  * matcher reads as nothing anyway.
  */
 export function subjectTag(project: Project | null): string {
-  return project?.key ? `[${project.key}]` : "";
+  // An ARCHIVED project's key is not ours to write. A key is unique among LIVE
+  // projects only, so an archived one may already have been taken by a new
+  // project — stamping it would route the customer's reply to whichever project
+  // holds that key now, which is not the one this message is about.
+  if (!project?.key || project.archived_at) {
+    return "";
+  }
+  return `[${project.key}]`;
 }
 
 /**
@@ -71,8 +82,30 @@ export function withSubjectTag(subject: string, tag: string): string {
   if (!tag) {
     return subject;
   }
-  const already = stripSubjectTag(subject, tag);
-  return already ? `${tag} ${already}` : tag;
+  return prefixed(stripEveryKeyTag(subject), tag);
+}
+
+/**
+ * `subject` with every bracketed project key removed, wherever it sits.
+ *
+ * Not only the leading one, and not only ours: the inbound matcher reads EVERY
+ * `[...]` group in a subject, and two live keys make the attribution ambiguous
+ * — it resolves to neither. So a subject that already names another project, or
+ * names one mid-line, has to be cleared before this one is written, or the tag
+ * added here silently cancels itself out.
+ *
+ * Only key-SHAPED groups go. `[FYI]` is prose to the matcher and prose here.
+ */
+export function stripEveryKeyTag(subject: string): string {
+  return (
+    subject
+      .replace(/\[[^\]]*\]/g, (group) =>
+        keyShaped(group.slice(1, -1)) ? "" : group,
+      )
+      // Removing a tag from mid-line leaves the spaces that surrounded it, and a
+      // subject reading "Re:  Hallo" is a tell that something was cut out of it.
+      .replace(/\s{2,}/g, " ")
+  );
 }
 
 /** `subject` with a leading `tag` removed, if it carries one. */
@@ -84,6 +117,22 @@ export function stripSubjectTag(subject: string, tag: string): string {
   return trimmed.startsWith(tag)
     ? trimmed.slice(tag.length).trimStart()
     : subject;
+}
+
+/** `body` behind `tag`, with one space and no leading blank. */
+function prefixed(body: string, tag: string): string {
+  const rest = body.trim();
+  return rest ? `${tag} ${rest}` : tag;
+}
+
+/**
+ * Whether one bracketed token could be a project key — the frontend reading of
+ * the rule the capture side applies (`project_key_shape`): letter-led, then
+ * letters, digits and hyphens, bounded in length. A bare number is deliberately
+ * excluded, so `[2026]` and `[4711]` stay prose.
+ */
+function keyShaped(token: string): boolean {
+  return /^[a-z][a-z0-9-]{1,23}$/i.test(token.trim());
 }
 
 /** Where a send files, and what the composer should say about it. */

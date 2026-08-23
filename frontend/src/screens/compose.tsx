@@ -47,6 +47,7 @@ import { useConsentPurposes } from "./consent";
 import {
   type Filing,
   filingFor,
+  stripEveryKeyTag,
   stripSubjectTag,
   subjectTag,
   useProjectRecord,
@@ -259,8 +260,16 @@ function fillFromDraft(
   }>,
 ) {
   const drafted = result.draft;
-  if (!form.subject) {
-    form.setSubject(drafted.subject);
+  // A subject holding only the project tag is a subject the rep has not written
+  // yet: the composer put it there, not them. The drafted subject fills in
+  // behind the tag rather than being dropped as "the field is taken".
+  const written = stripEveryKeyTag(form.subject).trim();
+  if (!written) {
+    form.setSubject(
+      form.subject.trim()
+        ? withSubjectTag(drafted.subject, form.subject.trim())
+        : drafted.subject,
+    );
   }
   if (!form.body) {
     form.setBody(drafted.body);
@@ -323,6 +332,18 @@ async function draftFromActivity({
 // This says where the message is going, and points at the one control that can
 // change it — which moves the whole conversation, not one message of it.
 /**
+ * What survives clearing a subject: the project tag, and nothing else.
+ *
+ * A tag is not the rep's words and not the draft's — the composer put it there
+ * to route the reply. Wiping it with the rejected draft would leave the filing
+ * checkbox asserting a routing the subject no longer performs.
+ */
+function keptTag(subject: string): string {
+  const words = stripEveryKeyTag(subject);
+  return subject.slice(0, subject.length - words.length).trim();
+}
+
+/**
  * Where this send will file, stated rather than asked, with the one control
  * that matters: the rep can decline it.
  *
@@ -371,14 +392,16 @@ function ProjectFiling({
         checked={filed}
         onChange={(event) => onFiledChange(event.target.checked)}
       />
-      <p className="t-caption">
-        {t(
-          filing.from === "deal"
-            ? "compose.filedUnderDeal"
-            : "compose.filedUnder",
-          { project: project.name },
-        )}
-      </p>
+      {filed && (
+        <p className="t-caption">
+          {t(
+            filing.from === "deal"
+              ? "compose.filedUnderDeal"
+              : "compose.filedUnder",
+            { project: project.name },
+          )}
+        </p>
+      )}
       {filed && tag && (
         <p className="t-caption">{t("compose.subjectTagged", { tag })}</p>
       )}
@@ -415,10 +438,11 @@ function useThreadProject(activityId?: string): {
     projectId: (query.data?.links ?? []).find(
       (link) => link.entity_type === "project",
     )?.entity_id,
-    // A read that has not answered is not "no project": stating a filing on a
-    // pending read would name the wrong one, or none, and then change under
-    // the rep after they had already read it.
-    settled: !activityId || !query.isPending,
+    // A read that has not answered — or FAILED — is not "no project". Treating
+    // an error as absence falls through to the deal's project, which the send
+    // would then contradict: the server re-reads the anchor and inherits the
+    // thread's own filing. Unsettled means say nothing.
+    settled: !activityId || (!query.isPending && !query.isError),
   };
 }
 
@@ -1369,22 +1393,31 @@ function useDraftMutation({
 function useAnchorProject(
   entityType: RelinkKind,
   entityId: string,
-): { projectId?: string | null } {
+): { projectId?: string | null; settled: boolean } {
   const query = useQuery({
-    queryKey: ["deal", entityId, "project"],
+    // The SAME key the deal page's own read uses, so opening the composer on a
+    // deal costs no request and cannot disagree with the page behind it. A
+    // second key would be a second answer to one question.
+    queryKey: ["deal", entityId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals/{id}", {
         params: { path: { id: entityId } },
       });
-      // A deal the reader may not open derives no filing, and that is not an
-      // error worth taking the composer down for: they can still write the
-      // message, it simply files under the record it was started from.
-      return error ? null : data;
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
     },
     enabled: entityType === "deal",
     staleTime: 60_000,
   });
-  return { projectId: query.data?.project_id };
+  return {
+    projectId: query.data?.project_id,
+    // A read that failed says nothing about this deal's project. Reporting it
+    // as "no project" would drop the filing silently; unsettled keeps the
+    // composer quiet instead, which is the same rule the thread read follows.
+    settled: entityType !== "deal" || (!query.isPending && !query.isError),
+  };
 }
 
 /**
@@ -1404,6 +1437,9 @@ function useProjectFiling(input: {
   activityId?: string;
   anchorProjectId?: string | null;
   reachable: readonly { id: string }[];
+  // Whether the anchor's own read has answered. False keeps the composer quiet
+  // rather than reporting a failed read as "no project".
+  anchorSettled: boolean;
   subject: string;
   setSubject: (next: string) => void;
 }): {
@@ -1414,11 +1450,18 @@ function useProjectFiling(input: {
 } {
   const thread = useThreadProject(input.activityId);
   const [declined, setDeclined] = useState(false);
-  const filing = filingFor({
-    threadProjectId: thread.projectId,
-    dealProjectId: input.anchorProjectId,
-    reachable: input.reachable,
-  });
+  // Nothing is derived until the thread has answered. The thread outranks the
+  // deal, so guessing while its read is in flight is guessing the loser: the
+  // composer would announce the deal's project, then swap under the rep, or —
+  // when the read failed — announce one the send will not use.
+  const filing =
+    thread.settled && input.anchorSettled
+      ? filingFor({
+          threadProjectId: thread.projectId,
+          dealProjectId: input.anchorProjectId,
+          reachable: input.reachable,
+        })
+      : ({ kind: "none" } as const);
   const derived = filing.kind === "derived" ? filing.projectId : undefined;
   const { project } = useProjectRecord(derived);
   const filed = Boolean(derived) && !declined;
@@ -1435,7 +1478,12 @@ function useProjectFiling(input: {
   const subjectRef = useRef(input.subject);
   subjectRef.current = input.subject;
   const setSubject = input.setSubject;
+
   useEffect(() => {
+    // Re-apply when the tag CHANGED, and also when the subject no longer holds
+    // the tag this hook believes it wrote — discarding a draft clears the field
+    // programmatically, and without this the checkbox would keep claiming a tag
+    // the subject does not carry.
     if (applied.current === want) {
       return;
     }
@@ -1540,6 +1588,7 @@ export function ComposeModal({
   const projectFiling = useProjectFiling({
     activityId,
     anchorProjectId: groundable ? null : anchorProject.projectId,
+    anchorSettled: anchorProject.settled,
     // The reachable set only decides between "ask" and "say nothing", and the
     // anchored path never asks — the account path owns that question.
     reachable: [],
@@ -1627,8 +1676,10 @@ export function ComposeModal({
     },
     onSuccess: () => {
       // The rejected words leave with the judgment; the recipients the rep
-      // addressed are their own work and stay.
-      setSubject("");
+      // addressed are their own work and stay. So does the project tag: it is
+      // not part of the draft being rejected, and clearing it would leave the
+      // checkbox claiming a filing the subject no longer carries.
+      setSubject((current) => keptTag(current));
       setBody("");
       setProvenance(null);
     },

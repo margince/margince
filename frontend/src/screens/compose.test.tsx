@@ -2084,4 +2084,47 @@ describe("ComposeModal started from an account", () => {
     await waitFor(() => expect(subject().value).toBe(""));
     expect(screen.queryByText(/is added to the subject/)).toBeNull();
   });
+
+  it("leaves a tag the rep deleted by hand deleted", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links: [{ entity_type: "deal", entity_id: "d-1" }],
+        }),
+      "GET /deals/d-1": () =>
+        jsonResponse({ id: "d-1", name: "netcare", project_id: "pr-9" }),
+      "GET /projects/pr-9": () =>
+        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="deal"
+        entityId="d-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const subject = () =>
+      screen.getByPlaceholderText("Subject") as HTMLInputElement;
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    // Deleting the tag is a second way to say "not this one". The composer
+    // must not put it back under the rep's cursor.
+    await user.clear(subject());
+    await user.type(subject(), "Re: ohne Tag");
+
+    await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
+    // And it stays gone rather than reappearing on the next render.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(subject().value).toBe("Re: ohne Tag");
+  });
 });

@@ -46,6 +46,38 @@ describe("the project tag a subject carries", () => {
     expect(withSubjectTag("Kurzer Austausch?", "")).toBe("Kurzer Austausch?");
   });
 
+  it("is empty for an ARCHIVED project, whose key may already be somebody else's", () => {
+    // A key is unique among LIVE projects only. Stamping an archived one would
+    // route the customer's reply to whichever project holds that key now.
+    expect(subjectTag(project({ archived_at: "2026-08-01T00:00:00Z" }))).toBe(
+      "",
+    );
+  });
+
+  it("clears another project's tag rather than adding a second one", () => {
+    // Two bracketed keys make the inbound matcher ambiguous, so it resolves to
+    // NEITHER — a subject carrying both files nowhere.
+    expect(withSubjectTag("[OTHER-9] Re: Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] Re: Hallo",
+    );
+  });
+
+  it("clears a key tag the rep moved into the middle of the subject", () => {
+    expect(withSubjectTag("Re: [OTHER-9] Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] Re: Hallo",
+    );
+  });
+
+  it("leaves a bracketed group the matcher could never read as a key", () => {
+    // The letter-led rule is what excludes a bare number, so `[2026]` is a year
+    // and stays. `[FYI]` is deliberately NOT in this test: it is key-shaped to
+    // the capture matcher too, so clearing it is correct — a subject carrying
+    // it alongside a real key would file nowhere.
+    expect(withSubjectTag("[2026] Budget", "[N2P-1]")).toBe(
+      "[N2P-1] [2026] Budget",
+    );
+  });
+
   it("takes its own tag back off, and nobody else's", () => {
     expect(stripSubjectTag("[N2P-1] Re: Hallo", "[N2P-1]")).toBe("Re: Hallo");
     // A different project's tag is the rep's text, not ours to remove.
