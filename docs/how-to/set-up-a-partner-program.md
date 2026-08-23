@@ -113,13 +113,21 @@ partners so filtering stays useful.
   scan for partners whose stage is behind reality and correct it; make sure every in-flight
   partner has a next step with a due date.
 
-Agents reach partners INDIRECTLY today. A partner organization is an ordinary company to the
-generic record tools, so an agent can find it, read it and see that it carries the `partner`
-relationship type — but `partner` is not yet one of the record types those tools accept, so the
-partner extension's own fields (tier, certification, relationship stage) are not readable or
-writable that way. A deal's partner and what that partner did for it ARE agent-visible, through
-the deal's own `partner_org_id` and `partner_attribution` fields — readable, and settable both
-when an agent creates a deal and when it updates one.
+Agents can READ partners directly. `partner` is a record type the generic tools accept, so
+`read_record` returns one partner's terms — tier, certification, relationship stage — and
+`search_records` lists them, narrowed by `partner_role` or `cert_status`. Two things to know
+about the shape:
+
+- **A partner is addressed by its ORGANIZATION's id.** The partner row is that company's terms,
+  not a separate record, so you pass the company id you already have.
+- **A partner has no text search, and an untyped sweep skips it.** Every word you would search
+  for lives on the organization, so searching without naming a type finds the company once
+  rather than twice. Name `record_type=partner` to reach the terms.
+
+Partners are **read-only to an agent**: creating or changing partner state stays a human action,
+so no tool writes a tier or a certification. A deal's partner and what that partner did for it
+are both readable and writable, through the deal's own `partner_org_id` and `partner_attribution`
+fields — settable when an agent creates a deal and when it updates one.
 
 ## Changing the value lists themselves
 

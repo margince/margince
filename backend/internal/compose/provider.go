@@ -76,12 +76,18 @@ var _ datasource.SystemOfRecordProvider = (*Provider)(nil)
 // the page.
 const defaultSearchPageSize = 50
 
+// searchable is what an UNTYPED sweep visits. Partner is deliberately absent:
+// a sweep carries no filters and matches on text, and a partner has no text of
+// its own — every word a caller would search for lives on the organization the
+// partner row extends. Including it would return the same companies twice
+// under two type names. It is reachable by naming record_type=partner, which
+// is the call that can also carry the role and certification dials.
 var searchable = []datasource.EntityType{datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
-		datasource.EntityRelationship:
+		datasource.EntityRelationship, datasource.EntityPartner:
 		return p.people.Read(ctx, ref)
 	case datasource.EntityDeal, datasource.EntityProject:
 		return p.deals.Read(ctx, ref)
@@ -102,7 +108,8 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 // rather than a name it would refuse.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead:
+	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+		datasource.EntityPartner:
 		return p.people.ListFilters(t)
 	case datasource.EntityDeal, datasource.EntityProject:
 		return p.deals.ListFilters(t)
@@ -191,7 +198,8 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 		err     error
 	)
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead:
+	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+		datasource.EntityPartner:
 		records, next, _, err = p.people.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityDeal, datasource.EntityProject:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)

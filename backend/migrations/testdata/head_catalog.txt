@@ -565,7 +565,7 @@ public.attachment.archived_at timestamp with time zone gen=- def=-
 public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
-public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text])))
+public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
@@ -1181,7 +1181,7 @@ public.custom_field.created_by uuid NOT NULL gen=- def=-
 public.custom_field.currency character(3) gen=- def=-
 public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
-public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text])))
+public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'boolean'::text])))
@@ -1587,7 +1587,7 @@ public.embedding.chunk_hash text NOT NULL gen=- def=-
 public.embedding.chunk_ix integer NOT NULL gen=- def=0
 public.embedding.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.embedding.embedding vector NOT NULL gen=- def=-
-public.embedding.embedding_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text])))
+public.embedding.embedding_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
 public.embedding.embedding_pkey PRIMARY KEY (entity_type, entity_id, chunk_ix)
 public.embedding.entity_id uuid NOT NULL gen=- def=-
 public.embedding.entity_type text NOT NULL gen=- def=-
@@ -1645,7 +1645,7 @@ public.field_provenance.confidence real gen=- def=-
 public.field_provenance.evidence_ref text gen=- def=-
 public.field_provenance.field_name text NOT NULL gen=- def=-
 public.field_provenance.field_provenance_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
-public.field_provenance.field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text])))
+public.field_provenance.field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text])))
 public.field_provenance.field_provenance_pkey PRIMARY KEY (id)
 public.field_provenance.id uuid NOT NULL gen=- def=uuidv7()
 public.field_provenance.object_id uuid NOT NULL gen=- def=-

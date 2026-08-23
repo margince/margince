@@ -2492,6 +2492,7 @@ paths:
       tags: [Organizations, Partners]
       operationId: getPartner
       summary: Read the partner extension on an org (404 if the org is not a partner).
+      x-mcp-tool: { verb: read_record, record_type: partner, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The partner record.

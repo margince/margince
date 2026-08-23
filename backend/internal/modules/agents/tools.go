@@ -122,7 +122,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		OpenAPIOp: "search",
 		InputSchema: schema(`{"type":"object","properties":{
 			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched."},
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","project"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these"},
+			"record_type":{"type":"string","enum":["person","organization","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
 			"additionalProperties":false}`),
@@ -206,9 +206,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
 		Description:   readRecordCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getPerson/getOrganization/getDeal/getLead/getActivity/getProject",
+		OpenAPIOp: "getPerson/getOrganization/getDeal/getLead/getActivity/getProject/getPartner",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project"]},
+			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project","partner"],"description":"partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

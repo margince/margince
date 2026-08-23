@@ -44,6 +44,8 @@ const (
 	filterTag              = "tag"
 	filterDomain           = "domain"
 	filterMinScore         = "min_score"
+	filterPartnerRole      = "partner_role"
+	filterCertStatus       = "cert_status"
 )
 
 var personListFilters = storekit.FilterSet[ListPeopleInput]{
@@ -57,6 +59,14 @@ var organizationListFilters = storekit.FilterSet[ListOrganizationsInput]{
 	filterOwnerID:   storekit.FilterID(func(in *ListOrganizationsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListOrganizationsInput, v *string) { in.RelationshipType = v }),
+}
+
+// Partner lists by role and certification, the two dials GET /partners already
+// publishes. There is no text index behind a partner, so these are the whole
+// vocabulary rather than a narrowing of a broader search.
+var partnerListFilters = storekit.FilterSet[ListPartnersInput]{
+	filterPartnerRole: storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.PartnerRole = v }),
+	filterCertStatus:  storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.CertStatus = v }),
 }
 
 var leadListFilters = storekit.FilterSet[ListLeadsInput]{
@@ -76,6 +86,8 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 		return organizationListFilters.Names()
 	case datasource.EntityLead:
 		return leadListFilters.Names()
+	case datasource.EntityPartner:
+		return partnerListFilters.Names()
 	default:
 		return nil
 	}
