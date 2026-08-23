@@ -90,7 +90,7 @@ func TestEveryStageableToolRefusesATargetHeldElsewhere(t *testing.T) {
 	// fixedStages only satisfies the constructor: refuseStagingElsewhere returns
 	// before advance_deal/progress_deal reach StageSemantic, so its answer is
 	// never read on this path.
-	RegisterCoreTools(registry, elsewhereProvider{}, fixedStages{semantic: "won"}, nil, noConflicts{})
+	RegisterCoreTools(registry, elsewhereProvider{}, fixedStages{semantic: "won"}, nil, noConflicts{}, nil)
 	RegisterCommsTools(registry, &recordingComms{}, elsewhereProvider{})
 
 	// registry.tools IS the universe — walking Specs() and looking the name back

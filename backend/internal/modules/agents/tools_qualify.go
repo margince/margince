@@ -13,9 +13,11 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
-	"unicode"
+
+	"github.com/gradionhq/margince/backend/internal/platform/freemail"
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -30,7 +32,8 @@ import (
 var qualificationFields = []string{"email", "full_name", "company_name", "title"}
 
 type qualifyLead struct {
-	p datasource.SystemOfRecordProvider
+	p            datasource.SystemOfRecordProvider
+	consumerMail ConsumerMail
 }
 
 func (t qualifyLead) Spec() mcp.ToolSpec {
@@ -71,7 +74,11 @@ func (t qualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	patch := map[string]string{}
 	filled := map[string]QualifiedField{}
 	if isBlank(lead.CompanyName) && !isBlank(lead.Email) {
-		if company, ok := companyFromEmailDomain(*lead.Email); ok {
+		company, ok, err := t.companyFromEmail(ctx, *lead.Email)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			patch["company_name"] = company
 			lead.CompanyName = &company
 			filled["company_name"] = QualifiedField{
@@ -121,41 +128,49 @@ func (t qualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 
 func isBlank(s *string) bool { return s == nil || strings.TrimSpace(*s) == "" }
 
-// freemailDomains are provider domains that name a mailbox host, never
-// the lead's company — an inference from them would be a guess.
-var freemailDomains = map[string]bool{
-	"gmail.com": true, "googlemail.com": true, "yahoo.com": true,
-	"outlook.com": true, "hotmail.com": true, "live.com": true,
-	"icloud.com": true, "me.com": true, "aol.com": true,
-	"gmx.de": true, "gmx.net": true, "web.de": true, "t-online.de": true,
-	"proton.me": true, "protonmail.com": true,
-}
-
-// companyFromEmailDomain derives a company name from a corporate email
-// domain: the registrable label, word-split on -/_ and title-cased
-// ("jane@acme-corp.io" → "Acme Corp"). Freemail domains and bare hosts
-// yield nothing — reporting the gap beats inventing an employer.
-func companyFromEmailDomain(email string) (string, bool) {
+// companyFromEmail derives a company name from a corporate mail address.
+//
+// Both halves are asked of `platform/freemail`, and neither is this file's to
+// answer. The web door asks the same package the same two questions, and the
+// answers have to match: a list compiled in here would disagree with the
+// operator's own administered overlay, and a name derived by cutting the domain
+// at its first dot would call "eu.docusign.net" a company named "Eu". Either
+// way the two doors write different companies from one address, in front of a
+// user rather than in a log.
+//
+// A blank derivation is reported as a GAP rather than filled with a guess,
+// which is this tool's whole contract: a fill without evidence is a guess, and
+// guesses are absent by construction.
+func (t qualifyLead) companyFromEmail(ctx context.Context, email string) (string, bool, error) {
 	at := strings.LastIndex(email, "@")
 	if at < 0 || at == len(email)-1 {
-		return "", false
+		return "", false, nil
 	}
-	domain := strings.ToLower(strings.TrimSpace(email[at+1:]))
-	if freemailDomains[domain] {
-		return "", false
+	// The syntactic gate, not just a lowercase: a lead's email is a string an
+	// outsider chose, and `jane@%` is a legal RFC 5322 address whose domain is
+	// a LIKE wildcard.
+	domain, ok := freemail.Hostname(email[at+1:])
+	if !ok {
+		return "", false, nil
 	}
-	label, _, hasTLD := strings.Cut(domain, ".")
-	if !hasTLD || label == "" {
-		return "", false
+	if t.consumerMail == nil {
+		// Unwired is not "not a provider". A registry built without the seam
+		// cannot answer the question, and answering it anyway would derive a
+		// company from an address an operator may have marked consumer — so
+		// this refuses on exactly the terms an unreadable list refuses on,
+		// rather than nil-panicking at the first lead with an email.
+		return "", false, errors.New("crmagents: qualify_lead has no consumer-mail list wired")
 	}
-	words := strings.FieldsFunc(label, func(r rune) bool { return r == '-' || r == '_' })
-	if len(words) == 0 {
-		return "", false
+	consumer, err := t.consumerMail.IsConsumer(ctx, domain)
+	if err != nil {
+		return "", false, err
 	}
-	for i, w := range words {
-		runes := []rune(w)
-		runes[0] = unicode.ToUpper(runes[0])
-		words[i] = string(runes)
+	if consumer {
+		return "", false, nil
 	}
-	return strings.Join(words, " "), true
+	name := freemail.DisplayName(domain)
+	if name == "" {
+		return "", false, nil
+	}
+	return name, true, nil
 }

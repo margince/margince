@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/gradionhq/margince/backend/internal/platform/freemail"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -97,7 +98,7 @@ func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDom
 		if err != nil {
 			return err
 		}
-		if DomainLooksPersonal(registrableLabel(in.Domain), persons) {
+		if DomainLooksPersonal(freemail.RegistrableLabel(in.Domain), persons) {
 			in.Status, in.Source = DomainPersonal, DomainSourceHeuristic
 			res, err = s.resolveDomainTriageTx(ctx, tx, in)
 			return err
