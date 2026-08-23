@@ -2035,7 +2035,9 @@ export interface paths {
         put?: never;
         /**
          * Create a project on a company.
-         * @description `organization_id` is required — a project has exactly one anchor company.
+         * @description `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+         *     work several companies do together, and the others are put on with
+         *     `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
          *     The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
          *     number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
          *     subject line to file mail under this project, so a caller-chosen one is a matcher
@@ -14475,7 +14477,10 @@ export interface components {
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+         *     (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+         *     holds the two rules this surface cannot: write authority over the project ROW, and the
+         *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
          *     (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
          *     org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
@@ -14484,7 +14489,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
@@ -14498,7 +14503,7 @@ export interface components {
             deal_id?: string | null;
             /**
              * Format: uuid
-             * @description The project on a project_stakeholder edge. Null for every other kind.
+             * @description The project on a project_stakeholder or project_company edge. Null for every other kind.
              */
             project_id?: string | null;
             /** @description employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project. */
@@ -28523,7 +28528,7 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
                 person_id?: string;
                 organization_id?: string;
                 deal_id?: string;

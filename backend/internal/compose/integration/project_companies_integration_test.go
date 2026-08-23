@@ -6,14 +6,20 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
+	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // Three companies building one project is the case this edge exists for: a
@@ -114,4 +120,83 @@ func TestTheLastCompanyCannotBeTakenOffAProject(t *testing.T) {
 	if err := e.People.RemoveProjectCompany(admin, p.ID, orgIDOf(compC)); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("taking off a company that was never on it answered %v, want not-found", err)
 	}
+}
+
+// The generic relationship surface is not a side door onto a project's
+// companies. It takes the project.update OBJECT grant but no write authority
+// over the project ROW, and it has no last-company rule at all — so a caller
+// reaching project_company through it could attach a company to a project they
+// cannot write, or archive the last one.
+func TestTheGenericRelationshipSurfaceRefusesAProjectCompany(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	org := e.SeedOrg(t, "Alpha Werke", nil)
+	p := seedProject(admin, t, e, "Joint rollout", org, nil)
+	other := e.SeedOrg(t, "Beta Systeme", nil)
+
+	orgID, projectID := orgIDOf(other), p.ID
+	_, err := e.People.CreateRelationship(admin, people.CreateRelationshipInput{
+		Kind: "project_company", OrganizationID: &orgID, ProjectID: &projectID, Source: "manual",
+	})
+	var kind *people.RelationshipKindError
+	if !errors.As(err, &kind) {
+		t.Fatalf("the generic surface accepted a project_company create: %v", err)
+	}
+
+	// And archiving the edge the project's own create wrote is refused the same
+	// way — the half a create-time vocabulary check cannot cover, because an
+	// archive names an existing row whatever the vocabulary says.
+	edge := oneProjectCompanyEdge(t, e, p.ID)
+	if _, err := e.People.ArchiveRelationship(admin, edge, nil); !errors.As(err, &kind) {
+		t.Fatalf("the generic surface archived a project_company edge: %v", err)
+	}
+}
+
+// A company still holding deals on the project cannot be taken off it: a deal
+// names a company AND a project, and the two must agree.
+func TestACompanyWithDealsOnTheProjectCannotBeTakenOff(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	compA := e.SeedOrg(t, "Alpha Werke", nil)
+	compB := e.SeedOrg(t, "Beta Systeme", nil)
+	p := seedProject(admin, t, e, "Joint rollout", compA, nil)
+	if _, err := e.People.SetProjectCompany(admin, people.SetProjectCompanyInput{
+		ProjectID: p.ID, OrganizationID: orgIDOf(compB), Role: "partner",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	pipeline, open, _ := DealFixture(t, e)
+	projectID := p.ID
+	orgB := orgIDOf(compB)
+	if _, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
+		Name: "Partner scope", PipelineID: pipeline, StageID: open,
+		OrganizationID: &orgB, ProjectID: &projectID, Source: "manual",
+	}); err != nil {
+		t.Fatalf("seeding the partner's deal on the project: %v", err)
+	}
+
+	err := e.People.RemoveProjectCompany(admin, p.ID, orgIDOf(compB))
+	var held *people.CompanyHasDealsOnProjectError
+	if !errors.As(err, &held) {
+		t.Fatalf("taking off a company with deals on the project answered %v, want the refusal", err)
+	}
+}
+
+// oneProjectCompanyEdge reads back the edge id the project's own create wrote,
+// which no store method exposes: the edges are read as companies, not as
+// relationship rows, and a test that needs the ROW id has to ask the table.
+func oneProjectCompanyEdge(t *testing.T, e *Env, projectID ids.ProjectID) ids.UUID {
+	t.Helper()
+	var edge ids.UUID
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT id FROM relationship WHERE kind = 'project_company' AND project_id = $1
+			  AND archived_at IS NULL ORDER BY created_at, id LIMIT 1`,
+			projectID).Scan(&edge)
+	}); err != nil {
+		t.Fatalf("reading the project's company edge: %v", err)
+	}
+	return edge
 }

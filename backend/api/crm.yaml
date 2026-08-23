@@ -3135,7 +3135,9 @@ paths:
       operationId: createProject
       summary: Create a project on a company.
       description: |
-        `organization_id` is required — a project has exactly one anchor company.
+        `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+        work several companies do together, and the others are put on with
+        `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
         The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
         number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
         subject line to file mail under this project, so a caller-chosen one is a matcher
@@ -5970,7 +5972,7 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
         - name: person_id
           in: query
           schema: { type: string, format: uuid }
@@ -20677,19 +20679,22 @@ components:
       type: object
       description: |
         The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-        `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+        `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+        (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+        holds the two rules this surface cannot: write authority over the project ROW, and the
+        refusal that keeps a project's last company on it), `project_stakeholder`
         (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
         (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
         org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
       required: [id, kind, source, captured_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
         counterparty_org_id: { type: [string, 'null'], format: uuid, description: 'The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.' }
         deal_id: { type: [string, 'null'], format: uuid }
-        project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder edge. Null for every other kind.' }
+        project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder or project_company edge. Null for every other kind.' }
         role:
           type: [string, 'null']
           description: 'employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.'
@@ -20707,6 +20712,11 @@ components:
       type: object
       required: [kind, source]
       properties:
+        # project_company is deliberately ABSENT: a company's place on a project
+        # is written through /projects/{id}/companies, which holds two rules
+        # this generic surface cannot — write authority over the project ROW,
+        # and the refusal that keeps a project's last company on it. The server
+        # refuses the kind here, and the enum says so before a caller tries.
         kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }

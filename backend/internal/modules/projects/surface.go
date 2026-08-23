@@ -57,6 +57,15 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 	if err != nil {
 		return nil, err
 	}
+	// A card under a company DISCLOSES that this company and this project are
+	// working together, which is what the edge's own admission governs — the
+	// project's read grant does not cover the pair. Without this a seat denied
+	// relationship reads still learns every company-project association from
+	// the company page.
+	edge, err := edgeBound(ctx, "c", arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT `+projectCardColumns+`
 		  FROM project p
@@ -64,7 +73,8 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 		 WHERE EXISTS (
 		           SELECT 1 FROM relationship c
 		            WHERE c.kind = 'project_company' AND c.project_id = p.id
-		              AND c.organization_id = $%d AND c.archived_at IS NULL)
+		              AND c.organization_id = $%d AND c.archived_at IS NULL
+		              AND (`+edge+`))
 		   AND p.archived_at IS NULL AND (%s)
 		 `+projectCardOrder+`
 		 LIMIT %d`, orgPos, scope, projectSurfaceCap), args...)

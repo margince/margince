@@ -26,23 +26,50 @@ BEGIN
 END;
 $$;
 
--- A project created while several companies were allowed may have no anchor.
--- Give it one of its companies rather than failing the migration on a NOT NULL
--- it cannot satisfy; which one is arbitrary, and that is the information this
--- direction loses by design.
+-- The anchor column is rebuilt from the EDGES, not left as it was found.
+--
+-- The legacy value is stale by construction: while several companies were
+-- allowed, a company could be taken off a project and another put on, and the
+-- column recorded neither. Preferring it would resurrect a company that was
+-- removed and discard the one that is actually there — which reads as data
+-- corruption rather than as a downgrade.
+--
+-- The customer edge wins, because organization_id has meant "the customer"
+-- since the edge existed; failing that, the oldest live edge, because a project
+-- that never named a customer still has to keep SOME company or it cannot
+-- satisfy the NOT NULL below.
 UPDATE project p
-   SET organization_id = (
-       SELECT r.organization_id FROM relationship r
-        WHERE r.kind = 'project_company' AND r.project_id = p.id AND r.archived_at IS NULL
-        ORDER BY r.created_at, r.id LIMIT 1)
- WHERE p.organization_id IS NULL;
+   SET organization_id = COALESCE(
+       (SELECT r.organization_id FROM relationship r
+         WHERE r.kind = 'project_company' AND r.project_id = p.id
+           AND r.archived_at IS NULL AND r.role = 'customer'
+         ORDER BY r.created_at, r.id LIMIT 1),
+       (SELECT r.organization_id FROM relationship r
+         WHERE r.kind = 'project_company' AND r.project_id = p.id AND r.archived_at IS NULL
+         ORDER BY r.created_at, r.id LIMIT 1),
+       p.organization_id);
 
-DELETE FROM project WHERE organization_id IS NULL;
+-- A project this direction cannot give an anchor STOPS the downgrade; it does
+-- not get deleted. A migration that destroys records to satisfy a constraint is
+-- a migration that loses the one thing nobody can rebuild, and an operator who
+-- sees this refusal can decide what those projects should become — which is a
+-- decision, not a default.
+DO $$
+DECLARE orphaned int;
+BEGIN
+  SELECT count(*) INTO orphaned FROM project WHERE organization_id IS NULL;
+  IF orphaned > 0 THEN
+    RAISE EXCEPTION 'cannot revert: % project(s) have no company to anchor to. '
+      'Give each one a company (or archive it) and run this again.', orphaned;
+  END IF;
+END $$;
+
 ALTER TABLE project ALTER COLUMN organization_id SET NOT NULL;
 
 DROP INDEX IF EXISTS idx_rel_company_projects;
 DROP INDEX IF EXISTS idx_rel_project_companies;
 DROP INDEX IF EXISTS uq_rel_project_company;
+-- The edges go last, after the anchor above has been rebuilt FROM them.
 DELETE FROM relationship WHERE kind = 'project_company';
 ALTER TABLE relationship DROP CONSTRAINT IF EXISTS rel_project_company_shape;
 ALTER TABLE relationship DROP CONSTRAINT relationship_kind_check;

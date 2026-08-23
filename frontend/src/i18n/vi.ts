@@ -345,6 +345,7 @@ export const vi = {
   "rel.kind.employment": "Việc làm",
   "rel.kind.dealStakeholder": "Bên liên quan deal",
   "rel.kind.projectStakeholder": "Bên liên quan dự án",
+  "rel.kind.projectCompany": "Công ty trong dự án",
   "rel.kind.partnerOf": "Đối tác của",
   "rel.kind.referredBy": "Được giới thiệu bởi",
   "rel.kind.coSellWith": "Bán chung với",

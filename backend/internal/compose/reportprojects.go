@@ -73,9 +73,29 @@ func projectRowDimensions() map[string]string {
 		fieldKey:            colKey,
 		fieldPhase:          colPhase,
 		fieldOwnerID:        colOwnerID,
-		fieldOrganizationID: colOrganizationID,
+		fieldOrganizationID: colProjectCustomer,
 	}
 }
+
+// colProjectCustomer is the company a project report GROUPS by: its customer,
+// the first company attached with that role.
+//
+// A project is worked by several companies, and a dimension has to be one value
+// per row — you cannot group a project under three headings at once. The
+// customer is the honest choice: it is what organization_id has meant since the
+// edge existed, and it is the company a reader means when they ask which
+// account a delivery is for.
+const colProjectCustomer = "(SELECT c.organization_id FROM relationship c" +
+	" WHERE c.kind = 'project_company' AND c.project_id = t.id" +
+	" AND c.archived_at IS NULL AND c.role = 'customer'" +
+	" ORDER BY c.created_at, c.id LIMIT 1)"
+
+// colProjectAnyCompany is what a company FILTER matches: any live company on
+// the project, so narrowing a report to a partner shows the deliveries that
+// partner is genuinely on rather than only the ones they are the customer of.
+const colProjectAnyCompany = "(SELECT c.organization_id FROM relationship c" +
+	" WHERE c.kind = 'project_company' AND c.project_id = t.id AND c.archived_at IS NULL" +
+	" ORDER BY (c.role = 'customer') DESC, c.created_at, c.id LIMIT 1)"
 
 // projectsByPhaseSpec counts the projects in each phase and folds the money
 // their deals are worth. The project's company is row-scoped and masked on a
@@ -89,7 +109,7 @@ func projectsByPhaseSpec() reportSpec {
 		basePlain: "live (unarchived) projects, with each project's open and won deal value in the installation's base currency",
 		dimensions: map[string]string{
 			fieldPhase:          colPhase,
-			fieldOrganizationID: colOrganizationID,
+			fieldOrganizationID: colProjectCustomer,
 			fieldOwnerID:        colOwnerID,
 		},
 		measures: map[string]string{
@@ -97,11 +117,11 @@ func projectsByPhaseSpec() reportSpec {
 			measureWonDealValue:  wonDealValueBaseExpr,
 		},
 		filters: map[string]string{
-			fieldOrganizationID: colOrganizationID,
+			fieldOrganizationID: colProjectAnyCompany,
 			fieldOwnerID:        colOwnerID,
 			fieldPhase:          colPhase,
 		},
-		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
 		// The money measures fold DEALS, which the project grant says nothing
 		// about: the deal grant is owed before either is served.
 		grants:    map[string]string{measureOpenDealValue: tableDeal, measureWonDealValue: tableDeal},
@@ -131,11 +151,11 @@ func projectCommitmentsSpec() reportSpec {
 			measureOverdue:         overdueCommitmentsExpr,
 		},
 		filters: map[string]string{
-			fieldOrganizationID: colOrganizationID,
+			fieldOrganizationID: colProjectAnyCompany,
 			fieldOwnerID:        colOwnerID,
 			fieldPhase:          colPhase,
 		},
-		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
 		// The commitment counts read TASKS, which take the activity grant.
 		grants:    map[string]string{measureOpenCommitments: tableActivity, measureOverdue: tableActivity},
 		defaultBy: []string{fieldProjectID, fieldName, fieldKey, fieldPhase, fieldOwnerID},
@@ -165,7 +185,7 @@ func projectsGoneQuietSpec() reportSpec {
 		dimensions: dimensions,
 		measures:   map[string]string{},
 		filters: map[string]string{
-			fieldOrganizationID: colOrganizationID,
+			fieldOrganizationID: colProjectAnyCompany,
 			fieldOwnerID:        colOwnerID,
 			fieldPhase:          colPhase,
 		},
@@ -175,7 +195,7 @@ func projectsGoneQuietSpec() reportSpec {
 				defaultValue: projects.DefaultProjectQuietDays,
 			},
 		},
-		referenceScopes: map[string]string{colOrganizationID: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
 		defaultBy:       []string{fieldProjectID, fieldName, fieldKey, fieldPhase, fieldOwnerID, fieldLastActivityAt, fieldQuietSince},
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "projects"},

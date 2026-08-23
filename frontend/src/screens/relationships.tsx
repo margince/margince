@@ -49,10 +49,20 @@ const KIND_LABELS: Record<RelationshipKind, MessageKey> = {
   employment: "rel.kind.employment",
   deal_stakeholder: "rel.kind.dealStakeholder",
   project_stakeholder: "rel.kind.projectStakeholder",
+  // Readable here, never creatable below: a company's place on a project is
+  // written through the project's own surface, which holds the two rules this
+  // generic form cannot — write authority over the project row, and the refusal
+  // that keeps a project's last company on it.
+  project_company: "rel.kind.projectCompany",
   partner_of: "rel.kind.partnerOf",
   referred_by: "rel.kind.referredBy",
   co_sell_with: "rel.kind.coSellWith",
 };
+
+// What this FORM may create, which is narrower than what it may show: the
+// contract's create body omits project_company, so the type follows it and a
+// picker offering the kind would not compile.
+type CreatableRelationshipKind = CreateRelationshipRequest["kind"];
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -197,7 +207,7 @@ function searchByEntity(
 // kind) per the rel_*_shape CHECKs (migration 0007). The anchor endpoint
 // comes from scope (scopeQuery); this describes the rest.
 export type EdgeOption = {
-  kind: RelationshipKind;
+  kind: CreatableRelationshipKind;
   entity: RelationshipEntity;
   field: "organization_id" | "person_id" | "counterparty_org_id" | "deal_id";
 };
@@ -263,7 +273,7 @@ function AddRelationshipAction({
   const headingId = useId();
   const options = edgeOptions(scope);
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<RelationshipKind>(options[0].kind);
+  const [kind, setKind] = useState<CreatableRelationshipKind>(options[0].kind);
   const [role, setRole] = useState("");
   const [startedAt, setStartedAt] = useState("");
   const [term, setTerm] = useState("");
@@ -341,7 +351,7 @@ function AddRelationshipAction({
 
   // Switching kind can switch the target entity (org→deal→person), so any
   // pending pick and search results from the old entity must clear.
-  function selectKind(next: RelationshipKind) {
+  function selectKind(next: CreatableRelationshipKind) {
     setKind(next);
     setTerm("");
     setCandidates([]);

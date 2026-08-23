@@ -44,10 +44,28 @@ func relationshipAnchor(kind string) (object, column string) {
 	}
 }
 
+// The kinds the GENERIC relationship surface admits.
+//
+// project_company is deliberately absent. A company's place on a project
+// carries two rules this surface cannot keep: the caller needs write authority
+// over the PROJECT ROW, not merely the project.update object grant this file
+// takes, and a project must keep at least one company. Both live on the
+// dedicated endpoints (projectcompany.go), so admitting the kind here would be
+// a side door around them — a caller could attach a company to a project they
+// cannot write, or archive the last one, through POST /v1/relationships.
 var relationshipKinds = map[string]bool{
 	"employment": true, "deal_stakeholder": true, "project_stakeholder": true,
-	ProjectCompanyKind: true,
-	"partner_of":       true, "referred_by": true, "co_sell_with": true,
+	"partner_of": true, "referred_by": true, "co_sell_with": true,
+}
+
+// refuseGenericProjectCompany is the same rule at the WRITE paths, because a
+// kind is only checked on create: an update or an archive names an existing
+// row, and a project_company row exists whatever this map says.
+func refuseGenericProjectCompany(kind string) error {
+	if kind != ProjectCompanyKind {
+		return nil
+	}
+	return &RelationshipKindError{Kind: kind}
 }
 
 const relationshipColumns = `id, kind, person_id, organization_id, counterparty_org_id, deal_id, project_id,
@@ -299,6 +317,12 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		if err != nil {
 			return err
 		}
+		// A kind is only checked on CREATE, and this path names an existing row
+		// — so the exclusion has to be re-stated here or the generic surface
+		// becomes the side door the vocabulary closed.
+		if err := refuseGenericProjectCompany(current.Kind); err != nil {
+			return err
+		}
 		// Same rule as create: editing an edge is editing its anchor.
 		anchorObject, _ := relationshipAnchor(current.Kind)
 		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
@@ -393,6 +417,12 @@ func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		current, err := s.visibleRelationship(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		// The same re-statement as the update path, and it matters more here:
+		// archiving through this surface would take a company off a project
+		// with no last-company check at all.
+		if err := refuseGenericProjectCompany(current.Kind); err != nil {
 			return err
 		}
 		// Same rule as create: removing an edge is editing its anchor.

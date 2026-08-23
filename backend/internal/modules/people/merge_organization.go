@@ -219,6 +219,8 @@ func absorbOrgReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 		// mid-merge. A project's anchor is NOT NULL ... ON DELETE RESTRICT
 		// and so cannot stay behind either (PROJ-LIFE-4) — leaving it is
 		// what turns a healthy deal un-editable over a mismatch nobody made.
+		// The legacy anchor column, kept in step so a downgrade reads something
+		// sane; the live answer is the edge below.
 		`UPDATE project SET organization_id = $2 WHERE organization_id = $1`,
 		`UPDATE deal SET organization_id = $2 WHERE organization_id = $1`,
 		`UPDATE deal SET partner_org_id = $2 WHERE partner_org_id = $1`,
@@ -315,6 +317,10 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 		    WHERE b.kind = a.kind AND b.archived_at IS NULL AND b.id <> a.id
 		      AND b.person_id IS NOT DISTINCT FROM a.person_id
 		      AND b.deal_id IS NOT DISTINCT FROM a.deal_id
+		      -- The project too, or a project_company edge on project A is
+		      -- read as a duplicate of one on project B merely because both
+		      -- name the survivor — and the company silently leaves project A.
+		      AND b.project_id IS NOT DISTINCT FROM a.project_id
 		      AND b.organization_id IS NOT DISTINCT FROM
 		            (CASE WHEN a.organization_id = $1 THEN $2::uuid ELSE a.organization_id END)
 		      AND b.counterparty_org_id IS NOT DISTINCT FROM
@@ -367,10 +373,17 @@ func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targe
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sourcePos, targetPos := arg(sourceID), arg(targetID)
+	// Read through the EDGES, not project.organization_id: that column stopped
+	// being written when a project became work several companies do together,
+	// so a guard reading it would let a merge through that joins two companies
+	// both genuinely carrying projects.
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT organization_id, name FROM project
-		WHERE organization_id IN ($%d, $%d) AND archived_at IS NULL
-		ORDER BY organization_id, name`, sourcePos, targetPos), args...)
+		SELECT c.organization_id, p.name
+		  FROM relationship c
+		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
+		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL
+		   AND c.organization_id IN ($%d, $%d)
+		 ORDER BY c.organization_id, p.name`, sourcePos, targetPos), args...)
 	if err != nil {
 		return fmt.Errorf("read projects on both merge endpoints: %w", err)
 	}

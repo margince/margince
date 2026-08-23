@@ -292,6 +292,23 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 		if live <= 1 {
 			return &LastProjectCompanyError{}
 		}
+		// A deal names a company AND a project, and the two must agree — the
+		// deal_project_same_org trigger enforces that on deal writes, but a
+		// company leaving the project is not a deal write, so nothing would stop
+		// this from stranding those deals in a state the trigger forbids.
+		//
+		// Refusing names the count: the fix is to move those deals or leave the
+		// company on, and both are decisions a person makes.
+		var stranded int
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM deal
+			  WHERE project_id = $1 AND organization_id = $2 AND archived_at IS NULL`,
+			projectID, organizationID).Scan(&stranded); err != nil {
+			return fmt.Errorf("count the deals this company holds on the project: %w", err)
+		}
+		if stranded > 0 {
+			return &CompanyHasDealsOnProjectError{Deals: stranded}
+		}
 		row, err := scanRelationship(tx.QueryRow(ctx,
 			`UPDATE relationship SET archived_at = now(), version = version + 1, updated_at = now()
 			  WHERE kind = $1 AND project_id = $2 AND organization_id = $3 AND archived_at IS NULL
@@ -330,3 +347,17 @@ func (p ProjectCompany) Name() string { return p.DisplayName }
 
 // OnProjectAs answers what the company is TO the project — its role.
 func (p ProjectCompany) OnProjectAs() string { return p.Role }
+
+// CompanyHasDealsOnProjectError maps to 422: the company still holds deals on
+// this project, and a deal must name a company the project is worked by.
+type CompanyHasDealsOnProjectError struct{ Deals int }
+
+func (e *CompanyHasDealsOnProjectError) Error() string {
+	return fmt.Sprintf("this company still has %d deal(s) on the project; "+
+		"move or close them before taking the company off", e.Deals)
+}
+
+// FieldFault names the company the caller tried to take off.
+func (e *CompanyHasDealsOnProjectError) FieldFault() (field, code, message string) {
+	return siteReadOrgKey, "company_has_deals_on_project", e.Error()
+}

@@ -8203,6 +8203,7 @@ const (
 	RelationshipKindDealStakeholder    RelationshipKind = "deal_stakeholder"
 	RelationshipKindEmployment         RelationshipKind = "employment"
 	RelationshipKindPartnerOf          RelationshipKind = "partner_of"
+	RelationshipKindProjectCompany     RelationshipKind = "project_company"
 	RelationshipKindProjectStakeholder RelationshipKind = "project_stakeholder"
 	RelationshipKindReferredBy         RelationshipKind = "referred_by"
 )
@@ -8217,6 +8218,8 @@ func (e RelationshipKind) Valid() bool {
 	case RelationshipKindEmployment:
 		return true
 	case RelationshipKindPartnerOf:
+		return true
+	case RelationshipKindProjectCompany:
 		return true
 	case RelationshipKindProjectStakeholder:
 		return true
@@ -11433,28 +11436,31 @@ func (e ListRecordGrantsParamsSubjectType) Valid() bool {
 
 // Defines values for ListRelationshipsParamsKind.
 const (
-	CoSellWith         ListRelationshipsParamsKind = "co_sell_with"
-	DealStakeholder    ListRelationshipsParamsKind = "deal_stakeholder"
-	Employment         ListRelationshipsParamsKind = "employment"
-	PartnerOf          ListRelationshipsParamsKind = "partner_of"
-	ProjectStakeholder ListRelationshipsParamsKind = "project_stakeholder"
-	ReferredBy         ListRelationshipsParamsKind = "referred_by"
+	ListRelationshipsParamsKindCoSellWith         ListRelationshipsParamsKind = "co_sell_with"
+	ListRelationshipsParamsKindDealStakeholder    ListRelationshipsParamsKind = "deal_stakeholder"
+	ListRelationshipsParamsKindEmployment         ListRelationshipsParamsKind = "employment"
+	ListRelationshipsParamsKindPartnerOf          ListRelationshipsParamsKind = "partner_of"
+	ListRelationshipsParamsKindProjectCompany     ListRelationshipsParamsKind = "project_company"
+	ListRelationshipsParamsKindProjectStakeholder ListRelationshipsParamsKind = "project_stakeholder"
+	ListRelationshipsParamsKindReferredBy         ListRelationshipsParamsKind = "referred_by"
 )
 
 // Valid indicates whether the value is a known member of the ListRelationshipsParamsKind enum.
 func (e ListRelationshipsParamsKind) Valid() bool {
 	switch e {
-	case CoSellWith:
+	case ListRelationshipsParamsKindCoSellWith:
 		return true
-	case DealStakeholder:
+	case ListRelationshipsParamsKindDealStakeholder:
 		return true
-	case Employment:
+	case ListRelationshipsParamsKindEmployment:
 		return true
-	case PartnerOf:
+	case ListRelationshipsParamsKindPartnerOf:
 		return true
-	case ProjectStakeholder:
+	case ListRelationshipsParamsKindProjectCompany:
 		return true
-	case ReferredBy:
+	case ListRelationshipsParamsKindProjectStakeholder:
+		return true
+	case ListRelationshipsParamsKindReferredBy:
 		return true
 	default:
 		return false
@@ -21513,7 +21519,10 @@ type RejectVoiceDraftRequest struct {
 }
 
 // Relationship The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-// `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+// `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+// (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+// holds the two rules this surface cannot: write authority over the project ROW, and the
+// refusal that keeps a project's last company on it), `project_stakeholder`
 // (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
 // (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
 // org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
@@ -21538,7 +21547,7 @@ type Relationship struct {
 	OrganizationId   *openapi_types.UUID `json:"organization_id,omitempty"`
 	PersonId         *openapi_types.UUID `json:"person_id,omitempty"`
 
-	// ProjectId The project on a project_stakeholder edge. Null for every other kind.
+	// ProjectId The project on a project_stakeholder or project_company edge. Null for every other kind.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Role employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.
