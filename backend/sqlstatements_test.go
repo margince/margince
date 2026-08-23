@@ -5,12 +5,10 @@ package backendarch
 
 // Reading the SQL a Go file sends, for the censuses that judge statements.
 //
-// ONE reading, because there were two. `statementsIn` and `sqlLiteralsIn` were
-// the same walk under different names, and they had already drifted: one
-// decodes escapes and flattens `+` chains, the other read source text a literal
-// at a time — so a probe written in double quotes was invisible to it while its
-// sibling saw it. Two answers to "what does this file send the database" is the
-// defect a census exists to find, standing inside the censuses.
+// ONE reading, shared by every census here. Each would otherwise answer "what
+// does this file send the database" for itself, and two answers to that
+// question is the defect a census exists to find — a census whose reader is
+// narrower than its sibling's reports a clean tree over what the sibling sees.
 
 import (
 	"go/ast"
@@ -21,7 +19,7 @@ import (
 	"testing"
 )
 
-// sqlLiteralsIn returns every string this file builds, one entry per STATEMENT
+// sqlStatementsIn returns every string this file builds, one entry per STATEMENT
 // rather than per literal.
 //
 // Adjacent literals joined with `+` are flattened into one entry, because a
