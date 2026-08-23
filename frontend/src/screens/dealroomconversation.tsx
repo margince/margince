@@ -135,31 +135,31 @@ export function DealRoomConversation({
   return (
     <QueryStates query={docs} pendingLines={3}>
       <QueryStates query={threads} pendingLines={3}>
-          {threads.data && docs.data ? (
-            <DocumentBoard
-              title={t("room.docs.title")}
-              sub={t("room.docs.sub")}
-              groups={DOCUMENT_GROUPS.map((g) => ({
-                key: g.key,
-                label: t(g.labelKey),
-              }))}
-              documents={documents}
-              threads={threads.data.data}
-              empty={t("room.docs.empty")}
-              footer={<AddDocument room={room} refusal={refusal} />}
-              verbs={{
-                mayRequireChange: false,
-                refusal,
-                open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
-                reply: mayWrite
-                  ? (threadId, body) => reply.mutateAsync({ threadId, body })
-                  : undefined,
-                resolve: mayWrite
-                  ? (threadId) => resolve.mutateAsync(threadId)
-                  : undefined,
-              }}
-            />
-          ) : null}
+        {threads.data && docs.data ? (
+          <DocumentBoard
+            title={t("room.docs.title")}
+            sub={t("room.docs.sub")}
+            groups={DOCUMENT_GROUPS.map((g) => ({
+              key: g.key,
+              label: t(g.labelKey),
+            }))}
+            documents={documents}
+            threads={threads.data.data}
+            empty={t("room.docs.empty")}
+            footer={<AddDocument room={room} refusal={refusal} />}
+            verbs={{
+              mayRequireChange: false,
+              refusal,
+              open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
+              reply: mayWrite
+                ? (threadId, body) => reply.mutateAsync({ threadId, body })
+                : undefined,
+              resolve: mayWrite
+                ? (threadId) => resolve.mutateAsync(threadId)
+                : undefined,
+            }}
+          />
+        ) : null}
       </QueryStates>
     </QueryStates>
   );

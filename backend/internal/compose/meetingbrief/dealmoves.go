@@ -172,8 +172,7 @@ func readOfferMoves(
 	return out, rowsErr(rows, "the deal's offers")
 }
 
-// readRoomMoves reads what the buyer did in the Deal Room: their comments and
-// their decisions on documents.
+// readRoomMoves reads what the buyer said in the Deal Room.
 //
 // It runs only for a caller holding deal_room read, and SAYS SO when it does
 // not: a rep without that grant gets a brief with no room line rather than a
@@ -190,7 +189,7 @@ func readRoomMoves(
 	// deal and holds the room grant may read what happened in its room, which
 	// is the same rule the room's own store applies.
 	rows, err := tx.Query(ctx, `
-		SELECT c.created_at, 'comment', coalesce(p.full_name, '')
+		SELECT c.created_at, coalesce(p.full_name, '')
 		  FROM deal_room_comment c
 		  JOIN deal_room r ON r.id = c.room_id
 		  LEFT JOIN deal_room_participant p ON p.id = c.author_participant_id
@@ -199,13 +198,7 @@ func readRoomMoves(
 		   -- and reporting it back to them as something that changed while
 		   -- they were away is noise in the one section that must not have any.
 		   AND c.author_participant_id IS NOT NULL
-		UNION ALL
-		SELECT d.created_at, d.kind, coalesce(p.full_name, '')
-		  FROM deal_room_decision d
-		  JOIN deal_room r ON r.id = d.room_id
-		  LEFT JOIN deal_room_participant p ON p.id = d.participant_id
-		 WHERE r.deal_id = $1 AND d.created_at > $2 AND d.created_at <= $3
-		 ORDER BY 1 DESC, 3 DESC LIMIT $4`, dealID, since, now, dealMovesCap)
+		 ORDER BY 1 DESC, 2 DESC LIMIT $4`, dealID, since, now, dealMovesCap)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the deal room's activity: %w", err)
 	}
@@ -213,29 +206,22 @@ func readRoomMoves(
 	var out []DealMoveIn
 	for rows.Next() {
 		var at time.Time
-		var kind, who string
-		if err := rows.Scan(&at, &kind, &who); err != nil {
+		var who string
+		if err := rows.Scan(&at, &who); err != nil {
 			return nil, false, fmt.Errorf("scan a deal room act: %w", err)
 		}
-		out = append(out, DealMoveIn{At: at, Text: roomMoveLine(kind, who), DealID: dealID.String()})
+		out = append(out, DealMoveIn{At: at, Text: roomMoveLine(who), DealID: dealID.String()})
 	}
 	return out, false, rowsErr(rows, "the deal room's activity")
 }
 
-// roomMoveLine words one act of the buyer's. An unnamed participant reads as
-// "the buyer" rather than as an empty name.
-func roomMoveLine(kind, who string) string {
+// roomMoveLine words one comment of the buyer's. An unnamed participant reads
+// as "the buyer" rather than as an empty name.
+func roomMoveLine(who string) string {
 	if who == "" {
 		who = "the buyer"
 	}
-	switch kind {
-	case "confirm_version":
-		return fmt.Sprintf("Since then %s confirmed a document in the Deal Room.", who)
-	case "request_changes":
-		return fmt.Sprintf("Since then %s asked for changes to a Deal Room document.", who)
-	default:
-		return fmt.Sprintf("Since then %s commented in the Deal Room.", who)
-	}
+	return fmt.Sprintf("Since then %s commented in the Deal Room.", who)
 }
 
 // newestFirst orders the merged moves and cuts them to the section's share.
