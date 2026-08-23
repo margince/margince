@@ -267,10 +267,13 @@ native-controls:
 ## ext-imports — a unit screen reaches the core only through the published
 ## surface (frontend/package.json's exports map) and npm only through what its
 ## own package declares. The frontend has no module boundary of its own, so
-## this script IS the boundary; check-ext-imports.test.sh exercises it.
+## this gate IS the boundary. It is a vitest fitness function over the
+## TypeScript AST now — see frontend/scripts/ext-imports.test.ts, which carries
+## its own fixture suite — so it runs in `fe-unit` with the rest of the suite.
+## This target keeps its name for anyone who runs the gate on its own.
 ext-imports:
-	frontend/scripts/check-ext-imports.sh
-	bash frontend/scripts/check-ext-imports.test.sh
+	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		scripts/ext-imports.test.ts
 
 ## seed-dev — create/refresh the demo workspace (demo-workspace,
 ## admin@demo.test / demo-password-123) through the public API, then seed
@@ -352,7 +355,6 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 	frontend/scripts/check-space-tokens.sh
-	frontend/scripts/check-ext-imports.sh
 
 ## fe-drift — the TS type-drift gate on its own: regenerate from the contract
 ## and fail if the committed types moved.

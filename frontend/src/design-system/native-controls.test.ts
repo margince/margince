@@ -59,19 +59,15 @@
 // parser drops for free, and that is where select.tsx and its neighbours cite
 // the thing they exist to remove.
 
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import {
+  extensionFrontendFiles,
+  filesUnder,
+  scriptKindFor,
+} from "../../scripts/lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "../..");
 const repoRoot = resolve(frontendRoot, "..");
@@ -88,54 +84,16 @@ const SUBST = "$" + "{id}";
 const nativeControls = new Set(["select", "option", "optgroup"]);
 
 // Tests and stories are scanned too: a test that drives a native control is a
-// test of the wrong control, and a story catalogues what we ship. The plain-JS
-// extensions cost nothing to scan, and a gate whose coverage depends on which
-// extension a file happens to carry is a gate with a way around it.
-const scanned = /\.(ts|tsx|js|jsx)$/;
+// test of the wrong control, and a story catalogues what we ship. Which files
+// those are is ../../scripts/lib/source-tree.ts's answer, shared with the
+// extension-import gate — the two walks had already drifted to four extensions
+// against eight before it existed.
 
 // This file holds the planted probes below, which are deliberate examples of
 // the markup. Judging them would report the gate's own evidence as a finding.
 // Excluded by NAME rather than by "a test file", because a test that renders a
 // native control is a test of the wrong control and is still a finding.
 const probeFile = join(srcDir, "design-system", "native-controls.test.ts");
-
-function sourceFilesUnder(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" ? [] : sourceFilesUnder(full);
-    }
-    return scanned.test(entry.name) ? [full] : [];
-  });
-}
-
-// A unit's screen is shipped UI in the same bundle, so a gate stopping at
-// frontend/src would hold the core to a standard the extension tier escapes.
-function extensionFrontendFiles(): string[] {
-  return extensionLayers(extensionsDir).flatMap(sourceFilesUnder);
-}
-
-// Every directory named `frontend`, at ANY depth. The shell gate this replaces
-// matched `-path "*/frontend/*"`, so reading only `extensions/<name>/frontend`
-// would miss a unit that nests one — latent in today's tree, which has two
-// top-level layers and no nested ones, and latent is exactly how a walk-shape
-// hole survives to bite somebody later.
-function extensionLayers(root: string): string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    if (!entry.isDirectory() || entry.name === "node_modules") return [];
-    const full = join(root, entry.name);
-    return entry.name === "frontend" ? [full] : extensionLayers(full);
-  });
-}
-
-// scriptKindFor picks the dialect for the primary parse. TSX for .tsx/.jsx,
-// TS otherwise — `.ts` cannot be JSX, because `<T>()` there is a type argument
-// and asking for TSX would misparse ordinary generics.
-function scriptKindFor(path: string): ts.ScriptKind {
-  return /\.(tsx|jsx)$/.test(path) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-}
 
 // findNativeControls returns one report line per native dropdown element in the
 // source, with the author's own line number.
@@ -276,8 +234,8 @@ describe("no product surface renders a browser-drawn dropdown", () => {
     timeout: 60_000,
   }, () => {
     const files = [
-      ...sourceFilesUnder(srcDir),
-      ...extensionFrontendFiles(),
+      ...filesUnder(srcDir),
+      ...extensionFrontendFiles(extensionsDir),
     ].filter((f) => f !== probeFile);
 
     // An empty scan means the gate is pointed at the wrong tree. A census that
@@ -313,7 +271,7 @@ describe("no product surface renders a browser-drawn dropdown", () => {
     // them, because the extension layers contribute a handful of files against
     // a floor of 100 — a census whose floor only the large half can satisfy is
     // a census that cannot see the small half disappear.
-    const layers = extensionFrontendFiles();
+    const layers = extensionFrontendFiles(extensionsDir);
     expect(
       layers.length,
       "no extension frontend file was found — the extension half of this gate is dark",
@@ -329,38 +287,6 @@ describe("no product surface renders a browser-drawn dropdown", () => {
         layers.some((f) => f.startsWith(`${layer}/`)),
         `${relative(repoRoot, layer)} has a frontend layer that the walk did not reach`,
       ).toBe(true);
-    }
-  });
-
-  it("walks every extension a bundler resolves", () => {
-    // Against a FIXTURE, because the real tree holds only .ts and .tsx — so
-    // dropping .jsx from the pattern was a mutant that survived, and a unit
-    // whose screen is a .jsx is a unit the gate would never read. The shell
-    // gate listed all four for the same reason: "a gate whose coverage depends
-    // on which extension a file happens to carry is a gate with a way around
-    // it."
-    const dir = mkdtempSync(join(tmpdir(), "nc-walk-"));
-    try {
-      const names = ["a.ts", "b.tsx", "c.js", "d.jsx", "skip.md", "skip.css"];
-      for (const n of names) writeFileSync(join(dir, n), "");
-      mkdirSync(join(dir, "node_modules"));
-      writeFileSync(join(dir, "node_modules", "dep.ts"), "");
-      const found = sourceFilesUnder(dir).map((f) => f.slice(dir.length + 1));
-      expect(found.sort()).toEqual(["a.ts", "b.tsx", "c.js", "d.jsx"]);
-
-      // And a layer NESTED inside a unit, which the real tree has none of —
-      // so nothing here could notice the walk stopping at the top level.
-      mkdirSync(join(dir, "unit", "panel", "frontend"), { recursive: true });
-      writeFileSync(join(dir, "unit", "panel", "frontend", "s.tsx"), "");
-      mkdirSync(join(dir, "flat", "frontend"), { recursive: true });
-      writeFileSync(join(dir, "flat", "frontend", "s.tsx"), "");
-      expect(
-        extensionLayers(dir)
-          .map((l) => l.slice(dir.length + 1))
-          .sort(),
-      ).toEqual(["flat/frontend", "unit/panel/frontend"]);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
     }
   });
 
