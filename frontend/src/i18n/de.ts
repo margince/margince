@@ -864,9 +864,6 @@ export const de = {
   "access.cap.viewHint": "Kann Dokumente und Unterhaltung lesen.",
   "access.cap.comment": "Lesen und kommentieren",
   "access.cap.commentHint": "Kann außerdem Fragen stellen und antworten.",
-  "access.cap.reviewer": "Lesen und kommentieren",
-  "access.cap.reviewerHint":
-    "Heute dasselbe wie Kommentieren. Bleibt ein eigener Platz, damit ein späterer Freigabeschritt einen Ort hat.",
   "access.state.invited": "eingeladen",
   "access.state.active": "angemeldet",
   "access.state.revoked": "entzogen",
@@ -4310,8 +4307,6 @@ export const de = {
   "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
-  "room.decisions.confirm_version": "hat die Version bestätigt",
-  "room.decisions.request_changes": "hat Änderungen angefordert",
   "dealbrief.title": "Deal-Briefing",
   "dealbrief.sub": "Wo der Deal steht, in nachprüfbaren Sätzen.",
   "dealbrief.empty": "Noch nichts in der Akte.",

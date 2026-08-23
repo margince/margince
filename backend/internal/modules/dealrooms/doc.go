@@ -38,6 +38,5 @@
 //
 // Tables owned: deal_room, deal_room_participant,
 // deal_room_invitation, deal_room_session, deal_room_document,
-// deal_room_thread, deal_room_comment, deal_room_decision,
-// deal_room_engagement.
+// deal_room_thread, deal_room_comment, deal_room_engagement.
 package dealrooms

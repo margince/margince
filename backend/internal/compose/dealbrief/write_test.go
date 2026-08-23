@@ -25,7 +25,6 @@ func TestTheBriefStatesWhatIsOnTheRecordAndCitesIt(t *testing.T) {
 	meeting := "Kick-off"
 	booked := crmcontracts.ActivityMeetingStatusBooked
 	dealID := openapi_types.UUID(ids.NewV7())
-	reviewer := "Laura Kern"
 	f := facts{
 		now: now,
 		deal: crmcontracts.Deal{
@@ -42,7 +41,6 @@ func TestTheBriefStatesWhatIsOnTheRecordAndCitesIt(t *testing.T) {
 		threads: []crmcontracts.DealRoomThread{{State: "open", Comments: []crmcontracts.DealRoomComment{
 			{Author: crmcontracts.DealRoomAuthor{Side: "buyer"}},
 		}}},
-		decisions: []crmcontracts.DealRoomDecision{{Kind: "confirm_version", ParticipantName: &reviewer, CreatedAt: now.Add(-24 * time.Hour)}},
 	}
 	sections := write(f)
 	got := map[crmcontracts.DealBriefSectionKind]string{}
@@ -60,7 +58,7 @@ func TestTheBriefStatesWhatIsOnTheRecordAndCitesIt(t *testing.T) {
 		sectionStanding: {"Acme rollout is open at 12000.00 EUR", "expected to close 2 Sep 2026", "Health reads 80 of 100", "3 days in the current stage"},
 		sectionActivity: {"Last activity: Re: MSA, 3 days ago", "Next meeting: Kick-off"},
 		sectionOpen:     {"1 open task, starting with \"Send the SOW\""},
-		sectionRoom:     {"\"Acme room\" is live", "1 thread from the buyer waiting", "Laura Kern confirmed a document, yesterday"},
+		sectionRoom:     {"\"Acme room\" is live", "1 thread from the buyer waiting"},
 	}
 	for kind, parts := range want {
 		for _, part := range parts {

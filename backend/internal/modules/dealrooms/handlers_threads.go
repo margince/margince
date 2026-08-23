@@ -72,16 +72,6 @@ func (h Handlers) ResolveDealRoomThread(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, thread)
 }
 
-// ListDealRoomDecisions returns what the buyer decided.
-func (h Handlers) ListDealRoomDecisions(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	decisions, err := h.store.ListDecisions(r.Context(), pathID(id))
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomDecisionListResponse{Data: decisions})
-}
-
 func optionalUUID(id *openapi_types.UUID) *ids.UUID {
 	if id == nil {
 		return nil

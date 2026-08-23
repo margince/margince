@@ -77,7 +77,7 @@ func seedBuyerInARoom(t *testing.T, e *Env, email string) buyerSeat {
 	}
 	roomID := ids.From[ids.DealRoomKind](ids.UUID(room.Id))
 	invited, err := rooms.InviteParticipant(ctx, roomID, dealrooms.InviteInput{
-		FullName: name, Email: email, Capability: "reviewer", Source: "ui",
+		FullName: name, Email: email, Capability: "comment", Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("seeding the buyer's seat: %v", err)

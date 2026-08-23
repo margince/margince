@@ -356,16 +356,16 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	}, nil, &doc)
 	docID, _ := doc["id"].(string)
 
-	// Laura may comment; Rita may decide.
+	// Two buyers on the same room, both able to speak in it.
 	var session apptest.AnyMap
 	publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": room.credential}, nil, &session)
 	laura, _ := session["session_token"].(string)
-	var reviewerIssued, reviewerSession apptest.AnyMap
+	var ritaIssued, ritaSession apptest.AnyMap
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants", apptest.AnyMap{
-		"full_name": "Rita Reviewer", "email": "rita@buyer.example", "capability": "reviewer", "source": "ui",
-	}, nil, &reviewerIssued)
-	publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": reviewerIssued["credential"]}, nil, &reviewerSession)
-	rita, _ := reviewerSession["session_token"].(string)
+		"full_name": "Rita Buyer", "email": "rita@buyer.example", "capability": "comment", "source": "ui",
+	}, nil, &ritaIssued)
+	publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": ritaIssued["credential"]}, nil, &ritaSession)
+	rita, _ := ritaSession["session_token"].(string)
 
 	// The seller asks on the document; the buyer answers; both names show.
 	var opened apptest.AnyMap
@@ -397,24 +397,20 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 		t.Fatalf("required-change thread = %d %v", status, required)
 	}
 
-	// What they can no longer do is formally accept the document. Sharing a
-	// document is sharing it, and the refusal is the STORE's rather than the
-	// screen's: a reviewer holds a live credential and reaches the endpoint
-	// directly, so hiding the button would leave the authority standing.
+	// Formally accepting a document is not something the room offers: sharing a
+	// document is sharing it. The route is gone rather than refusing, so a buyer
+	// holding a live credential has nothing to reach.
 	for _, seat := range []struct {
 		who   string
 		token string
-		kind  string
 	}{
-		{"a reviewer", rita, "confirm_version"},
-		{"a commenter", laura, "request_changes"},
+		{"Rita", rita},
+		{"Laura", laura},
 	} {
-		var refused apptest.AnyMap
 		status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision",
-			apptest.AnyMap{"kind": seat.kind}, bearer(seat.token), &refused)
-		if status != http.StatusUnprocessableEntity || refused["code"] != "document_decisions_retired" {
-			t.Fatalf("%s sending %s = %d %v, want 422 document_decisions_retired",
-				seat.who, seat.kind, status, refused)
+			apptest.AnyMap{"kind": "confirm_version"}, bearer(seat.token), nil)
+		if status != http.StatusNotFound {
+			t.Fatalf("%s deciding on a document = %d, want 404: the route is retired", seat.who, status)
 		}
 	}
 
@@ -422,24 +418,15 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads/"+requiredID+"/resolve", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("resolve = %d", status)
 	}
-	// Resolving changes nothing about the refusal: there is no confirmation
-	// waiting behind it any more.
-	var stillRefused apptest.AnyMap
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/documents/"+docID+"/decision",
-		apptest.AnyMap{"kind": "confirm_version"}, bearer(rita), &stillRefused); status != http.StatusUnprocessableEntity {
-		t.Fatalf("confirm after resolve = %d %v, want the same refusal", status, stillRefused)
-	}
 	// A resolved thread takes no more replies.
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads/"+requiredID+"/comments", apptest.AnyMap{"body": "one more"}, bearer(rita), nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("reply on resolved = %d, want 422", status)
 	}
 
-	// The seller's decisions read still answers, and answers empty: the rows
-	// that exist are history, and no new one can be written.
-	var decisions apptest.AnyMap
-	e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/decisions", nil, nil, &decisions)
-	if list, _ := decisions["data"].([]any); len(list) != 0 {
-		t.Fatalf("decisions = %v, want none recorded", list)
+	// The seller has no decisions read either: the whole surface went with the
+	// feature rather than lingering as an endpoint that always answers empty.
+	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/decisions", nil, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("seller decisions read = %d, want 404: the route is retired", status)
 	}
 
 	// A thread follows its document out of the room. Removing the document is

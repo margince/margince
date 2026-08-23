@@ -905,9 +905,6 @@ export const en = {
   "access.cap.viewHint": "Can read the documents and the conversation.",
   "access.cap.comment": "Read and comment",
   "access.cap.commentHint": "Can also ask questions and reply.",
-  "access.cap.reviewer": "Read and comment",
-  "access.cap.reviewerHint":
-    "The same as commenting today. Kept as a separate seat so a future approval step has somewhere to land.",
   "access.state.invited": "invited",
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
@@ -4365,8 +4362,6 @@ export const en = {
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
-  "room.decisions.confirm_version": "confirmed the version",
-  "room.decisions.request_changes": "asked for changes",
   "dealbrief.title": "Deal brief",
   "dealbrief.sub": "Where it stands, in sentences you can check.",
   "dealbrief.empty": "Nothing on the record yet.",

@@ -9,7 +9,7 @@ package dealrooms
 // them changed; a real session cannot.
 //
 // What keeps the preview harmless: the row is `preview` and `view` by CHECK,
-// so no participant write can make it a reviewer; it is outside the
+// so no participant write can give it a voice in the room; it is outside the
 // per-address uniqueness and excluded from every roster, count and the public
 // link request, so a buyer never learns of it and the rep's own address never
 // receives a mailed link; every public write refuses a preview session; and
@@ -171,5 +171,5 @@ func endPreviewSessions(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) e
 var errPreviewSession = &fieldError{
 	field: fieldCapability,
 	code:  "preview_session",
-	msg:   "a preview cannot write; sign in as a buyer to comment or decide",
+	msg:   "a preview cannot write; sign in as a buyer to comment",
 }

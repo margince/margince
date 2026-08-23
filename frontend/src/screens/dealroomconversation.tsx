@@ -14,12 +14,11 @@ import {
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 
 // The seller's side of the document board: the documents with their share
-// state, the threads under each, the buyer's decisions, and the verbs the
-// seller has — add, remove, reply, open, resolve.
+// state, the threads under each, and the verbs the seller has — add, remove,
+// reply, open, resolve.
 
 type DealRoom = components["schemas"]["DealRoom"];
 type DealRoomDocument = components["schemas"]["DealRoomDocument"];
-type DealRoomDecision = components["schemas"]["DealRoomDecision"];
 
 function RemoveButton({
   room,
@@ -50,29 +49,6 @@ function RemoveButton({
 }
 
 // The latest decision a reviewer made on this document, as one sentence.
-function DecisionNote({
-  decisions,
-}: Readonly<{ decisions: readonly DealRoomDecision[] }>) {
-  const t = useT();
-  if (decisions.length === 0) {
-    return null;
-  }
-  const latest = decisions.reduce((a, b) =>
-    b.created_at > a.created_at ? b : a,
-  );
-  return (
-    <p className="t-small">
-      <strong>{latest.participant_name}</strong>{" "}
-      {t(
-        latest.kind === "confirm_version"
-          ? "room.decisions.confirm_version"
-          : "room.decisions.request_changes",
-      )}
-      {latest.note ? ` — ${latest.note}` : ""}
-    </p>
-  );
-}
-
 export function DealRoomConversation({
   room,
   refusal,
@@ -92,7 +68,6 @@ export function DealRoomConversation({
     },
   });
   const docs = useRoomDocuments(room.id);
-  const decisions = useRoomDecisions(room.id);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["deal-room-threads", room.id] });
   const open = useMutation({
@@ -150,25 +125,16 @@ export function DealRoomConversation({
     onSuccess: refresh,
   });
   const mayWrite = refusal === undefined;
-  // A decisions read that failed is not "no decisions": a card would then say
-  // nothing where a buyer had asked for changes. The panel says so instead.
-  const decided = decisions.data?.data ?? [];
   const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => ({
     id: doc.id,
     groupKey: doc.group_key,
     title: doc.title,
     meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
     actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
-    note: (
-      <DecisionNote
-        decisions={decided.filter((d) => d.document_id === doc.id)}
-      />
-    ),
   }));
   return (
     <QueryStates query={docs} pendingLines={3}>
-      <QueryStates query={decisions} pendingLines={1}>
-        <QueryStates query={threads} pendingLines={3}>
+      <QueryStates query={threads} pendingLines={3}>
           {threads.data && docs.data ? (
             <DocumentBoard
               title={t("room.docs.title")}
@@ -194,23 +160,7 @@ export function DealRoomConversation({
               }}
             />
           ) : null}
-        </QueryStates>
       </QueryStates>
     </QueryStates>
   );
-}
-
-function useRoomDecisions(roomId: string) {
-  return useQuery({
-    queryKey: ["deal-room-decisions", roomId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/decisions", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
 }

@@ -51,10 +51,8 @@ export type BoardDocument = Readonly<{
   meta: string;
   /** The share state the seller sees (the buyer only sees shared ones). */
   status?: ReactNode;
-  /** Download, remove, decide — the side's own verbs on the document. */
+  /** Download or remove — the side's own verbs on the document. */
   actions?: ReactNode;
-  /** A sentence under the actions: a decision made, a download error. */
-  note?: ReactNode;
 }>;
 
 export type BoardGroup = Readonly<{ key: string; label: string }>;
@@ -177,7 +175,6 @@ function DocumentCard({
         </div>
         {doc.actions ? <div className="card-actions">{doc.actions}</div> : null}
       </div>
-      {doc.note}
       {threads.length > 0 ? (
         <div className="board-doc-threads">
           <span className="t-small board-doc-threads-head">
