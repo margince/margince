@@ -23,6 +23,7 @@ import { NewDealAction } from "./companyactions";
 import { TimelineActions } from "./compose";
 import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
+import { ProjectCompanies } from "./projectcompanies";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
 import { CoverageLine, RollupsStrip } from "./projectreadings";
 import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
@@ -139,6 +140,13 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       rail={
         <div className="project-rail">
           <PhaseHistoryCard view={view} />
+          {/* Who is working this together, above the people on it: the reader
+              asking "whose project is this" is asking about companies first. */}
+          <ProjectCompanies
+            projectId={project.id}
+            companies={project.organizations}
+            readOnly={Boolean(project.archived_at)}
+          />
           <StakeholdersCard view={view} />
           <ProjectContractsCard view={view} />
           <ProjectDocumentsCard view={view} />

@@ -304,6 +304,26 @@ export const en = {
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
   "commission.status.void": "Reversed",
+  "commission.outstanding": "Still owed",
+  "commission.column.actions": "Decision",
+  "commission.decide.withheld": "Not yours to decide",
+  "commission.decide.approve": "Approve",
+  "commission.decide.pay": "Mark as paid",
+  "commission.decide.void": "Reverse",
+  "commission.decide.approveConfirm":
+    "Approving records that this commission is agreed. It does not pay anything — settle the payment in your finance system, then mark it paid here.",
+  "commission.decide.payConfirm":
+    "Mark this as paid once your finance system has actually paid it. Margince records the fact; it does not move money.",
+  "commission.decide.voidConfirm":
+    "Reversing writes a cancelling row beside this one. Nothing is deleted, and the original stays readable.",
+  "commission.decide.reasonLabel": "Why is it reversed?",
+  "commission.decide.reasonRequired":
+    "A reversal needs a reason — it is what explains the entry to the partner later.",
+  "commission.decide.approved": "Commission approved",
+  "commission.decide.paid": "Commission marked as paid",
+  "commission.decide.voided": "Commission reversed",
+  "commission.decide.settledElsewhere":
+    "Paying happens in your finance system. This records what it did.",
   "partner.setup": "Make this a partner",
   "partner.edit": "Edit partner",
   "partner.none": "Not a partner yet",
@@ -913,15 +933,13 @@ export const en = {
   "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",
   "access.empty": "Nobody has been invited yet.",
-  "access.noReviewer":
-    "There are documents but nobody who can confirm them. Invite a reviewer, or change somebody to reviewer.",
   "access.cap.view": "Read only",
   "access.cap.viewHint": "Can read the documents and the conversation.",
   "access.cap.comment": "Read and comment",
   "access.cap.commentHint": "Can also ask questions and reply.",
-  "access.cap.reviewer": "Read, comment and confirm documents",
+  "access.cap.reviewer": "Read and comment",
   "access.cap.reviewerHint":
-    "Can also request changes to a document or confirm a version.",
+    "The same as commenting today. Kept as a separate seat so a future approval step has somewhere to land.",
   "access.state.invited": "invited",
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
@@ -940,6 +958,8 @@ export const en = {
   "access.nameLabel": "Name",
   "access.emailLabel": "Email",
   "access.capabilityLegend": "What may they do?",
+  "access.inviteBeforePublish":
+    "This room has never been published, so whoever you invite will see an empty page until you press Publish.",
   "access.inviteNote":
     "You will get the link to copy. If a mail relay is configured it is also sent to them.",
   "access.issued.title": "Link for {name}",
@@ -4381,15 +4401,9 @@ export const en = {
   "threads.reply": "Reply",
   "threads.resolve": "Resolve",
   "threads.newLabel": "New thread",
-  "threads.requireChangeLabel":
-    "This requires a change before I can confirm the document",
+  "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
-  "buyer.decide.requestChanges": "Request changes",
-  "buyer.decide.confirm": "Confirm this version",
-  "buyer.decide.confirmed":
-    "You confirmed this version. This is a working decision inside the room, not a signature.",
-  "buyer.decide.requested": "You asked for changes to this version.",
   "room.decisions.confirm_version": "confirmed the version",
   "room.decisions.request_changes": "asked for changes",
   "dealbrief.title": "Deal brief",
@@ -6145,6 +6159,38 @@ export const en = {
   // word the list, the page and the deal form's picker say about one.
   "nav.projects": "Projects",
   "unit.projects": "projects",
+  "companyProjects.title": "Projects",
+  "companyProjects.empty":
+    "A project is the body of work a deal is about. This company appears here once it is on one — as the client, a partner, or a subcontractor.",
+  "projectCompanies.title": "Companies",
+  "projectCompanies.empty":
+    "A project is work several companies do together — the client, and any partner or subcontractor delivering it.",
+  "projectCompanies.attach": "Attach company",
+  "projectCompanies.detachTitle": "Take this company off?",
+  "projectCompanies.searchLabel": "Search companies by name",
+  "personProjects.title": "Projects",
+  "personProjects.empty":
+    "This contact appears here once they are on a delivery — as a sponsor, a contact, or whoever else is working it.",
+  "projectRole.customer": "Customer",
+  "projectRole.partner": "Partner",
+  "projectRole.subcontractor": "Subcontractor",
+  "personRole.sponsor": "Sponsor",
+  "personRole.projectLead": "Project lead",
+  "personRole.deliveryLead": "Delivery lead",
+  "personRole.expert": "Subject-matter expert",
+  "personRole.user": "User",
+  "projectLinks.new": "New project",
+  "projectLinks.attach": "Attach project",
+  "projectLinks.move": "Move to another project",
+  "projectLinks.detach": "Detach",
+  "projectLinks.detachConfirm": "Detach it",
+  "projectLinks.detachNamed": "Detach {name}",
+  "projectLinks.roleLabel": "As",
+  "projectLinks.detachTitle": "Detach this project?",
+  "projectLinks.detachBody":
+    "{name} stays as it is. Only its link to this record ends — nothing is deleted.",
+  "projectLinks.emptyTitle": "No projects yet",
+  "projectLinks.searchLabel": "Search projects by name or key",
   "project.name": "Project name",
   "project.keyMinted":
     "Margince gives each project a short key. Write [{key}] in an email subject and the mail is filed under this project.",

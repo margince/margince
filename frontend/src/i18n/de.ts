@@ -290,6 +290,26 @@ export const de = {
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.outstanding": "Noch offen",
+  "commission.column.actions": "Entscheidung",
+  "commission.decide.withheld": "Nicht Ihre Entscheidung",
+  "commission.decide.approve": "Freigeben",
+  "commission.decide.pay": "Als ausgezahlt markieren",
+  "commission.decide.void": "Stornieren",
+  "commission.decide.approveConfirm":
+    "Mit der Freigabe halten Sie fest, dass diese Provision vereinbart ist. Ausgezahlt wird dadurch nichts — zahlen Sie in Ihrem Finanzsystem und markieren Sie es danach hier.",
+  "commission.decide.payConfirm":
+    "Markieren Sie erst als ausgezahlt, wenn Ihr Finanzsystem tatsächlich gezahlt hat. Margince hält die Tatsache fest und bewegt kein Geld.",
+  "commission.decide.voidConfirm":
+    "Eine Stornierung schreibt eine Gegenbuchung daneben. Nichts wird gelöscht, der ursprüngliche Eintrag bleibt lesbar.",
+  "commission.decide.reasonLabel": "Warum wird storniert?",
+  "commission.decide.reasonRequired":
+    "Eine Stornierung braucht einen Grund — damit lässt sie sich dem Partner später erklären.",
+  "commission.decide.approved": "Provision freigegeben",
+  "commission.decide.paid": "Provision als ausgezahlt markiert",
+  "commission.decide.voided": "Provision storniert",
+  "commission.decide.settledElsewhere":
+    "Ausgezahlt wird im Finanzsystem. Hier wird festgehalten, was dort passiert ist.",
   "partner.setup": "Zum Partner machen",
   "partner.edit": "Partner bearbeiten",
   "partner.none": "Noch kein Partner",
@@ -874,15 +894,13 @@ export const de = {
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
   "access.empty": "Noch niemand eingeladen.",
-  "access.noReviewer":
-    "Es gibt Dokumente, aber niemanden, der sie bestätigen kann. Laden Sie einen Prüfer ein oder machen Sie jemanden zum Prüfer.",
   "access.cap.view": "Nur lesen",
   "access.cap.viewHint": "Kann Dokumente und Unterhaltung lesen.",
   "access.cap.comment": "Lesen und kommentieren",
   "access.cap.commentHint": "Kann außerdem Fragen stellen und antworten.",
-  "access.cap.reviewer": "Lesen, kommentieren und Dokumente bestätigen",
+  "access.cap.reviewer": "Lesen und kommentieren",
   "access.cap.reviewerHint":
-    "Kann außerdem Änderungen an einem Dokument anfordern oder eine Version bestätigen.",
+    "Heute dasselbe wie Kommentieren. Bleibt ein eigener Platz, damit ein späterer Freigabeschritt einen Ort hat.",
   "access.state.invited": "eingeladen",
   "access.state.active": "angemeldet",
   "access.state.revoked": "entzogen",
@@ -901,6 +919,8 @@ export const de = {
   "access.nameLabel": "Name",
   "access.emailLabel": "E-Mail",
   "access.capabilityLegend": "Was darf die Person tun?",
+  "access.inviteBeforePublish":
+    "Dieser Raum wurde noch nie veröffentlicht. Wen Sie jetzt einladen, sieht eine leere Seite, bis Sie auf Veröffentlichen klicken.",
   "access.inviteNote":
     "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
   "access.issued.title": "Link für {name}",
@@ -4328,16 +4348,9 @@ export const de = {
   "threads.reply": "Antworten",
   "threads.resolve": "Erledigen",
   "threads.newLabel": "Neuer Thread",
-  "threads.requireChangeLabel":
-    "Das muss geändert werden, bevor ich das Dokument bestätigen kann",
+  "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
-  "buyer.decide.requestChanges": "Änderungen anfordern",
-  "buyer.decide.confirm": "Diese Version bestätigen",
-  "buyer.decide.confirmed":
-    "Sie haben diese Version bestätigt. Das ist eine Arbeitsentscheidung im Raum, keine Unterschrift.",
-  "buyer.decide.requested":
-    "Sie haben Änderungen an dieser Version angefordert.",
   "room.decisions.confirm_version": "hat die Version bestätigt",
   "room.decisions.request_changes": "hat Änderungen angefordert",
   "dealbrief.title": "Deal-Briefing",
@@ -6078,6 +6091,38 @@ export const de = {
   "sched.reload": "Erneut lesen",
   "nav.projects": "Projekte",
   "unit.projects": "Projekte",
+  "companyProjects.title": "Projekte",
+  "companyProjects.empty":
+    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist — als Kunde, Partner oder Subunternehmer.",
+  "projectCompanies.title": "Unternehmen",
+  "projectCompanies.empty":
+    "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",
+  "projectCompanies.attach": "Unternehmen verknüpfen",
+  "projectCompanies.detachTitle": "Dieses Unternehmen entfernen?",
+  "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
+  "personProjects.title": "Projekte",
+  "personProjects.empty":
+    "Dieser Kontakt erscheint hier, sobald er an einer Lieferung beteiligt ist — als Sponsor, Ansprechpartner oder wer sonst daran arbeitet.",
+  "projectRole.customer": "Kunde",
+  "projectRole.partner": "Partner",
+  "projectRole.subcontractor": "Subunternehmer",
+  "personRole.sponsor": "Sponsor",
+  "personRole.projectLead": "Projektleitung",
+  "personRole.deliveryLead": "Lieferverantwortung",
+  "personRole.expert": "Fachexperte",
+  "personRole.user": "Anwender",
+  "projectLinks.new": "Neues Projekt",
+  "projectLinks.attach": "Projekt verknüpfen",
+  "projectLinks.move": "Zu anderem Projekt verschieben",
+  "projectLinks.detach": "Verknüpfung lösen",
+  "projectLinks.detachConfirm": "Verknüpfung lösen",
+  "projectLinks.detachNamed": "{name} lösen",
+  "projectLinks.roleLabel": "Als",
+  "projectLinks.detachTitle": "Verknüpfung zu diesem Projekt lösen?",
+  "projectLinks.detachBody":
+    "{name} bleibt unverändert. Nur die Verknüpfung zu diesem Datensatz endet — es wird nichts gelöscht.",
+  "projectLinks.emptyTitle": "Noch keine Projekte",
+  "projectLinks.searchLabel": "Projekte nach Name oder Kürzel suchen",
   "project.name": "Projektname",
   "project.keyMinted":
     "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",

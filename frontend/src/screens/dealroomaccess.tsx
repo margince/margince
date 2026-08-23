@@ -89,15 +89,11 @@ export function buyerLink(credential: string): string {
 export function DealRoomAccess({
   room,
   mayManage,
-  hasDocuments,
-}: Readonly<{ room: DealRoom; mayManage: boolean; hasDocuments: boolean }>) {
+}: Readonly<{ room: DealRoom; mayManage: boolean }>) {
   const t = useT();
   const [inviting, setInviting] = useState(false);
   const participants = useParticipants(room.id);
   const rows = participants.data?.data ?? [];
-  const live = rows.filter((p) => !p.revoked_at);
-  const noReviewer =
-    hasDocuments && live.every((p) => p.capability !== "reviewer");
   return (
     <Panel
       title={t("access.title")}
@@ -110,11 +106,6 @@ export function DealRoomAccess({
         ) : undefined
       }
     >
-      {noReviewer ? (
-        <PanelBody>
-          <Callout tone="warn">{t("access.noReviewer")}</Callout>
-        </PanelBody>
-      ) : null}
       <QueryStates query={participants} pendingLines={2}>
         {rows.length === 0 ? (
           <PanelBody>
@@ -409,6 +400,9 @@ function InviteDialog({
             }))}
           />
           <p className="t-small">{t("access.inviteNote")}</p>
+          {room.published_at ? null : (
+            <Callout tone="warn">{t("access.inviteBeforePublish")}</Callout>
+          )}
         </div>
       )}
     </ConfirmModal>

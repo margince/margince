@@ -42,7 +42,9 @@
   justify-content: flex-end;
 }
 
-.buyer-decide {
+/* The actions beside a shared document. One button today; the row exists so a
+   second never has to re-lay-out the card. */
+.buyer-doc-actions {
   display: flex;
   gap: var(--space-2);
   align-items: center;
