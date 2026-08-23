@@ -28,7 +28,6 @@ import (
 func TestEveryOrganizationCreatePathRunsTheDedupeLadder(t *testing.T) {
 	const (
 		theInsert = "createOrganization"
-		ladder    = "DedupeOrganization"
 		ladderTx  = "DedupeOrganizationForCreate"
 	)
 
@@ -57,45 +56,63 @@ func TestEveryOrganizationCreatePathRunsTheDedupeLadder(t *testing.T) {
 				if !ok || fn.Body == nil || fn.Name.Name == theInsert {
 					continue
 				}
-				var callsInsert, callsLadder bool
+				var mentionsInsert, callsLadder, escapes bool
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					call, ok := n.(*ast.CallExpr)
-					if !ok {
-						return true
-					}
-					switch fun := call.Fun.(type) {
-					case *ast.Ident:
-						switch fun.Name {
-						case theInsert:
-							callsInsert = true
-						case ladder, ladderTx:
+					if ok {
+						if name := calleeName(call.Fun); name == theInsert {
+							mentionsInsert = true
+						} else if strings.Contains(name, "Dedupe") {
+							// The ladder, or one of the wrappers whose whole
+							// job is to run it (manualDedupeOrganization).
 							callsLadder = true
 						}
-					case *ast.SelectorExpr:
-						// manualDedupeOrganization and friends wrap the ladder;
-						// a name carrying "Dedupe" is the seam being used.
-						if sel := fun.Sel.Name; sel == ladder || sel == ladderTx {
-							callsLadder = true
+						// The insert named anywhere OTHER than as the callee —
+						// passed as a value, assigned, taken as a method value
+						// — leaves the reach of this check. Refused rather than
+						// ignored: a seam nobody can verify is not a seam.
+						for _, arg := range call.Args {
+							if id, ok := arg.(*ast.Ident); ok && id.Name == theInsert {
+								escapes = true
+							}
+						}
+						return true
+					}
+					if assign, ok := n.(*ast.AssignStmt); ok {
+						for _, rhs := range assign.Rhs {
+							if id, ok := rhs.(*ast.Ident); ok && id.Name == theInsert {
+								escapes = true
+							}
 						}
 					}
 					return true
 				})
-				// A wrapper whose own name says it dedupes counts as the ladder.
-				if !callsLadder {
-					ast.Inspect(fn.Body, func(n ast.Node) bool {
-						id, ok := n.(*ast.Ident)
-						if ok && strings.Contains(id.Name, "Dedupe") {
-							callsLadder = true
-						}
-						return true
-					})
+				if escapes {
+					t.Errorf("%s: %s takes %s as a VALUE rather than calling it; "+
+						"this check follows direct calls only, so a reference that escapes it "+
+						"must not exist — call the insert directly, beside its ladder",
+						path, fn.Name.Name, theInsert)
 				}
-				if callsInsert && !callsLadder {
+				if mentionsInsert && !callsLadder {
 					t.Errorf("%s: %s calls %s without running the dedupe ladder in the same function; "+
 						"every path that mints an organization must obtain its match from %s",
 						path, fn.Name.Name, theInsert, ladderTx)
 				}
 			}
 		}
+	}
+}
+
+// calleeName is the identifier a call expression invokes, bare or selected.
+// Anything else — a call through a value, an immediately-invoked literal —
+// answers empty, and the escape check above is what refuses those.
+func calleeName(fun ast.Expr) string {
+	switch f := fun.(type) {
+	case *ast.Ident:
+		return f.Name
+	case *ast.SelectorExpr:
+		return f.Sel.Name
+	default:
+		return ""
 	}
 }

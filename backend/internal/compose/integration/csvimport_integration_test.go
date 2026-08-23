@@ -147,6 +147,21 @@ func uploadCSV(t *testing.T, e *apptest.AppEnv, object, body string) (importProf
 	return profile, resp.StatusCode
 }
 
+// createRunOnDuplicate is createRunWithMapping for a run that names a duplicate
+// policy. Separate rather than a variadic so every existing call site keeps
+// saying, in its own text, that it takes the default.
+func createRunOnDuplicate(t *testing.T, e *apptest.AppEnv, object, sourceRef string,
+	mapping map[string]string, onDuplicate string,
+) (importRunDTO, int) {
+	t.Helper()
+	var run importRunDTO
+	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+		"connector": "csv", "object": object, "source_ref": sourceRef,
+		"mapping": mapping, "on_duplicate": onDuplicate,
+	}, nil, &run)
+	return run, status
+}
+
 func createRunWithMapping(t *testing.T, e *apptest.AppEnv, object, sourceRef string, mapping map[string]string) (importRunDTO, int) {
 	t.Helper()
 	var run importRunDTO
@@ -763,5 +778,75 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 			t.Errorf("importing a City column erased the rest of the address: line1=%q postal=%q country=%q",
 				o.Address.Line1, o.Address.PostalCode, o.Address.Country)
 		}
+	}
+}
+
+// on_duplicate: skip — the preview and the commit must give the SAME answer.
+// A preview that says "create" while the approved run skips is the defect this
+// whole change set exists to remove, in a new place.
+func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
+	e := setupImportApp(t)
+
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent → %d, want 201", status)
+	}
+	orgsBefore := len(organizations(t, e).Data)
+
+	const file = "Company\nKestrel Data\nNordwind Logistik\n"
+	profile, _ := uploadCSV(t, e, "organization", file)
+	run, status := createRunOnDuplicate(t, e, "organization", profile.SourceRef,
+		map[string]string{"Company": "display_name"}, "skip")
+	if status != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", status)
+	}
+
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+		t.Fatalf("preview = created %d skipped %d, want 1 and 1 — the duplicate is skipped, the new company lands",
+			report.Disposition.Created, report.Disposition.Skipped)
+	}
+	if report.Disposition.Duplicates == nil || *report.Disposition.Duplicates != 1 {
+		t.Errorf("duplicates = %v, want 1", report.Disposition.Duplicates)
+	}
+	if got := report.Disposition.Created + report.Disposition.Updated +
+		report.Disposition.Unchanged + report.Disposition.Skipped; got != report.RowsRead {
+		t.Errorf("the disposition sums to %d for %d rows read", got, report.RowsRead)
+	}
+
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+
+	// Exactly one company added, and no second Kestrel.
+	after := organizations(t, e).Data
+	if len(after) != orgsBefore+1 {
+		t.Errorf("companies went from %d to %d; the preview promised one new company", orgsBefore, len(after))
+	}
+	kestrels := 0
+	for _, o := range after {
+		if o.DisplayName == "Kestrel Data" {
+			kestrels++
+		}
+	}
+	if kestrels != 1 {
+		t.Errorf("%d companies named Kestrel Data; the run was asked to skip duplicates", kestrels)
+	}
+}
+
+// An unknown policy is refused rather than silently treated as create.
+func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := uploadCSV(t, e, "organization", "Company\nInitech\n")
+	// Decoded into nothing: a refusal answers a problem document, not a run.
+	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+		"connector": "csv", "object": "organization", "source_ref": profile.SourceRef,
+		"mapping": map[string]string{"Company": "display_name"}, "on_duplicate": "merge",
+	}, nil, nil)
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
 	}
 }

@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/migration"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -147,6 +148,10 @@ const (
 	// the preview's job is to say a duplicate is coming while a human can
 	// still fix the file.
 	predictCollides
+	// predictCollidesSkipped is a duplicate this run will NOT land, because it
+	// asked for on_duplicate: skip. Separate from predictCollides so the
+	// preview reports the same outcome the commit will produce.
+	predictCollidesSkipped
 )
 
 // Predict answers what Ensure would do, without writing.
@@ -169,11 +174,14 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 		// seeded. The identity map cannot see any of those, so the create the
 		// engine is about to report gets the same dedupe read the create path
 		// itself performs.
-		collides, err := w.collidesWithExisting(ctx, row)
+		collides, err := w.collidesWithExisting(ctx, row, w.onDuplicate != string(crmcontracts.Skip))
 		if err != nil {
 			return predictCreate, err
 		}
 		if collides {
+			if w.onDuplicate == string(crmcontracts.Skip) {
+				return predictCollidesSkipped, nil
+			}
 			return predictCollides, nil
 		}
 		return predictCreate, nil
@@ -196,6 +204,11 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // names, through the SAME ladder the create path runs (PO-F-2). It reads and
 // writes nothing.
 //
+// discloseOnly separates the two questions this answers. The PREVIEW asks it to
+// tell a person something, so a match they cannot see must not be mentioned.
+// The `on_duplicate: skip` path asks it to DECIDE, and there visibility is
+// irrelevant — see the branch below.
+//
 // Only organizations: a lead's identity is its email, which the store's own
 // unique key already refuses, so there is no silent twin to warn about.
 //
@@ -204,7 +217,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // holding. The answer can therefore go stale between the preview and the
 // commit; that is correct, because the commit runs the locking version and its
 // answer is the one that decides.
-func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row) (bool, error) {
+func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row, discloseOnly bool) (bool, error) {
 	if w.object != migration.ObjectOrganization {
 		return false, nil
 	}
@@ -216,15 +229,37 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 	if candidate.DisplayName == "" && candidate.LegalName == "" {
 		return false, nil
 	}
-	var match people.OrganizationMatch
+	var visible bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		var err error
-		match, err = people.DedupeOrganization(ctx, tx, candidate)
+		match, err := people.DedupeOrganization(ctx, tx, candidate)
+		if err != nil || match.Decision == people.DecisionNoMatch {
+			return err
+		}
+		// The ladder reads every organization, by design — it is the write
+		// path's collision check, and a create must not mint a twin of a row
+		// the caller happens not to be allowed to see. A DISCLOSURE is the
+		// opposite: telling this caller "that company is already here" about a
+		// row they cannot read turns the preview into an oracle for a
+		// colleague's owner-private capture, which even an admin may not read
+		// (rowscope.go). So a match the caller cannot see discloses nothing.
+		//
+		// The COMMIT is unaffected: it still refuses or files the review pair
+		// on the ladder's own answer, visible or not.
+		if !discloseOnly {
+			// Deciding whether to SKIP the row, not whether to mention it. The
+			// incumbent's visibility is beside the point: creating a twin of a
+			// row this caller cannot see is exactly the duplicate the run asked
+			// to avoid, and skipping it reveals nothing the caller did not
+			// already put in their own file.
+			visible = true
+			return nil
+		}
+		visible, err = auth.VisibleTo(ctx, tx, "organization", match.OrganizationID.UUID)
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking %q against the companies already held: %w", candidate.DisplayName, err)
 	}
-	return match.Decision != people.DecisionNoMatch, nil
+	return visible, nil
 }
 
 // Ensure lands one row: created the first time, updated when the file has
@@ -248,7 +283,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// record anyway, and the run says what to do about that. The check runs on
 	// the commit as well as the dry run so the two cannot disagree.
 	if w.onDuplicate == string(crmcontracts.Skip) {
-		collides, err := w.collidesWithExisting(ctx, row)
+		collides, err := w.collidesWithExisting(ctx, row, false)
 		if err != nil {
 			return migration.EnsureResult{}, err
 		}

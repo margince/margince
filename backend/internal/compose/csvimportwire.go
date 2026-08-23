@@ -426,6 +426,15 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 					ExternalID: row.ExternalID,
 					Reason:     unwritableReason(object, textFields(row.Fields)),
 				})
+			case predictCollidesSkipped:
+				// The run asked to skip duplicates, so this row is a skip and
+				// the preview says so — the commit must not be the first place
+				// a person learns the row did not land.
+				p.duplicates++
+				p.skipped = append(p.skipped, migration.SkippedRow{
+					ExternalID: row.ExternalID,
+					Reason:     duplicateSkipReason,
+				})
 			case predictCollides:
 				p.duplicates++
 				// Still a create — the commit lands it and files a review pair
