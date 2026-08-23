@@ -25,6 +25,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
@@ -108,6 +109,65 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 	}
 }
 
+// TestAMutationEchoCarriesWritabilityToo guards the case a single GET does not:
+// the row a PATCH or a create hands back is a different code path, and absent
+// reads as NOT writable — so a missing stamp takes the edit buttons away from
+// the owner in the moment right after they saved.
+func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
+	e := Setup(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, orgWriterPermsFor(t))
+	name := "Echo Test GmbH"
+
+	created, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+		DisplayName: name, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the organization: %v", err)
+	}
+	if created.Writable == nil || !*created.Writable {
+		t.Errorf("the CREATE echo reports writable=%v for the row its own caller just made and owns",
+			created.Writable)
+	}
+
+	changed := "Echo Test GmbH II"
+	updated, err := e.People.UpdateOrganization(rep, ids.From[ids.OrganizationKind](ids.UUID(created.Id)),
+		people.UpdateOrganizationInput{DisplayName: &changed})
+	if err != nil {
+		t.Fatalf("updating the organization: %v", err)
+	}
+	if updated.Writable == nil || !*updated.Writable {
+		t.Errorf("the UPDATE echo reports writable=%v for a row the same caller just wrote",
+			updated.Writable)
+	}
+}
+
+// TestAnArchivedRecordIsNotWritableOnTheWire holds the state half. The write
+// gate's own probes are LIVE-only, so a row the caller owns but has archived is
+// refused by every mutation — and a flag that ignored that would offer an edit
+// the server declines.
+func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
+	e := Setup(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, orgWriterPermsFor(t))
+	created, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+		DisplayName: "Archived Co", Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the organization: %v", err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(created.Id))
+	if _, err := e.People.ArchiveOrganization(rep, orgID, nil); err != nil {
+		t.Fatalf("archiving: %v", err)
+	}
+	got, err := e.People.GetOrganization(rep, orgID, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("reading the archived organization: %v", err)
+	}
+	if got.Writable != nil && *got.Writable {
+		t.Error("an archived organization reports writable=true, but every mutation takes the LIVE " +
+			"probe and refuses it — the flag is promising an edit the server declines")
+	}
+}
+
 // TestAListPageCarriesWritabilityOnEveryRow guards the half a single read
 // cannot: the list is a different code path, and a page that reported every row
 // writable would put an edit affordance on every colleague's record at once.
@@ -141,4 +201,19 @@ func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
 		t.Fatalf("the list returned %d of the %d seeded rows — the fixture is not what this asserts on",
 			seen, len(want))
 	}
+}
+
+// orgWriterPermsFor is AccountRepPerms plus organization.update. No shipped rep
+// fixture grants it, and several suites read those fixtures as a rep who cannot
+// write a company, so widening one there would make them pass while proving
+// nothing.
+func orgWriterPermsFor(t *testing.T) principal.Permissions {
+	t.Helper()
+	perms := AccountRepPerms
+	perms.Objects = map[string]principal.ObjectGrant{}
+	for object, grant := range AccountRepPerms.Objects {
+		perms.Objects[object] = grant
+	}
+	perms.Objects["organization"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	return perms
 }

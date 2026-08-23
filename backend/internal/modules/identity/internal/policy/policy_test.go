@@ -117,9 +117,17 @@ func TestMergeUnionsGrantsAndWidensScope(t *testing.T) {
 	if merged.Allows("person", principal.ActionDelete) {
 		t.Error("merge invented person.delete that no role grants")
 	}
-	// Widest scope wins: read_only's `all` over rep's `team`.
+	// Widest scope wins: read_only's `all` over rep's `own`.
 	if merged.RowScope != principal.RowScopeAll {
 		t.Errorf("merged row scope %q, want all (the widest held)", merged.RowScope)
+	}
+	// The MIDDLE tier, which no seeded role holds any more. Comparing only the
+	// two extremes would pass over a Wider that ranked team wrongly, and team
+	// scope is still reachable — an operator's custom role may carry it, and the
+	// write predicate still renders its arm.
+	team := Document{Objects: rep.Objects, RowScope: principal.RowScopeTeam}
+	if scoped := Merge(map[string]Document{"rep": rep, "team_role": team}); scoped.RowScope != principal.RowScopeTeam {
+		t.Errorf("own merged with team gives %q, want team (the wider of the two)", scoped.RowScope)
 	}
 	if len(merged.RoleKeys) != 2 {
 		t.Errorf("attribution lists %v, want both roles", merged.RoleKeys)

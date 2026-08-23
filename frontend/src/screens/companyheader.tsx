@@ -3,7 +3,7 @@ import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
+import { useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
@@ -248,7 +248,11 @@ export function useCompanyReadOnlyReason(
   if (overlay) {
     return t("overlay.partialWriteBack");
   }
-  if (!mine) {
+  // An UNOWNED record is not "somebody else's" — it is nobody's yet, and the
+  // claim door is deliberately open to every seat. Reporting it read-only here
+  // would shut the one control that makes it writable, which is the opposite of
+  // what this reason is for.
+  if (!mine && org.owner_id) {
     return t("record.notYoursToChange");
   }
   return undefined;
@@ -265,7 +269,10 @@ export function CompanyLifecycleControl({
   org,
 }: Readonly<{ org: Organization }>) {
   const t = useT();
-  const canUpdate = useCan("organization", "update");
+  // useCanWrite, not useCan: these controls issue a PATCH, and the licensing
+  // middleware refuses a mutation from a read seat before RBAC is consulted.
+  // Gating on the grant alone offers an active control whose save is rejected.
+  const canUpdate = useCanWrite("organization", "update");
   const readOnlyReason = useCompanyReadOnlyReason(org);
   const patch = useCompanyFieldPatch(org);
   return (
@@ -328,7 +335,10 @@ export function CompanyOwnerControl({
   hideLabel,
 }: Readonly<{ org: Organization; hideLabel?: boolean }>) {
   const t = useT();
-  const canUpdate = useCan("organization", "update");
+  // useCanWrite, not useCan: these controls issue a PATCH, and the licensing
+  // middleware refuses a mutation from a read seat before RBAC is consulted.
+  // Gating on the grant alone offers an active control whose save is rejected.
+  const canUpdate = useCanWrite("organization", "update");
   const readOnlyReason = useCompanyReadOnlyReason(org);
   const patch = useCompanyFieldPatch(org);
   const claim = useClaimRecord("organization", org.id, org.version);
@@ -394,6 +404,33 @@ export function CompanyOwnerControl({
       }
     />
   );
+}
+
+// useCompanyVerbRefusal answers why the record's own verbs — edit, merge,
+// archive, share — are refused, or undefined when they are pressable.
+//
+// Two states refuse them, and they read the same to a user: the record is
+// archived, or it is somebody else's. Both are facts about the RECORD, so both
+// take STATE-4a's answer — the verb stays visible and says why, because a
+// missing button reads as a build without the feature.
+//
+// Overlay is deliberately NOT one of them, which is why this is its own function
+// rather than useCompanyReadOnlyReason. Overlay's sentence says a write reaches
+// the incumbent only in part: a caveat on a write that still happens, not a
+// reason it is refused. Disabling these verbs on it would take away edits the
+// mirror does support.
+//
+// An UNOWNED record is not one either. Nobody owns it yet, and the verbs that
+// let a reader take it on stay pressable.
+function useCompanyVerbRefusal(org: Organization): string | undefined {
+  const t = useT();
+  if (org.archived_at) {
+    return t("record.archivedReadOnly");
+  }
+  if (org.owner_id && !(org.writable ?? false)) {
+    return t("record.notYoursToChange");
+  }
+  return undefined;
 }
 
 // useClaimRecord is the claim door: POST /records/{type}/{id}/claim makes the
@@ -547,7 +584,8 @@ export function CompanyActionBadges({
   // whether these verbs are refused.
   const ownReasonId = useId();
   const menuReasonId = archivedReasonId ?? ownReasonId;
-  const refusedByArchive = org.archived_at ? menuReasonId : undefined;
+  const refusedReason = useCompanyVerbRefusal(org);
+  const refusedByState = refusedReason ? menuReasonId : undefined;
   return (
     <>
       {/* What the company IS to us. Where it STANDS is a separate question,
@@ -566,15 +604,15 @@ export function CompanyActionBadges({
           and the sentence refusing them travels with them. Only a panel with
           no items at all would be worth hiding. */}
       <OverflowMenu label={t("record.moreActions")}>
-        {org.archived_at && !archivedReasonId && (
+        {refusedReason && !archivedReasonId && (
           <p id={ownReasonId} className="t-caption">
-            {t("record.archivedReadOnly")}
+            {refusedReason}
           </p>
         )}
         <CompanyEditAction
           org={org}
           overlay={overlay}
-          disabledReasonId={refusedByArchive}
+          disabledReasonId={refusedByState}
         />
         {/* Merge has no incumbent-first projection — the seam refuses it
             outright (overlay/provider_writes.go Merge) — unlike
@@ -583,7 +621,7 @@ export function CompanyActionBadges({
             its answer: there is no fact about this account to report. */}
         {!overlay && (
           <MergeAction
-            disabledReasonId={refusedByArchive}
+            disabledReasonId={refusedByState}
             label={t("merge.org")}
             sourceId={org.id}
             sourceName={org.display_name}
@@ -613,7 +651,7 @@ export function CompanyActionBadges({
           />
         )}
         <ArchiveAction
-          disabledReasonId={refusedByArchive}
+          disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}
           archive={async () => {
@@ -637,7 +675,7 @@ export function CompanyActionBadges({
           <ShareAction
             recordType="organization"
             recordId={org.id}
-            disabledReasonId={refusedByArchive}
+            disabledReasonId={refusedByState}
           />
         )}
         {/* The way in to the partner programme for an account that has none.
@@ -645,7 +683,7 @@ export function CompanyActionBadges({
             partner row would be unreachable — this is the same form, asked
             for rather than offered. */}
         {!overlay && !(org.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByArchive} onClick={onSetUpPartner}>
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
             {t("org.partnerSetUp")}
           </Button>
         )}

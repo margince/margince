@@ -33,6 +33,14 @@ func stampLeadsWritable(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lea
 
 // stampLeadWritable is the single-record spelling, so a caller holding one lead
 // does not assemble a slice to ask.
+//
+// readLead calls it for every read, including the few that are internal
+// decisions rather than wire results — the merge reads both ends before it
+// folds them. That is one extra statement on those paths, and it is the cheaper
+// mistake: stamping only the callers that reach the wire means listing them,
+// and a list goes stale the first time somebody adds a read. A record served
+// without the flag reads as NOT writable, so the failure it would cause is an
+// owner losing their edit buttons.
 func stampLeadWritable(ctx context.Context, tx pgx.Tx, lead *crmcontracts.Lead) error {
 	one := []crmcontracts.Lead{*lead}
 	if err := stampLeadsWritable(ctx, tx, one); err != nil {

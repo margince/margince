@@ -76,18 +76,23 @@ func WritableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.U
 		return nil, err
 	}
 	out := make(map[ids.UUID]bool, len(rowIDs))
-	if UnboundedFor(p, table) && Unbounded(p) {
-		for _, id := range rowIDs {
-			out[id] = true
-		}
-		return out, nil
-	}
 	// The row arm alone is not write authority: a caller whose role lost the
 	// object's update verb can still OWN a row, and a mask conditioned on
 	// write authority must not lift for them. EnsureWritable never sees this
 	// case because its handlers Require(update) first; this helper is asked
 	// bare, so it asks itself.
-	if !p.Permissions.Allows(table, principal.ActionUpdate) {
+	//
+	// Asked BEFORE the unbounded shortcut, not after: an all-scope human whose
+	// role carries no update verb is refused by auth.Require on every mutation,
+	// and answering "yes, writable" for them would be the one case where the
+	// shortcut disagrees with the gate it stands in for.
+	if !p.Permissions.Allows(table, principal.ActionUpdate) && p.Type != principal.PrincipalSystem {
+		return out, nil
+	}
+	if UnboundedFor(p, table) && Unbounded(p) {
+		for _, id := range rowIDs {
+			out[id] = true
+		}
 		return out, nil
 	}
 	if len(rowIDs) == 0 {
@@ -146,6 +151,14 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	if err != nil {
 		return nil, err
 	}
+	// An ARCHIVED row is nobody's to change, whatever their authority over it.
+	// WritableSubset deliberately does not filter on archived_at — it answers
+	// the masks, which apply to a record a caller may still READ — but the
+	// mutations take the LIVE probe, so a flag that ignored the state would
+	// promise an edit every one of them refuses.
+	if err := excludeArchived(ctx, tx, table, writable); err != nil {
+		return nil, err
+	}
 	for i := range rows {
 		may := writable[id(rows[i])]
 		set(&rows[i], may)
@@ -195,4 +208,33 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 		}
 	}
 	return clause, masked, nil
+}
+
+// excludeArchived clears the write flag on every row that is not live. ONE
+// statement for the page, like everything else on this path: it asks which of
+// the rows already marked writable are archived, and only those come back.
+func excludeArchived(ctx context.Context, tx pgx.Tx, table string, writable map[ids.UUID]bool) error {
+	live := make([]ids.UUID, 0, len(writable))
+	for id, may := range writable {
+		if may {
+			live = append(live, id)
+		}
+	}
+	if len(live) == 0 {
+		return nil
+	}
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT id FROM %s WHERE id = ANY($1) AND archived_at IS NOT NULL`, table), live)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		writable[id] = false
+	}
+	return rows.Err()
 }

@@ -570,8 +570,8 @@ func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
-	if preview.Permissions.RowScope != principal.RowScopeTeam || !preview.Permissions.Allows("deal", principal.ActionRead) {
-		t.Errorf("rep preview = scope %s deal.read %v, want team scope with deal.read", preview.Permissions.RowScope, preview.Permissions.Allows("deal", principal.ActionRead))
+	if preview.Permissions.RowScope != principal.RowScopeOwn || !preview.Permissions.Allows("deal", principal.ActionRead) {
+		t.Errorf("rep preview = scope %s deal.read %v, want own scope with deal.read", preview.Permissions.RowScope, preview.Permissions.Allows("deal", principal.ActionRead))
 	}
 	if len(preview.Permissions.FieldMasks) != 1 || preview.Permissions.FieldMasks[0].Field != "amount_minor" {
 		t.Errorf("rep preview masks = %+v, want the deal amount mask", preview.Permissions.FieldMasks)

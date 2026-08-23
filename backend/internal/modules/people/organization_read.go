@@ -113,6 +113,16 @@ func readOrganization(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, arc
 		return crmcontracts.Organization{}, err
 	}
 	orgs := []crmcontracts.Organization{o}
+	// Stamped HERE rather than only in attachOrgCounts, because every mutation
+	// echo — create, update, archive, restore, the merge survivor — hands the
+	// row back through this function and not through the counts page. Absent
+	// reads as NOT writable, so a missing stamp takes the edit buttons away from
+	// the owner who just saved.
+	if _, err := auth.StampWritable(ctx, tx, "organization", orgs,
+		func(o crmcontracts.Organization) ids.UUID { return ids.UUID(o.Id) },
+		func(o *crmcontracts.Organization, may bool) { o.Writable = &may }); err != nil {
+		return crmcontracts.Organization{}, err
+	}
 	if err := attachOrgDomains(ctx, tx, orgs); err != nil {
 		return crmcontracts.Organization{}, err
 	}
