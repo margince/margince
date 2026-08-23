@@ -38,11 +38,14 @@ type Completer interface {
 // deal's name back at a reader who is looking at it.
 const statusSystem = `You write the status of one sales deal, from a JSON summary of the deal, its timeline, its open tasks and its buyer conversation in a CRM.
 Return ONLY a JSON object: {"standing":[{"text":"...","evidence":["<id>", ...]}, ...],"risk":[{"text":"...","evidence":["<id>", ...]}, ...],"move_reason":"..."}.
-"standing" is where the deal is now: at most three sentences. What moved, what is waiting, what the buyer last said.
-"risk" is what could lose this deal: at most two sentences. Write it ONLY when the summary shows something wrong — silence after a proposal, a close date the deal cannot make, a question nobody answered, an objection still open. When nothing is wrong, return an empty list. Never write a reassurance.
+"standing" is where the deal is now: at most three sentences, each under 300 characters. What moved, what is waiting, what the buyer last said.
+"risk" is what could lose this deal: at most two sentences, each under 300 characters. Write it ONLY when the summary shows something wrong — silence after a proposal, a close date the deal cannot make, a question nobody answered, an objection still open. When nothing is wrong, return an empty list. Never write a reassurance.
 "move_reason" is one sentence saying why the recommended next move is the right one now, at most 200 characters. The move itself is decided elsewhere and given to you in "recommended_move" — explain it, never replace it.
 Every sentence in "standing" and "risk" lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — an id must never appear in any "text" or in "move_reason".
+Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
+"health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
+Never write the same fact in both "standing" and "risk". Standing says where the deal is; risk says what could lose it. A sentence repeated in both wastes the reader's one glance.
 Voice: a calm, capable colleague briefing you in the corridor. Lead with what matters. No greetings, no praise, no exclamation marks, no "I recommend", no restating the deal's name.`
 
 // statusSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
@@ -52,9 +55,16 @@ func statusSystemFor(fence promptfence.Fence) string {
 
 // The reply's bounds. A card past these is a document, and the page already
 // links the records it would be paraphrasing.
+//
+// The sentence bound is generous on purpose. A real status sentence carries a
+// subject, a date and what it means — "They asked to move to 60-day payment
+// terms on the 11th and we said we would come back this week, which has not
+// happened" is 130 characters and entirely reasonable. A bound tight enough to
+// feel neat rejects good cards, and the reader gets the deterministic one
+// without ever learning why.
 const (
-	maxSentenceLen  = 240
-	maxMoveReason   = 240
+	maxSentenceLen  = 400
+	maxMoveReason   = 300
 	maxStandingRows = 3
 	maxRiskRows     = 2
 	// maxExcerptLen bounds what one row contributes, so a pasted contract in
@@ -93,12 +103,21 @@ type DealIn struct {
 	ExpectedClose string `json:"expected_close,omitempty"`
 }
 
-// FactorIn is one health factor: the number and the fact behind it, so the
-// model can say WHY a deal is at risk rather than that a score is low.
+// FactorIn is one health factor as a MEASUREMENT: what was counted, and how
+// low it scored. Deliberately no sentence.
+//
+// The formula's own explanatory prose ("no two-way contact in the last 90
+// days") is written for a numeric readout, and handing it to a writer produces
+// a card that quotes a statistic where the reader wanted the situation — and
+// that reads the measurement WINDOW as elapsed time. A number and a label give
+// the model the same signal with nothing to paste.
 type FactorIn struct {
-	Key    string  `json:"key"`
-	Value  float64 `json:"value"`
-	Reason string  `json:"reason"`
+	Key   string  `json:"key"`
+	Value float64 `json:"value"`
+	// Count is what the factor counted, where counting is what it does:
+	// engaged stakeholders, overdue tasks. Absent for the two that measure
+	// time rather than things.
+	Count *int `json:"count,omitempty"`
 }
 
 // ActIn is one timeline row, dated rather than aged, so the same facts build
@@ -109,7 +128,12 @@ type ActIn struct {
 	Direction string `json:"direction,omitempty"`
 	Subject   string `json:"subject,omitempty"`
 	At        string `json:"at"`
-	Excerpt   string `json:"excerpt,omitempty"`
+	// When says whether this row has happened yet. A deal's timeline holds
+	// BOTH — a booked meeting sits in it beside last week's mail — and a date
+	// alone does not tell a writer which, so a card would report a meeting
+	// scheduled for Thursday as one that already took place.
+	When    string `json:"when"`
+	Excerpt string `json:"excerpt,omitempty"`
 }
 
 // TaskIn is one open task: what is owed and by when.

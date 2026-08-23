@@ -29,12 +29,12 @@ const promptVersion = "deal-status-1"
 // and a withheld row gives up its words here.
 func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: move.Action + ": " + move.Reason}
-	in.Health = healthIn(f.health, f.now)
+	in.Health = healthIn(f.health)
 	for _, a := range f.timeline {
 		if len(in.Timeline) == maxTimelineRows {
 			break
 		}
-		in.Timeline = append(in.Timeline, actIn(a))
+		in.Timeline = append(in.Timeline, actIn(a, f.now))
 	}
 	for _, t := range f.openTasks {
 		in.OpenTasks = append(in.OpenTasks, taskIn(t))
@@ -43,26 +43,27 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 	return in
 }
 
-// healthIn carries the four factors with the fact behind each, so the model
-// can say WHY a deal is at risk rather than that a number is low. A reader
-// cannot act on 0.31.
-//
-// The wording is the deals module's, not this package's: the formula and the
-// sentences that explain it belong together.
-func healthIn(h *deals.DealHealth, now time.Time) []FactorIn {
+// healthIn carries the four factors as measurements: a score and, where the
+// factor counts things, the count. No sentence — see FactorIn for why.
+func healthIn(h *deals.DealHealth) []FactorIn {
 	if h == nil {
 		return nil
 	}
-	reasons := deals.HealthReasons(*h, now)
-	out := make([]FactorIn, 0, len(reasons))
-	for _, r := range reasons {
-		out = append(out, FactorIn{Key: r.Key, Value: r.Value, Reason: r.Reason})
+	engaged := len(h.Evidence.EngagedStakeholderIDs)
+	overdue := len(h.Evidence.OverdueTaskIDs)
+	return []FactorIn{
+		{Key: "activity_recency", Value: h.Factors.ActivityRecency},
+		{Key: "stage_velocity", Value: h.Factors.StageVelocity},
+		{Key: "engagement", Value: h.Factors.Engagement, Count: &engaged},
+		{Key: "commitments", Value: h.Factors.Commitments, Count: &overdue},
 	}
-	return out
 }
 
-func actIn(a crmcontracts.Activity) ActIn {
-	out := ActIn{ID: a.Id.String(), Kind: string(a.Kind), At: a.OccurredAt.Format("2006-01-02")}
+func actIn(a crmcontracts.Activity, now time.Time) ActIn {
+	out := ActIn{
+		ID: a.Id.String(), Kind: string(a.Kind),
+		At: a.OccurredAt.Format("2006-01-02"), When: whenOf(a, now),
+	}
 	if a.Direction != nil {
 		out.Direction = string(*a.Direction)
 	}
@@ -79,6 +80,15 @@ func actIn(a crmcontracts.Activity) ActIn {
 		out.Excerpt = excerpt(*a.Body)
 	}
 	return out
+}
+
+// whenOf says whether a row has happened. The deal's timeline holds booked
+// meetings alongside past contact, and only this tells them apart.
+func whenOf(a crmcontracts.Activity, now time.Time) string {
+	if a.OccurredAt.After(now) {
+		return "scheduled"
+	}
+	return "past"
 }
 
 func withheld(a crmcontracts.Activity) bool {

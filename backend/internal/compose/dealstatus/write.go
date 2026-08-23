@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/deals"
 )
 
 type sentence = crmcontracts.OrganizationBriefSentence
@@ -81,15 +82,19 @@ func openTasksLine(n int, more bool) string {
 	return fmt.Sprintf("%d tasks are still open on this deal.", n)
 }
 
-// riskLines name what is wrong, and say nothing when nothing is. The floor
-// reads the health factors rather than guessing: a factor the formula scored
-// low is a fact, and the sentence behind it was written beside the formula.
+// riskLines name what is wrong, and say nothing when nothing is.
+//
+// The floor reads the health factors rather than guessing, and it uses the
+// formula's OWN sentences — deals.HealthReasons — because a deterministic card
+// restates records rather than interpreting them, and those sentences were
+// written beside the numbers they explain. The model lane is handed the bare
+// measurements instead, for the reason FactorIn gives.
 func riskLines(f facts) []sentence {
 	if f.health == nil || !f.health.AtRisk {
 		return nil
 	}
 	var lines []sentence
-	for _, r := range healthIn(f.health, f.now) {
+	for _, r := range deals.HealthReasons(*f.health, f.now) {
 		if r.Value >= atRiskFactor {
 			continue
 		}

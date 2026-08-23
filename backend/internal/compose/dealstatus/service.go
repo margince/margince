@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -176,6 +177,12 @@ func (s *Service) write(
 	defer cancel()
 	written, err := s.ask(laneCtx, in)
 	if err != nil {
+		// The degrade is declared, but a SILENT one is indistinguishable from
+		// a lane nobody wired: the reader sees a deterministic card either
+		// way, and only this line says which. It carries the reason rather
+		// than the reply, because the reply is the buyer's words.
+		slog.WarnContext(ctx, "deal status fell back to the deterministic card",
+			"deal_id", f.deal.Id.String(), "reason", err)
 		return floor
 	}
 	return foldWritten(floor, written, f, mv)
