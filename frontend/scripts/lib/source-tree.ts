@@ -18,8 +18,9 @@
 // of the two and invisible to the other — for no reason either author chose.
 // There is ONE set here, and it is the wide one.
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 
 // Every extension a bundler resolves. Not just the two a well-behaved unit
 // writes: a `"main": "screen.jsx"` is a legal unit, and a gate whose coverage
@@ -49,13 +50,45 @@ export function filesUnder(dir: string): string[] {
 // unit that nested one was invisible to them — latent in today's tree, which
 // has only top-level layers, and latent is exactly how a walk-shape hole
 // survives to bite somebody later.
-export function extensionLayers(root: string): string[] {
+export function extensionLayers(
+  root: string,
+  seen = new Set<string>(),
+): string[] {
   if (!existsSync(root)) return [];
+  // Keyed on the REAL path, so a link and its target are one place. Without it
+  // a cycle — `extensions/a/loop -> ..` is enough — recurses until the stack
+  // gives out, and the gate dies instead of reporting.
+  const here = realpathSync(root);
+  if (seen.has(here)) return [];
+  seen.add(here);
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    if (!entry.isDirectory() || entry.name === "node_modules") return [];
+    if (entry.name === "node_modules") return [];
     const full = join(root, entry.name);
-    return entry.name === "frontend" ? [full] : extensionLayers(full);
+    // A symlink is FOLLOWED, layer or not. `Dirent.isDirectory()` is false for
+    // one, so both a linked layer and a unit hidden behind a linked parent were
+    // absent from the walk rather than refused — and the census floor stays
+    // green off the other units, so nothing notices. Git commits symlinks, so
+    // such a unit ships in a PR that looks like two ordinary files.
+    const isDir = entry.isSymbolicLink()
+      ? existsSync(full) && statSync(full).isDirectory()
+      : entry.isDirectory();
+    if (!isDir) return [];
+    return entry.name === "frontend" ? [full] : extensionLayers(full, seen);
   });
+}
+
+// scriptKindFor picks the dialect to parse a file as. ONE answer, because there
+// were two: the native-control gate read a `.js` as TypeScript and the
+// extension-import gate read it as JavaScript, neither stating why, in the pair
+// this module exists to stop from drifting.
+//
+// `.ts` must NOT be asked for TSX — `<T>()` there is a type argument, and
+// asking would misparse every ordinary generic. That is the whole reason the
+// distinction exists; everything else follows from it.
+export function scriptKindFor(path: string): ts.ScriptKind {
+  if (/\.(tsx|jsx)$/.test(path)) return ts.ScriptKind.TSX;
+  if (/\.(js|mjs|cjs)$/.test(path)) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
 }
 
 // A unit's screen is shipped UI in the same bundle, so a gate stopping at

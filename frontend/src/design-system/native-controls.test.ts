@@ -66,6 +66,7 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
+  scriptKindFor,
 } from "../../scripts/lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "../..");
@@ -93,13 +94,6 @@ const nativeControls = new Set(["select", "option", "optgroup"]);
 // Excluded by NAME rather than by "a test file", because a test that renders a
 // native control is a test of the wrong control and is still a finding.
 const probeFile = join(srcDir, "design-system", "native-controls.test.ts");
-
-// scriptKindFor picks the dialect for the primary parse. TSX for .tsx/.jsx,
-// TS otherwise — `.ts` cannot be JSX, because `<T>()` there is a type argument
-// and asking for TSX would misparse ordinary generics.
-function scriptKindFor(path: string): ts.ScriptKind {
-  return /\.(tsx|jsx)$/.test(path) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-}
 
 // findNativeControls returns one report line per native dropdown element in the
 // source, with the author's own line number.

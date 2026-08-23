@@ -10,11 +10,18 @@
 // nested layer, a linked node_modules) is one the real tree cannot exercise.
 // Dropping `.jsx` from the pattern was a mutant that survived a census.
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { extensionLayers, filesUnder } from "./source-tree";
+import { extensionLayers, filesUnder, scriptKindFor } from "./source-tree";
 
 describe("the walk the source-wide gates share", () => {
   let dir = "";
@@ -93,6 +100,82 @@ describe("the walk the source-wide gates share", () => {
     mkdirSync(join(dir, "unit", "frontend-lib"), { recursive: true });
     writeFileSync(join(dir, "unit", "frontend-lib", "s.ts"), "");
     expect(extensionLayers(dir)).toEqual([]);
+  });
+
+  it("finds a layer that is itself a symlink", () => {
+    // `Dirent.isDirectory()` is false for a symlink, so a unit whose frontend/
+    // is a link was absent from the walk rather than refused — and the census
+    // floor stays green off the other units, so nothing notices. Git commits
+    // symlinks, so that unit ships in a PR that looks like two ordinary files.
+    const real = join(dir, "elsewhere");
+    mkdirSync(real, { recursive: true });
+    writeFileSync(join(real, "s.tsx"), "");
+    mkdirSync(join(dir, "unit"), { recursive: true });
+    symlinkSync(real, join(dir, "unit", "frontend"), "dir");
+    expect(rel(extensionLayers(dir))).toEqual(["unit/frontend"]);
+    // And the walk reads THROUGH it, or finding the layer buys nothing.
+    expect(filesUnder(join(dir, "unit", "frontend")).length).toBe(1);
+  });
+
+  it("finds a layer hidden behind a symlinked parent", () => {
+    // Refusing to traverse an intermediate link would only move the hiding
+    // place one directory up, so links are followed wherever they sit.
+    //
+    // The target sits OUTSIDE the walked root, so the link is the only route to
+    // it. With it inside, the walk reaches the layer by its real path anyway
+    // and the case passes without following anything.
+    const outside = mkdtempSync(join(tmpdir(), "source-tree-away-"));
+    try {
+      mkdirSync(join(outside, "frontend"), { recursive: true });
+      symlinkSync(outside, join(dir, "hop"), "dir");
+      expect(rel(extensionLayers(dir))).toEqual(["hop/frontend"]);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("reports one layer when two paths reach it", () => {
+    // Keyed on the REAL path, so a link and its target are one place rather
+    // than two readings of one layer — which would judge every file in it
+    // twice and report every finding twice.
+    mkdirSync(join(dir, "unit", "frontend"), { recursive: true });
+    symlinkSync(join(dir, "unit"), join(dir, "alias"), "dir");
+    expect(extensionLayers(dir).length).toBe(1);
+  });
+
+  it("survives a symlink cycle instead of dying on it", () => {
+    // Following links is what makes a cycle reachable, so the guard is part of
+    // the same change. `loop -> ..` is the whole of it, and without the
+    // realpath-keyed visited set the walk recurses until the stack gives out —
+    // the gate dies rather than reporting, which reads as a broken gate.
+    mkdirSync(join(dir, "unit", "frontend"), { recursive: true });
+    symlinkSync(dir, join(dir, "unit", "loop"), "dir");
+    expect(rel(extensionLayers(dir))).toEqual(["unit/frontend"]);
+  });
+
+  it("picks a dialect a file can actually be parsed as", () => {
+    // ONE answer, because there were two: the native-control gate read a `.js`
+    // as TypeScript and this one read it as JavaScript, neither stating why.
+    // `.ts` must never be asked for TSX — `<T>()` there is a type argument, and
+    // asking would misparse every ordinary generic.
+    expect(scriptKindFor("a.tsx")).toBe(ts.ScriptKind.TSX);
+    expect(scriptKindFor("a.jsx")).toBe(ts.ScriptKind.TSX);
+    expect(scriptKindFor("a.js")).toBe(ts.ScriptKind.JS);
+    expect(scriptKindFor("a.mjs")).toBe(ts.ScriptKind.JS);
+    expect(scriptKindFor("a.cjs")).toBe(ts.ScriptKind.JS);
+    expect(scriptKindFor("a.ts")).toBe(ts.ScriptKind.TS);
+    expect(scriptKindFor("a.mts")).toBe(ts.ScriptKind.TS);
+    expect(scriptKindFor("a.cts")).toBe(ts.ScriptKind.TS);
+    // The property the .ts arm exists for, rather than the enum value: a
+    // generic call in a .ts file parses, and would be a syntax error as TSX.
+    const generic = ts.createSourceFile(
+      "a.ts",
+      "const x = f<T>();",
+      ts.ScriptTarget.ES2022,
+      true,
+      scriptKindFor("a.ts"),
+    );
+    expect(generic.statements.length).toBe(1);
   });
 
   it("does not descend into a node_modules looking for layers", () => {

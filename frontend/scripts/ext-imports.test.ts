@@ -72,16 +72,17 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { extensionLayers, filesUnder } from "./lib/source-tree";
+import { extensionLayers, filesUnder, scriptKindFor } from "./lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "..");
 const repoRoot = resolve(frontendRoot, "..");
@@ -97,6 +98,15 @@ function readJson(path: string): Record<string, unknown> {
   return existsSync(path)
     ? (JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>)
     : {};
+}
+
+// entriesOf reads a manifest section as name -> declared VALUE. The value is
+// kept because rule 3 asks what the declaration resolves to, not only whether
+// the name appears.
+function entriesOf(value: unknown): [string, string][] {
+  return typeof value === "object" && value !== null
+    ? Object.entries(value).map(([k, v]) => [k, typeof v === "string" ? v : ""])
+    : [];
 }
 
 function keysOf(value: unknown): string[] {
@@ -118,22 +128,29 @@ function publishedSubpaths(pkgPath: string): string[] {
 // commented-out escape be reported as one rather than as live code.
 type Specifier = { text: string; line: number; inComment: boolean };
 
-function scriptKindFor(path: string): ts.ScriptKind {
-  if (/\.(tsx|jsx)$/.test(path)) return ts.ScriptKind.TSX;
-  if (/\.(js|mjs|cjs)$/.test(path)) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
-// Every comment in the file, taken from the PARSER's trivia. Each comment is
-// the leading trivia of exactly one token — the end-of-file token carries the
-// tail — so walking down to tokens reaches all of them, and `//` inside a
-// string is not one of them for free.
+// Every comment in the file, taken from the PARSER's trivia — so a `//` inside
+// a string is not one of them, for free.
+//
+// A comment is trivia attached to a token, and there are two attachments, not
+// one. This walked LEADING only, and the comment saying so claimed that reached
+// them all; it did not, and the gap it hid was the commonest shape of the rule
+// it was implementing. Both are read now, keyed by position so a comment
+// attached from both sides is one comment.
 function commentRanges(source: ts.SourceFile, text: string): ts.CommentRange[] {
   const out: ts.CommentRange[] = [];
   const seen = new Set<number>();
   const collect = (node: ts.Node): void => {
-    for (const range of ts.getLeadingCommentRanges(text, node.getFullStart()) ??
-      []) {
+    // LEADING and TRAILING both, and the second is not a refinement.
+    // `getLeadingCommentRanges` does not return a comment that sits on the same
+    // line as the code before it, so `const a = 1; // import … from "../core"`
+    // was invisible — which is the single most natural way to comment an import
+    // out mid-edit, and the shell gate this replaces caught it because it read
+    // text. Leading alone made the stated rule hold for a comment on its own
+    // line and quietly not for one sharing a line.
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(text, node.getFullStart()) ?? []),
+      ...(ts.getTrailingCommentRanges(text, node.getEnd()) ?? []),
+    ]) {
       if (seen.has(range.pos)) continue;
       seen.add(range.pos);
       out.push(range);
@@ -153,11 +170,11 @@ function commentRanges(source: ts.SourceFile, text: string): ts.CommentRange[] {
 // place makes the whole body one unterminated comment and yields ZERO nodes —
 // a silent miss, and a mutant removing it fails the suite. The CLOSING `*/`,
 // and the `*` a block comment puts at the head of each line, are deliberately
-// left alone: both looked equally necessary, both were here, and mutants
-// removing them changed no verdict. TypeScript's error recovery steps over a
-// stray `*` and finds the statement behind it — measured across eleven comment
-// shapes (plain, star and named re-export, import-equals, require, dynamic,
-// bare, two on two lines, single-line, no trailing space, expression tail).
+// left alone: both looked equally necessary, both were written, and neither
+// changes an answer — TypeScript's error recovery steps over a stray `*` and
+// finds the statement behind it. The case below HOLDS that, rather than this
+// paragraph asserting it: a claim about a measurement nobody can re-run is the
+// kind this repo asks you to delete or gate.
 //
 // A line no test can fail without is a line the next reader has to reason about
 // for nothing, so the rule is the one this suite applies to everything else:
@@ -200,9 +217,11 @@ function specifiersIn(path: string, text: string): Specifier[] {
   return [...astSpecifiers(path, text, scriptKindFor(path)), ...inComments];
 }
 
-// astSpecifiers is the ONE reading of "what does this source import". It is
-// called twice — once on the file, once on each comment's body — because two
-// readings of that question are two answers that drift.
+// astSpecifiers is this gate's ONE reading of "what does this source import" —
+// called twice, on the file and on each comment's body, because two readings of
+// that question inside one gate are two answers that drift. Not the only such
+// reading in the tree: scripts/test-budget.ts extracts specifiers too, for a
+// different question, and merging them would be a worse answer to both.
 function astSpecifiers(
   path: string,
   text: string,
@@ -251,12 +270,19 @@ function astSpecifiers(
       push(node, node.moduleReference.expression.text);
     }
     // `import("x")` and `require("x")`.
+    //
+    // isStringLiteralLike, not isStringLiteral: a NoSubstitutionTemplateLiteral
+    // is not a StringLiteral, and `import(`../../../frontend/src/app/session`)`
+    // is a static edge a bundler resolves exactly like the quoted form. The
+    // shell gate this replaces caught it — its quote class carried the backtick
+    // — so requiring a StringLiteral here was a MISS the port introduced, in
+    // the one direction this gate must never be wrong in.
     if (ts.isCallExpression(node)) {
       const dynamic = node.expression.kind === ts.SyntaxKind.ImportKeyword;
       const required =
         ts.isIdentifier(node.expression) && node.expression.text === "require";
       const [first] = node.arguments;
-      if ((dynamic || required) && first && ts.isStringLiteral(first)) {
+      if ((dynamic || required) && first && ts.isStringLiteralLike(first)) {
         push(node, first.text);
       }
     }
@@ -264,6 +290,32 @@ function astSpecifiers(
   };
   ts.forEachChild(source, visit);
   return out;
+}
+
+// throughLinks resolves a path the way a BUNDLER will, following any symlink on
+// the way. Textual resolution alone is a way past rule 1: a unit that commits
+//
+//   extensions/evil/frontend/core -> ../../../frontend/src
+//
+// then writes `import "./core/app/session"`, and the specifier never textually
+// leaves the layer. Vite follows the link (preserveSymlinks defaults false) and
+// serves the core module. The shell gate this replaces missed it too, so it is
+// not a regression — but it is a hole in the one thing holding this boundary.
+//
+// The target of an import usually does not exist as written — no extension, or
+// a directory index — so the existing PREFIX is what gets resolved, and the
+// unresolvable tail is put back. A path with no existing prefix at all comes
+// back unchanged, which is the textual answer and the right fallback.
+function throughLinks(target: string): string {
+  const tail: string[] = [];
+  let head = target;
+  while (!existsSync(head)) {
+    const parent = dirname(head);
+    if (parent === head) return target;
+    tail.unshift(basename(head));
+    head = parent;
+  }
+  return join(realpathSync(head), ...tail);
 }
 
 // judge applies the three rules to one file's specifiers. `file` is absolute
@@ -278,7 +330,7 @@ function judge(args: {
   layer: string;
   specifiers: Specifier[];
   published: string[];
-  declared: string[];
+  declared: Map<string, string>;
 }): string[] {
   const { file, shown, layer, specifiers, published, declared } = args;
   const where = (s: Specifier) =>
@@ -286,13 +338,14 @@ function judge(args: {
 
   return specifiers.flatMap((s) => {
     if (s.text.startsWith(".")) {
-      const resolved = resolve(dirname(file), s.text);
+      const resolved = throughLinks(resolve(dirname(file), s.text));
       // The layer itself, or something BENEATH it — the separator is
       // load-bearing. An unslashed prefix test accepts a sibling whose name
       // merely starts with the layer's: extensions/foo/frontend-lib is not
       // inside extensions/foo/frontend, and nothing scans it, because a layer
       // is a directory named exactly `frontend`.
-      const inside = resolved === layer || resolved.startsWith(`${layer}/`);
+      const real = throughLinks(layer);
+      const inside = resolved === real || resolved.startsWith(`${real}/`);
       return inside
         ? []
         : [
@@ -310,11 +363,21 @@ function judge(args: {
     const root = s.text.startsWith("@")
       ? s.text.split("/").slice(0, 2).join("/")
       : s.text.split("/")[0];
-    return declared.includes(root)
-      ? []
-      : [
-          `${where(s)}: '${s.text}' is not declared by the unit's frontend/package.json — a unit imports what it declares, or it works only by accident of hoisting (shipped code may not reach a devDependency)`,
-        ];
+    const declaredAs = declared.get(root);
+    if (declaredAs !== undefined) {
+      // A name in `dependencies` is not the end of the question — the VALUE
+      // decides what it resolves to. `"evil": "file:../../../frontend/src"` is
+      // a declaration the gate used to accept, and pnpm resolves it straight
+      // into core, so rule 3 was a check that a string appeared in a list.
+      return /^(file|link):/.test(declaredAs)
+        ? [
+            `${where(s)}: '${s.text}' is declared as '${declaredAs}', a path into the tree rather than a package — a unit reaches the core through @margince/frontend/<subpath>, never by resolving to it`,
+          ]
+        : [];
+    }
+    return [
+      `${where(s)}: '${s.text}' is not declared by the unit's frontend/package.json — a unit imports what it declares, or it works only by accident of hoisting (shipped code may not reach a devDependency)`,
+    ];
   });
 }
 
@@ -340,11 +403,14 @@ function auditLayers(roots: { extensions: string; surface: string }): {
     // SHIPPED code may reach dependencies and peers. A screen importing a dev
     // dependency would pull a test runner into the bundle, so devDependencies
     // are deliberately absent from this set — and present in the other.
-    const shipped = [
-      ...keysOf(pkg.dependencies),
-      ...keysOf(pkg.peerDependencies),
-    ];
-    const forTests = [...shipped, ...keysOf(pkg.devDependencies)];
+    const shipped = new Map<string, string>([
+      ...entriesOf(pkg.dependencies),
+      ...entriesOf(pkg.peerDependencies),
+    ]);
+    const forTests = new Map<string, string>([
+      ...shipped,
+      ...entriesOf(pkg.devDependencies),
+    ]);
     return filesUnder(layer).flatMap((file) => {
       files += 1;
       return judge({
@@ -367,7 +433,7 @@ describe("a unit reaches the core only through the published surface", () => {
       "frontend/package.json publishes no exports — the gate has no surface to hold a unit to",
     ).toBeGreaterThan(0);
 
-    const { violations, layers } = auditLayers({
+    const { violations, layers, files } = auditLayers({
       extensions: extensionsDir,
       surface: surfacePkg,
     });
@@ -377,22 +443,14 @@ describe("a unit reaches the core only through the published surface", () => {
       layers.length,
       "no extension frontend layer was found — this gate is dark",
     ).toBeGreaterThan(0);
+    // And a FILE floor, not only a layer one. A layer the walk finds but reads
+    // nothing inside judges nothing, and reports the same word for it: PASS.
+    // The counter existed and was returned to nobody.
+    expect(
+      files,
+      "extension layers were found but no file inside them was read",
+    ).toBeGreaterThan(layers.length);
     expect(violations).toEqual([]);
-  });
-
-  it("reaches every unit that has a frontend layer, at any depth", () => {
-    // The walk's own test. The shell gate globbed extensions/*/frontend, so a
-    // nested layer was unreachable — and nothing could notice, because the
-    // real tree has none.
-    const layers = extensionLayers(extensionsDir);
-    for (const entry of readdirSync(extensionsDir, { withFileTypes: true })) {
-      const layer = join(extensionsDir, entry.name, "frontend");
-      if (!entry.isDirectory() || !existsSync(layer)) continue;
-      expect(
-        layers,
-        `extensions/${entry.name}/frontend has a layer the walk did not reach`,
-      ).toContain(layer);
-    }
   });
 });
 
@@ -533,6 +591,108 @@ describe("the extension-import detector sees what it claims to", () => {
           '// we read the date from "dayjs" here once, and stopped\nexport default function S() { return null }',
       },
     },
+    // A SYMLINK inside the layer: the specifier never textually leaves, and a
+    // bundler follows the link straight into core.
+    {
+      name: "a relative import through a symlink pointing at core",
+      want: "leaves the unit's own frontend/",
+      files: { "screen.tsx": 'import { session } from "./core/app/session";' },
+      extra: (root) => {
+        const layer = join(root, "extensions", "probe", "frontend");
+        const core = join(root, "core-src");
+        mkdirSync(join(core, "app"), { recursive: true });
+        writeFileSync(join(core, "app", "session.ts"), "export const s = 1;");
+        symlinkSync(core, join(layer, "core"), "dir");
+      },
+    },
+    // A file in a SUBDIRECTORY of the layer: rule 1 resolves against the
+    // importing FILE, not against the layer, and nothing here could tell the
+    // two apart while every fixture sat at the layer root.
+    {
+      name: "a nested file whose escape is shallower than the layer root's",
+      want: "leaves the unit's own frontend/",
+      files: {
+        "screen.tsx": "export default function S() { return null }",
+        "panels/inner.tsx":
+          'import { session } from "../../../../frontend/src/app/session";',
+      },
+    },
+    {
+      name: "a nested file reaching back up inside the layer",
+      want: null,
+      files: {
+        "screen.tsx": "export default function S() { return null }",
+        "helper.ts": "export const helper = 1;",
+        "panels/inner.tsx": 'import { helper } from "../helper";',
+      },
+    },
+    // The layer directory ITSELF is inside the layer — the `resolved === layer`
+    // half of the containment test, which nothing reached.
+    {
+      name: "an import of the layer directory itself",
+      want: null,
+      files: { "screen.tsx": 'import { x } from "../frontend";' },
+    },
+    // Rule 3 asked whether a NAME appears in the manifest. pnpm resolves the
+    // VALUE, and a path protocol resolves wherever it points.
+    {
+      name: "a dependency declared as a path into the tree",
+      want: "a path into the tree rather than a package",
+      files: { "screen.tsx": 'import { session } from "evil/app/session";' },
+      manifest: JSON.stringify({
+        name: "@margince-ext/probe",
+        dependencies: { evil: "file:../../../frontend/src" },
+      }),
+    },
+    {
+      name: "a dependency declared as a link protocol",
+      want: "a path into the tree rather than a package",
+      files: { "screen.tsx": 'import { x } from "sneaky";' },
+      manifest: JSON.stringify({
+        name: "@margince-ext/probe",
+        dependencies: { sneaky: "link:../../../frontend/src" },
+      }),
+    },
+    {
+      name: "a dependency declared as an ordinary version range",
+      want: null,
+      files: { "screen.tsx": 'import { useState } from "react";' },
+    },
+    // A TEMPLATE literal is a specifier. The port required a StringLiteral and
+    // a NoSubstitutionTemplateLiteral is not one, so these two shipped past a
+    // gate the shell script had caught — its quote class carried the backtick.
+    {
+      name: "a dynamic import whose specifier is a template literal",
+      want: "leaves the unit's own frontend/",
+      files: { "screen.tsx": `const s = await import(\`${ESCAPE}\`);` },
+    },
+    {
+      name: "a require whose specifier is a template literal",
+      want: "leaves the unit's own frontend/",
+      files: { "screen.cjs": `const s = require(\`${ESCAPE}\`);` },
+    },
+    // A comment sharing a line with code is a comment. Leading trivia does not
+    // carry one, so the rule held for a comment on its own line and quietly did
+    // not for the commonest way to comment an import out mid-edit.
+    {
+      name: "an escape commented out at the end of a line of code",
+      want: "commented out",
+      files: {
+        "screen.tsx": `const a = 1; // import { session } from "${ESCAPE}";`,
+      },
+    },
+    // The parser-trivia design, held rather than asserted: a `//` inside a
+    // STRING is not a comment. The previous case for this could not fail —
+    // its string's tail held no import keyword, so a regex-based comment
+    // finder passed it too.
+    {
+      name: "a string whose // tail is itself an import statement",
+      want: null,
+      files: {
+        "screen.tsx":
+          "const doc = 'see // import dayjs from \"dayjs\"';\nexport default function S() { return null }",
+      },
+    },
     // And the line this rule DOES draw, stated rather than discovered: prose
     // that embeds a whole import STATEMENT is reported. `drop import "dayjs"
     // when the shim goes` does not parse, but TypeScript's error recovery finds
@@ -657,6 +817,48 @@ describe("the extension-import detector sees what it claims to", () => {
       expect(hits.join("\n")).toContain(tc.want);
     });
   }
+
+  it("needs no trailing delimiter or line-head star blanked", () => {
+    // The absence two lines were deleted for. Each shape is read twice — as the
+    // gate reads it, and with `*/` and the line-head `*` also blanked — and the
+    // two must agree, or one of those lines was load-bearing after all.
+    //
+    // An absence is the hardest thing to keep true: nothing fails when somebody
+    // re-adds a strip "for safety", and the comment explaining why it is not
+    // there stops matching the code silently.
+    const alsoBlanked = (raw: string) =>
+      raw
+        .replace(/^\/\//, "  ")
+        .replace(/^\/\*/, "  ")
+        .replace(/\*\/$/, "  ")
+        .replace(/^(\s*)\*/gm, "$1 ");
+    const shapes = [
+      '/**\n * import { s } from "../x";\n */',
+      '/**\n * export * from "../x";\n */',
+      '/**\n * export { s } from "../x";\n */',
+      '/**\n * import s = require("../x");\n */',
+      '/**\n * const s = require("../x");\n */',
+      '/**\n * const s = await import("../x");\n */',
+      '/**\n * import "../x";\n */',
+      '/**\n * import a from "../x";\n * import b from "../y";\n */',
+      '/**\n *import { s } from "../x";\n */',
+      '/* import { s } from "../x"; */',
+      '/* const s = require("../x")*/',
+    ];
+    for (const raw of shapes) {
+      const kind = ts.ScriptKind.TS;
+      const asRead = astSpecifiers("c.ts", unmarked(raw), kind).map(
+        (x) => x.text,
+      );
+      const asIfBlanked = astSpecifiers("c.ts", alsoBlanked(raw), kind).map(
+        (x) => x.text,
+      );
+      expect(asRead, `blanking more changed the answer for: ${raw}`).toEqual(
+        asIfBlanked,
+      );
+      expect(asRead.length, `nothing found in: ${raw}`).toBeGreaterThan(0);
+    }
+  });
 
   it("names the line inside a multi-line comment, not the comment's first", () => {
     // A comment's body is parsed on its own, so its line numbers start at 1 and
