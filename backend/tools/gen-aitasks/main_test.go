@@ -481,3 +481,118 @@ tasks:
 		})
 	}
 }
+
+// agentContract declares one agent_loop task carrying an `agents:` mapping —
+// the shape ADR-0074 grows to say WHICH TOOLS each scheduled agent attaches.
+// `bar` is the control: a task with no agent_loop site may not declare agents.
+const agentContract = `
+tiers: [alpha, beta]
+
+tasks:
+  foo:
+    ladder: [alpha, beta]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites:
+      - {name: loop, kind: agent_loop}
+    agents:
+      morning_brief:
+        tools: [list_records, read_record]
+      overnight_sweep:
+        tools: [list_records, log_activity]
+  bar: {ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
+
+degrade_to:
+  beta: alpha
+  alpha: alpha
+`
+
+// The declaration is only worth having if it reaches the binary, and in an
+// order that does not move between runs: a map has no stable iteration, so the
+// emitted table is walked in sorted name order the way SitesFor's already is.
+func TestEmitGoProducesTheDeclaredAgentToolAttachment(t *testing.T) {
+	c, err := parseContract([]byte(agentContract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	for _, want := range []string{
+		`{Name: "morning_brief", Tools: []string{"list_records", "read_record"}}`,
+		`{Name: "overnight_sweep", Tools: []string{"list_records", "log_activity"}}`,
+		"func AgentsFor(t Task) []Agent",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated source missing %s:\n%s", want, out)
+		}
+	}
+	brief := strings.Index(out, `Name: "morning_brief"`)
+	sweep := strings.Index(out, `Name: "overnight_sweep"`)
+	if brief < 0 || sweep < 0 || brief > sweep {
+		t.Errorf("agents are not emitted in sorted name order, so the generated file moves between runs")
+	}
+}
+
+// Each refusal below is a way the declaration could be wrong that a runtime
+// would discover late or not at all. ADR-0074's rule for every field in this
+// contract is that absent-by-accident is a BUILD error.
+func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		contract string
+		wantErr  string
+	}{
+		{
+			// The allowlist is the whole point of the declaration: an agent
+			// carrying none is read downstream as "no narrowing", which is the
+			// opposite of what declaring it was for.
+			name:     "an agent declaring no tools",
+			contract: strings.Replace(agentContract, "tools: [list_records, read_record]", "tools: []", 1),
+			wantErr:  "declares no tools",
+		},
+		{
+			name:     "an agent whose tools key is absent",
+			contract: strings.Replace(agentContract, "        tools: [list_records, read_record]\n", "", 1),
+			wantErr:  "declares no tools",
+		},
+		{
+			// Only an agent_loop site runs a tool-fed window, so an allowlist
+			// on any other task describes a surface that is never assembled.
+			name: "agents on a task with no agent_loop site",
+			contract: strings.Replace(agentContract,
+				"      - {name: loop, kind: agent_loop}", "      - {name: loop, kind: one_shot}", 1),
+			wantErr: "no agent_loop site",
+		},
+		{
+			name:     "an agent named outside the identifier rule",
+			contract: strings.Replace(agentContract, "morning_brief:", "Morning-Brief:", 1),
+			wantErr:  "must match",
+		},
+		{
+			name:     "the same tool attached twice",
+			contract: strings.Replace(agentContract, "tools: [list_records, read_record]", "tools: [read_record, read_record]", 1),
+			wantErr:  "twice",
+		},
+		{
+			// strictdecode.go exists because a custom UnmarshalYAML is a hole in
+			// KnownFields. A typo here must fail rather than leave the agent
+			// with no allowlist at all.
+			name:     "a typo for the tools key",
+			contract: strings.Replace(agentContract, "        tools: [list_records, read_record]", "        tool: [list_records, read_record]", 1),
+			wantErr:  "field tool not found",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := parseContract([]byte(tc.contract))
+			if err == nil {
+				t.Fatalf("the contract was accepted, so %s reaches the binary", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Errorf("the refusal does not say what is wrong: want it to mention %q, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
