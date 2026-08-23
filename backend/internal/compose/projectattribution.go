@@ -91,24 +91,26 @@ func (projectCandidateFinder) LiveProjectsReached(ctx context.Context, tx pgx.Tx
 	if scope != "" {
 		scope = " AND " + scope
 	}
-	// The candidate set is reached THROUGH the company edge, and a proposal
-	// naming a project discloses that this sender's company works it — the pair
-	// the edge's own admission governs. A connector acting under a human whose
-	// grants exclude relationship reads must not learn it here.
-	edge, err := auth.EdgeReadScope(ctx, "pc", arg)
-	if err != nil {
-		return nil, err
-	}
-	if edge == "" {
-		edge = jsonTrue
-	}
+	// The company edge carries NO gate of its own here, and that is the rule
+	// rather than an omission.
+	//
+	// This walk answers "which projects could this message be about" for the
+	// CAPTURE principal — a connector acting for the mailbox's owner, holding
+	// activity, person, organization, project and deal, and no relationship
+	// grant, because reading edges is not what capture does. Gating the join on
+	// relationship.read refused every candidate for every connector, which read
+	// as the ladder having nothing to propose rather than as a refusal.
+	//
+	// Nothing about the edge reaches anyone. The row it yields is a project id,
+	// staged as an approval, and approvals/payloadreference.go re-checks
+	// project.read against the DECIDING human before the offer is shown or is
+	// decidable. The edge is the path, not the answer.
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id, p.name, coalesce(p.key, '')
 		  FROM (`+activities.OrgReachSet()+`) ro
 		  JOIN relationship pc ON pc.kind = 'project_company'
 		                      AND pc.organization_id = ro.organization_id
 		                      AND pc.archived_at IS NULL
-		                      AND (`+edge+`)
 		  JOIN project p ON p.id = pc.project_id
 		 WHERE ro.activity_id = $1
 		   AND p.archived_at IS NULL AND p.phase <> 'closed'`+scope+`

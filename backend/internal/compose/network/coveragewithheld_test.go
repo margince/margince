@@ -75,7 +75,7 @@ func TestCoverageNamesTheWithheldSectionsWithoutReachingAStatement(t *testing.T)
 // call things in, and that is one refactor from a disclosure.
 func TestTheDepartureReadRefusesBeforeItReachesAStatement(t *testing.T) {
 	_, err := readDeparted(coverageReaderWithoutTheEdgeGrant(), nil,
-		ids.NewV7(), []ids.UUID{ids.NewV7()}, time.Now().UTC())
+		ids.NewV7(), []ids.UUID{ids.NewV7()})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("readDeparted(no edge grant) = %v, want ErrPermissionDenied", err)
 	}
