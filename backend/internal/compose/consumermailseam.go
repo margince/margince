@@ -22,7 +22,6 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/capture"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -34,8 +33,14 @@ type consumerMailSeam struct {
 	db *database.DB
 }
 
-func newConsumerMailSeam(pool *pgxpool.Pool) consumerMailSeam {
-	return consumerMailSeam{db: InstallationDB(pool)}
+// newConsumerMailSeam takes the handle the registry is ALREADY bound to, not a
+// pool to re-derive one from. `NewRegistryFor` exists precisely because a
+// harness can name a workspace that is not the installation's singleton, and a
+// seam that called InstallationDB itself would read that workspace's operator
+// list at every other door and the installation's here — one credential, two
+// answers about the same domain.
+func newConsumerMailSeam(db *database.DB) consumerMailSeam {
+	return consumerMailSeam{db: db}
 }
 
 // IsConsumer reads the overlay INSIDE the transaction that answers, rather than

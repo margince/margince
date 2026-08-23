@@ -243,8 +243,12 @@ func TestQualifyLeadNamesTheCompanyNotTheSubdomain(t *testing.T) {
 
 			out := qualify(t, p, leadID)
 
-			if got := out.Filled["company_name"].Value; got != tc.want {
-				t.Fatalf("%s -> %q, want %q", tc.email, got, tc.want)
+			field, filled := out.Filled["company_name"]
+			if !filled {
+				t.Fatalf("%s: company_name not filled at all, want %q", tc.email, tc.want)
+			}
+			if field.Value != tc.want {
+				t.Fatalf("%s -> %q, want %q", tc.email, field.Value, tc.want)
 			}
 		})
 	}
@@ -299,4 +303,27 @@ type brokenConsumerMail struct{}
 
 func (brokenConsumerMail) IsConsumer(context.Context, string) (bool, error) {
 	return false, errors.New("the consumer-mail overlay is unreadable")
+}
+
+// A registry built without the seam cannot answer the consumer-mail question,
+// and answering it anyway would derive a company from an address an operator
+// may have marked consumer. `RegisterCoreTools` takes the seam as a plain
+// interface and thirteen call sites in this tree pass nil for the seams they do
+// not exercise, so an unwired one is reachable — it refuses on the same terms
+// an unreadable list refuses on rather than nil-panicking at the first lead
+// with an email.
+func TestQualifyLeadRefusesWhenNoConsumerMailListIsWired(t *testing.T) {
+	leadID := ids.NewV7()
+	p := leadFixture(t, leadID,
+		`{"email":"jane@acme.com","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
+
+	_, err := qualifyLead{p: p}.Handle(context.Background(),
+		json.RawMessage(`{"record_id":"`+leadID.String()+`"}`))
+
+	if err == nil {
+		t.Fatal("qualify answered with no consumer-mail list wired at all")
+	}
+	if len(p.updates) != 0 {
+		t.Fatalf("provider saw %d updates, want none", len(p.updates))
+	}
 }

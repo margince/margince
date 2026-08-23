@@ -13,6 +13,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -151,6 +152,14 @@ func (t qualifyLead) companyFromEmail(ctx context.Context, email string) (string
 	domain, ok := freemail.Hostname(email[at+1:])
 	if !ok {
 		return "", false, nil
+	}
+	if t.consumerMail == nil {
+		// Unwired is not "not a provider". A registry built without the seam
+		// cannot answer the question, and answering it anyway would derive a
+		// company from an address an operator may have marked consumer — so
+		// this refuses on exactly the terms an unreadable list refuses on,
+		// rather than nil-panicking at the first lead with an email.
+		return "", false, errors.New("crmagents: qualify_lead has no consumer-mail list wired")
 	}
 	consumer, err := t.consumerMail.IsConsumer(ctx, domain)
 	if err != nil {

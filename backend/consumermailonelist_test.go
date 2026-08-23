@@ -19,9 +19,11 @@ package backendarch
 // marked a host consumer in their own workspace was honoured at one door and
 // ignored at the other, because a compiled-in map cannot read a table.
 //
-// The subject is DERIVED: every composite literal in the tree that names two or
-// more consumer mailbox providers. Two is the threshold because one provider in
-// a literal is a test fixture or a single named case, while two is a list.
+// The subject is DERIVED twice over: every composite literal in the tree that
+// names two or more consumer mailbox providers, with "is a provider" answered
+// by `platform/freemail`'s own shipped dataset rather than by a list kept here.
+// Two is the threshold because one provider in a literal is a test fixture or a
+// single named case, while two is a list.
 //
 // WHAT THIS DOES NOT CATCH, deliberately: a list built from a file, a constant,
 // or a database read. A gate that tried to follow those would need to run them,
@@ -35,25 +37,50 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/gradionhq/margince/backend/internal/platform/freemail"
 )
 
-// A sample of the platform baseline wide enough to catch a real list. It does
-// not need to be exhaustive, and deliberately is not: a hand-written
-// consumer-mail list that avoids ALL of these is not a consumer-mail list.
-// Every entry here is in `platform/freemail`'s shipped dataset.
-var knownConsumerProviders = map[string]bool{
-	"gmail.com": true, "googlemail.com": true, "yahoo.com": true,
-	"yahoo.co.uk": true, "outlook.com": true, "hotmail.com": true,
-	"live.com": true, "icloud.com": true, "me.com": true, "aol.com": true,
-	"gmx.de": true, "gmx.net": true, "web.de": true, "t-online.de": true,
-	"proton.me": true, "protonmail.com": true, "zoho.com": true,
-	"yandex.ru": true, "mail.com": true, "fastmail.com": true,
-	"tutanota.com": true, "mail.ru": true, "qq.com": true,
-	"naver.com": true, "seznam.cz": true,
+// The subject set comes from the OWNER, not from a sample.
+//
+// The first draft of this file carried a hand-written 25-domain catalog and a
+// comment claiming every entry was in the shipped dataset. Two reviewers named
+// the same thing at once, and they were right twice over: it was a SECOND
+// hand-maintained consumer-mail list inside the gate that exists to forbid
+// second consumer-mail lists, and it was incomplete — `[]string{"laposte.net",
+// "hotmail.fr"}` is a two-provider list the sample could not see, so the file
+// holding it was dropped before the census ever parsed it.
+//
+// Asking `platform/freemail` itself is exhaustive by construction (8,758
+// entries plus this repo's pins), and it cannot drift: the dataset is
+// deliberately re-syncable, and a re-sync now widens this gate rather than
+// silently orphaning entries in a copy nobody re-checks.
+var baselineDomains = sync.OnceValue(func() map[string]struct{} {
+	set := make(map[string]struct{})
+	for _, domain := range freemail.Domains() {
+		set[domain] = struct{}{}
+	}
+	return set
+})
+
+// looksLikeADomain screens a string literal before the baseline is consulted.
+//
+// Membership alone is not the question: an ADDRESS at a provider names a
+// person, not a list, and `jane@gmail.com` in a fixture is not somebody
+// re-declaring the list. So the literal has to be a bare domain — a dot, no
+// user part, no path, no space — before it counts.
+func looksLikeADomain(value string) bool {
+	if !strings.Contains(value, ".") || strings.ContainsAny(value, "@/\\ \t") {
+		return false
+	}
+	_, known := baselineDomains()[strings.ToLower(value)]
+	return known
 }
 
 // The package that OWNS the answer, including its own tests: the baseline's
@@ -89,9 +116,29 @@ var freemailDomains = map[string]bool{
 			want: 1,
 		},
 		{
+			// The pair CodeRabbit named: both are in the shipped dataset and
+			// neither was in the sampled catalog this file used to carry, so a
+			// file holding exactly this was dropped by the prefilter before the
+			// census ever parsed it.
+			name: "two providers the old hand-written sample could not see",
+			code: `package p
+var providers = []string{"laposte.net", "hotmail.fr"}`,
+			want: 1,
+		},
+		{
 			name: "the same list as a slice",
 			code: `package p
 var providers = []string{"gmail.com", "outlook.com"}`,
+			want: 1,
+		},
+		{
+			// Found by a bot: de-duplicating a hand-written map through
+			// constants is the natural next spelling of this bug, and it puts
+			// only ONE string literal in the list.
+			name: "a list assembled from a named constant",
+			code: `package p
+const gmail = "gmail.com"
+var providers = []string{gmail, "outlook.com"}`,
 			want: 1,
 		},
 		{
@@ -169,9 +216,19 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 	return found
 }
 
+// namesAnyProvider is the parse-cost shortcut, and it is derived from the SAME
+// set the census counts against. A prefilter narrower than the detector is how
+// a real list gets dropped before anything looks at it — which is exactly what
+// the sampled version did to `laposte.net`.
+//
+// It reads the file's own quoted tokens and asks the set about each, rather
+// than asking the file about each of 8,758 domains: same answer, and it turns
+// a whole-tree sweep from a minute into a second.
+var quotedToken = regexp.MustCompile(`"([^"\n]{3,255})"`)
+
 func namesAnyProvider(code string) bool {
-	for domain := range knownConsumerProviders {
-		if strings.Contains(code, domain) {
+	for _, match := range quotedToken.FindAllStringSubmatch(code, -1) {
+		if looksLikeADomain(match[1]) {
 			return true
 		}
 	}
@@ -187,6 +244,36 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 	if err != nil {
 		t.Fatalf("parse %s: %v", name, err)
 	}
+	// Constants declared in this file, so a list assembled from named ones is
+	// not invisible. `const gmail = "gmail.com"` beside
+	// `[]string{gmail, "outlook.com"}` is a two-provider list with one string
+	// literal in it, and de-duplicating a hand-written map through constants is
+	// the natural next spelling of the very bug this file guards.
+	//
+	// Same file only. A constant imported from elsewhere would need the type
+	// checker, and a list assembled across package boundaries is not a shape
+	// anything here writes.
+	constants := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, ok := n.(*ast.ValueSpec)
+		if !ok {
+			return true
+		}
+		for i, name := range spec.Names {
+			if i >= len(spec.Values) {
+				continue
+			}
+			basic, ok := spec.Values[i].(*ast.BasicLit)
+			if !ok || basic.Kind != token.STRING {
+				continue
+			}
+			if value, err := strconv.Unquote(basic.Value); err == nil {
+				constants[name.Name] = value
+			}
+		}
+		return true
+	})
+
 	var found []string
 	ast.Inspect(file, func(n ast.Node) bool {
 		lit, ok := n.(*ast.CompositeLit)
@@ -199,12 +286,8 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 		distinct := map[string]bool{}
 		for _, element := range lit.Elts {
 			ast.Inspect(element, func(inner ast.Node) bool {
-				basic, ok := inner.(*ast.BasicLit)
-				if !ok || basic.Kind != token.STRING {
-					return true
-				}
-				value, err := strconv.Unquote(basic.Value)
-				if err == nil && knownConsumerProviders[strings.ToLower(value)] {
+				value, ok := stringValue(inner, constants)
+				if ok && looksLikeADomain(value) {
 					distinct[strings.ToLower(value)] = true
 				}
 				return true
@@ -217,4 +300,18 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 		return true
 	})
 	return found
+}
+
+// stringValue reads a node's string value: a literal directly, and a named
+// constant through the file's own declarations.
+func stringValue(node ast.Node, constants map[string]string) (string, bool) {
+	if basic, ok := node.(*ast.BasicLit); ok && basic.Kind == token.STRING {
+		value, err := strconv.Unquote(basic.Value)
+		return value, err == nil
+	}
+	if ident, ok := node.(*ast.Ident); ok {
+		value, known := constants[ident.Name]
+		return value, known
+	}
+	return "", false
 }

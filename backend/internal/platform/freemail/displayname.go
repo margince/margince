@@ -12,7 +12,12 @@ package freemail
 // package and the derivation in another, and the second door then grew its own
 // copy of each.
 
-import "strings"
+import (
+	"strings"
+
+	"golang.org/x/net/idna"
+	"golang.org/x/net/publicsuffix"
+)
 
 // DisplayName turns a mail domain into a readable organization name by
 // title-casing its registrable label: "gitex.com" → "Gitex",
@@ -34,9 +39,31 @@ func DisplayName(domain string) string {
 	if normalized == "" {
 		return ""
 	}
+	// A bare public suffix has no registrable label to name. `Registrable`
+	// passes such a domain through unchanged, so cutting it would yield "co"
+	// from "co.uk" and render a company called "Co" — a fabrication wearing a
+	// title case. The documented fallback is the domain itself.
+	//
+	// ICANN is the discriminator, not "is it its own suffix". Every unknown
+	// single label is its own suffix as far as the list is concerned, so the
+	// broader test would refuse to name "localhostonly" — a hostname somebody
+	// typed, where titling the whole input IS the honest last resort. "co.uk"
+	// and "com" are on the ICANN list and are nobody's company; "internal" and
+	// "localhostonly" are not.
+	if suffix, icann := publicsuffix.PublicSuffix(normalized); icann && suffix == normalized {
+		return normalized
+	}
 	label := RegistrableLabel(normalized)
 	if label == "" {
 		return normalized
+	}
+	// Punycode is TRANSPORT, not a name. `normalize` folds a Unicode domain to
+	// its xn-- form because that is what a mail header carries, and titling
+	// that form renders "müll.email" as "Xn Mll Hoa". The display half decodes
+	// it again; a label that will not decode keeps its ASCII form rather than
+	// being dropped.
+	if unicodeLabel, err := idna.ToUnicode(label); err == nil {
+		label = unicodeLabel
 	}
 	return titleizeLabel(label)
 }
