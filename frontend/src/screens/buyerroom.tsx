@@ -104,9 +104,26 @@ function retireOnRefusal(onSessionLost: () => void) {
 }
 
 export function BuyerRoomScreen() {
-  // Read once, at mount. The credential is gone from the address bar after
-  // this, so a re-render must not look for it again.
-  const [credential] = useState(credentialFromLocation);
+  // Read at mount AND whenever the address changes to carry a new one.
+  //
+  // The credential is scrubbed from the bar as soon as it is read, so a
+  // re-render never finds the same one twice — but a SECOND link pasted into a
+  // tab already sitting on #/room changes only the hash, which React does not
+  // treat as a new mount. Reading once meant that link was ignored and the tab
+  // went on presenting whatever session it already held, including a dead one:
+  // the buyer sees "Nothing published yet" for a room that has published, and
+  // concludes the link is broken.
+  const [credential, setCredential] = useState(credentialFromLocation);
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = credentialFromLocation();
+      if (next) {
+        setCredential(next);
+      }
+    };
+    globalThis.addEventListener?.("hashchange", onHashChange);
+    return () => globalThis.removeEventListener?.("hashchange", onHashChange);
+  }, []);
   // A link in hand outranks a kept session from the first render: a tab that
   // still holds room A's session must not show room A for a breath while
   // room B's link is being exchanged.
@@ -144,12 +161,20 @@ export function BuyerRoomScreen() {
   // the replayed mount unsubscribes the first observer, and an option callback
   // on an observer nobody listens to never runs.
   const exchangeAsync = exchange.mutateAsync;
-  const exchanged = useRef(false);
+  // Keyed on the credential itself rather than a bare bool: a second link is a
+  // second credential, and a flag that only says "we have exchanged once"
+  // would refuse to exchange it.
+  const exchanged = useRef<string | null>(null);
   useEffect(() => {
-    if (!credential || exchanged.current) {
+    if (!credential || exchanged.current === credential) {
       return;
     }
-    exchanged.current = true;
+    exchanged.current = credential;
+    // The link in hand outranks whatever this tab was showing: drop the old
+    // session before the exchange answers, so a dead one cannot render a
+    // "nothing here" page over a room the new link opens.
+    setToken(null);
+    setRefusal(null);
     exchangeAsync(credential).then(
       (issued) => {
         if (issued) {
@@ -412,44 +437,19 @@ function useBuyerDocuments(token: string, onSessionLost: () => void) {
 
 type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
 
-// The buyer's verbs on one document: download it, and — a reviewer on a live
-// room — confirm the version or ask for changes.
+// The buyer's one verb on a document: take a copy of it.
+//
+// There is no "confirm this version" and no "request changes". Sharing a
+// document with a buyer is sharing it — asking them to formally accept each
+// file turns a room into an approval queue nobody asked for, and the buyer
+// reading "Confirm this version" under a transcript cannot tell what they
+// would be agreeing to. Anything they want to say about a document they say in
+// the thread under it, which is the whole point of the board.
 function BuyerDocumentVerbs({
   token,
   doc,
-  mayDecide,
-  onSessionLost,
-}: Readonly<{
-  token: string;
-  doc: BuyerRoomDocument;
-  mayDecide: boolean;
-  onSessionLost: () => void;
-}>) {
+}: Readonly<{ token: string; doc: BuyerRoomDocument }>) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const decide = useMutation({
-    mutationKey: ["buyer-room-document-decide"],
-    mutationFn: async (input: { documentId: string; kind: string }) => {
-      const { data, error, response } = await api.POST(
-        "/public/rooms/documents/{documentId}/decision",
-        {
-          params: { path: { documentId: input.documentId } },
-          body: { kind: input.kind },
-          ...bearer(token),
-        },
-      );
-      if (error) {
-        refuseOrThrow(error, response, t);
-      }
-      return data;
-    },
-    onError: retireOnRefusal(onSessionLost),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["buyer-room-threads", token],
-      });
-    },
-  });
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
     mutationFn: async (input: { documentId: string; filename: string }) => {
@@ -487,44 +487,8 @@ function BuyerDocumentVerbs({
         <Download aria-hidden />
         {t("buyer.docs.downloadShort")}
       </Button>
-      {mayDecide && decide.isSuccess ? (
-        <p className="t-small">
-          {t(
-            decide.data?.kind === "confirm_version"
-              ? "buyer.decide.confirmed"
-              : "buyer.decide.requested",
-          )}
-        </p>
-      ) : null}
-      {mayDecide && !decide.isSuccess ? (
-        <>
-          <Button
-            small
-            variant="ghost"
-            pending={decide.isPending}
-            onClick={() =>
-              decide.mutate({ documentId: doc.id, kind: "request_changes" })
-            }
-          >
-            {t("buyer.decide.requestChanges")}
-          </Button>
-          <Button
-            small
-            variant="primary"
-            pending={decide.isPending}
-            onClick={() =>
-              decide.mutate({ documentId: doc.id, kind: "confirm_version" })
-            }
-          >
-            {t("buyer.decide.confirm")}
-          </Button>
-        </>
-      ) : null}
       {download.isError ? (
         <p className="t-small t-danger">{download.error.message}</p>
-      ) : null}
-      {decide.isError ? (
-        <p className="t-small t-danger">{problemMessageOf(decide.error, t)}</p>
       ) : null}
     </div>
   );
@@ -537,13 +501,11 @@ function BuyerBoard({
   token,
   onSessionLost,
   mayWrite,
-  mayDecide,
   refusal,
 }: Readonly<{
   token: string;
   onSessionLost: () => void;
   mayWrite: boolean;
-  mayDecide: boolean;
   refusal: string | undefined;
 }>) {
   const t = useT();
@@ -625,14 +587,7 @@ function BuyerBoard({
     groupKey: doc.group_key,
     title: doc.title,
     meta: doc.filename,
-    actions: (
-      <BuyerDocumentVerbs
-        token={token}
-        doc={doc}
-        mayDecide={mayDecide}
-        onSessionLost={onSessionLost}
-      />
-    ),
+    actions: <BuyerDocumentVerbs token={token} doc={doc} />,
   }));
   return (
     <QueryStates query={docs} pendingLines={3}>
@@ -752,9 +707,6 @@ function RoomView({
         onSessionLost={onSessionLost}
         mayWrite={
           view.access === "live" && view.participant.capability !== "view"
-        }
-        mayDecide={
-          view.participant.capability === "reviewer" && view.access === "live"
         }
         refusal={conversationRefusal(view, t)}
       />

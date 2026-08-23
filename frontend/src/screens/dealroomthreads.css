@@ -66,10 +66,21 @@
   margin-top: var(--space-1);
 }
 
+/* The conversation about ONE document, indented under it so the belonging is
+   visible at a glance rather than inferred from the order of two panels. */
 .board-doc-threads {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--accent);
+}
+
+/* The composer sits at the same indent as the thread it joins, so "ask about
+   this document" reads as part of that document's conversation and not as a
+   second, unrelated form under the card. */
+.board-doc > .thread-composer,
+.board-doc > .card-actions {
   padding-left: var(--space-3);
   border-left: 2px solid var(--borderSubtle);
 }
