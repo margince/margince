@@ -5254,6 +5254,27 @@ export const vi = {
   "installationSettings.edit": "Sửa",
   "installationSettings.editField": "Sửa {field}",
   "installationSettings.save": "Lưu",
+  "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
+  "aiProviderKeys.sub":
+    "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",
+  "aiProviderKeys.configured": "Đã lưu khóa",
+  "aiProviderKeys.absent": "Chưa có khóa",
+  "aiProviderKeys.configuredHint":
+    "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
+  "aiProviderKeys.absentHint":
+    "Nhà cung cấp này chưa có thông tin xác thực, nên không thể gọi mô hình gắn với nó. Khóa cũng có thể đến qua {envVar}.",
+  "aiProviderKeys.addPlaceholder": "Dán khóa API",
+  "aiProviderKeys.replacePlaceholder": "Dán khóa mới để thay thế",
+  "aiProviderKeys.add": "Thêm",
+  "aiProviderKeys.replace": "Thay thế",
+  "aiProviderKeys.removeConfirmTitle": "Xóa khóa {provider}?",
+  "aiProviderKeys.removeConfirmBody":
+    "Thông tin xác thực sẽ bị xóa khỏi kho khóa và không thể phục hồi — khóa không bao giờ đọc lại được nên không có bản sao nào. Mọi luồng AI gắn với nhà cung cấp này sẽ dừng cho đến khi dán khóa mới.",
+  "aiProviderKeys.withheld":
+    "Chỉ người có quyền thay đổi liên kết mô hình mới thấy nhà cung cấp nào đã có khóa.",
+  "aiProviderKeys.remove": "Xóa",
+  "aiRouting.withheld":
+    "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
   "aiRouting.title": "Định tuyến mô hình",
   "aiRouting.sub":
     "Mô hình nào phục vụ từng bậc. Thay đổi có hiệu lực mà không cần khởi động lại; mọi tiến trình sẽ nhận trong vòng một phút.",

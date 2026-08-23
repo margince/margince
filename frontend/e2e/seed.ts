@@ -377,7 +377,7 @@ export const auditEntries = [
   },
 ];
 
-// The three reads behind Settings → AI and Settings → Maintenance. They are
+// The four reads behind Settings → AI and Settings → Maintenance. They are
 // fixtures rather than catch-all `page([])` answers because the catch-all is
 // not a thin response — it is the WRONG SHAPE, and the two sweeps below cannot
 // see what they cannot render: `/admin/job-health` answered `{data,page}` (no
@@ -387,6 +387,24 @@ export const auditEntries = [
 // sweep visits, and the queue report never rendered at all. Every field below
 // is required by its contract schema (AiUsage / AiCallListResponse /
 // JobHealth) — an under-filled fixture would just move the lie.
+//
+// `/ai/provider-keys` is the fourth, and it failed the same way rather than
+// differently: the card indexes `providers`, which the contract makes required,
+// so the catch-all's `{data,page}` handed it undefined and it threw mid-render.
+// A throw there takes the WHOLE AI entry down, so the symptom was four
+// unrelated cases reporting "element(s) not found" on #/settings/ai — none of
+// them naming this endpoint. That is the cost the comment above is about.
+
+// One provider keyed and one not, so the route the 390px and axe sweeps visit
+// renders BOTH row states. A list of only-configured or only-empty rows would
+// leave half the card's markup unvisited by the very sweeps that exist to see
+// it. `env_var` is required by AiProviderKeyStatus.
+export const aiProviderKeys = {
+  providers: [
+    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+    { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+  ],
+};
 
 export const aiUsage = {
   days: [
@@ -1673,6 +1691,9 @@ export async function mockApi(
     }
     if (path === "/ai/usage") {
       return json(aiUsage);
+    }
+    if (path === "/ai/provider-keys" && method === "GET") {
+      return json(aiProviderKeys);
     }
     if (path === "/ai/calls" && method === "GET") {
       return json(aiCalls);

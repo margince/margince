@@ -5342,6 +5342,27 @@ export const en = {
   "installationSettings.save": "Save",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
+  "aiProviderKeys.title": "Model provider keys",
+  "aiProviderKeys.sub":
+    "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
+  "aiProviderKeys.configured": "Key stored",
+  "aiProviderKeys.absent": "No key",
+  "aiProviderKeys.configuredHint":
+    "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
+  "aiProviderKeys.absentHint":
+    "This vendor has no credential, so a model bound to it cannot be called. It may also arrive as {envVar}.",
+  "aiProviderKeys.addPlaceholder": "Paste the API key",
+  "aiProviderKeys.replacePlaceholder": "Paste a new key to replace",
+  "aiProviderKeys.add": "Add",
+  "aiProviderKeys.replace": "Replace",
+  "aiProviderKeys.removeConfirmTitle": "Remove the {provider} key?",
+  "aiProviderKeys.removeConfirmBody":
+    "The credential is deleted from the key vault and cannot be recovered — it is never readable, so there is no copy to restore. Every AI lane bound to this vendor stops until a new key is pasted in.",
+  "aiProviderKeys.withheld":
+    "Only an operator who may change the model binding can see which vendors hold a key.",
+  "aiProviderKeys.remove": "Remove",
+  "aiRouting.withheld":
+    "Only an operator who may change the model binding can see which models this installation uses.",
   "aiRouting.title": "Model routing",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",

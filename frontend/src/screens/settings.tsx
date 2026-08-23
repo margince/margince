@@ -77,6 +77,7 @@ import { formatDate, formatDateTime } from "../format/format";
 import { RECORD_ZONE, viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
@@ -876,6 +877,11 @@ function AiSettingsTab() {
       {/* Which vendor the installation's text is sent to, first: it is the
           decision the three cards under it report against. */}
       <AiRoutingCard />
+      {/* Directly under the binding, because the two are one decision read in
+          two halves: which vendor serves a tier, and whether this installation
+          can call it at all. A binding whose vendor holds no key fails closed,
+          and this is where a reader finds out why. */}
+      <AiProviderKeysCard />
       <AutomationsAdmin />
       <AiUsageCard />
       <ModelCostsCard />

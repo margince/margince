@@ -70,6 +70,10 @@ type RoutingConfig struct {
 	// bytes. Zero value "" on a config built by struct literal (FakeRoutingConfig,
 	// most unit-test configs) rather than parsed from yaml.
 	sourceHash string
+	// credentialVersion is a digest of the provider credentials this config
+	// resolves with, stamped by whoever resolved them. Deliberately outside
+	// sourceHash: see Router.CredentialVersion for why the two must not merge.
+	credentialVersion string
 	// keys resolves a cloud provider's BYOK secret when the clients are built.
 	// It travels on the config because that is where configuration enters this
 	// package (LoadRoutingFile), and because the routing file names only the
@@ -129,6 +133,20 @@ func (cfg RoutingConfig) BoundModelIDsByProvider() map[string]map[string]bool {
 // Two configs that route identically share a version however differently they
 // were written — see bindingDigest for why that is the whole point.
 func (cfg RoutingConfig) RoutingVersion() string { return cfg.sourceHash }
+
+// WithCredentialVersion stamps a digest of the credentials this config resolves
+// with, so a watcher can tell a rotated key from an unchanged binding.
+//
+// Stamped by the caller that resolved the credentials rather than computed here,
+// because this package never sees a ref: `WithKeys` takes a lookup function, and
+// where the values behind it came from is compose's knowledge.
+func (cfg RoutingConfig) WithCredentialVersion(version string) RoutingConfig {
+	cfg.credentialVersion = version
+	return cfg
+}
+
+// CredentialVersion reports that digest. Empty when nothing stamped one.
+func (cfg RoutingConfig) CredentialVersion() string { return cfg.credentialVersion }
 
 // LoadRoutingFile reads and validates a deployment's routing config. keys is
 // where the BYOK secrets come from — the file names providers, never their

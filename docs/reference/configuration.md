@@ -1035,7 +1035,14 @@ The providers a binding may name, and what each requires. A cloud provider's
 BYOK key is **read from an environment variable** at boot — the routing file
 names only the provider (a stray `api_key:` there is a startup error):
 
-| provider | key env var | `base_url` | notes |
+A cloud provider's key lives in the **key vault**, and an admin puts one there
+at Settings → AI → Model provider keys (`PUT /v1/ai/provider-keys/{provider}`).
+The environment variable in the table below is a SEED, not the home: a key found
+there is sealed on the next boot and the variable can then be deleted. Both
+routes still fail closed — a bound provider with a key by neither is refused at
+construction, naming what is missing.
+
+| provider | key env var (seed) | `base_url` | notes |
 |---|---|---|---|
 | `fake` | — | — | offline deterministic stub (dev/test) |
 | `ollama` | — | optional (default `localhost:11434`) | local; sovereign-eligible |

@@ -105,6 +105,25 @@ export function readOn(object: RbacObject): GrantSpec {
   return spec;
 }
 
+// The endpoints on this screen that answer with a KEYED envelope rather than
+// the paged `{data, page}` one every fake falls back to. An unrouted keyed
+// endpoint does not read as an empty card: the consumer indexes the key it was
+// promised, gets undefined, and throws mid-render — which takes the whole entry
+// down and surfaces as its OTHER cards being absent, nowhere near the cause.
+//
+// Shared because this screen has two fetch fakes (`settingsBackend` here and
+// `mergedEntryBackend`, which parameterizes the seat), and a keyed endpoint
+// added to one of them alone leaves the other failing exactly that way.
+export function keyedEnvelope(url: string) {
+  // `providers` is required in the contract, so a card is right to index it
+  // directly; an empty list is the honest answer for an installation that has
+  // bound no cloud provider.
+  if (url.includes("/ai/provider-keys")) {
+    return jsonResponse({ providers: [] });
+  }
+  return null;
+}
+
 // Routed by URL so every card on the screen gets an honest per-endpoint
 // answer; the cards not under test render their empty states.
 export function settingsBackend() {
@@ -134,6 +153,10 @@ export function settingsBackend() {
         ],
         page: { next_cursor: null, has_more: false },
       });
+    }
+    const keyed = keyedEnvelope(url);
+    if (keyed) {
+      return keyed;
     }
     return jsonResponse({
       data: [],
