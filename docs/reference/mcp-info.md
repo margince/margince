@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 151.3 KB |
+| Tool catalog | 151.6 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39514 |
+| Approx. wire tokens | 39581 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,9 +30,9 @@ budget in `agenttooldescriptions_test.go`.
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
-| Input schemas | 32.8 KB | 21% | Yes, every step |
+| Input schemas | 33.1 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **67.6 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **67.8 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -98,7 +98,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.5 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.3 KB |
-| [`read_record`](#read_record) | Read a record | yes |  | 1.9 KB |
+| [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.2 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 1.9 KB |
@@ -107,7 +107,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 2.9 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 6.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes |  | 2.7 KB |
+| [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
@@ -7982,13 +7982,15 @@ Read one record's own stored fields — the values a person would see on its det
       "type": "string"
     },
     "record_type": {
+      "description": "partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record.",
       "enum": [
         "person",
         "organization",
         "deal",
         "lead",
         "activity",
-        "project"
+        "project",
+        "partner"
       ],
       "type": "string"
     }
@@ -9624,17 +9626,18 @@ Find people, organizations, deals, leads and projects when you know roughly what
       "type": "integer"
     },
     "q": {
-      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched.",
+      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own.",
       "type": "string"
     },
     "record_type": {
-      "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these",
+      "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one.",
       "enum": [
         "person",
         "organization",
         "deal",
         "lead",
-        "project"
+        "project",
+        "partner"
       ],
       "type": "string"
     }

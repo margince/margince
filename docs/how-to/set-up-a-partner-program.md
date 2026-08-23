@@ -113,13 +113,42 @@ partners so filtering stays useful.
   scan for partners whose stage is behind reality and correct it; make sure every in-flight
   partner has a next step with a due date.
 
-Agents reach partners INDIRECTLY today. A partner organization is an ordinary company to the
-generic record tools, so an agent can find it, read it and see that it carries the `partner`
-relationship type — but `partner` is not yet one of the record types those tools accept, so the
-partner extension's own fields (tier, certification, relationship stage) are not readable or
-writable that way. A deal's partner and what that partner did for it ARE agent-visible, through
-the deal's own `partner_org_id` and `partner_attribution` fields — readable, and settable both
-when an agent creates a deal and when it updates one.
+Agents can READ partners directly. `partner` is a record type the generic tools accept, so
+`read_record` returns one partner's terms — tier, certification, relationship stage — and
+`search_records(record_type="partner")` returns the partner list. Three things to know about
+the shape:
+
+- **A partner is addressed by its ORGANIZATION's id.** The partner row is that company's terms,
+  not a separate record, so you pass the company id you already have.
+- **A partner has no text search, and an untyped sweep skips it.** Every word you would search
+  for lives on the organization, so searching without naming a type finds the company once
+  rather than twice. Name `record_type=partner` to reach the terms.
+- **The role and certification dials are not on the tool surface yet.** `GET /partners` narrows
+  by `partner_role` and `cert_status`, and the store binds both. But `search_records` — the tool
+  that serves partner — takes no filters at all, and `list_records`, which does carry them, does
+  not serve `partner`. So an agent gets the whole partner list and narrows it itself. Tracked as
+  a follow-up.
+
+**The generic tools only READ a partner.** `partner` is not one of the record types
+`update_record` accepts, so an agent working through those tools cannot set a tier or a
+certification.
+
+That is a statement about the generic tools, not a guarantee that no agent can ever write partner
+state. `PUT /organizations/{id}/partner` carries a write annotation, and a passport is a REST
+credential as well as an MCP one, so an agent can reach that route directly. Three things all
+have to be true for it to succeed, and any one of them is where you stop it:
+
+- the passport carries **write** scope,
+- the granting human's seat has **update** on `partner`,
+- and **update** on `organization` as well — becoming a partner stamps the company's
+  relationship types, so the route needs both.
+
+If you want partner terms to be human-only, that is what to withhold. The tool vocabulary is not
+what decides it.
+
+A deal's partner and what that partner did for it are both readable and writable, through the
+deal's own `partner_org_id` and `partner_attribution` fields — settable when an agent creates a
+deal and when it updates one.
 
 ## Changing the value lists themselves
 

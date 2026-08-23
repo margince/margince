@@ -79,12 +79,26 @@ var _ datasource.SystemOfRecordProvider = (*Provider)(nil)
 // the page.
 const defaultSearchPageSize = 50
 
+// searchable is what an UNTYPED sweep visits, in the order it visits them.
+//
+// Partner is deliberately absent: a sweep carries no filters and matches on
+// text, and a partner has no text of its own — every word a caller would
+// search for lives on the organization the partner row extends. Including it
+// would return the same companies twice under two type names.
 var searchable = []datasource.EntityType{datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
+
+// nameable is what a caller may ASK FOR BY NAME. It is a superset of
+// searchable, and the two are separate because they answer different
+// questions: "where does an unguided sweep look?" and "what may a caller
+// name?". Conflating them is how naming a type became impossible by the act
+// of keeping it out of the sweep — a type left out of the default set stopped
+// being reachable at all, which is the opposite of what excluding it meant.
+var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner)
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
 	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
-		datasource.EntityRelationship:
+		datasource.EntityRelationship, datasource.EntityPartner:
 		return p.people.Read(ctx, ref)
 	case datasource.EntityDeal:
 		return p.deals.Read(ctx, ref)
@@ -107,7 +121,8 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 // rather than a name it would refuse.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead:
+	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+		datasource.EntityPartner:
 		return p.people.ListFilters(t)
 	case datasource.EntityDeal:
 		return p.deals.ListFilters(t)
@@ -198,7 +213,8 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 		err     error
 	)
 	switch t {
-	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead:
+	case datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityLead,
+		datasource.EntityPartner:
 		records, next, _, err = p.people.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityDeal:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
@@ -217,7 +233,12 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 }
 
 // sweepOrder resolves the types one query walks: the ones it named, or every
-// searchable type when it named none.
+// SEARCHABLE type when it named none.
+//
+// A named type is admitted from NAMEABLE, which is wider — see the two vars
+// above. What a sweep visits by default and what a caller may name are
+// different questions, and answering both from one list makes every type kept
+// out of the sweep unreachable by name too.
 //
 // Always in one fixed order and always without repeats, whatever order the
 // caller listed them in and however many times — a stream walked twice serves
@@ -229,13 +250,13 @@ func sweepOrder(named []datasource.EntityType) ([]datasource.EntityType, error) 
 	}
 	asked := make(map[datasource.EntityType]bool, len(named))
 	for _, et := range named {
-		if !slices.Contains(searchable, et) {
+		if !slices.Contains(nameable, et) {
 			return nil, &datasource.UnsupportedEntityError{Type: string(et)}
 		}
 		asked[et] = true
 	}
 	walk := make([]datasource.EntityType, 0, len(asked))
-	for _, et := range searchable {
+	for _, et := range nameable {
 		if asked[et] {
 			walk = append(walk, et)
 		}
@@ -260,7 +281,10 @@ func resumeStream(cursor string) (storekit.SweepCursor, error) {
 	if position.Stream == "" {
 		return position, nil
 	}
-	if !slices.Contains(searchable, datasource.EntityType(position.Stream)) {
+	// NAMEABLE, not searchable: a partner page mints a cursor in its own
+	// stream, and judging it against the sweep's default set would refuse this
+	// seam's own token as malformed on the second page.
+	if !slices.Contains(nameable, datasource.EntityType(position.Stream)) {
 		return storekit.SweepCursor{}, &storekit.MalformedCursorError{}
 	}
 	return position, nil
@@ -279,9 +303,13 @@ func resumeIndex(walk []datasource.EntityType, stream string) int {
 	if stream == "" {
 		return 0
 	}
-	at := slices.Index(searchable, datasource.EntityType(stream))
+	// NAMEABLE, not searchable: it is the order every walk is built in, and a
+	// stream absent from the list Index is asked about answers -1 — which
+	// compares below every position and restarts the walk at its first type,
+	// re-serving records the caller already has.
+	at := slices.Index(nameable, datasource.EntityType(stream))
 	for i, et := range walk {
-		if slices.Index(searchable, et) >= at {
+		if slices.Index(nameable, et) >= at {
 			return i
 		}
 	}
