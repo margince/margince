@@ -384,6 +384,27 @@ function ProjectFiling({
     return null;
   }
   const tag = subjectTag(project);
+  // A THREAD already filed under a project settles this reply too: the send
+  // inherits the anchor's links, and no control on this form can undo that.
+  // So the thread reading states the filing and offers nothing — a tickbox
+  // here would promise a choice the send does not honour, and unticking it
+  // would still file. Moving a filed conversation is Relink, on the message's
+  // own timeline row, which moves the whole thread rather than one message.
+  //
+  // The DEAL reading is a genuine choice: nothing else carries that project,
+  // so the box decides both the filing and the tag.
+  if (filing.from === "thread") {
+    return (
+      <div className="stack-2xs">
+        <p className="t-caption">
+          {t("compose.filedUnder", { project: project.name })}
+        </p>
+        {tag && (
+          <p className="t-caption">{t("compose.subjectTagged", { tag })}</p>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="stack-2xs">
       <Checkbox
@@ -394,12 +415,7 @@ function ProjectFiling({
       />
       {filed && (
         <p className="t-caption">
-          {t(
-            filing.from === "deal"
-              ? "compose.filedUnderDeal"
-              : "compose.filedUnder",
-            { project: project.name },
-          )}
+          {t("compose.filedUnderDeal", { project: project.name })}
         </p>
       )}
       {filed && tag && (
@@ -1464,7 +1480,11 @@ function useProjectFiling(input: {
       : ({ kind: "none" } as const);
   const derived = filing.kind === "derived" ? filing.projectId : undefined;
   const { project } = useProjectRecord(derived);
-  const filed = Boolean(derived) && !declined;
+  // A thread's filing is not declinable — the send inherits it whatever this
+  // form says — so the thread reading shows no tickbox, and a `declined` left
+  // over from a deal reading must not silently strip the tag here.
+  const declinable = filing.kind === "derived" && filing.from === "deal";
+  const filed = Boolean(derived) && (!declinable || !declined);
   const tag = subjectTag(project);
   // The tag follows the filing, applied once per change rather than on every
   // render: `applied` remembers what this composer last wrote, so a rerender
