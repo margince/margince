@@ -85,6 +85,11 @@ var baselineDomains = sync.OnceValue(func() map[string]struct{} {
 // silently.
 //
 // If a shortcut ever looks necessary: measure first.
+//
+// The same reasoning applies to the OWNER list below. `platform/freemail` is
+// named as the one package allowed to declare providers; widening that to a
+// pattern would let a second declaration join the exemption without anybody
+// deciding it should.
 
 // looksLikeADomain screens a string literal before the baseline is consulted.
 //
