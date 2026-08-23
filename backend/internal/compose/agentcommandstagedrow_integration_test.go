@@ -223,6 +223,11 @@ func archiveRegistry(e *integration.Env) *agents.Registry {
 			}
 			return mcp.TierAutoExecute, false
 		}))
+	// No consumer-mail seam: this registry exists to exercise the ARCHIVE tier
+	// floor, and qualify_lead is not on its path. A nil seam is safe rather
+	// than latent — the tool refuses on the terms an unreadable list refuses
+	// on, so an accidental call here would fail loudly instead of deriving a
+	// company from the compiled-in baseline.
 	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil)
 	return reg
 }
