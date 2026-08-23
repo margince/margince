@@ -25,6 +25,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/webread"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -217,7 +218,13 @@ func recordingLanes(opts SiteReadDebugOptions, log *callLog) (profile, facts, tr
 // debug run wants the whole read regardless of the verdict — what it reports is
 // what production WOULD have decided.
 func debugTriage(ctx context.Context, brain completer, seed crawlPage) DebugTriage {
-	req := triageRequest(seed)
+	// English rather than the installation's base language, because this probe
+	// is deliberately DB-less (see SiteReadDebugBrain) and has no pool to read
+	// the setting through. The report says what production WOULD have decided
+	// about the KIND, which is an enum and identical either way; only the
+	// reason sentence comes back in a different language than a production run
+	// would have written it.
+	req := triageRequest(seed, string(textlang.English))
 	var resp model.Response
 	var err error
 	// The same validated call classifySeed makes. Without it a malformed reply

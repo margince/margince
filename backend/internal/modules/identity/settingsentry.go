@@ -15,11 +15,14 @@ package identity
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
@@ -186,4 +189,41 @@ func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // installations get today anyway.
 func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.GetTx(ctx, tx, BaseLanguage)
+}
+
+// BaseLanguageForPrompt resolves the base language for a caller that holds a
+// POOL rather than a transaction, opening the workspace transaction itself.
+//
+// It sits beside BaseLanguageOf rather than in either caller because both a
+// compose engine and the deal-status service need exactly this, and the six
+// lines are identical either way — two copies of one settings read is how one
+// question comes to have two answers that drift.
+//
+// It never fails the caller. A prompt is being built, and the language is the
+// least important thing in it: refusing to extract a meeting's next steps
+// because a settings read timed out trades a whole feature for a formatting
+// preference. On any error the answer is English, which is what these prompts
+// produced before the setting existed.
+//
+// The failure IS logged, and it has to be: this returns a string and nothing
+// else, so a caller has no way to notice a degraded resolve and say so itself.
+// A missing row does NOT reach that line — BaseLanguageOf answers the
+// registered default for one — so a log here always means something actually
+// went wrong.
+func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
+	lang := string(textlang.English)
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		resolved, err := BaseLanguageOf(ctx, tx)
+		if err != nil {
+			return err
+		}
+		lang = resolved
+		return nil
+	})
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's base language could not be read; this prompt asks for English",
+			"reason", err)
+		return string(textlang.English)
+	}
+	return lang
 }

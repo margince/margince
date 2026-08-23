@@ -293,6 +293,8 @@ func parseRateExtraction(text string) ([]extractedModel, error) {
 // The page's own bytes reach the model unedited, only numbered; the one thing
 // that stops them ending their span is a marker minted for THIS call and named
 // in THIS call's system prompt.
+//
+//promptlang:exempt returns model prices — decimal numbers keyed by model id, no sentence a reader reads
 func rateExtractRequest(pageText string) model.Request {
 	fence := promptfence.New()
 	return model.Request{

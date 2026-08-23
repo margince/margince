@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/overlay"
@@ -37,6 +38,10 @@ const claimBatch = 4
 // entry point: TickWorkspace seeds + executes one tenant's due jobs,
 // HandleEvent resumes suspended runs when their approval is decided.
 type RunnerService struct {
+	// pool reads the installation's base language, which a run's final summary
+	// is written in. A summary is filed on a record the whole team reads, so it
+	// takes the shared language rather than any one reader's.
+	pool      *pgxpool.Pool
 	store     *runner.Store
 	runner    *runner.Runner
 	identity  *identity.Service
@@ -83,6 +88,7 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 // (reads and non-SoR tools are unaffected).
 func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain completer, retriever retrieval.Retriever, log *slog.Logger, resolveIncumbent func(context.Context) (overlay.Incumbent, error), send SendPath, opts ...RunnerOption) *RunnerService {
 	svc := &RunnerService{
+		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
 		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, resolveIncumbent, send), brain),
 		identity:   identity.NewService(pool),
@@ -273,6 +279,9 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
 		Grounding:  grounding,
+		// The rendered rule, not a code: the runner is a module and may not
+		// import compose, where the one spelling of this block lives.
+		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
 	})
 	s.landOutcome(runCtx, runID, job.TriggerRef, res, err)
 	s.finishJob(ctx, job.ID, &runID, "")
@@ -369,6 +378,11 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 		TriggerRef: suspended.TriggerRef,
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
+		// Resolved fresh on resume rather than carried in the suspended row:
+		// the summary is written after the human answers, so it takes the
+		// language the installation has NOW, the same way Tools rides the
+		// current catalog entry above.
+		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
 	}, runner.Decision{
 		Pending:  suspended.Pending,
 		Approved: payload.Verdict == "approved",

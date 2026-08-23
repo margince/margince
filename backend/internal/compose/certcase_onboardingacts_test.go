@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
@@ -207,7 +208,7 @@ func TestOnboardingActCaseTraceCarriesTheRequestItIssued(t *testing.T) {
 	if !strings.Contains(req.System, "writing samples that train their personal voice profile") {
 		t.Errorf("the traced request is not the voice act's prompt: %q", req.System)
 	}
-	if !strings.Contains(req.System, "Respond in en.") {
+	if !strings.Contains(req.System, promptlang.Rule("en")) {
 		t.Errorf("the traced request does not name the fixture's locale: %q", req.System)
 	}
 	marker, declared := promptfence.MarkerIn(req.System)

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
@@ -152,7 +153,15 @@ func onboardingActSystem(act, locale string) string {
 	default:
 		role = `You are Margince, helping the administrator decide whether to connect an email inbox. Connecting is optional and happens last; consent is per purpose and default-deny, and nothing is read without an explicit grant. Answer questions about what connecting does and does not do.`
 	}
-	return role + "\n" + onboardingActHardening + "\nRespond in " + locale + "."
+	// The locale, not the installation's base language: onboarding is a live
+	// conversation with ONE administrator, and the reply is read by them and
+	// nobody else. That is the same rule correspondence follows — a shared
+	// record takes the base language, a conversation takes its reader's.
+	//
+	// promptlang.Rule rather than a bare "Respond in X": the reply is a JSON
+	// object whose kind and field names the parser matches exactly, and a bare
+	// instruction gets those translated along with the prose.
+	return role + "\n" + onboardingActHardening + "\n" + promptlang.Rule(locale)
 }
 
 // validateOnboardingActReply enforces the non-company acts' hard rule:

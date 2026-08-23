@@ -151,16 +151,24 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 // keeps two readers apart is the (user_id, deal_id) primary key and the
 // explicit user_id predicate in Service.cached, where user_id comes from the
 // authenticated principal and never from the request.
-func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, day time.Time) (string, error) {
+// The LANGUAGE is in the key because the card is written in it. An admin who
+// switches the installation from English to German changes nothing else about
+// the deal, so every other component of this key is identical — and without
+// this the cache would serve the English card to a reader whose installation
+// has just been told to write German, indefinitely, until some unrelated fact
+// moved. The setting would appear to have done nothing.
+func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, day time.Time, lang string) (string, error) {
 	encoded, err := json.Marshal(struct {
-		In      StatusInput `json:"in"`
-		Prompt  string      `json:"prompt"`
-		Routing string      `json:"routing"`
-		Reader  string      `json:"reader"`
-		Day     string      `json:"day"`
+		In       StatusInput `json:"in"`
+		Prompt   string      `json:"prompt"`
+		Routing  string      `json:"routing"`
+		Reader   string      `json:"reader"`
+		Day      string      `json:"day"`
+		Language string      `json:"language"`
 	}{
 		In: in, Prompt: projectionVersion + "\x00" + promptVersion, Routing: routingVersion,
 		Reader: userID.String(), Day: day.UTC().Format("2006-01-02"),
+		Language: lang,
 	})
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the deal status input: %w", err)

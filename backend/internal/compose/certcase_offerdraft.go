@@ -49,6 +49,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -326,7 +327,13 @@ type offerDraftCase struct {
 // that retried would certify the answer a model gives after being told it got
 // the shape wrong rather than the answer it gives.
 func (c *offerDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := offerDraftRequest(c.dealContext, c.catalog)
+	// English, pinned, rather than the installation's base language: a
+	// certification record grades a fixed corpus, and a score that moved with a
+	// settings row would not be comparable between two installations or across
+	// one that changed its mind. The rule is PRESENT in the graded request for
+	// the same reason — production sends one, so a case that left it out would
+	// grade a prompt the product does not send.
+	req := offerDraftRequest(c.dealContext, c.catalog, string(textlang.English))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

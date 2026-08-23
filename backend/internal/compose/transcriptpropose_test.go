@@ -11,6 +11,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/schema"
 )
 
@@ -165,7 +166,7 @@ func TestEvidenceTrimsAQuotationLongerThanTheApprovalsCapAccepts(t *testing.T) {
 }
 
 func TestTheRequestNumbersEveryLineAndFencesTheTranscript(t *testing.T) {
-	req := transcriptRequest(meetingLines())
+	req := transcriptRequest(meetingLines(), string(textlang.English))
 	if len(req.Messages) != 1 {
 		t.Fatalf("want one user message, got %d", len(req.Messages))
 	}

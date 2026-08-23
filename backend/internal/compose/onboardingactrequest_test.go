@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
@@ -51,7 +52,7 @@ func TestOnboardingActRequestFencesTheContextUnderTheMarkerItDeclares(t *testing
 	if strings.Contains(instructions, "1240") {
 		t.Errorf("the context block reaches the instruction region:\n%s", instructions)
 	}
-	if !strings.Contains(req.System, "Respond in en.") {
+	if !strings.Contains(req.System, promptlang.Rule("en")) {
 		t.Errorf("the act prompt does not name the locale it was built for: %q", req.System)
 	}
 }

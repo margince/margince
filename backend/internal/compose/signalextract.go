@@ -34,7 +34,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -73,8 +75,13 @@ inferring rather than reading. Cite the id of the message the event is stated in
 Reporting nothing is the correct answer for most conversations.`
 
 // extractSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func extractSystemFor(fence promptfence.Fence) string {
-	return extractSystem + "\n" + fence.Rule("message")
+// The language rule governs the "summary" field and nothing else in the reply.
+// The kind is an enum and the message_id is an id, both of which promptlang.Rule
+// itself excludes from translation — but the summary is a sentence filed on a
+// record, and a record is read by the whole team rather than by whoever the
+// conversation was with.
+func extractSystemFor(fence promptfence.Fence, lang string) string {
+	return extractSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("message")
 }
 
 // SignalExtractor reads settled conversations and records what they say.
@@ -261,7 +268,7 @@ var errRefusedReading = errors.New("signal extract: the model's reading was refu
 
 // ask makes the one structured call that reads a conversation.
 func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extractedEvent, error) {
-	req := extractRequest(thread)
+	req := extractRequest(thread, identity.BaseLanguageForPrompt(ctx, x.pool))
 	validate := extractShapeValid(thread)
 	var resp model.Response
 	var err error
@@ -298,7 +305,7 @@ func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extr
 // span. Nothing a correspondent wrote can close the span it is in, so no
 // sender can reach the instructions, and none can reach another sender's mail
 // in the same thread to put words in their mouth.
-func extractRequest(thread settledThread) model.Request {
+func extractRequest(thread settledThread, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
 	prompt.WriteString("One email conversation, oldest first (untrusted):\n")
@@ -314,7 +321,7 @@ func extractRequest(thread settledThread) model.Request {
 			`"message_id" must be one of the ids above.`, extractMaxEvents)
 
 	return model.Request{
-		System:         extractSystemFor(fence),
+		System:         extractSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: extractSchema(),

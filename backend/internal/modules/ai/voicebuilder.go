@@ -124,6 +124,8 @@ type VoiceArtifact struct {
 
 // DeriveVoice creates a bounded request and validates the response against the
 // exact corpus snapshot. sourceHash is supplied by the store that took it.
+//
+//promptlang:exempt the reply describes how ONE person writes, and its exemplars are quoted from that person's own samples — validateVoiceInference checks them against the corpus, so a language instruction would both fail that check and describe a voice in a language its owner does not write in.
 func DeriveVoice(ctx context.Context, brain voiceBrain, personality, sourceHash string, samples []VoiceSample) (VoiceArtifact, error) {
 	if brain == nil {
 		return VoiceArtifact{}, errors.New("voice build has no model path — configure AI routing or the explicit fake model")

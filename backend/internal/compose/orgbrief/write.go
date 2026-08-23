@@ -160,6 +160,8 @@ func BriefRequest(in Input) model.Request {
 // prompt that names that same nonce as the data boundary. systemFor receives
 // the fence so the two can never disagree — a request whose prompt named a
 // different boundary than the one wrapping the data would fence nothing.
+//
+//promptlang:exempt DEFERRED, not exempt on the merits: a brief is cached per reader and the language has to enter Fingerprint with it, or an installation that switches language keeps serving the old-language brief until some unrelated fact moves — the setting would appear to do nothing. Fingerprint is being rewritten concurrently to derive its prompt version from the prompt text, and two edits to the same function land as a conflict rather than a change. Adding the rule without the key is the worse half to ship alone.
 func groundedRequest(systemFor func(promptfence.Fence) string, in Input) model.Request {
 	fence := promptfence.New()
 	return model.Request{

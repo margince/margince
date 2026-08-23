@@ -56,6 +56,20 @@ type Job struct {
 	// ENTRY'S OWN ALLOWLIST. A scheduled agent therefore never reaches the
 	// empty case; only a caller with no entry behind it does.
 	Tools []string
+	// LanguageRule is the RENDERED "write in this language" block for the run's
+	// final summary, already text rather than a language code.
+	//
+	// Rendered by compose and passed in, because that block is spelled in
+	// compose/promptlang and a module may not import compose. Passing a code
+	// instead would mean this package rendering its own copy of the rule, which
+	// is the second spelling that package exists to prevent.
+	//
+	// Held by: TestOnlyPromptlangSpellsTheLanguageRule (backend/promptlanguage_test.go)
+	//
+	// EMPTY MEANS NO RULE, and it is what the certification lane's Job carries:
+	// a cert grades a fixed corpus, so a rule that moved with an installation's
+	// settings would make two installations' scores incomparable.
+	LanguageRule string
 }
 
 // Grounding is one provenance-stamped seed context item (§3): T2

@@ -52,7 +52,9 @@ Cite the ids the summary gave you, in evidence only. An id must never appear in 
 Voice: write like a calm, capable colleague. Lead with the result. One idea per sentence. Short sentences. Use contractions. Address the reader as "you".
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
-Write in the language named by "language" in the summary. Write naturally in that language rather than translating English phrasing.`
+LANGUAGE
+Write in the language named by "language" in the summary. Write naturally in that language rather than translating English phrasing.
+Leave everything that is not a sentence exactly as given: ids, urls, email addresses, people's names, company names, and any text you are quoting.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func briefSystemFor(fence promptfence.Fence) string {

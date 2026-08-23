@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -71,8 +72,11 @@ Never write the same fact in two sections. Each one answers a different question
 Voice: a capable colleague briefing you in the corridor, in plain words. Say "she asked for times and nobody sent them", not "follow-up communication remains outstanding". Short sentences. No corporate register, no hedging, no "it appears that", no greetings, no praise, no exclamation marks, no restating the deal's name.`
 
 // statusSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func statusSystemFor(fence promptfence.Fence) string {
-	return statusSystem + "\n" + fence.Rule("deal timeline and buyer conversation")
+// The card is filed on the deal and read by whoever opens it, so it takes the
+// installation's shared language rather than the language the buyer's mail
+// happened to be in — which is what an unruled prompt would have followed.
+func statusSystemFor(fence promptfence.Fence, lang string) string {
+	return statusSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("deal timeline and buyer conversation")
 }
 
 // The reply's bounds. A card past these is a document, and the page already
@@ -193,10 +197,10 @@ type ThreadIn struct {
 // written by people outside this workspace. It is fenced with a nonce the
 // writer has never seen, so no subject line can close the span and be read as
 // instruction.
-func StatusRequest(in StatusInput) model.Request {
+func StatusRequest(in StatusInput, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:         statusSystemFor(fence),
+		System:         statusSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),

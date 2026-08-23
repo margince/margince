@@ -190,6 +190,8 @@ var errRefusedDocument = errors.New("compose: the reading could not be used")
 // It is a PURE function of the source so the certification case can issue the
 // SHIPPING request rather than a copy of it — a cert that grades a
 // hand-rewritten prompt certifies nothing about what runs.
+//
+//promptlang:exempt every value returned is copied out of the document verbatim and carries a source_quote proving it — groundOneField checks the quote against the document's own bytes, so instructing a language here would ask the model to translate the one thing that has to match character for character.
 func documentExtractRequest(src documentSource) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
