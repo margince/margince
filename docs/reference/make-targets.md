@@ -180,11 +180,21 @@ in `lastactivity_integration_test.go`.
 
 `make dev DEV_SLUG=<slug>` runs a full stack that won't collide with another
 worktree's: the ONE shared infra (Postgres/Redis on `15432`/`16379`), but a
-private database `margince_dev_<slug>` and api/FE ports derived
-deterministically from the slug (the FE's `/v1` proxy follows the api via
-`BACKEND_PORT`). Logs + stop handle live under `.tmp/dev/<slug>/`. Bare
-`make dev` uses the shared `margince` database with the app on the base
-`:8080`. Stop either with `make dev-stop [DEV_SLUG=<slug>] [DROP=1]`.
+private database `margince_dev_<slug>`, a private **Redis logical database**,
+and api/FE ports derived deterministically from the slug (the FE's `/v1` proxy
+follows the api via `BACKEND_PORT`). Logs + stop handle live under
+`.tmp/dev/<slug>/`. Bare `make dev` uses the shared `margince` database, Redis
+db 0, and the app on the base `:8080`. Stop either with
+`make dev-stop [DEV_SLUG=<slug>] [DROP=1]`.
+
+**The Redis index is isolation, not tidiness.** The stream names and consumer
+groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
+share one consumer group: whichever worker reads an entry first consumes it,
+resolves it against its OWN Postgres, finds nothing, and acks. The other
+stack's event is gone, and a projection or accrual that never runs looks
+exactly like a broken feature — it cost a day and a wrongly-filed critical bug
+once. Slugs take 1–15; the startup banner prints which. With more than 15
+slugged stacks two will collide, which is the state bare `make dev` sweeps.
 
 A slugged stack is the one thing `make dev`'s sweep does not perform — it
 sweeps nothing itself, so it can start alongside the base stack. But the next

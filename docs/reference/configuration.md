@@ -25,7 +25,7 @@ configurable logger.
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — organization, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `organization` + `bootstrap_admin` |
 | `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime-DDL pool; unset = `createCustomField`/`updateCustomFieldOptions` answer 501 |
 | `--addr` | — | `:8080` | listen address |
-| `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus) |
+| `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
 | `--inline-relay` | — | `true` | run the outbox relay in-process; set `false` when `cmd/worker` runs it |
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key sealing outbound-webhook signing secrets at rest; unset = the mutating `/webhook-subscriptions` paths (create/rotate, replay) answer 503, never an unsigned fallback; the read surface still lists |
 | `--geocode-base-url` | `MARGINCE_GEOCODE_BASE_URL` | — | Nominatim base URL, on the worker role. Unset = no geocoding: company addresses keep no coordinates and every `within_radius` query answers unavailable. `public` uses OpenStreetMap's own service, which is POC-only — its terms hold a client that runs on a schedule to 4 requests a minute, single-threaded, with caching, so any real volume wants a self-hosted instance. |
@@ -298,7 +298,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required for a marketing send originated by this role's Surface-B agent run — without it that send refuses rather than emit a forgeable link |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off |
-| `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus) |
+| `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | path to a routing file, read **only** to seed an installation with no stored binding — see the api row. A bound installation runs the Surface-B runner + embeddings from the database, and this role re-reads it on an interval so it never serves a binding the api has replaced |
 | `--ai-fake` | — | `false` | run the Surface-B runner on the offline fake model |
 | `--runner-interval` | — | `30s` | Surface-B scheduler tick — the River periodic schedule of the `agent_scheduler` dispatcher, which enqueues one `agent_scheduler_workspace` job per live workspace. It paces the fan-out, not an agent's own schedule: the catalog's daily due hour decides when a brief runs |
@@ -398,6 +398,27 @@ embedding lane simply do not start; the relay, retention, the event-triggered
 workflow dispatch (`cg:workflows`), and the clock time-scan always run.
 Shutdown is graceful: in-flight subscriber handlers finish their ack before
 the process exits.
+
+## The bus address and its logical database (api, worker)
+
+`--redis` accepts a Redis logical database as a suffix: `localhost:16379/7`
+selects database 7, and a bare `localhost:16379` keeps the default 0. Valid
+indices are 0–15, Redis's own `databases 16`. A suffix that is not an index in
+that range is refused rather than ignored — falling back to 0 would put the
+process on a bus it was configured off.
+
+**Why it exists.** The stream names and consumer groups are constants
+(`gw:events:crm:*`, `cg:*`), so two installations pointed at one Redis database
+share one consumer group per name. Whichever worker reads a stream entry first
+consumes it, resolves it against its OWN Postgres database, finds nothing there,
+and acknowledges it. The other installation's event is gone, and the symptom —
+a projection, an accrual or a notification that simply never runs — looks
+exactly like a broken feature rather than a misconfigured bus.
+
+A production installation has its own Redis and needs none of this. It matters
+on a developer machine, where `make dev` gives every `DEV_SLUG` stack its own
+index (bare `make dev` keeps 0) so parallel stacks stop stealing each other's
+events. The startup banner prints which index a slugged stack took.
 
 ## Capture connector OAuth (api, worker) — Gmail / Microsoft 365
 

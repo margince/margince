@@ -15,6 +15,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -29,8 +31,21 @@ import (
 // NewClient returns the Redis client the composition root hands to the
 // relay and subscribers, verified reachable — a bus that silently isn't
 // there would strand every committed outbox row.
+//
+// The address may name a logical database as `host:port/N`. One Redis serves
+// several stacks on a developer's machine, and the stream names and consumer
+// groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on db 0 share
+// ONE consumer group: whichever worker reads an entry first consumes it,
+// resolves it against its OWN database, finds nothing, and acks. The other
+// stack's event is simply gone, and the symptom — a projection that never
+// runs — is indistinguishable from a broken feature. `make dev` gives each
+// DEV_SLUG its own index for that reason.
 func NewClient(ctx context.Context, addr string) (*redis.Client, error) {
-	rdb := redis.NewClient(&redis.Options{Addr: addr})
+	opts, err := ClientOptions(addr)
+	if err != nil {
+		return nil, err
+	}
+	rdb := redis.NewClient(opts)
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		//craft:ignore swallowed-errors best-effort close of a client whose ping already failed — the unreachable-bus error is the one to report
 		_ = rdb.Close()
@@ -38,6 +53,32 @@ func NewClient(ctx context.Context, addr string) (*redis.Client, error) {
 	}
 	return rdb, nil
 }
+
+// ClientOptions turns a bus address into Redis options, accepting an optional
+// `/N` logical-database suffix.
+//
+// Spelled once and exported because the api builds a client of its own beside
+// the relay's: two parsers would let one of them keep landing on db 0 while
+// the other honoured the suffix, which is the same event-stealing bug wearing
+// a different hat.
+func ClientOptions(addr string) (*redis.Options, error) {
+	host, index, found := strings.Cut(addr, "/")
+	if !found {
+		return &redis.Options{Addr: addr}, nil
+	}
+	db, err := strconv.Atoi(index)
+	if err != nil || db < 0 || db > maxRedisDB {
+		return nil, fmt.Errorf(
+			"bus: redis address %q names logical database %q, which is not an integer in 0..%d",
+			addr, index, maxRedisDB)
+	}
+	return &redis.Options{Addr: host, DB: db}, nil
+}
+
+// maxRedisDB is Redis's own default `databases 16`, so 0..15. A higher index
+// would connect and then fail on the first command, which reads as an
+// unreachable bus rather than as a misconfigured one.
+const maxRedisDB = 15
 
 // publishedTotal counts rows shipped since process start — process-wide,
 // not per-Relay, so the metrics endpoint reads it without holding the

@@ -101,6 +101,28 @@ fi
 fe_port=$(( 8080 + hash ))
 api_port=$(( 18080 + hash ))
 
+# The Redis LOGICAL DATABASE this stack uses, derived from the same hash.
+#
+# One Redis serves every stack on the machine, and the stream names and
+# consumer groups are constants (`gw:events:crm:*`, `cg:*`). Two stacks on the
+# same index therefore share ONE consumer group: whichever worker reads an
+# entry first consumes it, resolves it against its OWN Postgres database, finds
+# nothing, and acks. The other stack's event is gone, and the symptom — a
+# projection or an accrual that never runs — is indistinguishable from a broken
+# feature. That cost a day and a wrongly-filed critical bug once.
+#
+# Bare `make dev` keeps db 0 so every existing recipe, redis-cli one-liner and
+# habit still points at the same place. A slug takes 1..15 (Redis ships
+# `databases 16`), so slugged stacks are isolated from the base stack and, by
+# the same hash that keeps their ports apart, from each other. A collision
+# beyond 15 slugs is possible and shows up as two stacks sharing a bus, which
+# is exactly the state bare `make dev` already sweeps.
+redis_db=0
+if [[ -n "$slug" ]]; then
+  redis_db=$(( 1 + hash % 15 ))
+fi
+REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
+
 # with_database DSN NAME — the same connection, pointed at a different database.
 #
 # The database segment is REPLACED, never inherited. DEV_SLUG owns the name
@@ -610,7 +632,7 @@ up)
     MARGINCE_BLOBSTORE_BUCKET=margince-dev \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
-    --redis "localhost:${REDIS_PORT}" \
+    --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
     "${ai_flag[@]}" "${gmail_api_flags[@]+"${gmail_api_flags[@]}"}" > >(log_as api) 2>&1 &
   be_pid=$!
@@ -663,7 +685,7 @@ up)
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
     MARGINCE_BLOBSTORE_BUCKET=margince-dev \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
-    ./bin/worker --dsn "$dev_app_url" --redis "localhost:${REDIS_PORT}" \
+    ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     --retention-interval 720h \
     "${ai_flag[@]}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
@@ -683,6 +705,12 @@ up)
     echo "  OPEN     http://localhost:${fe_port}"
     echo ""
     echo "  api      http://localhost:${api_port}  (also proxied at :${fe_port}/v1)"
+    # Printed for a slugged stack only, and printed at all because a shared bus
+    # is invisible until something goes missing: a reader debugging a consumer
+    # needs to know which index to point redis-cli at.
+    if [[ -n "$slug" ]]; then
+      echo "  bus      redis db ${redis_db} on :${REDIS_PORT}  (this slug's own — events are not shared with other stacks)"
+    fi
     # The only seat on a cold start is the bootstrap admin, and the deployment
     # config is where it is defined — read the address back from that file
     # rather than restating it, so an edited config prints the truth.
