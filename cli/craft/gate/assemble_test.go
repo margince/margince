@@ -74,7 +74,7 @@ func contains(s []string, v string) bool {
 // be judged against a different rulebook on each run.
 func TestNearestAgentsSkipsARulebookWithNoRubric(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "AGENTS.md", "# root\n\n## Craftsmanship\n\nthe rubric lives here\n")
+	writeFile(t, root, "AGENTS.md", "# root\n\n## Layout\n\nnot the rubric\n\n## Craftsmanship\n\nthe rubric lives here\n\n## License headers\n\nalso not the rubric\n")
 	writeFile(t, root, "frontend/AGENTS.md", "# frontend\n\nrules with no rubric section\n")
 	writeFile(t, root, "frontend/src/app.tsx", "export const a = 1\n")
 	writeFile(t, root, "backend/main.go", "package main\n")
@@ -87,6 +87,14 @@ func TestNearestAgentsSkipsARulebookWithNoRubric(t *testing.T) {
 	if !strings.Contains(got, "the rubric lives here") {
 		t.Errorf("walking up from frontend/src returned a rulebook with no ## Craftsmanship section:\n%s\n"+
 			"The gate would run with no rubric in its prompt and still return a verdict.", got)
+	}
+	// The SECTION, not the file: the prompt labels this "## Craftsmanship
+	// deltas", and the neighbouring sections are payload the model reads past.
+	for _, other := range []string{"not the rubric", "also not the rubric"} {
+		if strings.Contains(got, other) {
+			t.Errorf("the gate prompt carries %q, from a section next to ## Craftsmanship — it should carry that "+
+				"section alone, since the standard itself is rubric.json and this is the delta layer:\n%s", other, got)
+		}
 	}
 
 }

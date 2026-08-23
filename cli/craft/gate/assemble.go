@@ -85,22 +85,27 @@ func (a *Assembler) addSiblings(dir string, in Inputs) {
 	}
 }
 
-// nearestAgents returns the ## Craftsmanship-bearing AGENTS.md closest to the
-// touched dirs, walking up to the repo root.
+// nearestAgents returns the ## Craftsmanship SECTION of the AGENTS.md closest to
+// the touched dirs, walking up to the repo root.
 //
-// Two properties this has to have, and neither is free:
+// The section, not the file. The prompt writes this under the label "Module
+// AGENTS.md (## Craftsmanship deltas)", and deltas is what the design means: the
+// standard itself is rubric.json, versioned and fed separately by writeRules, and
+// this is the per-directory layer on top of it. Passing the whole rulebook put
+// ~570 lines of issue labels, make targets and module layout into every gate
+// prompt under a label promising Craftsmanship deltas — payload the model has to
+// read past to reach the rules, and a reason the rulebook could not be
+// reorganised without changing what the gate sees.
 //
-// The heading is a REQUIREMENT, not a description. A directory may hold an
-// AGENTS.md that carries its own rules and no Craftsmanship section — frontend/
-// does. Returning that one would hand the gate a prompt with no rubric in it at
-// all, and the gate would still answer: a verdict reached without the rules,
-// reported exactly like one reached with them. So a file that does not carry the
-// section is not the nearest one; the walk continues past it.
+// A file with no such section is not the nearest one, and the walk continues past
+// it. That matters because a directory may carry rules of its own and no rubric —
+// frontend/ does. Returning that file would hand the gate a delta layer that is
+// really somebody else's rulebook.
 //
-// And the order is SORTED, because dirs is a map and a diff routinely touches
-// more than one. Ranging over it directly picks a random starting directory, so
-// the same diff could be judged against one rulebook on one run and another on
-// the next — a gate that disagrees with itself for no reason anybody changed.
+// The order is SORTED, because dirs is a map and a diff routinely touches more
+// than one directory. Ranging over it picks a random starting point, so the same
+// diff could be judged with one directory's deltas on one run and another's on the
+// next — a gate that disagrees with itself for no reason anybody changed.
 func (a *Assembler) nearestAgents(dirs map[string]bool) string {
 	ordered := make([]string, 0, len(dirs))
 	for dir := range dirs {
@@ -110,9 +115,10 @@ func (a *Assembler) nearestAgents(dirs map[string]bool) string {
 
 	for _, dir := range ordered {
 		for d := dir; ; d = filepath.Dir(d) {
-			content, ok := a.read(filepath.Join(d, "AGENTS.md"))
-			if ok && strings.Contains(content, craftsmanshipHeading) {
-				return content
+			if content, ok := a.read(filepath.Join(d, "AGENTS.md")); ok {
+				if section, found := craftsmanshipSection(content); found {
+					return section
+				}
 			}
 			if d == "." || d == "/" {
 				break
@@ -122,9 +128,31 @@ func (a *Assembler) nearestAgents(dirs map[string]bool) string {
 	return ""
 }
 
-// craftsmanshipHeading is the section that makes an AGENTS.md usable as a gate
-// prompt. `make check-craft-doc` asserts the root rulebook still carries it.
-const craftsmanshipHeading = "## Craftsmanship\n"
+// craftsmanshipSection returns the body of the ## Craftsmanship heading, from the
+// heading itself up to the next H2 or end of file.
+func craftsmanshipSection(content string) (string, bool) {
+	lines := strings.Split(content, "\n")
+	start := -1
+	for i, line := range lines {
+		if strings.HasPrefix(line, craftsmanshipHeading) {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return "", false
+	}
+	end := len(lines)
+	for i := start + 1; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "## ") {
+			end = i
+			break
+		}
+	}
+	return strings.TrimSpace(strings.Join(lines[start:end], "\n")), true
+}
+
+const craftsmanshipHeading = "## Craftsmanship"
 
 func (a *Assembler) read(path string) (string, bool) {
 	b, err := os.ReadFile(filepath.Join(a.Root, path)) //nolint:gosec // G304: path comes from git diff output for files under a.Root

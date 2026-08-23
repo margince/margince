@@ -500,8 +500,11 @@ every control that already exists.
 
 _Why this is shaped the way it is, and how to audit a subsystem against it: [docs/principles/legibility-is-the-product.md](docs/principles/legibility-is-the-product.md)._
 
-The anti-tell catalog T1–T11, in full below — this list is the rule, not a summary
-of one kept elsewhere. The rule under every rule:
+The anti-tell catalog below is the prose form of the standard. The rule the gate
+actually applies is `cli/craft/rubric/rubric.json`, which is versioned and machine-read —
+it carries the anti-tells T1–T10 and five positive rules P1–P5 (idiomatic,
+small-focused, tests-as-spec, pr-tells-story, restraint) that this section does
+not restate. When the two disagree, the rubric is what blocked your push. The rule under every rule:
 **code that reads best to a human reads best to the next agent that edits it** —
 legibility is the product, not polish.
 
@@ -513,7 +516,7 @@ legibility is the product, not polish.
   abstraction without a second concrete caller today, no `TODO` without an issue
   ref (T3/T8).
 - Handle the honest hard cases (empty page, version skew, cross-tenant, GUC-unset) (T7).
-- **Tests prove behaviour or they are noise (T11):** no assertion-free test (it can
+- **Tests prove behaviour or they are noise (P3, tests-as-spec):** no assertion-free test (it can
   only fail by panicking), no `time.Sleep` / real-clock / real-network flakiness, no
   over-mocking that asserts call-order; mock only true boundaries (DB/HTTP/clock/queue)
   and inject a `Clock`. Tests read as specs; the integration lane fails loudly without a

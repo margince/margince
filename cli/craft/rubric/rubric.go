@@ -1,7 +1,17 @@
-// Package rubric is the machine-readable craftsmanship standard the review agent
-// reviews against. The canonical text is the Craftsmanship section of
-// AGENTS.md; rubric.json
-// is the version the gate consumes. See architecture/15 (ADR-0045/A60).
+// Package rubric is the craftsmanship standard the review agent reviews against,
+// and rubric.json is the standard rather than a copy of one: it is what the gate
+// consumes, it carries the severity model and the block-eligibility the gate acts
+// on, and it is versioned. AGENTS.md's Craftsmanship section is the prose form
+// for a human or an agent reading the rulebook, plus whatever per-directory
+// deltas a nested AGENTS.md adds — the gate is handed that section alongside this
+// file, never instead of it.
+//
+// The two are held in agreement by TestTheProseFormNamesTheSameRules, because
+// they had already drifted: the prose advertised an anti-tell catalogue of
+// "T1-T11" against a rubric of T1-T10 plus five positive rules P1-P5, so it named
+// one rule that does not exist and hid five that block pushes.
+//
+// See architecture/15 (ADR-0045/A60).
 package rubric
 
 import (

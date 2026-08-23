@@ -1,6 +1,11 @@
 package rubric
 
-import "testing"
+import (
+	"os"
+	"regexp"
+	"strings"
+	"testing"
+)
 
 func TestLoad_everyRuleCarriesIDCategoryAndBlockFlag(t *testing.T) {
 	r, err := Load()
@@ -56,4 +61,84 @@ func TestBlockEligible(t *testing.T) {
 			t.Errorf("BlockEligible(%q) = %v, want %v", tt.category, got, tt.want)
 		}
 	}
+}
+
+// The prose form of the standard lives in AGENTS.md's Craftsmanship section and
+// the machine form lives in rubric.json. Two statements of one thing drift, and
+// these two had: the prose advertised "T1-T11" while the rubric carried T1-T10
+// plus P1-P5, so it promised a rule that does not exist and said nothing about
+// five that block a push.
+//
+// The expectation is derived from the rubric, which is the standard — a rule id
+// added there is enrolled here the moment it exists, and there is no list in this
+// test to go short.
+func TestTheProseFormNamesTheSameRules(t *testing.T) {
+	const rulebook = "../../../AGENTS.md"
+
+	raw, err := os.ReadFile(rulebook)
+	if err != nil {
+		t.Fatalf("read %s: %v", rulebook, err)
+	}
+	section, found := craftsmanshipSectionOf(string(raw))
+	if !found {
+		t.Fatalf("%s carries no ## Craftsmanship section — the gate is handed that section as its delta layer, "+
+			"and `make check-craft-doc` asserts it exists", rulebook)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("load rubric: %v", err)
+	}
+
+	// Any T-or-P id the prose mentions must be a real rule.
+	idPattern := regexp.MustCompile(`\b([TP]\d{1,2})\b`)
+	real := map[string]bool{}
+	for _, r := range loaded.Rules {
+		real[r.ID] = true
+	}
+	for _, m := range idPattern.FindAllStringSubmatch(section, -1) {
+		if !real[m[1]] {
+			t.Errorf("%s's Craftsmanship section names rule %s, which rubric.json does not carry. An agent reading "+
+				"the rulebook is told about a rule the gate will never apply; worse, a range like T1-T11 written "+
+				"over a rubric of T1-T10 hides that the ids past it are P-rules.", rulebook, m[1])
+		}
+	}
+
+	// And the prose must not silently drop a whole class the gate blocks on.
+	var hasPositive bool
+	for _, r := range loaded.Rules {
+		if r.Kind == KindPositive {
+			hasPositive = true
+			break
+		}
+	}
+	if hasPositive && !strings.Contains(section, "P1") {
+		t.Errorf("rubric.json carries positive rules (P-ids) and %s's Craftsmanship section never mentions one. "+
+			"They are part of the standard the gate applies, so a reader of the rulebook alone does not know "+
+			"what blocks a push.", rulebook)
+	}
+}
+
+// craftsmanshipSectionOf mirrors what the gate assembler hands the model: the
+// ## Craftsmanship heading through to the next H2.
+func craftsmanshipSectionOf(content string) (string, bool) {
+	lines := strings.Split(content, "\n")
+	start := -1
+	for i, line := range lines {
+		if strings.HasPrefix(line, "## Craftsmanship") {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return "", false
+	}
+	end := len(lines)
+	for i := start + 1; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "## ") {
+			end = i
+			break
+		}
+	}
+	return strings.Join(lines[start:end], "\n"), true
 }
