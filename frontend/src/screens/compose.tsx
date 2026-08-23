@@ -574,11 +574,32 @@ function AccountDraftContext({
   const deals = view?.deals?.data ?? [];
   const projects = liveProjects(view?.projects);
   useSoleProjectDefault(projects, projectId, onProjectChange);
-  // No contact on the account is an honest dead end for a GROUNDED draft, and
-  // saying so beats an empty picker the rep tries and cannot use. They can
-  // still type an address into To and write the mail themselves.
+  // No contact on the account is an honest dead end for the DRAFT — the model
+  // has no relationship to write from — and saying so beats an empty picker the
+  // rep tries and cannot use. They can still type an address into To and write
+  // the mail themselves.
+  //
+  // The PROJECT picker survives that dead end, and must: which body of work a
+  // message is about has nothing to do with whether the account has a contact
+  // yet. Returning early here took the project choice away from exactly the
+  // message that most needs it — a check-in to an account nobody has spoken to
+  // in a while, which is the first mail on a fresh delivery and the one with no
+  // thread to inherit a project from. It would land unfiled, and the ladder
+  // would ask about it in Approvals afterwards instead.
   if (query.isSuccess && contacts.length === 0) {
-    return <p className="t-caption">{t("compose.noGroundableRecipient")}</p>;
+    return (
+      <>
+        <p className="t-caption">{t("compose.noGroundableRecipient")}</p>
+        {projects.length > 0 && (
+          <ProjectPicker
+            projects={projects}
+            projectId={projectId}
+            onChange={onProjectChange}
+            scope={scope}
+          />
+        )}
+      </>
+    );
   }
   return (
     <>
