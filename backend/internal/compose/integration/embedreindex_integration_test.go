@@ -129,26 +129,12 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	// caller of this setup pays for it at most once per process.
 	ApplyRiverSchema(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Embed Reindex E2E", "embed-reindex@fable.test", "Admin")
-	e.Slug = "embed-reindex-e2e" // slugify("Embed Reindex E2E")
 
 	identity, _ := router.EmbedIdentity()
 	if err := search.NewStore(e.DB()).SeedBinding(ctx, identity); err != nil {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 	return e
-}
-
-// embedReindexWorkspaceID resolves the bootstrapped workspace's raw id —
-// there is no /v1/workspaces endpoint to read it from, so this reads it
-// the same way demoteToRep/SetWorkspaceSeat already do (owner connection,
-// by slug).
-func embedReindexWorkspaceID(t *testing.T, e *apptest.AppEnv) string {
-	t.Helper()
-	var wsID string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
-	return wsID
 }
 
 // seedStaleEmbeddingRow plants one person carrying an embedding row under
@@ -289,7 +275,7 @@ func embedReindexDecode[T any](t *testing.T, e *apptest.AppEnv, method, path str
 func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
 	router := embedReindexRouter(t, "reindex-count-v1")
 	e := setupEmbedReindex(t, router)
-	wsID := embedReindexWorkspaceID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
 
 	status, before, _ := embedStatus(t, e)
@@ -315,7 +301,7 @@ func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
 func TestEmbedReindexStatusAndPreviewReflectPendingEntities(t *testing.T) {
 	router := embedReindexRouter(t, "reindex-status-v1")
 	e := setupEmbedReindex(t, router)
-	wsID := embedReindexWorkspaceID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
 
 	identity, _ := router.EmbedIdentity()
@@ -396,7 +382,7 @@ func TestEmbedReindexConfirmRequiresAdminOrOps(t *testing.T) {
 func TestEmbedReindexConfirmLifecycle(t *testing.T) {
 	router := embedReindexRouter(t, "reindex-lifecycle-v1")
 	e := setupEmbedReindex(t, router)
-	wsID := embedReindexWorkspaceID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
 
 	status, confirmed, _ := embedConfirm(t, e, nil)
@@ -457,7 +443,7 @@ func TestEmbedReindexConfirmLifecycle(t *testing.T) {
 func TestEmbedReindexRepeatConfirmIsRefusedAfterItsDispatcherFinishes(t *testing.T) {
 	router := embedReindexRouter(t, "reindex-singleflight-v1")
 	e := setupEmbedReindex(t, router)
-	wsID := embedReindexWorkspaceID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
 
 	if status, _, _ := embedConfirm(t, e, nil); status != http.StatusAccepted {
@@ -487,7 +473,7 @@ func TestEmbedReindexRepeatConfirmIsRefusedAfterItsDispatcherFinishes(t *testing
 func TestEmbedReindexConfirmRefusesIdentityDrift(t *testing.T) {
 	router := embedReindexRouter(t, "reindex-drift-v1")
 	e := setupEmbedReindex(t, router)
-	wsID := embedReindexWorkspaceID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
 
 	status, _, problem := embedConfirm(t, e, apptest.AnyMap{"previewed_identity": "fake/someone-else@1024"})

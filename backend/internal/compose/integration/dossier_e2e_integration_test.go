@@ -181,11 +181,6 @@ func seedProfileFieldWrittenAt(
 	t *testing.T, e *apptest.AppEnv, orgID, field, value string, written time.Time,
 ) {
 	t.Helper()
-	var workspaceID ids.UUID
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspaceID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
 	if _, err := e.Owner.Exec(context.Background(), `
 		INSERT INTO organization_profile_field (id, organization_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
 		VALUES ($1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,

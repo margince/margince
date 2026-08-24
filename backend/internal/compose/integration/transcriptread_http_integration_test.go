@@ -54,7 +54,6 @@ func transcriptDoorApp(t *testing.T, slug, name, email string) *apptest.AppEnv {
 	// The door enqueues in the same transaction as the run record, so the job
 	// schema has to exist before the FIRST request, not merely before a worker.
 	ApplyRiverSchema(t)
-	e.Slug = slug
 	apptest.BootstrapWorkspaceSession(t, e, name, email, "Ada Admin")
 	return e
 }

@@ -188,11 +188,6 @@ func TestBootstrapSeedsTheAiModelRatePriceSheet(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	ctx := context.Background()
 
-	var wsID string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
-
 	var total int
 	if err := e.Owner.QueryRow(ctx, `SELECT count(*) FROM ai_model_rate`).Scan(&total); err != nil {
 		t.Fatal(err)

@@ -1,11 +1,10 @@
--- seed-reset.sql — wipe the demo workspace (slug 'demo-workspace') so
+-- seed-reset.sql — wipe the demo installation's workspace so
 -- `make seed-dev` can rebuild it from scratch. Run by `make seed-reset`
 -- against the compose stack's Postgres.
 --
 -- Deletes every row scoped to the demo workspace across all tenant tables
 -- (those with a workspace_id column), discovered dynamically so a new
--- table is covered without touching this file. Workspaces other than the
--- demo one are untouched.
+-- table is covered without touching this file.
 --
 -- session_replication_role = replica disables FK enforcement and triggers
 -- for the duration, so the deletes are order-independent. That includes
@@ -22,9 +21,11 @@ DECLARE
   ws uuid;
   t  text;
 BEGIN
-  SELECT id INTO ws FROM workspace WHERE slug = 'demo-workspace';
+  -- The installation's one workspace (ADR-0061); ADR-0091 retired the slug
+  -- this used to match on.
+  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
   IF ws IS NULL THEN
-    RAISE NOTICE 'seed-reset: no demo-workspace row — nothing to do';
+    RAISE NOTICE 'seed-reset: no live workspace — nothing to do';
     RETURN;
   END IF;
 

@@ -178,13 +178,13 @@ func newCaptureRegistryFixture(t *testing.T) (context.Context, *capture.Registry
 	// the millisecond timestamp, so two workspaces minted in the same test
 	// binary run within the same millisecond would truncate to the same
 	// admin email and collide on its unique index.
-	slug := "capture-disconnect-" + wsUUID.String()
+	mailLabel := "capture-disconnect-" + wsUUID.String()
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO workspace (id) VALUES ($1)`, wsUUID); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Fixture User')`, userUUID, "user-"+userUUID.String()+"@"+slug+".test"); err != nil {
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Fixture User')`, userUUID, "user-"+userUUID.String()+"@"+mailLabel+".test"); err != nil {
 		t.Fatalf("seeding app_user: %v", err)
 	}
 

@@ -64,18 +64,6 @@ func createRouteLeadAutomation(t *testing.T, e *apptest.AppEnv) string {
 	return created.ID
 }
 
-// workspaceIDBySlug resolves the bootstrapped tenant's id through the
-// owner connection for RLS-free seeding.
-func workspaceIDBySlug(t *testing.T, e *apptest.AppEnv) string {
-	t.Helper()
-	var wsID string
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
-	return wsID
-}
-
 // seedWorkflowRun records one engine firing linked the way the engine
 // links them: handler = catalog key, idempotency key suffixed with
 // "@<automation id>". planned/applied ride the workflow.Action encoding;
@@ -161,7 +149,7 @@ func assertRunsStartEmptyAndHideAbsentInstances(t *testing.T, e *apptest.AppEnv,
 // fired run names its action kinds and first target.
 func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, autoID string) {
 	t.Helper()
-	wsID := workspaceIDBySlug(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	targetLead := ids.NewV7().String()
 	actionTrace := fmt.Sprintf(`[{"Kind":"assign_owner","Target":{"Type":"lead","ID":"%s"},"Args":{}}]`, targetLead)
 	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)

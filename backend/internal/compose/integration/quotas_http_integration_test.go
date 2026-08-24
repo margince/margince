@@ -59,10 +59,7 @@ func seedQuotaTeam(t *testing.T, e *apptest.AppEnv, name string) string {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var wsID, teamID string
-	if err := tx.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
+	var teamID string
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO team (name) VALUES ($1) RETURNING id`, name).Scan(&teamID); err != nil {
 		t.Fatalf("insert team: %v", err)
@@ -89,10 +86,7 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var wsID string
-	if err := tx.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
+	wsID := apptest.InstallationWorkspaceID(ctx, t, tx)
 	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
 		t.Fatalf("set guc: %v", err)
 	}

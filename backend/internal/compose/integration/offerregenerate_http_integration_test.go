@@ -81,17 +81,6 @@ func seedDealContextActivity(t *testing.T, e *apptest.AppEnv, wsID, dealID, subj
 	return "activity:" + activityID.String()
 }
 
-// installationWsID resolves the workspace's own id — the raw-SQL activity seed
-// above needs it, and the HTTP surface never exposes it.
-func installationWsID(t *testing.T, e *apptest.AppEnv) string {
-	t.Helper()
-	var wsID string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("resolving the installation's workspace: %v", err)
-	}
-	return wsID
-}
-
 // stagedLineCount counts proposal_state='staged' rows on one offer — the
 // same check offerdraft_integration_test.go's Env.WsCount runs, over
 // this file's own raw owner connection.
@@ -146,9 +135,8 @@ func containsDescription(descriptions []string, want string) bool {
 
 func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotals(t *testing.T) {
 	e, fake := setupWithOfferDraft(t)
-	e.Slug = "offer-regen-ai"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen AI", "offerai@fable.test", "Admin")
-	wsID := installationWsID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	dealID := offerFixture(t, e)
 	source := seedDealContextActivity(t, e, wsID, dealID,
 		`Client said: "we'd want a kickoff workshop" and agreed to 20000 cents for it.`)
@@ -199,9 +187,8 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 
 func TestOfferRegenerateHTTP_UngroundedCandidateFallsBackToMechanicalCloneOnly(t *testing.T) {
 	e, fake := setupWithOfferDraft(t)
-	e.Slug = "offer-regen-ungrounded"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Ungrounded", "ungrounded@fable.test", "Admin")
-	wsID := installationWsID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	dealID := offerFixture(t, e)
 	seedDealContextActivity(t, e, wsID, dealID, "Client mentioned they liked our website.")
 	fake.Script(`{"lines":[
@@ -245,7 +232,6 @@ func TestOfferRegenerateHTTP_UngroundedCandidateFallsBackToMechanicalCloneOnly(t
 // whether or not an AI brain is wired.
 func TestOfferRegenerateHTTP_NonSentOfferRefusesMechanically(t *testing.T) {
 	e, _ := setupWithOfferDraft(t)
-	e.Slug = "offer-regen-not-sent"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Not Sent", "notsent@fable.test", "Admin")
 	dealID := offerFixture(t, e)
 	draft := createOfferInCurrency(t, e, dealID, "EUR")
@@ -272,9 +258,8 @@ func TestOfferRegenerateHTTP_NonSentOfferRefusesMechanically(t *testing.T) {
 // caller never loses the revision it just minted behind a 500.
 func TestOfferRegenerateHTTP_MalformedModelResponseFallsBackToMechanicalClone(t *testing.T) {
 	e, fake := setupWithOfferDraft(t)
-	e.Slug = "offer-regen-malformed"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Malformed", "malformed@fable.test", "Admin")
-	wsID := installationWsID(t, e)
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	dealID := offerFixture(t, e)
 	seedDealContextActivity(t, e, wsID, dealID, "Client asked about a custom rollout plan.")
 	fake.Script(`this is not json at all`)

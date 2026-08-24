@@ -25,7 +25,7 @@
 #
 # Same teeth as the serial lane: zero-skip guard (a SKIP fails the run) and any
 # package failure fails the whole run. MARGINCE_ENV=dev is exported so the HTTP
-# e2e suites' X-Workspace-Slug trust switch is honored (same as the serial lane).
+# e2e suites boot under the same non-production postures the serial lane uses.
 #
 # Shard mode (the CI matrix): INTEGRATION_SHARD="k/N" slices the lane across N
 # independent runners BY TEST, not by package — package-level fan-out bottoms

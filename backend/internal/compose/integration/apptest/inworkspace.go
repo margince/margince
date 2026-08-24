@@ -36,10 +36,7 @@ func InWorkspace(e *AppEnv, t *testing.T, fn func(pgx.Tx) error) error {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	var wsID string
-	if err := tx.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		return err
-	}
+	wsID := InstallationWorkspaceID(ctx, t, tx)
 	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
 		return err
 	}

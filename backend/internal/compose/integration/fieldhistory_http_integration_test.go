@@ -93,10 +93,7 @@ func assertFieldHistoryValidation422(t *testing.T, status int, problem fieldHist
 func fieldHistoryHTTPEnv(t *testing.T, e *apptest.AppEnv) *Env {
 	t.Helper()
 	ctx := context.Background()
-	var ws ids.UUID
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&ws); err != nil {
-		t.Fatalf("resolving workspace id for %q: %v", e.Slug, err)
-	}
+	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Owner)
 	pool, err := database.NewPool(ctx, apptest.AppDSN(t))
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)

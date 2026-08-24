@@ -87,11 +87,7 @@ func setupWebhooks(t *testing.T) *webhookEnv {
 	e := apptest.SetupAppWithOptions(t, compose.WithWebhookSigningKey(cipher))
 	e.BootstrapWorkspace(t)
 
-	var wsID ids.UUID
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
+	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	return &webhookEnv{AppEnv: e, pool: e.Pool, cipher: cipher, wsID: wsID}
 }
 

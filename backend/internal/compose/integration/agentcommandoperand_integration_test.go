@@ -21,6 +21,7 @@ package integration
 // rather than hand-bound in a unit test's route context.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -54,7 +55,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 		"display_name": "Capture-Private Inc", "owner_id": adminID,
 	})
 
-	wsA := wsID(t, e)
+	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	rep := ids.NewV7()
 	seedInWorkspace(t, e, wsA,
 		stmt(`UPDATE organization SET visibility = 'owner' WHERE id = $1`, orgID),

@@ -76,7 +76,7 @@ func setupPreflightWithoutGoogleApp(t *testing.T) *preflightEnv {
 // activity being answered, and the acting human. extra carries whatever the
 // caller wants composed on top of the vault and the public base URL — which is
 // where the two setups above differ, and the only place. Each test boots its own
-// database, so the one installation slug serves both.
+// database, so the one installation serves both.
 func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
 	key := make([]byte, 32)
@@ -94,7 +94,6 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	// carries one — an install that can send at all has one.
 	opts = append(opts, compose.WithPublicBaseURL(preflightBaseURL))
 	e := apptest.SetupAppWithOptions(t, opts...)
-	e.Slug = "preflight-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Preflight E2E", "sender@fable.test", "Admin")
 
 	var person struct {

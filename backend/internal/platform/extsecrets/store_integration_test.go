@@ -81,13 +81,13 @@ func setup(t *testing.T) *env {
 		otherWS:   ids.NewV7(),
 		otherUser: ids.NewV7(),
 	}
-	seed := func(ws, user ids.UUID, slug string) {
+	seed := func(ws, user ids.UUID, mailLabel string) {
 		if _, err := owner.Exec(ctx,
 			`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := owner.Exec(ctx,
-			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Member')`, user, slug+"@extsecrets.test"); err != nil {
+			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Member')`, user, mailLabel+"@extsecrets.test"); err != nil {
 			t.Fatal(err)
 		}
 	}

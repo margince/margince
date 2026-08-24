@@ -83,11 +83,6 @@ func seedMeetingLinkedTo(t *testing.T, e *apptest.AppEnv, personID string) strin
 	}, nil, &meeting); status != http.StatusCreated {
 		t.Fatalf("log meeting → %d", status)
 	}
-	var wsID string
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
-		t.Fatalf("reading the workspace: %v", err)
-	}
 	if _, err := e.Owner.Exec(t.Context(), `
 		INSERT INTO activity_participant (activity_id, role, address)
 		VALUES ($1, 'attendee', 'nobody@example.test')`, meeting.ID); err != nil {

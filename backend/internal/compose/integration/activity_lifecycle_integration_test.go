@@ -40,7 +40,6 @@ func seedTaskAndTarget(t *testing.T, e *apptest.AppEnv) (personID, taskID string
 
 func TestActivityUpdateArchiveRelink(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "act-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Act E2E", "act@fable.test", "Admin")
 	personID, taskID := seedTaskAndTarget(t, e)
 

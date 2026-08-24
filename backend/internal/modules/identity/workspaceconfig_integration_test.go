@@ -195,9 +195,27 @@ func TestPreservedWorkspaceColumnsAreRealAndExcluded(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			return err
 		}
-		for name := range preservedWorkspaceColumns {
-			if !existing[name] {
-				t.Errorf("preserved column %q is not a current workspace column (renamed/dropped?) — a reset would start restoring what it names", name)
+		if len(existing) == 0 {
+			t.Fatal("the workspace table introspected to no columns at all — every name below would be reported missing, or none checked")
+		}
+		// Both maps, because both are keyed by column name and both rot the
+		// same silent way: a dropped column's entry simply stops matching.
+		// `name` outlived 0211 in the second one, and `slug` outlived its own
+		// drop in both, with nothing failing either time.
+		for _, list := range []struct {
+			what string
+			cols map[string]bool
+		}{
+			{"preserved column", preservedWorkspaceColumns},
+			{"per-installation column", perInstallationWorkspaceColumns},
+		} {
+			if len(list.cols) == 0 {
+				t.Errorf("the %s list is empty — this check read nothing and would pass however wrong the tree was", list.what)
+			}
+			for name := range list.cols {
+				if !existing[name] {
+					t.Errorf("%s %q is not a current workspace column (renamed/dropped?) — the name stops matching and reads as deliberately spared", list.what, name)
+				}
 			}
 		}
 		cols, err := workspaceConfigColumns(ctx, tx)
@@ -267,68 +285,11 @@ func TestEveryWorkspaceConfigColumnCanTakeItsDeclaredDefault(t *testing.T) {
 //
 // It is short now because the row is: name went to `setting` with 0211, and
 // ADR-0091 retired the slug. Both outlived their columns in this list, which
-// is what TestTheWorkspaceColumnListsNameRealColumns now refuses.
+// is what TestPreservedWorkspaceColumnsAreRealAndExcluded now refuses — it
+// checks this map alongside preservedWorkspaceColumns, against
+// information_schema rather than the query under test.
 var perInstallationWorkspaceColumns = map[string]bool{
 	"id": true, "created_at": true, "updated_at": true,
-}
-
-// TestTheWorkspaceColumnListsNameRealColumns: both maps above are keyed by
-// column name, so an entry for a column that no longer exists simply stops
-// matching. Nothing else notices — the reset keeps working, this suite keeps
-// passing, and the stale name reads to the next author as a column that is
-// deliberately spared.
-//
-// Both lists had already rotted that way: `name` outlived 0211 in one of them,
-// and `slug` outlived its own drop in both. The failure mode is one-directional
-// and silent, which is exactly the kind that wants a rail rather than a habit.
-func TestTheWorkspaceColumnListsNameRealColumns(t *testing.T) {
-	_, pool := setupIdentityDB(t)
-	ctx := context.Background()
-
-	if err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
-		live := map[string]bool{}
-		rows, err := tx.Query(ctx, `
-			SELECT a.attname
-			FROM pg_attribute a
-			JOIN pg_class c ON c.oid = a.attrelid
-			JOIN pg_namespace n ON n.oid = c.relnamespace
-			WHERE n.nspname = 'public' AND c.relname = 'workspace' AND c.relkind = 'r'
-			  AND a.attnum > 0 AND NOT a.attisdropped`)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var name string
-			if err := rows.Scan(&name); err != nil {
-				return err
-			}
-			live[name] = true
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(live) == 0 {
-			t.Fatal("the workspace table introspected to no columns at all — every assertion here would hold vacuously")
-		}
-		for _, list := range []struct {
-			name string
-			cols map[string]bool
-		}{
-			{"preservedWorkspaceColumns", preservedWorkspaceColumns},
-			{"perInstallationWorkspaceColumns", perInstallationWorkspaceColumns},
-		} {
-			for col := range list.cols {
-				if !live[col] {
-					t.Errorf("%s names %q, which is not a column of `workspace` — a dropped column left in the list matches nothing and reads as deliberately spared; remove it",
-						list.name, col)
-				}
-			}
-		}
-		return nil
-	}); err != nil {
-		t.Fatalf("column introspection: %v", err)
-	}
 }
 
 // TestAResetWorkspaceMatchesAFreshlyBootstrappedOne is the rail for the

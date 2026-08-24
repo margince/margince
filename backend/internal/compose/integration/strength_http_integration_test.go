@@ -68,7 +68,6 @@ func seedStrengthPersonWithActivities(t *testing.T, e *apptest.AppEnv) string {
 // same §4 formula the domain computes, just surfaced over the wire.
 func TestPersonStrengthHTTPReconciles(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "strength-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Strength E2E", "admin@strength.test", "Admin")
 	personID := seedStrengthPersonWithActivities(t, e)
 
@@ -108,7 +107,6 @@ func TestPersonStrengthHTTPReconciles(t *testing.T) {
 // every other row-scoped read.
 func TestPersonStrengthHTTPMissingIs404(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "strength-404"
 	apptest.BootstrapWorkspaceSession(t, e, "Strength 404", "admin@strength404.test", "Admin")
 
 	if status := e.Call(t, "GET", "/v1/people/"+ids.NewV7().String()+"/strength", nil, nil, nil); status != http.StatusNotFound {
@@ -121,7 +119,6 @@ func TestPersonStrengthHTTPMissingIs404(t *testing.T) {
 // computed for the person-level endpoint above.
 func TestOrganizationStrengthHTTPReconciles(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "org-strength-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Org Strength E2E", "admin@orgstrength.test", "Admin")
 
 	var org struct {
@@ -152,7 +149,6 @@ func TestOrganizationStrengthHTTPReconciles(t *testing.T) {
 // a nonexistent organization id discloses nothing about it either.
 func TestOrganizationStrengthHTTPMissingIs404(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "org-strength-404"
 	apptest.BootstrapWorkspaceSession(t, e, "Org Strength 404", "admin@orgstrength404.test", "Admin")
 
 	if status := e.Call(t, "GET", "/v1/organizations/"+ids.NewV7().String()+"/strength", nil, nil, nil); status != http.StatusNotFound {

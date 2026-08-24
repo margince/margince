@@ -63,11 +63,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 		profile.ID).Scan(&ownerID); err != nil {
 		t.Fatalf("resolving the profile's owner: %v", err)
 	}
-	var workspaceID ids.UUID
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspaceID); err != nil {
-		t.Fatalf("resolving the installation's workspace: %v", err)
-	}
+	workspaceID := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 
 	var person struct {
 		ID string `json:"id"`

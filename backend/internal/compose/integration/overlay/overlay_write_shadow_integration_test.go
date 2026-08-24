@@ -89,10 +89,7 @@ func setupOverlayWrite(t *testing.T) overlayWriteEnv {
 	if err != nil {
 		t.Fatalf("parsing admin user id: %v", err)
 	}
-	var wsIDStr string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsIDStr); err != nil {
-		t.Fatalf("looking up the workspace id: %v", err)
-	}
+	wsIDStr := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	wsID, err := ids.Parse(wsIDStr)
 	if err != nil {
 		t.Fatalf("parsing workspace id: %v", err)

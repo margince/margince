@@ -7,9 +7,12 @@
 # slug-derived ports, so two worktrees can run concurrently without colliding on
 # the database or the host ports.
 #
-# MARGINCE_ENV=dev is set so the api trusts the X-Workspace-Slug header the FE
-# and the seed script send. localhost is a browser secure-context, so the Secure session
-# cookie survives over plain http — no TLS front door needed.
+# MARGINCE_ENV=dev relaxes the production-only postures (an unlicensed install
+# warns rather than refuses, the data reset is reachable). It does NOT switch on
+# a workspace header: one installation serves one organization (ADR-0061), the
+# server resolves it itself, and no request selects a tenant. localhost is a
+# browser secure-context, so the Secure session cookie survives over plain
+# http — no TLS front door needed.
 #
 # BYOK: if .env.local sets a cloud key (GEMINI_API_KEY / OPENAI_API_KEY /
 # ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY), sourcing it exports the var and

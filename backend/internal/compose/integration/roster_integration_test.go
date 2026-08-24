@@ -39,17 +39,6 @@ type rosterTeam struct {
 }
 
 // wsID resolves the installation's workspace id through the owner connection.
-// One installation serves one organization (ADR-0061), so there is one row and
-// nothing to select it by — the slug that used to name it is gone (ADR-0091).
-func wsID(t *testing.T, e *apptest.AppEnv) ids.UUID {
-	t.Helper()
-	var id ids.UUID
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&id); err != nil {
-		t.Fatalf("resolving the installation's workspace: %v", err)
-	}
-	return id
-}
-
 // seedStmt is one workspace-scoped setup statement for seedInWorkspace.
 type seedStmt struct {
 	sql  string
@@ -58,9 +47,15 @@ type seedStmt struct {
 
 func stmt(sql string, args ...any) seedStmt { return seedStmt{sql: sql, args: args} }
 
-// seedInWorkspace runs setup statements inside a workspace-bound
-// transaction: app_user/team/team_membership are FORCE-RLS tables, so the
-// owner must set app.workspace_id even to insert. Mirrors SetWorkspaceSeat.
+// seedInWorkspace runs setup statements inside a workspace-bound transaction.
+//
+// The binding scopes nothing on core: 0217 retired row-level security there,
+// and app_user/team/team_membership carry no policy — this used to claim they
+// were FORCE-RLS tables the owner could not insert into unbound, which stopped
+// being true before the claim was written. It is still bound because a seed
+// stands in for a production write, and production writes run bound (the
+// extension tables' policies read that GUC). Mirrors apptest.InWorkspace,
+// which now says the same thing.
 func seedInWorkspace(t *testing.T, e *apptest.AppEnv, ws ids.UUID, stmts ...seedStmt) {
 	t.Helper()
 	ctx := context.Background()
@@ -87,7 +82,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t) // workspace "fable-e2e" + admin ada@example.com, session in the jar
 
-	wsA := wsID(t, e)
+	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	rep, bob, deskTeam := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	seedInWorkspace(
 		t, e, wsA,
@@ -98,14 +93,6 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, deskTeam, bob),
 	)
 
-	// A second tenant with its own member — its rows must never surface
-	// under workspace A's session (RLS row-scope). Seed workspace B (a
-	// non-tenant row) then its user inside B's GUC.
-	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO workspace (id) VALUES ($1)`,
-		ids.NewV7()); err != nil {
-		t.Fatalf("seeding workspace B: %v", err)
-	}
 	// A second workspace's member used to be seeded here, holding a uniquely
 	// keyed role, so the assertions below could prove neither escaped into this
 	// roster. ADR-0091 §8 phase D took the tenant column off app_user, role and
@@ -208,7 +195,7 @@ func TestRosterWithholdsRoleKeysFromANonAdmin(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t) // admin ada@example.com, session in the jar
 
-	wsA := wsID(t, e)
+	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	rep := ids.NewV7()
 	seedInWorkspace(
 		t, e, wsA,
@@ -287,7 +274,6 @@ func assertRosterUnauthorized(t *testing.T, e *apptest.AppEnv) {
 		if err != nil {
 			t.Fatalf("building request for %s: %v", path, err)
 		}
-		req.Header.Set("X-Workspace-Slug", e.Slug)
 		resp, err := noSession.Do(req)
 		if err != nil {
 			t.Fatalf("GET %s (no session): %v", path, err)

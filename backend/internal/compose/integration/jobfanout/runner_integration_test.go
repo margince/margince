@@ -91,7 +91,6 @@ func stagingSpec(name string) (runner.AgentSpec, bool) {
 func setupRunner(t *testing.T) *runnerEnv {
 	t.Helper()
 	e := apptest.SetupApp(t)
-	e.Slug = "runner-e2e"
 
 	apptest.BootstrapWorkspaceSession(t, e, "Runner E2E", "runner@fable.test", "Admin")
 
@@ -114,10 +113,7 @@ func setupRunner(t *testing.T) *runnerEnv {
 	}
 	t.Cleanup(pool.Close)
 
-	var wsRaw string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsRaw); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
+	wsRaw := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	wsID, err := ids.Parse(wsRaw)
 	if err != nil {
 		t.Fatal(err)

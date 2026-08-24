@@ -46,7 +46,7 @@ type channelSendEnv struct {
 	*apptest.AppEnv
 	activityID string
 	personID   string
-	ws, user   string
+	user       string
 }
 
 // setupChannelSend boots the api composition with the connect registry (so the
@@ -71,7 +71,6 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: channelSendBaseURL,
 		}, compose.CaptureConfig{}),
 		compose.WithPublicBaseURL(channelSendBaseURL))
-	e.Slug = "channel-send-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Channel Send E2E", "rep@fable.test", "Admin")
 
 	c := &channelSendEnv{AppEnv: e}
@@ -84,7 +83,7 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 	c.personID = person.ID
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT (SELECT id FROM workspace ORDER BY created_at LIMIT 1), id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.ws, &c.user)
+			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.user)
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}

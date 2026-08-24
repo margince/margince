@@ -109,7 +109,10 @@ func LinkActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, entityType s
 // Exported because the fan-out suites in sibling packages need a second tenant
 // too, and a workspace row is the one thing none of them can mint any other way:
 // workspace is outside RLS and no endpoint creates one.
-func SeedExtraWorkspace(t *testing.T, owner *pgx.Conn, name string, archived bool) ids.UUID {
+// label names the caller in the failure message and nothing else: the row has
+// no name and no slug to carry it, since ADR-0091 left `workspace` holding only
+// identity and lifecycle.
+func SeedExtraWorkspace(t *testing.T, owner *pgx.Conn, label string, archived bool) ids.UUID {
 	t.Helper()
 	ws := ids.NewV7()
 	archivedAt := "NULL"
@@ -119,7 +122,7 @@ func SeedExtraWorkspace(t *testing.T, owner *pgx.Conn, name string, archived boo
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO workspace (id, archived_at)
 		VALUES ($1, `+archivedAt+`)`, ws); err != nil {
-		t.Fatalf("seeding the %s workspace: %v", name, err)
+		t.Fatalf("seeding the %s workspace: %v", label, err)
 	}
 	return ws
 }

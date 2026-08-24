@@ -203,7 +203,7 @@ type telegramEnv struct {
 	inserter *jobs.Runner
 	log      *slog.Logger
 
-	ws, admin string
+	admin string
 	// conn is the live bot binding Connect wrote.
 	conn capture.ChannelConnection
 }
@@ -245,7 +245,6 @@ func setupTelegram(t *testing.T) *telegramEnv {
 		compose.WithKeyvault(vault),
 	)
 	apptest.BootstrapWorkspaceSession(t, e, telegramWorkspaceName, telegramAdminEmail, "Telegram Admin")
-	e.Slug = telegramWorkspaceSlug
 
 	c := &telegramEnv{AppEnv: e, vault: vault, api: api, inserter: inserter, log: quiet}
 	c.resolveActors(t)
@@ -260,20 +259,16 @@ func (c *telegramEnv) resolveActors(t *testing.T) {
 	t.Helper()
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT (SELECT id FROM workspace ORDER BY created_at LIMIT 1), id FROM app_user WHERE email = $1`, telegramAdminEmail).Scan(&c.ws, &c.admin)
+			`SELECT id FROM app_user WHERE email = $1`, telegramAdminEmail).Scan(&c.admin)
 	}); err != nil {
 		t.Fatalf("resolving the acting admin: %v", err)
 	}
 }
 
-// workspaceID is the bootstrapped workspace as a typed id.
+// workspaceID is the installation's workspace as a typed id.
 func (c *telegramEnv) workspaceID(t *testing.T) ids.UUID {
 	t.Helper()
-	id, err := ids.Parse(c.ws)
-	if err != nil {
-		t.Fatalf("parsing the workspace id: %v", err)
-	}
-	return id
+	return apptest.InstallationWorkspaceUUID(context.Background(), t, c.Owner)
 }
 
 // adminCtx binds the principal Connect requires: a human on a full seat

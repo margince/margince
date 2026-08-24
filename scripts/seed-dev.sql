@@ -42,9 +42,13 @@ DO $$
 DECLARE
   ws uuid;
 BEGIN
-  SELECT id INTO ws FROM workspace WHERE slug = 'demo-workspace';
+  -- The installation's one workspace (ADR-0061), not a row selected by name:
+  -- ADR-0091 retired the slug this used to match on. Archived rows are
+  -- excluded and the id breaks a created_at tie, so this asks the same
+  -- question identity.activeWorkspaces asks.
+  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
   IF ws IS NULL THEN
-    RAISE NOTICE 'seed-dev.sql: no demo-workspace row — run make seed-dev first';
+    RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
     RETURN;
   END IF;
 
@@ -75,9 +79,13 @@ DECLARE
   rep2_id uuid;
   dach_team_id uuid;
 BEGIN
-  SELECT id INTO ws FROM workspace WHERE slug = 'demo-workspace';
+  -- The installation's one workspace (ADR-0061), not a row selected by name:
+  -- ADR-0091 retired the slug this used to match on. Archived rows are
+  -- excluded and the id breaks a created_at tie, so this asks the same
+  -- question identity.activeWorkspaces asks.
+  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
   IF ws IS NULL THEN
-    RAISE NOTICE 'seed-dev.sql: no demo-workspace row — run make seed-dev first';
+    RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
     RETURN;
   END IF;
 
@@ -107,8 +115,8 @@ BEGIN
   -- ADR-0091 §8 phase D is taking the tenant column off these tables, and where
   -- it is already gone there is no narrower set to name. What bounds the blast
   -- radius is the guard at the top of this block, not a predicate here — the
-  -- whole DO block returns unless a workspace with slug 'demo-workspace' and an
-  -- admin@demo.test user both exist, which is the demo installation and not
+  -- whole DO block returns unless a live workspace and an admin@demo.test
+  -- user both exist, which is the demo installation and not
   -- anything else. A seed that creates users with a published password was
   -- never safe to point at real data; the tenant predicate narrowed the damage
   -- but was never what made it safe.
@@ -229,7 +237,7 @@ DECLARE
   conn uuid;
   org  RECORD;
 BEGIN
-  SELECT id INTO ws FROM workspace WHERE slug = 'demo-workspace';
+  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
   IF ws IS NULL THEN
     RETURN;
   END IF;

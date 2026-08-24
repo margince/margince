@@ -75,10 +75,7 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	var wsRaw string
-	if err := o.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsRaw); err != nil {
-		t.Fatal(err)
-	}
+	wsRaw := apptest.InstallationWorkspaceID(context.Background(), t, o.Owner)
 	wsID, err := ids.Parse(wsRaw)
 	if err != nil {
 		t.Fatal(err)

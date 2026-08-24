@@ -102,7 +102,6 @@ func seatActions() []seatAction {
 
 func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "seat-matrix"
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Matrix", "seat@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)
 	roles := seededRoles(t, e)
@@ -125,7 +124,7 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 			resetSeatFixtures(t, e, fixtures)
 			// A read seat is refused whatever the role grants — the
 			// ceiling is licensing, and it is checked first.
-			e.SetWorkspaceSeat(t, e.Slug, "read")
+			e.SetWorkspaceSeat(t, "read")
 			fullSeat(t, e, fixtures.colleague)
 			if status, code := action.call(t, e, fixtures); status != http.StatusForbidden ||
 				code != "seat_tier_insufficient" {
@@ -134,7 +133,7 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 			}
 			// A full seat falls through to RBAC, and what RBAC then says
 			// is read out of this role's own seeded grant document.
-			e.SetWorkspaceSeat(t, e.Slug, "full")
+			e.SetWorkspaceSeat(t, "full")
 			fullSeat(t, e, fixtures.colleague)
 			status, code := action.call(t, e, fixtures)
 			if code == "seat_tier_insufficient" {
@@ -174,7 +173,6 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 // handed a record to read, never one to write.
 func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "seat-grant"
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Grant", "seat-grant@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)
 	readSeatColleague(t, e, fixtures.colleague)
@@ -232,7 +230,6 @@ func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 // the row no residue whatever order the statements ran in.
 func TestAReAssertCannotWalkAWriteGrantPastTheSeatCeiling(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "seat-grant-reassert"
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Grant Reassert", "seat-reassert@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)
 	readSeatColleague(t, e, fixtures.colleague)
@@ -385,7 +382,6 @@ func exportForCode(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) (int, s
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Workspace-Slug", e.Slug)
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("export request: %v", err)

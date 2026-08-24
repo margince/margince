@@ -120,12 +120,16 @@ func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 //
 // It runs against `app_user` — a CORE table, and one holding people's names —
 // because the extension's own ext_* tables arrive with the demo unit and this
-// seam has to be correct before there is one. That it succeeds is also the
-// honest demonstration of what the containment wall is today: the tenant pin
-// and the RLS policies, and NOT a per-unit database role. runtime.go used to
-// claim the latter; it does not exist, and issue #628 tracks building it. When
-// it does, this test is expected to need a table the unit actually owns — and
-// the fact that it currently does not is the point being recorded here rather
+// seam has to be correct before there is one.
+//
+// That it SUCCEEDS is the honest demonstration, and the honest statement is
+// blunter than the one this comment used to make: for a core table there is no
+// containment wall at all. Core has carried no row-level security since 0217,
+// so the tenant pin binds a GUC that only the extension tables' policies read,
+// and this unit's SQL carries no workspace predicate of its own. runtime.go
+// once claimed a per-unit database role; none exists, and #628 tracks building
+// one. When it does, this test is expected to need a table the unit actually
+// owns — that it currently does not is the point being recorded here rather
 // than hidden.
 //
 // It used to write workspace.slug, until ADR-0091 retired that column. The
@@ -196,14 +200,14 @@ func (e *extRuntimeEnv) seatName(ctx context.Context, t *testing.T, rt *callRunt
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// One row, because the id is the primary key. A second would mean the
-	// cursor is reading something other than what this test writes. It is NOT
-	// a proof of the tenant pin — core carries no deny-on-unset policy since
-	// 0217, so an unpinned read would see this row too. The pin is proved
-	// against the GUC the policies read, in
+	// The row was VISIBLE, which is the only thing a primary-key lookup can
+	// report: zero would mean the seam hid it, not that a second one appeared.
+	// It is NOT a proof of the tenant pin either — core carries no
+	// deny-on-unset policy since 0217, so an unpinned read would see this row
+	// too. The pin is proved against the GUC the policies read, in
 	// TestRuntimeTxIsPinnedToTheInvokingWorkspace.
 	if seen != 1 {
-		t.Fatalf("the read saw %d rows for one primary key, want exactly 1", seen)
+		t.Fatalf("the read saw %d rows for the seeded seat's primary key, want it visible through the seam", seen)
 	}
 	return name
 }
