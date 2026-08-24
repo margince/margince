@@ -62,8 +62,12 @@
 
 .r360-signals > li {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-1);
+  /* The figure belongs to the label beside it: "Going cold" over "95 days" on
+     two lines reads as two findings, and the number loses the rule it counts
+     for. The chip wraps as a unit or not at all. */
+  white-space: nowrap;
 }
 
 /* The number that tripped the rule, beside the rule's own words. Tabular so a

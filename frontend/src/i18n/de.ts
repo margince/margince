@@ -4322,7 +4322,7 @@ export const de = {
   "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
   "deal360.title": "Deal360",
   "deal360.sub":
-    "Was passiert ist, was den Deal aufhält, und was als Nächstes zu sagen ist.",
+    "Wie es um den Deal steht, und was ich als Nächstes tun würde.",
   "deal360.blocker": "Was den Deal aufhält",
   "deal360.buyer": "Was der Käufer will",
   "deal360.verdict.live": "Aktiv",

@@ -4283,8 +4283,7 @@ export const vi = {
   "threads.open": "Đăng",
   "threads.readOnly": "Quyền truy cập của bạn chỉ đọc.",
   "deal360.title": "Deal360",
-  "deal360.sub":
-    "Điều đã xảy ra, điều đang cản trở, và điều cần nói tiếp theo.",
+  "deal360.sub": "Giao dịch đang ở đâu, và tôi sẽ làm gì tiếp theo.",
   "deal360.blocker": "Điều đang cản trở",
   "deal360.buyer": "Điều người mua muốn",
   "deal360.verdict.live": "Đang chạy",

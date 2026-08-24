@@ -4377,8 +4377,7 @@ export const en = {
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
   "deal360.title": "Deal360",
-  "deal360.sub":
-    "What has happened, what is holding it up, and what to say next.",
+  "deal360.sub": "Where this deal stands, and what I would do next.",
   "deal360.blocker": "What is holding this up",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict.live": "Live",
