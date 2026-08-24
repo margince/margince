@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -207,6 +209,71 @@ func TestASiteReadLeavesAHumansDescriptionAlone(t *testing.T) {
 	}
 }
 
+// A description a person supplies AT CREATE is theirs too. The edit path is
+// the obvious one to protect and was protected first; a create that stamped
+// nothing would leave the very first sentence somebody wrote unclaimed, and the
+// next crawl would take it.
+func TestASiteReadLeavesAHumansCreatedDescriptionAlone(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	typed := "What we tell people we do, written when the record was made."
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Created With Words GmbH", Source: "manual", Description: &typed,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+
+	applySiteReadDescription(ctx, t, e, orgID, "Whatever the marketing page happens to claim.")
+
+	reread, err := e.store.GetOrganization(ctx, orgID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != typed {
+		t.Fatalf("description after the site read = %v, want the human's %q", reread.Description, typed)
+	}
+}
+
+// A description inherited by a merge survivor keeps the author it had. The
+// survivorship fill moves a person's sentence onto a record that never had one,
+// and if the claim did not travel with it the next site read of the survivor
+// would replace words a person wrote.
+func TestAMergedInDescriptionKeepsItsHumanAuthor(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	typed := "The sentence a person wrote on the record that lost the merge."
+	retired, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Retired Author GmbH", Source: "manual", Description: &typed,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	survivor, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Surviving Blank GmbH", Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	survivorID := ids.From[ids.OrganizationKind](ids.UUID(survivor.Id))
+	if _, err := e.store.MergeOrganization(ctx,
+		ids.From[ids.OrganizationKind](ids.UUID(retired.Id)), survivorID); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	applySiteReadDescription(ctx, t, e, survivorID, "Whatever the marketing page happens to claim.")
+
+	reread, err := e.store.GetOrganization(ctx, survivorID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != typed {
+		t.Fatalf("survivor description after the site read = %v, want the inherited human sentence %q",
+			reread.Description, typed)
+	}
+}
+
 // An AGENT editing the description through update_record does not claim the
 // column: the stamp records the authenticated principal, and only a human:<id>
 // holds it. Without this the governed write surface would be a way to freeze a
@@ -237,6 +304,112 @@ func TestAnAgentsEditDoesNotClaimTheDescription(t *testing.T) {
 	if reread.Description == nil || *reread.Description != fromSite {
 		t.Fatalf("description after the site read = %v, want the site's %q — an agent's edit must not "+
 			"hold the column", reread.Description, fromSite)
+	}
+}
+
+// An agent re-sending a human's description UNCHANGED does not take the column
+// from them. The patch records an assignment without comparing, so "the request
+// named this field" and "the value moved" are different questions; answering
+// the first would let any agent write that echoes a record back strip the
+// human's claim and hand the sentence to the next crawl.
+func TestAnAgentEchoingAHumansDescriptionDoesNotTakeIt(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	typed := "The sentence a person wrote and an agent merely repeats."
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Echoed GmbH", Source: "manual", Description: &typed,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+
+	// The same value back, the way a round-tripping agent write sends it.
+	same := typed
+	if _, err := e.store.UpdateOrganization(e.asAgent(), orgID,
+		UpdateOrganizationInput{Description: &same}); err != nil {
+		t.Fatal(err)
+	}
+
+	applySiteReadDescription(ctx, t, e, orgID, "Whatever the marketing page happens to claim.")
+
+	reread, err := e.store.GetOrganization(ctx, orgID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != typed {
+		t.Fatalf("description after the site read = %v, want the human's %q — an agent echoing a value "+
+			"unchanged must not become its author", reread.Description, typed)
+	}
+}
+
+// A description that predates field-level stamping is protected by the row's
+// own captured_by, which is what the 1787560000 backfill writes into
+// field_provenance for every organization that already had one.
+//
+// The stamp is deleted here to reproduce the pre-migration shape, because a
+// record created by the current code always has one and so cannot exhibit the
+// case. What is asserted is the backfill's premise: the row's captured_by is a
+// sound answer to who wrote the description when nothing else recorded it.
+func TestABackfilledLegacyDescriptionIsHeldByItsRowAuthor(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	typed := "Written long before anybody stamped a field."
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Legacy Words GmbH", Source: "manual", Description: &typed,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	stripDescriptionStamp(ctx, t, e, orgID)
+	backfillDescriptionAuthors(ctx, t, e)
+
+	applySiteReadDescription(ctx, t, e, orgID, "Whatever the marketing page happens to claim.")
+
+	reread, err := e.store.GetOrganization(ctx, orgID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != typed {
+		t.Fatalf("description after the site read = %v, want the legacy human sentence %q — the backfill "+
+			"must claim it from the row's own captured_by", reread.Description, typed)
+	}
+}
+
+// stripDescriptionStamp removes the field-level provenance a current create
+// writes, leaving the row in the shape every pre-migration record is in.
+func stripDescriptionStamp(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `DELETE FROM field_provenance
+			WHERE object_type = 'organization' AND object_id = $1 AND field_name = 'description'`, orgID)
+		return err
+	}); err != nil {
+		t.Fatalf("clearing the description stamp: %v", err)
+	}
+}
+
+// backfillDescriptionAuthors runs the same statement migration 1787560000
+// runs. It is spelled here rather than read from the file because the lane
+// applies migrations before the test starts, so the only way to exercise the
+// backfill against a row this test made is to run it again.
+func backfillDescriptionAuthors(ctx context.Context, t *testing.T, e *dedupeEnv) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO field_provenance (object_type, object_id, field_name, source, captured_by, captured_at)
+			SELECT 'organization', o.id, 'description', o.source, o.captured_by, o.created_at
+			FROM organization o
+			WHERE o.description IS NOT NULL
+			  AND NOT EXISTS (
+			    SELECT 1 FROM field_provenance fp
+			    WHERE fp.object_type = 'organization'
+			      AND fp.object_id = o.id
+			      AND fp.field_name = 'description')`)
+		return err
+	}); err != nil {
+		t.Fatalf("running the description-author backfill: %v", err)
 	}
 }
 

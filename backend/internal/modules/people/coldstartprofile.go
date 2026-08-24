@@ -117,6 +117,9 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	if err != nil {
 		return ids.OrganizationID{}, err
 	}
+	if err := gateResolvedColdStartTarget(ctx, tx, orgID, created); err != nil {
+		return ids.OrganizationID{}, err
+	}
 	// The columns as they stand before the apply, including display_name: a
 	// created organization gets its name here, and that is a column change a
 	// reader is entitled to see.
@@ -267,17 +270,13 @@ var coldStartColumns = map[string]string{
 	"address": `UPDATE organization SET address_line1 = $2 WHERE id = $1 AND address_line1 IS NULL
 	            AND address_city IS NULL AND address_postal_code IS NULL`,
 	// The length guard mirrors organization_description_length (0203): a
-	// summary the CHECK would reject skips the fill instead of aborting the
-	// whole apply — the evidence row still lands, and the column stays
-	// fillable by a shorter later read.
+	// summary the CHECK would reject skips the write instead of aborting the
+	// whole apply — the evidence row still lands, and the column stays writable
+	// by a shorter later read.
 	//
-	// Unlike its siblings this arm also REPLACES a description no person
-	// authored. The header's summary is meant to say what the company sells,
-	// and the site is what knows that; an agent creating the record from a
-	// meeting transcript writes a summary of the MEETING there, which then
-	// blocked the read that could have corrected it. Whose sentence it is comes
-	// from field_provenance (descriptionHeldByHuman), the same layer the logo
-	// asks, so the product has one answer to "a human owns this field".
+	// Unlike its siblings this arm REPLACES rather than fills; who is allowed to
+	// be replaced is decided by descriptionHeldByHuman, and
+	// organizationdescriptionowner.go says why.
 	"description": `UPDATE organization SET description = $2
 	            WHERE id = $1 AND description IS DISTINCT FROM $2 AND length($2) <= 500`,
 }

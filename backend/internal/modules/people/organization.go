@@ -177,6 +177,17 @@ func createOrganizationInTx(ctx context.Context, tx pgx.Tx, in CreateOrganizatio
 		return crmcontracts.Organization{}, err
 	}
 
+	// A description supplied at create is authored the same way an edited one
+	// is, and has to say so for the same reason: the site read asks
+	// field_provenance whose sentence it is before replacing it, and a create
+	// that stamped nothing would leave a person's own words unclaimed. `by` is
+	// the authenticated principal, so an agent's create claims nothing.
+	if in.Description != nil && *in.Description != "" {
+		if err := stampDescriptionAuthor(ctx, tx, id, by); err != nil {
+			return crmcontracts.Organization{}, err
+		}
+	}
+
 	auditID, err := storekit.Audit(ctx, tx, "create", "organization", id.UUID, nil, map[string]any{"display_name": in.DisplayName})
 	if err != nil {
 		return crmcontracts.Organization{}, fmt.Errorf("audit organization create: %w", err)
@@ -296,12 +307,18 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 			}
 		}
 		// The description carries the same lattice on a different layer. A site
-		// read fills this column and may replace what an automated writer put
-		// there, so an edited description has to say in field_provenance that a
-		// person authored it — otherwise the next crawl reads "no row" as "no
-		// owner" and overwrites the sentence somebody typed. Only on a real
-		// change, for the reason the name stamp above gives.
-		if _, changed := after["description"]; changed {
+		// read may replace a description no person authored, so an edited one has
+		// to say in field_provenance that a person wrote it — otherwise the next
+		// crawl reads "no row" as "no owner" and takes the sentence somebody
+		// typed.
+		//
+		// The test is whether the VALUE moved, not whether the field was sent.
+		// storekit.Patch records an assignment unconditionally, so `after` holds
+		// every key the request named — and an agent re-sending a human's
+		// description unchanged would otherwise write an agent: row on top of the
+		// human's and hand the column to the next crawl. The display-name stamp
+		// above reads its own key the looser way and is not this change's to move.
+		if describedDifferently(before, after) {
 			// Not the `by` above: stageOrgReplaceSets answers "" unless the edit
 			// also carried a replace-set, and a description edit usually carries
 			// neither, which would stamp the field to nobody.
