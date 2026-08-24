@@ -103,7 +103,9 @@ export function stripEveryKeyTag(subject: string): string {
   // the line is returned byte for byte: this runs over a subject the rep is
   // typing, and a global whitespace collapse would rewrite their spacing —
   // eating the second space of "Re:  Kurzer" that they put there on purpose.
-  return subject.replace(/\s?\[[^\]]*\]\s?/g, (group) => {
+  // Exactly ONE space on each side is eligible to go with the tag — the
+  // separator this module writes. A second space is the rep's own and stays.
+  return subject.replace(/ ?\[[^\]]*\] ?/g, (group) => {
     const inner = group.trim().slice(1, -1);
     if (!keyShaped(inner)) {
       return group;
@@ -114,24 +116,31 @@ export function stripEveryKeyTag(subject: string): string {
   });
 }
 
-/** `subject` with a leading `tag` removed, if it carries one. */
+/**
+ * `subject` with a leading `tag` removed, if it carries one — along with the
+ * ONE space this module puts after it, and no more.
+ *
+ * What Margince manages is the tag plus a single separator. Everything after
+ * that is the rep's, including a second space they typed themselves: stripping
+ * every leading space would take `[KEY]  Re:` down to `Re:` and quietly change
+ * what they wrote.
+ */
 export function stripSubjectTag(subject: string, tag: string): string {
-  if (!tag) {
+  if (!tag || !subject.startsWith(tag)) {
     return subject;
   }
-  const trimmed = subject.trimStart();
-  return trimmed.startsWith(tag)
-    ? trimmed.slice(tag.length).trimStart()
-    : subject;
+  const rest = subject.slice(tag.length);
+  return rest.startsWith(" ") ? rest.slice(1) : rest;
 }
 
-/** `body` behind `tag`, with one space and no leading blank. */
+/**
+ * `body` behind `tag`, with the one separator this module owns.
+ *
+ * `body` arrives already stripped of the tag and its separator, so it is used
+ * verbatim — leading spaces included, because those are the rep's.
+ */
 function prefixed(body: string, tag: string): string {
-  // Only the LEADING space is dropped, and only to avoid "[KEY]  Re:". A
-  // trailing one is the space the rep just typed before the next word, and
-  // trimming it here takes it back out from under their cursor.
-  const rest = body.replace(/^\s+/, "");
-  return rest ? `${tag} ${rest}` : tag;
+  return body === "" ? tag : `${tag} ${body}`;
 }
 
 /**

@@ -94,6 +94,23 @@ describe("the project tag a subject carries", () => {
     );
   });
 
+  it("keeps a second space the rep typed right after the tag", () => {
+    // The space beside the tag is the easiest one to lose and the least
+    // visible when it goes: what this module manages is the tag plus ONE
+    // separator, and anything past that is the rep's own spacing.
+    expect(withSubjectTag("[N2P-1]  Re: Hallo", "[N2P-1]")).toBe(
+      "[N2P-1]  Re: Hallo",
+    );
+    expect(withSubjectTag("[N2P-1]   Re: Hallo", "[N2P-1]")).toBe(
+      "[N2P-1]   Re: Hallo",
+    );
+    // And the ordinary single-separator case is untouched, so re-applying is
+    // still idempotent rather than growing a space each pass.
+    expect(withSubjectTag("[N2P-1] Re: Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] Re: Hallo",
+    );
+  });
+
   it("closes the gap a removed tag leaves behind", () => {
     // One separator survives when the tag sat between two things, so a subject
     // does not read "Re:  Hallo" with a hole where the tag was.
@@ -104,6 +121,8 @@ describe("the project tag a subject carries", () => {
 
   it("takes its own tag back off, and nobody else's", () => {
     expect(stripSubjectTag("[N2P-1] Re: Hallo", "[N2P-1]")).toBe("Re: Hallo");
+    // One separator comes off with the tag, not every space behind it.
+    expect(stripSubjectTag("[N2P-1]  Re: Hallo", "[N2P-1]")).toBe(" Re: Hallo");
     // A different project's tag is the rep's text, not ours to remove.
     expect(stripSubjectTag("[OTHER-9] Re: Hallo", "[N2P-1]")).toBe(
       "[OTHER-9] Re: Hallo",
