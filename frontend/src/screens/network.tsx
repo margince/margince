@@ -15,7 +15,6 @@ import {
   throwProblem,
   useSorMode,
 } from "./common";
-import { dealRoleLabel } from "./record360";
 
 // The two relationship-graph cards (ADR-0078).
 //
@@ -149,7 +148,6 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
     enabled: !overlay,
   });
   const risks = query.data?.risks ?? [];
-  const seats = query.data?.stakeholders ?? [];
   // Withheld is checked BEFORE the empty case, and the order is the whole
   // point: a caller without the relationship grant is served no findings, so
   // testing the risk list first would render "this deal passes every coverage
@@ -157,14 +155,6 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
   // happened; the card must not decide for itself.
   const omitted = query.data?.sections_omitted ?? [];
   const withheld = omitted.includes("risks");
-  // Read from the payload, not inferred from the seat list being empty: an
-  // empty list would render "nobody is on this deal" over a list the server
-  // never sent, which is the mistake the risks comment above exists to
-  // prevent. The server withholds all three sections together today, so this
-  // tracks `withheld` in practice — it is asked separately because the
-  // contract lets them differ and this card must not be the thing that breaks
-  // if they ever do.
-  const seatsWithheld = omitted.includes("stakeholders");
 
   return (
     <Card className="net-card" title={t("coverage.title")}>
@@ -182,33 +172,15 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
       {!overlay && query.isSuccess && !withheld && risks.length === 0 && (
         <p className="t-caption">{t("coverage.clear")}</p>
       )}
-      {/* Who is on the deal, by NAME. This list used to sit in its own card
-          rendering `role ?? person_id`, which meant a real stakeholder showed
-          as the bare word "economic_buyer" and a rep could not tell who it
-          was. The seats live here because coverage already knows which of them
-          is engaged, and a name beside a finding about single-threading is the
-          thing that makes the finding actionable. */}
-      {!overlay && query.isSuccess && seatsWithheld && (
-        <EmptyState>{t("coverage.seatsWithheld")}</EmptyState>
-      )}
-      {!overlay && !seatsWithheld && seats.length > 0 && (
-        <ul className="net-seats">
-          {seats.map((seat) => (
-            <li key={seat.person_id}>
-              <span className="net-seat-name">
-                {/* Null when the caller may not read that person: the seat
-                    still counts toward coverage, so it is shown, and only the
-                    identity is withheld. */}
-                {seat.person_name ?? t("coverage.seatWithheld")}
-              </span>
-              <Badge tone={seat.engaged ? "success" : undefined}>
-                {seat.engaged ? t("coverage.engaged") : t("coverage.quiet")}
-              </Badge>
-              <span className="t-caption">{dealRoleLabel(seat.role, t)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* The SEATS are not here any more. They moved to the deal page's rail
+          (deal360/dealseats.tsx) when the readings band started counting them:
+          a reader was meeting the same two facts three times on one screen —
+          once as a figure, once as a chip in Deal360, once as this list. What
+          stays is the FINDINGS, which is what this card was for.
+
+          The seat list still lives in one place, not two: dealseats.tsx moved
+          the markup rather than rewriting it, and both render `.net-seats`
+          from this sheet. */}
       {!overlay && risks.length > 0 && (
         <ul className="net-risks">
           {risks.map((risk) => (

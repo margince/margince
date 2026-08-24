@@ -1,4 +1,5 @@
 import type { Locale } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
 
 // The presentation edge (architecture/10 §1–3): everything here formats
@@ -298,6 +299,59 @@ function byteScale(bytes: number): [number, "byte" | "kilobyte" | "megabyte"] {
     return [bytes / 1000, "kilobyte"];
   }
   return [bytes, "byte"];
+}
+
+/**
+ * calendarDaysBetween counts whole days between two instants by the CALENDAR,
+ * in UTC — the frontend spelling of the backend's shared/kernel/elapsed.Days.
+ *
+ * Not by elapsed milliseconds, and the difference is a defect the product has
+ * already shipped once. Two surfaces on the deal page counted the same silence
+ * and printed 96 and 95 on one card, because one counted calendar days and the
+ * other divided a duration by 24 hours; they agreed only around midnight. The
+ * server now counts one way, and a screen that counted the other way here
+ * would put the disagreement straight back on the page.
+ *
+ * Held by: format.calendar-days.test.ts, which pins the boundary case the
+ * millisecond spelling gets wrong (23:00 to 01:00 is one day, not zero).
+ */
+export function calendarDaysBetween(from: Date, to: Date): number {
+  const day = 86_400_000;
+  const fromDay = Math.floor(from.getTime() / day);
+  const toDay = Math.floor(to.getTime() / day);
+  return toDay - fromDay;
+}
+
+/**
+ * relativeDays reads a timestamp the way a person says it: today, yesterday,
+ * or "N days".
+ *
+ * `never` is reserved for a read that HAPPENED and found nothing — the caller
+ * decides that by passing null only when the section was readable. A withheld
+ * section is not "never"; it is unknown, and its card says so.
+ *
+ * It lives here because three screens wanted it and each wrote its own: two
+ * private copies in personstrip.tsx and personrail.tsx, byte-equivalent and
+ * both counting milliseconds. format.ts's own INTL_LOCALE comment had been
+ * pointing at this gap since it was written — "exported because a relative-time
+ * formatter needs the same mapping".
+ */
+export function relativeDays(
+  at: string | null | undefined,
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+  now: Date = new Date(),
+): string {
+  if (!at) {
+    return t("person.strip.never");
+  }
+  const days = calendarDaysBetween(new Date(at), now);
+  if (days <= 0) {
+    return t("person.strip.today");
+  }
+  if (days === 1) {
+    return t("person.strip.yesterday");
+  }
+  return t("person.strip.days", { count: days });
 }
 
 // Idle/SLA spans display as ABSOLUTE durations (no naive calendar diff —
