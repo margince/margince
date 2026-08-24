@@ -62,6 +62,11 @@ const (
 // provider, which is why both live behind the same seam.
 type fsStore struct {
 	root string
+	// sync makes a rename durable. A field rather than a direct call because a
+	// failure AFTER the rename is a state this store has to answer for — the
+	// file is already published — and a test that cannot produce it is a test
+	// that cannot hold the answer.
+	sync func(string) error
 }
 
 // NewFilesystem returns a Store that keeps object bytes under root, creating
@@ -82,7 +87,7 @@ func NewFilesystem(root string) (Store, error) {
 			return nil, fmt.Errorf("blobstore: create %s: %w", filepath.Join(abs, dir), err)
 		}
 	}
-	return &fsStore{root: abs}, nil
+	return &fsStore{root: abs, sync: syncDir}, nil
 }
 
 // path turns a key into a path under one of the store's trees, refusing any key
@@ -172,14 +177,28 @@ func (f *fsStore) Put(_ context.Context, key string, r io.Reader, _ int64, conte
 		if rmErr := removeStaging(meta); rmErr != nil {
 			return fmt.Errorf("blobstore: clear the content type for %q: %w", key, rmErr)
 		}
-	} else if err := writeFileAtomic(meta, strings.NewReader(contentType)); err != nil {
-		return err
+	} else if published, metaErr := writeFileAtomic(meta, strings.NewReader(contentType), f.sync); metaErr != nil {
+		// Published-but-unsynced metadata is VISIBLE, and the bytes it claims to
+		// describe are not written yet — so it is undone here rather than left
+		// for a reader to find. Unpublished, there is nothing to undo.
+		if published {
+			return errors.Join(metaErr, f.restoreMeta(meta, previous, hadPrevious))
+		}
+		return metaErr
 	}
 
-	if err := writeFileAtomic(blob, r); err != nil {
-		return errors.Join(err, restoreMeta(meta, previous, hadPrevious))
+	published, blobErr := writeFileAtomic(blob, r, f.sync)
+	if blobErr == nil {
+		return nil
 	}
-	return nil
+	// The bytes are visible: the metadata beside them describes THEM, and taking
+	// it away would leave a readable object with no content type. The error still
+	// goes back — a caller that heard "failed" and finds an object is better off
+	// than one that heard nothing.
+	if published {
+		return blobErr
+	}
+	return errors.Join(blobErr, f.restoreMeta(meta, previous, hadPrevious))
 }
 
 // readMeta reads a key's stored content type, reporting whether one was there.
@@ -197,13 +216,16 @@ func readMeta(meta string) (string, bool, error) {
 
 // restoreMeta puts a key's previous content type back after a failed write —
 // or removes the one just published, when the key had none. It is the second
-// half of Put's failure path: the metadata was published before the bytes, so a
+// half of Put's failure path: the metadata is published before the bytes, so a
 // failure there has to unpublish it without disturbing what was already stored.
-func restoreMeta(meta, previous string, hadPrevious bool) error {
+//
+// A restore that is itself published-but-unsynced is still a restore: the
+// previous value is what a reader sees, which is the outcome this is for.
+func (f *fsStore) restoreMeta(meta, previous string, hadPrevious bool) error {
 	if !hadPrevious {
 		return removeStaging(meta)
 	}
-	if err := writeFileAtomic(meta, strings.NewReader(previous)); err != nil {
+	if _, err := writeFileAtomic(meta, strings.NewReader(previous), f.sync); err != nil {
 		return fmt.Errorf("blobstore: restore the previous content type at %s: %w", meta, err)
 	}
 	return nil
@@ -378,34 +400,44 @@ func countFiles(dir string) (int, error) {
 }
 
 // writeFileAtomic writes r to path through a temporary file in the same
-// directory and renames it into place. Rename within one directory is atomic,
-// which is what keeps a half-written object from ever being readable.
+// directory and renames it into place, reporting whether the file was
+// PUBLISHED.
 //
-// Every failure path removes the staging file and reports what removing it
+// The bool is the whole point of the signature. Rename publishes; the directory
+// sync that follows can still fail, and at that moment the file is visible to
+// every reader while this function returns an error. A caller that reads
+// "error" as "nothing happened" then undoes something that did happen — which
+// is exactly how removing the metadata of an already-published blob would leave
+// an object readable with no content type.
+//
+// Failures BEFORE the rename remove the staging file and report what removing it
 // cost, if anything: a returned error must not also leave litter for the next
-// operator to wonder about, and a cleanup that itself failed is part of what
-// went wrong rather than something to hide.
-func writeFileAtomic(path string, r io.Reader) error {
+// operator to wonder about.
+func writeFileAtomic(path string, r io.Reader, sync func(string) error) (published bool, err error) {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, fsDirPerm); err != nil {
-		return fmt.Errorf("blobstore: create %s: %w", dir, err)
+	if mkErr := os.MkdirAll(dir, fsDirPerm); mkErr != nil {
+		return false, fmt.Errorf("blobstore: create %s: %w", dir, mkErr)
 	}
 	staging, err := os.CreateTemp(dir, ".tmp-*")
 	if err != nil {
-		return fmt.Errorf("blobstore: stage a write in %s: %w", dir, err)
+		return false, fmt.Errorf("blobstore: stage a write in %s: %w", dir, err)
 	}
 	name := staging.Name()
-	if err := fillStaging(staging, r); err != nil {
-		return errors.Join(err, removeStaging(name))
+	if fillErr := fillStaging(staging, r); fillErr != nil {
+		return false, errors.Join(fillErr, removeStaging(name))
 	}
-	if err := os.Rename(name, path); err != nil {
-		return errors.Join(fmt.Errorf("blobstore: rename into %s: %w", path, err), removeStaging(name))
+	if renErr := os.Rename(name, path); renErr != nil {
+		return false, errors.Join(fmt.Errorf("blobstore: rename into %s: %w", path, renErr), removeStaging(name))
 	}
-	// The rename is a directory-entry change, and fillStaging's fsync covered
-	// only the staging file's bytes. Without this a power loss can lose the
-	// rename while the contents survive, leaving no object under a key a row
-	// already points at. See syncDir, which differs by platform.
-	return syncDir(dir)
+	// Published from here on, whatever the sync says. The rename is a
+	// directory-entry change and fillStaging's fsync covered only the staging
+	// file's bytes, so without this a power loss can lose the rename while the
+	// contents survive — no object under a key a row already points at. See
+	// syncDir, which differs by platform.
+	if syncErr := sync(dir); syncErr != nil {
+		return true, syncErr
+	}
+	return true, nil
 }
 
 // fillStaging writes r into the staging file, then makes it durable and closes
