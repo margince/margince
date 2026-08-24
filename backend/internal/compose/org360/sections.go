@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -157,7 +158,7 @@ func nextStepsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 		step.AssigneeId = uuidPtr(assignee)
 		step.LinkedDealId = uuidPtr(dealID)
 		step.LinkedPersonId = uuidPtr(personID)
-		step.Overdue = step.DueAt != nil && step.DueAt.Before(now)
+		step.Overdue = deadline.Passed(step.DueAt, now)
 		return step, nil
 	})
 	if err != nil {
