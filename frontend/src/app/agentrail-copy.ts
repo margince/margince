@@ -75,7 +75,7 @@ export const LABELS = {
   model: "model",
   sources: "sources",
   tools: "tools",
-  approvals: "Approvals waiting",
+  approvals: "Decisions waiting",
   offline: "offline",
   idle: "Idle",
   reading: "Loading",

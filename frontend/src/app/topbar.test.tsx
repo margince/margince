@@ -200,15 +200,15 @@ describe("Top bar sidebar toggle", () => {
 // Where the reader is, ending in the page itself. The last stop is the page and
 // is never a link — a link to the page you are already on is a control that does
 // nothing — and it is the ONE element in the bar that claims the current page.
-describe("Top bar approvals", () => {
-  // Silent at zero. A bell that is always on screen with nothing behind it
+describe("Top bar decisions", () => {
+  // Silent at zero. A mark that is always on screen with nothing behind it
   // teaches a reader to stop looking at it, which is the one thing a queue that
   // blocks other people cannot afford.
   it("names the queue and shows no count when nothing is waiting", () => {
     renderTopBar({ screen: "home" });
-    const bell = screen.getByRole("link", { name: "Approvals" });
-    expect(bell.getAttribute("href")).toBe("#/inbox");
-    expect(bell.querySelector(".topbar-bellcount")).toBeNull();
+    const mark = screen.getByRole("link", { name: "Decisions" });
+    expect(mark.getAttribute("href")).toBe("#/inbox");
+    expect(mark.querySelector(".topbar-decisioncount")).toBeNull();
   });
 
   // The number is in the accessible NAME, and the chip that draws it is
@@ -217,9 +217,9 @@ describe("Top bar approvals", () => {
   it("carries the waiting count in its name, with the chip decorative", () => {
     renderTopBar({ screen: "home" }, { counts: { inbox: 7, tasks: 9 } });
     // The inbox count specifically — tasks sits in the same record and carries a
-    // different number, so a bell reading any count would show 9.
-    const bell = screen.getByRole("link", { name: "Approvals — 7 waiting" });
-    const chip = bell.querySelector(".topbar-bellcount");
+    // different number, so a mark reading any count would show 9.
+    const mark = screen.getByRole("link", { name: "Decisions — 7 waiting" });
+    const chip = mark.querySelector(".topbar-decisioncount");
     expect(chip?.textContent).toBe("7");
     expect(chip?.getAttribute("aria-hidden")).toBe("true");
   });

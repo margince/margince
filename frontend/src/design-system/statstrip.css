@@ -12,6 +12,12 @@
      in a wider template ends in white space, which is simply where the row
      ends. */
   background: var(--bgElevated);
+  /* The plate is a CARD: the same ground, border, radius and shadow `.card` and
+     `Panel` stand on, because a readings plate on a page of cards that had no
+     shadow read as a table drawn on the page rather than as a surface sitting
+     on it. The slots' own box-shadows are the divider rules and are unaffected
+     — they belong to the children. */
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 

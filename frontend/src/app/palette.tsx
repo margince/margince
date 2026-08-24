@@ -23,7 +23,7 @@ export type Command = {
   subtitle?: string;
   // Extra terms the row answers to but does not display. A nav label is a
   // presentation choice and the domain vocabulary outlives it: Pipeline is still
-  // the place deals live, Approvals is still the inbox, and someone typing the
+  // the place deals live, Decisions is still the inbox, and someone typing the
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";

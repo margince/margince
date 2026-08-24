@@ -53,7 +53,7 @@ export default meta;
 type Story = StoryObj<typeof Shell>;
 
 // What is waiting, spelled once and handed to BOTH halves of the chrome the way
-// the shell hands it: the Approvals row's badge in the panel and the bell's chip
+// the shell hands it: the Decisions row's badge in the panel and the mark's chip
 // in the strip are two readings of one queue, and a frame that fed one and left
 // the other at nothing would draw the same queue as 12 and as empty at once.
 const COUNTS = { inbox: 12, tasks: 4 };

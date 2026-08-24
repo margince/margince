@@ -809,3 +809,27 @@ describe("unsaved edits", () => {
     ).toEqual(["src/App.tsx"]);
   });
 });
+
+describe("the phone nav's clearance", scanBudget, () => {
+  // The nav bar belongs to the shell, so where it is belongs to the shell too.
+  // Three sheets used to keep their own answer — the record action bar at 720px,
+  // the deck tray at 640px, the scroll padding at 700px — and being three
+  // answers, they were wrong at every width where they disagreed: the tray hid
+  // behind the nav from 641px to 700px, and the record page reserved room for a
+  // bar that is gone above 700px. The shell now publishes `--stickyBottomInset`
+  // at exactly the widths where it draws the bar, and everything sticky reads
+  // that. Two files may name the clearance itself: tokens.css declares it, and
+  // shell.css is the one that knows when it applies.
+  it("is read through --stickyBottomInset everywhere but the shell", () => {
+    const readers = files
+      .filter((file) => /\.css$/.test(file))
+      .filter((file) => /--phoneNavClearance/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(frontendRoot, file))
+      .sort();
+    expect(
+      readers,
+      "a sticky element that names --phoneNavClearance is a second opinion " +
+        "about where the nav bar is; read var(--stickyBottomInset) instead",
+    ).toEqual(["src/app/shell.css", "src/design-system/tokens.css"]);
+  });
+});

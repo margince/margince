@@ -1,0 +1,317 @@
+/*
+ * BriefItemCard — one Morning-Brief queue entry.
+ *
+ * Two things in here are decisions rather than styling, and both are written
+ * down because the obvious alternative is what the screen shipped first.
+ *
+ *   1. A SETTLED item recedes; it does not dim. `opacity: 0.6` on the card was
+ *      the first answer, and it dimmed everything the card holds — the focus
+ *      ring, the badge's contrast, the state word the reader is looking FOR —
+ *      so the one thing that had to stay legible faded with the rest. The
+ *      recede is token roles instead: `Card`'s own `inset` variant supplies the
+ *      recessed ground and drops the boundary and the shadow, and the rules
+ *      below quiet the ink and the fills. Every value is a token or a
+ *      color-mix over one, so the dark theme's accent lift carries through and
+ *      there is nothing to restate per theme.
+ *
+ *   2. The bars share ONE grid. Five tracks that each size themselves are five
+ *      readings; five that start and end at the same x are one comparison, and
+ *      the comparison is the whole point of a factor decomposition. The
+ *      composite is the grid's first row for the same reason — same scale, same
+ *      fill, same track, heavier ink — so the headline figure cannot look like
+ *      it disagrees with the bars it is made of.
+ */
+
+.brief-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* The quiet fill a receded bar takes: enough of the secondary ink to read as
+     a measurement, mixed far enough into the recessed ground that a closed card
+     stops competing with the live ones above it. Derived, so it follows the
+     theme rather than being declared twice. */
+  --brief-bar-quiet: color-mix(
+    in oklab,
+    var(--textSecondary) 55%,
+    var(--bgCard)
+  );
+  /* What a FACTOR's fill takes, against the composite's full-strength accent.
+     Three cards on one screen carry eighteen bars, and at one fill weight the
+     whole column reads as a block of green with no first row — the ink
+     hierarchy the labels already state, said in the fill as well. Derived from
+     the same accent so it stays the same measurement said more softly, and it
+     follows the theme rather than being a second colour.
+
+     45% of the accent measures 1.9:1 against the track and 55% measures 2.2:1,
+     neither of which clears the 3:1 a graphical object has to — and the mix
+     that does clear it is indistinguishable from the composite, which is the
+     whole reason this value exists. It is the same call `--brief-bar-quiet`
+     above already makes at 2.1:1, and it rests on the same fact: every bar
+     states its value as a FIGURE beside it and `Meter` carries it in the
+     accessible name, so the fill is a second reading of a number that is
+     already written down. A bar nobody can read is still a row a reader can. */
+  --brief-bar-factor: color-mix(in oklab, var(--accent) 55%, var(--bgCard));
+}
+
+/* ----- head: rank, the deal, its money ----- */
+
+.brief-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.brief-item-rank {
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+  flex: none;
+}
+
+.brief-item-name {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  color: var(--textPrimary);
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  transition: color var(--dur-state) var(--ease-out);
+}
+
+.brief-item-name:hover {
+  color: var(--accent);
+}
+
+.brief-item-name:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.brief-item-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sized here rather than left at lucide's 24px default: the arrow belongs to
+   the title's line, not to a row of icons. */
+.brief-item-name svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  transition: transform var(--dur-tap) var(--ease-out);
+}
+
+.brief-item-name:hover svg {
+  transform: translateX(2px);
+}
+
+.brief-item-amount {
+  margin-left: auto;
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+/* ----- the composite and its decomposition, on one axis ----- */
+
+.brief-item-bars {
+  display: grid;
+  /* label · track · figure. The label column is `max-content` so a translation
+     sets its own width and every row still agrees on where the tracks begin;
+     the cap below is what keeps a long compound noun from eating the track it
+     is meant to label. */
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr) max-content;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+}
+
+/* The row has no box of its own: its three cells are the grid's items, which is
+   what makes the tracks line up across rows. It still carries the row's stagger
+   index, because a custom property inherits through `display: contents`. */
+.brief-item-bar {
+  display: contents;
+}
+
+.brief-item-bar-label {
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brief-item-bar-value {
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The composite outranks its own factors by INK, never by geometry: every track
+   is the same height and sits in the same column, so the first row still reads
+   as part of the comparison rather than as a second chart above it. The ink is
+   the label, the figure AND the fill — a full-strength composite over softer
+   factors is the same axis with a first row on it. */
+.brief-item-bar-headline .brief-item-bar-label,
+.brief-item-bar-headline .brief-item-bar-value {
+  color: var(--textPrimary);
+  font-weight: var(--fw-semibold);
+}
+
+.brief-item-bar:not(.brief-item-bar-headline) .meterbar > span {
+  background: var(--brief-bar-factor);
+}
+
+.brief-item-bar-headline .brief-item-bar-value {
+  font-size: var(--fs-sm);
+}
+
+/* What the revenue factor normalised against. A caption under the bars rather
+   than a cell in them: it is one row's basis, not a sixth reading. */
+.brief-item-basis {
+  color: var(--textTertiary);
+  margin: 0;
+}
+
+/* ----- foot: what is behind the score, what the rep did, what they can do ----- */
+
+.brief-item-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.brief-item-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.brief-item-when {
+  font-size: var(--fs-meta);
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-item-resurface {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-meta);
+  color: var(--textContent);
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-item-resurface svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--accent);
+}
+
+.brief-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.brief-item-error {
+  color: var(--danger);
+  margin: 0;
+}
+
+/* ----- settled: receded, never dimmed ----- */
+
+.brief-item-quiet {
+  color: var(--textSecondary);
+}
+
+.brief-item-quiet .brief-item-name,
+.brief-item-quiet .brief-item-bar-headline .brief-item-bar-label,
+.brief-item-quiet .brief-item-bar-headline .brief-item-bar-value {
+  color: var(--textSecondary);
+}
+
+/* The fills go quiet with the card. Reaching into `Meter`'s fill from here is
+   deliberate and is the ONE thing this sheet borrows from another component:
+   `Meter` publishes `tone` for a reading that is bad news and `flat` for one
+   with no low-is-bad meaning, and neither is what a receded card wants — it
+   wants the same reading, said more softly. A `quiet` tone on `Meter` is the
+   cleaner home for this the moment a second surface needs it. */
+.brief-item-quiet .brief-item-bars .meterbar > span {
+  background: var(--brief-bar-quiet);
+}
+
+/* One class deeper than the factor rule above, so a settled card's factors go
+   quiet with the rest of it rather than keeping the live accent. */
+.brief-item-quiet
+  .brief-item-bar:not(.brief-item-bar-headline)
+  .meterbar
+  > span {
+  background: var(--brief-bar-quiet);
+}
+
+/* ----- arrival ----- */
+
+/*
+ * The bars grow from nothing, once, in reading order.
+ *
+ * `scaleX` rather than `width`, because the width is the reading: it is set
+ * inline from the value, and animating the same property the data owns means
+ * the two can disagree for the length of the animation. A transform leaves the
+ * value alone and composites, so the growth costs no layout.
+ *
+ * Only a `from` frame, with `backwards` fill — the same shape `enter.css` uses,
+ * and for the same reason: nothing is left applied once it ends, so no bar
+ * keeps a transform (and with it a containing block) for the life of the page.
+ */
+@keyframes brief-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.brief-item-bars .meterbar > span {
+  transform-origin: left center;
+  animation: brief-bar-grow var(--dur-move) var(--ease-out) backwards;
+  animation-delay: calc(var(--brief-bar-index, 0) * var(--stagger-enter));
+}
+
+/*
+ * Reduced motion gets the end state, which for a proportion is the proportion.
+ * Last in the file on purpose: a media query adds no specificity, so document
+ * order is what settles the tie with the rules above — including `Meter`'s own
+ * width transition, which this card promises not to run either.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .brief-item-bars .meterbar > span {
+    animation: none;
+    transition: none;
+  }
+
+  .brief-item-name,
+  .brief-item-name svg {
+    transition: none;
+  }
+
+  .brief-item-name:hover svg {
+    transform: none;
+  }
+}

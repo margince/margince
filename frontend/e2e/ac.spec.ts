@@ -154,7 +154,7 @@ function accountTrigger(page: Page) {
 // intelligence. Not upstream's set: Duplicates is a destination here (the queue
 // had no address outside a home digest card) while Automations is not (it is
 // set-and-forget configuration on Settings → AI). Two labels differ from their
-// route ids on purpose — `deals` presents as Pipeline and `inbox` as Approvals
+// route ids on purpose — `deals` presents as Pipeline and `inbox` as Decisions
 // — so this asserts what a person reads, not what the router matches.
 //
 // The count and the list are both spelled out on purpose. NAV_GROUPS in
@@ -186,7 +186,10 @@ test("AC-shell-1: the rail renders the canonical 12 items in order", async ({
     "Pipeline",
     "Projekte",
     "Aufgaben",
-    "Freigaben",
+    // Was "Freigaben". The surface is called Decisions now — it covers both
+    // halves of that screen, the pending work and the log of what was decided,
+    // and it names what the human does rather than how the system stages it.
+    "Entscheidungen",
     "Berichte",
     "Margince fragen",
   ]);

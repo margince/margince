@@ -375,6 +375,28 @@ export function formatDuration(ms: number, locale: Locale): string {
   }).format(hours);
 }
 
+/**
+ * The clock hour, 0-23, that an instant reads as in one zone.
+ *
+ * Here rather than at the call site because this file is where a formatter is
+ * constructed: outside it, a locale reaches `Intl` through `INTL_LOCALE` or it
+ * does not reach one at all (`one-locale.test.ts` holds that). The hour itself
+ * carries no locale — 08 is 08 in every language — so the tag is `en-GB` for
+ * `hourCycle: "h23"` to be unambiguous, and the ZONE is what the caller is
+ * actually asking about.
+ *
+ * Used to decide which greeting a reader gets, which is a fact about their
+ * morning rather than about any record.
+ */
+export function hourInZone(instant: Date, zone: string): number {
+  const hour = new Intl.DateTimeFormat(INTL_LOCALE.en, {
+    hour: "numeric",
+    hourCycle: "h23",
+    timeZone: zone,
+  }).format(instant);
+  return Number.parseInt(hour, 10);
+}
+
 // FX lineage (ADR-0004): a converted figure ships with its contributing rows
 // from the query-plan IR. The UI consumes base_value_minor VERBATIM — it
 // never multiplies native × rate and never fetches a rate.

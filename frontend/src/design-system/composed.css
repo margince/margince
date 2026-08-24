@@ -1,39 +1,6 @@
 /* Composed surfaces (B-EP09.3b) — consume the trust primitives; staged vs
  * real vs human-typed carries through unchanged (§5c). */
 
-.brief-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.brief-item .brief-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.brief-item .brief-rank {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  color: var(--textMeta);
-  flex: none;
-}
-.brief-item .brief-title {
-  font-weight: 600;
-  color: var(--textPrimary);
-  flex: 1;
-}
-.brief-nothing-sent {
-  color: var(--warn);
-  background: var(--warnBg);
-  border-radius: var(--r-sm);
-  padding: 3px 8px;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  align-self: flex-start;
-}
-
 .board {
   display: grid;
   grid-auto-flow: column;
@@ -112,9 +79,6 @@
   text-align: left;
   width: 100%;
   font-family: var(--f-body);
-}
-.deal-card.stalled {
-  border-left: 3px solid var(--away);
 }
 .deal-card.staged {
   background: var(--aiLight);
@@ -324,7 +288,11 @@
   }
   .record-actions {
     position: sticky;
-    bottom: var(--phoneNavClearance);
+    /* The shell publishes this: the phone-nav clearance at the widths where it
+       draws the fixed bottom bar, the plain ledge everywhere else. This sheet
+       used to name the clearance itself behind its own 720px query, and so
+       stood off a nav that is gone above 700px. */
+    bottom: var(--stickyBottomInset);
     /* Above the page's own content and below the app nav, so neither covers
        the other. The modal overlay (50) still wins over both: an action bar
        across an open dialog would trap a rep behind a button they cannot
@@ -356,7 +324,7 @@
      reserves room for it AND for the nav below it — without this the last row
      of the timeline sits permanently underneath and cannot be scrolled to. */
   .record-zones {
-    padding-bottom: calc(var(--phoneNavClearance) + var(--space-6));
+    padding-bottom: calc(var(--stickyBottomInset) + var(--space-6));
   }
 }
 
@@ -387,47 +355,12 @@
   margin-bottom: var(--space-5);
 }
 
-/* The record page's zones: what is happening in the work column, the business
-   around it beside. A page may still pass both a rail and an aside, but the
-   company page passes only the aside (plan §4). The work column is the one
-   that grows, so the rails keep a fixed share and the
-   layout folds to one column before either becomes unreadably narrow. */
-.record-zones {
-  display: grid;
-  gap: 16px;
-  align-items: start;
-}
-/* The story always gets the largest share, whichever rails exist. */
-.record-zones-both {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 3fr);
-}
-.record-zones-rail {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
-}
-.record-zones-aside {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
-}
-.record-zones .record-rail,
-.record-zones .record-aside,
-.record-zones .record-main {
-  min-width: 0;
-}
-@media (max-width: 1200px) {
-  .record-zones {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  /* The story stays first and full width once the rails sit under it:
-     a rep opening an account reads what is happening, not the firmographics. */
-  .record-zones .record-main {
-    grid-column: 1 / -1;
-    order: -1;
-  }
-}
-@media (max-width: 720px) {
-  .record-zones {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
+/* The record page's zones — the grid itself is `PageZones` (pagezones.css),
+   which the record page composes rather than owns: the ratios and the two folds
+   are a page shape, not a record's. `.record-zones` is what the record adds ON
+   TOP of that grid, and today that is exactly one thing — the phone bottom
+   clearance in the 720px block above, so the sticky action bar cannot cover the
+   last row of the timeline. */
 
 .timeline {
   list-style: none;

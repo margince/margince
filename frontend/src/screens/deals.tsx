@@ -436,7 +436,7 @@ function dealCompany(
   return { org: mark?.name ?? "", orgLogoUrl: mark?.logoUrl };
 }
 
-function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
+export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
   const since = deal.last_activity_at ?? deal.created_at;
   return {
     id: deal.id,
@@ -1040,7 +1040,7 @@ export function buildStageTotals(
  * A withheld company is never among them — the wire sends no id to read — so
  * this cannot turn a mask into a name.
  */
-function useOrgMarks(
+export function useOrgMarks(
   deals: Deal[],
   page: Organization[],
   pageSettled: boolean,

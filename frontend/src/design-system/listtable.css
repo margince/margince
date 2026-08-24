@@ -17,6 +17,9 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
+  /* The list surface is one card, and takes the card shadow: the same plate
+     rule as `.card`, `Panel` and the readings strip. */
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
