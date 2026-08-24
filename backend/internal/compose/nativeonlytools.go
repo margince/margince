@@ -243,6 +243,24 @@ func nativeOnlyHandoff(mode overlayModeChecker, read agents.HandoffReader) agent
 	}
 }
 
+// nativeOnlyProject360 guards read_project_360, for the reason
+// nativeOnlyHandoff gives: a project is a native record with no incumbent
+// analogue, so a mirrored workspace has no page to assemble — and the refusal
+// lands before the project read, or that workspace learns not-found instead
+// of "not available here". The HTTP page refuses the same way in its handler.
+func nativeOnlyProject360(mode overlayModeChecker, read agents.Project360Reader) agents.Project360Reader {
+	return func(ctx context.Context, projectID ids.UUID) (crmcontracts.Project360, error) {
+		overlay, err := mode.isOverlayUncached(ctx)
+		if err != nil {
+			return crmcontracts.Project360{}, err
+		}
+		if overlay {
+			return crmcontracts.Project360{}, apperrors.ErrUnsupportedBySoR
+		}
+		return read(ctx, projectID)
+	}
+}
+
 // nativeOnlyDisqualifier guards disqualify_lead, and it is the tool half of a
 // refusal REST already makes.
 //
@@ -256,9 +274,9 @@ func nativeOnlyHandoff(mode overlayModeChecker, read agents.HandoffReader) agent
 // while the route refused. A tool and its route are two transports onto one
 // behaviour or they are a silent divergence (ADR-0018/AC-OV-2).
 //
-// TestEveryUnservableRecordWriteVerbRefusesOnItsToolPath derives which verbs
-// need this, so a lifecycle seam added for another such verb fails the gate
-// rather than shipping unguarded.
+// TestEveryUnservableRecordWriteVerbIsARegisteredToolTheOverlayPinDrives derives
+// which verbs need this, so a lifecycle seam added for another such verb fails
+// the gate rather than shipping unguarded.
 func nativeOnlyDisqualifier(mode overlayModeChecker, disqualifier agents.LeadDisqualifier) disqualifierGuard {
 	return disqualifierGuard{mode: mode, inner: disqualifier}
 }

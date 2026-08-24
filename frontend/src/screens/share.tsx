@@ -26,6 +26,7 @@ import {
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -34,7 +35,12 @@ import {
   QueryGate,
   throwProblem,
 } from "./common";
-import { EntityRef, useRoster } from "./entityref";
+import {
+  EntityRef,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "./entityref";
 import "./share.css";
 
 // AS-3/4/5 — the record-share screen (A52/ADR-0039): grant a user/team
@@ -49,9 +55,9 @@ type RecordGrant = components["schemas"]["RecordGrant"];
 type CreateRecordGrantRequest =
   components["schemas"]["CreateRecordGrantRequest"];
 type Access = CreateRecordGrantRequest["access"];
-// The share screen serves the record kinds the app has a page for; the
-// contract also admits `project`, which is shareable through the API and has
-// no screen of its own yet.
+// The share screen serves the record kinds the app has a page for, which is
+// every kind the grant contract admits: a grant on a record the reader could
+// not open afterwards would be a door to nowhere.
 type RecordType = Extract<CreateRecordGrantRequest["record_type"], EntityKind>;
 type User = components["schemas"]["User"];
 type Team = components["schemas"]["Team"];
@@ -138,6 +144,7 @@ const RECORD_TYPES: readonly RecordType[] = [
   "organization",
   "deal",
   "lead",
+  "project",
 ];
 
 function isRecordType(value: string): value is RecordType {
@@ -328,6 +335,7 @@ function renderSubjectList(
 function RosterPicker({
   usersQuery,
   teamsQuery,
+  partial,
   filteredRoster,
   held,
   subject,
@@ -336,6 +344,10 @@ function RosterPicker({
 }: Readonly<{
   usersQuery: { isPending: boolean; isError: boolean; refetch: () => unknown };
   teamsQuery: { isPending: boolean; isError: boolean; refetch: () => unknown };
+  // Whether either roster stopped short of the workspace. A subject nothing
+  // here read cannot be granted access, and a picker silent about that reads as
+  // the complete list of who there is to share with.
+  partial: boolean;
   filteredRoster: RosterSubject[];
   // The grant each subject already holds on this record, by `subjectKey`.
   held: ReadonlyMap<string, RecordGrant>;
@@ -384,12 +396,23 @@ function RosterPicker({
   }
   if (filteredRoster.length === 0) {
     return (
-      <p className="t-caption" data-testid="share-roster-empty">
-        {t("share.rosterEmpty")}
-      </p>
+      <>
+        <p className="t-caption" data-testid="share-roster-empty">
+          {t("share.rosterEmpty")}
+        </p>
+        {/* "Nobody matches" over a roster that stopped early is the reader
+            being told the subject they are looking for does not exist, on the
+            strength of pages nothing read. */}
+        <RosterPartialNote partial={partial} />
+      </>
     );
   }
-  return renderSubjectList(filteredRoster, held, subject, t, onPick);
+  return (
+    <>
+      {renderSubjectList(filteredRoster, held, subject, t, onPick)}
+      <RosterPartialNote partial={partial} />
+    </>
+  );
 }
 
 function ShareScreenBody({
@@ -401,7 +424,7 @@ function ShareScreenBody({
   // Grant expiry must read in the viewer's own timezone, not a hardcoded
   // one — the browser's resolved IANA zone is the honest signal for "what
   // calendar date does this viewer see".
-  const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zone = viewerZone();
   const queryClient = useQueryClient();
   const headingId = useId();
   // Where focus lands when a dialog closes on a control that no longer exists.
@@ -423,6 +446,13 @@ function ShareScreenBody({
   // one roster fetch, whether it's the picker here or a resolved name there.
   const usersQuery = useRoster("user", true);
   const teamsQuery = useRoster("team", true);
+  // The picker offers users and teams as one list, so it is incomplete when
+  // EITHER walk stopped short of its end. Both hooks run unconditionally —
+  // short-circuiting the second behind the first would make the hook count
+  // depend on how deep the user roster went.
+  const usersPartial = useRosterPartial("user", true);
+  const teamsPartial = useRosterPartial("team", true);
+  const rosterPartial = usersPartial || teamsPartial;
 
   // At most one grant per subject on one record — the tuple the create is
   // idempotent on is exactly `(record, subject)` — so the grant itself is the
@@ -671,6 +701,7 @@ function ShareScreenBody({
             <RosterPicker
               usersQuery={usersQuery}
               teamsQuery={teamsQuery}
+              partial={rosterPartial}
               filteredRoster={filteredRoster}
               held={heldBySubject}
               subject={subject}
@@ -839,7 +870,7 @@ function ShareScreenBody({
                       )}
                       {g.expires_at && (
                         <span className="share-expiry-badge">
-                          {formatDate(g.expires_at, locale, viewerZone)}
+                          {formatDate(g.expires_at, locale, zone)}
                         </span>
                       )}
                     </div>

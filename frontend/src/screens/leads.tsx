@@ -18,12 +18,18 @@ import { RecordView } from "../design-system/composed";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useRecordTimeline } from "../design-system/recordtimeline";
+import {
+  useRecordTimeline,
+  useTimelineFilters,
+} from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
+import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateAbbrev } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  LoadMoreButton,
   OverlayUnavailable,
   problemMessageOf,
   QueryGate,
@@ -37,7 +43,12 @@ import type { CreateField } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { EditAction } from "./edit";
-import { EntityRef, useRoster } from "./entityref";
+import {
+  EntityRef,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
 import {
   FirstResponseLine,
@@ -53,6 +64,7 @@ import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
 import { LogActivity } from "./logactivity";
 import { ShareAction } from "./share";
+import { groupChronology } from "./timelinegroups";
 import "./leads.css";
 
 // Leads (B-EP09.10a/b): visually SEGREGATED from the contact graph — the
@@ -79,6 +91,9 @@ export {
   scoreTone,
   terminalBadge,
 } from "./leadpresentation";
+
+import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+
 export { LeadsScreen } from "./leads.list";
 
 // The recorded trigger, as the outcome card names it — the wire token never
@@ -191,7 +206,7 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const t = useT();
   const explain = useQuery({
-    queryKey: ["lead", id, "score"],
+    queryKey: leadScoreKey(id),
     queryFn: async () => {
       const { data, error } = await api.GET("/leads/{id}/score", {
         params: { path: { id } },
@@ -307,6 +322,86 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
 // Reassignment is a plain owner change (UC-E13-04): the server audits it and
 // keeps whatever routing decision it overrides, so the only thing this
 // control owes the reader is an honest list of who they can hand it to.
+// How one candidate reads in the list. The viewer reads as "Me": a rep scanning
+// this list looks for themselves, not for their own name among colleagues'. A
+// user with no display name still has to be pickable, so the id stands in
+// rather than rendering a blank row.
+function candidateLabel(
+  entry: Readonly<{ id: string; display_name?: string }>,
+  meId: string | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  if (entry.id === meId) {
+    return t("lead.assignToMe");
+  }
+  return entry.display_name ?? entry.id;
+}
+
+// The assignee list's four readings, as early returns rather than one chained
+// conditional: a roster still arriving, a roster that failed, a workspace with
+// nobody else in it, and the picker itself.
+function AssigneePicker({
+  roster,
+  rosterPartial,
+  candidates,
+  meId,
+  pending,
+  onPick,
+}: Readonly<{
+  roster: ReturnType<typeof useRoster>;
+  rosterPartial: boolean;
+  candidates: readonly Readonly<{ id: string; display_name?: string }>[];
+  meId: string | undefined;
+  pending: boolean;
+  onPick: (ownerId: string) => void;
+}>) {
+  const t = useT();
+  if (roster.isPending) {
+    return <span className="t-caption">{t("share.rosterLoading")}</span>;
+  }
+  if (roster.isError) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-2)",
+          alignItems: "center",
+        }}
+      >
+        <span className="t-caption share-error">
+          {t("share.rosterErrorUsers")}
+        </span>
+        <Button small onClick={() => roster.refetch()}>
+          {t("common.retry")}
+        </Button>
+      </div>
+    );
+  }
+  // "Nobody else" is a claim about the WHOLE workspace, so only a roster read
+  // to its end may make it. Over a walk that stopped early it would report a
+  // lead as unassignable when the colleague to hand it to sits on a page
+  // nothing here read.
+  if (candidates.length === 0 && !rosterPartial) {
+    return <span className="t-caption">{t("lead.assignNobodyElse")}</span>;
+  }
+  return (
+    <>
+      <Select
+        aria-label={t("lead.assignTo")}
+        placeholder={t("lead.assignChoose")}
+        value=""
+        disabled={pending}
+        options={candidates.map((entry) => ({
+          value: entry.id,
+          label: candidateLabel(entry, meId, t),
+        }))}
+        onChange={onPick}
+      />
+      <RosterPartialNote partial={rosterPartial} />
+    </>
+  );
+}
+
 function LeadOwner({
   lead,
   meId,
@@ -324,6 +419,7 @@ function LeadOwner({
   const pickerId = useId();
   const [picking, setPicking] = useState(false);
   const roster = useRoster("user", picking);
+  const rosterPartial = useRosterPartial("user", picking);
   // Everyone but the current owner, with the VIEWER first: assigning to
   // yourself is the common case on a small team, and it is now an option in
   // this one control rather than a button of its own (ADR-0108 §5).
@@ -378,50 +474,19 @@ function LeadOwner({
       </div>
 
       <div id={pickerId}>
-        {picking &&
-          (roster.isPending ? (
-            <span className="t-caption">{t("share.rosterLoading")}</span>
-          ) : roster.isError ? (
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--space-2)",
-                alignItems: "center",
-              }}
-            >
-              <span className="t-caption share-error">
-                {t("share.rosterErrorUsers")}
-              </span>
-              <Button small onClick={() => roster.refetch()}>
-                {t("common.retry")}
-              </Button>
-            </div>
-          ) : candidates.length === 0 ? (
-            <span className="t-caption">{t("lead.assignNobodyElse")}</span>
-          ) : (
-            <Select
-              aria-label={t("lead.assignTo")}
-              placeholder={t("lead.assignChoose")}
-              value=""
-              disabled={pending}
-              options={candidates.map((entry) => ({
-                value: entry.id,
-                // The viewer reads as "Me" — a rep scanning this list looks
-                // for themselves, not for their own name among colleagues'.
-                // A user with no display name still has to be pickable, so
-                // the id stands in rather than rendering a blank row.
-                label:
-                  entry.id === meId
-                    ? t("lead.assignToMe")
-                    : (("display_name" in entry ? entry.display_name : null) ??
-                      entry.id),
-              }))}
-              onChange={(value) => {
-                onAssign(value);
-                setPicking(false);
-              }}
-            />
-          ))}
+        {picking && (
+          <AssigneePicker
+            roster={roster}
+            rosterPartial={rosterPartial}
+            candidates={candidates}
+            meId={meId}
+            pending={pending}
+            onPick={(value) => {
+              onAssign(value);
+              setPicking(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -685,7 +750,7 @@ function LeadIdentityFields({
           </FieldRow>
           {lead.project_id && (
             <FieldRow label={t("lead.project")}>
-              <span className="t-mono">{lead.project_id}</span>
+              <EntityRef kind="project" id={lead.project_id} />
             </FieldRow>
           )}
         </FieldGrid>
@@ -736,7 +801,10 @@ function LeadLifecycle({
       // is read from the record the mutation is about, not from render state,
       // so a lead that went terminal while this page was open is refused too.
       if (lead.archived_at) {
-        throw new Error("a terminal lead takes no writes");
+        // Catalog copy in a problem body, on the same terms as every other
+        // refusal this screen shows: "a terminal lead takes no writes" is a
+        // sentence for whoever reads this file, not for whoever is refused.
+        throwProblem({ detail: t("lead.terminalReadOnly") });
       }
       const { data, error } = await api.PATCH("/leads/{id}", {
         params: { path: { id }, ...ifMatch(requireVersion(lead.version)) },
@@ -1020,11 +1088,9 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead", id] });
-      queryClient.invalidateQueries({
-        queryKey: ["record-history", "lead", id],
-      });
+      for (const key of leadWriteKeys(id)) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
       setOpen(false);
       setReason("");
     },
@@ -1148,7 +1214,7 @@ function PromotedLeadPanel({
               // The reader's own zone, the same one the shell stamps this
               // page's timeline rows in — a lead carries no location of its
               // own to prefer over where the reader is.
-              Intl.DateTimeFormat().resolvedOptions().timeZone,
+              viewerZone(),
             )}
           </p>
         )}
@@ -1204,11 +1270,9 @@ function useLadderRefresh(id: string): () => void {
     for (const delay of [1500, 4000, 8000]) {
       timers.current.push(
         window.setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ["lead", id] });
-          queryClient.invalidateQueries({ queryKey: ["leads"] });
-          queryClient.invalidateQueries({
-            queryKey: ["record-history", "lead", id],
-          });
+          for (const key of leadWriteKeys(id)) {
+            queryClient.invalidateQueries({ queryKey: key });
+          }
         }, delay),
       );
     }
@@ -1449,7 +1513,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   // mirror lead has no row in — see deals.tsx's DealBadges).
   const overlay = useSorMode() === "overlay";
   const leadQuery = useQuery({
-    queryKey: ["lead", id],
+    queryKey: leadKey(id),
     queryFn: async () => {
       const { data, error } = await api.GET("/leads/{id}", {
         params: { path: { id } },
@@ -1463,8 +1527,12 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   // A lead's own activities: what we already did about this prospect
   // (ADR-0118/A169). `activity_link` has carried the lead arm since migration
   // 0038; only the screen was missing.
-  const timelineQuery = useRecordTimeline("lead", id);
+  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
+  const timelineQuery = useRecordTimeline("lead", id, {
+    filters: timelineFilters,
+  });
   const viewerId = useViewerId();
+  const timelineEntries = activityTimeline(timelineQuery.activities, viewerId);
   const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
   // What the last qualify did, said once under the header: the contact and,
   // when one was opened, the deal. The page stays (ADR-0119): a promoted
@@ -1519,12 +1587,21 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
             // The shell stamps timeline rows in this zone. The viewer's own is
             // the honest default for a prospect: a lead carries no workspace
             // location of its own to prefer over where the reader is.
-            zone={Intl.DateTimeFormat().resolvedOptions().timeZone}
-            timeline={
-              timelineQuery.isSuccess
-                ? activityTimeline(timelineQuery.data.data, viewerId)
-                : []
+            zone={viewerZone()}
+            timeline={timelineEntries}
+            timelineGroups={groupChronology(
+              timelineEntries,
+              timelineQuery.hasNextPage,
+            )}
+            timelineHeader={
+              overlay ? undefined : (
+                <TimelineFilterBar
+                  value={timelineFilters}
+                  onChange={setTimelineFilters}
+                />
+              )
             }
+            timelineFooter={<LoadMoreButton query={timelineQuery} />}
             timelineNotice={timelineZoneNotice(
               { overlay, pending: timelineQuery.isPending },
               t,
@@ -1583,8 +1660,9 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
                 onQualify={() => setDialog("qualify")}
                 onDisqualify={() => setDialog("disqualify")}
                 onLifecycleChanged={() => {
-                  queryClient.invalidateQueries({ queryKey: ["leads"] });
-                  queryClient.invalidateQueries({ queryKey: ["lead", id] });
+                  for (const key of leadWriteKeys(id)) {
+                    queryClient.invalidateQueries({ queryKey: key });
+                  }
                 }}
                 onTouchLogged={refreshAfterTouch}
               />

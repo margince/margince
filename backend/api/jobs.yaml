@@ -801,6 +801,45 @@ kinds:
       expiry no surface can read it back, so a daily pass would leave a day of
       expired personal data sitting past its purpose.
 
+  ai_activity_reconcile:
+    role: worker
+    go_type: AIActivityReconcileArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 15m
+    reason: >-
+      The AI-activity projection is fed by an at-least-once bus, and a consumer
+      group that falls behind the stream's trim horizon loses events for good —
+      XAUTOCLAIM recovers pending entries, not trimmed ones. This pass
+      re-publishes the current state of live source occurrences — at most
+      aiActivityReconcileBatch (500) per run, rotating on the source's own
+      last-announced marker so a deep backlog drains rather than reselecting
+      its own head — and a lost event therefore costs a delay rather than a
+      permanently wrong display.
+
+      Fifteen minutes because the display it repairs is a LIVE one. A reading's
+      own lease is five minutes, so a row the projection missed entirely is
+      invisible for at most three lease windows — long enough that the pass is
+      cheap, short enough that a rep pressing the button again is not the only
+      way the rail ever catches up.
+
+  ai_activity_retention:
+    role: worker
+    go_type: AIActivityRetentionArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 24h
+    reason: >-
+      Daily, because what it drops is a settled occurrence past a fourteen-day
+      window and nothing reads one after that. The window is wider than the
+      rail needs (today) so the paginated feed that follows can page backwards
+      without a second migration; a narrower one would have to be widened by
+      changing history nobody kept.
+
   idempotency_retention:
     role: dispatcher
     go_type: IdempotencyRetentionArgs
@@ -1130,17 +1169,57 @@ kinds:
     role: worker
     go_type: GeocodeOrganizationArgs
     queue: geocode
-    timeout: 1m
+    timeout: 3m
     opts_owner: caller
     registration: {when: [Geocoder], absent: registers_anyway}
     args:
       Workspace: id
       OrganizationID: id
     reason: >-
-      One address, one lookup, plus the write. A minute is generous for a single
-      HTTP call and deliberately so: the pacer may hold this job for up to the
-      policy interval before the request even starts, and a timeout that fired
-      during the wait would retry into the same queue and make the rate worse.
+      One address, one lookup, plus the write — but the ceiling is set by what
+      the job can WAIT for, not by what it does. The pacer may hold it for the
+      full policy interval (15s) before the request is built, the HTTP client
+      allows 20s, and the write follows: 35s of budget, and three minutes is
+      that with room to spare.
+
+      The margin is load-bearing rather than generous. River applies this
+      timeout by cancelling the job's context, so a job that hit its ceiling is
+      indistinguishable from a worker that was shut down — and the worker
+      treats those differently on purpose, re-queueing a shutdown unrecorded
+      while counting a real failure. A ceiling close to the budget would make
+      that distinction lie.
+
+  # The backfill's own kind, not a flag on the per-company one. Geocoding fires
+  # on an address WRITE, which never reaches a row written before this
+  # installation had a geocoder — a seeded workspace, an old import, or the
+  # ordinary case of an operator configuring the provider on a system that
+  # already holds its customers. Those rows are invisible to the trigger and
+  # would never be located at all.
+  #
+  # It NOMINATES; it does not decide. Each candidate is handed to
+  # geocode_organization, which re-asks AddressForGeocode, so the retry ledger
+  # and the settled-address rules stay in exactly one place.
+  #
+  # NO WORKSPACE ARG, like webhook_retry and for the same reason: a periodic
+  # insert has no tenant to name, and a WorkspaceScoped kind whose args carry
+  # none fails every tick with "declares WorkspaceScoped but carries no
+  # workspace". The pass reads the installation's own companies and stamps the
+  # workspace onto each per-company job it queues, which is where the tenant
+  # actually belongs — that job is the one that reads and writes a row.
+  geocode_backfill:
+    role: worker
+    go_type: GeocodeBackfillArgs
+    queue: geocode
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: {operator: Geocoding.BackfillInterval, schedule_when_positive: Geocoding.BackfillInterval}
+    registration: {when: [Geocoder], absent: registers_nothing}
+    reason: >-
+      One indexed read and up to GeocodeBackfillBatch (50) enqueues, no
+      outbound call of its own — the lookups happen in the per-company jobs it
+      queues, each paced by the installation-wide requester. Two minutes is
+      generous for that and bounded by the batch.
 
   transcript_propose:
     role: worker

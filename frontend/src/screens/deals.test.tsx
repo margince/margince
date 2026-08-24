@@ -17,6 +17,7 @@ import { LocaleProvider } from "../i18n";
 import {
   buildColumns,
   buildStageTotals,
+  type CompanyNaming,
   DealScreen,
   DealsScreen,
   mapDealCreate,
@@ -97,6 +98,10 @@ const stages: Stage[] = [
     win_probability: 100,
   },
 ];
+
+// These cases are about column totals, so no card here names a company: an
+// empty mark set resolves none, and none of these deals withholds one.
+const noCompany: CompanyNaming = { marks: new Map(), unreadable: new Set() };
 
 function deal(overrides: Partial<Deal>): Deal {
   return {
@@ -285,6 +290,7 @@ describe("buildColumns", () => {
         }),
       ],
       totals,
+      noCompany,
     );
     expect(columns[0].rawMinor).toBe(24_686);
     expect(columns[0].weightedMinor).toBe(4_938);
@@ -319,12 +325,13 @@ describe("buildColumns", () => {
         }),
       ],
       totals,
+      noCompany,
     );
     expect(columns[1].sumHidden).toBe(true);
   });
 
   it("a stage with no totals row states no figure and no currency", () => {
-    const columns = buildColumns(stages, [], new Map());
+    const columns = buildColumns(stages, [], new Map(), noCompany);
     expect(columns[0].rawMinor).toBeNull();
     expect(columns[0].currency).toBeNull();
     expect(columns[0].sumHidden).toBeFalsy();
@@ -2150,5 +2157,110 @@ describe("DealScreen — History tab", () => {
     await waitFor(() =>
       expect(screen.getByText("Deal amount changed")).toBeTruthy(),
     );
+  });
+});
+
+// Which partner, not just whether there is one.
+//
+// The boolean partner_sourced chip could say "these came from some partner"
+// and never say which — the same gap the deals-by-stage report had before it
+// gained the dimension. The picker's options come from usePartnerOptions, so
+// a partner whose company this reader cannot open is not offered: picking it
+// would name a company the screen could not then show them.
+describe("the partner filter", () => {
+  it("narrows the list to one named partner", async () => {
+    const urls: string[] = [];
+    const d = deal({ id: "d1", name: "Fleet retrofit" });
+    vi.stubGlobal("fetch", (request: Request) => {
+      urls.push(request.url);
+      if (request.url.includes("/partners")) {
+        return Promise.resolve(
+          jsonResponse({
+            data: [{ organization_id: "o1", cert_status: "certified" }],
+            page: { next_cursor: null },
+          }),
+        );
+      }
+      return Promise.resolve(stubBackend([d], { single: d })(request));
+    });
+
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const menu = screen.getByRole("group", { name: "Filter" });
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Partner" }),
+    );
+    // The option is the company's NAME, resolved from the organization list —
+    // never the bare id, which names nothing to a reader.
+    await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
+
+    await waitFor(() =>
+      expect(urls.some((u) => u.includes("partner_org_id=o1"))).toBe(true),
+    );
+  });
+
+  it("sends the partner to the board totals too, not only the deal list", async () => {
+    // The board's per-column totals come from the deals-by-stage report with
+    // the screen's own dials. A dial the screen offers and the report refuses
+    // answers 422, and the board then counts the cards it happens to hold —
+    // which looks exactly like a working total.
+    const bodies: unknown[] = [];
+    const d = deal({ id: "d1", name: "Fleet retrofit" });
+    vi.stubGlobal("fetch", async (request: Request) => {
+      if (request.url.includes("/partners")) {
+        return jsonResponse({
+          data: [{ organization_id: "o1", cert_status: "certified" }],
+          page: { next_cursor: null },
+        });
+      }
+      if (request.url.includes("/reports/deals-by-stage")) {
+        bodies.push(await request.clone().json());
+      }
+      return stubBackend([d], { single: d })(request);
+    });
+
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const menu = screen.getByRole("group", { name: "Filter" });
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Partner" }),
+    );
+    await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
+
+    await waitFor(() =>
+      expect(
+        bodies.some(
+          (b) =>
+            (b as { filters?: Record<string, unknown> }).filters
+              ?.partner_org_id === "o1",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("offers no partner filter when the installation has no partners", async () => {
+    const d = deal({ id: "d1", name: "Fleet retrofit" });
+    vi.stubGlobal("fetch", (request: Request) => {
+      if (request.url.includes("/partners")) {
+        return Promise.resolve(
+          jsonResponse({ data: [], page: { next_cursor: null } }),
+        );
+      }
+      return Promise.resolve(stubBackend([d], { single: d })(request));
+    });
+
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+
+    // A picker with nothing in it asks a question that has no answers.
+    const menu = screen.getByRole("group", { name: "Filter" });
+    expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
   });
 });

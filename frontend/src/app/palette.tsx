@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useSettingsEntryVisibility } from "../screens/settings";
+import {
+  settingsAddress,
+  useSettingsEntryVisibility,
+} from "../screens/settings";
 import { ENTITY, ENTITY_KINDS, type EntityKind } from "./entity";
 import { NAV } from "./nav";
 import { navigate, type Route } from "./router";
@@ -29,7 +32,7 @@ export type Command = {
 
 // The settings entries this palette offers a shortcut to. Narrower than the full
 // entry set on purpose — only these two lost an address of their own.
-type OrgEntry = "data-model" | "ai";
+type AdminEntry = "data-model" | "ai";
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
@@ -81,14 +84,14 @@ export function useBuiltinCommands(): Command[] {
     // address, and the rest are reachable by the rail door beside them.
     // Each carries the entry it opens, so the gate below reads the same answer the
     // settings level does rather than a second copy of the predicate.
-    const settingsShortcuts: readonly (Command & { entry: OrgEntry })[] = [
+    const settingsShortcuts: readonly (Command & { entry: AdminEntry })[] = [
       {
         entry: "data-model",
         id: "screen:settings-data-model",
         label: t("settings.tab.data-model"),
         keywords: ["custom-fields", "products", "offer-templates", "pipelines"],
         type: "screen",
-        route: { screen: "settings", id: "data-model" },
+        route: settingsAddress("data-model"),
       },
       {
         entry: "ai",
@@ -96,7 +99,7 @@ export function useBuiltinCommands(): Command[] {
         label: t("settings.tab.ai"),
         keywords: ["automations"],
         type: "screen",
-        route: { screen: "settings", id: "ai" },
+        route: settingsAddress("ai"),
       },
     ];
     const settingsScreens: Command[] = settingsShortcuts.filter(
@@ -131,15 +134,93 @@ function useSearchCommands(query: string): Command[] {
       return data.data;
     },
   });
-  return (result.data ?? [])
-    .filter((hit) => RECORD_KINDS.has(hit.type as EntityKind))
-    .map((hit) => ({
-      id: `record:${hit.type}:${hit.id}`,
-      label: hit.title ?? hit.id,
-      subtitle: hit.type,
-      type: "record" as const,
-      route: ENTITY[hit.type as EntityKind].route(hit.id),
-    }));
+  const hits = (result.data ?? []).filter((hit) =>
+    RECORD_KINDS.has(hit.type as EntityKind),
+  );
+  const projectLines = useProjectHitLines(
+    hits.filter((hit) => hit.type === "project").map((hit) => hit.id),
+  );
+  return hits.map((hit) => ({
+    id: `record:${hit.type}:${hit.id}`,
+    label: hit.title ?? hit.id,
+    // A project's secondary line is its key or its company, not the word
+    // "project": a search hit for one carries no snippet, and two projects
+    // called "Rollout" are told apart by the key a rep already types into
+    // subject lines. Every other kind keeps the kind.
+    subtitle:
+      hit.type === "project"
+        ? (projectLines.get(hit.id) ?? hit.type)
+        : hit.type,
+    type: "record" as const,
+    route: ENTITY[hit.type as EntityKind].route(hit.id),
+  }));
+}
+
+/**
+ * The secondary line for each project hit: the key when the project has one,
+ * else the company's name. At most five hits are on screen, so the reads are
+ * per record and share the cache entries the project page and the company
+ * reference already fill.
+ */
+function useProjectHitLines(projectIds: string[]): Map<string, string> {
+  const projects = useQueries({
+    queries: projectIds.map((id) => ({
+      queryKey: ["project", id, "ref"],
+      staleTime: 60_000,
+      queryFn: async () => {
+        const { data, error } = await api.GET("/projects/{id}", {
+          params: { path: { id } },
+        });
+        if (error) {
+          // A palette line that cannot be resolved falls back to the kind;
+          // the hit itself still routes. The project page reports the
+          // failure in full.
+          return null;
+        }
+        return data;
+      },
+    })),
+  });
+  const companyIds = projects.flatMap((query) =>
+    query.data && !query.data.key && query.data.organization_id
+      ? [query.data.organization_id]
+      : [],
+  );
+  const companies = useQueries({
+    queries: companyIds.map((id) => ({
+      // The same entry EntityRef fills for a company reference.
+      queryKey: ["organization", "ref", id],
+      staleTime: 60_000,
+      queryFn: async () => {
+        const { data, error } = await api.GET("/organizations/{id}", {
+          params: { path: { id } },
+        });
+        if (error) {
+          return null;
+        }
+        return data.display_name ?? null;
+      },
+    })),
+  });
+  const companyName = new Map(
+    companyIds.map((id, index) => [id, companies[index]?.data ?? null]),
+  );
+  const lines = new Map<string, string>();
+  projects.forEach((query, index) => {
+    const project = query.data;
+    if (!project) {
+      return;
+    }
+    const line =
+      project.key ??
+      (project.organization_id
+        ? companyName.get(project.organization_id)
+        : null);
+    if (line) {
+      lines.set(projectIds[index], line);
+    }
+  });
+  return lines;
 }
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
@@ -234,10 +315,9 @@ export function CommandPalette({
   }
 
   return (
-    // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled on the input inside
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop dismiss; Esc is the keyboard path
     // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handled on the input below
-    <div
+    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled on the input inside
       className="overlay palette-overlay"
       onClick={(event) => {
         if (event.target === event.currentTarget) {

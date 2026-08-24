@@ -60,7 +60,7 @@ func TestComputedFieldsVisible_SystemPrincipalTrusted(t *testing.T) {
 // not_yet_built.
 func TestOrganizationComputedFields_FiveRowsExactShape(t *testing.T) {
 	minor := int64(125000)
-	rows := organizationComputedFields(&minor, 1)
+	rows := organizationComputedFields(openPipeline{minorBase: &minor, dealCount: 1, pricedCount: 1})
 	if len(rows) != 5 {
 		t.Fatalf("want exactly 5 display rows, got %d", len(rows))
 	}
@@ -114,7 +114,7 @@ func TestOrganizationComputedFields_FiveRowsExactShape(t *testing.T) {
 // poc-1-tested behaviour: a record-page tile has no way to render
 // "unknown", so 0 is the honest lower bound of what CAN be priced.
 func TestOrganizationComputedFields_NoOpenDeals_FloorsToZero(t *testing.T) {
-	rows := organizationComputedFields(nil, 0)
+	rows := organizationComputedFields(openPipeline{})
 	if rows[0].ValueMinor == nil || *rows[0].ValueMinor != 0 {
 		t.Fatalf("open_pipeline.value_minor = %v, want 0", rows[0].ValueMinor)
 	}
@@ -126,15 +126,13 @@ func TestOrganizationComputedFields_NoOpenDeals_FloorsToZero(t *testing.T) {
 	}
 }
 
-// The OTHER honest "not computable yet" state 0065 documents: the view
-// row EXISTS (open deals reference this org, dealCount > 0) but its
-// aggregate is itself NULL because every one of those deals is still
-// missing fx_rate_to_base. Flooring this to 0 would be dishonest — a
-// non-zero weighted_pipeline sitting beside a fabricated zero — so it
-// must floor to computable:false, reason:"awaiting_fx" instead, with no
-// value_minor on the wire.
-func TestOrganizationComputedFields_NullAggregateWithOpenDeals_AwaitingFX(t *testing.T) {
-	rows := organizationComputedFields(nil, 2)
+// The honest "not computable" state: open deals exist and NOT ONE of them
+// could be priced, so the aggregate is NULL. Flooring this to 0 would be
+// dishonest — a non-zero weighted_pipeline sitting beside a fabricated zero —
+// so it floors to computable:false, reason:"awaiting_fx", with no value_minor
+// on the wire.
+func TestOrganizationComputedFields_NothingCouldBePriced_AwaitingFX(t *testing.T) {
+	rows := organizationComputedFields(openPipeline{dealCount: 2})
 	open := rows[0]
 	if open.Computable {
 		t.Fatalf("open_pipeline must be computable=false when the aggregate is NULL but open deals exist, got %+v", open)
@@ -146,6 +144,42 @@ func TestOrganizationComputedFields_NullAggregateWithOpenDeals_AwaitingFX(t *tes
 		t.Fatalf("open_pipeline.value_minor = %v, want nil (awaiting_fx carries no value)", open.ValueMinor)
 	}
 	if open.FormulaSql == "" {
-		t.Fatal("open_pipeline.formula_sql must stay populated: the formula exists, only its FX input doesn't yet")
+		t.Fatal("open_pipeline.formula_sql must stay populated: the formula exists, only a rate for these currencies does not")
+	}
+}
+
+// The state that matters most, because it is the one a short number hides in:
+// some open deals reached the total and others could not be priced.
+//
+// The sum is REAL — it just is not the pipeline. Reporting it as a total puts a
+// confident figure on the page covering part of the account, with nothing to
+// say which part, and a reader has no way to know it is short. That is worse
+// than the "not computable" this replaces, so it floors instead.
+func TestOrganizationComputedFields_SomeDealsPriced_RefusesTheShortTotal(t *testing.T) {
+	sum := int64(10_000)
+	rows := organizationComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 1})
+	open := rows[0]
+	if open.Computable {
+		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", open)
+	}
+	if open.Reason == nil || *open.Reason != partialPipelineReason {
+		t.Fatalf("open_pipeline.reason = %v, want %q", open.Reason, partialPipelineReason)
+	}
+	if open.ValueMinor != nil {
+		t.Fatalf("open_pipeline.value_minor = %v, want nil — a short sum must not be shown as the total", open.ValueMinor)
+	}
+}
+
+// And the complete case still reports its figure: every open deal reached the
+// total, so the number IS the pipeline.
+func TestOrganizationComputedFields_EveryDealPriced_ReportsTheTotal(t *testing.T) {
+	sum := int64(28_000)
+	rows := organizationComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 2})
+	open := rows[0]
+	if !open.Computable {
+		t.Fatalf("a total covering every open deal is not computable: %+v", open)
+	}
+	if open.ValueMinor == nil || *open.ValueMinor != sum {
+		t.Fatalf("open_pipeline.value_minor = %v, want %d", open.ValueMinor, sum)
 	}
 }

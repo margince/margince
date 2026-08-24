@@ -15,6 +15,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/schema"
 )
 
@@ -29,7 +30,7 @@ func TestExtractRequestFencesEveryMessageUnderTheMarkerItDeclares(t *testing.T) 
 		{ID: ids.NewV7(), Direction: "outbound", Subject: "Acknowledgement", Body: "Understood, thank you."},
 	}}
 
-	req := extractRequest(thread)
+	req := extractRequest(thread, string(textlang.English))
 
 	marker, declared := promptfence.MarkerIn(req.System)
 	if !declared {
@@ -72,11 +73,11 @@ func TestExtractRequestFencesEveryMessageUnderTheMarkerItDeclares(t *testing.T) 
 func TestExtractRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 	thread := settledThread{Messages: []threadMessage{{ID: ids.NewV7(), Subject: "Renewal"}}}
 
-	first, declared := promptfence.MarkerIn(extractRequest(thread).System)
+	first, declared := promptfence.MarkerIn(extractRequest(thread, string(textlang.English)).System)
 	if !declared {
 		t.Fatal("the extract system prompt declares no data boundary")
 	}
-	second, declared := promptfence.MarkerIn(extractRequest(thread).System)
+	second, declared := promptfence.MarkerIn(extractRequest(thread, string(textlang.English)).System)
 	if !declared {
 		t.Fatal("the second extract system prompt declares no data boundary")
 	}

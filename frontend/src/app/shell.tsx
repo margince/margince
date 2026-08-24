@@ -29,7 +29,7 @@ import {
   type NavLevelEntry,
   type NavLevelGroup,
   type NavSection,
-  navLevelHref,
+  navEntryHref,
   RAIL_LESS_SCREENS,
 } from "./nav";
 import {
@@ -115,7 +115,7 @@ function BrandBlock() {
 }
 
 // WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
-// of its content — up to eleven navigation rows and the entitlement row in the
+// of its content — up to twelve navigation rows and the entitlement row in the
 // sidebar, then the strip's collapse control, trail, search, system-of-record
 // chip, approvals bell and account menu — and without this a keyboard reader
 // walked all of it again on every page they opened.
@@ -293,6 +293,13 @@ export function WorkspaceRail({
     (item) => item.screen === route.screen && !MOBILE_PRIMARY.has(item.screen),
   );
 
+  // The agent is APP-level chrome: there is one of it, and it belongs to the
+  // whole session rather than to any destination. A drilled-in level is
+  // navigation INSIDE one destination, so an agent standing under it would read
+  // as that destination's own — re-parented under a sub-level, and a second one
+  // the moment a reader walks back out.
+  const leveled = level.parent !== undefined;
+
   return (
     <>
       {/* The scrim dims the page the sheet covers and gives the eye the layer
@@ -301,11 +308,7 @@ export function WorkspaceRail({
       {sheetOpen && <div className="railscrim" aria-hidden="true" />}
       <nav
         ref={nav}
-        className={railClasses({
-          collapsed,
-          sheetOpen,
-          leveled: level.parent !== undefined,
-        })}
+        className={railClasses({ collapsed, sheetOpen, leveled })}
         aria-label={t("shell.railAria")}
         onKeyDown={dismissTip}
       >
@@ -356,10 +359,15 @@ export function WorkspaceRail({
             rather than navigates, and it never claims the current page. What the
             installation is ENTITLED to used to sit here as its own grey row, and
             it now reaches a reader through the Core instead: a licence fault
-            turns the orb amber, which is a thing somebody notices. */}
-        <div className="railfoot">
-          <AgentRail route={route} />
-        </div>
+            turns the orb amber, which is a thing somebody notices.
+            The whole foot goes on a drilled-in level, element and all: an empty
+            box left behind would still hold the band and the rule that divide a
+            reading from the rows above it. */}
+        {!leveled && (
+          <div className="railfoot">
+            <AgentRail route={route} />
+          </div>
+        )}
       </nav>
     </>
   );
@@ -374,7 +382,7 @@ export function WorkspaceRail({
  * no other screen pays for the visibility probes the hook makes.
  */
 export function SettingsRail(props: Readonly<RailProps>) {
-  const section = useSettingsSection(props.route.id);
+  const section = useSettingsSection(props.route);
   return <WorkspaceRail {...props} section={section} />;
 }
 
@@ -398,7 +406,7 @@ function SettingsTopBar({
   onToggle: () => void;
   onOpenSearch: () => void;
 }>) {
-  const section = useSettingsSection(route.id);
+  const section = useSettingsSection(route);
   return (
     <TopBar
       route={route}
@@ -412,7 +420,7 @@ function SettingsTopBar({
 }
 
 function SettingsPageTitle({ route }: Readonly<{ route: Route }>) {
-  const section = useSettingsSection(route.id);
+  const section = useSettingsSection(route);
   return <PageTitle route={route} section={section} />;
 }
 
@@ -436,7 +444,7 @@ function SectionPickGroup({
       {group.items.map((entry) => (
         <a
           key={entry.id}
-          href={navLevelHref([section.screen], entry.id)}
+          href={navEntryHref([section.screen], entry)}
           aria-current={entry.id === activeId ? "page" : undefined}
           // The sheet covers the page it just navigated to, so a row that acts
           // takes the sheet with it.
@@ -623,12 +631,26 @@ export function Shell({
 }>) {
   const route = useRoute();
   const railless = RAIL_LESS_SCREENS.has(route.screen);
-  const leveled = route.screen === SETTINGS_SCREEN;
+  // An extension unit's page is REACHED from settings and says so in its trail
+  // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
+  // not: the rail fell back to the destinations, and following "Open" from a
+  // settings card swapped the whole sidebar out from under a reader whose URL
+  // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
+  // answered `settings` for a unit route; this is the other half of that answer.
+  //
+  // Conditioned on the descriptor RESOLVING, like the page title's own branch:
+  // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.
+  const onUnitPage =
+    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
+  const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
   // Record pages only: the id is what makes it one. `#/companies` is the list,
   // and a list belongs to the other family.
   const griddedRecord =
     route.id !== undefined && GRIDDED_RECORD_SCREENS.has(route.screen);
-  const gridded = leveled || griddedRecord;
+  // A unit is NOT in this family, though it is leveled: the reading column is a
+  // claim about the page's own content, and a unit's surface is the unit's to
+  // lay out.
+  const gridded = route.screen === SETTINGS_SCREEN || griddedRecord;
   const [collapsed, setCollapsed] = useState(
     () => readStored(COLLAPSE_KEY) === "1",
   );

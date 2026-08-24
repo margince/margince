@@ -18,7 +18,7 @@ func (h Handlers) GetFieldHistory(w http.ResponseWriter, r *http.Request, params
 	entityType := string(params.EntityType)
 	if !fieldHistoryEntityTypes[entityType] {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_entity_type",
-			"entity_type must be one of person, organization, deal, lead, activity"))
+			"entity_type must be one of "+fieldHistoryEntityTypeList))
 		return
 	}
 	f := FieldHistoryFilter{
@@ -32,7 +32,7 @@ func (h Handlers) GetFieldHistory(w http.ResponseWriter, r *http.Request, params
 		at := string(*params.ActorType)
 		if !fieldHistoryActorTypes[at] {
 			httperr.Write(w, r, httperr.Validation("actor_type", "invalid_actor_type",
-				"actor_type must be one of human, agent, system, connector"))
+				"actor_type must be one of human, agent, system, connector, buyer"))
 			return
 		}
 		f.ActorType = &at

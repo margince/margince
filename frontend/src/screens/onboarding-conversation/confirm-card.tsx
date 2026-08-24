@@ -16,7 +16,7 @@ import {
   EvidenceChip,
   ProvenanceTag,
 } from "../../design-system/trust";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
@@ -1066,7 +1066,7 @@ function FactsGroupSection({
 }: Readonly<{
   facts: readonly SiteFact[];
   selection: FactSelection;
-  locale: string;
+  locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
   return (
@@ -1173,7 +1173,7 @@ function GroupBody({
   read: CompanySiteRead | null;
   facts: readonly SiteFact[];
   factSelection: FactSelection;
-  locale: string;
+  locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
   if (group.key === PEOPLE_KEY) {

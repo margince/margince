@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -10,7 +11,6 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
 import { LoadMoreButton, throwProblem } from "./common";
-import { RECORD_ZONE } from "./company360";
 import "./person360.css";
 
 // The person's own files: unlike the sibling tabs in persontabs.tsx, this one
@@ -43,6 +43,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
 export function PersonFilesTab({ personId }: Readonly<{ personId: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [adding, setAdding] = useState(false);
 
   const query = useInfiniteQuery({
@@ -141,7 +142,7 @@ export function PersonFilesTab({ personId }: Readonly<{ personId: string }>) {
               name is what a reader looks for, and the filename is what the
               saved file is called. */}
             <span className="pe-row-label">
-              {formatDateAbbrev(file.created_at, locale, RECORD_ZONE)}
+              {formatDateAbbrev(file.created_at, locale, recordZone)}
             </span>
             <span className="pe-row-value">
               <a

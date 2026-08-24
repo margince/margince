@@ -31,6 +31,13 @@ const (
 	// on the same spelling: the constraint mapper, its client-facing detail,
 	// and the attach path that recovers from losing its own race.
 	projectStakeholderUnique = "uq_rel_project_stakeholder"
+
+	// ProjectCompanyKind is the edge naming a company that is ON a project. A
+	// project is work several companies do together — a customer, a partner, a
+	// subcontractor — so the companies are edges rather than one anchor column,
+	// and they ride this table for the same reason the stakeholders do: it
+	// already carries a role, a source and the archive semantics an edge needs.
+	ProjectCompanyKind = "project_company"
 )
 
 // ListProjectStakeholders serves the project-scoped stakeholder view; the
@@ -94,4 +101,54 @@ func (h Handlers) RemoveProjectStakeholder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// SetProjectCompany puts a company on a project with a role, or re-roles the
+// edge that already exists, and answers the project's companies afterwards —
+// the whole list rather than the one edge, because that is what a caller does
+// next with the answer: render who is on this project.
+func (h Handlers) SetProjectCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SetProjectCompanyParams) {
+	var req crmcontracts.SetProjectCompanyRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	role := ""
+	if req.Role != nil {
+		role = *req.Role
+	}
+	on, err := h.store.SetProjectCompany(r.Context(), SetProjectCompanyInput{
+		ProjectID:      pathID[ids.ProjectKind](id),
+		OrganizationID: pathID[ids.OrganizationKind](req.OrganizationId),
+		Role:           role,
+	})
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ProjectCompanyListResponse{Data: wireProjectCompanies(on)})
+}
+
+// RemoveProjectCompany takes a company off a project by archiving the edge —
+// taking off is not deleting, and the company keeps every record it owns.
+func (h Handlers) RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, organizationID openapi_types.UUID, _ crmcontracts.RemoveProjectCompanyParams) {
+	err := h.store.RemoveProjectCompany(r.Context(),
+		pathID[ids.ProjectKind](id), ids.From[ids.OrganizationKind](ids.UUID(organizationID)))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// wireProjectCompanies maps the store's rows onto the contract's shape.
+func wireProjectCompanies(on []ProjectCompany) []crmcontracts.ProjectCompany {
+	out := make([]crmcontracts.ProjectCompany, 0, len(on))
+	for _, one := range on {
+		out = append(out, crmcontracts.ProjectCompany{
+			OrganizationId: openapi_types.UUID(one.OrganizationID.UUID),
+			DisplayName:    one.DisplayName,
+			Role:           one.Role,
+		})
+	}
+	return out
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -198,7 +199,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	for _, s := range stakeholders {
 		people = append(people, s.PersonID)
 	}
-	out.DepartedPersonIDs, err = readDeparted(ctx, tx, facts.organizationID, people, now)
+	out.DepartedPersonIDs, err = readDeparted(ctx, tx, facts.organizationID, people)
 	if err != nil {
 		return out, err
 	}
@@ -334,7 +335,7 @@ func goingCold(c DealCoverage, now time.Time) (Risk, bool) {
 	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() {
 		return Risk{}, false
 	}
-	days := int(now.Sub(c.LastTouchAt).Hours() / hoursPerDay)
+	days := elapsed.Days(c.LastTouchAt, now)
 	if days < goingColdDays {
 		return Risk{}, false
 	}
@@ -343,8 +344,6 @@ func goingCold(c DealCoverage, now time.Time) (Risk, bool) {
 		Summary: fmt.Sprintf("no captured touch for %d days — the deal is open and nobody is talking", days),
 	}, true
 }
-
-const hoursPerDay = 24
 
 // reportThreadingFloor is REPORT-PARAM-1's value, named rather than inline so
 // the constant a support conversation quotes is the constant compared against.

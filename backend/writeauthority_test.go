@@ -99,20 +99,22 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// change it", and the record actually being written is gated on its own way
 	// in. Widening one would withhold from a caller the id of a record they can
 	// perfectly well open — a worse answer, not a safer one.
-	"internal/modules/people:ensureOrgDomainsUnclaimed":       "the create path's domain-collision probe: whether the 409 may name the organization already holding the domain. The organization being written is a different row, and its own gate is the organization:create grant",
-	"internal/modules/people:ensureOrgDomainsUnclaimedExcept": "the edit path's twin of the same probe over the same rival row; the organization being edited took auth.EnsureWritable before this runs",
-	"internal/modules/people:refusedOrgCreate":                "the duplicate-domain 409's disclosure decision: it names the incumbent organization only when the caller could have READ it, and writes nothing to that row. The create it is refusing is gated by organization:create",
-	"internal/modules/people:refusedPersonCreate":             "the person twin of refusedOrgCreate, and the same decision: whether the conflict may carry the incumbent's id, never whether the caller may change that person",
-	"internal/modules/people:GetDedupeCandidate":              "a READ of one dedupe pair, probing BOTH sides because the evidence names both and a pair with an out-of-scope side must read as absent. EVERY verb that may follow takes its own write-authority probe on each end — dismiss and undo through ensurePairWritable, and the merge through mergePair on top of it. Naming only one of the three is what let a dismissal ride this read for as long as it did",
-	"internal/modules/capture:findLeadCollision":              "the captured lead's incumbent probe, and its answer is to SKIP: an incumbent the granting human cannot see is neither merged into nor written around, so the record is refused and the address left for someone with the scope to act. Nothing is written to that lead on this path — the merge a human may later confirm goes through the approvals engine, which takes its own authority. Widening to write authority would turn a colleague's read share into a reason to capture a SECOND lead for the same address, forking the record across scopes, which is the outcome the skip exists to prevent",
+	"internal/modules/people:claimedDomainOwner":  "the domain-collision probe every door shares: whether the 409 may NAME the organization already holding the domain. That organization is a different row from the one being written, and the write it refuses takes its own gate first — organization:create on the create path, auth.EnsureWritable on the edit and profile paths",
+	"internal/modules/people:refusedOrgCreate":    "the duplicate-domain 409's disclosure decision: it names the incumbent organization only when the caller could have READ it, and writes nothing to that row. The create it is refusing is gated by organization:create",
+	"internal/modules/people:refusedPersonCreate": "the person twin of refusedOrgCreate, and the same decision: whether the conflict may carry the incumbent's id, never whether the caller may change that person",
+	"internal/modules/people:GetDedupeCandidate":  "a READ of one dedupe pair, probing BOTH sides because the evidence names both and a pair with an out-of-scope side must read as absent. EVERY verb that may follow takes its own write-authority probe on each end — dismiss and undo through ensurePairWritable, and the merge through mergePair on top of it. Naming only one of the three is what let a dismissal ride this read for as long as it did",
+	"internal/modules/capture:findLeadCollision":  "the captured lead's incumbent probe, and its answer is to SKIP: an incumbent the granting human cannot see is neither merged into nor written around, so the record is refused and the address left for someone with the scope to act. Nothing is written to that lead on this path — the merge a human may later confirm goes through the approvals engine, which takes its own authority. Widening to write authority would turn a colleague's read share into a reason to capture a SECOND lead for the same address, forking the record across scopes, which is the outcome the skip exists to prevent",
 
 	// Reads that sit inside a flow which also writes. Each is the read half,
 	// and each names where the write half takes its own authority.
-	"internal/modules/people:visibleLeadScope":        "the lead-vocabulary writers' returned representation carries a lead_count — a count of the leads the CALLER MAY SEE, a read decision that only narrows. The probe has its own spelling so ONLY this count inherits the waiver; a future write path reaching the shared scopeOrAllRows still fails this gate. The vocabulary row being written is gated on its own object grant before the store runs, and no lead row is changed",
-	"internal/modules/people:readAnchorForComparison": "the site-read comparison's CURRENT-STATE read, rendered beside the proposed one for a human to judge. The confirmation that may follow writes through resolveOrCreateAnchor, which takes the write-authority probe itself",
-	"internal/modules/deals:visibleOffer":             "the READ spelling of the offer's deal-derived row scope, shared with the offer list, the single read and the render. Its mutation spelling is visibleOfferLocked, which calls this and then takes auth.EnsureWritable on the same deal — every offer edit goes through that one",
-	"internal/modules/commissions:VisibleClause":      "the READ spelling of a commission entry's deal-derived row scope, shared with the ledger page, the summary and the single read. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — call it to resolve the row and then take WritableEntriesForDeal, which is auth.EnsureWritable on the same deal, before writing anything",
-	"internal/modules/privacy:AssembleSAR":            "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
+	"internal/modules/people:visibleLeadScope":         "the lead-vocabulary writers' returned representation carries a lead_count — a count of the leads the CALLER MAY SEE, a read decision that only narrows. The probe has its own spelling so ONLY this count inherits the waiver; a future write path reaching the shared scopeOrAllRows still fails this gate. The vocabulary row being written is gated on its own object grant before the store runs, and no lead row is changed",
+	"internal/modules/people:readAnchorForComparison":  "the site-read comparison's CURRENT-STATE read, rendered beside the proposed one for a human to judge. The confirmation that may follow writes through resolveOrCreateAnchor, which takes the write-authority probe itself",
+	"internal/modules/deals:visibleOffer":              "the READ spelling of the offer's deal-derived row scope, shared by the offer list and the single read. Its write-authority spelling is writableOffer, which calls this and then takes auth.EnsureWritable on the same deal; visibleOfferLocked adds the row lock on top for the edits that linearize. Every offer WRITE — the patch, the line edits, the lifecycle moves and the render — resolves its row through one of those two, never through this",
+	"internal/modules/dealrooms:dealScopeClause":       "the READ spelling of a Deal Room's deal-derived row scope, shared by the single read, the list page and the release page — a room carries no owner of its own, so its visibility IS its deal's. Every path that changes a room resolves it through this read and then calls ensureDealWritable, which is auth.EnsureWritable on the same deal: create, update, archive, publish and all three lifecycle moves take it before writing anything",
+	"internal/modules/commissions:VisibleClause":       "the READ spelling of a commission entry's deal-derived row scope, shared with the ledger page, the summary and the single read. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — call it to resolve the row and then take WritableEntriesForDeal, which is auth.EnsureWritable on the same deal, before writing anything",
+	"internal/modules/projects:transferableProjectIDs": "the READ half of the bulk owner handover, listing the from-owner's live projects under the same visibility clause the project list renders. Every id it returns has ALREADY passed auth.WritableBy in the same function, and transferProjectOwner then locks and writes only those — a `read` share is enumerated here and dropped before anything is written",
+	"internal/modules/people:CompaniesOnProjectTx":     "a READ: it lists the companies on a project and returns them, and every path that CHANGES the edges — SetProjectCompany, RemoveProjectCompany — takes auth.EnsureWritableLive on the project before it writes anything. This clause decides only which companies a reader may be SHOWN, so narrowing it to write authority would hide companies from a reader entitled to see them",
+	"internal/modules/privacy:AssembleSAR":             "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
 
 	// Writes that touch a shareable record's machinery without changing the
 	// record, or anything a share can speak about.
@@ -125,9 +127,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// cannot see must still block the write — so narrowing the clause would not
 	// tighten the refusal, only strip a legitimate caller of the ids that tell
 	// them what to go and look at.
-	"internal/modules/deals:ensureProjectKeyFree":         "whether a key collision may name the project already holding it. The unique index is the authority that refuses either way; this clause decides only disclosure",
-	"internal/modules/deals:refuseIfOccupied":             "the stage-removal refusal's naming clause: which of the deals still sitting on the stage may be listed back. Every occupant blocks the removal, visible or not",
-	"internal/modules/people:refuseWhenBothCarryProjects": "the organization-merge precondition, and its own comment states the split this waiver rests on: the decision counts EVERY live project on both endpoints, and the clause governs only which of them the refusal may name",
+	"internal/modules/deals:refuseIfOccupied": "the stage-removal refusal's naming clause: which of the deals still sitting on the stage may be listed back. Every occupant blocks the removal, visible or not",
 
 	// The `add` verb again (#1405), in its rendered-clause form: each of these
 	// writes the row that HANGS OFF the record — a link, a participant, an
@@ -135,14 +135,29 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// be touched or named.
 	"internal/modules/activities:deleteVisibleLinksOfType":     "clears an activity's links to records the caller can see, so a relink cannot silently drop an edge to a record they cannot; what it deletes is the LINK row, and its own comment already states the one bit that escapes",
 	"internal/modules/activities:repointDisplacedParticipants": "moves activity_participant rows from the displaced people to the relink target; the row written is the participant edge, never the person",
-	"internal/modules/people:matchGhostsByEmail":               "confirms the UPLOADER's own linkedin_connection rows against people they can see. The scope is there to stop the confirmed count becoming an existence oracle — a read concern, which its own comment spells out — and the row it writes is the ghost, not the person",
-	"internal/modules/capture:projectScopeClause":              "the project-attribution ladder's row predicate, narrowing which projects a captured message may be FILED UNDER. Read authority is the whole of what it needs: the project is referenced, never changed — the rows written are the activity_link edge and the activity's own version bump, and both are gated on activity:update in linkActivityToProject. A `read` share on a project is exactly the authority to see mail land on it, so requiring write here would refuse a filing to the colleague the project was deliberately shared with",
+	// The one waiver here that is a LIMIT OF THE EXTRACTOR rather than a claim
+	// about what the probe decides, and it is spelled that way on purpose.
+	//
+	// resolveAttachmentParent branches on its `action` argument: this probe runs
+	// under principal.ActionRead alone, and every other action falls through to
+	// ensureAttachmentParentWritable four lines below. The gate walks the call
+	// graph, not the branch, so a mutating caller reaching the resolver looks
+	// exactly like a mutation gated on visibility alone.
+	//
+	// Splitting the read arm into its own function does NOT help — the walk is
+	// transitive and reaches the split arm just the same. What this costs is
+	// real and worth stating: the waiver excuses the FUNCTION, so it would go on
+	// passing if somebody wired this probe onto a genuine write path. Read the
+	// `action` branch in resolveAttachmentParent before trusting it, and if the
+	// attachment paths grow a third arm, revisit this rather than extend it.
+	"internal/modules/activities:visibleParentClause":           "the document library's per-row visibility clause, reached from a write path only by ensureInDealDocuments — the hide's membership probe, asking whether the file is in THIS caller's view of the deal's Files area at all. It only ever NARROWS (a miss is 404), and the record being changed is the deal's listing, gated on its own way in by auth.EnsureWritable(deal) in setDealDocumentHidden before the probe runs",
+	"internal/modules/activities:ensureAttachmentParentVisible": "the READ half of a pair whose only caller picks between them by action: principal.ActionRead takes this one, everything else takes ensureAttachmentParentWritable. The write path is gated as this test demands; the extractor sees the function, not the arm",
+	"internal/modules/people:matchGhostsByEmail":                "confirms the UPLOADER's own linkedin_connection rows against people they can see. The scope is there to stop the confirmed count becoming an existence oracle — a read concern, which its own comment spells out — and the row it writes is the ghost, not the person",
+	"internal/modules/capture:projectScopeClause":               "the project-attribution ladder's row predicate, narrowing which projects a captured message may be FILED UNDER. Read authority is the whole of what it needs: the project is referenced, never changed — the rows written are the activity_link edge and the activity's own version bump, and both are gated on activity:update in linkActivityToProject. A `read` share on a project is exactly the authority to see mail land on it, so requiring write here would refuse a filing to the colleague the project was deliberately shared with",
 
 	// Read predicates whose mutating callers take the write probe elsewhere.
-	"internal/modules/contracts:VisibleClause": "the contracts module's READ predicate, shared by the list, the single read and the company-value rollup. A contract owns no owner_id and inherits its whole row scope from its anchor, so this one clause used to stand in front of every mutation too; the patch, archive, status change, cancellation and renewal now go through writableContract, which takes auth.EnsureWritable on that same anchor",
-
-	// A gap named rather than reasoned away.
-	"internal/modules/people:applySitePersonFieldsTx": "the probe is on the ORGANIZATION whose published site was read, and it is a read of that company. The person this then fills is resolved from the org's employment edges and carries NO row-scope probe of its own — which is a separate defect, filed as #1406, not a property that makes this probe correct. This waiver goes when that issue does",
+	"internal/modules/contracts:VisibleClause":        "the contracts module's READ predicate, shared by the list, the single read and the company-value rollup. A contract owns no owner_id and inherits its whole row scope from its anchor, so this one clause used to stand in front of every mutation too; the patch, archive, status change, cancellation and renewal now go through writableContract, which takes auth.EnsureWritable on that same anchor",
+	"internal/modules/people:applySitePersonFieldsTx": "the probe this gate sees is on the ORGANIZATION whose published site was read, and reading it is all this does: the company is the page's subject, never the record that changes. What changes is the PERSON, and it now takes auth.EnsureWritableLive on its own id immediately after the employment-edge match resolves it — the Live spelling because both callers are system principals, for whom the plain probe returns nil on an empty clause and would gate nothing",
 })
 
 // writeAuthorityProbes are the platform/auth spellings that ask the narrower
@@ -211,6 +226,21 @@ type writeAuthorityFn struct {
 	requires map[string]bool
 	mutates  bool
 	calls    map[string]bool
+	// writes names the shareable tables this function's own body CHANGES, and
+	// dynamicWrite records a mutation whose target this pass could not read.
+	// mutates answers "does a write happen here at all"; these answer "to
+	// which record", which is the question the reach gate
+	// (writeauthorityreach_test.go) asks and this one does not.
+	writes       map[string]bool
+	dynamicWrite []string
+}
+
+// noteWrite records that this function changes the named table.
+func (f *writeAuthorityFn) noteWrite(table string) {
+	if f.writes == nil {
+		f.writes = map[string]bool{}
+	}
+	f.writes[table] = true
 }
 
 func TestEveryMutationOfAShareableRecordProbesForWriteAuthority(t *testing.T) {
@@ -324,9 +354,30 @@ func shareableTables(t *testing.T) map[string]bool {
 func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[string]map[string]*writeAuthorityFn {
 	t.Helper()
 	pkgs := map[string]map[string]map[string]*writeAuthorityFn{}
-	for _, src := range tierFiles(t, modulesDir) {
+	files := tierFiles(t, modulesDir)
+	// One pass for the constants first. Probe resolution stays FILE-scoped — a
+	// probe and the const it names sit together — but the write census must be
+	// package-scoped: deals/project_update.go patches a table named by a const
+	// declared in project.go, and a file-scoped lookup drops that writer out of
+	// the census entirely while the gate reports a clean tree.
+	dirConsts := map[string]map[string]string{}
+	for _, src := range files {
+		dir := filepath.ToSlash(filepath.Dir(src.Path))
+		if dirConsts[dir] == nil {
+			dirConsts[dir] = map[string]string{}
+		}
+		for name, value := range packageStringConsts(src) {
+			dirConsts[dir][name] = value
+		}
+	}
+	for _, src := range files {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
 		consts := packageStringConsts(src)
+		for name, value := range dirConsts[dir] {
+			if _, local := consts[name]; !local {
+				consts[name] = value
+			}
+		}
 		if pkgs[dir] == nil {
 			pkgs[dir] = map[string]map[string]*writeAuthorityFn{}
 		}
@@ -389,8 +440,16 @@ func indexWriteAuthorityBody(fn *ast.FuncDecl, info *writeAuthorityFn, tables ma
 		case *ast.CallExpr:
 			indexWriteAuthorityCall(n, info, tables, consts, at, src)
 		case *ast.BasicLit:
-			if text, isString := stringConst(n); isString && writesSQL(text) {
-				info.mutates = true
+			if text, isString := stringConst(n); isString {
+				if writesSQL(text) {
+					info.mutates = true
+				}
+				tables, dynamic := mutatedTables(text)
+				for _, table := range tables {
+					info.mutates = true
+					info.noteWrite(table)
+				}
+				info.dynamicWrite = append(info.dynamicWrite, dynamic...)
 			}
 		}
 		return true
@@ -410,6 +469,9 @@ func indexWriteAuthorityCall(call *ast.CallExpr, info *writeAuthorityFn, tables 
 		}
 		if mutationMarkers[fun.Sel.Name] {
 			info.mutates = true
+			if table, ok := patchTargetTable(fun.Sel.Name, call, consts); ok && tables[table] {
+				info.noteWrite(table)
+			}
 		}
 		info.calls[fun.Sel.Name] = true
 	}
@@ -478,6 +540,149 @@ func writesSQL(text string) bool {
 	return false
 }
 
+// patchTargetTable reads the table a storekit patch or row lock names, for the
+// writes that carry no SQL literal at the call site at all.
+//
+// storekit.Patch.ApplyGuarded(ctx, tx, "deal", …) and LockRow(ctx, tx, "person",
+// …) are how the main human-facing update paths write — person.go, deal_update.go
+// and lead_update.go among them. A census reading SQL literals alone would
+// report green while covering none of the writers that matter most.
+//
+// ApplyLocked takes a RowLock rather than a name, so the table it writes is the
+// one its LockRow named; both appear in the same function body, and the LockRow
+// arm is what puts that table into the census.
+func patchTargetTable(spelling string, call *ast.CallExpr, consts map[string]string) (string, bool) {
+	switch spelling {
+	case "ApplyWithVersion", "ApplyGuarded", "ApplyGuardedIn", "LockRow", "LockPair":
+	default:
+		return "", false
+	}
+	if len(call.Args) < 3 {
+		return "", false
+	}
+	return resolveTableArg(call.Args[2], consts)
+}
+
+// mutatedTables reads the tables one SQL literal CHANGES, plus the first line of
+// any mutation whose target it could not name.
+//
+// The table name is matched as a WHOLE identifier, never a prefix. This tree
+// holds person_email, person_consent, person_profile_field, organization_domain
+// and some twenty more children that all begin with one of the five shareable
+// names, and a prefix match would drag every one of them into the census — the
+// "add a row that hangs off the record" paths that are deliberately outside it.
+//
+// INSERT is deliberately absent. A create has no row yet for a grant to widen
+// or an owner to hold, which is the same reason mutatingActions omits
+// ActionCreate; a create is gated by its object grant alone.
+//
+// The scan runs over the WHOLE literal rather than its first word, because a
+// statement in this tree routinely starts on the line after the backtick.
+func mutatedTables(text string) (tables []string, dynamic []string) {
+	upper := strings.ToUpper(text)
+	for _, verb := range []string{"UPDATE ", "DELETE FROM "} {
+		for at := 0; ; {
+			hit := strings.Index(upper[at:], verb)
+			if hit < 0 {
+				break
+			}
+			hit += at
+			at = hit + len(verb)
+			// A verb must start its own word: "SELECT ... FOR UPDATE " is not a
+			// mutation, and neither is a column called delete_from.
+			if hit > 0 && isSQLWordByte(text[hit-1]) {
+				continue
+			}
+			// And it must start the LITERAL, or follow a statement break. An
+			// error message that happens to read "update %d carries no message"
+			// is prose, and treating its %d as a dynamic table would make the
+			// tripwire fire on wording rather than on SQL.
+			if !startsStatement(text, hit) {
+				continue
+			}
+			name, ok := sqlTableName(text, upper, at)
+			if !ok {
+				// The literal ends at the verb, so the table name is being
+				// concatenated on. Report it only when a SHAREABLE table could
+				// be what follows: the merge relinkers build
+				// `UPDATE activity_link SET `+column, where the dynamic half is
+				// the column and the table is a literal the next fragment
+				// carries. Those are not writes this census can lose.
+				if endsAtVerb(text, at) || !looksLikeSQL(text) {
+					continue
+				}
+				dynamic = append(dynamic, strings.TrimSpace(firstLineFrom(text, hit)))
+				continue
+			}
+			tables = append(tables, name)
+		}
+	}
+	return tables, dynamic
+}
+
+// sqlTableName reads the identifier a mutation verb names, skipping whitespace
+// and an ONLY keyword. It reports false when the target is not a plain
+// identifier — a format verb, or a literal that ends mid-statement — so the
+// caller can say so out loud rather than dropping the write from the census.
+func sqlTableName(text, upper string, at int) (string, bool) {
+	for at < len(text) && (text[at] == ' ' || text[at] == '\t' || text[at] == '\n' || text[at] == '\r') {
+		at++
+	}
+	if strings.HasPrefix(upper[at:], "ONLY ") {
+		return sqlTableName(text, upper, at+len("ONLY "))
+	}
+	end := at
+	for end < len(text) && isSQLWordByte(text[end]) {
+		end++
+	}
+	if end == at {
+		return "", false
+	}
+	return text[at:end], true
+}
+
+// startsStatement reports whether the offset begins a SQL statement: the start
+// of the literal, or the first word after a semicolon or an opening parenthesis.
+// Everything before it must be whitespace or a statement terminator.
+func startsStatement(text string, at int) bool {
+	for i := at - 1; i >= 0; i-- {
+		switch text[i] {
+		case ' ', '\t', '\n', '\r':
+		case ';', '(':
+			return true
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// endsAtVerb reports whether the literal stops immediately after the mutation
+// verb, which is the shape of a statement assembled from fragments. The table
+// name then lives in the NEXT fragment, so this literal names no table at all
+// rather than naming one dynamically.
+func endsAtVerb(text string, at int) bool {
+	for at < len(text) {
+		switch text[at] {
+		case ' ', '\t', '\n', '\r':
+			at++
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// firstLineFrom returns the line the offset sits on, for an error that has to
+// name a statement this pass could not read.
+func firstLineFrom(text string, at int) string {
+	rest := text[at:]
+	if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
+		return rest[:nl]
+	}
+	return rest
+}
+
 // visibleWriteAuthorityFns returns the functions a name in this receiver can
 // reach: its own methods plus the package-level ones, merging a name held by
 // both — a bare foo(...) and an s.foo(...) are the same token in this index, so
@@ -500,6 +705,10 @@ func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn
 		}
 		for _, src := range []*writeAuthorityFn{pkgLevel, info} {
 			merged.probes = append(merged.probes, src.probes...)
+			merged.dynamicWrite = append(merged.dynamicWrite, src.dynamicWrite...)
+			for key := range src.writes {
+				merged.noteWrite(key)
+			}
 			for key := range src.requires {
 				merged.requires[key] = true
 			}

@@ -240,6 +240,9 @@ func (x evidenceExtractor) extractProfile(ctx context.Context, pages []crawlPage
 // The fence is minted here, per request: a boundary reused across calls is one
 // some crawled site has already been shown, and every passage in this prompt is
 // a site's own writing.
+//
+//promptlang:exempt hardGateProfileFields are checked for overlap against the crawled page's own text, so those values must stay in the site's language; the paraphrased fields ride the same reply and cannot be given a different instruction than their neighbours.
+//promptvoice:exempt the values are checked for overlap against the crawled page's own text, so they must stay in the site's own words.
 func profileRequest(idx snippetIndex) model.Request {
 	fence := promptfence.New()
 	return model.Request{

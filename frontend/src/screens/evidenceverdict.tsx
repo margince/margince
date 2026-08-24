@@ -2,11 +2,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
-import { RECORD_ZONE } from "./company360";
 
 // A human's verdict on a machine's claim: agree with it, or correct it.
 //
@@ -119,6 +119,7 @@ export function EvidenceVerdict({
 }: Readonly<{ orgId: string; claim: EvidenceClaim; canEdit: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const queryClient = useQueryClient();
   const [correcting, setCorrecting] = useState(false);
   const [draft, setDraft] = useState(claim.value);
@@ -161,7 +162,7 @@ export function EvidenceVerdict({
       <span className="evidence-verdict t-muted">
         {claim.verifiedAt
           ? t("evidence.confirmedAt", {
-              when: formatDateTime(claim.verifiedAt, locale, RECORD_ZONE),
+              when: formatDateTime(claim.verifiedAt, locale, recordZone),
             })
           : t("evidence.humanSet")}
       </span>

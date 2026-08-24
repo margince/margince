@@ -236,7 +236,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
 		Description:   sendEmailCopy.render(),
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendEmail",
 		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body","consent_purpose"],"properties":{
 			"activity_id":{"type":"string","format":"uuid"},
@@ -247,7 +247,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 			"consent_purpose":{"type":"string","description":"Purpose key the recipients must have granted"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendEmailResult](),
 	}
@@ -288,6 +288,18 @@ func (t sendEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	// The resolver's own guards (commandcomms.go), on the door that now
+	// executes directly. They used to run only at staging, which was enough
+	// while nothing reached here without an approval; a verb that executes has
+	// no such shelter, and a send with no addressee — or anchored to a record
+	// whose authority lives in another system — must be refused before the
+	// mail leaves rather than after.
+	if err := requireAddressee(args.To); err != nil {
+		return nil, err
+	}
+	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
+		return nil, err
+	}
 	noteEvidence(ctx, datasource.EntityActivity, args.ActivityID)
 	return marshalResult(t.comms.SendEmail(ctx, args.ActivityID, args.SendEmailArgs))
 }
@@ -306,13 +318,13 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
 		Description:   sendMessageCopy.render(),
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendMessage",
 		InputSchema: schema(`{"type":"object","required":["activity_id","body","consent_purpose"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured conversation being replied to"},
 			"body":{"type":"string","minLength":1},
 			"consent_purpose":{"type":"string","description":"Purpose key the recipient must have granted"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendMessageResult](),
 	}
@@ -343,6 +355,19 @@ func (t sendMessageTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	// Same reason as its mail twin above: the anchor's authority is checked on
+	// the door that sends, not only on the one that staged.
+	if err := (&anchoredRecord{records: t.p, entityType: datasource.EntityActivity}).refuse(ctx, args.ActivityID); err != nil {
+		return nil, err
+	}
+	// NOT carried over from the resolver's Guards: CanSendOnProvider, which
+	// refused a transport this installation composed no sender for. It was
+	// there because staging spends a human's one-shot approval and a message
+	// on an uncomposed transport would have been approved and then failed.
+	// With no approval to spend, the executor's own refusal arrives at the same
+	// moment and names the same thing — ChannelNotSendCapableError, by provider
+	// (activities/channelsend.go). Repeating it here would need ChannelKinds
+	// threaded through the comms registrar for an answer the send already gives.
 	noteEvidence(ctx, datasource.EntityActivity, args.ActivityID)
 	return marshalResult(t.comms.SendMessage(ctx, args.ActivityID, args.SendMessageArgs))
 }

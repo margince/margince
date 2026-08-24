@@ -68,6 +68,7 @@ type Service struct {
 	// item leaves the inbox and the thing it was about carries on waiting for a
 	// decision nobody will make again.
 	declines map[string]DeclinedEffect
+	expiries map[string]ExpiredEffect
 	// quota is the volume meter an approved step-up widens (quotarelease.go).
 	// Nil in a composition that serves no agents, where a step-up can never be
 	// staged in the first place.
@@ -124,6 +125,13 @@ type ReleasePrecheck func(ctx context.Context, staged, edited json.RawMessage) e
 // neither does.
 type DeclinedEffect func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error
 
+// ExpiredEffect is what the clock's expiry executes, in the expiry's own
+// transaction and for the reason DeclinedEffect runs in the decision's: a
+// staging about a subject that is WAITING — a candidate ledger row, a held
+// message — must learn that nobody answered, or it waits forever while the
+// card that would have resolved it is already gone from every inbox.
+type ExpiredEffect func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error
+
 // NewService builds the approvals engine over a workspace-bound handle,
 // with no effects registered until compose wires them.
 func NewService(db *database.DB) *Service {
@@ -132,6 +140,7 @@ func NewService(db *database.DB) *Service {
 		effects:   map[string]ApprovedEffect{},
 		prechecks: map[string]ReleasePrecheck{},
 		declines:  map[string]DeclinedEffect{},
+		expiries:  map[string]ExpiredEffect{},
 	}
 }
 
@@ -175,6 +184,15 @@ func (s *Service) WithDeclinedEffect(kind string, effect DeclinedEffect) *Servic
 	return s
 }
 
+// WithExpiredEffect registers what runs when the clock expires one staging
+// kind. Register one where an expiry has work to do, on the same terms as
+// WithDeclinedEffect — and on the service the sweep runs on, which is the one
+// jobs_approvalexpiry.go builds.
+func (s *Service) WithExpiredEffect(kind string, effect ExpiredEffect) *Service {
+	s.expiries[kind] = effect
+	return s
+}
+
 // WithLogger installs the mounting process's logger.
 func (s *Service) WithLogger(log *slog.Logger) *Service {
 	s.log = log
@@ -208,16 +226,15 @@ func (s *Service) EffectKinds() []string {
 // audit appends this module's audit rows — same append-only table, this
 // module's own writer (modules do not share store internals).
 func (s *Service) audit(ctx context.Context, tx pgx.Tx, p principal.Principal, action string, entityID ids.UUID, evidence map[string]any) (ids.UUID, error) {
-	wsID, _ := principal.WorkspaceID(ctx)
 	raw, err := json.Marshal(evidence)
 	if err != nil {
 		return ids.Nil, err
 	}
 	id := ids.NewV7()
 	_, err = tx.Exec(ctx,
-		`INSERT INTO audit_log (id, workspace_id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, evidence)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, 'approval', $8, $9)`,
-		id, wsID, string(p.Type), p.ID, nullUUID(p.PassportID), nullUUID(p.OnBehalfOf),
+		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, evidence)
+		 VALUES ($1, $2, $3, $4, $5, $6, 'approval', $7, $8)`,
+		id, string(p.Type), p.ID, nullUUID(p.PassportID), nullUUID(p.OnBehalfOf),
 		action, entityID, raw)
 	return id, err
 }

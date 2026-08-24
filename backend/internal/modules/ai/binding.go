@@ -41,6 +41,13 @@ type binding struct {
 	// without a RoutingConfig: Embed then leaves a caller-unset Dimensions at
 	// 0 and each adapter's own provider default still applies.
 	embedDims int
+	// credentialVersion is a digest of the provider credentials this Router's
+	// clients were built WITH, and it is separate from configSnapshot on
+	// purpose: rotating a key must rebind the clients but must NOT move
+	// RoutingConfigHash, which is a brief cache key. Folding the credential
+	// into that digest would regenerate every stored brief in the installation
+	// through paid models on every key rotation.
+	credentialVersion string
 }
 
 // binding returns the configuration this call must serve itself from. Load it
@@ -59,17 +66,24 @@ func (r *Router) binding() *binding {
 // and embed width stamped on — the one place that keeps both in sync, since the
 // snapshot's provider_params must name the SAME width Embed defaults an unset
 // request to. Pure: EnsureConfig plants the row lazily, once per flush.
-func (b binding) withConfigSnapshot(routingConfigHash string, embedDims int) binding {
+// Takes the CONFIG rather than the two values it needs, so a third thing the
+// binding must carry from it cannot be added at one construction site and
+// forgotten at the other two. credentialVersion was exactly that: three sites
+// stamped the snapshot, and a version threaded through only one of them left
+// the boot-built Router unable to notice a rotated key.
+func (b binding) withConfigSnapshot(cfg RoutingConfig) binding {
 	// ParseRouting defaults 0→defaultEmbedDimensions, but a programmatic
 	// RoutingConfig built without it (a hand-assembled test fixture) reaches
 	// construction with Dimensions still 0 — default here too so a bound embed
 	// lane never stamps its identity as "@0" or asks a provider for width 0.
+	embedDims := cfg.Embeddings.Dimensions
 	if embedDims == 0 {
 		embedDims = defaultEmbedDimensions
 	}
 	b.embedDims = embedDims
-	b.configSnapshot = newConfigSnapshot(routingConfigHash, embedDims)
+	b.configSnapshot = newConfigSnapshot(cfg.sourceHash, embedDims)
 	b.configHash = b.configSnapshot.Hash
+	b.credentialVersion = cfg.credentialVersion
 	return b
 }
 
@@ -96,11 +110,22 @@ func (r *Router) Rebind(cfg RoutingConfig) error {
 	next := binding{
 		clients: clients, embedder: embedder,
 		profile: cfg.Profile, routeMeta: embedInclusiveMeta(cfg),
-	}.withConfigSnapshot(cfg.sourceHash, cfg.Embeddings.Dimensions)
+	}.withConfigSnapshot(cfg)
 	r.bound.Store(&next)
 	r.cache.clear()
 	return nil
 }
+
+// CredentialVersion is a digest of the provider credentials this Router's
+// clients hold. A caller compares it against the stored one to decide whether it
+// has fallen behind on a KEY, which RoutingVersion cannot answer: a rotation
+// changes no tier, no model and no base URL, so the routing digest is identical
+// before and after and a watcher comparing only that would keep calling the
+// vendor with a credential an admin has revoked.
+//
+// Empty on a Router assembled without one, which is every unit fixture and an
+// installation whose keys come from the environment alone.
+func (r *Router) CredentialVersion() string { return r.binding().credentialVersion }
 
 // RoutingVersion is the digest of the ROUTING CONFIG this Router is serving —
 // the value a caller compares against the stored one to decide whether it has

@@ -43,6 +43,16 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 				return nil, err
 			}
 			renamed = renamed || (moved && field == fieldLegalName)
+			// A description this form actually landed is a person's sentence,
+			// and a later site read asks field_provenance whose it is before
+			// replacing it. The profile-field row above says source=human too,
+			// but that table answers for the FIELD; the column has its own
+			// owner, and descriptionHeldByHuman reads this layer.
+			if moved && field == fieldOfferSummary {
+				if err := stampDescriptionAuthor(ctx, tx, orgID, by); err != nil {
+					return nil, err
+				}
+			}
 		}
 		if trimmed == "" {
 			if _, err := tx.Exec(ctx,

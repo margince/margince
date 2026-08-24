@@ -177,6 +177,19 @@ func fillOrgSurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.O
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
+	// An inherited description arrives with its author still attached. Without
+	// this the survivor holds a person's sentence that field_provenance says
+	// nobody wrote, and the next site read of the survivor replaces it — the
+	// merge would quietly strip a human's claim on words it did not change.
+	// The RETIRED record's author is carried across, not the person running the
+	// merge: a merge moves a value, it does not author one.
+	if _, inherited := p.After()["description"]; inherited {
+		if err := carryDescriptionAuthor(ctx, tx,
+			ids.OrganizationID{UUID: ids.UUID(src.Id)},
+			ids.OrganizationID{UUID: ids.UUID(tgt.Id)}); err != nil {
+			return nil, err
+		}
+	}
 	return p.After(), nil
 }
 
@@ -219,6 +232,8 @@ func absorbOrgReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 		// mid-merge. A project's anchor is NOT NULL ... ON DELETE RESTRICT
 		// and so cannot stay behind either (PROJ-LIFE-4) — leaving it is
 		// what turns a healthy deal un-editable over a mismatch nobody made.
+		// The legacy anchor column, kept in step so a downgrade reads something
+		// sane; the live answer is the edge below.
 		`UPDATE project SET organization_id = $2 WHERE organization_id = $1`,
 		`UPDATE deal SET organization_id = $2 WHERE organization_id = $1`,
 		`UPDATE deal SET partner_org_id = $2 WHERE partner_org_id = $1`,
@@ -315,6 +330,10 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 		    WHERE b.kind = a.kind AND b.archived_at IS NULL AND b.id <> a.id
 		      AND b.person_id IS NOT DISTINCT FROM a.person_id
 		      AND b.deal_id IS NOT DISTINCT FROM a.deal_id
+		      -- The project too, or a project_company edge on project A is
+		      -- read as a duplicate of one on project B merely because both
+		      -- name the survivor — and the company silently leaves project A.
+		      AND b.project_id IS NOT DISTINCT FROM a.project_id
 		      AND b.organization_id IS NOT DISTINCT FROM
 		            (CASE WHEN a.organization_id = $1 THEN $2::uuid ELSE a.organization_id END)
 		      AND b.counterparty_org_id IS NOT DISTINCT FROM
@@ -353,21 +372,31 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 // naming a project is a read of it, so the refusal lists only the ones this
 // caller may already see and counts the rest.
 func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.OrganizationID) error {
+	// Naming a project is a read of it, and the merge entry point checks only
+	// organization.update — nothing on this path has asked for project.read.
+	// Row scope no longer narrows a project (no own/team arm in platform/auth
+	// tableclass.go, and migration 1787320003 narrowed project.visibility to
+	// 'workspace'), but the OBJECT grant is a separate gate and a seat can
+	// hold organization.update with no sight of a project at all. So the
+	// naming asks for the grant it actually needs, and a caller without it is
+	// still refused the merge — on counts, which say the work exists without
+	// saying whose it is or what it is called.
+	mayName := auth.Require(ctx, "project", principal.ActionRead) == nil
+
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sourcePos, targetPos := arg(sourceID), arg(targetID)
-	scope, err := auth.ScopeClauseFor(ctx, projectObjectName, "", arg)
-	if err != nil {
-		return err
-	}
-	visible := "true"
-	if scope != "" {
-		visible = scope
-	}
+	// Read through the EDGES, not project.organization_id: that column stopped
+	// being written when a project became work several companies do together,
+	// so a guard reading it would let a merge through that joins two companies
+	// both genuinely carrying projects.
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT organization_id, name, (%s) AS visible FROM project
-		WHERE organization_id IN ($%d, $%d) AND archived_at IS NULL
-		ORDER BY organization_id, name`, visible, sourcePos, targetPos), args...)
+		SELECT c.organization_id, p.name
+		  FROM relationship c
+		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
+		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL
+		   AND c.organization_id IN ($%d, $%d)
+		 ORDER BY c.organization_id, p.name`, sourcePos, targetPos), args...)
 	if err != nil {
 		return fmt.Errorf("read projects on both merge endpoints: %w", err)
 	}
@@ -377,8 +406,7 @@ func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targe
 	for rows.Next() {
 		var org ids.UUID
 		var name string
-		var canSee bool
-		if err := rows.Scan(&org, &name, &canSee); err != nil {
+		if err := rows.Scan(&org, &name); err != nil {
 			return err
 		}
 		side, names := &refusal.TargetCount, &refusal.Target
@@ -386,7 +414,7 @@ func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targe
 			side, names = &refusal.SourceCount, &refusal.Source
 		}
 		*side++
-		if canSee {
+		if mayName {
 			*names = append(*names, name)
 		}
 	}

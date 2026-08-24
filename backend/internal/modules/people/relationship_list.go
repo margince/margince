@@ -104,7 +104,7 @@ func relationshipListWhere(ctx context.Context, in ListRelationshipsInput, arg f
 	if in.Cursor != "" {
 		after, err := ids.Parse(in.Cursor)
 		if err != nil {
-			return nil, &RequiredFieldError{Field: "cursor"}
+			return nil, &storekit.MalformedCursorError{}
 		}
 		where = append(where, storekit.SQLf("r.id > $%d", arg(after)))
 	}

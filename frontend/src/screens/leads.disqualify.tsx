@@ -7,6 +7,7 @@ import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
@@ -49,8 +50,9 @@ export function DisqualifyDialog({
       return data;
     },
     onSuccess: (closed) => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead", lead.id] });
+      for (const key of leadWriteKeys(lead.id)) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
       onDisqualified(closed);
     },
   });

@@ -63,6 +63,7 @@ type setupClaimRequest struct {
 	OrganizationName string `json:"organization_name"`
 	Timezone         string `json:"timezone"`
 	BaseCurrency     string `json:"base_currency"`
+	BaseLanguage     string `json:"base_language"`
 	AdminEmail       string `json:"admin_email"`
 	AdminName        string `json:"admin_name"`
 	AdminPassword    string `json:"admin_password"`
@@ -108,14 +109,24 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 			return
 		}
 
+		// The basis is validated INSIDE the claim, after the token has been
+		// matched, rather than here. Checking it on the way in would answer 422
+		// to a caller holding no valid token — telling an unauthenticated
+		// stranger which fields this body carries and which values it will
+		// take, on the one route that creates the root account.
+		//
+		// The seed's own discards, merged below. ClaimInstallation ASSIGNS the
+		// identity ones, so a shared slice would lose these.
+		var seedDiscards []string
 		wsID, discarded, err := svc.ClaimInstallation(r.Context(), in.SetupToken, identity.InstallationBootstrap{
 			OrganizationName: in.OrganizationName,
 			BaseCurrency:     in.BaseCurrency,
+			BaseLanguage:     in.BaseLanguage,
 			Timezone:         in.Timezone,
 			AdminEmail:       in.AdminEmail,
 			AdminName:        in.AdminName,
 			AdminPassword:    in.AdminPassword,
-		}, configuredSeed(seeds, deals.NewHandlers(InstallationDB(pool), DealsInstallation())))
+		}, configuredSeed(seeds, deals.NewHandlers(InstallationDB(pool), DealsInstallation()), &seedDiscards))
 		switch {
 		case errors.Is(err, identity.ErrAlreadyProvisioned):
 			// The true reason, not a token failure: a caller holding a valid
@@ -138,8 +149,9 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 		// archived creates a new one beside settings rows that survived, and the
 		// identity the human just typed into the claim form is discarded. They
 		// see the old name in the UI and have no way to tell why (#863).
+		discarded = append(discarded, seedDiscards...)
 		if len(discarded) > 0 {
-			log.Warn("the claim kept the identity already stored and discarded what was submitted; a previous installation's settings survived because they are not scoped to a workspace",
+			log.Warn("the claim kept the values already stored and discarded what was submitted; a previous installation's settings survived because they are not scoped to a workspace",
 				"discarded_keys", strings.Join(discarded, ", "), "workspace_id", wsID.String())
 		}
 		httperr.WriteJSON(w, http.StatusCreated, setupClaimResponse{WorkspaceID: wsID.String()})

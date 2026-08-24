@@ -4,7 +4,7 @@
 package identity
 
 // The installation-settings surface (ADR-0090/A135): the module-facing shape
-// over the three settings identity owns. RBAC, validation, the freeze probe
+// over the settings identity owns. RBAC, validation, the freeze probe
 // and the audit-only write all live on the entries — this file is only the
 // read/patch shape a transport needs.
 
@@ -26,12 +26,54 @@ type InstallationSettings struct {
 	Name         string
 	Timezone     string
 	BaseCurrency string
+	BaseLanguage string
+	// FiscalYearStartMonth is the month the business year begins, 1..12.
+	FiscalYearStartMonth int
 	// BaseCurrencyLocked and its reason let a client render the field
 	// read-only instead of discovering the refusal by attempting a write —
 	// the same information the write path would give, offered before the
 	// operator types a currency they cannot save.
 	BaseCurrencyLocked       bool
 	BaseCurrencyLockedReason string
+}
+
+// InstallationPatch is a sparse installation-settings write: a nil field is
+// left unchanged. Named fields rather than positional pointers, because most of
+// them are *string and a transposed pair would write a language into the
+// currency row and pass the type checker.
+type InstallationPatch struct {
+	Name                 *string
+	Timezone             *string
+	BaseCurrency         *string
+	BaseLanguage         *string
+	FiscalYearStartMonth *int
+}
+
+// pendingWrite is one field of a sparse patch, already reduced to the two
+// things the write loop needs: which setting to write under, and the JSON to
+// write. `raw` nil means the field was absent and nothing is written.
+type pendingWrite struct {
+	entry settings.Definition
+	raw   []byte
+}
+
+// encodePatchField reduces one patch field to a pendingWrite, encoding it here
+// where its type is still known rather than handing the loop an `any`.
+//
+// Generic over the field's own type, which is what keeps the write typed: the
+// installation's fields are strings except the fiscal start month, and a loop
+// carrying `any` would accept a value of any type at all — including, silently,
+// a nil typed pointer, which is NOT equal to nil once it is inside an
+// interface.
+func encodePatchField[T any](entry settings.Definition, value *T) (pendingWrite, error) {
+	if value == nil {
+		return pendingWrite{entry: entry}, nil
+	}
+	raw, err := json.Marshal(*value)
+	if err != nil {
+		return pendingWrite{}, fmt.Errorf("identity: encoding %s: %w", entry.Key(), err)
+	}
+	return pendingWrite{entry: entry, raw: raw}, nil
 }
 
 // InstallationSettingsStore reads and patches the installation settings.
@@ -49,7 +91,7 @@ func NewInstallationSettings(db *database.DB, s *settings.Store) *InstallationSe
 	return &InstallationSettingsStore{db: db, settings: s}
 }
 
-// GetInstallation reads the three settings and the base currency's lock state.
+// GetInstallation reads the settings and the base currency's lock state.
 //
 // Named GetInstallation rather than Get deliberately. rbacgate_test.go resolves
 // gatedness by BARE FUNCTION NAME within a package — optimistic by design, so
@@ -71,13 +113,22 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	language, err := settings.Get(ctx, s.settings, BaseLanguage)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
+	fiscalStart, err := settings.Get(ctx, s.settings, FiscalYearStartMonth)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	locked, why, err := s.baseCurrencyLock(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
 	return InstallationSettings{
-		Name: name, Timezone: zone, BaseCurrency: currency,
-		BaseCurrencyLocked: locked, BaseCurrencyLockedReason: why,
+		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language,
+		FiscalYearStartMonth: fiscalStart,
+		BaseCurrencyLocked:   locked, BaseCurrencyLockedReason: why,
 	}, nil
 }
 
@@ -100,6 +151,45 @@ func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (bool,
 	return locked, why, nil
 }
 
+// encodeInstallationPatch reduces every field of a sparse patch to its wire
+// bytes. Every field appears exactly once, and a field left out here is a value
+// that silently stops saving — the form still shows it, the PATCH still carries
+// it, the write still returns 200, and the row never moves.
+//
+// Held by TestEveryInstallationPatchFieldIsEncoded, which derives the expected
+// list from InstallationPatch by reflection rather than restating it: a sixth
+// setting added to that struct fails until it is encoded here. The claim was a
+// comment first, and dropping a line from the slice below left the whole tree
+// green.
+//
+// The error returns are not dead despite json.Marshal never failing on the
+// string and int fields that exist today: encodePatchField is generic, and the
+// first field whose type has a MarshalJSON that can fail arrives without
+// touching this function.
+func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
+	name, err := encodePatchField(Name, in.Name)
+	if err != nil {
+		return nil, err
+	}
+	zone, err := encodePatchField(Timezone, in.Timezone)
+	if err != nil {
+		return nil, err
+	}
+	currency, err := encodePatchField(BaseCurrency, in.BaseCurrency)
+	if err != nil {
+		return nil, err
+	}
+	language, err := encodePatchField(BaseLanguage, in.BaseLanguage)
+	if err != nil {
+		return nil, err
+	}
+	fiscal, err := encodePatchField(FiscalYearStartMonth, in.FiscalYearStartMonth)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{name, zone, currency, language, fiscal}, nil
+}
+
 // UpdateInstallation applies a sparse patch. Named for the same reason as
 // GetInstallation above. A nil field is left unchanged; an unchanged value
 // writes nothing and audits nothing. Returns the settings after the write.
@@ -111,28 +201,24 @@ func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (bool,
 // Every field commits in ONE transaction, and the settings rows are the only
 // copy: a change here moves the value everything computes in, because there is
 // no second place for it to disagree.
-func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, name, zone, currency *string) (InstallationSettings, error) {
+func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in InstallationPatch) (InstallationSettings, error) {
 	if err := auth.Require(ctx, installationSettingsObject, principal.ActionUpdate); err != nil {
 		return InstallationSettings{}, err
 	}
-	patch := []struct {
-		entry *settings.Entry[string]
-		value *string
-	}{
-		{Name, name},
-		{Timezone, zone},
-		{BaseCurrency, currency},
+	// Each field is encoded where its own type is still known, so the loop
+	// below carries bytes rather than an `any` that would accept anything.
+	// Every field of the patch appears exactly once: one left out is a value
+	// that silently stops saving.
+	patch, err := encodeInstallationPatch(in)
+	if err != nil {
+		return InstallationSettings{}, err
 	}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, w := range patch {
-			if w.value == nil {
+			if w.raw == nil {
 				continue
 			}
-			raw, err := json.Marshal(*w.value)
-			if err != nil {
-				return fmt.Errorf("identity: encoding %s: %w", w.entry.Key(), err)
-			}
-			if err := s.settings.SetRawTx(ctx, tx, w.entry.Key(), raw); err != nil {
+			if err := s.settings.SetRawTx(ctx, tx, w.entry.Key(), w.raw); err != nil {
 				return err
 			}
 		}

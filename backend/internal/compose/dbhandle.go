@@ -9,7 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/modules/customfields"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -45,4 +48,21 @@ func actingWorkspaceDB(ctx context.Context, pool *pgxpool.Pool) (*database.DB, e
 		return nil, fmt.Errorf("%w: this call was made outside a workspace", database.ErrNoWorkspace)
 	}
 	return database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil
+}
+
+// ProjectsStore builds this module's store over the installation's workspace,
+// with the custom-field catalog wired exactly as the HTTP surface wires it.
+// Spelled once here because five composition sites need the same store and a
+// second spelling is a second answer to one question.
+func ProjectsStore(pool *pgxpool.Pool) *projects.Store {
+	return ProjectsStoreOver(InstallationDB(pool))
+}
+
+// ProjectsStoreOver is ProjectsStore over a handle whose workspace is already
+// decided — the datasource provider's path, and a suite that names its own
+// workspace rather than resolving the installation's singleton.
+func ProjectsStoreOver(db *database.DB) *projects.Store {
+	return projects.NewStore(db).
+		WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
+		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx))
 }

@@ -42,6 +42,17 @@ const streamOverlay = "overlay"
 // every one of those depend on which units an installation happens to ship.
 const extensionStreamEntity = "extension"
 
+// aiTaskStreamEntity is the stream every ai_task.state_changed rides.
+//
+// It is deliberately NOT in streamEntities, which is what coreStreams() — and
+// therefore every all-stream group — expands to. An AI task's state change is
+// an internal projection feed: the automation engine has no trigger for it, the
+// webhook deliverer has no public type to name it by, and the audit stream's
+// agent-actor slice already sees the work itself through the events that
+// mutated records. Enumerated by Streams() all the same, because a stream the
+// purge does not unlink is one that outlives a data reset.
+const aiTaskStreamEntity = "aitask"
+
 // ExtensionEventVersion is the payload schema version every extension event
 // carries, and it is 1 forever.
 //
@@ -97,11 +108,11 @@ var streamEntities = []string{
 // left out here is one the data reset does not unlink and no operator can see,
 // which is a worse outcome than the entries it would leave behind.
 func Streams() []string {
-	out := make([]string, 0, len(streamEntities)+1)
+	out := make([]string, 0, len(streamEntities)+2)
 	for _, e := range streamEntities {
 		out = append(out, StreamPrefix+e)
 	}
-	out = append(out, StreamPrefix+extensionStreamEntity)
+	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity)
 	sort.Strings(out)
 	return out
 }
@@ -167,7 +178,12 @@ var catalog = map[string]struct {
 	// The sender's own sign-off. It rides the person stream because what it
 	// governs is how a member is represented on every message they send, which
 	// is a fact about that person rather than about any one mail.
-	"email_signature.changed":  {personStreamEntity, 1},
+	"email_signature.changed": {personStreamEntity, 1},
+	// The language a member reads their own interface in. It rides the person
+	// stream for the same reason the sign-off does: it is a fact about that
+	// person rather than about the installation, which names its own language
+	// in a setting and publishes nothing per reader.
+	"user_locale.changed":      {personStreamEntity, 1},
 	"linkedin_account.changed": {personStreamEntity, 1},
 	// One import act, not one row: an export is thousands of rows and a
 	// per-row event would bury every other event in the stream, while the
@@ -228,6 +244,27 @@ var catalog = map[string]struct {
 	"offer.accepted":          {dealStreamEntity, 1},
 	"offer.rejected":          {dealStreamEntity, 1},
 	"offer.superseded":        {dealStreamEntity, 1},
+	// A Deal Room rides the deal family stream for the same reason a contract
+	// does: it is the buyer-facing face of one deal, and a consumer following
+	// that deal's arc wants what the buyer was shown alongside what changed.
+	"deal_room.opened":   {dealStreamEntity, 1},
+	"deal_room.updated":  {dealStreamEntity, 1},
+	"deal_room.paused":   {dealStreamEntity, 1},
+	"deal_room.resumed":  {dealStreamEntity, 1},
+	"deal_room.closed":   {dealStreamEntity, 1},
+	"deal_room.archived": {dealStreamEntity, 1},
+	// Access changes ride the same stream: who may read a deal's material is part
+	// of that deal's arc, and a consumer following it wants both.
+	"deal_room.participant_invited":             {dealStreamEntity, 1},
+	"deal_room.participant_revoked":             {dealStreamEntity, 1},
+	"deal_room.participant_credential_reissued": {dealStreamEntity, 1},
+	// Editorial content (documents, wording) reaches a buyer through
+	// deal_room.published and is not announced separately. The conversation is live on both sides and never waits for a publish, so
+	// each act announces itself: a comment (on a document or the room), the
+	// seller resolving a thread, and a buyer's decision on a document version.
+	"deal_room.comment_posted":    {dealStreamEntity, 1},
+	"deal_room.thread_resolved":   {dealStreamEntity, 1},
+	"deal_room.decision_recorded": {dealStreamEntity, 1},
 
 	"lead.created":      {leadStreamEntity, 1},
 	"lead.updated":      {leadStreamEntity, 1},
@@ -298,21 +335,32 @@ var catalog = map[string]struct {
 	// rides the same overlay-mode-only stream as the mirror it gates.
 	"incumbent.connected":    {streamOverlay, 1},
 	"incumbent.disconnected": {streamOverlay, 1},
+
+	// The AI-activity projection feed (ai_task_run). One type with the state
+	// inside, like voice.build_changed: a new state must never need a new type.
+	"ai_task.state_changed": {aiTaskStreamEntity, 1},
 }
 
-// pipelineEventTypes are the capture-pipeline events that may ride the bus
-// WITHOUT a subject entity ref. A pipeline step can be subject-less by
-// nature — capture.skipped names NOTHING (an excluded personal message
-// creates no row), yet the spec still requires it on the bus as the
-// machine-checkable "personal mail is never ingested" proof (capture.md
-// AC1.3, EVT-SEM-10). These events carry no entity handle, but they DO keep
-// the ledger trace link (audit_log OR system_log) so the outcome stays
-// attributable — Validate enforces the trace, only the entity is relaxed.
+// pipelineEventTypes are the events that may ride the bus WITHOUT a subject
+// entity ref, because the thing they report names no record.
+//
+// Two families qualify, for the same reason. A capture pipeline step can be
+// subject-less by nature — capture.skipped names NOTHING (an excluded personal
+// message creates no row), yet the spec still requires it on the bus as the
+// machine-checkable "personal mail is never ingested" proof (capture.md AC1.3,
+// EVT-SEM-10). An AI task's state change names no record either: the occurrence
+// it reports is operational state, and the row that will hold it does not exist
+// until the projection this event feeds writes it — so there is nothing for a
+// consumer to read back under its own scope, which is what an entity ref is
+// for. These events carry no entity handle, but they DO keep the ledger trace
+// link (audit_log OR system_log) so the outcome stays attributable — Validate
+// enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
-	"capture.received":   {},
-	"capture.normalized": {},
-	"capture.failed":     {},
-	"capture.skipped":    {},
+	"capture.received":      {},
+	"capture.normalized":    {},
+	"capture.failed":        {},
+	"capture.skipped":       {},
+	"ai_task.state_changed": {},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less
@@ -365,88 +413,6 @@ func VersionOf(eventType string) int {
 		return ExtensionEventVersion
 	}
 	return 0
-}
-
-// Group is a §4.3 consumer group: one per consuming module, so each
-// module sees every event once and scales horizontally inside the group.
-type Group struct {
-	Name    string
-	Streams []string
-}
-
-// Groups returns the consumer groups with their subscribed streams —
-// the events.md §4.3 set plus the later consumers; the census test
-// mirrors the full list. cg:workflows and cg:read-model subscribe to
-// everything by design; cg:audit-stream also does, because its "all
-// actor.type=agent events" slice cuts across every stream and Redis
-// consumer groups can only partition by stream, not by envelope field —
-// the actor filter is in-process, like the workspace filter.
-func Groups() []Group {
-	all := coreStreams()
-	forEntities := func(entities ...string) []string {
-		keys := make([]string, len(entities))
-		for i, e := range entities {
-			keys[i] = StreamPrefix + e
-		}
-		sort.Strings(keys)
-		return keys
-	}
-	return []Group{
-		{Name: "cg:context-graph", Streams: forEntities(personStreamEntity, organizationStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
-		// The interaction-edge projection (CG-DDL-1 / ADR-0078). Its OWN group
-		// rather than a second handler on cg:context-graph: a projection
-		// rebuild must not be able to stall embedding freshness, and the two
-		// have unrelated failure modes.
-		{Name: "cg:graph-edge", Streams: forEntities(activityStreamEntity, personStreamEntity)},
-		// The audience-change corrector: when a human LIMITS a message after
-		// the derived models were built, the derived signals citing it narrow
-		// and the thread's scan watermark drops so the next extraction pass
-		// re-reads under the new audience. Its own group rather than a second
-		// handler on cg:graph-edge for the same isolation reason: re-scoping
-		// signals must not be able to stall the edge projection, and vice
-		// versa.
-		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity)},
-		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
-		// a second handler on cg:graph-edge: that consumer lives in the search
-		// module and this call belongs to people, and a module never reaches
-		// into a sibling. It listens on the person and organization streams —
-		// a contact appearing is a chance to attach a ghost, and so is an
-		// account appearing, because employer resolution is what most ghosts
-		// are waiting on.
-		{Name: "cg:linkedin-match", Streams: forEntities(personStreamEntity, organizationStreamEntity)},
-		// Turning a won deal into what its partner earned. Its own group
-		// because accrual is money: a projection rebuild or an embedding
-		// backlog must never be able to stall it, and a failure to accrue must
-		// never look like a failure to index. It listens on the deal stream,
-		// where deal.stage_changed carries both the win and the reopen that
-		// reverses one.
-		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
-		// Filling a contact from what their employer's site already published
-		// (ADR-0072 arc). Its own group for the same reason as the matcher
-		// above: the deep read fills a published person DURING the crawl, so
-		// a contact who arrives afterwards is never matched against what that
-		// site said. It listens on the person stream alone — the fill is
-		// keyed on the contact, and an account appearing enriches nobody
-		// until a person is filed against it, which is itself a person event.
-		{Name: "cg:person-auto-enrich", Streams: forEntities(personStreamEntity)},
-		// Automatic enrichment from a LICENSED provider (ADR-0101/PI-EVT-1).
-		// Its own group rather than a second handler on the pass above,
-		// because the two differ in what a failure costs: that one reads a
-		// page the workspace already crawled, this one SPENDS the customer's
-		// credits, and a consumer whose retries buy data must not share a
-		// cursor with one whose retries are free.
-		{Name: "cg:person-data", Streams: forEntities(personStreamEntity)},
-		{Name: "cg:overnight-agent", Streams: forEntities(activityStreamEntity, dealStreamEntity, leadStreamEntity, approvalStreamEntity)},
-		{Name: "cg:workflows", Streams: all},
-		{Name: "cg:capture", Streams: forEntities(captureStreamEntity)},
-		{Name: "cg:flow-bridge", Streams: forEntities(personStreamEntity, dealStreamEntity, activityStreamEntity)},
-		{Name: "cg:read-model", Streams: all},
-		{Name: "cg:audit-stream", Streams: all},
-		// The outbound-webhook fan-out (E10/S-E10.6): a subscription may
-		// name any published event type, so this group listens on every
-		// stream and matches per-subscription event_types in-process.
-		{Name: "cg:webhooks", Streams: all},
-	}
 }
 
 // SplitType breaks a catalog type into its <entity>.<verb> segments

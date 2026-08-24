@@ -37,6 +37,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -337,7 +338,7 @@ func edgeRank(e crmcontracts.PersonGraphEdge) int {
 func proofLine(e crmcontracts.PersonGraphEdge, now time.Time) string {
 	when := "no recent contact"
 	if e.LastAt != nil {
-		days := int(now.Sub(*e.LastAt).Hours() / 24)
+		days := elapsed.Days(*e.LastAt, now)
 		switch days {
 		case 0:
 			when = "last contact today"

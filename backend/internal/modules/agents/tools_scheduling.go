@@ -71,7 +71,7 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "book_meeting", Title: "Book a meeting", Version: toolVersionV1,
 		Description:   bookMeetingCopy.render(),
-		RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "bookMeeting",
 		// `links` is REQUIRED by crm.yaml's bookMeeting body and was advertised
 		// as optional, so an agent that read the schema and omitted it was
@@ -87,7 +87,7 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},"maxItems":25,
 				"description":"Who and what the meeting is about; at least one. The booking is refused without it."},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PassthroughEntityResult](),
 	}
@@ -129,8 +129,21 @@ func (t bookMeetingTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 	if err := requireBookingLinks(args.Links); err != nil {
 		return nil, err
 	}
+	// Booking onto SOMEBODY ELSE'S calendar takes admin. This lived only in the
+	// resolver's Guards, which run inside StageSubject — enough while the verb
+	// always staged, and nothing at all now that it executes: defaultHost
+	// (compose/comms.go) takes whatever host it is handed without asking who
+	// the caller is.
+	if err := requireOwnCalendarOrAdmin(ctx, args.HostUserID); err != nil {
+		return nil, err
+	}
 	links, err := uniqueRecordLinks(args.Links)
 	if err != nil {
+		return nil, err
+	}
+	// And every link is read under the caller's row scope, the same reason:
+	// a booking must not be filed against a record the caller cannot see.
+	if _, err := readStageableLinks(ctx, t.p, links); err != nil {
 		return nil, err
 	}
 	args.Links = links

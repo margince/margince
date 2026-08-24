@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { TableScroll } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { ImportColumn, ImportProfile } from "./importtypes";
@@ -43,7 +44,11 @@ export function ImportMappingTable({
       <p className="import__hint">
         {t("import.profiled", { rows: profile.rows_profiled })}
       </p>
-      <div className="import__scroll">
+      {/* The fifth screen to have written this box by hand. `.import__scroll`
+          was `overflow-x: auto` and nothing else: no tab stop and no announced
+          name, so a keyboard reader could not reach the columns past the right
+          edge at all. */}
+      <TableScroll label={t("import.mappingTable")}>
         <table className="import__table">
           <thead>
             <tr>
@@ -85,7 +90,7 @@ export function ImportMappingTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

@@ -3,10 +3,10 @@
 
 package compose
 
-// The REST door's half of the seven bespoke auto-execute commands
-// (gradionhq/margince-poc-v1#928 task 6): a list member, a tag apply, an
-// offer line item add/update/remove, an offer created under a parent deal,
-// and a partner upsert. Unlike agentcommandoperand.go's confirm-first
+// The REST door's half of the six bespoke auto-execute commands
+// (margince/margince#928 task 6): a list member, a tag apply, an
+// offer line item add/update/remove, and an offer created under a parent
+// deal. Unlike agentcommandoperand.go's confirm-first
 // family, none of these carries body-derived VALUES into its command — the
 // body is the executor's own concern, never something Subject or Guards
 // reads (modules/agents/commandnested.go's own doc says why per command) —
@@ -95,7 +95,7 @@ func removeOfferLineItemCommand(_ agentPolicy, deps restCommandDeps, r *http.Req
 }
 
 // createOfferCommand decodes POST /v1/deals/{id}/offers. The route's own
-// {id} is the DEAL the offer nests under (gradionhq/margince-poc-v1#1046),
+// {id} is the DEAL the offer nests under (margince/margince#1046),
 // not an offer id — there is no offer id to decode, since the offer does
 // not exist yet. body is the same buffered copy every other create/patch
 // decoder reuses (createCommand's own comment says why).
@@ -110,13 +110,4 @@ func createOfferCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 		DealID: dealID,
 		Fields: json.RawMessage(body),
 	}), nil
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func upsertPartnerCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewUpsertPartnerCall(deps.records, agents.UpsertPartnerCommand{ID: id}), nil
 }

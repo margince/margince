@@ -112,8 +112,8 @@ func TestSettingOneGrantLeavesTheRestOfTheDocumentIntact(t *testing.T) {
 	}
 	// row_scope is not this endpoint's to touch and is not modelled by the
 	// grant map; a rewrite would have dropped it and silently narrowed the role.
-	if doc.RowScope != "team" {
-		t.Errorf("row_scope = %q, want the seeded rep scope 'team' — the write rewrote the document", doc.RowScope)
+	if doc.RowScope != "own" {
+		t.Errorf("row_scope = %q, want the seeded rep scope 'own' — the write rewrote the document", doc.RowScope)
 	}
 	if !doc.Objects["ext_gone_thing"].Read {
 		t.Error("the orphaned grant was erased; the write is not targeted")
@@ -151,9 +151,8 @@ func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) 
 	var roleID ids.UUID
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT actor_type, actor_id, entity_id, before, after FROM audit_log
-		  WHERE workspace_id = $1 AND entity_type = 'role' AND action = 'update'
-		  ORDER BY occurred_at DESC, id DESC LIMIT 1`,
-		e.admin.WorkspaceID).Scan(&actorType, &actorID, &roleID, &before, &after); err != nil {
+		  WHERE entity_type = 'role' AND action = 'update'
+		  ORDER BY occurred_at DESC, id DESC LIMIT 1`).Scan(&actorType, &actorID, &roleID, &before, &after); err != nil {
 		t.Fatalf("reading the audit row: %v", err)
 	}
 	if actorType != "human" || actorID != "human:"+e.admin.UserID.String() {
@@ -254,8 +253,7 @@ func TestSetRoleObjectGrantRefusesANonAdminAnUnknownRoleAndAnUnknownObject(t *te
 	// Nothing was written by any of the four attempts.
 	var count int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM audit_log WHERE workspace_id = $1 AND entity_type = 'role'`,
-		e.admin.WorkspaceID).Scan(&count); err != nil {
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'role'`).Scan(&count); err != nil {
 		t.Fatalf("counting audit rows: %v", err)
 	}
 	if count != 0 {

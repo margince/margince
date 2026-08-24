@@ -11,7 +11,7 @@ export interface components {
          * @description The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
          * @enum {string}
          */
-        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "project.created" | "project.updated" | "project.phase_changed" | "project.archived" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "offer.created" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "person.created" | "person.archived" | "person.merged" | "person.updated" | "person.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "organization.created" | "organization.archived" | "organization.merged" | "organization.updated" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "activity.captured" | "activity.archived" | "activity.updated" | "engagement.reply" | "consent.changed" | "email_signature.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.invited" | "user.password_link_issued" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "mirror.conflict" | "mirror.budget_degraded" | "mirror.deleted" | "mirror.write_rejected" | "incumbent.connected" | "incumbent.disconnected" | "approval.requested" | "approval.decided" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
+        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "project.created" | "project.updated" | "project.phase_changed" | "project.archived" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "offer.created" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "person.created" | "person.archived" | "person.merged" | "person.updated" | "person.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "organization.created" | "organization.archived" | "organization.merged" | "organization.updated" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "activity.captured" | "activity.archived" | "activity.updated" | "engagement.reply" | "consent.changed" | "email_signature.changed" | "user_locale.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.invited" | "user.password_link_issued" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "mirror.conflict" | "mirror.budget_degraded" | "mirror.deleted" | "mirror.write_rejected" | "incumbent.connected" | "incumbent.disconnected" | "approval.requested" | "approval.decided" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
         /** @description Who or what caused the event, as exposed publicly. */
         PublicEventActor: {
             /** @description Actor kind (e.g. human, agent, connector). */
@@ -90,6 +90,186 @@ export interface components {
             to_status: string;
             /** @description Why the entry was voided; absent for approve and pay. */
             reason?: string;
+        };
+        /**
+         * @description Payload for deal_room.opened — a Deal Room was created on a deal. Nothing is
+         *     buyer-visible yet: the room starts in draft and stays private until a human
+         *     publishes it.
+         */
+        PublicEventDealRoomOpened: {
+            /** Format: uuid */
+            deal_id: string;
+            title: string;
+            /**
+             * Format: uuid
+             * @description The named human a buyer is pointed at for help.
+             */
+            steward_user_id?: string;
+        };
+        /**
+         * @description Payload for deal_room.updated — something a buyer reads changed: the
+         *     room's title or welcome message, or the documents in it. A room is live
+         *     from creation, so there is no staging step between this event and what
+         *     an invited buyer sees on their next read.
+         */
+        PublicEventDealRoomUpdated: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description Which editorial fields moved. Names only — the text itself is not published.
+             *     Typed as a plain string rather than an inline enum: an inline enum here
+             *     generates package-scope Go constants named `Title`, `ExpiresAt` and the
+             *     like in the shared contracts package, which collide with, and silently
+             *     rename, the constants of any other schema that later declares the same
+             *     value. The closed set is stated here and held by the writer.
+             */
+            changed_fields: string[];
+        };
+        /**
+         * @description Payload for deal_room.participant_invited — an outside person was admitted to a
+         *     Deal Room.
+         *
+         *     The event names the participant and the room, never the credential or its hash:
+         *     a subscriber that could read the token off the bus would hold everything the
+         *     invitation grants.
+         */
+        PublicEventDealRoomParticipantInvited: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            participant_id: string;
+            /** @description view or comment. */
+            capability: string;
+        };
+        /**
+         * @description Payload for deal_room.participant_revoked — an outside person's access to a Deal
+         *     Room was taken away. Their live session ended and any unconsumed credential was
+         *     retired at the same moment.
+         */
+        PublicEventDealRoomParticipantRevoked: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            participant_id: string;
+        };
+        /**
+         * @description Payload for deal_room.participant_credential_reissued — the credential that
+         *     admits one participant changed, so whatever they were holding no longer works.
+         *
+         *     Two acts raise it: a resend, and a correction to the address a link was sent
+         *     to. Both retire the previous credential, which is the fact a subscriber needs;
+         *     `reason` says which happened. Like every participant event it names nobody's
+         *     token — a subscriber able to read one off the bus would hold what it grants.
+         */
+        PublicEventDealRoomParticipantCredentialReissued: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            participant_id: string;
+            /**
+             * @description `resent` — a fresh credential was issued on request.
+             *     `address_corrected` — the address changed, so the link already sent was
+             *     retired; no new credential exists until somebody resends.
+             */
+            reason: string;
+        };
+        /**
+         * @description Payload for deal_room.paused — buyer reads are refused while every credential
+         *     stays valid, so resuming needs no re-invitation.
+         */
+        PublicEventDealRoomPaused: {
+            /** Format: uuid */
+            deal_id: string;
+        };
+        /** @description Payload for deal_room.resumed — a paused room serves its existing release again. */
+        PublicEventDealRoomResumed: {
+            /** Format: uuid */
+            deal_id: string;
+        };
+        /**
+         * @description Payload for deal_room.closed — the room's CONTENT is frozen while buyer ACCESS
+         *     continues. The buyer keeps reading; nobody writes.
+         */
+        PublicEventDealRoomClosed: {
+            /** Format: uuid */
+            deal_id: string;
+        };
+        /**
+         * @description Payload for deal_room.archived — the room ended and buyer access is revoked.
+         *     Its releases survive, so what a buyer was shown stays answerable.
+         */
+        PublicEventDealRoomArchived: {
+            /** Format: uuid */
+            deal_id: string;
+        };
+        /**
+         * @description Payload for deal_room.comment_posted — somebody on either side said
+         *     something in a room thread, on a document or on the room as a whole. The
+         *     comment's text is deliberately absent: a subscriber reads it through the
+         *     room, under the room's own authority, not off the bus.
+         */
+        PublicEventDealRoomCommentPosted: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            thread_id: string;
+            /** Format: uuid */
+            comment_id: string;
+            /**
+             * Format: uuid
+             * @description The room document the thread is about; null for a room-level exchange.
+             */
+            document_id?: string | null;
+            /** @description Who spoke — `seller` or `buyer`. */
+            side: string;
+            /** @description True when this comment is the thread's first — a new question, not a reply. */
+            opens_thread: boolean;
+            /** @description True when the thread, as opened, blocks confirming the document until resolved. */
+            required_change?: boolean;
+            /**
+             * @description Who spoke, by name, as the room recorded them at that moment. Additive and optional: an event minted before this field existed carries none.
+             *     The comment's TEXT stays off the bus for the reason above, and a name is a different thing from the text — it is who acted, which is what any record of an act has to say. A timeline entry reading "the buyer said something" names no buyer and is not worth the row it occupies.
+             */
+            author_name?: string;
+            /**
+             * @description The document the thread is about, titled as it stood at that moment. Absent for a room-level exchange, and absent on an event minted before this field existed.
+             *     Carried rather than resolved later, for the reason every other field here is: a document can be retitled or removed afterwards, and a timeline entry means what was true when it happened.
+             */
+            document_title?: string;
+        };
+        /** @description Payload for deal_room.thread_resolved — a thread was closed by the seller's side. */
+        PublicEventDealRoomThreadResolved: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            thread_id: string;
+            /** Format: uuid */
+            document_id?: string | null;
+        };
+        /**
+         * @description Payload for deal_room.decision_recorded — a buyer asked for changes to a
+         *     document version, or confirmed it.
+         *
+         *     HISTORICAL ONLY. Deciding on a document version is retired: sharing a
+         *     document with a buyer is sharing it, and what they want to say about one
+         *     they say in the thread under it. Nothing emits this any more, and the
+         *     rows it named are gone. It stays declared because a subscriber may still
+         *     be reading events emitted before the retirement off the bus.
+         */
+        PublicEventDealRoomDecisionRecorded: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            decision_id: string;
+            /** Format: uuid */
+            document_id: string;
+            /**
+             * Format: uuid
+             * @description The exact version decided on.
+             */
+            attachment_id: string;
+            /** @description `request_changes` or `confirm_version`. */
+            kind: string;
         };
         /** @description Payload for contract.created — an agreement was recorded against a company. */
         PublicEventContractCreated: {
@@ -679,6 +859,11 @@ export interface components {
             /** @description Whether mail from this member now carries a sign-off. False after a member empties the field, which is a deliberate "send unsigned". */
             has_signature: boolean;
         };
+        /** @description Payload for user_locale.changed — a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this person needs to know which catalog to reach for. */
+        PublicEventUserLocaleChanged: {
+            /** @description The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event. */
+            locale: string;
+        };
         /** @description Payload for linkedin_account.changed — a member recorded or corrected their OWN LinkedIn authorization (people/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed, so it is auditable and published rather than written quietly. The profile URL itself is NOT in the payload: it is the member's own identifier and a subscriber needs to know that the authorization moved, not what their LinkedIn address is. */
         PublicEventLinkedinAccountChanged: {
             /** @description Whether an authorization is on record after this change. */
@@ -1207,7 +1392,7 @@ type ReadonlyArray<T> = [
 ] extends [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
-export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "project.created", "project.updated", "project.phase_changed", "project.archived", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "offer.created", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "person.created", "person.archived", "person.merged", "person.updated", "person.restored", "conversation_claim.captured", "conversation_claim.changed", "organization.created", "organization.archived", "organization.merged", "organization.updated", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "activity.captured", "activity.archived", "activity.updated", "engagement.reply", "consent.changed", "email_signature.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.invited", "user.password_link_issued", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "mirror.conflict", "mirror.budget_degraded", "mirror.deleted", "mirror.write_rejected", "incumbent.connected", "incumbent.disconnected", "approval.requested", "approval.decided", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
+export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "project.created", "project.updated", "project.phase_changed", "project.archived", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "offer.created", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "person.created", "person.archived", "person.merged", "person.updated", "person.restored", "conversation_claim.captured", "conversation_claim.changed", "organization.created", "organization.archived", "organization.merged", "organization.updated", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "activity.captured", "activity.archived", "activity.updated", "engagement.reply", "consent.changed", "email_signature.changed", "user_locale.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.invited", "user.password_link_issued", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "mirror.conflict", "mirror.budget_degraded", "mirror.deleted", "mirror.write_rejected", "incumbent.connected", "incumbent.disconnected", "approval.requested", "approval.decided", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventRetentionRestrictedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionRestricted"]["action"]> = ["restrict", "release", "pin"];
 export const publicEventTeamChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventTeamChanged"]["change"]> = ["created", "renamed", "archived", "restored", "member_added", "member_removed"];

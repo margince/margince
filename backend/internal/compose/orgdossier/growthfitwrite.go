@@ -27,6 +27,8 @@ import (
 	"strings"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -51,19 +53,23 @@ positive_factors and negative_factors are why they do or do not fit. whitespace 
 Our offering describes US. It is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
 Put ids ONLY in evidence. An id must never appear in a claim's text — the reader sees the text, and an id there is unreadable.
 Never invent a fact. If the summary does not say it, you may still ASSESS it, but then it is an assessment and must be labelled one.
-Write one claim per sentence, plainly.`
+Write one claim per sentence.`
 
 // growthFitSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func growthFitSystemFor(fence promptfence.Fence) string {
-	return growthFitSystem + "\n" + fence.Rule("company summary")
+//
+// The assessment is filed on the company and read by whoever opens it, so it
+// takes the installation's shared language.
+func growthFitSystemFor(fence promptfence.Fence, lang string) string {
+	return growthFitSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("company summary")
 }
 
 // GrowthFitRequest builds the one-shot call. Exported so the AI cert case
 // measures the request production actually sends rather than a copy of it.
-func GrowthFitRequest(in Input) model.Request {
+func GrowthFitRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:   growthFitSystemFor(fence),
+		System:   growthFitSystemFor(fence, lang),
 		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		// Our own offering is what makes this a FIT rather than a description,
 		// so it is requested unconditionally — a growth fit written without it
@@ -153,13 +159,13 @@ func keepSubScores(
 // down sees "here is what I would need to know" rather than a band nobody
 // stands behind — and `generated_by` says which of the two they are reading.
 func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
-	selfConfirmed bool, now nowFunc,
+	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, crmcontracts.WrittenBy, bool) {
 	if lane == nil {
 		return Assess(in, crmcontracts.GrowthFitBandUnknown, selfConfirmed, AbstainedNoWriter, now()),
 			crmcontracts.Deterministic, false
 	}
-	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now)
+	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now, lang)
 	if err != nil {
 		// The declared degrade posture (on_budget_exhausted: degrade), not a
 		// swallowed error. A lane that is unavailable, over budget, or
@@ -184,9 +190,9 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 }
 
 func assessWithModel(ctx context.Context, lane Completer, in Input,
-	selfConfirmed bool, now nowFunc,
+	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, error) {
-	resp, err := lane.Complete(ctx, GrowthFitRequest(in))
+	resp, err := lane.Complete(ctx, GrowthFitRequest(in, lang))
 	if err != nil {
 		return Assessment{}, err
 	}

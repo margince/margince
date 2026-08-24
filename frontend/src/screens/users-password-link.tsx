@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessage } from "./common";
 import "./users-admin.css";
@@ -113,11 +114,10 @@ export function PasswordLinkModal({
   const headingId = useId();
   return (
     <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      <h2
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      {/* `modal-title` is the dialog heading's own interval, spelled once in
+          atoms.css. It was an inline style here, which is a second author for a
+          rhythm the design system already owns. */}
+      <h2 id={headingId} className="t-h3 modal-title">
         {t("users.link.title", { name: memberName })}
       </h2>
       {pending && <p className="t-small">{t("users.link.pending")}</p>}
@@ -160,7 +160,7 @@ export function PasswordLinkModal({
 function Expiry({ iso }: Readonly<{ iso: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zone = viewerZone();
   return (
     <p className="t-caption">
       <time dateTime={iso}>

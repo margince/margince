@@ -1,5 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
+import { type MockProject, projectMock } from "./projectmock";
 
 // The AC specs drive an admin, and the UI now scopes every write affordance on
 // the grant map /me carries rather than on the role name — so the mock has to
@@ -24,6 +25,11 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // `settings/voice` sweep measures a card with no controls at all — the
   // read-only posture a `read_only` seat gets, not the admin the specs drive.
   voice_profile: ["create", "read", "update", "delete"],
+  // The installation's own profile — name, timezone, base currency — which the
+  // organization card gates every write on. The unsaved-guard suite needs it:
+  // that card's draft is the one that OUTLIVES its dialog, so it is the only
+  // settings edit a reader can still be holding while they navigate away.
+  installation_settings: ["read", "update"],
   // The consent registry's own gate, and so the Privacy & audit ENTRY's: the
   // server reads purposes under `person:read` (consent/store.go), not under a
   // role. Read alone, because no spec exercises a person write from here and a
@@ -140,6 +146,7 @@ export const deals = [
     pipeline_id: "pl",
     stage_id: "s2",
     organization_id: "o-brandt",
+    project_id: null as string | null,
     status: "open",
     stalled: true,
     // Every mutable record carries its row version, because the advance and the
@@ -161,6 +168,7 @@ export const deals = [
     pipeline_id: "pl",
     stage_id: "s1",
     organization_id: "o-brandt",
+    project_id: null as string | null,
     status: "open",
     stalled: false,
     version: 5,
@@ -171,6 +179,28 @@ export const deals = [
     last_activity_at: "2026-06-28T08:00:00Z",
   },
 ];
+
+// The body of work the fleet deals are about, born in `initiative` while the
+// deal is still open and attached to no deal yet — the project page's empty
+// state and the deal form's project picker both read from it.
+export const seededProject: MockProject = {
+  id: "pr-fleet",
+  workspace_id: "w",
+  name: "Flottenumbau Brandt",
+  key: "BRANDT-FLEET",
+  organization_id: "o-brandt",
+  owner_id: "u1",
+  phase: "initiative",
+  closed_reason: null,
+  description: null,
+  target_end_date: null,
+  version: 1,
+  source: "manual",
+  captured_by: "human:u1",
+  created_at: "2026-05-01T08:00:00Z",
+  updated_at: "2026-05-01T08:00:00Z",
+  last_activity_at: null,
+};
 
 // One persisted Morning-Brief run over the two seeded deals — the §10.1
 // composite with its factor decomposition, so the home queue's arithmetic
@@ -347,7 +377,7 @@ export const auditEntries = [
   },
 ];
 
-// The three reads behind Settings → AI and Settings → Maintenance. They are
+// The four reads behind Settings → AI and Settings → Maintenance. They are
 // fixtures rather than catch-all `page([])` answers because the catch-all is
 // not a thin response — it is the WRONG SHAPE, and the two sweeps below cannot
 // see what they cannot render: `/admin/job-health` answered `{data,page}` (no
@@ -357,6 +387,24 @@ export const auditEntries = [
 // sweep visits, and the queue report never rendered at all. Every field below
 // is required by its contract schema (AiUsage / AiCallListResponse /
 // JobHealth) — an under-filled fixture would just move the lie.
+//
+// `/ai/provider-keys` is the fourth, and it failed the same way rather than
+// differently: the card indexes `providers`, which the contract makes required,
+// so the catch-all's `{data,page}` handed it undefined and it threw mid-render.
+// A throw there takes the WHOLE AI entry down, so the symptom was four
+// unrelated cases reporting "element(s) not found" on #/settings/ai — none of
+// them naming this endpoint. That is the cost the comment above is about.
+
+// One provider keyed and one not, so the route the 390px and axe sweeps visit
+// renders BOTH row states. A list of only-configured or only-empty rows would
+// leave half the card's markup unvisited by the very sweeps that exist to see
+// it. `env_var` is required by AiProviderKeyStatus.
+export const aiProviderKeys = {
+  providers: [
+    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+    { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+  ],
+};
 
 export const aiUsage = {
   days: [
@@ -749,6 +797,30 @@ export async function mockApi(
   // untouched fixture — the workflow would pass having done nothing, which is
   // the one outcome a mapping test must not be able to reach.
   const userMapEntries = overlayUserMap.entries.map((entry) => ({ ...entry }));
+  // per-page activity state for the rows a spec LOGS and then expects to see
+  // again — on the deal it was logged against, and on the project it is
+  // relinked to. Only rows linked to a deal or a project are remembered, so
+  // the timelines the other suites read as empty stay empty.
+  const loggedActivities: {
+    id: string;
+    kind: string;
+    subject: string;
+    body: string | null;
+    occurred_at: string;
+    thread_key: null;
+    links: { entity_type: string; entity_id: string }[];
+    source: string;
+    captured_by: string;
+    version: number;
+    created_at: string;
+    updated_at: string;
+  }[] = [];
+  const projectState = projectMock({
+    seeded: seededProject,
+    organizationName: brandt.display_name,
+    deals: () => deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] })),
+    activities: () => loggedActivities,
+  });
 
   await target.route(/\/v1\//, async (route) => {
     const url = new URL(route.request().url());
@@ -778,9 +850,30 @@ export async function mockApi(
           ...me.user,
           id: "u1",
           email: "lars@brandt.example",
-          locale: "de-DE",
+          // "de", not "de-DE": the contract declares this field as en | de | vi,
+          // and the catalogs are keyed by exactly those. A regional tag here is
+          // a key the catalogs have no entry for.
+          locale: "de",
         },
         system_of_record: { mode: sorMode },
+      });
+    }
+    if (path === "/installation/settings" && method === "GET") {
+      // The authenticated shell holds its first paint on this read, because
+      // `installation.timezone` is the clock every record date is rendered in
+      // and a page painted before it arrives would renumber under the reader.
+      // The catch-all would answer it with a list envelope — a 200 carrying no
+      // timezone — so every spec would silently run on the fallback zone while
+      // appearing to exercise the configured one.
+      //
+      // Europe/Berlin because the specs assert German dates against it.
+      return json({
+        name: "Brandt Automotive",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+        base_language: "de",
+        base_currency_locked: false,
+        max_upload_bytes: 25_000_000,
       });
     }
     // The two anonymous reads the unauthenticated surface makes. Both answer
@@ -878,16 +971,15 @@ export async function mockApi(
         422,
       );
     }
-    if (
-      sorMode === "overlay" &&
-      path.startsWith("/deals/") &&
-      method === "PATCH"
-    ) {
-      // Update DOES write back through the incumbent seam and succeed
-      // (overlay/provider_writes.go Update) — the mock echoes the patched
-      // fields onto the matching seeded deal, same shape a real mirror
-      // re-read would answer, and remembers the patch so a follow-up GET
-      // (the screen's post-save refetch) reflects it too.
+    if (await projectState.handle(route, path, method, json)) {
+      return;
+    }
+    if (path.startsWith("/deals/") && method === "PATCH") {
+      // In overlay mode Update DOES write back through the incumbent seam and
+      // succeed (overlay/provider_writes.go Update); natively it is an
+      // ordinary write. Either way the mock echoes the patched fields onto the
+      // matching seeded deal and remembers the patch so a follow-up GET (the
+      // screen's post-save refetch) reflects it too.
       const id = path.slice("/deals/".length);
       const base = deals.find((deal) => deal.id === id) ?? deals[0];
       const body = route.request().postDataJSON();
@@ -1206,12 +1298,43 @@ export async function mockApi(
           409,
         );
       }
+      // A win needs evidence, exactly as deals/deal_advance.go's
+      // ensureWinEvidence demands it: a signed contract (none is seeded) or a
+      // stated reason. Refused with the same field code, so the dialog's
+      // "How was it won?" branch is the path a spec has to walk.
+      const advance = route.request().postDataJSON();
+      if (advance.status === "won" && !advance.won_without_contract_reason) {
+        return json(
+          {
+            title: "Unprocessable",
+            status: 422,
+            code: "validation_error",
+            details: {
+              errors: [
+                {
+                  field: "won_without_contract_reason",
+                  code: "win_evidence_required",
+                  message:
+                    "a won deal needs a signed contract with its paper attached, or a reason why there is none",
+                },
+              ],
+            },
+          },
+          422,
+        );
+      }
       dealPatches[target.id] = {
         ...dealPatches[target.id],
         stage_id: "s4",
         status: "won",
+        won_without_contract_reason:
+          advance.won_without_contract_reason ?? null,
         version: current + 1,
       };
+      // The win starts the delivery it was sold for, in the same write.
+      projectState.startDelivery(
+        dealPatches[target.id]?.project_id ?? target.project_id,
+      );
       return json({ ...target, ...dealPatches[target.id] });
     }
     if (path.startsWith("/deals/") && path.endsWith("/stakeholders")) {
@@ -1245,25 +1368,76 @@ export async function mockApi(
     }
     if (path === "/activities" && method === "POST") {
       const body = route.request().postDataJSON();
-      return json(
-        {
-          id: "act-new",
-          workspace_id: "w",
-          kind: body.kind ?? "note",
-          subject: body.subject ?? "",
-          body: body.body ?? null,
-          occurred_at: "2026-07-06T09:00:00Z",
-          links: body.links ?? [],
-          source: "manual",
-          captured_by: "human:u1",
-          version: 1,
-          created_at: "2026-07-06T09:00:00Z",
-          updated_at: "2026-07-06T09:00:00Z",
-        },
-        201,
+      const links: { entity_type: string; entity_id: string }[] =
+        body.links ?? [];
+      const created = {
+        id: "act-new",
+        workspace_id: "w",
+        kind: body.kind ?? "note",
+        subject: body.subject ?? "",
+        body: body.body ?? null,
+        occurred_at: "2026-07-06T09:00:00Z",
+        thread_key: null,
+        links,
+        source: "manual",
+        captured_by: "human:u1",
+        version: 1,
+        created_at: "2026-07-06T09:00:00Z",
+        updated_at: "2026-07-06T09:00:00Z",
+      };
+      if (
+        links.some((link) => ["deal", "project"].includes(link.entity_type))
+      ) {
+        created.id = `act-new-${loggedActivities.length + 1}`;
+        loggedActivities.push(created);
+      }
+      return json(created, 201);
+    }
+    const relinkRoute = /^\/activities\/([^/]+)\/relink$/.exec(path);
+    if (relinkRoute && method === "POST") {
+      // Idempotent like the real one: the same link twice is one link.
+      const activity = loggedActivities.find(
+        (row) => row.id === relinkRoute[1],
       );
+      if (!activity) {
+        return json({ title: "Not Found", status: 404 }, 404);
+      }
+      const body = route.request().postDataJSON();
+      if (body.replace_existing_of_type) {
+        activity.links = activity.links.filter(
+          (link) => link.entity_type !== body.entity_type,
+        );
+      }
+      if (
+        !activity.links.some(
+          (link) =>
+            link.entity_type === body.entity_type &&
+            link.entity_id === body.entity_id,
+        )
+      ) {
+        activity.links.push({
+          entity_type: body.entity_type,
+          entity_id: body.entity_id,
+        });
+      }
+      return json(activity);
     }
     if (path === "/activities") {
+      const entityType = url.searchParams.get("entity_type");
+      const entityId = url.searchParams.get("entity_id");
+      if (entityType === "deal" || entityType === "project") {
+        return json(
+          page(
+            loggedActivities.filter((row) =>
+              row.links.some(
+                (link) =>
+                  link.entity_type === entityType &&
+                  link.entity_id === entityId,
+              ),
+            ),
+          ),
+        );
+      }
       return json(page([]));
     }
     if (path === "/consent-purposes") {
@@ -1400,9 +1574,21 @@ export async function mockApi(
       });
     }
     if (path === "/search") {
+      // Cross-object: the relink picker searches projects by name alongside
+      // the seeded person, so a spec can file an activity under one.
+      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      const projectHits = projectState.projects
+        .filter((project) => project.name.toLowerCase().includes(q))
+        .map((project) => ({
+          type: "project",
+          id: project.id,
+          title: project.name,
+          score: 0.8,
+        }));
       return json(
         page([
           { type: "person", id: "p-anna", title: "Anna Weber", score: 0.9 },
+          ...projectHits,
         ]),
       );
     }
@@ -1523,6 +1709,9 @@ export async function mockApi(
     }
     if (path === "/ai/usage") {
       return json(aiUsage);
+    }
+    if (path === "/ai/provider-keys" && method === "GET") {
+      return json(aiProviderKeys);
     }
     if (path === "/ai/calls" && method === "GET") {
       return json(aiCalls);

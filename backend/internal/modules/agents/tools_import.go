@@ -114,7 +114,9 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `"]},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make."}},
+			  "description":"Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add."},
+			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
+			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
@@ -122,9 +124,10 @@ func (t previewImport) Spec() mcp.ToolSpec {
 
 func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Object  string            `json:"object"`
-		CSV     string            `json:"csv"`
-		Mapping map[string]string `json:"mapping"`
+		Object      string            `json:"object"`
+		CSV         string            `json:"csv"`
+		Mapping     map[string]string `json:"mapping"`
+		OnDuplicate string            `json:"on_duplicate"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -159,12 +162,17 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		mapping[column] = field
 	}
 
-	run, err := t.imports.StageRun(ctx, crmcontracts.CreateImportRunRequest{
+	req := crmcontracts.CreateImportRunRequest{
 		Connector: crmcontracts.CreateImportRunRequestConnector(importConnectorCSV),
 		Object:    profile.Object,
 		SourceRef: profile.SourceRef,
 		Mapping:   mapping,
-	})
+	}
+	if args.OnDuplicate != "" {
+		policy := crmcontracts.ImportOnDuplicate(args.OnDuplicate)
+		req.OnDuplicate = &policy
+	}
+	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +188,13 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 // upload door uses, because it IS the same path — only the way the bytes
 // arrived differs.
 const importConnectorCSV = "csv"
+
+// The two duplicate policies, spelled here so the tool schema and the contract
+// enum cannot drift apart.
+const (
+	importOnDuplicateCreate = string(crmcontracts.Create)
+	importOnDuplicateSkip   = string(crmcontracts.Skip)
+)
 
 // refuseUnimportableObject holds `object` to the vocabulary, naming the whole
 // of it rather than saying the value is invalid.
@@ -275,11 +290,11 @@ func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
 		Description:   commitImportCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{
 			"run_id":{"type":"string","format":"uuid"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportRunResult](),
 	}
@@ -302,6 +317,14 @@ func (t commitImport) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	id, err := importRunArg(in)
 	if err != nil {
 		return nil, err
+	}
+	// The seam is checked here, not only where an approval used to be staged.
+	// A deployment with no object store still SERVES this verb — the contract
+	// declares it, so the registry advertises it — and a nil seam reached by a
+	// direct call panics on the read below rather than naming what is missing.
+	if t.imports == nil {
+		return nil, fmt.Errorf(
+			"no import seam is wired, so run %s cannot be committed here", id)
 	}
 	// Checked again on the approved retry. StageInfo's check is the courtesy
 	// that avoids spending an approval; this one is the rule, because Handle

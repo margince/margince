@@ -11,6 +11,7 @@
 }
 
 .net-colleagues,
+.net-seats,
 .net-risks {
   display: flex;
   flex-direction: column;
@@ -20,12 +21,27 @@
   list-style: none;
 }
 
+/* The seats sit above the findings and read as one list with them: same row
+   rhythm, so a name and the warning about that name line up. */
+.net-seats {
+  margin-bottom: var(--space-3);
+}
+
 .net-colleagues li,
+.net-seats li,
 .net-risks li {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* The name leads the row and takes the slack, so the engagement badge and the
+   role stay together at the right where they can be scanned down the column. */
+.net-seat-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
 }
 
 /* The name leads and takes the slack, so the band and counts stay right-aligned

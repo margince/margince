@@ -35,6 +35,7 @@ import (
 // canned record, which cannot express a merge's two halves or a missing row.
 type tallyingProvider struct {
 	datasource.SystemOfRecordProvider
+	archivesWhatNativeDoes
 	records map[datasource.EntityRef]datasource.Record
 	reads   int
 }
@@ -142,6 +143,17 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			func(p *tallyingProvider) GovernedCall {
 				return NewRelinkActivityCall(p, RelinkActivityCommand{
 					ActivityID: id, EntityType: "deal", EntityID: ids.NewV7(),
+				})
+			},
+		},
+		{
+			// A batch card binds to the DESTINATION: the one record the decision
+			// is about, read once for the refusal and the pin alike.
+			"relink_activities",
+			oneRecord(datasource.EntityProject, id, `{"name":"Rollout"}`, 3),
+			func(p *tallyingProvider) GovernedCall {
+				return NewRelinkActivitiesCall(p, RelinkActivitiesCommand{
+					ActivityIDs: []ids.UUID{ids.NewV7(), ids.NewV7()}, EntityType: "project", EntityID: id,
 				})
 			},
 		},
@@ -271,6 +283,21 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 			NewRelinkActivityCall(oneRecord(datasource.EntityActivity, id, `{}`, 1),
 				RelinkActivityCommand{ActivityID: id, EntityType: "invoice", EntityID: other}),
 			"is not a link target",
+		},
+		{
+			"a named-set relink with no ids",
+			NewRelinkActivitiesCall(oneRecord(datasource.EntityProject, other, `{}`, 1),
+				RelinkActivitiesCommand{EntityType: "project", EntityID: other}),
+			"between 1 and 500",
+		},
+		{
+			// The thread form never stages: a thread key is re-read at
+			// redemption, so the rows a human released would not be the rows
+			// moved. The refusal sends the caller to relink_activities.
+			"a thread relink onto a destination that needs a human",
+			NewRelinkThreadCall(oneRecord(datasource.EntityProject, other, `{}`, 1),
+				RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "project", EntityID: other}),
+			"relink_activities",
 		},
 	}
 	for _, c := range cases {
@@ -622,6 +649,60 @@ func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
 			_, err := StageSubject(c.ctx, call(c.host))
 			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
 				t.Fatalf("staging answered %v; want permission denied = %v", err, c.denied)
+			}
+		})
+	}
+}
+
+// The same rule on the door that now EXECUTES it. book_meeting stopped staging
+// by default, and requireOwnCalendarOrAdmin lived only in the resolver's Guards
+// — which run inside StageSubject and nowhere else. The store does not re-ask:
+// defaultHost (compose/comms.go) takes whatever host it is handed. So without
+// this the verb would book onto a colleague's calendar for any passport holding
+// `send`.
+func TestBookingAnotherHostExecutesOnlyForAnAdmin(t *testing.T) {
+	self, host, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
+	tool := bookMeetingTool{
+		comms: &recordingComms{},
+		p:     oneRecord(datasource.EntityOrganization, org, `{}`, 1),
+	}
+	args := func(hostID *ids.UUID) json.RawMessage {
+		in := map[string]any{
+			"start": window.Format(time.RFC3339), "end": window.Add(30 * time.Minute).Format(time.RFC3339),
+			"subject": "Review",
+			"links":   []map[string]string{{"entity_type": "organization", "entity_id": org.String()}},
+		}
+		if hostID != nil {
+			in["host_user_id"] = hostID.String()
+		}
+		raw, err := json.Marshal(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+	as := func(roles []string) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + self.String(), UserID: self,
+			Permissions: principal.Permissions{RoleKeys: roles, RowScope: principal.RowScopeAll},
+		})
+	}
+	for _, c := range []struct {
+		name   string
+		ctx    context.Context
+		host   *ids.UUID
+		denied bool
+	}{
+		{"own calendar", as([]string{"management"}), &self, false},
+		{"no host named", as([]string{"rep"}), nil, false},
+		{"another host, admin", as([]string{"admin"}), &host, false},
+		{"another host, management", as([]string{"management"}), &host, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := tool.Handle(c.ctx, args(c.host))
+			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
+				t.Fatalf("Handle answered %v; want permission denied = %v", err, c.denied)
 			}
 		})
 	}

@@ -3,30 +3,29 @@
 
 package agents
 
-// The seven remaining bespoke commands (gradionhq/margince-poc-v1#928 task 6):
-// a list member add, a tag apply, an offer line item add/update/remove, an
-// offer created under a parent deal, and a partner upsert. All seven are 🟢
-// auto_execute today, and six of them therefore never reach Subject/Guards on
-// today's tiers. upsertPartner is the exception, and it is one TODAY: the §2.1
-// human-edit-precedence split stages it through both of splitHumanOwnedUpdate's
-// branches, each of which resolves its staged target through this same command
-// (agentsplit.go, and restCommands' own entry in compose/agentcommand.go says
-// the same). A tier floor (#982) tightening any of the other six makes this the
-// answer a human decides from, and the REST door has no other one to fall back
-// on. For
+// The six remaining bespoke commands (margince/margince#928 task 6):
+// a list member add, a tag apply, an offer line item add/update/remove, and an
+// offer created under a parent deal. All six are 🟢 auto_execute today, so none
+// reaches Subject/Guards on today's tiers. They are registered anyway, because
+// a tier floor (#982) tightening any of them makes this the answer a human
+// decides from and the REST door has no other one to fall back on. For
 // createOffer that matters on its face: the routed {id} is the DEAL the offer
 // is created ON, not an offer id, so anything reading the target off the route
 // would pair target_entity_type=offer with a deal's id — a target that
 // resolves to no row, or to an unrelated offer that happens to share the id
-// space (gradionhq/margince-poc-v1#1046, closed by this file's
+// space (margince/margince#1046, closed by this file's
 // CreateOfferCommand).
+//
+// A seventh, upsertPartner, is gone: setting a partner's margin tier is
+// human-only (crm.yaml), so no agent reaches that route and a resolver for it
+// would answer for a door nobody can open.
 //
 // list, tag and offer are all outside the record seam's vocabulary
 // (servedByTheRecordSeam, command.go), the same bound six of the twelve
-// archivable types already stand on — so five of these seven resolvers'
-// Guards stand down, reusing that check rather than a hand-restated opinion
-// (gradionhq/margince-poc-v1#1021). deal and organization ARE served, so
-// createOffer's and upsertPartner's Guards perform a real read.
+// archivable types already stand on — so five of these six resolvers' Guards
+// stand down, reusing that check rather than a hand-restated opinion
+// (margince/margince#1021). deal IS served, so createOffer's Guards
+// perform a real read.
 
 import (
 	"context"
@@ -247,7 +246,7 @@ func (r removeOfferLineItemResolver) Guards(ctx context.Context, cmd RemoveOffer
 // CreateOfferCommand is one offer creation under a parent deal, whichever
 // door asked for it. DealID is the ROUTED id — POST /v1/deals/{id}/offers
 // names the parent, not an offer, because the offer does not exist yet
-// (gradionhq/margince-poc-v1#1046). Fields is the create body, carried the
+// (margince/margince#1046). Fields is the create body, carried the
 // same way CreateCommand's own is, so Subject can name which fields it sets.
 type CreateOfferCommand struct {
 	DealID ids.UUID
@@ -274,7 +273,7 @@ type createOfferResolver struct {
 // Subject names the record TYPE the approval binds to, with NO id — exactly
 // the shape createResolver stages for every other create (command.go),
 // because an offer does not exist yet either. This is the fix for
-// gradionhq/margince-poc-v1#1046: the routed {id} is the deal, and pairing
+// margince/margince#1046: the routed {id} is the deal, and pairing
 // target_entity_type=offer with the deal's id names a target that resolves to
 // no row, or to an unrelated offer that happens to share the id space. Naming
 // no id at all is the only staged target this create could honestly carry.
@@ -296,55 +295,4 @@ func (r createOfferResolver) Subject(_ context.Context, cmd CreateOfferCommand) 
 // leaving that question to the door that owns the answer.
 func (r createOfferResolver) Guards(ctx context.Context, cmd CreateOfferCommand) error {
 	return r.parent.refuse(ctx, cmd.DealID)
-}
-
-// UpsertPartnerCommand is one partner-extension upsert, whichever door
-// asked for it — the routed organization id only. It does not carry the
-// partner fields (cert_status, margin_tier, …): neither Guards nor Subject
-// reads them, the same reasoning AddListMemberCommand's own doc gives.
-//
-// The route's own record_type annotation is `partner`, but there is no
-// `partner` id in the path and no row for it on the seam — {id} names the
-// ORGANIZATION, and the upsert IS a field patch on that organization's
-// partner extension, so the approval binds to the organization exactly as
-// commandsidecar.go's four resolvers do (organizationSidecarRecordType).
-// This is also why upsertPartner is deliberately EXCLUDED from
-// agentsplit.go's actionShapedUpdateOps: that set is for operations whose
-// body is NOT a field patch on the routed record, and this one's body is
-// exactly that, so it must take the full §2.1 human-edit-precedence split
-// rather than run unconditionally 🟢.
-type UpsertPartnerCommand struct {
-	ID ids.UUID
-}
-
-// NewUpsertPartnerCall binds one partner upsert to the resolver that
-// answers for it, reading through the record seam the organization itself
-// writes through.
-//
-//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewUpsertPartnerCall(records datasource.SystemOfRecordProvider, cmd UpsertPartnerCommand) GovernedCall {
-	return bind[UpsertPartnerCommand](upsertPartnerResolver{
-		target: routedRecordTarget{records: records, recordType: organizationSidecarRecordType},
-	}, cmd)
-}
-
-type upsertPartnerResolver struct {
-	target routedRecordTarget
-}
-
-// Subject names the ORGANIZATION the approval binds to (this type's own doc
-// says why), not the partner row this route's record_type annotation names.
-func (r upsertPartnerResolver) Subject(_ context.Context, cmd UpsertPartnerCommand) (StageInfo, error) {
-	return StageInfo{
-		TargetType: organizationSidecarRecordType,
-		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Upsert the partner extension on organization %s", cmd.ID),
-	}, nil
-}
-
-// Guards refuses the same two ways patchResolver.Guards refuses its own
-// target: an organization the caller cannot see, or one whose authority
-// lives in another system of record.
-func (r upsertPartnerResolver) Guards(ctx context.Context, cmd UpsertPartnerCommand) error {
-	return r.target.refuse(ctx, cmd.ID)
 }

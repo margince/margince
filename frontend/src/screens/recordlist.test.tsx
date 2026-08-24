@@ -35,7 +35,10 @@ describe("one record list, three record types", () => {
   it("the standard views are All, and Mine only for a signed-in reader", () => {
     const t = ((key: string) => key) as Parameters<typeof ownerColumn>[0];
     expect(ownerColumn(t).sort).toBe("owner_id");
-    expect(createdColumn(t, "en").sort).toBe("created_at");
+    // The zone is what the column RENDERS its dates in; this line asserts what
+    // it SORTS on, which the zone cannot change. Any zone the column would
+    // accept states the same claim.
+    expect(createdColumn(t, "en", "Europe/Berlin").sort).toBe("created_at");
     expect(standardViews(undefined).map((v) => v.label)).toEqual([
       "list.viewAll",
     ]);

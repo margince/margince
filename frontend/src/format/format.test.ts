@@ -5,9 +5,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatDate,
   formatDateTime,
+  formatDayMonth,
   formatDuration,
   formatMoney,
   formatMoneyOrAbsent,
+  formatTimeOfDay,
+  isRenderableZone,
   MONEY_ABSENT,
 } from "./format";
 
@@ -103,6 +106,62 @@ describe("date/time formatting (B-EP09.17/19)", () => {
     expect(() => formatDate(instant, "de", "GMT+1")).toThrow(/IANA/);
   });
 
+  it("renders a day and month without a year, in the reader's own locale", () => {
+    // Four screens carried a private copy of this rendering, every one of them
+    // passing `undefined` — so the same person record printed its dates in the
+    // browser's guessed locale on four surfaces. The locale is the whole point
+    // of the assertion: de and en put the day and the month in different
+    // orders, and a copy that took no locale would produce one of them for
+    // every reader.
+    expect(formatDayMonth(instant, "de", "Europe/Berlin")).toBe("4. Juni");
+    expect(formatDayMonth(instant, "en", "Europe/Berlin")).toBe("4 Jun");
+    // And it is genuinely the year-less sibling of formatDateAbbrev.
+    expect(formatDayMonth(instant, "en", "Europe/Berlin")).not.toMatch(/2026/);
+  });
+
+  it("carries the zone into a day-month rendering too", () => {
+    // 21:30Z on 4 June is already 5 June in Auckland. A day-month rendering
+    // that dropped the zone would name the wrong day for half the world while
+    // looking correct to whoever wrote it.
+    expect(formatDayMonth(instant, "en", "Pacific/Auckland")).toBe("5 Jun");
+  });
+
+  it("renders a time of day in the zone it is given", () => {
+    expect(formatTimeOfDay(instant, "en", "Europe/Berlin")).toBe("23:30");
+    expect(formatTimeOfDay(instant, "en", "Pacific/Auckland")).toBe("09:30");
+  });
+
+  it("refuses a fixed offset from the day-month and time renderings as well", () => {
+    // The rule is the module's, not one function's: a renderer added without
+    // the assertion would accept an offset that freezes the DST rules of the
+    // day it was picked.
+    expect(() => formatDayMonth(instant, "de", "+01:00")).toThrow(/IANA/);
+    expect(() => formatTimeOfDay(instant, "de", "Etc/GMT-1")).toThrow(/IANA/);
+  });
+
+  it("answers whether a zone renders, without throwing, and agrees with the formatters", () => {
+    // A page rendering a LIST cannot let one row's zone take the page down, so
+    // it asks first. Asked any other way the two answers come apart: probing
+    // Intl alone learns only that the name RESOLVES, which every one of these
+    // fixed offsets does — and a caller that trusted that probe then threw
+    // inside the formatter one line later.
+    for (const rejected of ["+01:00", "Etc/GMT-1", "Etc/GMT+5", "GMT"]) {
+      expect(isRenderableZone(rejected)).toBe(false);
+      // The half that makes the predicate worth having: Intl itself accepts
+      // every one of these, so a probe built on Intl would have said yes.
+      expect(() =>
+        new Intl.DateTimeFormat("en-US", { timeZone: rejected }).format(),
+      ).not.toThrow();
+      expect(() => formatDateTime(instant, "en", rejected)).toThrow(/IANA/);
+    }
+    for (const accepted of ["Europe/Berlin", "Pacific/Auckland", "UTC"]) {
+      expect(isRenderableZone(accepted)).toBe(true);
+      expect(() => formatDateTime(instant, "en", accepted)).not.toThrow();
+    }
+    // A name no runtime knows is refused too, and still without throwing.
+    expect(isRenderableZone("Not/AZone")).toBe(false);
+  });
+
   it("renders idle spans as absolute durations, not calendar diffs", () => {
     expect(formatDuration(62 * 86_400_000, "en")).toMatch(/62/);
     expect(formatDuration(5 * 3_600_000, "en")).toMatch(/5/);
@@ -133,5 +192,23 @@ describe("FX display discipline (B-EP09.18)", () => {
   it("never multiplies native amounts by rates (consumes the IR base_value)", () => {
     // the lineage row fields exist for display; no arithmetic combines them
     expect(explainSource).not.toMatch(/nativeAmountMinor\s*\*|rate\s*\*/);
+  });
+});
+
+// The ten codes where CLDR and ISO 4217 disagree are the ones that prove
+// display and storage share a scale. A stored IQD 1234 is 1.234 dinars to the
+// server, and Intl's own count would have rendered it as 1,234.
+describe("display scales by the same table the server stores with", () => {
+  it.each([
+    ["IQD", 1234, "1.234"],
+    ["MGA", 1234, "12.34"],
+    ["IRR", 1234, "12.34"],
+    ["VND", 18_000_000, "18,000,000"],
+    ["EUR", 12_345, "123.45"],
+  ])("%s %i renders the figure %s", (currency, minor, figure) => {
+    // Only the digits are asserted: symbol placement and grouping are Intl's
+    // to decide and are not what this pins.
+    const rendered = formatMoney(minor, currency, "en").replace(/[^\d.,]/g, "");
+    expect(rendered).toBe(figure);
   });
 });

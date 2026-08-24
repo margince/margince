@@ -37,16 +37,35 @@ func relationshipAnchor(kind string) (object, column string) {
 		return "person", "person_id"
 	case "deal_stakeholder":
 		return "deal", "deal_id"
-	case ProjectStakeholderKind:
+	case ProjectStakeholderKind, ProjectCompanyKind:
 		return projectObjectName, "project_id"
 	default: // partner_of, referred_by, co_sell_with
 		return "organization", "organization_id"
 	}
 }
 
+// The kinds the GENERIC relationship surface admits.
+//
+// project_company is deliberately absent. A company's place on a project
+// carries two rules this surface cannot keep: the caller needs write authority
+// over the PROJECT ROW, not merely the project.update object grant this file
+// takes, and a project must keep at least one company. Both live on the
+// dedicated endpoints (projectcompany.go), so admitting the kind here would be
+// a side door around them — a caller could attach a company to a project they
+// cannot write, or archive the last one, through POST /v1/relationships.
 var relationshipKinds = map[string]bool{
 	"employment": true, "deal_stakeholder": true, "project_stakeholder": true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
+}
+
+// refuseGenericProjectCompany is the same rule at the WRITE paths, because a
+// kind is only checked on create: an update or an archive names an existing
+// row, and a project_company row exists whatever this map says.
+func refuseGenericProjectCompany(kind string) error {
+	if kind != ProjectCompanyKind {
+		return nil
+	}
+	return &RelationshipKindError{Kind: kind}
 }
 
 const relationshipColumns = `id, kind, person_id, organization_id, counterparty_org_id, deal_id, project_id,
@@ -298,6 +317,12 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		if err != nil {
 			return err
 		}
+		// A kind is only checked on CREATE, and this path names an existing row
+		// — so the exclusion has to be re-stated here or the generic surface
+		// becomes the side door the vocabulary closed.
+		if err := refuseGenericProjectCompany(current.Kind); err != nil {
+			return err
+		}
 		// Same rule as create: editing an edge is editing its anchor.
 		anchorObject, _ := relationshipAnchor(current.Kind)
 		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
@@ -356,7 +381,35 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 	return out, err
 }
 
-func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID) (relationshipRow, error) {
+// RefuseArchiveRelationship answers every authority refusal
+// ArchiveRelationship would answer with, and writes nothing — the stage-time
+// half, so a staged approval is never spent on an edge the store was always
+// going to refuse. It runs BOTH of the archive's probes, because an edge's
+// authority is two questions: the edge must be visible through its endpoints,
+// and removing it is editing its anchor.
+func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) error {
+	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		current, err := s.visibleRelationship(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		anchorObject, _ := relationshipAnchor(current.Kind)
+		return auth.Require(ctx, anchorObject, principal.ActionUpdate)
+	})
+}
+
+// ArchiveRelationship retires one edge, conditioned on ifVersion wherever the
+// caller's authority named a version.
+//
+// The write moved off `UPDATE … RETURNING` and onto the guarded patch, so the
+// row is read back rather than returned by the statement. That costs one SELECT
+// and buys the version clause — and IncludeArchived is required on the read
+// back for the reason the statement's RETURNING never had to think about: the
+// row this reads is the one just archived.
+func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion *int64) (relationshipRow, error) {
 	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
 		return relationshipRow{}, err
 	}
@@ -366,13 +419,23 @@ func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID) (relations
 		if err != nil {
 			return err
 		}
+		// The same re-statement as the update path, and it matters more here:
+		// archiving through this surface would take a company off a project
+		// with no last-company check at all.
+		if err := refuseGenericProjectCompany(current.Kind); err != nil {
+			return err
+		}
 		// Same rule as create: removing an edge is editing its anchor.
 		anchorObject, _ := relationshipAnchor(current.Kind)
 		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
 			return err
 		}
-		row := tx.QueryRow(ctx,
-			`UPDATE relationship SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING `+relationshipColumns, id)
+		p := storekit.NewPatch()
+		p.Set("archived_at", nil, time.Now().UTC())
+		if err := p.ApplyGuarded(ctx, tx, "relationship", id, ifVersion); err != nil {
+			return err
+		}
+		row := tx.QueryRow(ctx, `SELECT `+relationshipColumns+` FROM relationship WHERE id = $1`, id)
 		if out, err = scanRelationship(row); errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		} else if err != nil {

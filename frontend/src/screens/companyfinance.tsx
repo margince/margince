@@ -1,7 +1,8 @@
 import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
+import { useRecordZone } from "../app/recordzone";
+import { Badge, Button, TableScroll } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter, Sparkline } from "../design-system/readings";
@@ -10,7 +11,7 @@ import { formatDate, formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, useFinanceSummary } from "./common";
-import { medianDaysLabel, RECORD_ZONE } from "./company360";
+import { medianDaysLabel } from "./company360";
 
 // The finance card: does this customer actually pay us, and on time?
 //
@@ -79,6 +80,7 @@ export function CompanyFinanceCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const query = useFinanceSummary(orgId);
 
   if (lifecycle && NEVER_INVOICED.has(lifecycle)) {
@@ -142,7 +144,7 @@ export function CompanyFinanceCard({
           detail={{
             onRetry: () => void query.refetch(),
             staleAsOf: summary.last_synced_at
-              ? formatDate(summary.last_synced_at, locale, RECORD_ZONE)
+              ? formatDate(summary.last_synced_at, locale, recordZone)
               : undefined,
           }}
         >
@@ -396,9 +398,10 @@ function RecentInvoices({ summary }: Readonly<{ summary: FinanceSummary }>) {
     // settlement dates read as one life of one invoice rather than three
     // columns a reader has to line up by eye. It is still every date the
     // server sent, which is what an invoice is checkable against. The table
-    // scrolls sideways inside its panel rather than widening the record page,
-    // the containment DataTable gives every list built from it (atoms.tsx).
-    <div className="table-scroll">
+    // scrolls sideways inside its panel rather than widening the record page:
+    // `TableScroll` is the one spelling of that box, the same one DataTable
+    // puts every list it draws inside (atoms.tsx).
+    <TableScroll label={t("finance.recentInvoices")}>
       <table className="table fin-table">
         <thead>
           <tr>
@@ -414,7 +417,7 @@ function RecentInvoices({ summary }: Readonly<{ summary: FinanceSummary }>) {
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScroll>
   );
 }
 
@@ -426,6 +429,7 @@ function InvoiceRow({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const late = invoice.days_late != null && invoice.days_late > 0;
   return (
     // A row the customer still owes past its due date carries the tint, so the
@@ -437,8 +441,8 @@ function InvoiceRow({
         {invoice.number ?? t("finance.unnumbered")}
       </td>
       <td className="fin-cell-dates">
-        {formatDate(invoice.issued_at, locale, RECORD_ZONE)} →{" "}
-        {invoice.due_at ? formatDate(invoice.due_at, locale, RECORD_ZONE) : "—"}
+        {formatDate(invoice.issued_at, locale, recordZone)} →{" "}
+        {invoice.due_at ? formatDate(invoice.due_at, locale, recordZone) : "—"}
         {/* When it was actually settled, appended rather than given a column
             of its own: an unpaid invoice has no date to put there, and a
             column of dashes states nothing the status does not. */}
@@ -446,7 +450,7 @@ function InvoiceRow({
           <span className="fin-cell-paid">
             {" · "}
             {t("finance.paidOn", {
-              when: formatDate(invoice.paid_at, locale, RECORD_ZONE),
+              when: formatDate(invoice.paid_at, locale, recordZone),
             })}
           </span>
         )}
@@ -524,6 +528,7 @@ const STATUS_TONE: Record<
 function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   if (!summary.provider) {
     return null;
   }
@@ -533,7 +538,7 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
       {summary.last_synced_at
         ? t("finance.syncedFrom", {
             provider: summary.provider,
-            when: formatDate(summary.last_synced_at, locale, RECORD_ZONE),
+            when: formatDate(summary.last_synced_at, locale, recordZone),
           })
         : t("finance.fromNeverSynced", { provider: summary.provider })}
     </p>

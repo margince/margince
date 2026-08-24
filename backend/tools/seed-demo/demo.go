@@ -138,6 +138,14 @@ type demoDeal struct {
 	Owner       string `json:"owner"`
 	CloseInDays int    `json:"close_in_days"`
 	LostReason  string `json:"lost_reason"`
+	// Partner is the DOMAIN of the partner this deal is attributed to, and
+	// PartnerAttribution is what they did: `sourced` (brought it) or
+	// `influenced` (helped). Only `sourced` accrues a commission, and only
+	// when the deal is WON — so a dataset that attributes none of its won
+	// deals leaves commission_entry empty and the partner program's story
+	// stops at "attributed" without ever reaching "earned".
+	Partner            string `json:"partner"`
+	PartnerAttribution string `json:"partner_attribution"`
 }
 
 type demoLead struct {
@@ -221,6 +229,13 @@ type demoOffer struct {
 type demoOfferLine struct {
 	Product  string `json:"product"`
 	Quantity int    `json:"quantity"`
+	// UnitPriceMinor overrides the product's own price, in the OFFER's
+	// currency. Required when the two differ: a line snapshots its price
+	// from the product, and the API refuses to convert one currency into
+	// another rather than fabricate a rate (ProductCurrencyMismatchError).
+	// Zero means "take the product's price", which is right whenever the
+	// offer and the product agree on currency.
+	UnitPriceMinor int64 `json:"unit_price_minor"`
 }
 
 // demoConsent is a consent state for one person, addressed by their position

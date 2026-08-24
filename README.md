@@ -313,6 +313,7 @@ per-client throttling at the proxy.
   task policy, behind the `company_context.rollout` kill switch. See
   [docs/explanation/ai-runtime.md](docs/explanation/ai-runtime.md) and
   [docs/explanation/company-context.md](docs/explanation/company-context.md).
+- **Projects**: the body of work a deal is about — four phases (initiative → pursuing → delivering → closed, movable both ways, closing needs a reason), a key that files any email carrying `[KEY]` in its subject, a deal win that moves its project into delivery, a project 360 with coverage figures, and the composer's project scope for AI drafts; walkthrough in [docs/tutorials/run-your-first-project.md](docs/tutorials/run-your-first-project.md).
 - **Web UI**: the Vite/React app in `frontend/` — login, the scene-based
   cold start (website read or manual entry, resumable, with a separate
   three-stop path for an invited member), a collapsible labeled shell over
@@ -413,6 +414,46 @@ because getting it wrong once was expensive:
    a struct in a test file whose fields mirror something `compose`
    already builds, and an unexpectedly uncovered new file usually means a
    test double stands where the real thing should.
+
+7. **One invariant spelled on both sides of a wire is one item, not
+   two.** Most topics are implemented once and merely rendered by the
+   other language; this rule is about the ones that are not. Where Go
+   and TypeScript each carry a spelling of the same rule, two errors can
+   CANCEL — which makes each half look correct in place, and makes
+   fixing one half a regression rather than half a fix. The frontend
+   wrote `Math.round(amount * 100)` for every currency and the backend
+   divided by 100 for every currency, so a zero-decimal price was stored
+   a hundredfold and displayed correctly: the screen agreed with itself
+   and only the record was wrong. Making the server currency-aware on
+   its own would have printed a hundred times the price on an outbound
+   offer. So check for the other side before you fix this one, and land
+   both in one change. Then declare which side is the MIRROR and gate it
+   in both directions — `values.MinorUnitExceptions()` against
+   `frontend/src/format/minorunits.ts`, in
+   `backend/frontendminorunits_test.go`, which fails on a code present
+   on one side only and on a digit count that differs. Two tables that
+   happen to agree today is the state this replaces; note that the gate
+   covers the shared TABLE, not the two suites' cases, and reads the
+   TypeScript with hand-written regexes — so it carries the caveat in
+   the next rule rather than escaping it.
+
+8. **A census that can fail short has already failed.** Every failure
+   mode of a gate is loud except one: under-recognition. A gate that
+   reads a smaller tree reports the same word for it — PASS — and there
+   is no failing assertion to notice, so a hand-written census is short
+   until proven otherwise, and each miss hides behind whatever also hid
+   it from the detector. Three consequences, each of them paid for here.
+   No prefilter, skip-list or file shortcut in front of a scan unless
+   you have MEASURED that it buys something: one such shortcut survived
+   six rounds of being found narrower than the census behind it, two of
+   the misses introduced by the fix for the one before, and deleting it
+   turned out to be FASTER than keeping it. Match statements, not lines
+   — a per-line matcher missed an entire write direction a formatter had
+   wrapped across three — and bound the join, or one statement swallows
+   a thirty-line `const (` block. And once the gate is green, ask what
+   shape of the defect it cannot see and plant that case; that is how
+   every hole found in review was found, and none by re-reading the
+   implementation.
 
 ## License
 

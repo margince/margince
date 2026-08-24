@@ -320,6 +320,9 @@ func (x evidenceExtractor) extractPageFacts(ctx context.Context, page crawlPage)
 // The fence is minted here, per request: a boundary reused across calls is one
 // some crawled site has already been shown, and every passage in this prompt is
 // a site's own writing.
+//
+//promptlang:exempt the reply is field values printed on the page — emails, urls, counts — and gatePageFactList refuses one the page does not print verbatim, so a translated value is a dropped value.
+//promptvoice:exempt the reply is field values printed on the page — emails, urls, counts — refused unless the page prints them verbatim.
 func pageFactsRequest(menu pageMenu, idx snippetIndex) model.Request {
 	fence := promptfence.New()
 	return model.Request{

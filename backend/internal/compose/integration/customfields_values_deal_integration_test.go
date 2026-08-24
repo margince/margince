@@ -27,6 +27,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/modules/customfields"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -55,6 +56,7 @@ type dealCFVFixture struct {
 	e        *Env
 	svc      *customfields.Service
 	store    *deals.Store
+	projects *projects.Store
 	ctx      context.Context
 	pipeline ids.PipelineID
 	stage    ids.StageID
@@ -69,6 +71,7 @@ func setupDealCFV(t *testing.T) dealCFVFixture {
 		e:        e,
 		svc:      svc,
 		store:    deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(svc),
+		projects: ProjectsStore(e.DB()).WithFieldCatalog(svc),
 		ctx:      e.As(e.Rep1, nil, dealCFVPerms),
 		pipeline: pipeline,
 		stage:    open,
@@ -127,7 +130,7 @@ func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
 }
 
 // The project round trip, and the case the deal one above could not stand
-// in for: the two records share a store and a seam but not a statement, and
+// in for: the two records share the fieldcatalog seam but not a statement, and
 // it was project's statement that mis-numbered its first custom placeholder.
 // Create is the assertion that matters — the write itself used to fail — and
 // the read-back is what proves the value reached its own column rather than a
@@ -137,7 +140,7 @@ func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 	col := f.defineDealField(t, customfields.FieldSpec{Object: "project", Label: "Engagement Model", Type: customfields.TypeText, Source: "ui"})
 	org := f.e.SeedOrg(t, "Northwind", nil)
 
-	created, err := f.store.CreateProject(f.ctx, deals.CreateProjectInput{
+	created, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
 		Name: "Rollout", OrganizationID: orgIDOf(org), Source: "ui",
 		CustomFields: map[string]any{col: "retainer"},
 	})
@@ -146,13 +149,13 @@ func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 	}
 	assertCF(t, created.AdditionalProperties, col, "retainer")
 
-	got, err := f.store.GetProject(f.ctx, projectIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
+	got, err := f.projects.GetProject(f.ctx, projectIDOf(ids.UUID(created.Id)), storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("GetProject: %v", err)
 	}
 	assertCF(t, got.AdditionalProperties, col, "retainer")
 
-	updated, err := f.store.UpdateProject(f.ctx, projectIDOf(ids.UUID(created.Id)), deals.UpdateProjectInput{
+	updated, err := f.projects.UpdateProject(f.ctx, projectIDOf(ids.UUID(created.Id)), projects.UpdateProjectInput{
 		CustomFields: map[string]any{col: "fixed-price"},
 	})
 	if err != nil {

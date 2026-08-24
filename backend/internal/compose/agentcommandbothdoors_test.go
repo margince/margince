@@ -32,6 +32,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +51,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
 // bothDoorsFixture is one intended act, written twice — once as the request the
@@ -325,12 +325,12 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 // can nonetheless be asked to perform, because the operation carries an operand
 // the verb's arguments have no member for.
 //
-// Each of the six is one of the bespoke confirm-first operations
+// Each of the eight is one of the bespoke confirm-first operations
 // (agentcommandoperand.go): a second operand that update_record's
 // {record_type, id, fields} cannot express is exactly what put them there, and
-// it is the same reason they cannot be twinned here. The other two of the eight
-// ride a record type update_record does not serve at all, so the verb answers
-// for them before any of this is asked.
+// it is the same reason they cannot be twinned here. The other two ride a record
+// type update_record does not serve at all, so the verb answers for them before
+// any of this is asked.
 var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 	"confirmOrganizationFact": "the fact key is a path segment, and the confirm carries no body at all — " +
 		"an update_record call has no member to put it in and no fields to send",
@@ -344,6 +344,10 @@ var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 	"setProjectStakeholder": "the stakeholder is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
 	"removeProjectStakeholder": "the person is a second path parameter naming the edge to drop, and " +
+		"update_record has no argument for a record other than the one it patches",
+	"setProjectCompany": "the company is an edge to a second record carrying its own role, which " +
+		"update_record's fields cannot spell — they write columns of the project the route names",
+	"removeProjectCompany": "the company is a second path parameter naming the edge to drop, and " +
 		"update_record has no argument for a record other than the one it patches",
 })
 
@@ -449,7 +453,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		agents.WithTierFloor(func(string, string) (mcp.RiskTier, bool) {
 			return mcp.TierConfirmationRequired, true
 		}))
-	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil)
+	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
 	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
@@ -603,6 +607,23 @@ var dynamicTierVerbs = gatekit.Waive(map[string]string{
 		"states produce — what the two doors do share is the command itself, both decoding into " +
 		"AdvanceDealCommand{DealID, ToStageID} (advanceDealCommand in agentcommandlifecycle.go, " +
 		"advanceDeal.StageInfo in tools.go), which no test compares door-to-door today",
+	"relink_activity": "the tier turns on the DESTINATION TYPE in the arguments, not on any record, so a " +
+		"person relink executes where a project relink stages and this lane's fixture would compare a " +
+		"staged row only one destination produces. Unlike the deal move, both doors ARE compared, each " +
+		"against the shape it actually receives: TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot " +
+		"(agentgate_dealreopen_test.go) drives the REST door through tierInput, and " +
+		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares (agents/tools_lifecycle_test.go) drives " +
+		"the MCP door through the tool's own InputSchema — that second one exists because relinkActivity is " +
+		"not a dynamicTool, so the registry hands the resolver raw tool arguments and the two spellings of " +
+		"`entity_type` are held together by nothing else",
+	"relink_thread": "the same destination-type tier as relink_activity, answered by the same resolver " +
+		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
+		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
+		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares the MCP door",
+	"relink_activities": "the same destination-type tier as relink_activity, answered by the same resolver " +
+		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
+		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
+		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares the MCP door",
 })
 
 // assertVerbResolvesItsTierPerCall holds an unwritten fixture to the one
@@ -646,30 +667,41 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 		t.Fatalf("the REST door's command refused to name a subject: %v", err)
 	}
 
-	staging := &capturingApprovals{}
-	_, err = bothDoorsRegistry(staging).Invoke(agentDoorCtx(), tool,
+	// Asked of the tool's own StageInfo. These verbs execute directly now, so
+	// Invoke no longer stages — but the subject each door would put in front of
+	// a human must still be the SAME subject, because a workspace tier floor
+	// brings the confirm-first path back for either of them.
+	subject, err := stageToolSubject(agentDoorCtx(), bothDoorsRegistry(&capturingApprovals{}), tool,
 		json.RawMessage(fixture.args(primary, secondary)))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("the tool door answered %v rather than staging the call its own schema declares", err)
+	if err != nil {
+		t.Fatalf("the tool door refused to name a subject for the call its own schema declares: %v", err)
 	}
 
-	if staging.last.TargetType != rest.TargetType || staging.last.TargetID != rest.TargetID {
+	if subject.TargetType != rest.TargetType || subject.TargetID != rest.TargetID {
 		t.Errorf("the doors bind one operation to two records: REST (%s,%s), tool (%s,%s) — one of them asks "+
 			"a human about a row the other would not have written",
-			rest.TargetType, rest.TargetID, staging.last.TargetType, staging.last.TargetID)
+			rest.TargetType, rest.TargetID, subject.TargetType, subject.TargetID)
 	}
-	if staging.last.Summary != rest.Summary {
+	if subject.Summary != rest.Summary {
 		t.Errorf("the doors resolve one operation to two commands:\n  REST: %q\n  tool: %q\nThe sentence is "+
 			"the only place an erased command's own arguments show, so the two doors would perform different "+
-			"acts for one call", rest.Summary, staging.last.Summary)
+			"acts for one call", rest.Summary, subject.Summary)
 	}
-	if (staging.last.TargetVersion == nil) != (rest.TargetVersion == nil) {
+	if (subject.TargetVersion == nil) != (rest.TargetVersion == nil) {
 		t.Errorf("one door pins a version the other does not (REST %v, tool %v) — the same call would be held "+
 			"to a record's version through one door and not through the other",
-			rest.TargetVersion, staging.last.TargetVersion)
+			rest.TargetVersion, subject.TargetVersion)
 	}
-	if staging.last.Tool != tool {
-		t.Errorf("the tool door staged kind %q for verb %s", staging.last.Tool, tool)
+}
+
+// stageToolSubject asks one tool for the subject it would put in front of a
+// human. Registry.Invoke no longer stages these verbs — they execute — so the
+// comparison reaches StageInfo directly, which is what a workspace tier floor
+// reaches too.
+func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args json.RawMessage) (agents.StageInfo, error) {
+	stager, ok := r.StagerFor(tool)
+	if !ok {
+		return agents.StageInfo{}, fmt.Errorf("%s describes no staging", tool)
 	}
+	return stager.StageInfo(ctx, args)
 }

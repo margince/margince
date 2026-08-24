@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -79,7 +80,6 @@ const (
 	// sqlAlwaysVisible is the no-op arm of the pair-visibility predicate:
 	// the caller's scope leaves that record type unbounded.
 	sqlAlwaysVisible = "true"
-	fieldCursor      = "cursor"
 )
 
 // dedupeCursor is the queue's keyset: confidence-descending with the id
@@ -98,10 +98,17 @@ func decodeDedupeCursor(token string) (dedupeCursor, error) {
 	var c dedupeCursor
 	raw, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return c, &DedupeInputError{Field: fieldCursor, Msg: "malformed page token"}
+		return c, &storekit.MalformedCursorError{}
 	}
 	if err := json.Unmarshal(raw, &c); err != nil {
-		return c, &DedupeInputError{Field: fieldCursor, Msg: "malformed page token"}
+		return c, &storekit.MalformedCursorError{}
+	}
+	// Valid JSON is not yet a cursor. `null` and `{}` both unmarshal without
+	// error and leave the keyset at its zero value, which reads as a real
+	// position and pages from the top of the queue instead of refusing. Every
+	// token this encodes names a row, so an absent id is the tell.
+	if c.ID == (ids.UUID{}) {
+		return dedupeCursor{}, &storekit.MalformedCursorError{}
 	}
 	return c, nil
 }

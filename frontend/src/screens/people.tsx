@@ -3,16 +3,22 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
-import { useRecordTimeline } from "../design-system/recordtimeline";
+import {
+  useRecordTimeline,
+  useTimelineFilters,
+} from "../design-system/recordtimeline";
+import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { ProvenanceTag } from "../design-system/trust";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
 import {
+  LoadMoreButton,
   OverlayUnavailable,
   provenanceOf,
   QueryGate,
@@ -49,7 +55,9 @@ import {
   WhoKnowsThem,
 } from "./person360";
 import { EnrichedFields } from "./personcorrections";
+import { PersonDealRooms } from "./persondealrooms";
 import { PersonGraphPanel } from "./persongraph";
+import { PersonProjects } from "./personprojects";
 import {
   createdColumn,
   lastActivityColumn,
@@ -59,6 +67,7 @@ import {
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { groupChronology } from "./timelinegroups";
 
 // Contacts list + person 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -68,7 +77,6 @@ import { ShareAction } from "./share";
 // view-existing link (P-16) are the four shared blocks wired in here.
 
 type Person = components["schemas"]["Person"];
-type Activity = components["schemas"]["Activity"];
 type CreatePersonRequest = components["schemas"]["CreatePersonRequest"];
 type UpdatePersonRequest = components["schemas"]["UpdatePersonRequest"];
 
@@ -296,65 +304,28 @@ function PersonAside({
   if (!view) {
     return undefined;
   }
+  // Every address the contact has: a seat may have been invited on a
+  // secondary one, and a card that checked only the primary would tell an
+  // admin the contact is out of every room when they are not.
+  const emails = (view.person.emails ?? []).map((e) => e.email);
   return (
     <>
       <RelationshipPulse view={view} />
+      <PersonProjects
+        personId={view.person.id}
+        projects={view.projects}
+        readOnly={Boolean(view.person.archived_at)}
+      />
       <WhoKnowsThem view={view} />
+      {emails.length > 0 ? <PersonDealRooms emails={emails} /> : null}
     </>
   );
-}
-
-// The timeline filters. They group by what a reader is LOOKING for rather
-// than by the activity kind vocabulary: someone scanning for "what did we
-// agree" wants tasks whatever their channel, and someone reconstructing a
-// conversation wants mail and chat together.
-const TIMELINE_FILTERS = ["all", "messages", "meetings", "tasks"] as const;
-type TimelineFilter = (typeof TIMELINE_FILTERS)[number];
-
-// MESSAGE_KINDS is every channel a human conversation arrives on. Kept as a
-// list rather than "not a meeting and not a task" so a kind added later is
-// classified deliberately instead of falling into messages by default.
-//
-// One member covers every messaging transport since ADR-0107/A158: a new
-// connector files under `message` and is classified here without this list
-// having to learn its name, which is the whole point of the narrowing.
-const MESSAGE_KINDS = ["email", "message", "call"];
-
-/**
- * useTimelineFilter keeps the filter per RECORD.
- *
- * The screen does not remount when the route changes contact, so a plain
- * useState would carry "tasks only" onto the next person and show them an
- * empty timeline with no visible reason for it.
- */
-function useTimelineFilter(
-  recordId: string,
-): [TimelineFilter, (next: TimelineFilter) => void] {
-  const [filter, setFilter] = useState<TimelineFilter>("all");
-  const [filterFor, setFilterFor] = useState(recordId);
-  if (filterFor !== recordId) {
-    setFilterFor(recordId);
-    setFilter("all");
-  }
-  return [filter, setFilter];
-}
-
-function matchesFilter(activity: Activity, filter: TimelineFilter): boolean {
-  switch (filter) {
-    case "messages":
-      return MESSAGE_KINDS.includes(activity.kind);
-    case "meetings":
-      return activity.kind === "meeting";
-    case "tasks":
-      return activity.kind === "task";
-    default:
-      return true;
-  }
 }
 
 export function ContactsScreen() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Offered only once /me has answered: a chip whose value is still "" reads
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
@@ -414,8 +385,8 @@ export function ContactsScreen() {
             ),
           },
           ownerColumn<Person>(t),
-          lastActivityColumn<Person>(t, locale),
-          createdColumn<Person>(t, locale),
+          lastActivityColumn<Person>(t, locale, recordZone),
+          createdColumn<Person>(t, locale, recordZone),
         ]}
         tools={<SaveViewAction resource="people" query={state.query} />}
         rowKey={(person) => person.id}
@@ -436,6 +407,7 @@ type PersonTab = (typeof PERSON_TABS)[number];
 
 export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const cf = useObjectCustomFields("person");
   // ONE sentence about this contact being archived, minted here and pointed at
   // by every verb the archive refuses. Said once for the page rather than
@@ -454,8 +426,10 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
       return data;
     },
   });
-  const timelineQuery = useRecordTimeline("person", id);
-  const [timelineFilter, setTimelineFilter] = useTimelineFilter(id);
+  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
+  const timelineQuery = useRecordTimeline("person", id, {
+    filters: timelineFilters,
+  });
   const view360 = usePerson360(id);
   // The composite is only usable once it carries its mandatory root record.
   // Guarding on the whole payload would let a partial or error-shaped body
@@ -463,6 +437,18 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const view = view360.data?.person ? view360.data : undefined;
   const overlay = useSorMode() === "overlay";
   const viewerId = useViewerId();
+  const timelineEntries = activityTimeline(
+    timelineQuery.activities,
+    viewerId,
+    (activity) => (
+      <TimelineActions
+        activity={activity}
+        entityType="person"
+        entityId={id}
+        personId={id}
+      />
+    ),
+  );
 
   return (
     <div className="wrap">
@@ -472,7 +458,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
           <RecordView
             name={person.full_name}
             subtitle={person.title ?? undefined}
-            zone="Europe/Berlin"
+            zone={recordZone}
             badges={
               <>
                 <ProvenanceTag
@@ -620,46 +606,25 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                 </p>
               ) : undefined
             }
-            timeline={
-              timelineQuery.isSuccess
-                ? activityTimeline(
-                    // Filtered through the same absent-body guard the adapter
-                    // holds: `isSuccess` says nothing about whether the body
-                    // arrived, and .filter on an undefined list crashes the
-                    // page before the adapter ever sees it.
-                    (timelineQuery.data.data ?? []).filter((a) =>
-                      matchesFilter(a, timelineFilter),
-                    ),
-                    viewerId,
-                    (activity) => (
-                      <TimelineActions
-                        activity={activity}
-                        entityType="person"
-                        entityId={id}
-                        personId={id}
-                      />
-                    ),
-                  )
-                : []
-            }
+            timeline={timelineEntries}
+            // Conversations, not messages: a thread the contact is on reads
+            // as one exchange rather than one row per reply.
+            timelineGroups={groupChronology(
+              timelineEntries,
+              timelineQuery.hasNextPage,
+            )}
             // The filter sits ABOVE the timeline; the notice REPLACES it
             // (composed.tsx renders `timelineNotice ?? the list`). Putting the
             // filter in the notice slot hid every activity row behind it.
             timelineHeader={
               overlay ? undefined : (
-                <SegmentedControl
-                  options={TIMELINE_FILTERS}
-                  value={timelineFilter}
-                  onChange={setTimelineFilter}
-                  labels={{
-                    all: t("person.timeline.all"),
-                    messages: t("person.timeline.messages"),
-                    meetings: t("person.timeline.meetings"),
-                    tasks: t("person.timeline.tasks"),
-                  }}
+                <TimelineFilterBar
+                  value={timelineFilters}
+                  onChange={setTimelineFilters}
                 />
               )
             }
+            timelineFooter={<LoadMoreButton query={timelineQuery} />}
             timelineNotice={overlay ? <OverlayUnavailable /> : undefined}
             rail={view ? <IdentityRail view={view} /> : undefined}
             aside={<PersonAside view={view} overlay={overlay} />}

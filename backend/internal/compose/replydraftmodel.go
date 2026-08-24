@@ -55,6 +55,8 @@ func replyDraftSystemFor(system string, fence promptfence.Fence) string {
 // DNA state selects the variant per call — a loaded profile supplies a block and
 // takes the voice prompt, no profile takes the plain one — and both remain the
 // same invocation site: same schema, same bounds, same data boundary.
+//
+//promptvoice:exempt the reply is an email sent to a customer under the user's own name, and draftrules carries that user's voice; Margince's register belongs to what it says TO the user, never to what it writes AS them.
 func replyDraftRequest(activity replyActivityData, voiceBlock voiceBlockFor, correction string) (model.Request, error) {
 	payload, err := json.Marshal(activity)
 	if err != nil {

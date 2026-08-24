@@ -26,16 +26,11 @@ import (
 // added outside the engine (a fork migration racing a create).
 const pgDuplicateColumn = "42701"
 
-// pgLockNotAvailable is SQLSTATE 55P03: a lock wait exceeded the
-// transaction's SET LOCAL lock_timeout — the retryable ErrTableBusy
-// answer, never a 500.
-const pgLockNotAvailable = "55P03"
-
-// lockTimedOut reports whether err is the bounded lock wait firing
-// (SQLSTATE 55P03).
+// lockTimedOut reports whether err is the bounded lock wait firing — the
+// retryable ErrTableBusy answer, never a 500. The SQLSTATE itself is storekit's
+// to name, so this module reads the classification rather than the code.
 func lockTimedOut(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == pgLockNotAvailable
+	return storekit.IsLockTimeout(err)
 }
 
 // Create is the single chokepoint allowed to run a runtime ALTER TABLE
@@ -293,4 +288,23 @@ func marshalOptions(options []string) ([]byte, error) {
 		return nil, fmt.Errorf("customfields: encoding options: %w", err)
 	}
 	return raw, nil
+}
+
+// unmarshalOptions is the one spelling of the decoding, and it exists as a pair
+// with marshalOptions because both catalog reads want the same answer to the same
+// two questions: what a malformed column says to the caller, and what an absent
+// option set decodes to. A second decode written at its own call site answered
+// them differently once already.
+//
+// Empty raw is an empty set, not an error: a non-picklist field stores SQL NULL
+// (optionsJSON), which is the normal shape for most rows rather than a fault.
+func unmarshalOptions(raw []byte) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var options []string
+	if err := json.Unmarshal(raw, &options); err != nil {
+		return nil, fmt.Errorf("customfields: catalog options column is not a JSON string array: %w", err)
+	}
+	return options, nil
 }

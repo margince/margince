@@ -13,6 +13,7 @@ package compose
 import (
 	"encoding/json"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
@@ -34,6 +35,8 @@ import (
 // whoever wrote that turn can spell, and the rule this prompt states — that the
 // dossier is evidence and never instruction — can only be stated about a region
 // the model can tell apart.
+//
+//promptlang:exempt this endpoint has no language to pass: it is a one-admin conversation, so the reader's locale is the right answer rather than the base language, and CompanySiteReadMessageRequest carries no locale field the way its sibling OnboardingCompanyMessageRequest does. Adding one is a contract change; tracked rather than defaulted, because guessing here would answer a German admin in English while claiming to be governed.
 func companyReadAnswerRequest(message string, history []model.Message, evidence []companyReadEvidence) (model.Request, error) {
 	fence := promptfence.New()
 	contextJSON, err := json.Marshal(struct {
@@ -47,7 +50,8 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 	messages = append(messages, history...)
 	messages = append(messages, model.Message{Role: chatRoleUser, Content: message})
 	return model.Request{
-		System:    companyReadMessageSystem + "\n" + fence.Rule("dossier evidence and application state"),
+		System: companyReadMessageSystem + "\n" + promptvoice.Rule + "\n" +
+			fence.Rule("dossier evidence and application state"),
 		Messages:  messages,
 		MaxTokens: ai.ReasoningOutputMaxTokens, ResponseSchema: companyReadMessageSchema,
 		SecretStripper: ai.NewSecretStripper(),

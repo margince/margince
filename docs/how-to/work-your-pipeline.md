@@ -98,7 +98,7 @@ practice today every win goes through the reason. Recording the agreement and at
 signed PDF still work and are still worth doing — they just do not yet count as the evidence.
 
 **The reason is not shown back on the deal afterwards**
-([#2105](https://github.com/gradionhq/margince-poc-v1/issues/2105)). It is recorded and reports
+([#2105](https://github.com/margince/margince/issues/2105)). It is recorded and reports
 can read it; the record page does not display it yet.
 
 **Closing is one deal at a time, on purpose.** The bulk bar offers open stages only: a lost
@@ -150,7 +150,14 @@ Pipeline narrows either view to them.
 ## Narrow the list, and keep the narrowing
 
 Filters, on both views: **Stage**, **Company**, **Stalled only**, **My deals**,
-**Partner-sourced**, the **Pipeline** picker, and a **Show archived** toggle.
+**Partner-sourced**, **Partner**, the **Pipeline** picker, and a **Show archived**
+toggle.
+
+**Partner-sourced** and **Partner** answer different questions: the first asks
+whether a deal came through any partner at all, the second narrows to one named
+partner. **Partner** appears only once a company has been made a partner — with
+no partner program there is nothing to pick from. The board's column totals
+narrow with the list.
 
 **There is no search box on this screen.** To find a deal by name, use the global
 **Search everything…** at the top, or narrow with the filters.
@@ -222,17 +229,17 @@ Stated plainly, so you don't hunt for them:
 - **Two deals cannot be merged.** The Duplicates queue covers people, companies and leads only.
   If one opportunity was captured twice, keep the better record and archive the other — moving
   any offers or notes across by hand first, because archiving does not move them.
-  ([#2033](https://github.com/gradionhq/margince-poc-v1/issues/2033))
+  ([#2033](https://github.com/margince/margince/issues/2033))
 - **An archived deal cannot be restored.** **Show archived** lets you *see* it, and it is
   read-only. Archiving is the one action here with no way back, which is why it asks first.
-  ([#2034](https://github.com/gradionhq/margince-poc-v1/issues/2034))
+  ([#2034](https://github.com/margince/margince/issues/2034))
 - **The board cannot be dragged on touch devices.** Use the deal page's stage stepper.
 - **There is no text search within the deals list.** Use global search.
 - **A contract cannot be tied to a deal, or moved out of draft.** So a win always goes through
   the reason rather than the paperwork. See *Close a deal* above.
-  ([#2088](https://github.com/gradionhq/margince-poc-v1/issues/2088))
+  ([#2088](https://github.com/margince/margince/issues/2088))
 - **A won deal does not show why it had no contract.** The answer is recorded, just not
-  displayed. ([#2105](https://github.com/gradionhq/margince-poc-v1/issues/2105))
+  displayed. ([#2105](https://github.com/margince/margince/issues/2105))
 
 ## Where deals meet the rest of Margince
 

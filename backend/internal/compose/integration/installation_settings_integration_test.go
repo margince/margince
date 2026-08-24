@@ -27,6 +27,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -96,14 +97,14 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 	}
 	// A read grant is not a write grant.
 	newName := "Renamed GmbH"
-	if _, err := store.UpdateInstallation(rep, &newName, nil, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.UpdateInstallation(rep, identity.InstallationPatch{Name: &newName}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("write with only a read grant returned %v, want ErrPermissionDenied", err)
 	}
 
 	before := installationAuditCount(t, e)
 
 	// A real change commits the row and its audit entry together.
-	updated, err := store.UpdateInstallation(admin, &newName, nil, nil)
+	updated, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &newName})
 	if err != nil {
 		t.Fatalf("renaming the installation: %v", err)
 	}
@@ -116,7 +117,7 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 
 	// Re-asserting the same value is a no-op: no second audit row. An
 	// idempotent PATCH must not litter the ledger.
-	if _, err := store.UpdateInstallation(admin, &newName, nil, nil); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &newName}); err != nil {
 		t.Fatalf("re-asserting the same name: %v", err)
 	}
 	if n := installationAuditCount(t, e); n != before+1 {
@@ -139,17 +140,17 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	blank := "   "
-	if _, err := store.UpdateInstallation(admin, &blank, nil, nil); err == nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &blank}); err == nil {
 		t.Error("a whitespace-only organization name was accepted")
 	}
 
 	notAZone := "Mars/Olympus_Mons"
-	if _, err := store.UpdateInstallation(admin, nil, &notAZone, nil); err == nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Timezone: &notAZone}); err == nil {
 		t.Error("a zone name this server's tzdata does not know was accepted")
 	}
 
 	notACurrency := "EURO"
-	_, err := store.UpdateInstallation(admin, nil, nil, &notACurrency)
+	_, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &notACurrency})
 	if err == nil {
 		t.Error("a four-letter base currency was accepted")
 	}
@@ -166,6 +167,83 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 	if !strings.Contains(message, "ISO-4217") {
 		t.Errorf("refusal message %q does not say what a base currency is", message)
 	}
+
+	// The fiscal start is the one field of this patch that is not a string, so
+	// it is the one whose encoding could be wrong in a way the others cannot
+	// show. A month outside 1..12 must be refused by the entry, not stored.
+	thirteen := 13
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{FiscalYearStartMonth: &thirteen})
+	if err == nil {
+		t.Fatal("a thirteenth month was accepted as a fiscal year start")
+	}
+	if !errors.As(err, &fault) {
+		t.Fatalf("the fiscal-start refusal does not classify as a field fault: %v", err)
+	}
+	field, _, message = fault.FieldFault()
+	if field != "installation.fiscal_year_start_month" {
+		t.Errorf("the fiscal-start refusal names field %q, want the setting key", field)
+	}
+	// The value that was refused, quoted back. Without it the caller is told a
+	// range and left to work out which of their fields was out of it.
+	if !strings.Contains(message, "13") {
+		t.Errorf("the fiscal-start refusal %q does not quote the month it refused", message)
+	}
+}
+
+// The fiscal start travels the REAL write path — patch, encode, validate,
+// store, read back.
+//
+// It earns its own test because every other test of this setting writes the
+// `setting` row with raw SQL, so `UpdateInstallation` could be broken for this
+// field alone and the report tests would stay green: they would be asserting
+// against a row they had written themselves. It is also the only non-string
+// field on the patch, so it is the one that proves the encoding is per-type
+// rather than accidentally string-shaped.
+func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
+
+	before, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatalf("reading the installation settings: %v", err)
+	}
+	if before.FiscalYearStartMonth != int(time.January) {
+		t.Fatalf("a fresh installation starts its year in month %d, want January — "+
+			"every installation predating this setting reports by the calendar year",
+			before.FiscalYearStartMonth)
+	}
+
+	april := int(time.April)
+	written, err := store.UpdateInstallation(admin, identity.InstallationPatch{FiscalYearStartMonth: &april})
+	if err != nil {
+		t.Fatalf("setting the fiscal year start to April: %v", err)
+	}
+	if written.FiscalYearStartMonth != april {
+		t.Errorf("the write returned month %d, want %d", written.FiscalYearStartMonth, april)
+	}
+
+	reread, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatalf("re-reading the installation settings: %v", err)
+	}
+	if reread.FiscalYearStartMonth != april {
+		t.Errorf("re-read month %d, want %d — the write did not reach the row", reread.FiscalYearStartMonth, april)
+	}
+
+	// A patch that names OTHER fields leaves this one alone. The sparse write
+	// is the whole contract of this endpoint, and an encoding that treated an
+	// absent field as a zero would set the month to 0 here rather than fail
+	// loudly — 0 is not a month, but nothing on the read path would say so.
+	renamed := "Renamed, fiscal untouched"
+	after, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &renamed})
+	if err != nil {
+		t.Fatalf("renaming the organization: %v", err)
+	}
+	if after.FiscalYearStartMonth != april {
+		t.Errorf("a patch naming only the name moved the fiscal start to %d, want %d",
+			after.FiscalYearStartMonth, april)
+	}
 }
 
 // The freeze is the one guard that fails OPEN: with the probe unwired the
@@ -180,7 +258,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// Changeable first — this is the case ADR-0085 §7 exists to serve: an
 	// installation that chose wrong in configuration and noticed in week one.
 	chf := "CHF"
-	if _, err := store.UpdateInstallation(admin, nil, nil, &chf); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &chf}); err != nil {
 		t.Fatalf("the base currency was refused before any deal converted: %v", err)
 	}
 
@@ -235,7 +313,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 
 	// And the write is refused, as a field fault naming the setting.
 	usd := "USD"
-	_, err = store.UpdateInstallation(admin, nil, nil, &usd)
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &usd})
 	if err == nil {
 		t.Fatal("the base currency was changed after deals had converted against it")
 	}
@@ -251,7 +329,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// Everything else on the surface still changes — the freeze is scoped to
 	// the one value whose history is at stake.
 	name := "Still Renamable GmbH"
-	if _, err := store.UpdateInstallation(admin, &name, nil, nil); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &name}); err != nil {
 		t.Errorf("the freeze on one setting blocked another: %v", err)
 	}
 }
@@ -302,7 +380,7 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 		t.Fatal("a sent offer holds a rate against this base, and the surface still reports it changeable")
 	}
 	usd := "USD"
-	if _, err := store.UpdateInstallation(admin, nil, nil, &usd); err == nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &usd}); err == nil {
 		t.Fatal("the base currency changed out from under a sent offer's frozen rate")
 	}
 }
@@ -325,7 +403,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 		VALUES ($1, 'USD', $2, 0.9150000000, current_date)`, base.BaseCurrency)
 
 	chf := "CHF"
-	_, err = store.UpdateInstallation(admin, nil, nil, &chf)
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &chf})
 	if err == nil {
 		t.Fatal("the base moved while the sheet was still priced against the old one")
 	}
@@ -345,7 +423,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 
 	// Re-asserting the base already in force is not a change, so a priced sheet
 	// does not break an idempotent patch.
-	if _, err := store.UpdateInstallation(admin, nil, nil, &base.BaseCurrency); err != nil {
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &base.BaseCurrency}); err != nil {
 		t.Fatalf("re-setting the base already in force: %v", err)
 	}
 }

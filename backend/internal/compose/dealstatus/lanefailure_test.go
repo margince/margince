@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package dealstatus
+
+// A lane that was wired and did not answer must not have its fallback cached.
+//
+// The card is keyed by a fingerprint, and a stored card whose fingerprint still
+// matches is served without asking the model again. So a floor card written
+// during a timeout and saved under the current key stands until some unrelated
+// fact moves — one transient outage, made permanent, with the reader seeing a
+// deterministic card and nothing saying why.
+//
+// A lane that is ABSENT is the opposite case and must still be cached: it will
+// answer no differently next time, so its floor is the real answer.
+//
+// This became reachable in a new way when the language entered the fingerprint.
+// An installation switching to German mints a fresh key for every deal, and a
+// lane that happens to be down while it does would freeze the ENGLISH floor as
+// that installation's German card.
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+)
+
+// refusingLane stands for every way a wired lane fails to answer: a timeout, a
+// spent budget, a reply the parser refuses.
+type refusingLane struct{ asked bool }
+
+func (l *refusingLane) Complete(context.Context, model.Request) (model.Response, error) {
+	l.asked = true
+	return model.Response{}, errors.New("the lane did not answer")
+}
+
+// cardClock is a fixed clock. write() reads it only to stamp the card, and a
+// real one would make two runs of the same test stamp different cards.
+func cardClock() time.Time { return time.Date(2026, 8, 24, 9, 0, 0, 0, time.UTC) }
+
+// cardFacts is the minimum a card can be written from.
+func cardFacts(t *testing.T) facts {
+	t.Helper()
+	return facts{
+		deal: crmcontracts.Deal{Name: "Nordwind", Status: "open"},
+		now:  cardClock(),
+		lang: "de",
+	}
+}
+
+func TestAWiredLaneThatDidNotAnswerIsReportedSoItsFallbackIsNotCached(t *testing.T) {
+	lane := &refusingLane{}
+	s := &Service{lane: lane, now: cardClock}
+	f := cardFacts(t)
+
+	card, laneFailed := s.write(context.Background(), f, decideMove(f), project(f, decideMove(f)), true)
+
+	if !lane.asked {
+		t.Fatal("the lane was never asked, so this proves nothing about a lane that fails")
+	}
+	if !laneFailed {
+		t.Error("a lane that was wired and refused reported success, so its English floor would be cached " +
+			"under the current fingerprint and served until an unrelated fact moved")
+	}
+	// The reader still gets a working card — the degrade is declared. Refusing
+	// the page would be the worse answer.
+	if card.GeneratedBy != crmcontracts.Deterministic {
+		t.Errorf("the fallback card is not labelled deterministic: %s", card.GeneratedBy)
+	}
+}
+
+func TestAnAbsentLaneIsNotAFailureAndItsCardIsCacheable(t *testing.T) {
+	// No lane at all: the deployment says this role runs no model. The floor is
+	// the real answer, not a degraded one, and caching it is right.
+	s := &Service{now: cardClock}
+	f := cardFacts(t)
+
+	card, laneFailed := s.write(context.Background(), f, decideMove(f), project(f, decideMove(f)), true)
+
+	if laneFailed {
+		t.Error("a deployment with no lane was reported as a lane failure, so every card it writes would " +
+			"be recomputed on every read rather than cached")
+	}
+	if card.GeneratedBy != crmcontracts.Deterministic {
+		t.Errorf("the card is not labelled deterministic: %s", card.GeneratedBy)
+	}
+}
+
+// Held back by the model-call floor: the facts moved, but too recently to pay
+// for another call. Also not a failure — the card is rewritten deterministically
+// on purpose, and it must be cached or the floor buys nothing.
+func TestACardHeldBackByTheCallFloorIsNotAFailure(t *testing.T) {
+	lane := &refusingLane{}
+	s := &Service{lane: lane, now: cardClock}
+	f := cardFacts(t)
+
+	_, laneFailed := s.write(context.Background(), f, decideMove(f), project(f, decideMove(f)), false)
+
+	if lane.asked {
+		t.Fatal("the lane was asked despite the call floor holding the card back")
+	}
+	if laneFailed {
+		t.Error("a card held back by the call floor was reported as a lane failure")
+	}
+}

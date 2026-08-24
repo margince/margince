@@ -3,11 +3,25 @@
 
 package agents
 
-// The 🟡 confirm-first tool family: every tool here is TierConfirmationRequired, so a
-// call is staged for a human decision before its Handle ever runs
-// (ADR-0036). Each implements StageInfo to pin the staged call to the
-// target's CURRENT version — an approval is a judgment about the record
-// as the human saw it, never about whatever it became since.
+// The consequential-write tool family. Each still implements StageInfo, which
+// pins a staged call to the target's CURRENT version — an approval is a
+// judgment about the record as the human saw it, never about whatever it
+// became since — and that machinery is what a workspace tier floor uses when
+// an installation asks for these to be confirmed.
+//
+// They no longer stage by DEFAULT. A passport carries the granting human's own
+// seat, grants and row scope, so a verb this family holds is one its holder
+// could perform unaided in the web app, and requiring a second confirmation
+// from the same person made the agent surface weaker than the person behind
+// it rather than safer. This is ADR-0055's argument — already accepted for
+// DECIDING an approval — applied to doing the thing itself.
+//
+// What still bounds a call is what bounds the human: RBAC, row scope, the seat
+// ceiling, expiry, and the passport scope its holder chose to lend. An
+// installation that wants a verb confirmed sets a tier floor for it — which is
+// only true because every tool in this family answers recordTypedTool
+// (tierfloor.go); a verb that cannot say which record type a call names takes no
+// floor at all, and the default would be the only setting there is.
 
 import (
 	"context"
@@ -43,8 +57,41 @@ var archivableRecordTypes = []string{
 	string(datasource.EntityRelationship), string(datasource.EntityActivity),
 }
 
-func archivableByTheRecordSeam(recordType string) bool {
-	return slices.Contains(archivableRecordTypes, recordType)
+// archivableHere answers what the ROUTED executor archives, falling back to the
+// native list above when the provider cannot say.
+//
+// The list above is what the NATIVE provider archives, and for an installation
+// running in overlay mode that is three types too wide: overlay archives
+// person, organization and deal, and refuses project, relationship and
+// activity. A stage-time check reading the native list therefore admitted an
+// archive the executor was always going to refuse — the one failure this
+// tool's confirm-first shape exists to prevent, and the failure the comment on
+// archivableRecordTypes describes happening to `activity` once already.
+//
+// The fallback is not a shrug: a provider that does not answer
+// RecordArchiverV2 is a fork's own adapter, and the native set is the only
+// honest guess about it. What it must NOT do is pretend to be an answer — so
+// it is the same list the caller would have used anyway, and nothing
+// downstream reads it as a fact about the executor.
+func archivableHere(ctx context.Context, p datasource.SystemOfRecordProvider) ([]string, error) {
+	archiver, ok := p.(datasource.RecordArchiverV2)
+	if !ok {
+		return archivableRecordTypes, nil
+	}
+	types, err := archiver.ArchivableTypes(ctx)
+	if err != nil {
+		// Surfaced, never absorbed. The answer turns on which mode this
+		// installation runs in, and a failed read of that is not a reason to
+		// fall back to the WIDER set: doing so would admit the three types
+		// this check was added to refuse, and leave the safety resting on a
+		// second read of the same value succeeding later.
+		return nil, err
+	}
+	out := make([]string, 0, len(types))
+	for _, t := range types {
+		out = append(out, string(t))
+	}
+	return out, nil
 }
 
 type archiveArgs struct {
@@ -60,12 +107,12 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
 		Description:   archiveRecordCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "archivePerson/archiveOrganization/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
 			"record_type":{"type":"string","enum":["person","organization","deal","project","relationship","activity"]},
 			"id":{"type":"string","format":"uuid"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ArchiveResult](),
 	}
@@ -105,12 +152,32 @@ func (t archiveRecord) StageInfo(ctx context.Context, in json.RawMessage) (Stage
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	if !archivableByTheRecordSeam(args.RecordType) {
-		return StageInfo{}, &BadArgsError{Cause: fmt.Errorf(
-			"this verb does not archive %q records, so no approval of it could ever be carried out; it archives %s",
-			args.RecordType, strings.Join(archivableRecordTypes, ", "))}
+	if err := refuseUnarchivableType(ctx, t.p, args.RecordType); err != nil {
+		return StageInfo{}, err
 	}
 	return StageSubject(ctx, NewArchiveCall(t.p, ArchiveCommand(args)))
+}
+
+// refuseUnarchivableType holds the verb to the types the seam actually routes,
+// naming the whole set rather than saying the value is invalid.
+//
+// Both doors call it. It used to sit in StageInfo alone, which was enough while
+// the verb always staged — nothing reached Handle without an approval, and the
+// approval could not be minted for a type that would fail. Executing directly
+// removes that shelter: the refusal has to be here, or `activity` is admitted
+// and fails deep in the seam with a message about the system of record. That is
+// the defect this refusal was written for in the first place.
+func refuseUnarchivableType(ctx context.Context, p datasource.SystemOfRecordProvider, recordType string) error {
+	archivable, err := archivableHere(ctx, p)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(archivable, recordType) {
+		return &BadArgsError{Cause: fmt.Errorf(
+			"this verb does not archive %q records; it archives %s",
+			recordType, strings.Join(archivable, ", "))}
+	}
+	return nil
 }
 
 func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -118,7 +185,10 @@ func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	ref, err := t.p.Archive(ctx, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
+	if err := refuseUnarchivableType(ctx, t.p, args.RecordType); err != nil {
+		return nil, err
+	}
+	ref, err := archiveAt(ctx, t.p, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
 	if err != nil {
 		return nil, err
 	}
@@ -149,14 +219,14 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "promote_lead", Title: "Promote a lead to a person", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
 			"lead_id":{"type":"string","format":"uuid"},
 			"trigger":{"type":"string","enum":["inbound_reply","meeting_booked","meeting_held","human_qualify"],
 				"description":"The genuine engagement justifying promotion; cold outreach with no reply never promotes"},
 			"evidence_note":{"type":"string"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PromoteLeadResult](),
 	}
@@ -234,13 +304,13 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "mergePerson/mergeOrganization",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
 			"record_type":{"type":"string","enum":["person","organization"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[MergeRecordsResult](),
 	}

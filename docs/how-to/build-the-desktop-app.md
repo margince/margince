@@ -38,7 +38,7 @@ Two places, for two different needs.
 
 ### A release, for a build meant to be kept
 
-The [releases page](https://github.com/gradionhq/margince-poc-v1/releases)
+The [releases page](https://github.com/margince/margince/releases)
 carries both bundles as assets on every release that was cut with them —
 `margince-macos-<version>.tar.gz` and `margince-windows-<version>.zip` — with
 the first-launch steps in the release notes. Release assets do not expire, which

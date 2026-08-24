@@ -281,7 +281,7 @@ describe("Section switcher (the page title at phone width)", () => {
       within(dialog)
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
-    ).toEqual(["You", "Organization"]);
+    ).toEqual(["You", "Admin settings"]);
     expect(
       within(dialog)
         .getAllByRole("link")
@@ -407,6 +407,10 @@ describe("Shell", () => {
     ["#/contacts", false],
     ["#/deals", false],
     ["#/reports", false],
+    // A composed unit's page keeps the settings LEVEL (below) but not the
+    // reading column: the column is a claim about the page's own content, and a
+    // unit lays its own surface out.
+    ["#/ext/notes", false],
   ])("reads the column policy off the route: %s", (hash, capped) => {
     window.location.hash = String(hash);
     const { container } = render(
@@ -414,6 +418,33 @@ describe("Shell", () => {
     );
     const main = container.querySelector("main");
     expect(main?.className.includes("main-gridded")).toBe(capped);
+  });
+
+  // A unit's page is REACHED from settings and its trail says so
+  // (`Settings / notes`), so the sidebar keeps the settings level on it. It did
+  // not: the rail fell back to the ten destinations, and following "Open" from a
+  // settings card swapped the whole sidebar out from under a reader whose URL
+  // and breadcrumb still read Settings.
+  //
+  // Asserted on what the rail SHOWS rather than on a class name, because the
+  // class is a rendering detail and the level is the claim.
+  it("keeps the settings level in the sidebar on a composed unit's page", async () => {
+    window.location.hash = "#/ext/notes";
+    render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+
+    const rail = await screen.findByRole("navigation", {
+      name: "Primary navigation",
+    });
+    expect(
+      await within(rail).findByRole("link", { name: "Account" }),
+    ).toBeTruthy();
+    // And no settings tab claims the page: the reader is on the unit, which has
+    // no row of its own (app/nav.ts, activeRowFor).
+    expect(
+      within(rail)
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("aria-current") === "page"),
+    ).toBe(false);
   });
 
   it("mints the page-level heading on a route that names no record", () => {
@@ -526,11 +557,11 @@ describe("Shell", () => {
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
   });
 
-  // The agent lives in the CHROME, at the foot of the rail, on every railed
-  // screen. Once, and inside the nav rather than the content column: a second
-  // one anywhere is two things claiming to be the same agent. Its own claims are
-  // agentrail.test.tsx's; that it is mounted here, once, and where, is the
-  // shell's.
+  // The agent lives in the CHROME, at the foot of the rail, on a screen the rail
+  // reaches from its top level. Once, and inside the nav rather than the content
+  // column: a second one anywhere is two things claiming to be the same agent.
+  // Its own claims are agentrail.test.tsx's; that it is mounted here, once, and
+  // where, is the shell's.
   it("mounts the agent once, at the foot of the rail", () => {
     window.location.hash = "#/contacts";
     const { container } = render(
@@ -544,6 +575,29 @@ describe("Shell", () => {
     expect(
       container.querySelector("main")?.querySelector(".arblock"),
     ).toBeNull();
+  });
+
+  // A sidebar showing a section's entries is navigation inside ONE destination,
+  // and the agent belongs to the whole session — so it is absent there rather
+  // than re-parented under a sub-level. The foot goes with it: an empty box would
+  // leave the band and the rule that divide a reading from the rows above it.
+  it("mounts no agent while the rail shows a section's own entries", async () => {
+    window.location.hash = "#/settings/account";
+    const { container } = render(
+      <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+    );
+
+    // Waited on the LEVEL arriving, which is what the rule keys on: the settings
+    // entries come from a capability read, so a rail asserted before it answers
+    // is still the top-level one and would pass whatever the rule did.
+    const rail = await screen.findByRole("navigation", {
+      name: "Primary navigation",
+    });
+    expect(
+      await within(rail).findByRole("link", { name: "Account" }),
+    ).toBeTruthy();
+    expect(container.querySelector(".arblock")).toBeNull();
+    expect(container.querySelector(".railfoot")).toBeNull();
   });
 
   it("renders rail-less for the documented exceptions (AC-shell layout exception)", () => {

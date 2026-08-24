@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
 import { Panel, PanelBody, PanelPlate, PanelRow } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
@@ -9,11 +10,10 @@ import {
   ENGAGEMENT_LABELS,
   ENGAGEMENT_TONE,
   nextCommitmentLine,
-  RECORD_ZONE,
   type SuggestionAction,
-  signalKindLabel,
   useSuggestionsBody,
 } from "./company360";
+import { signalKindLabel } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
 // the page that answers *what do I do now*. It replaces two earlier cards
@@ -113,10 +113,10 @@ export function TodayOnThisAccount({
   // is happening on this account" — all three draw a short section, and only
   // one of them is a fact about the account.
   failed: boolean;
+  // Opens the pre-meeting brief for the day's meeting.
   onPrepareMeeting?: (activityId: string) => void;
-  // Starting a message from the account. Named separately from
-  // onPrepareMeeting because the two open the composer on different grounds:
-  // one anchors on a meeting, this one on the account and its recipient.
+  // Starting a message from the account: opens the composer anchored on the
+  // account and its recipient.
   onDraftTo?: (personId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Performing a suggestion's own action. The composer, the deal and the
@@ -128,6 +128,7 @@ export function TodayOnThisAccount({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Called unconditionally regardless of the loading/failed branches below,
   // same as every other hook here — React requires it, and the hook itself
   // already answers "nothing to show" by returning `ready: false`.
@@ -160,7 +161,7 @@ export function TodayOnThisAccount({
   const ctx: TodayContext = {
     view,
     t,
-    when: (at: string) => formatDateTime(at, locale, RECORD_ZONE),
+    when: (at: string) => formatDateTime(at, locale, recordZone),
   };
   const lead = whoseMove(ctx);
   const items = todayContextItems(ctx);

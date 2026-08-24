@@ -47,8 +47,16 @@ func TestAPromiseIsJudgedAgainstTheInstantItWasSweptAt(t *testing.T) {
 		{"a promise due tomorrow is upcoming", at(24 * time.Hour), commitmentUpcoming},
 		{"a promise due one second from now is still upcoming", at(time.Second), commitmentUpcoming},
 		{
-			"a promise due exactly now is overdue: the moment arrived and it is not done",
-			at(0), commitmentOverdue,
+			// At the instant a promise falls due it is due, not late — the
+			// boundary every surface reads and the one the SQL asks
+			// (`due_at < now()`). A reader told they had missed something in
+			// the moment it came due has been told a thing that is not so.
+			"a promise due exactly now is upcoming: the moment arrived, it has not passed",
+			at(0), commitmentUpcoming,
+		},
+		{
+			"a promise due one nanosecond ago is overdue",
+			at(-time.Nanosecond), commitmentOverdue,
 		},
 		{"a promise due yesterday is overdue", at(-24 * time.Hour), commitmentOverdue},
 	} {

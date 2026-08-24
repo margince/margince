@@ -15,6 +15,8 @@ package finance
 import (
 	"sort"
 	"time"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 )
 
 // Window parameters (FIN-PARAM-1..3). Named rather than inlined because each
@@ -172,7 +174,7 @@ func OpenBalanceAt(invoices []Invoice, asOf time.Time) OpenBalance {
 			return OpenBalance{RateUnavailable: true}
 		}
 		out.OpenMinorBase += inv.OpenMinorBase
-		if inv.DueOn == nil || !inv.DueOn.Before(asOf) {
+		if !deadline.Passed(inv.DueOn, asOf) {
 			continue
 		}
 		out.OverdueMinorBase += inv.OpenMinorBase

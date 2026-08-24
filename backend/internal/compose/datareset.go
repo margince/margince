@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -226,14 +226,12 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		if err != nil {
 			return err
 		}
-		// The provider platform's sealed API keys, collected the same way and
-		// for the same reason — its connection table carries no workspace_id,
-		// so neither the sweep above nor the collection above can see it.
-		providerRefs, err := providerCredentialRefs(ctx, tx)
-		if err != nil {
-			return err
-		}
-		counts.secretRefs = slices.Concat(secretRefs, providerRefs)
+		// The provider platform's sealed API keys arrive in the same slice. They
+		// used to need a pass of their own, because the collection keyed on one
+		// column name and provider_connection carries no workspace_id; it keys
+		// on neither now, so that pass was a SECOND collector of the same rows
+		// and it double-counted them. Deleted.
+		counts.secretRefs = secretRefs
 
 		if err := sweepWorkspaceData(ctx, tx, tables); err != nil {
 			return err
@@ -257,7 +255,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// with the sweep, the reset carries its own audit row, and
 		// incumbent.disconnected would be staged into an outbox this reset just
 		// drained.
-		reverted, err := overlay.RevertToNative(ctx, tx)
+		reverted, err := overlay.RevertToNative(ctx, tx, wsID)
 		if err != nil {
 			return err
 		}
@@ -277,7 +275,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// because whether the installation WAS in overlay mode is only knowable
 		// before something writes the column — a blanket restore cannot report
 		// what it changed, and that fact belongs in the audit row.
-		if err := identity.ResetWorkspaceConfig(ctx, tx); err != nil {
+		if err := identity.ResetWorkspaceConfig(ctx, tx, wsID); err != nil {
 			return err
 		}
 
@@ -303,8 +301,19 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 			Type: principal.PrincipalSystem, ID: "system",
 		})
 		seedCtx = principal.WithCorrelationID(seedCtx, ids.NewV7())
-		if err := configuredSeed(h.seeds, deals.NewHandlers(InstallationDB(h.pool), DealsInstallation()))(seedCtx, tx); err != nil {
+		// The reset's own discard list, reported here rather than dropped. It
+		// is not empty on this path: ai.Routing is installation identity, so
+		// ResetConfig spares its row and a re-seed of the declared binding is
+		// refused by ON CONFLICT — correct, because the stored binding is the
+		// one an admin may have changed since bootstrap, and a reset must not
+		// quietly re-point which vendor sees the installation's text.
+		var discarded []string
+		if err := configuredSeed(h.seeds, deals.NewHandlers(InstallationDB(h.pool), DealsInstallation()), &discarded)(seedCtx, tx); err != nil {
 			return err
+		}
+		if len(discarded) > 0 {
+			resetLog(h).WarnContext(ctx, "the reset kept settings already stored rather than re-seeding them from margince.yaml; they survive a reset by design",
+				"kept_keys", strings.Join(discarded, ", "))
 		}
 
 		// Record the reset under the invoking admin principal.
@@ -453,4 +462,14 @@ func (h dataResetHandlers) ResetData(w http.ResponseWriter, r *http.Request) {
 		ObjectsDeleted: counts.ObjectsDeleted,
 		DrainTimedOut:  counts.DrainTimedOut,
 	})
+}
+
+// resetLog is this handler's logger, defaulting the same way the reset's own
+// entry point does — a nil logger is the wired-but-unconfigured case, not a
+// reason to drop a warning about a binding that was not re-seeded.
+func resetLog(h dataResetHandlers) *slog.Logger {
+	if h.log == nil {
+		return slog.Default()
+	}
+	return h.log
 }

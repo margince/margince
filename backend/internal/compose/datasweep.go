@@ -11,14 +11,14 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 )
 
 // preservedResetTables are the tables a reset must NOT delete. Everything else
@@ -77,32 +77,6 @@ var preservedResetTables = map[string]bool{
 	// It is still cleared by a reset — `activity` is swept, and the cascade takes
 	// the evidence with it. Preserved here means "not a target", never "kept".
 	"activity_retention_evidence": true,
-}
-
-// providerCredentialRefs collects the sealed API keys the provider
-// connections hold, BEFORE the sweep deletes the rows naming them. Same
-// reasoning as collectWorkspaceSecretRefs: the ciphertext lives in a table
-// with no workspace_id, so these handles are the only thing that will still
-// connect it to this installation once the rows are gone.
-func providerCredentialRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT credential_ref FROM provider_connection WHERE credential_ref IS NOT NULL`)
-	if err != nil {
-		return nil, fmt.Errorf("data reset: reading provider credential handles: %w", err)
-	}
-	defer rows.Close()
-	var refs []string
-	for rows.Next() {
-		var ref string
-		if err := rows.Scan(&ref); err != nil {
-			return nil, fmt.Errorf("data reset: reading a provider credential handle: %w", err)
-		}
-		refs = append(refs, ref)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("data reset: reading provider credential handles: %w", err)
-	}
-	return refs, nil
 }
 
 // resetTargetTables lists every public base table a reset sweeps: all of them,
@@ -184,7 +158,7 @@ func sweepWorkspaceData(ctx context.Context, tx pgx.Tx, tables []resetTarget) er
 				progressed = true
 				continue
 			}
-			if !isForeignKeyViolation(delErr) {
+			if !storekit.IsForeignKeyViolation(delErr) {
 				return delErr
 			}
 			if _, err := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT reset_sp"); err != nil {
@@ -242,17 +216,25 @@ func (h dataResetHandlers) clearOutbox(ctx context.Context) error {
 	})
 }
 
-func isForeignKeyViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23503"
-}
-
-// vaultRefColumn is the one spelling every table uses for a keyvault
-// handle (connector_connection, channel_connection, incumbent_connection).
-// Deriving the collection from the catalog on this name rather than listing
-// those three means a connection table added later is covered the day its
-// column exists, which a hand-kept list would not be.
-const vaultRefColumn = "credential_ref"
+// credentialHandleSuffix is how a column that holds a keyvault handle is
+// spelled in this schema — `credential_ref` on the connection tables,
+// `vault_ref` on extension_secret, `signing_secret_ref` on
+// webhook_subscription.
+//
+// A SUFFIX and not a name, because the name was wrong. This used to be the
+// single string "credential_ref", above a comment calling it "the one spelling
+// every table uses". There were three, so extension_secret's and
+// webhook_subscription's ciphertext was never collected and outlived every
+// reset — resident and unreachable, which is the exact failure
+// collectWorkspaceSecretRefs' comment says it exists to prevent.
+//
+// The suffix over-matches on purpose: thirteen distinct `_ref` column names
+// exist in this schema and only three are handles. Over-matching costs nothing
+// because the VAULT decides — a candidate value is collected only if
+// vault_secret holds it, so an `evidence_ref` or a `pdf_asset_ref` contributes
+// nothing. Under-matching is what cost something, and it is the direction a
+// derivation like this must not fail in.
+const credentialHandleSuffix = "_ref"
 
 // collectWorkspaceSecretRefs reads every sealed-credential handle in the
 // installation, BEFORE the sweep deletes the rows that name them.
@@ -263,67 +245,102 @@ const vaultRefColumn = "credential_ref"
 // reset that did not collect these first would leave the ciphertext resident
 // and unreachable forever — credential material outliving the wipe that was
 // supposed to clear it.
+//
+// The join to vault_secret is what makes the wide column match safe, and it is
+// also what makes the collection EXACT: a handle is a value the vault holds,
+// which is the vault's own answer rather than this file's guess about naming.
 func collectWorkspaceSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
-	tables, err := tablesWithVaultRef(ctx, tx)
+	columns, err := credentialHandleColumns(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
 	var refs []string
-	for _, t := range tables {
+	for _, c := range columns {
+		table, column := pgx.Identifier{c.table}.Sanitize(), pgx.Identifier{c.column}.Sanitize()
 		rows, err := tx.Query(ctx,
-			`SELECT `+pgx.Identifier{vaultRefColumn}.Sanitize()+
-				` FROM `+pgx.Identifier{t}.Sanitize()+
-				` WHERE `+pgx.Identifier{vaultRefColumn}.Sanitize()+` IS NOT NULL`)
+			`SELECT h.`+column+` FROM `+table+` h
+			 JOIN vault_secret v ON v.ref = h.`+column+`
+			 WHERE h.`+column+` IS NOT NULL`)
 		if err != nil {
-			return nil, fmt.Errorf("data reset: reading credential handles from %s: %w", t, err)
+			return nil, fmt.Errorf("data reset: reading credential handles from %s.%s: %w", c.table, c.column, err)
 		}
 		for rows.Next() {
 			var ref string
 			if err := rows.Scan(&ref); err != nil {
 				rows.Close()
-				return nil, fmt.Errorf("data reset: reading a credential handle from %s: %w", t, err)
+				return nil, fmt.Errorf("data reset: reading a credential handle from %s.%s: %w", c.table, c.column, err)
 			}
 			refs = append(refs, ref)
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("data reset: reading credential handles from %s: %w", t, err)
+			return nil, fmt.Errorf("data reset: reading credential handles from %s.%s: %w", c.table, c.column, err)
 		}
 	}
 	return refs, nil
 }
 
-// tablesWithVaultRef lists the tables holding a credential handle, derived from
-// the catalog for the same reason resetTargetTables is: a new one enrols itself.
+// likeEscaped makes a literal safe as a LIKE pattern, using `!` as the escape
+// character rather than a backslash.
 //
-// Holding the COLUMN is the whole test. It used to also require a workspace_id,
-// which was the same set only while every connection table had one — and phase
-// D (ADR-0091 §8) is removing it table by table, so each connection table that
-// dropped it silently stopped being collected and left its sealed credential
-// resident after a reset. That is the same failure resetTargetTables already
-// had for the same reason, and it is why neither derivation may ask about a
-// column that is on its way out.
-func tablesWithVaultRef(ctx context.Context, tx pgx.Tx) ([]string, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT c.relname
+// `_` is a LIKE WILDCARD, so the suffix went in as "any character followed by
+// ref" — which finds `href` and `pref` as readily as `_ref`. Harmless only
+// because the vault decides what is a handle, and that is not a reason to ask
+// the wrong question.
+//
+// `!` and not `\`: a backslash has to survive a Go string, an SQL string and
+// LIKE itself, and Postgres rejects an ESCAPE that is not exactly one
+// character — which is what the first attempt produced. `!` cannot appear in a
+// pg_attribute name, so nothing needs escaping that is not being escaped here.
+func likeEscaped(s string) string {
+	return strings.NewReplacer("!", "!!", "_", "!_", "%", "!%").Replace(s)
+}
+
+// handleColumn is one place a keyvault handle can be written down.
+type handleColumn struct{ table, column string }
+
+// credentialHandleColumns lists them, derived from the catalog for the same
+// reason resetTargetTables is: a new one enrols itself.
+//
+// It asks only about the column, not about a workspace_id. It used to also
+// require one, which was the same set only while every connection table had
+// one — and phase D (ADR-0091 §8) is removing it table by table, so each
+// connection table that dropped it silently stopped being collected and left
+// its sealed credential resident after a reset. That is the same failure
+// resetTargetTables already had for the same reason, and it is why neither
+// derivation may ask about a column that is on its way out.
+//
+// vault_secret itself is excluded: its `ref` IS the handle rather than a
+// reference to one, and joining the table to itself would collect every secret
+// in the installation whether or not anything still points at it.
+func credentialHandleColumns(ctx context.Context, tx pgx.Tx) ([]handleColumn, error) {
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	suffixPos := arg("%" + likeEscaped(credentialHandleSuffix))
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT c.relname, a.attname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
 		JOIN pg_attribute a ON a.attrelid = c.oid
+		JOIN pg_type t ON t.oid = a.atttypid
 		WHERE n.nspname = 'public'
 		  AND c.relkind = 'r'
-		  AND a.attname = $1 AND a.attnum > 0 AND NOT a.attisdropped
-		ORDER BY c.relname`, vaultRefColumn)
+		  AND c.relname <> 'vault_secret'
+		  AND a.attname LIKE %s ESCAPE '!'
+		  AND t.typname IN ('text', 'varchar')
+		  AND a.attnum > 0 AND NOT a.attisdropped
+		ORDER BY c.relname, a.attname`, suffixPos), args...)
 	if err != nil {
-		return nil, fmt.Errorf("data reset: listing tables holding a credential handle: %w", err)
+		return nil, fmt.Errorf("data reset: listing columns that can hold a credential handle: %w", err)
 	}
 	defer rows.Close()
-	var out []string
+	var out []handleColumn
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
+		var c handleColumn
+		if err := rows.Scan(&c.table, &c.column); err != nil {
+			return nil, fmt.Errorf("data reset: listing columns that can hold a credential handle: %w", err)
 		}
-		out = append(out, name)
+		out = append(out, c)
 	}
 	return out, rows.Err()
 }

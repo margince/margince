@@ -1,13 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  EmptyState,
+  Field,
+  Modal,
+  TextInput,
+} from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
+import "./users-access.css";
 
 // What a seat will see, said by the server. The invite form asks before the
 // invite goes out; the answer is the evaluated policy — the same grants,
@@ -16,7 +26,6 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type AccessPreview = components["schemas"]["AccessPreview"];
 type Role = components["schemas"]["AccessPreviewRequest"]["role"];
-type Team = components["schemas"]["Team"];
 
 // The objects worth a line in the preview: the record kinds a rep works.
 const PREVIEW_OBJECTS = [
@@ -29,7 +38,13 @@ const PREVIEW_OBJECTS = [
 
 function useAccessPreview(role: Role, teamIds: string[]) {
   return useQuery({
-    queryKey: ["access-preview", role, [...teamIds].sort().join(",")],
+    // "en", not the reader's locale: this is a cache key, so the same set of
+    // teams has to spell the same key wherever it is read.
+    queryKey: [
+      "access-preview",
+      role,
+      [...teamIds].sort((a, b) => a.localeCompare(b, "en")).join(","),
+    ],
     queryFn: async (): Promise<AccessPreview> => {
       const { data, error } = await api.POST("/users/access-preview", {
         body: { role, team_ids: teamIds },
@@ -60,7 +75,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   const t = useT();
   const verbs = (object: string): string => {
     const grant = access.objects?.[object];
-    if (!grant || !grant.read) {
+    if (!grant?.read) {
       return t("users.access.none");
     }
     const parts = [t("users.access.read")];
@@ -106,35 +121,15 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
 // Membership is what resolves who may EDIT whose records now that customer
 // identity is readable by every seat, so this is where that is administered.
 
-function useTeams() {
-  return useQuery({
-    queryKey: ["teams"],
-    queryFn: async (): Promise<Team[]> => {
-      const { data, error } = await api.GET("/teams", {
-        params: { query: { limit: 200 } },
-      });
-      if (error) throwProblem(error);
-      return data.data;
-    },
-  });
-}
-
 export function TeamsCard() {
   const t = useT();
   const qc = useQueryClient();
-  const teams = useTeams();
-  const [draft, setDraft] = useState("");
-  const create = useMutation({
-    mutationFn: async (name: string) => {
-      const { data, error } = await api.POST("/teams", { body: { name } });
-      if (error) throwProblem(error);
-      return data;
-    },
-    onSuccess: () => {
-      setDraft("");
-      qc.invalidateQueries({ queryKey: ["teams"] });
-    },
-  });
+  // The shared roster read, not a second query of this card's own. Both spell
+  // the same list under the same cache key, so whichever mounted first decided
+  // what the other one read back — and only one of the two follows the
+  // endpoint's cursor to the end.
+  const teams = useRoster("team", true);
+  const teamsPartial = useRosterPartial("team", true);
   const archive = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await api.PATCH("/teams/{id}", {
@@ -146,80 +141,150 @@ export function TeamsCard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["teams"] }),
   });
   return (
-    <Panel title={t("users.teamsTitle")}>
-      <PanelBody className="form-stack">
-        <p className="t-caption">{t("users.teamsSub")}</p>
-        <QueryGate query={teams}>
-          {(list) =>
-            list.length === 0 ? (
-              <p className="t-small">{t("users.noTeamsYet")}</p>
-            ) : (
-              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                {list.map((team) => (
-                  <li
-                    key={team.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "var(--space-2)",
-                      padding: "var(--space-2) 0",
-                    }}
-                  >
-                    <span>
-                      {team.name}
-                      <span
-                        className="t-small"
-                        style={{ marginLeft: "var(--space-2)" }}
-                      >
-                        {t("users.teamMembers", {
-                          count: team.member_count ?? 0,
-                        })}
-                      </span>
-                    </span>
-                    <Button
-                      variant="ghost"
-                      aria-label={t("users.archiveTeam", { name: team.name })}
-                      disabled={archive.isPending}
-                      onClick={() => archive.mutate(team.id)}
-                    >
-                      <Trash2 aria-hidden size={16} />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )
-          }
-        </QueryGate>
-        <form
-          style={{ display: "flex", gap: "var(--space-2)" }}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const name = draft.trim();
-            if (name) create.mutate(name);
-          }}
-        >
-          <TextInput
-            value={draft}
-            aria-label={t("users.newTeamLabel")}
-            placeholder={t("users.newTeamPlaceholder")}
-            disabled={create.isPending}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={create.isPending || draft.trim() === ""}
-          >
-            {t("users.createTeam")}
-          </Button>
-        </form>
-        {(create.isError || archive.isError) && (
-          <span role="alert" className="form-error">
-            {problemMessageOf(create.error ?? archive.error, t)}
-          </span>
+    // The create verb sits on the title's own line, which is where a card-level
+    // create verb goes. It used to be the LAST ROW of the team list, labelled
+    // "New team" beside a button reading "Create team" — a row that was not a
+    // team, inside a list of teams, saying its own name twice.
+    <Panel title={t("users.teamsTitle")} titleAction={<NewTeamAction />}>
+      <PanelBody>
+        <p className="settings-panel-sub">{t("users.teamsSub")}</p>
+        {/* A refused archive belongs to the card, not to the row: the roster
+            below is refetched on success, so the only thing left to say is that
+            the write did not land. Callout's `danger` tone is what the rest of
+            this tab says that with — a bare `role="alert"` span took its
+            emphasis from nothing at all. */}
+        {archive.isError && (
+          <Callout tone="danger" live="alert">
+            {problemMessageOf(archive.error, t)}
+          </Callout>
         )}
+        <QueryGate query={teams}>
+          {(list) => {
+            // The roster hook serves users and teams alike, so narrow to the
+            // entries that actually carry a team's name rather than asserting
+            // the shape.
+            const rows = list.flatMap((entry) =>
+              "name" in entry ? [entry] : [],
+            );
+            return rows.length === 0 && !teamsPartial ? (
+              <EmptyState>
+                <p className="t-small">{t("users.noTeamsYet")}</p>
+              </EmptyState>
+            ) : (
+              // One team per row: the name and how many people are in it on the
+              // left, the verb that archives it on the right, at the one x every
+              // answer in settings sits at.
+              <SettingList>
+                {rows.map((team) => (
+                  <SettingRow
+                    key={team.id}
+                    label={team.name}
+                    // The roster's own count copy, which has a singular — this
+                    // row said "1 members" for a team of one.
+                    value={t(
+                      (team.member_count ?? 0) === 1
+                        ? "users.memberCount.one"
+                        : "users.memberCount.other",
+                      { count: team.member_count ?? 0 },
+                    )}
+                    control={
+                      <Button
+                        small
+                        variant="ghost"
+                        iconOnly
+                        aria-label={t("users.archiveTeam", { name: team.name })}
+                        disabled={archive.isPending}
+                        onClick={() => archive.mutate(team.id)}
+                      >
+                        <Trash2 aria-hidden />
+                      </Button>
+                    }
+                  />
+                ))}
+              </SettingList>
+            );
+          }}
+        </QueryGate>
+        {/* The card lists what there is, so a list that stopped short of the
+            end says so under the rows rather than reading as all of them. */}
+        <RosterPartialNote partial={teamsPartial} />
       </PanelBody>
     </Panel>
+  );
+}
+
+// Creating a team is one field, but it is the CARD's verb rather than one of the
+// card's rows — so it reads on the title line and the field it needs opens in a
+// dialog. The alternative kept a create form permanently open at the foot of a
+// list whose every other row was a team.
+function NewTeamAction() {
+  const t = useT();
+  const qc = useQueryClient();
+  const titleId = useId();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  // The name rides as the mutation's variable rather than through the closure:
+  // react-query re-arms a mutation's options in a passive effect, so a submit
+  // landing in that window would otherwise create a team under the PREVIOUS
+  // name — which is the one thing a team is.
+  const create = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await api.POST("/teams", { body: { name } });
+      if (error) throwProblem(error);
+      return data;
+    },
+    onSuccess: () => {
+      setDraft("");
+      // The dialog closes on the write that landed, never before it: a refused
+      // create has to leave the name where the admin typed it.
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["teams"] });
+    },
+  });
+  const ready = draft.trim() !== "" && !create.isPending;
+  return (
+    <>
+      {/* Named for what it opens; the dialog's submit reads "Create team", so
+          the two buttons on screen together are tellable apart. */}
+      <Button small onClick={() => setOpen(true)}>
+        {t("users.newTeamOpen")}
+      </Button>
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (ready) create.mutate(draft.trim());
+          }}
+        >
+          <h2 className="t-h3 modal-title" id={titleId}>
+            {t("users.newTeamLabel")}
+          </h2>
+          <Field label={t("users.teamNameLabel")} required>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={draft}
+                placeholder={t("users.newTeamPlaceholder")}
+                disabled={create.isPending}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            )}
+          </Field>
+          {/* `.form-stack` stretches its children, so the submit takes its own
+              trailing row rather than filling the dialog's width. */}
+          <div className="form-actions">
+            <Button type="submit" variant="primary" small disabled={!ready}>
+              {t("users.createTeam")}
+            </Button>
+          </div>
+          {create.isError && (
+            <Callout tone="danger" live="alert">
+              {problemMessageOf(create.error, t)}
+            </Callout>
+          )}
+        </form>
+      </Modal>
+    </>
   );
 }

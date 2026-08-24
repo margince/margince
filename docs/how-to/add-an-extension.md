@@ -14,7 +14,7 @@ specifically, the live capability is retention floors; the running example below
 An extension is its own Go module reaching the core through only the marker-allowlisted
 `backend/pkg/**` surface. **Presence under `extensions/` is the enablement** — there is no flag to
 flip. `extensions/notes` is the **reference unit** for a unit that owns data or serves routes — copy it
-first. `extensions/dispact-connector` is the reference for a unit that faces an outside provider:
+first. `extensions/relay-probe` is the reference for a unit that faces an outside provider:
 capture, a merge-key declaration, and a transport replies leave on. `extensions/de` (a jurisdiction
 pack), `extensions/yogi` (one served agent tool) and `fixtures/extensions/crm-hello` (the
 walking-skeleton) are the smaller shapes.
@@ -349,8 +349,9 @@ Four rules, each refused at generation because each fails somewhere worse otherw
 - **`private: true`.** A workspace member that is not private is one `pnpm publish -r` from a registry.
 - **`main` names a module that exists *inside* your `frontend/`**, and its **default export** is the
   screen. Relative is required and containment is checked, not just existence: the import gate scans
-  `extensions/*/frontend`, so a `main` of `../elsewhere/screen.tsx` would put your shipped code outside
-  the one thing holding the unit/core boundary.
+  every directory named `frontend` under `extensions/`, at any depth — so a `main` of
+  `../elsewhere/screen.tsx` would put your shipped code outside the one thing holding the unit/core
+  boundary.
 - **React, react-dom and `@tanstack/react-query` are PEERS, never dependencies.** Each keeps state the
   host owns — React's hook dispatcher, react-query's QueryClient context — and a second copy is a
   second, empty one. This is the rule that fails at *run time* if you get it wrong: hooks throw with a
@@ -360,7 +361,7 @@ Four rules, each refused at generation because each fails somewhere worse otherw
 **Import the core only through `@margince/frontend/<subpath>`** — `design-system`, `api`, `app`, as
 published by `frontend/package.json`'s `exports` map. That map is this side's
 `//margince:extension-surface`: the Go tier gets its boundary from the compiler, a bundler gives none,
-so `frontend/scripts/check-ext-imports.sh` is the boundary. It refuses a relative path escaping your
+so `frontend/scripts/ext-imports.test.ts` is the boundary. It refuses a relative path escaping your
 unit, an unpublished subpath, and any bare specifier your own `package.json` does not declare —
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
 
@@ -478,7 +479,7 @@ provider, and the core stamps it into every landed record's provenance:
 
 ```go
 Ingress: []extension.IngressSource{{
-	System: "dispact",                                    // lower kebab, ≤32 chars, STABLE
+	System: "relay",                                      // lower kebab, ≤32 chars, STABLE
 	Lands:  []extension.RecordKind{extension.KindActivity},
 	Merges: []extension.MergeKey{extension.MergeKeyEmail}, // optional; see below
 }},
@@ -524,7 +525,7 @@ A `Channel` declares a messaging provider your unit can carry messages on, so a 
 conversation you captured leaves through your unit rather than a surface of your own:
 
 ```go
-Channels: []extension.Channel{{Provider: "dispact", Send: send, Live: live}},
+Channels: []extension.Channel{{Provider: "relay", Send: send, Live: live}},
 ```
 
 ```go

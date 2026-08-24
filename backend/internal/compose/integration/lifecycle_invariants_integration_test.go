@@ -276,6 +276,75 @@ func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 	}
 }
 
+// domainCreateRepPerms is a rep who may CREATE an organization and is bounded
+// to their team. Both halves are load-bearing: without the create grant the
+// probe below never runs and the test reports a permission denial instead of a
+// disclosure verdict, and an unbounded caller can see every org, which makes
+// the withheld case unreachable.
+var domainCreateRepPerms = principal.Permissions{
+	RoleKeys: []string{"rep"},
+	Objects: map[string]principal.ObjectGrant{
+		"organization":          {Create: true, Read: true, Update: true},
+		"person":                {Create: true, Read: true, Update: true},
+		"installation_settings": {Read: true},
+	},
+	RowScope: principal.RowScopeTeam,
+}
+
+// A DOMAIN collision answers under the same disclosure rule as an email one,
+// and the domain half was untested: every existing case asserted the id IS
+// carried, so removing the visibility gate broke nothing.
+//
+// One test for four doors, because they share `claimedDomainOwner`: creating a
+// company, editing its domains, and saving its profile website all reach the
+// same probe, so the rule is held in one place for all of them.
+func TestDuplicateDomain409DoesNotDiscloseAnOrgOutOfScope(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+
+	hidden, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+		DisplayName: "Owned elsewhere GmbH", Source: "manual",
+		Domains: []people.OrgDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.MakeCapturePrivate(t, "organization", ids.UUID(hidden.Id), e.Rep3)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, domainCreateRepPerms)
+	_, err = e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+		DisplayName: "Duplicate attempt GmbH", Source: "manual",
+		Domains: []people.OrgDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
+	})
+	var dup *people.DuplicateDomainError
+	if !errors.As(err, &dup) {
+		t.Fatalf("duplicate domain → %v, want people.DuplicateDomainError", err)
+	}
+	if !dup.ExistingID.IsZero() {
+		t.Errorf("409 disclosed an out-of-scope organization %s", dup.ExistingID)
+	}
+
+	// And the same conflict against an org the rep CAN see keeps the id, so
+	// the "open the existing company" affordance survives for legitimate cases.
+	visible, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+		DisplayName: "Visible GmbH", Source: "manual",
+		Domains: []people.OrgDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+		DisplayName: "Duplicate attempt 2 GmbH", Source: "manual",
+		Domains: []people.OrgDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
+	})
+	if !errors.As(err, &dup) {
+		t.Fatalf("visible duplicate domain → %v, want people.DuplicateDomainError", err)
+	}
+	if dup.ExistingID != ids.From[ids.OrganizationKind](ids.UUID(visible.Id)) {
+		t.Errorf("409 for a visible duplicate carries %s, want the owner %s", dup.ExistingID, visible.Id)
+	}
+}
+
 // repPermsWithActivity extends the rep fixture with activity grants for
 // the timeline tests.
 func repPermsWithActivity() principal.Permissions {

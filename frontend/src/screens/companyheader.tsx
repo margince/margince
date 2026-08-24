@@ -3,7 +3,8 @@ import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
+import { useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
@@ -12,13 +13,17 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
-import { RECORD_ZONE } from "./company360";
 import { DecisionsChip } from "./companyapprovals";
 import { ComposeModal } from "./compose";
 import { joinMultiselectValue } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { EditAction } from "./edit";
-import { EntityRef, useRoster } from "./entityref";
+import {
+  EntityRef,
+  rosterMissLabel,
+  useRoster,
+  useRosterPartial,
+} from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
 import {
@@ -229,11 +234,26 @@ export function useCompanyReadOnlyReason(
 ): string | undefined {
   const t = useT();
   const overlay = useSorMode() === "overlay";
+  // The per-ROW question only. The object grant and the seat ceiling are the
+  // caller's to apply — every mount point here already ANDs `useCan` with this
+  // reason, and folding them in again would answer "no grant" as though it were
+  // a fact about the record.
+  const mine = org.writable ?? false;
+  // Archived first: it is the reason a reader can act on, by restoring the
+  // record. Ownership comes last because it is the standing state — a company
+  // that is simply somebody else's is not a problem to solve, it is who owns it.
   if (org.archived_at) {
     return t("record.archivedReadOnly");
   }
   if (overlay) {
     return t("overlay.partialWriteBack");
+  }
+  // An UNOWNED record is not "somebody else's" — it is nobody's yet, and the
+  // claim door is deliberately open to every seat. Reporting it read-only here
+  // would shut the one control that makes it writable, which is the opposite of
+  // what this reason is for.
+  if (!mine && org.owner_id) {
+    return t("record.notYoursToChange");
   }
   return undefined;
 }
@@ -249,7 +269,10 @@ export function CompanyLifecycleControl({
   org,
 }: Readonly<{ org: Organization }>) {
   const t = useT();
-  const canUpdate = useCan("organization", "update");
+  // useCanWrite, not useCan: these controls issue a PATCH, and the licensing
+  // middleware refuses a mutation from a read seat before RBAC is consulted.
+  // Gating on the grant alone offers an active control whose save is rejected.
+  const canUpdate = useCanWrite("organization", "update");
   const readOnlyReason = useCompanyReadOnlyReason(org);
   const patch = useCompanyFieldPatch(org);
   return (
@@ -285,21 +308,19 @@ export function CompanyLifecycleControl({
   );
 }
 
-// What to call an owner the roster's answer does not name, in the three
-// readings that answer has. "No longer in the user list" is a claim about a
-// read that came back WITHOUT them: over a read still in flight it reports the
-// owner as departed on the evidence of nothing having arrived, and over a read
-// that failed it turns a 403 or a dropped connection into a fact about who owns
-// the account. Shared by every control here that names the current owner, so
-// one of them cannot go on making the claim after the others stopped.
+// What to call an owner the roster's answer does not name. "No longer in the
+// user list" is a claim about a read that came back WITHOUT them, so it is the
+// only reading this screen supplies; the three that are not about an owner at
+// all — still reading, read failed, walk stopped short — belong to the roster
+// and are spelled once there. Shared by every control here that names the
+// current owner, so one of them cannot go on making the claim after the others
+// stopped.
 function unresolvedOwnerLabel(
   roster: Readonly<{ isPending: boolean; isError: boolean }>,
+  partial: boolean,
   t: ReturnType<typeof useT>,
 ): string {
-  if (roster.isPending) {
-    return t("common.loading");
-  }
-  return roster.isError ? t("ref.nameLoadFailed") : t("co.owner.notInRoster");
+  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
 }
 
 // Exported for the same reason as useCompanyFieldPatch/useCompanyReadOnlyReason
@@ -314,26 +335,31 @@ export function CompanyOwnerControl({
   hideLabel,
 }: Readonly<{ org: Organization; hideLabel?: boolean }>) {
   const t = useT();
-  const canUpdate = useCan("organization", "update");
+  // useCanWrite, not useCan: these controls issue a PATCH, and the licensing
+  // middleware refuses a mutation from a read seat before RBAC is consulted.
+  // Gating on the grant alone offers an active control whose save is rejected.
+  const canUpdate = useCanWrite("organization", "update");
   const readOnlyReason = useCompanyReadOnlyReason(org);
   const patch = useCompanyFieldPatch(org);
   const claim = useClaimRecord("organization", org.id, org.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
+  const rosterPartial = useRosterPartial("user", true);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
-  // The account's current owner may sit outside the roster's one page — a big
-  // workspace, a deactivated user — and a select whose current value is not an
-  // option renders blank. Naming them keeps the control honest about who owns
-  // it today even when it cannot resolve them; which sentence is honest is
-  // `unresolvedOwnerLabel`'s question, not this one's.
+  // The account's current owner may sit outside what the roster read — a
+  // deactivated user, or a workspace deeper than the walk reaches — and a select
+  // whose current value is not an option renders blank. Naming them keeps the
+  // control honest about who owns it today even when it cannot resolve them;
+  // which sentence is honest is `unresolvedOwnerLabel`'s question, not this
+  // one's.
   if (org.owner_id && !owners.some((user) => user.value === org.owner_id)) {
     owners.unshift({
       value: org.owner_id,
-      label: unresolvedOwnerLabel(roster, t),
+      label: unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
@@ -366,7 +392,7 @@ export function CompanyOwnerControl({
         }
         return (
           owners.find((user) => user.value === value)?.label ??
-          unresolvedOwnerLabel(roster, t)
+          unresolvedOwnerLabel(roster, rosterPartial, t)
         );
       }}
       // An unowned account is nobody's to change until somebody claims it, so
@@ -378,6 +404,33 @@ export function CompanyOwnerControl({
       }
     />
   );
+}
+
+// useCompanyVerbRefusal answers why the record's own verbs — edit, merge,
+// archive, share — are refused, or undefined when they are pressable.
+//
+// Two states refuse them, and they read the same to a user: the record is
+// archived, or it is somebody else's. Both are facts about the RECORD, so both
+// take STATE-4a's answer — the verb stays visible and says why, because a
+// missing button reads as a build without the feature.
+//
+// Overlay is deliberately NOT one of them, which is why this is its own function
+// rather than useCompanyReadOnlyReason. Overlay's sentence says a write reaches
+// the incumbent only in part: a caveat on a write that still happens, not a
+// reason it is refused. Disabling these verbs on it would take away edits the
+// mirror does support.
+//
+// An UNOWNED record is not one either. Nobody owns it yet, and the verbs that
+// let a reader take it on stay pressable.
+function useCompanyVerbRefusal(org: Organization): string | undefined {
+  const t = useT();
+  if (org.archived_at) {
+    return t("record.archivedReadOnly");
+  }
+  if (org.owner_id && !(org.writable ?? false)) {
+    return t("record.notYoursToChange");
+  }
+  return undefined;
 }
 
 // useClaimRecord is the claim door: POST /records/{type}/{id}/claim makes the
@@ -420,6 +473,7 @@ function CompanyEditAction({
   const t = useT();
   const cf = useObjectCustomFields("organization");
   const roster = useRoster("user", true);
+  const rosterPartial = useRosterPartial("user", true);
   // The roster hook serves users and teams alike, so narrow to the entries
   // that actually carry a person's name rather than asserting the shape.
   const owners = (roster.data ?? []).flatMap((entry) =>
@@ -427,16 +481,16 @@ function CompanyEditAction({
       ? [{ id: entry.id, display_name: entry.display_name }]
       : [],
   );
-  // The roster is one page of 200. An owner outside it — a big workspace, a
-  // deactivated user — would leave the prefilled select showing a blank it
-  // cannot resolve, and since the select is required once an owner is set,
-  // saving anything else would then force a reassignment nobody asked for. The
-  // form names them exactly as the header does, off the same three readings:
+  // An owner outside what the roster read — a deactivated user, or a workspace
+  // deeper than the walk reaches — would leave the prefilled select showing a
+  // blank it cannot resolve, and since the select is required once an owner is
+  // set, saving anything else would then force a reassignment nobody asked for.
+  // The form names them exactly as the header does, off the same four readings:
   // the same roster read cannot be a departure here and a refusal there.
   if (org.owner_id && !owners.some((user) => user.id === org.owner_id)) {
     owners.push({
       id: org.owner_id,
-      display_name: unresolvedOwnerLabel(roster, t),
+      display_name: unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
   return (
@@ -530,7 +584,8 @@ export function CompanyActionBadges({
   // whether these verbs are refused.
   const ownReasonId = useId();
   const menuReasonId = archivedReasonId ?? ownReasonId;
-  const refusedByArchive = org.archived_at ? menuReasonId : undefined;
+  const refusedReason = useCompanyVerbRefusal(org);
+  const refusedByState = refusedReason ? menuReasonId : undefined;
   return (
     <>
       {/* What the company IS to us. Where it STANDS is a separate question,
@@ -549,15 +604,15 @@ export function CompanyActionBadges({
           and the sentence refusing them travels with them. Only a panel with
           no items at all would be worth hiding. */}
       <OverflowMenu label={t("record.moreActions")}>
-        {org.archived_at && !archivedReasonId && (
+        {refusedReason && !archivedReasonId && (
           <p id={ownReasonId} className="t-caption">
-            {t("record.archivedReadOnly")}
+            {refusedReason}
           </p>
         )}
         <CompanyEditAction
           org={org}
           overlay={overlay}
-          disabledReasonId={refusedByArchive}
+          disabledReasonId={refusedByState}
         />
         {/* Merge has no incumbent-first projection — the seam refuses it
             outright (overlay/provider_writes.go Merge) — unlike
@@ -566,7 +621,7 @@ export function CompanyActionBadges({
             its answer: there is no fact about this account to report. */}
         {!overlay && (
           <MergeAction
-            disabledReasonId={refusedByArchive}
+            disabledReasonId={refusedByState}
             label={t("merge.org")}
             sourceId={org.id}
             sourceName={org.display_name}
@@ -596,7 +651,7 @@ export function CompanyActionBadges({
           />
         )}
         <ArchiveAction
-          disabledReasonId={refusedByArchive}
+          disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}
           archive={async () => {
@@ -620,7 +675,7 @@ export function CompanyActionBadges({
           <ShareAction
             recordType="organization"
             recordId={org.id}
-            disabledReasonId={refusedByArchive}
+            disabledReasonId={refusedByState}
           />
         )}
         {/* The way in to the partner programme for an account that has none.
@@ -628,7 +683,7 @@ export function CompanyActionBadges({
             partner row would be unreachable — this is the same form, asked
             for rather than offered. */}
         {!overlay && !(org.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByArchive} onClick={onSetUpPartner}>
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
             {t("org.partnerSetUp")}
           </Button>
         )}
@@ -750,15 +805,16 @@ export function CompanyIdentityLine({
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
+  const recordZone = useRecordZone();
   // WHO wrote this record, by name. The roster is the page's existing one —
   // CompanyOwnerControl on the line above already reads it, and both share
   // react-query's `["users"]` entry, so this adds no request.
   //
   // Undefined on a roster miss, deliberately: `ProvenanceTag` falls back to
-  // "typed by a person", which is true. The roster reads one page of 200 users,
-  // so an author outside it would otherwise be named with the raw uuid the
-  // generic reference renders — and "typed by 3f2b8c…" is worse than not
-  // claiming to know, not better.
+  // "typed by a person", which is true. The roster walk is bounded, and an
+  // author it never reached — or one deactivated out of the list since — would
+  // otherwise be named with the raw uuid the generic reference renders, and
+  // "typed by 3f2b8c…" is worse than not claiming to know, not better.
   const roster = useRoster("user", true);
   const authorName = (userId: string) => {
     const entry = roster.data?.find((candidate) => candidate.id === userId);
@@ -767,7 +823,7 @@ export function CompanyIdentityLine({
   // Withheld or still in flight, the line says nothing about it: naming no way
   // in on an account that has one is worse than saying nothing.
   const wayIn = loading ? undefined : view?.strength;
-  const when = (at: string) => formatDateAbbrev(at, locale, RECORD_ZONE);
+  const when = (at: string) => formatDateAbbrev(at, locale, recordZone);
   // Withheld, absent, or still in flight, the line says nothing about it at
   // all: "never contacted" read off data the page could not answer is a
   // business conclusion it has no basis for, and it is the one a rep would

@@ -85,7 +85,11 @@ func setupForecast(t *testing.T) *forecastEnv {
 	if _, err := owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Forecast"'::jsonb),
 			('installation.base_currency', '"EUR"'::jsonb),
-			('installation.timezone', '"UTC"'::jsonb)
+			('installation.timezone', '"UTC"'::jsonb),
+			-- January, seeded explicitly rather than left absent: the period
+			-- buckets read it, and a fixture that relied on the registered
+			-- default would assert against a row nothing wrote.
+			('installation.fiscal_year_start_month', '1'::jsonb)
 		 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
 		t.Fatalf("seeding the installation settings: %v", err)
 	}
@@ -529,5 +533,102 @@ func TestTheForecastBucketsInTheZoneTheSettingNames(t *testing.T) {
 	if got := e.forecastStatus(e.Admin(), body); got == http.StatusOK {
 		t.Error("the forecast still answered 200 with an unresolvable zone in the setting; " +
 			"the slipped-category dimension never consulted it")
+	}
+}
+
+// What is a partner bringing us THIS quarter — the pipeline question, asked of
+// the same dimension deals-by-stage answers about what already landed.
+//
+// It was on one of the two deal reports and not the other, so "revenue by
+// partner" could be read backwards and never forwards.
+func TestForecastGroupsThePipelineByPartner(t *testing.T) {
+	e := setupForecast(t)
+	northgate := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Northgate', 'manual', 'human:x')`)
+	kestrel := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Kestrel', 'manual', 'human:x')`)
+	// Open deals only: the forecast's baseWhere is the pipeline, not history.
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'Northgate open one', $2, $3, $4, 'sourced', 30000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], northgate)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'Northgate open two', $2, $3, $4, 'influenced', 20000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], northgate)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'Kestrel open', $2, $3, $4, 'sourced', 70000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], kestrel)
+
+	result := e.runReport(e.Admin(), t, "forecast",
+		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
+
+	byPartner := map[string]int64{}
+	for _, row := range result.Rows {
+		id, ok := row["partner_org_id"].(string)
+		if !ok {
+			continue
+		}
+		byPartner[id] = wireInt(t, row, "unweighted_minor")
+	}
+	if got := byPartner[northgate.String()]; got != 50000 {
+		t.Errorf("Northgate open pipeline = %d, want 50000 (both of their open deals)", got)
+	}
+	if got := byPartner[kestrel.String()]; got != 70000 {
+		t.Errorf("Kestrel open pipeline = %d, want 70000", got)
+	}
+}
+
+// Narrowing the forecast to ONE partner, the dial the deals screen offers.
+func TestForecastNarrowsToOnePartner(t *testing.T) {
+	e := setupForecast(t)
+	wanted := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)
+	other := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'Theirs', $2, $3, $4, 'sourced', 40000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], wanted)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'Somebody else', $2, $3, $4, 'sourced', 90000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], other)
+
+	result := e.runReport(e.Admin(), t, "forecast",
+		fmt.Sprintf(`{"group_by":["partner_org_id"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}],"filters":{"partner_org_id":%q}}`, wanted.String()))
+
+	// One row, and it is theirs. A filter that returned both would read as a
+	// working narrow to anyone who only checked the partner they asked for.
+	if len(result.Rows) != 1 {
+		t.Fatalf("rows = %d, want exactly the one partner asked for", len(result.Rows))
+	}
+	if id, _ := result.Rows[0]["partner_org_id"].(string); id != wanted.String() {
+		t.Errorf("row names partner %s, want %s", id, wanted)
+	}
+	if got := wireInt(t, result.Rows[0], "unweighted_minor"); got != 40000 {
+		t.Errorf("filtered total = %d, want 40000", got)
+	}
+}
+
+// The disclosure guard, the same one deals-by-stage carries: an aggregate must
+// not name a partner the caller's own deal read would mask, and an aggregate
+// has no per-row place to write "withheld".
+func TestForecastByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
+	e := setupForecast(t)
+	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+		VALUES ($1, $2, 'Hidden Partners', 'owner', 'manual', 'human:x')`, e.Rep3)
+	open := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+		VALUES ($1, 'Open Partners', 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'From the hidden partner', $2, $3, $4, 'sourced', 90000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], hidden)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, status, source, captured_by)
+		VALUES ($1, 'From the open partner', $2, $3, $4, 'sourced', 10000, 'EUR', 'open', 'manual', 'human:x')`, e.pipeline, e.stages[60], open)
+
+	reader := e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
+	result := e.runReport(reader, t, "forecast",
+		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
+
+	for _, row := range result.Rows {
+		if id, ok := row["partner_org_id"].(string); ok && id == hidden.String() {
+			t.Errorf("the forecast named partner %s, which this caller's own deal read masks", id)
+		}
+	}
+	// The clause narrows; it does not blank the dimension.
+	var sawOpen bool
+	for _, row := range result.Rows {
+		if id, ok := row["partner_org_id"].(string); ok && id == open.String() {
+			sawOpen = true
+		}
+	}
+	if !sawOpen {
+		t.Error("the partner this caller CAN open was dropped too — the clause blanked the dimension rather than narrowing it")
 	}
 }

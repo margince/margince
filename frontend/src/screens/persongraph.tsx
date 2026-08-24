@@ -3,8 +3,10 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 
 type Graph = components["schemas"]["PersonGraph"];
@@ -301,6 +303,8 @@ function EdgeFacts({
   anchorId: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Whom this edge joins the SELECTED node to. Both ends have to be read,
   // because an account-arm edge need not touch the anchor at all: reading `to`
   // alone named the selected node as its own counterpart whenever the edge
@@ -356,7 +360,9 @@ function EdgeFacts({
           {receipts.map((r) => (
             <li key={r.activity_id}>
               {r.subject ?? t("person.graph.untitledMessage")} ·{" "}
-              {new Date(r.occurred_at).toLocaleDateString()}
+              {/* The record's zone: a receipt is evidence of when a message
+                  happened, so every reader of this edge names the same day. */}
+              {formatDate(r.occurred_at, locale, recordZone)}
             </li>
           ))}
         </ul>

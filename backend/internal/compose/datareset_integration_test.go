@@ -16,10 +16,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/platform/config"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -569,12 +572,33 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 
 	vault := resetTestVault(t, e)
 	wsID := ids.From[ids.WorkspaceKind](e.WS)
-	mine, err := vault.Put(ctx, wsID, []byte("an incumbent's oauth refresh token"))
-	if err != nil {
-		t.Fatalf("sealing the credential under test: %v", err)
+	seal := func(what string) string {
+		t.Helper()
+		ref, err := vault.Put(ctx, wsID, []byte(what))
+		if err != nil {
+			t.Fatalf("sealing %s: %v", what, err)
+		}
+		return string(ref)
 	}
+
+	// One per SPELLING, not one per table. The handle column is called
+	// `credential_ref` on the connection tables, `vault_ref` on
+	// extension_secret and `signing_secret_ref` on webhook_subscription — and
+	// this test used to seed only the first, which is exactly why the
+	// collection could be written against one name and look correct. A test
+	// that exercises the spelling the code already knows about cannot fail on
+	// the spellings it does not.
+	mine := seal("an incumbent's oauth refresh token")
+	extension := seal("an extension's api key")
+	signing := seal("a webhook's signing secret")
+
 	e.WsExec(t, `INSERT INTO incumbent_connection (id, incumbent, region, status, credential_ref)
-		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), string(mine))
+		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), mine)
+	e.WsExec(t, `INSERT INTO extension_secret (id, extension_name, key, vault_ref)
+		VALUES ($1, 'relay-probe', 'api_key', $2)`, ids.NewV7(), extension)
+	e.WsExec(t, `INSERT INTO webhook_subscription (id, owner_id, target_url, event_types, signing_secret_ref)
+		VALUES ($1, $2, 'https://example.test/hook', ARRAY['person.created'], $3)`,
+		ids.NewV7(), e.AdminUser, signing)
 
 	h := dataResetHandlers{
 		pool:             e.Pool,
@@ -587,12 +611,18 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	if _, err := vault.Get(ctx, wsID, mine); !errors.Is(err, keyvault.ErrNotFound) {
-		t.Errorf("the sealed credential outlived the reset (Get returned %v) — a wipe that leaves credential material resident is not a clean slate", err)
+	for _, c := range []struct{ what, ref string }{
+		{"the incumbent connection's credential_ref", mine},
+		{"the extension secret's vault_ref", extension},
+		{"the webhook subscription's signing_secret_ref", signing},
+	} {
+		if _, err := vault.Get(ctx, wsID, keyvault.Ref(c.ref)); !errors.Is(err, keyvault.ErrNotFound) {
+			t.Errorf("%s outlived the reset (Get returned %v) — a wipe that leaves credential material resident is not a clean slate", c.what, err)
+		}
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE action = 'reset_data' AND evidence->>'secrets_purged' = '1'`); got != 1 {
-		t.Errorf("reset_data rows recording one purged secret = %d, want 1", got)
+		WHERE action = 'reset_data' AND evidence->>'secrets_purged' = '3'`); got != 1 {
+		t.Errorf("reset_data rows recording three purged secrets = %d, want 1", got)
 	}
 }
 
@@ -609,4 +639,66 @@ func resetTestVault(t *testing.T, e *integration.Env) keyvault.Vault {
 		t.Fatalf("building the test vault: %v", err)
 	}
 	return vault
+}
+
+// TestResetKeepsTheDeploymentCredentialsSealedBeforeIt: the mirror image of the
+// purge above, and the half that is easy to lose.
+//
+// The relay password and the license token are sealed into the same vault, but
+// their refs live in `setting` rather than in a `credential_ref` column, so the
+// purge never collects them — which is correct, because those two must SURVIVE
+// a reset. A reset returns the installation to first-boot state without
+// re-creating it, and an installation that came back without its license would
+// refuse to serve in production over a wipe that was supposed to be routine.
+//
+// Both halves have to agree: `vault_secret` is in preservedResetTables and both
+// entries are marked AsInstallationIdentity. Dropping either marker leaves a ref
+// pointing at nothing or a blob nobody names, and neither failure is visible
+// until the next boot.
+func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+
+	vault := resetTestVault(t, e)
+	wsID := ids.From[ids.WorkspaceKind](e.WS)
+	// Sealed through the real boot path, not by hand. No seeded role holds
+	// license:update — that is the point of the entry — so a hand-written row
+	// would need a principal the product never uses, and would prove nothing
+	// about the row the product actually writes.
+	cfg, err := deployconfig.Parse([]byte("version: 1\nlicense:\n  token: ${env:LICENSE_TOKEN}\n"))
+	if err != nil {
+		t.Fatalf("parsing the deployment file: %v", err)
+	}
+	source := SealedLicenseTokenSource(context.Background(), e.Pool, vault, cfg,
+		config.Static(map[string]string{"LICENSE_TOKEN": "a license token"}),
+		slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if _, err := source(); err != nil {
+		t.Fatalf("sealing the credential under test: %v", err)
+	}
+	ref, err := settings.Get(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
+	if err != nil {
+		t.Fatalf("reading the recorded ref: %v", err)
+	}
+
+	h := dataResetHandlers{
+		pool:             e.Pool,
+		seeds:            deployconfig.Seeds{},
+		dataResetAllowed: true,
+		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
+		vault:            vault,
+	}
+	if _, err := h.run(ctx, "Authz"); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	after, err := settings.Get(bootCtx(context.Background(), e.WS, secretSealActor), NewSettingsStore(e.Pool), identity.LicenseTokenRef)
+	if err != nil {
+		t.Fatalf("reading the ref after the reset: %v", err)
+	}
+	if after != ref {
+		t.Fatalf("the reset left the license ref as %q, want the sealed ref — the next boot has no license", after)
+	}
+	if _, err := vault.Get(ctx, wsID, keyvault.Ref(ref)); err != nil {
+		t.Errorf("the sealed license did not survive the reset (Get returned %v) — the ref survived but points at nothing", err)
+	}
 }

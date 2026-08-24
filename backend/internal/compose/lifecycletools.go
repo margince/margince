@@ -22,8 +22,8 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,6 +43,38 @@ func (a activityRelinker) RelinkActivity(
 	return json.Marshal(out)
 }
 
+// RelinkThread and RelinkActivities reach the store's batch doors, which
+// perform the single relink's guarded write per row; the count-and-ids answer
+// is marshalled here as the contract shape the REST route serves.
+func (a activityRelinker) RelinkThread(
+	ctx context.Context, threadKey string, entityType string, entityID ids.UUID, replaceExistingOfType bool,
+) (json.RawMessage, error) {
+	out, err := a.store.RelinkThread(ctx, threadKey, activities.RelinkActivityInput{
+		EntityType: entityType, EntityID: entityID, ReplaceExistingOfType: replaceExistingOfType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(relinkBatchWire(out))
+}
+
+func (a activityRelinker) RelinkActivities(
+	ctx context.Context, activityIDs []ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool,
+) (json.RawMessage, error) {
+	out, err := a.store.RelinkActivities(ctx, activityIDs, activities.RelinkActivityInput{
+		EntityType: entityType, EntityID: entityID, ReplaceExistingOfType: replaceExistingOfType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(relinkBatchWire(out))
+}
+
+// relinkBatchWire is the tool door's spelling of the REST handler's answer.
+func relinkBatchWire(out activities.RelinkBatchResult) agents.RelinkBatchResult {
+	return agents.RelinkBatchResult{Relinked: out.Relinked}
+}
+
 type leadDisqualifier struct{ store *people.Store }
 
 func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error) {
@@ -53,12 +85,12 @@ func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID) (json
 	return json.Marshal(out)
 }
 
-type projectPhaseAdvancer struct{ store *deals.Store }
+type projectPhaseAdvancer struct{ store *projects.Store }
 
 func (p projectPhaseAdvancer) AdvanceProjectPhase(
 	ctx context.Context, id ids.UUID, toPhase string, reason *string, ifVersion *int64,
 ) (json.RawMessage, error) {
-	out, err := p.store.AdvanceProjectPhase(ctx, ids.From[ids.ProjectKind](id), deals.AdvanceProjectPhaseInput{
+	out, err := p.store.AdvanceProjectPhase(ctx, ids.From[ids.ProjectKind](id), projects.AdvanceProjectPhaseInput{
 		ToPhase:   toPhase,
 		Reason:    reason,
 		IfVersion: ifVersion,
@@ -120,5 +152,5 @@ func (c companyEnricher) EnrichCompany(
 func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, projectPhaseAdvancer) {
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
 		leadDisqualifier{store: people.NewStore(InstallationDB(pool))},
-		projectPhaseAdvancer{store: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+		projectPhaseAdvancer{store: ProjectsStore(pool)}
 }

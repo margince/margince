@@ -157,6 +157,8 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, correction st
 // The caller's intent is the one input outside the fence, and it is outside
 // because the caller typed it: fencing a person's own instruction would tell
 // the model to treat the reader as an attacker.
+//
+//promptvoice:exempt the reply is an email the salesperson sends under their OWN name. Margince's personality inside a customer-facing draft would be Margince signing somebody else's mail; compose/draftrules carries the user's own voice instead.
 func groundedRequest(in Input) (model.Request, error) {
 	fence := promptfence.New()
 	payload, err := json.Marshal(fencedInput(in))
@@ -194,7 +196,12 @@ func fencedInput(in Input) Input {
 // certification case, which drives the same parse the runtime does.
 func ParseDraft(raw string, in Input) (Draft, error) {
 	var out modelDraft
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+	// ai.Unfence, not the raw text: a model that wraps its JSON in a ```json
+	// fence answers correctly and would fail this parse. The reply surface
+	// already strips the fence, so without this the SAME model succeeds when it
+	// answers a reply and fails when it writes a draft — and ai.Unfence's own
+	// doc says callers must not each invent their own trim.
+	if err := json.Unmarshal([]byte(ai.Unfence(raw)), &out); err != nil {
 		return Draft{}, fmt.Errorf("account draft response: %w", err)
 	}
 	subject := strings.TrimSpace(out.Subject)

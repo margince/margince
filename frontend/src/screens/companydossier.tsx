@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import { RECORD_ZONE, SentenceList, WrittenBy } from "./company360";
+import { SentenceList, WrittenBy } from "./record360";
 
 type Dossier = components["schemas"]["OrganizationDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];
@@ -47,6 +48,7 @@ export function DossierPanel({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const recordZone = useRecordZone();
   const dossier = useQuery({
     queryKey: ["org-dossier", orgId],
     enabled,
@@ -109,7 +111,7 @@ export function DossierPanel({
       )}
       <span className="t-small">
         {t("co.brief.generatedAt", {
-          when: formatDateTime(readable.generated_at, locale, RECORD_ZONE),
+          when: formatDateTime(readable.generated_at, locale, recordZone),
         })}
       </span>
       <Button

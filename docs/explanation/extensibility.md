@@ -11,7 +11,7 @@ already ships four:
 | `extensions/de` | The German jurisdiction pack — statutory retention floors, and nothing else |
 | `extensions/yogi` | The reference unit that serves one governed agent tool |
 | `extensions/notes` | The reference extension for a unit that owns data: its own table under RLS, six governed operations, its own RBAC object, a stored signing key it signs with and never emits, and a scheduled heartbeat |
-| `extensions/dispact-connector` | The reference unit that reaches the outside world: it captures messages from its provider and carries replies back out on its own transport |
+| `extensions/relay-probe` | The reference unit that reaches the outside world: it captures messages from its provider and carries replies back out on its own transport |
 
 This page is for a contributor who wants the whole idea first, then the detail. Start here; to
 actually *build* a unit, jump to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -182,7 +182,7 @@ blast radius before enabling it:
 
 The returned `extension.Extension` literal and every field the manifest derives must be literal
 values; an unrecognized field fails generation with its position rather than producing a manifest
-that silently omits a request. That is why a unit spells `"dispact"` twice rather than sharing a
+that silently omits a request. That is why a unit spells `"relay"` twice rather than sharing a
 constant between its ingress source and its channel — the reader is static and resolves no
 constants, and a test holds the two strings equal. The manifest is committed with the unit and
 drift-gated like the contract; its digest rides in `composition.json` per unit.
@@ -357,7 +357,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   Authority is the mirror image of `tx.Core()`'s: an ingest is refused from an ATTENDED invocation, and
   it runs on the LIVE authority of the member named in `on` — who must currently hold one of this unit's
   user-scoped secrets, because depositing a credential with a unit is the act that says "act for me
-  here". `extensions/dispact-connector` is the unit that exercises the path end to end.
+  here". `extensions/relay-probe` is the unit that exercises the path end to end.
 
 - **Its own messaging transport** — a `Channel` declares a provider the unit can carry messages on, so
   a rep's reply to a captured conversation leaves through the unit, on the member's own credential,
@@ -387,7 +387,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
 
 - **Its own frontend** — a `frontend/` directory whose screen is aliased into the SPA and rendered at
   the unit's route. Removing a unit is a one-place operation again: delete the unit directory. An
-  import gate (`frontend/scripts/check-ext-imports.sh`) holds a unit screen to the published surface,
+  import gate (`frontend/scripts/ext-imports.test.ts`) holds a unit screen to the published surface,
   the same way the Go marker gate holds its handlers.
 
 **The one upstream-owned file a unit may edit: `pnpm-lock.yaml`.** A unit frontend that declares npm
@@ -461,8 +461,9 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | A declaration the composer cannot honour is refused rather than discarded — an unknown job role, governance declared on the wrong half of a pair, a `$ref` in an advertised schema, a multi-document base contract | `backend/tools/gen-composition` |
 | Every declared extension operation is mounted, and every mounted route was declared | `backend/internal/compose/extparity_test.go` |
 | A unit's served tool is dispatched only by that unit's own route — one unit cannot inherit another's handler by naming its verb | `backend/internal/compose/extparity_test.go` |
-| A unit's SCREEN reaches the core only through the published surface (`frontend/package.json`'s `exports`), and npm only through what its own package declares | `frontend/scripts/check-ext-imports.sh`, itself tested by `check-ext-imports.test.sh` |
-| A unit's screen is held to the same design system as core — tokens, icons, spacing, no native dropdown | the four `frontend/scripts/check-*.sh` gates, which sweep `extensions/*/frontend` as well as `frontend/src` |
+| A unit's SCREEN reaches the core only through the published surface (`frontend/package.json`'s `exports`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts` — a vitest fitness function over the TypeScript AST, carrying its own fixture suite |
+| A unit's screen is held to the same design system as core — tokens, icons, spacing | `check-ds-purity.sh`, `check-icon-glyph.sh` and `check-ds-spacing.sh`, which sweep `extensions/*/frontend` as well as `frontend/src`. **`check-font-lock.sh` and `check-space-tokens.sh` read `frontend/src` only**, so a unit's fonts and spacing tokens are ungated ([#2407](https://github.com/margince/margince/issues/2407)) |
+| …and renders no native dropdown | `frontend/src/design-system/native-controls.test.ts` — a vitest fitness function over the TypeScript AST, reaching every extension frontend layer at any depth |
 | A unit cannot ship a second copy of state the host owns (React's hook dispatcher, react-query's QueryClient) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches a transitive one |
 | A unit's copy is namespaced to that unit and cannot rewrite a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | A unit screen's own test suite is RUN, not merely typechecked | `frontend/vitest.ext.config.ts` via `make fe-test-ext`, which `make check-fe` calls |
@@ -497,7 +498,7 @@ the whole path).
 | The first-party German pack | `extensions/de/de.go` |
 | The reference served-tool unit | `extensions/yogi/yogi.go` |
 | The reference extension (every capability) | `extensions/notes/notes.go` |
-| The reference connector: ingress, merge key, transport | `extensions/dispact-connector/dispact.go`, `record.go`, `send.go` |
+| The reference connector: ingress, merge key, transport | `extensions/relay-probe/relayprobe.go`, `record.go`, `send.go` |
 | Its screen, in the unit's own workspace package | `extensions/notes/frontend/screen.tsx` |
 | That screen's tests, and the lane that runs them | `extensions/notes/frontend/screen.test.tsx`, `frontend/vitest.ext.config.ts` |
 | The reference fixture | `fixtures/extensions/crm-hello/crmhello.go` |

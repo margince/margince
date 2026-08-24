@@ -4,7 +4,7 @@
 package compose
 
 // The REST door's half of the four record-lifecycle commands
-// (gradionhq/margince-poc-v1#928 task 7): graduating a lead, retiring one,
+// (margince/margince#928 task 7): graduating a lead, retiring one,
 // stepping a project along its phase ladder, and moving a deal between stages.
 // Each names its record in the route and its operands in the body, and each
 // has a tool-door twin resolving the identical command

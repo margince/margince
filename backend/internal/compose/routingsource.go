@@ -20,8 +20,13 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,6 +34,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/platform/config"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -99,7 +105,80 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 	if stored.Unconfigured() {
 		return ai.RoutingConfig{}, nil
 	}
-	return ai.FromStored(stored, keys)
+	lookup, credentials := sealedKeys(ctx, pool, ws, keys, log)
+	cfg, err := ai.FromStored(stored, lookup)
+	if err != nil {
+		return ai.RoutingConfig{}, err
+	}
+	return cfg.WithCredentialVersion(credentials), nil
+}
+
+// sealedKeys upgrades the environment lookup to one that resolves a provider's
+// BYOK key from the vault, sealing any the environment still carries.
+//
+// Built here rather than passed in because this is where the workspace is
+// already resolved, and both roles would otherwise construct the same thing
+// from the same three inputs. A second vault instance costs nothing: it holds a
+// pool and an AEAD derived from the root key, and no state that two of them
+// could disagree about.
+//
+// An installation with no vault configured gets the environment unchanged,
+// which is where every installation was before this existed.
+func sealedKeys(ctx context.Context, pool *pgxpool.Pool, ws ids.UUID, env config.Lookup, log *slog.Logger) (config.Lookup, string) {
+	vault, configured, err := keyvault.FromEnv(ctx, pool, env)
+	if err != nil || !configured {
+		if err != nil {
+			// Not fatal HERE, deliberately. FromEnv refuses a boot that finds
+			// sealed ciphertext with no root key, so by the time this runs the
+			// serving roles have already had their say on whether the vault is
+			// survivable. What is left for this path is a vault that cannot be
+			// built at all, and provider keys still resolve from the
+			// environment — which is where every installation kept them before
+			// the vault existed.
+			log.WarnContext(ctx, "the key vault is configured but unusable; provider credentials resolve from the environment this boot", "error", err)
+		}
+		return env, ""
+	}
+	workspace := ids.From[ids.WorkspaceKind](ws)
+	refs := SealProviderKeys(ctx, pool, vault, workspace, env, log)
+	return ai.SealedKeys(ctx, vault, workspace, refs, env), credentialDigest(refs)
+}
+
+// credentialDigest fingerprints the provider→ref map a binding resolves with, so
+// a rotated or removed key is observable to a watcher that would otherwise see
+// an identical routing digest and keep serving the old credential.
+//
+// Over the REFS, never the secrets: a ref is an opaque handle, and the digest of
+// one tells a reader only whether it moved. Sorted, because a map's iteration
+// order is not stable and an unsorted digest would report a change on every
+// tick.
+//
+// The empty map digests to the empty string rather than to a hash of nothing, so
+// an installation with no vault and one with a vault holding no keys compare
+// equal — neither has a credential to fall behind on.
+func credentialDigest(refs map[string]string) string {
+	if len(refs) == 0 {
+		return ""
+	}
+	providers := make([]string, 0, len(refs))
+	for provider := range refs {
+		providers = append(providers, provider)
+	}
+	sort.Strings(providers)
+	// Rendered to one string and hashed once, rather than written into the hash
+	// incrementally: a hash.Hash's Write never fails, but a call whose error is
+	// ignored reads exactly like one that should have been handled.
+	var canonical strings.Builder
+	for _, provider := range providers {
+		// Length-prefixed so no two different maps can render the same bytes —
+		// {"ab":"c"} and {"a":"bc"} concatenate identically without it.
+		canonical.WriteString(strconv.Itoa(len(provider)))
+		canonical.WriteString(":" + provider + "=")
+		canonical.WriteString(strconv.Itoa(len(refs[provider])))
+		canonical.WriteString(":" + refs[provider] + ";")
+	}
+	sum := sha256.Sum256([]byte(canonical.String()))
+	return hex.EncodeToString(sum[:])
 }
 
 // routingCtx binds the boot's system principal on the installation's
@@ -107,9 +186,16 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 // how the worker's sweeps read their settings too — the alternative would be an
 // ungated read, and `setting` has no RLS beneath that gate.
 func routingCtx(ctx context.Context, ws ids.UUID) context.Context {
+	return bootCtx(ctx, ws, routingSeedActor)
+}
+
+// bootCtx is that same binding for any boot-time settings read: the workspace,
+// a named system actor, and a correlation id, so a settings write made before
+// any request exists is still attributable to the thing that made it.
+func bootCtx(ctx context.Context, ws ids.UUID, actor string) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: routingSeedActor,
+		Type: principal.PrincipalSystem, ID: actor,
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }

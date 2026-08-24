@@ -22,18 +22,42 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
-// promptVersion changes whenever ANYTHING about how a brief is written
-// changes: the model prompt, the shape of the assembled input, or the wording
-// the deterministic floor produces. It rides the fingerprint, so such a deploy
-// invalidates every cached brief rather than serving text written the old way.
+// floorVersion is bumped by hand when the DETERMINISTIC floor's wording
+// changes, and it is the half of the fingerprint a digest cannot reach.
 //
-// The floor's wording counts because the floor's OUTPUT is what gets cached. A
-// deploy that reworded it and left this alone kept serving the old sentences
-// to every account whose facts had not moved — which is most of them.
-const promptVersion = "org-brief-v6"
+// The floor's output is what gets cached, and its sentences are built by Go
+// code — `fmt.Sprintf` formats inside deterministic.go — so there is nothing to
+// hash. A deploy that rewords the floor and leaves this alone keeps serving the
+// old sentences to every account whose facts have not moved, which is most of
+// them.
+//
+// It covers ONLY the floor. The model prompt versions itself below.
+const floorVersion = "org-brief-floor-v6"
+
+// promptVersion is DERIVED from the prompt as it is SENT — boundary rule
+// included — so editing that wording bumps it whether or not anybody remembers
+// to.
+//
+// The ask prompt is deliberately absent. Ask answers are not cached (see
+// Service.Ask), so binding them to the brief's key would rewrite every cached
+// brief for a change that cannot affect one.
+//
+// The input's SHAPE still rides the fingerprint separately: `Input` is
+// marshalled into the sum, so a changed field changes the key on its own.
+// Digested at ONE fixed language, the same way dealstatus and orgdossier do it.
+// The language is its own component of Fingerprint below, so folding it in here
+// would say the same thing twice — and this is a package-level var computed at
+// init, where no installation's setting is readable at all. What it captures is
+// the WORDING, which English captures completely.
+var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
+	return briefSystemFor(fence, string(textlang.English))
+})
 
 // Input is what one brief is written from: the account's identity, its
 // pipeline, its people, and what has moved recently — each already pruned
@@ -68,6 +92,21 @@ type Input struct {
 	// with us. Curated statements a site read produced and a human accepted,
 	// so the brief can describe the company without inventing a word about it.
 	Profile []ProfileIn `json:"profile,omitempty"`
+
+	// Project is the body of work the reading was narrowed to, when the
+	// reader asked for one. It rides the fingerprint, so a scoped brief and
+	// an unscoped one never serve each other from the cache, and it tells the
+	// writer which engagement the words are about.
+	Project *ProjectIn `json:"project,omitempty"`
+}
+
+// ProjectIn names the scoping project to the writer. No counts: how much the
+// scope dropped is a fact for the reader's scope line, not a fact the prose
+// should reason from.
+type ProjectIn struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Key  string `json:"key,omitempty"`
 }
 
 // NamedIn is a record the brief may write about and must be able to cite:
@@ -234,6 +273,12 @@ func FromView(view crmcontracts.Organization360) Input {
 	foldDeals(view, &in)
 	foldTasks(view, &in)
 	foldRecent(view, &in)
+	if view.Scope != nil {
+		in.Project = &ProjectIn{ID: view.Scope.ProjectId.String(), Name: view.Scope.Name}
+		if view.Scope.Key != nil {
+			in.Project.Key = *view.Scope.Key
+		}
+	}
 	return in
 }
 
@@ -319,14 +364,16 @@ func foldRecent(view crmcontracts.Organization360, in *Input) {
 // account no longer has. routingVersion folds in the model binding, so
 // re-pointing a lane rewrites briefs instead of leaving text attributed to
 // a model that no longer writes it.
-func Fingerprint(in Input, routingVersion string) (string, error) {
+// The LANGUAGE is a component of its own: the brief is written in it, and
+// nothing else about the account moves when an installation changes language.
+func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 	// json.Marshal orders struct fields by declaration, so the same input
 	// hashes the same way across processes — a map would not.
 	encoded, err := json.Marshal(in)
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the brief input: %w", err)
 	}
-	sum := sha256.Sum256([]byte(promptVersion + "\x00" + routingVersion + "\x00" + string(encoded)))
+	sum := sha256.Sum256([]byte(floorVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
 

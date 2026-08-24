@@ -65,6 +65,10 @@ type ModelPath struct {
 	// degrade to a deterministic floor, so a role without this lane still
 	// answers — just not in written prose.
 	Summarize completer
+	// DealHealth serves the deal card's next_move site: one concrete task
+	// proposed from the deal's own timeline. Its floor is the generic "agree
+	// the next step" task, so a role without this lane still answers the card.
+	DealHealth completer
 	// GrowthFit judges how well one company fits what we sell. It is the only
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
@@ -140,7 +144,7 @@ func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 // router's ai_call tracing (ai.NewRouter) — the deployment's
 // AI.CapturePayloads posture and the process logger, never a stand-in.
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
-	router, err := ai.NewRouter(cfg, ai.NewMeter(InstallationDB(pool)), NewSeatBudget(pool), ai.NewCallMeter(InstallationDB(pool)), capturePayloads, log)
+	router, err := ai.NewRouter(cfg, ai.NewMeter(InstallationDB(pool)), NewSeatBudget(pool), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log), capturePayloads, log)
 	if err != nil {
 		return ModelPath{}, err
 	}
@@ -228,6 +232,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		RateExtract:                brain(ai.TaskRateExtract),
 		BriefRanking:               brain(ai.TaskBriefRanking),
 		Summarize:                  brain(ai.TaskSummarize),
+		DealHealth:                 brain(ai.TaskDealHealth),
 		GrowthFit:                  brain(ai.TaskGrowthFit),
 		DraftReply:                 brain(ai.TaskDraftReply),
 		OfferDraft:                 brain(ai.TaskOfferDraft),

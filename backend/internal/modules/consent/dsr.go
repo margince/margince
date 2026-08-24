@@ -123,7 +123,7 @@ func dsrListQuery(cursor, status string, bounded int) (string, []any, error) {
 	if cursor != "" {
 		after, err := ids.Parse(cursor)
 		if err != nil {
-			return "", nil, &ValidationError{Field: "cursor", Reason: "malformed"}
+			return "", nil, &storekit.MalformedCursorError{}
 		}
 		sql += storekit.SQLf(" AND id > $%d", arg(after))
 	}

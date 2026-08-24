@@ -1,0 +1,48 @@
+name: deal_status_says_nothing_is_wrong_when_nothing_is
+task: deal_health
+site: deal_status
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  deal:
+    name: "Kessler GmbH — WMS Pilot"
+    status: open
+    amount: "1200000 EUR (minor units)"
+    expected_close: "2026-10-15"
+  move: "open_meeting_brief: A meeting is booked in 3 days — read the brief before it."
+  timeline:
+    # A deal doing fine: they answered, a meeting is booked, nothing is owed.
+    # The card must not manufacture a risk to fill its own layout.
+    - label: scope_reply
+      kind: email
+      direction: inbound
+      subject: "Re: pilot scope — looks right"
+      at: "2026-08-20"
+      when: past
+      excerpt: "Scope reads well. Booking the kickoff with our ops lead for next week."
+    - label: kickoff
+      kind: meeting
+      direction: outbound
+      subject: "Kickoff — WMS pilot scope walkthrough"
+      at: "2026-08-26"
+      when: scheduled
+      excerpt: "Walk the pilot scope with ops before the pilot starts."
+expect:
+  outcome: accepted
+  # Standing rests on the reply that moved the deal and the booked kickoff.
+  answer: [scope_reply]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the briefing is honest about a deal that is going well.
+    "story" must say the buyer accepted the scope and a kickoff is booked, and
+    must treat the kickoff as SCHEDULED rather than as something that already
+    happened. "blocker" must be EMPTY: nothing in the fixture holds this deal
+    up, and a card that invents one — "no pricing discussed yet", "the close
+    date is tight" — fails the scenario outright, because a blocker section
+    that always finds something teaches the reader to stop reading it.
+    "verdict" must be live; blocked or cold fails, and drifting scores low
+    given a booked meeting three days out. "move_reason" must explain reading
+    the brief before that meeting.

@@ -6,6 +6,7 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -42,17 +43,29 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			in := organizationCreateFrom(fields, "src")
 			up := organizationUpdateFrom(fields)
 			return map[string]bool{
-					"display_name": in.DisplayName != "",
-					"legal_name":   in.LegalName != nil,
-					"industry":     in.Industry != nil,
-					"size_band":    in.SizeBand != nil,
-					"description":  in.Description != nil,
+					"display_name":        in.DisplayName != "",
+					"legal_name":          in.LegalName != nil,
+					"industry":            in.Industry != nil,
+					"size_band":           in.SizeBand != nil,
+					"description":         in.Description != nil,
+					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
+					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
+					"address.city":        in.Address != nil && in.Address.City != nil,
+					"address.region":      in.Address != nil && in.Address.Region != nil,
+					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
+					"address.country":     in.Address != nil && in.Address.Country != nil,
 				}, map[string]bool{
-					"display_name": up.DisplayName != nil,
-					"legal_name":   up.LegalName != nil,
-					"industry":     up.Industry != nil,
-					"size_band":    up.SizeBand != nil,
-					"description":  up.Description != nil,
+					"display_name":        up.DisplayName != nil,
+					"legal_name":          up.LegalName != nil,
+					"industry":            up.Industry != nil,
+					"size_band":           up.SizeBand != nil,
+					"description":         up.Description != nil,
+					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
+					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
+					"address.city":        up.Address != nil && up.Address.City != nil,
+					"address.region":      up.Address != nil && up.Address.Region != nil,
+					"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
+					"address.country":     up.Address != nil && up.Address.Country != nil,
 				}
 		},
 	} {
@@ -67,12 +80,29 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			created, patched := build(fields)
 			for _, target := range targets {
+				if target == csvTargetID {
+					// A SELECTOR, not a field: it names the record the row is, and
+					// writes nothing. Exempt here and asserted the other way round
+					// below — advertised, and reaching neither input on purpose.
+					continue
+				}
 				if !created[target] {
 					t.Errorf("%s: target %q is advertised but never reaches the create input", object, target)
 				}
 				if !patched[target] {
 					t.Errorf("%s: target %q is advertised but never reaches the update input", object, target)
 				}
+			}
+			if !selectsByID(object) {
+				return
+			}
+			if created[csvTargetID] || patched[csvTargetID] {
+				t.Errorf("%s: %q reached a write input — it names the record a row IS, and writing "+
+					"it would let a file move a company onto another company's id", object, csvTargetID)
+			}
+			if !slices.Contains(targets, csvTargetID) {
+				t.Errorf("%s: %q is not an accepted column, so a corrections file naming its records "+
+					"would be refused", object, csvTargetID)
 			}
 		})
 	}
@@ -142,6 +172,41 @@ func TestMappingFromRefusesATargetTheObjectDoesNotHave(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("an unknown target was accepted; the run would fail at the first row instead")
+	}
+}
+
+// Both refusals below are dead ends without the vocabulary: the mapping targets
+// are a closed set that no error, schema or tool description spells out, so a
+// caller who guesses wrong has nowhere to look. An agent driving this over MCP
+// cannot open the field catalog the way a screen can.
+func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
+	targets, err := importTargets(migration.ObjectOrganization)
+	if err != nil {
+		t.Fatalf("importTargets: %v", err)
+	}
+
+	cases := map[string]map[string]string{
+		// "city" reads like an obvious company field and is not one.
+		"unknown target": {"City": "city"},
+		// A header whose columns match nothing: SuggestMapping proposes
+		// nothing by design, so the caller arrives here having sent no mapping.
+		"nothing mapped": {},
+	}
+
+	for name, mapping := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := mappingFrom(migration.ObjectOrganization, crmcontracts.CreateImportRunRequest{
+				Mapping: mapping,
+			})
+			if err == nil {
+				t.Fatal("the mapping was accepted; expected a refusal")
+			}
+			for _, target := range targets {
+				if !strings.Contains(err.Error(), target) {
+					t.Errorf("the refusal does not name %q, so the caller cannot act on it: %v", target, err)
+				}
+			}
+		})
 	}
 }
 

@@ -206,7 +206,11 @@ func matchGhostsByEmail(ctx context.Context, tx pgx.Tx, owner, onlyPerson ids.UU
 // suggestNameEmployerMatchSQL renders the proposal in one statement, over three
 // parameter positions: the owner filter, the person row scope, and the
 // single-person narrowing.
-const suggestNameEmployerMatchSQL = `
+// A var and not a const, because the employment-currency predicate is a
+// function call: EmploymentIsCurrentSQL is the one definition of "this job is
+// still theirs", and a const cannot reach it. This query used to hand-spell it
+// and got the semantics right, which is what made the copy invisible.
+var suggestNameEmployerMatchSQL = `
 		WITH pair AS (
 		    -- DISTINCT pairs FIRST. A contact with two live employment rows at
 		    -- one account (a role change recorded as a second row) joins twice
@@ -230,7 +234,7 @@ const suggestNameEmployerMatchSQL = `
 		       -- Still employed TODAY, the same test the coverage and intro
 		       -- reads take: a future end date is still employment.
 		       AND r.archived_at IS NULL
-		       AND (r.ended_at IS NULL OR r.ended_at > current_date)
+		       AND ` + EmploymentIsCurrentSQL("r.ended_at") + `
 		     WHERE g.match_status = 'unmatched'
 		       AND g.tombstoned_at IS NULL
 		       -- The employer is matched through matched_org_id, which the

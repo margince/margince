@@ -36,7 +36,8 @@ func TestSchema_amountMinorBaseIsDatabaseGenerated(t *testing.T) {
 	ctx := context.Background()
 
 	var isGenerated, generationExpr string
-	if err := owner.QueryRow(ctx, `
+	if err := owner.QueryRow(
+		ctx, `
 		SELECT is_generated, generation_expression
 		FROM information_schema.columns
 		WHERE table_schema = 'public' AND table_name = 'deal' AND column_name = 'amount_minor_base'`,
@@ -56,7 +57,8 @@ func TestSchema_amountMinorBaseIsDatabaseGenerated(t *testing.T) {
 	// Postgres's STORED-generated marker (the only kind it currently
 	// supports), cross-checking the information_schema view above.
 	var attgenerated string
-	if err := owner.QueryRow(ctx, `
+	if err := owner.QueryRow(
+		ctx, `
 		SELECT attgenerated FROM pg_attribute
 		WHERE attrelid = 'deal'::regclass AND attname = 'amount_minor_base' AND NOT attisdropped`,
 	).Scan(&attgenerated); err != nil {
@@ -80,7 +82,8 @@ func TestSchema_organizationOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 	ctx := context.Background()
 
 	var reloptions []string
-	if err := owner.QueryRow(ctx, `
+	if err := owner.QueryRow(
+		ctx, `
 		SELECT COALESCE(reloptions, '{}') FROM pg_class
 		WHERE relname = 'organization_open_pipeline_rollup' AND relnamespace = 'public'::regnamespace`,
 	).Scan(&reloptions); err != nil {
@@ -115,6 +118,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_link.lead_id":           "gated: auth.EnsureLinkTarget in LogActivity",
 	"activity_link.project_id":        "gated: auth.EnsureLinkTarget in LogActivity — the link target is probed by its wire entity_type, so project rides the same gate as its siblings",
 	"deal.project_id":                 "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1) — the anchor project is client-supplied, so naming it is a read of it",
+	"deal_document_hide.deal_id":      "gated: auth.EnsureWritable(deal) in activities.setDealDocumentHidden — the deal is the route's own {id}, and hiding a file from its Files area changes what that deal lists, so the caller must be able to change the deal, not merely see it; the attachment half is then checked against THIS caller's view of the area, so a miss of either reads as not-found",
+	"deal_room.deal_id":               "gated: auth.EnsureWritableLive in createRoomTx — STRONGER than the EnsureLinkTarget its siblings take, deliberately. The deal a room is opened on is client-supplied, so naming it is a read of it; but opening a room also starts showing that deal to an outside party, which visibility alone does not authorize. A room on a deal the caller could merely see would publish that deal's existence, and its editorial text, to buyers",
 	"contract.organization_id":        "gated: auth.EnsureLinkTarget in createContractTx (H1) — the counterparty is client-supplied, so naming it is a read of it",
 	// The deal and project links carry a SECOND obligation the sibling columns
 	// above do not, and it is the reason this table's gate is not just a copy.
@@ -139,6 +144,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"org_dossier.organization_id":              "gated: the dossier is assembled only after orgdossier.Service.Get runs the caller's OWN sidecar reads, and people.ListOrganizationProfileFields opens with auth.Require + ensureOrgReadable — a company the caller cannot read has no dossier written for it, and the row is keyed on that same caller",
 	"org_growth_fit.organization_id":           "gated: same path as org_dossier — the assessment is written only after the caller's own gated sidecar reads succeed, and the row is keyed on that caller",
 	"org_brief.organization_id":                "gated: the brief is written only after orgbrief.Service.Get runs the caller's own org360 Assemble, whose GetOrganizationTx does auth.Require + auth.EnsureVisible — an account the caller cannot read has no brief written for it, and the row is keyed on that same caller",
+	"deal_status_card.deal_id":                 "gated: the deal-side twin of org_brief and person_brief — the card is written only after dealstatus.Service.gather calls deals.Store.GetDeal, whose auth.Require + auth.EnsureVisible refuse a deal the caller cannot read, and that gather runs BEFORE the cache is consulted so the served-from-cache path carries the same gate. The row is keyed on that same caller",
 	"person_brief.person_id":                   "gated: the person-side twin of org_brief — the brief is written only after personbrief.Service.Get runs the caller's own person360 Assemble, whose GetPersonTx does auth.Require + auth.EnsureVisible, and the row is keyed on that same caller",
 	"person_moment_dismissal.person_id":        "gated: auth.RequireHuman + auth.Require + auth.EnsureVisibleLive in person360.Service.DismissMoment, inside the same transaction as the insert — dismissing a card about a contact the caller cannot read would confirm they exist",
 	"consent_qualifying_event.person_id":       "gated: the event is recorded only on a path that already holds the person — a captured inbound activity, an inquiry, or a named human typing an exchange on the record's own surface, each of which took the person read before it could name them",
@@ -156,6 +162,14 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"conversation_claim.task_activity_id":   "PENDING WRITER: no code writes this table yet. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
+	"organization_geocode_state.organization_id": "child row: the sidecar for an organization's own coordinate lookup, and no caller ever names the organization it keys on. " +
+		"The row is created by enqueueGeocode inside UpdateOrganization's transaction, for the id that write was already addressing (people/organization.go), " +
+		"and touched afterwards only by AddressForGeocode and recordGeocodeAfter (people/geocode.go). " +
+		"WHAT THIS EXCEPTION RESTS ON IS CURRENTLY NON-EXECUTING, and that is the honest statement of its cost: all three of those statements filter " +
+		"organization.workspace_id, a column core 1787047322 dropped three days before geocode.go shipped, so every one fails with SQLSTATE 42703 (#2173). " +
+		"No read reaches this FK today because no read on this path runs at all. When #2173 is fixed the ADR-0091-consistent repair DELETES that predicate " +
+		"rather than restoring the column, at which point this reason is void and nothing here would fail — gatekit checks the key, never the rationale — so " +
+		"#2173 carries a note to revisit this entry, and it must be re-derived against whatever replaces the predicate rather than carried over.",
 	"activity_link.activity_id":  "child row: written only inside LogActivity for the new activity",
 	"lead_score_history.lead_id": "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
 	// comms_outbound is delivery machinery for one activity, not a
@@ -232,6 +246,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// activity's own id — a connector principal supplies message bytes, never
 	// a record reference.
 	"capture_pending_counterparty.activity_id": "server-derived: stamped by the capture Sink from the activity it just wrote",
+	// The attribution ladder's candidate ledger: both ends are the ladder's
+	// own reads — the activity capture just wrote, and a project the rung read
+	// under the caller's project grant and row scope (readableProjectScope +
+	// the finder's ScopeClauseFor), never a request body.
+	"project_link_candidate.activity_id": "server-derived: stamped by the capture Sink's attribution ladder from the activity it just wrote",
+	"project_link_candidate.project_id":  "gated then stamped: read under the caller's project row scope by the uncertain rung's finder before the candidate is written",
 	// Client-supplied edge endpoints — every one probed at the store:
 	"relationship.person_id":                     "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.counterparty_org_id":           "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
@@ -268,13 +288,18 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// GetDedupeCandidate). All six entries rest on that read, held by
 	// TestDedupeQueueHidesPairsOutsideTheCallersRowScope and, per entity type and
 	// per side, TestDedupeQueueHidesAPairTheCallerCanOnlyHalfSee.
-	"dedupe_candidate.left_person_id":           "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
-	"dedupe_candidate.right_person_id":          "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
-	"dedupe_candidate.left_org_id":              "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
-	"dedupe_candidate.right_org_id":             "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
-	"dedupe_candidate.left_lead_id":             "server-derived: stamped by recordDedupeCandidate from fuzzyLead's own match query",
-	"dedupe_candidate.right_lead_id":            "server-derived: stamped by recordDedupeCandidate from fuzzyLead's own match query",
-	"person_profile_field.person_id":            "server-derived: the enrich pass resolves the person from its own connector-activity query (PO-DDL-12), never from a request body — it runs as the system principal, so what holds this is the absence of a caller, not a scope clause",
+	"dedupe_candidate.left_person_id":  "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
+	"dedupe_candidate.right_person_id": "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
+	"dedupe_candidate.left_org_id":     "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
+	"dedupe_candidate.right_org_id":    "server-derived: stamped by recordDedupeCandidate from the writing path's own match query",
+	"dedupe_candidate.left_lead_id":    "server-derived: stamped by recordDedupeCandidate from fuzzyLead's own match query",
+	"dedupe_candidate.right_lead_id":   "server-derived: stamped by recordDedupeCandidate from fuzzyLead's own match query",
+	// Two writers, two different things holding them, so both are named: the
+	// enrich pass has no caller to scope against, and the research accept has
+	// one. This census is keyed by COLUMN, so it cannot notice a second writer
+	// of an already-waived column — the text is the only control, and a waiver
+	// naming one writer would read as covering both.
+	"person_profile_field.person_id":            "server-derived for the enrich pass — it resolves the person from its own connector-activity query (PO-DDL-12) as the system principal, so what holds it is the absence of a caller; gated for SaveResearchClaims, whose person id IS the request path's — auth.EnsureWritableLive inside the write's own transaction",
 	"capture_auto_enrich_state.organization_id": "server-derived: the auto-enrich sweep keys the cursor on an org id its own ListDueOrgs read produced (CAP-PARAM-7), never from a request body — a background pass with no caller to scope against",
 	// The signature pass's read cursor (PO-F-2a): both ids come from the
 	// pass's own SignatureCandidates query — the person it just read for and
@@ -336,8 +361,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// already linked to rather than from anything a caller sends. When the
 	// writer lands it must derive both from rows the actor could already see —
 	// this entry is the obligation, not a record of one already met.
-	"activity_retention_evidence.activity_id": "schema only, no writer yet (#1557): the evidence is written by the qualifying pass from the activity it substantiates, never from a request body — when that pass lands, the activity it names must be one the actor could already see",
-	"activity_retention_evidence.deal_id":     "schema only, no writer yet (#1557): the qualifying transaction is resolved from the activity's own link, not supplied — and it is ON DELETE SET NULL beside a frozen deal_name, so the evidence answers after the deal is gone",
+	"activity_retention_evidence.activity_id": "server-derived: every writer names the activity it is already writing — the deal stamp sweeps the activities linked to the concluding deal, the project stamp takes the one whose link it just wrote, and the erasure's legacy arm takes the rows it already selected. None of the three reads an activity id off a request body",
+	"activity_retention_evidence.deal_id":     "server-derived: the qualifying deal is the one whose own conclusion triggered the stamp, never supplied. ON DELETE SET NULL beside a frozen deal_name, so the evidence still answers after the deal is gone",
+	"activity_retention_evidence.project_id":  "server-derived: the qualifying project is the one whose link the same transaction just wrote, and that link's target went through auth.EnsureLinkTarget before it landed — so the reference is a read the writer already gated. ON DELETE SET NULL beside a frozen project_name, on the same terms as the deal pair beside it",
 	"finance_customer_link.organization_id":   "schema only, no writer yet (#725): the mapping write does not exist, and when it lands it must put the named company through auth.EnsureLinkTarget — this entry is the obligation, not a record of one already met",
 	"finance_invoice.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
 	"finance_payment.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",

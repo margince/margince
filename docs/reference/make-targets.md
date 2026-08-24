@@ -81,6 +81,10 @@ root gates (each is a small script; all merge-blocking):
 | `go-file-length` | Hard 500-LOC cap on hand-written **product** Go, ratcheted via `scripts/go-file-length-waivers.txt`. Test and generated files are exempt here — `*_test.go` is bounded at 1000 lines by the craft gate instead |
 | `rls-store-path` | No `internal/modules` statement addresses the superuser pool directly (RLS bypass); `// rls-exempt: <reason>` is the escape for a genuinely cross-workspace query |
 | `no-jurisdiction` | No country-specific regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code in core **code**, only in the jurisdiction seam (`internal/modules/de`, `internal/shared/ports/jurisdiction`); statute citations in comments are allowed |
+| `one-spelling` | Three choke points, in **code** only: SQLSTATEs are named in `storekit/sqlstate.go` (the code list is READ from that file, never re-typed), a CHECK breach is answered by `httperr`'s constraint net rather than a module's copy of it, and the ISO-4217 shape is `values.ValidCurrency`. A genuine false positive is waived on the line with `// one-spelling-exempt: <reason>` |
+| `test-one-spelling` | Points the gate at a throwaway tree (so `make -j` cannot race the real one) and asserts its verdict on the unmodified repo plus nine planted cases: each of the three defects fires, an unrelated SQLSTATE-shaped literal does not, a waiver silences its own line and only that line, and the same tokens inside a line, block and inline-block comment stay silent |
+| `money-scale` | An amount in minor units is converted by the one owner of the ISO minor-unit table — `shared/kernel/values` in Go, `src/format/minorunits` in TypeScript — never by a hard-coded power of ten, which is wrong for VND/JPY/KRW (no minor unit) and KWD (three digits). The only gate reading both languages: the scale is a contract between them, and while only one side was currency-aware the two disagreed symmetrically and looked correct. Waived on the line with `// money-scale-exempt: <reason>` |
+| `test-money-scale` | Points that gate at a throwaway tree and asserts its verdict on the unmodified repo plus twenty-nine planted cases: divide, multiply and remainder fire in **both** languages and at every power the detector accepts (10, 100, 1000, 10000), including an expression the formatter wrapped across lines and an upper-case identifier; a percentage and a progress-bar width do not; the waiver silences its own line and only that line, a marker inside a string literal waives nothing, a template interpolation is judged as the code it is while the string around it is not, and a grouped literal past any minor unit does not fire; and a `fires` case must see an actual scale finding, so the gate exiting non-zero for an unrelated reason cannot pass for a detection |
 | `pkg-freeze` | Published-surface freeze (EXT-P3): apidiff on every `backend/pkg` package vs the merge target (`origin/$GITHUB_BASE_REF` in CI; locally the extensions integration branch, else `origin/main`). **Advisory before the first v1+ release tag** — incompatible changes print, never block (the surface is design-fluid). **Enforcing from v1.0.0** — incompatible changes and removed packages fail; a ratified change is its exact apidiff finding line in `scripts/pkg-freeze-allowlist.txt`, bound to the merge-base sha it was ratified against (superseded entries license nothing and warn); removals are never allowlistable. Overrides: `PKG_FREEZE_MODE=advisory\|enforce`, `PKG_FREEZE_BASE=<ref>` |
 
 ## Occasional
@@ -154,14 +158,15 @@ in `lastactivity_integration_test.go`.
 | Target | What it does |
 |---|---|
 | `frontend-check` | The frontend gate, node-only: `fe-ds-gates`, `fe-drift`, `fe-lint`, `fe-unit`, `fe-build` in that order. It is spelled as those five legs rather than inline because CI runs them as three parallel jobs and both callers have to mean the same thing — `TestEveryLocalFrontendGateLegRunsInCI` fails if a leg added here reaches no CI job |
-| `fe-ds-gates` | The design-system purity/font-lock/icon-glyph/spacing/space-token/native-control/ext-import script gates, as one target |
+| `fe-ds-gates` | The design-system purity/font-lock/icon-glyph/spacing/space-token script gates, as one target. The native-control and extension-import gates are NOT here: they read the TypeScript AST and run in `fe-unit` with the rest of the vitest suite |
 | `fe-drift` | The TS type-drift gate: `pnpm gen:api`, then fail if the committed `src/api/schema.d.ts` / `public-events.ts` moved |
 | `fe-unit` | The vitest suite. `FE_COVERAGE=1` instruments it so the one run also writes `frontend/coverage/lcov.info` for the `sonarcloud` job — what CI passes, and about a third slower, which is why it is not the default a developer pays. On those runs `frontend/scripts/check-lcov-paths.sh` reads the report back before anything ships it: the scanner drops a path it cannot resolve in silence, so an unchecked lcov and an untested frontend look identical downstream (#1541) |
 | `fe-clock-drift` | The same vitest suite, run as if it were `FE_CLOCK_SKEW_DAYS` (200) from now, and required to reach the same verdict. Not part of `frontend-check` and not a PR gate: the change that breaks these tests is the calendar rather than a diff, so it runs daily on `main` from `scheduled.yml`. It exists because three tests began failing on a date nobody edited anything on (#1977) — a fixture carried an absolute expiry the component compares to `now`. A grep cannot replace it: "an absolute date in a file that never pins the clock" matches 129 files here, nearly all harmless, and nothing static separates a date a component FORMATS from one it COMPARES |
 | `fe-quality` | The CI aggregate: every leg of the gate except the unit suite and the bundle, plus the composed-SPA typecheck and the unit screens' suites. Needs a Go toolchain (it composes) |
 | `fe-bundle` | The CI aggregate: `fe-build` + `fe-storybook` |
 | `fe-install` / `fe-lint` / `fe-test` / `fe-build` / `fe-storybook` / `fe-format` / `fe-preview` | The individual frontend steps (`pnpm` wrappers) |
-| `ds-purity` / `font-lock` / `icon-lint` / `ds-spacing` / `native-controls` | The design-system script gates, runnable alone. `native-controls` is the no-browser-drawn-dropdown gate: `<select>`, `<option>` or `<optgroup>` anywhere under `frontend/src` outside `design-system/select.tsx` |
+| `ds-purity` / `font-lock` / `icon-lint` / `ds-spacing` | The design-system script gates, runnable alone |
+| `native-controls` / `ext-imports` | The two source-wide gates that read the TypeScript AST rather than the text, so both run in `fe-unit` with the rest of the vitest suite; these targets exist to run one of them alone. `native-controls` refuses `<select>`, `<option>` or `<optgroup>` anywhere under `frontend/src` or an extension's frontend layer — there is no exemption, `design-system/select.tsx` included. `ext-imports` holds a unit's screen to `frontend/package.json`'s `exports` map and to what the unit's own `package.json` declares. Their shared walk is `frontend/scripts/lib/source-tree.ts` |
 | `gen-types` / `gen-types-check` | Aliases for backend `gen` / `drift` |
 | `seed-dev` | API-seed the demo workspace against a running stack (idempotent), then the API-less extras (`seed-dev-db`) |
 | `verify-boot` | Prove a running, seeded stack end to end: seeded-admin login, seeded people over `/v1`, frontend production build — pure client, fails loudly |
@@ -175,11 +180,30 @@ in `lastactivity_integration_test.go`.
 
 `make dev DEV_SLUG=<slug>` runs a full stack that won't collide with another
 worktree's: the ONE shared infra (Postgres/Redis on `15432`/`16379`), but a
-private database `margince_dev_<slug>` and api/FE ports derived
-deterministically from the slug (the FE's `/v1` proxy follows the api via
-`BACKEND_PORT`). Logs + stop handle live under `.tmp/dev/<slug>/`. Bare
-`make dev` uses the shared `margince` database with the app on the base
-`:8080`. Stop either with `make dev-stop [DEV_SLUG=<slug>] [DROP=1]`.
+private database `margince_dev_<slug>`, a private **Redis logical database**,
+and api/FE ports derived deterministically from the slug (the FE's `/v1` proxy
+follows the api via `BACKEND_PORT`). Logs + stop handle live under
+`.tmp/dev/<slug>/`. Bare `make dev` uses the shared `margince` database, Redis
+db 0, and the app on the base `:8080`. Stop either with
+`make dev-stop [DEV_SLUG=<slug>] [DROP=1]`.
+
+**The Redis index is isolation, not tidiness.** The stream names and consumer
+groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
+share one consumer group: whichever worker reads an entry first consumes it,
+resolves it against its OWN Postgres, finds nothing, and acks. The other
+stack's event is gone, and a projection or accrual that never runs looks
+exactly like a broken feature — it cost a day and a wrongly-filed critical bug
+once.
+
+The instance serves 80 databases in three blocks: **0** is bare `make dev`,
+**1–63** the parallel integration lane (one per package, which `FLUSHDB`s), and
+**64–79** slugged stacks. A slug takes the lowest free index in its block,
+claimed under a lock and recorded in `.tmp/dev/<slug>/env`, so restarting a
+slug reclaims its own and two slugs never share one. Deliberately not the port
+hash: two hashes differing by a multiple of the block size would take different
+ports and the SAME database, a collision the port check cannot see. The startup
+banner prints the index. A 17th concurrent slugged stack is refused rather than
+doubled up.
 
 A slugged stack is the one thing `make dev`'s sweep does not perform — it
 sweeps nothing itself, so it can start alongside the base stack. But the next

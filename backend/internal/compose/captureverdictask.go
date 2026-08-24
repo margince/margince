@@ -39,6 +39,9 @@ import (
 // The fence is minted here, per request: its scope is the text of this one call,
 // and a boundary reused across calls is one a previous sender has already been
 // shown.
+//
+//promptlang:exempt the reply is one verdict enum value and a confidence number — validateVerdictPayload refuses any other token, so there is no sentence here for a language to apply to.
+//promptvoice:exempt the reply is one verdict enum value and a confidence number.
 func verdictRequest(row capture.PendingCounterparty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder

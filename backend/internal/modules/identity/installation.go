@@ -12,6 +12,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // ErrNotBootstrapped means the database holds no active organization.
@@ -42,11 +44,18 @@ var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace
 // every binary of this installation must agree on it.
 const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 
-// InstallationBootstrap is the boot-time creation input, sourced from the
-// deployment configuration file — never from a request body.
+// InstallationBootstrap is the creation input for the singleton organization.
+//
+// It arrives one of two ways and never both: from the deployment
+// configuration file when the operator configured a bootstrap admin, or from
+// the setup claim when a human claims an unprovisioned installation with the
+// setup token. The two paths are mutually exclusive — creating the
+// organization retires every setup token — so neither can correct the other
+// afterwards.
 type InstallationBootstrap struct {
 	OrganizationName string
 	BaseCurrency     string
+	BaseLanguage     string
 	Timezone         string
 	AdminEmail       string
 	AdminName        string
@@ -201,9 +210,9 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	if err := boot.normalize(); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	currency := in.BaseCurrency
-	if currency == "" {
-		currency = "EUR"
+	currency, language, err := resolveBasis(in, origin)
+	if err != nil {
+		return ids.WorkspaceID{}, err
 	}
 	hash, err := password.Hash(boot.AdminPassword)
 	if err != nil {
@@ -222,7 +231,12 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	// by a caller: normalize() and the currency default above are the only
 	// place these values are resolved, and a second derivation elsewhere would
 	// drift from them (the columns that used to carry them are gone).
-	dropped, err := seedInstallationIdentity(ctx, tx, boot.WorkspaceName, boot.Timezone, currency)
+	dropped, err := seedInstallationIdentity(ctx, tx, installationIdentity{
+		name:     boot.WorkspaceName,
+		zone:     boot.Timezone,
+		currency: currency,
+		language: language,
+	})
 	if err != nil {
 		return ids.WorkspaceID{}, err
 	}
@@ -268,9 +282,9 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		actorType, actorID = "human", userID.String()
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO system_log (workspace_id, actor_type, actor_id, action, detail)
-		 VALUES ($1, $2, $3, 'installation_bootstrap', jsonb_build_object('admin_user_id', $4::text))`,
-		wsID, actorType, actorID, userID.String()); err != nil {
+		`INSERT INTO system_log (actor_type, actor_id, action, detail)
+		 VALUES ($1, $2, 'installation_bootstrap', jsonb_build_object('admin_user_id', $3::text))`,
+		actorType, actorID, userID.String()); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 
@@ -333,7 +347,64 @@ func slugify(name string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-// seedInstallationIdentity writes the three settings rows that ARE the
+// resolveBasis settles what the installation is measured in — the currency
+// every amount converts to, and the language AI writes the shared record in.
+//
+// The two provisioning paths get different answers to an ABSENT value, and the
+// difference is whether a human was there to ask. A deployment file has no one
+// at boot, so an omitted key falls back and the installation starts; the
+// operator corrects it in Settings afterwards. A claim has a human in front of
+// a form that asks, so an absent value means a client that stopped asking, and
+// defaulting it would put the installation permanently on EUR because nobody
+// was ever shown the question — the base currency stops being changeable once
+// anything converts against it.
+//
+// It runs INSIDE the claim transaction, after the setup token has matched, so
+// a caller holding no valid token learns nothing about this body's shape.
+// The validators are the ENTRIES' own, so what the claim accepts and what the
+// settings screen accepts are one rule with one spelling. A refusal carries the
+// setting key as its field, which is what a 422 needs to point at.
+func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency, language string, err error) {
+	currency, language = in.BaseCurrency, in.BaseLanguage
+	if origin == originClaimed {
+		for _, ask := range []struct {
+			entry *settings.Entry[string]
+			value string
+		}{
+			{BaseCurrency, currency},
+			{BaseLanguage, language},
+		} {
+			raw, err := json.Marshal(ask.value)
+			if err != nil {
+				return "", "", fmt.Errorf("identity: encoding %s from the claim: %w", ask.entry.Key(), err)
+			}
+			if err := ask.entry.ValidateJSON(raw); err != nil {
+				return "", "", err
+			}
+		}
+		return currency, language, nil
+	}
+	if currency == "" {
+		currency = "EUR"
+	}
+	if language == "" {
+		language = string(textlang.English)
+	}
+	return currency, language, nil
+}
+
+// installationIdentity is what the installation IS: the four values seeded
+// together at bootstrap. Named fields rather than four positional strings,
+// because three of them are same-typed and a transposed pair would seed a
+// currency into the timezone row without a compiler complaint.
+type installationIdentity struct {
+	name     string
+	zone     string
+	currency string
+	language string
+}
+
+// seedInstallationIdentity writes the settings rows that ARE the
 // installation's identity (ADR-0090/A135). Seed, not Set: this runs inside
 // bootstrap's own transaction, before any principal exists to gate a settings
 // write, and it is creating the values rather than changing them.
@@ -343,14 +414,15 @@ func slugify(name string) string {
 // new workspace beside the old settings and every value the operator supplied is
 // discarded — which is #863. What should happen then is undecided; this only
 // makes sure the caller can say it happened.
-func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, name, zone, currency string) (discarded []string, err error) {
+func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, id installationIdentity) (discarded []string, err error) {
 	for _, seed := range []struct {
 		entry *settings.Entry[string]
 		value string
 	}{
-		{Name, name},
-		{Timezone, zone},
-		{BaseCurrency, currency},
+		{Name, id.name},
+		{Timezone, id.zone},
+		{BaseCurrency, id.currency},
+		{BaseLanguage, id.language},
 	} {
 		stored, err := settings.SeedValue(ctx, tx, seed.entry, seed.value)
 		if err != nil {

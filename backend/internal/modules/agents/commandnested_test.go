@@ -3,10 +3,10 @@
 
 package agents
 
-// The seven bespoke resolvers' own answers (commandnested.go): five stand
+// The six bespoke resolvers' own answers (commandnested.go): five stand
 // down the same way the six record-seam-unserved archivable types do
-// (list, tag, offer), and two — createOffer's parent deal, upsertPartner's
-// organization — refuse the same two ways patchResolver's own target does.
+// (list, tag, offer), and one — createOffer's parent deal — refuses the same
+// two ways patchResolver's own target does.
 
 import (
 	"context"
@@ -87,7 +87,7 @@ func TestOfferLineItemSummariesNameTheLineItem(t *testing.T) {
 	}
 }
 
-// gradionhq/margince-poc-v1#1046: createOffer's staged target must carry NO
+// margince/margince#1046: createOffer's staged target must carry NO
 // id. The routed {id} on POST /v1/deals/{id}/offers is the DEAL the offer
 // nests under, not an offer id — the offer does not exist yet — so pairing
 // target_entity_type=offer with that id would name a target that resolves to
@@ -107,7 +107,7 @@ func TestCreateOfferStagesNoID(t *testing.T) {
 	}
 	if !info.TargetID.IsZero() {
 		t.Errorf("staged target_id = %s, want zero — the offer does not exist yet, and the routed id names "+
-			"the DEAL, not an offer (gradionhq/margince-poc-v1#1046)", info.TargetID)
+			"the DEAL, not an offer (margince/margince#1046)", info.TargetID)
 	}
 	if !strings.Contains(info.Summary, dealID.String()) {
 		t.Errorf("summary %q does not name the parent deal", info.Summary)
@@ -141,50 +141,5 @@ func TestCreateOfferGuardsAdmitAReadableDeal(t *testing.T) {
 	if err := NewCreateOfferCall(provider, CreateOfferCommand{DealID: id, Fields: json.RawMessage(`{}`)}).
 		Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative deal answered %v, want it admitted", err)
-	}
-}
-
-// upsertPartner stages the ORGANIZATION the route names, not a `partner`
-// row — the route's own record_type annotation says `partner`, but there
-// is no partner id in the path and no row for one on the seam.
-func TestUpsertPartnerStagesTheOrganization(t *testing.T) {
-	orgID := ids.NewV7()
-	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityOrganization, orgID, true)}
-	call := NewUpsertPartnerCall(provider, UpsertPartnerCommand{ID: orgID})
-
-	info, err := StageSubject(context.Background(), call)
-	if err != nil {
-		t.Fatalf("staging a partner upsert answered %v, want it staged", err)
-	}
-	if info.TargetType != "organization" || info.TargetID != orgID {
-		t.Errorf("staged target = (%s,%s), want (organization,%s)", info.TargetType, info.TargetID, orgID)
-	}
-}
-
-// An organization the caller cannot see is refused before anything is
-// staged.
-func TestUpsertPartnerGuardsRefuseAnUnreadableOrganization(t *testing.T) {
-	call := NewUpsertPartnerCall(unreadableProvider{}, UpsertPartnerCommand{ID: ids.NewV7()})
-
-	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("guarding an unreadable organization answered %v, want the row-scope miss", err)
-	}
-}
-
-// An organization held in another system of record is refused too.
-func TestUpsertPartnerGuardsRefuseAnOrganizationHeldElsewhere(t *testing.T) {
-	call := NewUpsertPartnerCall(elsewhereProvider{}, UpsertPartnerCommand{ID: ids.NewV7()})
-
-	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("guarding a mirrored organization answered %v, want the unsupported-by-SoR refusal", err)
-	}
-}
-
-// A served, readable organization is admitted rather than refused.
-func TestUpsertPartnerGuardsAdmitAReadableOrganization(t *testing.T) {
-	id := ids.NewV7()
-	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityOrganization, id, true)}
-	if err := NewUpsertPartnerCall(provider, UpsertPartnerCommand{ID: id}).Guards(context.Background()); err != nil {
-		t.Fatalf("guarding a readable, authoritative organization answered %v, want it admitted", err)
 	}
 }

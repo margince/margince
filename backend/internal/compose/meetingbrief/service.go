@@ -9,6 +9,7 @@ package meetingbrief
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,9 +17,13 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -36,14 +41,14 @@ type (
 // rather than imported so this package composes one seam instead of
 // re-deriving a dozen gated reads that could disagree with the page's own.
 type Assembler interface {
-	Assemble(ctx context.Context, personID ids.PersonID) (crmcontracts.Person360, error)
+	AssembleScoped(ctx context.Context, personID ids.PersonID, opts person360.AssembleOptions) (crmcontracts.Person360, error)
 }
 
 // ClaimReader reads one person's live conversation claims inside a caller's
 // transaction. It is the people store's own read, injected because a module is
 // never imported across a compose seam by another module.
 type ClaimReader interface {
-	ClaimsForPerson(ctx context.Context, tx pgx.Tx, personID ids.PersonID, limit int) ([]crmcontracts.ConversationClaim, error)
+	ClaimsForPerson(ctx context.Context, tx pgx.Tx, personID ids.PersonID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error)
 }
 
 // briefClaims bounds the commitments the brief reads per attendee. The person
@@ -57,11 +62,23 @@ type Service struct {
 	view   Assembler
 	claims ClaimReader
 	now    func() time.Time
+	// lane rewrites the deterministic floor in Margince's voice when a
+	// deployment binds one. Nil is the floor, which is not an error state.
+	lane Completer
 }
 
 // NewService binds the brief to the reads it is written from.
 func NewService(pool *pgxpool.Pool, view Assembler, claimReader ClaimReader, now func() time.Time) *Service {
 	return &Service{pool: pool, view: view, claims: claimReader, now: now}
+}
+
+// WithLane binds the summarize lane that REWRITES the deterministic sections
+// in Margince's own voice. Without it the service serves the floor and says so
+// in generated_by, which is the deployment running no model rather than an
+// error. Returns the service so a caller can bind it where it is built.
+func (s *Service) WithLane(lane Completer) *Service {
+	s.lane = lane
+	return s
 }
 
 // Get assembles the brief for one meeting, fresh.
@@ -72,38 +89,104 @@ func NewService(pool *pgxpool.Pool, view Assembler, claimReader ClaimReader, now
 // caller's own composite read, which carries its own row scope. A brief can
 // therefore only describe records this caller could open themselves.
 func (s *Service) Get(ctx context.Context, activityID ids.UUID) (crmcontracts.MeetingBrief, error) {
-	// A brief is a reading aid for a person walking into a room; an agent
-	// reading records through a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
-		return crmcontracts.MeetingBrief{}, err
-	}
+	brief, _, err := s.GetFiled(ctx, activityID)
+	return brief, err
+}
+
+// GetScoped is Get with the project the caller wants to prepare for.
+//
+// The meeting's own filing wins. A meeting filed under a project is about
+// that project, and the brief scopes itself by it with or without a request;
+// asking for the same project is agreement, asking for a different one is a
+// brief this meeting cannot honestly be, and it answers not-found — the same
+// existence-hiding answer the tool surface gives a scope naming a project
+// the caller may not see. Only a meeting filed under NO project takes the
+// requested scope as its own.
+func (s *Service) GetScoped(ctx context.Context, activityID ids.UUID, requested *ids.ProjectID) (crmcontracts.MeetingBrief, error) {
+	brief, _, err := s.assembleFiled(ctx, activityID, requested)
+	return brief, err
+}
+
+// GetFiled is Get plus the project the meeting is filed under, nil when it
+// is filed under none. The brief scopes itself by that project without
+// saying so on the wire; a surface that lets a caller ask for a project
+// needs it to tell an agreeing request from a disagreeing one.
+func (s *Service) GetFiled(ctx context.Context, activityID ids.UUID) (crmcontracts.MeetingBrief, *ids.UUID, error) {
+	return s.assembleFiled(ctx, activityID, nil)
+}
+
+func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, requested *ids.ProjectID) (crmcontracts.MeetingBrief, *ids.UUID, error) {
+	// NO human gate. It used to read "an agent reading records through a
+	// passport has the records themselves", and that argument is what produced
+	// two answers to one question: agents could not reach this, so a second
+	// prep tool grew beside it with different grounding rules, and the two
+	// disagreed about the same meeting. Having the records is not having the
+	// brief — the eight sections, the first-time flags, the cited claims.
+	//
+	// Nothing is widened by admitting an agent. Every gate below is the
+	// caller's own: the object grants, the activity probe, and the composite
+	// read's row scope. A passport is already capped by the granting human's
+	// live seat, so an agent reads exactly the brief that human would.
 	// The OBJECT grant, before any row is read. Row scope decides WHICH
 	// meetings a caller may see; it does not decide whether they may see
 	// meetings at all, and a reader with no activity grant would otherwise
 	// reach the brief through a path every sibling read refuses.
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return crmcontracts.MeetingBrief{}, err
+		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	// The brief names the people in the room and what they promised, so it is
 	// also a person read — and the caller must hold that grant for the same
 	// reason the person page does.
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
-		return crmcontracts.MeetingBrief{}, err
+		return crmcontracts.MeetingBrief{}, nil, err
 	}
-	in, err := s.assembleInput(ctx, activityID)
+	in, scope, err := s.assembleInput(ctx, activityID, requested)
 	if err != nil {
-		return crmcontracts.MeetingBrief{}, err
+		return crmcontracts.MeetingBrief{}, nil, err
+	}
+	// The lane rewrites the same facts in Margince's voice, or answers the
+	// floor: Write decides, and writtenBy tells the reader which they got.
+	// The installation's language, not the reader's. This product has ONE answer
+	// to "what language is AI writing in" — the admin's setting — and a brief
+	// that asked the browser instead would be the single surface disagreeing
+	// with every other one.
+	sections, writtenBy := Write(ctx, s.lane, in, identity.BaseLanguageForPrompt(ctx, s.pool))
+	var filed *ids.UUID
+	if in.Project != nil {
+		id, err := ids.Parse(in.Project.ID)
+		if err != nil {
+			// The id travels through the brief's input as the string the
+			// header line prints, and is parsed back here.
+			return crmcontracts.MeetingBrief{}, nil, fmt.Errorf("meeting brief: project id %q read off the meeting is not an id: %w", in.Project.ID, err)
+		}
+		filed = &id
 	}
 	return crmcontracts.MeetingBrief{
 		ActivityId: openapi_types.UUID(activityID),
 		// Always the instant of the read. Nothing is stored, so there is no
 		// older instant this could honestly report.
 		GeneratedAt: s.now().UTC(),
-		// No model lane is wired: the sections are the deterministic floor and
-		// say so, rather than passing a composition off as a written brief.
-		GeneratedBy: crmcontracts.Deterministic,
-		Sections:    wireSections(Deterministic(in)),
-	}, nil
+		GeneratedBy: writtenBy,
+		Scope:       scope,
+		Sections:    wireSections(sections),
+		Omitted:     omissions(in),
+	}, filed, nil
+}
+
+// omissions names what this reader's own grants kept out of the brief.
+//
+// Nil rather than an empty slice when the reader could see everything: the
+// contract's field is optional, and an empty array on the wire invites a client
+// to render an empty "what you cannot see" heading.
+func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
+	if !in.RoomHidden {
+		return nil
+	}
+	out := []crmcontracts.MeetingBriefOmission{{
+		Source: "deal_room",
+		Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
+	}}
+	return &out
 }
 
 // assembleInput gathers everything the brief is written from.
@@ -113,44 +196,128 @@ func (s *Service) Get(ctx context.Context, activityID ids.UUID) (crmcontracts.Me
 // assembled after it, in its own transaction, on purpose: it is the person
 // page's own read and reusing it whole is what keeps the brief and the page
 // from disagreeing about what this caller may see.
-func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID) (Input, error) {
+//
+// It answers the scope report beside the input: the lead attendee's page,
+// read under the scope, counts what the narrowing kept of their history.
+// Nil when the read ran unscoped, and nil too for a scoped room nobody in
+// may be seen — there is no attendee whose history the count would be of.
+func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, requested *ids.ProjectID) (Input, *crmcontracts.ProjectScope, error) {
 	var room meeting
+	var scope *ids.ProjectID
 	var perAttendee map[ids.UUID][]crmcontracts.ConversationClaim
+	var earlier []priorMeeting
+	var lastSpoke *time.Time
+	var moves []DealMoveIn
+	var roomHidden bool
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		loaded, err := s.readMeeting(ctx, tx, activityID)
+		// The requested project is gated BEFORE the meeting is read, because
+		// the meeting read already narrows by it (the attendees' last-touch
+		// dates): a scope nobody checked must not shape a single row.
+		if requested != nil {
+			if err := activities.RequireProjectScope(ctx, tx, *requested); err != nil {
+				return err
+			}
+		}
+		loaded, err := s.readMeeting(ctx, tx, activityID, requested)
 		if err != nil {
 			return err
 		}
 		room = loaded
-		perAttendee, err = s.claimsPerAttendee(ctx, tx, loaded)
+		chosen, err := resolveScope(loaded, requested)
+		if err != nil {
+			return err
+		}
+		scope = chosen.project
+		perAttendee, err = s.claimsPerAttendee(ctx, tx, loaded, scope)
+		if err != nil {
+			return err
+		}
+		earlier, err = s.readPriorMeetings(ctx, tx, loaded, scope, s.now().UTC())
+		if err != nil {
+			return err
+		}
+		spoke, ever, err := s.readLastSpoke(ctx, tx, loaded, scope, s.now().UTC())
+		if err != nil {
+			return err
+		}
+		if !ever {
+			// No baseline is FIRST CONTACT, and nothing has moved "since" a
+			// conversation that never happened.
+			return nil
+		}
+		lastSpoke = &spoke
+		if loaded.Deal == nil {
+			return nil
+		}
+		moves, roomHidden, err = s.readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
 		return err
 	})
 	if err != nil {
-		return Input{}, err
+		return Input{}, nil, err
 	}
 
 	in := FromMeeting(room, perAttendee, s.now().UTC())
+	in.PriorMeetings = foldPriorMeetings(earlier)
+	in.LastSpokeAt = lastSpoke
+	in.DealMoves = moves
+	in.RoomHidden = roomHidden
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a person nobody named would be a read of a
 		// record this brief has no reason to touch.
-		return in, nil
+		return in, nil, nil
 	}
-	view, err := s.view.Assemble(ctx, ids.From[ids.PersonKind](room.Attendees[0].PersonID))
+	// Scoped like the claims above: the lead attendee's page read for a
+	// meeting on one engagement must not describe the account's other
+	// engagement as this room's recent history.
+	view, err := s.view.AssembleScoped(ctx, ids.From[ids.PersonKind](room.Attendees[0].PersonID),
+		person360.AssembleOptions{ProjectID: scope})
 	if err != nil {
-		return Input{}, err
+		return Input{}, nil, err
 	}
 	WithCounterpart(&in, view)
-	return in, nil
+	return in, view.Scope, nil
+}
+
+// resolveScope resolves the project the brief's reads are narrowed by.
+//
+// The meeting's own filing comes first and needs no gate beyond the
+// meeting's: a caller who may read the meeting may read which project it is
+// filed under. A request that names the same project agrees; one that names
+// another is refused as not-found, because the brief for a meeting about one
+// engagement is not available as a brief about another and the refusal must
+// not confirm which project the meeting IS filed under.
+//
+// A meeting filed under none takes the request as its scope. The request was
+// already gated as a read of the project (activities.RequireProjectScope in
+// assembleInput) before the meeting itself was read.
+//
+// The answer is an option rather than a pointer: "narrows nothing" is one of
+// its three honest outcomes, not an absence.
+func resolveScope(room meeting, requested *ids.ProjectID) (scopeChoice, error) {
+	if room.Project != nil {
+		filed := ids.From[ids.ProjectKind](room.Project.ID)
+		if requested != nil && requested.UUID != filed.UUID {
+			return scopeChoice{}, apperrors.ErrNotFound
+		}
+		return scopeChoice{project: &filed}, nil
+	}
+	return scopeChoice{project: requested}, nil
+}
+
+// scopeChoice is the resolved narrowing: the project the brief's reads are
+// scoped by, or none.
+type scopeChoice struct {
+	project *ids.ProjectID
 }
 
 // claimsPerAttendee reads what each person in the room has promised, asked and
 // decided. It runs inside the meeting's own transaction so the commitments a
 // reader is shown are the ones that were true when the room was read.
-func (s *Service) claimsPerAttendee(ctx context.Context, tx pgx.Tx, room meeting) (map[ids.UUID][]crmcontracts.ConversationClaim, error) {
+func (s *Service) claimsPerAttendee(ctx context.Context, tx pgx.Tx, room meeting, scope *ids.ProjectID) (map[ids.UUID][]crmcontracts.ConversationClaim, error) {
 	out := make(map[ids.UUID][]crmcontracts.ConversationClaim, len(room.Attendees))
 	for _, attendee := range room.Attendees {
-		found, err := s.claims.ClaimsForPerson(ctx, tx, ids.From[ids.PersonKind](attendee.PersonID), briefClaims)
+		found, err := s.claims.ClaimsForPerson(ctx, tx, ids.From[ids.PersonKind](attendee.PersonID), scope, briefClaims)
 		if err != nil {
 			return nil, err
 		}

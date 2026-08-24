@@ -4,7 +4,7 @@
 package compose
 
 // The REST door's half of the two commands one tool serves through TWO
-// contract operations (gradionhq/margince-poc-v1#928 task 7): merge_records is
+// contract operations (margince/margince#928 task 7): merge_records is
 // mergePerson and mergeOrganization, and enrich is scrapeCompany and
 // deepReadCompany.
 //

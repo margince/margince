@@ -4,10 +4,12 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ToastRegion, useToast } from "../design-system/toast";
 import { formatDateAbbrev } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -203,6 +205,7 @@ function LeadsWorkbench({
   const roster = useRoster("user", true);
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const overlay = useSorMode() === "overlay";
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
@@ -412,12 +415,12 @@ function LeadsWorkbench({
                   ? ` · ${t("lead.openTaskCount", { count: lead.open_task_count })}`
                   : ""}
                 {lead.next_task_due_at
-                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, Intl.DateTimeFormat().resolvedOptions().timeZone)}`
+                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, viewerZone())}`
                   : ""}
               </span>
             ),
           },
-          lastActivityColumn<Lead>(t, locale),
+          lastActivityColumn<Lead>(t, locale, recordZone),
           {
             key: "source",
             header: t("lead.source"),

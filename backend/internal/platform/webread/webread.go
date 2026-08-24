@@ -31,16 +31,22 @@ import (
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/platform/netguard"
+	"github.com/gradionhq/margince/backend/internal/platform/outbound"
+)
+
+// UserAgent names the bot on every request, robots.txt lookups included, and
+// robotsAgentProduct is the token a site's robots.txt group header is matched
+// against. BOTH come from one Agent: a request that advertises one name while
+// obeying rules written for another ignores a Disallow the site did mean for us.
+const (
+	UserAgent          = outbound.SiteReadHeader
+	robotsAgentProduct = outbound.SiteReadProduct
 )
 
 const (
 	fetchTimeout  = 10 * time.Second
 	maxFetchBytes = 1 << 20 // 1 MiB per page
-	// UserAgent names the bot on every request, robots.txt lookups included.
-	UserAgent = "margince-siteread/1.0"
-	// robotsAgentProduct is the product name robots.txt group headers match on
-	// (RFC 9309 calls this the product token).
-	robotsAgentProduct = "margince-siteread"
+
 	// robotsTTL bounds how long a fetched policy is trusted; a crawl session
 	// asks once, a later session re-asks.
 	robotsTTL = 15 * time.Minute

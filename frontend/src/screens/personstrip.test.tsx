@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
@@ -37,12 +37,27 @@ function viewWith(directions: readonly Direction[]): Person360 {
   } as unknown as Person360;
 }
 
-function renderStrip(view: Person360) {
+function renderStrip(view: Person360, locale: "en" | "de" | "vi" = "en") {
   render(
-    <LocaleProvider initial="en">
+    <LocaleProvider initial={locale}>
       <PersonStrip view={view} consentVerdict={undefined} />
     </LocaleProvider>,
   );
+}
+
+function viewWithDeal(amountMinor: number, currency: string): Person360 {
+  return {
+    person: { id: "p1", full_name: "Marine Raucoules" },
+    activities: { data: [] },
+    commercial: {
+      deal: {
+        id: "d1",
+        title: "ERP rollout",
+        amount_minor: amountMinor,
+        currency,
+      },
+    },
+  } as unknown as Person360;
 }
 
 describe("the reciprocity reading", () => {
@@ -75,5 +90,35 @@ describe("the reciprocity reading", () => {
     renderStrip(viewWith(["outbound", "internal"]));
 
     expect(screen.getByText("0 in · 1 out")).toBeTruthy();
+  });
+});
+
+// The open-deal slot used to run its own formatter: a hard-coded k/1000 tier
+// and a three-entry symbol table, locale-blind, exported from a screen and
+// used by personcards too. It reads through `formatMoneyCompact` now, the same
+// one company360 uses for the same glance on the account page.
+describe("the open-deal reading", () => {
+  it("abbreviates in the READER's conventions, not in one table's", () => {
+    // The defect the shared formatter closes: a table that says "k" says it to
+    // everybody. German abbreviates at the million and writes the symbol after
+    // the figure, and neither is something a screen gets to decide.
+    renderStrip(viewWithDeal(1_999_999_900, "EUR"), "en");
+    expect(screen.getByText("€20m")).toBeTruthy();
+
+    cleanup();
+    renderStrip(viewWithDeal(1_999_999_900, "EUR"), "de");
+    expect(screen.getByText("20 Mio. €")).toBeTruthy();
+  });
+
+  it("reads the scale off the CURRENCY, so a zero-decimal one is not divided", () => {
+    // ₫18,000,000 is eighteen million dong, not a hundred and eighty thousand.
+    // A hard-coded /100 understated every zero-decimal currency a hundredfold.
+    renderStrip(viewWithDeal(18_000_000, "VND"), "en");
+    expect(screen.getByText("₫18m")).toBeTruthy();
+  });
+
+  it("keeps a credit's sign in front of the figure", () => {
+    renderStrip(viewWithDeal(-9_500_000, "EUR"), "en");
+    expect(screen.getByText("-€95k")).toBeTruthy();
   });
 });

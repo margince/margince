@@ -60,7 +60,32 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
 		return
 	}
-	s, err := h.store.UpdateInstallation(r.Context(), req.Name, req.Timezone, req.BaseCurrency)
+	patch := identity.InstallationPatch{
+		Name:         req.Name,
+		Timezone:     req.Timezone,
+		BaseCurrency: req.BaseCurrency,
+	}
+	if req.BaseLanguage != nil {
+		// The generated enum refuses an unknown value at the edge, so a code
+		// that reaches here is one the contract admits. The entry validates it
+		// again on the write — the contract and the setting each state the
+		// language set, and neither defers to the other.
+		if !req.BaseLanguage.Valid() {
+			httperr.Write(w, r, httperr.Validation("base_language", "invalid", "a base language is one of en, de, vi"))
+			return
+		}
+		lang := string(*req.BaseLanguage)
+		patch.BaseLanguage = &lang
+	}
+	// No range check here, unlike BaseLanguage above. That one exists because
+	// the generated enum type carries a Valid() method worth calling; this
+	// field has no such type, and the entry's own refusal is already the better
+	// answer — settings.InvalidValue implements apperrors.FieldFault, so an
+	// out-of-range month comes back as a 422 naming the setting and carrying
+	// identity's own sentence, which quotes the value that was refused. A
+	// second check here would name a different field and say less.
+	patch.FiscalYearStartMonth = req.FiscalYearStartMonth
+	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -77,11 +102,13 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // changeable: an empty string would render as a reason that says nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
-		Name:               s.Name,
-		Timezone:           s.Timezone,
-		BaseCurrency:       s.BaseCurrency,
-		BaseCurrencyLocked: s.BaseCurrencyLocked,
-		MaxUploadBytes:     h.maxUploadBytes,
+		Name:                 s.Name,
+		Timezone:             s.Timezone,
+		BaseCurrency:         s.BaseCurrency,
+		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
+		FiscalYearStartMonth: s.FiscalYearStartMonth,
+		BaseCurrencyLocked:   s.BaseCurrencyLocked,
+		MaxUploadBytes:       h.maxUploadBytes,
 	}
 	if s.BaseCurrencyLockedReason != "" {
 		reason := s.BaseCurrencyLockedReason

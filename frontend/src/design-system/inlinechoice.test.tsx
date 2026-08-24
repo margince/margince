@@ -1,9 +1,16 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { ProblemError } from "../screens/common";
 import { InlineChoice, InlineText } from "./inlinechoice";
 
 // The rules this control keeps are failure modes, not polish. Each one here
@@ -82,7 +89,10 @@ describe("editing a value where it is read", () => {
 
   it("keeps the reader's choice on screen when the save is refused", async () => {
     const onSave = vi.fn(async () => {
-      throw new Error("Somebody else changed this record.");
+      throw new ProblemError({
+        code: "version_conflict",
+        detail: "Somebody else changed this record.",
+      });
     });
     renderChoice({ onSave });
     await userEvent.click(
@@ -99,6 +109,35 @@ describe("editing a value where it is read", () => {
       ),
     );
     expect(screen.getByRole("combobox")).toBeTruthy();
+  });
+
+  // The disclosure this control used to make, proved on the CHOICE half as
+  // well as the text half below. A version conflict cannot prove it: its
+  // detail is a sentence a reader is meant to see, so it renders identically
+  // whether or not the catalog arm is consulted. Only a refusal the catalog
+  // REPLACES separates the two.
+  it("answers a permission refusal in the reader's words, never the server's", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => {
+      throw new ProblemError({
+        code: "permission_denied",
+        detail: "organization.update: permission denied",
+      });
+    });
+    renderChoice({ onSave });
+    await user.click(
+      screen.getByRole("button", { name: "Change Account lifecycle" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Customer" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "do not have permission",
+      ),
+    );
+    const alert = screen.getByRole("alert").textContent ?? "";
+    expect(alert).not.toContain("organization.update");
+    expect(alert).not.toContain("permission denied");
   });
 
   // The counterpart of the Escape case below: leaving the editing view is what
@@ -138,12 +177,25 @@ describe("editing a value where it is read", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("does not pull focus back to the trigger when Tab moves it forward", async () => {
+  it("does not reach for the trigger when Tab leaves the open list", async () => {
     const { onSave } = renderChoice();
     await userEvent.click(
       screen.getByRole("button", { name: "Change Account lifecycle" }),
     );
-    await userEvent.tab();
+    // The keydown alone, deliberately, rather than `userEvent.tab()`: moving
+    // focus is the BROWSER's half of a Tab press, and it is the half no DOM
+    // emulation models. A browser remembers the place a removed focused
+    // element held — the sequential focus navigation starting point — and
+    // carries the reader on from there. jsdom keeps no such place, so once
+    // this picker unmounts the emulation restarts from the top of the
+    // document and lands on the resting trigger of its own accord, which
+    // would read here as the control having reached for focus. Dispatching
+    // the press by itself leaves exactly the half this control owns, which is
+    // the half the name of this test claims and no more. The browser's half —
+    // a Tab press carrying the reader to the next field — is checked in
+    // select.test.tsx, where the trigger survives the press and so jsdom can
+    // still model where focus goes.
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
     // Tab already moved the reader on — reclaiming focus here would fight
     // the very key that just moved it, the opposite of what Escape does.
     const trigger = screen.getByRole("button", {
@@ -156,7 +208,10 @@ describe("editing a value where it is read", () => {
 
   it("lets Escape back out even once a save has already failed", async () => {
     const onSave = vi.fn(async () => {
-      throw new Error("Somebody else changed this record.");
+      throw new ProblemError({
+        code: "version_conflict",
+        detail: "Somebody else changed this record.",
+      });
     });
     renderChoice({ onSave });
     await userEvent.click(
@@ -303,7 +358,10 @@ describe("editing free text where it is read", () => {
 
   it("keeps the input mounted with the typed text on a refused save, rather than pulling focus back", async () => {
     const onSave = vi.fn(async () => {
-      throw new Error("Somebody else changed this record.");
+      throw new ProblemError({
+        code: "version_conflict",
+        detail: "Somebody else changed this record.",
+      });
     });
     renderText({ onSave });
     await userEvent.click(
@@ -320,5 +378,35 @@ describe("editing free text where it is read", () => {
     // Still the editor, still the reader's own typed text — a failed save
     // must not also lose what they wrote or drop them out of the field.
     expect(screen.getByLabelText("Industry")).toHaveValue("Aerospace");
+  });
+
+  // The disclosure both controls used to make. `auth.Require` composes a
+  // refusal's detail from the RBAC object and the verb, so showing a caught
+  // error's own text handed the person who was just refused the name of the
+  // permission they lack and the record kind it governs.
+  it("answers a permission refusal in the reader's words, never the server's", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => {
+      throw new ProblemError({
+        code: "permission_denied",
+        detail: "person.update: permission denied",
+      });
+    });
+    renderText({ onSave });
+    await user.click(screen.getByRole("button", { name: "Change Industry" }));
+    const input = screen.getByLabelText("Industry");
+    await user.clear(input);
+    await user.type(input, "Aerospace{Enter}");
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "do not have permission",
+      ),
+    );
+    expect(screen.getByRole("alert").textContent).not.toContain(
+      "person.update",
+    );
+    expect(screen.getByRole("alert").textContent).not.toContain(
+      "permission denied",
+    );
   });
 });

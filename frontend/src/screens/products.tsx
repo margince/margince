@@ -6,6 +6,7 @@ import { Badge } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatMoney } from "../format/format";
+import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { throwProblem, useMe } from "./common";
@@ -84,9 +85,18 @@ const PRODUCT_FIELDS: CreateField[] = [
   { key: "default_tax_rate", label: "product.taxRate", type: "number" },
 ];
 
-// Major-unit price string -> integer minor units (P11: no float money on the wire).
-function toMinor(major: string | undefined): number {
-  return Math.round(Number(major ?? "0") * 100);
+// text narrows one value off the edit form's Record<string, unknown> without
+// asserting: a field the reader left alone is absent, not an empty string, and
+// an assertion would hand `undefined` to a scale that then silently defaults.
+function text(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+// Major-unit price string -> integer minor units (P11: no float money on the
+// wire), at the scale the PRODUCT's own currency carries. A hard-coded hundred
+// priced a yen product at a hundredth and a dinar product at ten times.
+function toMinor(major: string | undefined, currency: string): number {
+  return toMinorUnits(Number(major ?? "0"), currency);
 }
 
 /**
@@ -128,7 +138,7 @@ export function ProductsAdmin() {
         sku: values.sku?.trim() || null,
         description: values.description?.trim() || null,
         unit: values.unit?.trim() || null,
-        unit_price_minor: toMinor(values.unit_price),
+        unit_price_minor: toMinor(values.unit_price, values.currency || "EUR"),
         currency: values.currency || "EUR",
         default_tax_rate: values.default_tax_rate
           ? Number(values.default_tax_rate)
@@ -159,8 +169,19 @@ export function ProductsAdmin() {
           sku: (values.sku as string)?.trim() || null,
           description: (values.description as string)?.trim() || null,
           unit: (values.unit as string)?.trim() || undefined,
-          unit_price_minor: toMinor(values.unit_price as string),
-          currency: (values.currency as string) || undefined,
+          // The currency the form carries, falling back to the product's
+          // stored one when the field was left alone — the same value the
+          // PATCH below sends, so the amount and its scale cannot disagree.
+          //
+          // Narrowed rather than asserted: this callback is handed
+          // Record<string, unknown>, and `as string` on a value that turns out
+          // to be undefined would scale the price at the two-digit default
+          // without anything failing.
+          unit_price_minor: toMinor(
+            text(values.unit_price),
+            text(values.currency) || product.currency,
+          ),
+          currency: text(values.currency) || undefined,
           default_tax_rate: values.default_tax_rate
             ? Number(values.default_tax_rate)
             : undefined,
@@ -180,8 +201,13 @@ export function ProductsAdmin() {
   const rowActions: ListColumn<Product> = {
     key: "actions",
     header: t("table.actions"),
+    // Two labelled buttons, not a value: the column is sized by the verbs in
+    // it rather than by a share of a 720px settings column, which is what had
+    // this cell handing the reader half an "Edit product" and a red sliver of
+    // "Archive product" (listtable.tsx, COLUMN_SIZES.verbs).
+    verbs: true,
     cell: (p: Product) => (
-      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+      <div className="listsection-rowverbs">
         {canUpdate && (
           <EditAction
             label={t("product.edit")}
@@ -189,7 +215,7 @@ export function ProductsAdmin() {
             recordKey="product"
             record={{
               ...p,
-              unit_price: (p.unit_price_minor / 100).toFixed(2),
+              unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
             }}
             update={updateProduct(p)}
             fields={PRODUCT_FIELDS}
@@ -220,7 +246,7 @@ export function ProductsAdmin() {
   return (
     <Panel className="listsection" title={t("product.title")}>
       <PanelBody className="listsection-intro">
-        <p className="t-caption">{t("product.settingsSub")}</p>
+        <p className="settings-panel-sub">{t("product.settingsSub")}</p>
         {/* A reader who holds no write verb here sees a list with no editor, and
             silence about why is a claim that the list has none. The posture is
             stated ONCE for the whole section (design-system README, "Absent,
@@ -232,7 +258,7 @@ export function ProductsAdmin() {
             read-only notice at the admin who holds all three. Gate on the
             probe, not on its absence. */}
         {me.isSuccess && !canCreate && !canUpdate && !canArchive && (
-          <p className="t-caption">{t("product.readOnly")}</p>
+          <p className="settings-panel-sub">{t("product.readOnly")}</p>
         )}
       </PanelBody>
       <ListTable

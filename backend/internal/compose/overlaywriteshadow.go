@@ -26,6 +26,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -141,6 +142,31 @@ type archiveWire[Res any] struct {
 	markArchived func(*Res, time.Time)
 }
 
+// archivePrecondition answers which If-Match this request carries, and it is a
+// named function rather than three lines inline because the QUESTION is what
+// was got wrong twice: a caller's header and a released approval's pin arrive
+// identically and are not the same claim.
+//
+// Only the redeemed case yields a version. The unredeemed one answers nil even
+// when the caller sent a header — this shadow's documented answer to a
+// precondition a mirror row cannot evaluate.
+//
+// COVERAGE, stated because it is uneven and the uncovered arm is the important
+// one: the FALSE arm is gated by TestOverlayArchiveIgnoresACallersIfMatch. The
+// TRUE arm is not, and cannot be from outside package agents — the redeemed
+// marker is set only by RedeemAndMark and has no exported setter, which is the
+// right design (a test-only way to forge "a human approved this" is a worse
+// thing to own than an untested branch). Reaching it honestly needs a
+// staged-then-redeemed archive that routes overlay, and overlay staging is
+// refused by refuseStagingElsewhere except inside the mode-cache window
+// dispatcherarchive.go describes — which is the path this arm exists for.
+func archivePrecondition(w http.ResponseWriter, r *http.Request) (*int64, bool) {
+	if !agents.ApprovalRedeemed(r.Context()) {
+		return nil, true
+	}
+	return httperr.IfMatchVersion(w, r)
+}
+
 // overlayArchive serves one archive shadow: the native module handler off
 // overlay mode, otherwise a dispatched seam Archive answered with the
 // archived row's last-known state — the contract's own archive response
@@ -190,13 +216,40 @@ func overlayArchive[Res any](s Server, w http.ResponseWriter, r *http.Request,
 		native()
 		return
 	}
+	// A CALLER's If-Match and a released APPROVAL's pin arrive in the same
+	// header and are not the same thing, so they are not answered the same way.
+	//
+	// A caller's precondition is a client convenience, and overlayUpdate's own
+	// doc twenty lines above states this shadow's answer to it: accepted and
+	// discarded, because a mirror row carries no version to compare against.
+	// Both verbs of one shadow owe a caller the same answer about one header —
+	// ignoring it on PATCH and refusing it on DELETE tells a client two things
+	// about one record.
+	//
+	// A released approval's pin is an AUTHORIZATION BINDING. redeemIfPresented
+	// (agentgatestaging.go) sets the header from it precisely so the store
+	// re-checks the version inside the transaction that mutates, and discarding
+	// it would carry out an archive a human approved against a version nothing
+	// then verified — silently, where the caller's own header is merely
+	// ignored. So it is forwarded, and overlay refuses it in its own words: an
+	// approval this seam cannot honour must fail loudly rather than land
+	// unconditioned.
+	//
+	// The gap the caller's header leaves — an overlay client has no optimistic
+	// concurrency and no signal saying so — is one question about both verbs,
+	// and closing it needs a version the caller can pin.
+	pin, ok := archivePrecondition(w, r)
+	if !ok {
+		return
+	}
 	ref := datasource.EntityRef{Type: et, ID: ids.UUID(id)}
 	rec, err := s.sorDispatch.Read(r.Context(), ref)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	if _, err := s.sorDispatch.archiveInMode(r.Context(), bool(ov), ref); err != nil {
+	if _, err := s.sorDispatch.archiveInMode(r.Context(), bool(ov),
+		datasource.ArchiveInput{Ref: ref, IfVersion: pin}); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -216,9 +269,9 @@ func (s Server) UpdatePerson(w http.ResponseWriter, r *http.Request, id crmcontr
 }
 
 // ArchivePerson shadows the person archive.
-func (s Server) ArchivePerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (s Server) ArchivePerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchivePersonParams) {
 	overlayArchive(s, w, r, datasource.EntityPerson, id,
-		func() { s.peopleHandlers.ArchivePerson(w, r, id) }, archiveWire[crmcontracts.Person]{
+		func() { s.peopleHandlers.ArchivePerson(w, r, id, params) }, archiveWire[crmcontracts.Person]{
 			assemble:     overlayWirePerson,
 			markArchived: func(p *crmcontracts.Person, at time.Time) { p.ArchivedAt = &at },
 		})
@@ -231,9 +284,9 @@ func (s Server) UpdateOrganization(w http.ResponseWriter, r *http.Request, id cr
 }
 
 // ArchiveOrganization shadows the organization archive.
-func (s Server) ArchiveOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (s Server) ArchiveOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchiveOrganizationParams) {
 	overlayArchive(s, w, r, datasource.EntityOrganization, id,
-		func() { s.peopleHandlers.ArchiveOrganization(w, r, id) }, archiveWire[crmcontracts.Organization]{
+		func() { s.peopleHandlers.ArchiveOrganization(w, r, id, params) }, archiveWire[crmcontracts.Organization]{
 			assemble:     overlayWireOrganization,
 			markArchived: func(o *crmcontracts.Organization, at time.Time) { o.ArchivedAt = &at },
 		})
@@ -246,9 +299,9 @@ func (s Server) UpdateDeal(w http.ResponseWriter, r *http.Request, id crmcontrac
 }
 
 // ArchiveDeal shadows the deal archive.
-func (s Server) ArchiveDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (s Server) ArchiveDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ArchiveDealParams) {
 	overlayArchive(s, w, r, datasource.EntityDeal, id,
-		func() { s.dealsHandlers.ArchiveDeal(w, r, id) }, archiveWire[crmcontracts.Deal]{
+		func() { s.dealsHandlers.ArchiveDeal(w, r, id, params) }, archiveWire[crmcontracts.Deal]{
 			assemble:     overlayWireDeal,
 			markArchived: func(d *crmcontracts.Deal, at time.Time) { d.ArchivedAt = &at },
 		})

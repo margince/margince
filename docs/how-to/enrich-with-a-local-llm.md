@@ -85,7 +85,7 @@ Full first-run details:
 
 1. Go to **Companies** (`#/companies`) → **New company**. Give it a **crawlable**
    domain, e.g. `stripe.com`.
-   > The fetcher sends `User-Agent: margince-enrich/1.0`; bot-protected sites
+   > The fetcher sends `User-Agent: margince-siteread/1.0`; bot-protected sites
    > (e.g. `tesla.com`) answer **403**. Known-crawlable: `stripe.com`, `go.dev`,
    > `ollama.com`, `news.ycombinator.com`, `sqlite.org`.
 2. Open the company → **Read now** on the *Read from the website* card.

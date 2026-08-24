@@ -10,6 +10,14 @@ package integration
 // harness that has to mirror something outside the test tree: identity's
 // seeded role documents. A fixture that drifts from that seed still passes,
 // while proving nothing about production.
+//
+// The row scope is the deliberate exception, and it diverges on purpose. The
+// seeded rep and manager are `own`: team membership is not by itself permission
+// to rewrite a teammate's records. These fixtures stay `team`, because the team
+// arm of the write predicate is still live — a record_grant may name a team, and
+// an operator may author a custom role at team scope — and it is these suites
+// that cover it. Moving them to `own` would delete that coverage while the
+// predicate went on rendering the clause.
 
 import (
 	"maps"
@@ -165,6 +173,12 @@ var (
 			// the harness admin fixture can exercise the rate editors.
 			"fx_rate":       {Create: true, Read: true, Update: true, Delete: true},
 			"ai_model_rate": {Create: true, Read: true, Update: true, Delete: true},
+			// ai_routing mirrors the real seed: read + update for admin/ops and
+			// nothing for anyone else, and NO create or delete — a setting is
+			// read and updated, and an absent row is its registered default
+			// rather than a missing record. It gates which vendor the
+			// installation's text is sent to.
+			"ai_routing": {Read: true, Update: true},
 			// capture_settings mirrors the real admin seed: create + read +
 			// update (0210 added create — any seat may contribute a consumer
 			// domain, and the admin fixture must hold what the seed holds or

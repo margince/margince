@@ -95,6 +95,21 @@ type Field struct {
 	// (automation's preview vocabularies) owes no target, because nothing can
 	// offer a picker for it.
 	References Reference
+	// Options is a picklist field's allowed values, for a surface that has to
+	// OFFER them. Empty for every other type, and empty for a picklist whose
+	// values this engine does not know.
+	//
+	// ADVERTISEMENT only: compileLeaf does not refuse a value outside the set, and
+	// TestAPicklistLeafComparesAnUnrecognisedValueRatherThanRefusingIt holds that
+	// so the behaviour is gated rather than assumed. Refusing would be a live-API
+	// change — a saved segment holding a value since removed from its set would
+	// begin failing at read time — which is why the set travels first and the
+	// refusal is a separate call to make.
+	//
+	// What this fixes meanwhile is the surface: a builder that knows the values
+	// offers them instead of asking a reader to type one, which is how a typo
+	// became a filter that matched nothing and read as a settled answer.
+	Options []string
 }
 
 // Reference is a record type an id field's values point at. Named rather than a
@@ -390,6 +405,18 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		value, err := scalarOperand(p.Value, field, p.Field, p.Op)
 		if err != nil {
 			return "", err
+		}
+		if p.Op == OpNeq {
+			// IS DISTINCT FROM rather than <>: a column that is UNSET is
+			// distinct from every value, and three-valued logic would otherwise
+			// drop those rows from an answer the caller reads as "everything
+			// that is not X".
+			//
+			// It is also what the rest of this package answers. A `neq` on a
+			// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
+			// record with no linked row at all; `<>` here would make one operator
+			// mean two things depending on where the field lives.
+			return fmt.Sprintf("%s IS DISTINCT FROM $%d", field.Expr, arg(value)), nil
 		}
 		return fmt.Sprintf("%s %s $%d", field.Expr, comparisonSQL[p.Op], arg(value)), nil
 	}

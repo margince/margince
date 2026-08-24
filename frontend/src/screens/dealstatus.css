@@ -1,0 +1,75 @@
+/* Deal360 — the deal page's written briefing. Tokens only. */
+
+.deal360-warn {
+  color: var(--warn);
+}
+
+.deal360-verdict-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* The call, as a word rather than a colour alone: a reader who cannot tell
+   the tints apart still reads "drifting". */
+.deal360-standing {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.deal360-live {
+  background: var(--successBg);
+  color: var(--success);
+}
+
+.deal360-drifting,
+.deal360-blocked {
+  background: var(--warnBg);
+  color: var(--warn);
+}
+
+.deal360-cold {
+  background: var(--dangerBg);
+  color: var(--danger);
+}
+
+.deal360-move-reason {
+  margin: 0 0 var(--space-3);
+}
+
+.deal360-evidence {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+  color: var(--textMeta);
+}
+
+.deal360-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Deal360 leads the page, so it needs room to breathe above the tabs. */
+.deal360-lead {
+  margin-bottom: var(--space-4);
+}
+
+/* The full briefing, folded. Closed by default: the head and the strip above
+   answer the scanning read, and the prose is for the reader who wants it. */
+.deal360-fold > summary {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+  color: var(--textMuted);
+  font-size: var(--fs-meta);
+}
+
+.deal360-fold > summary:hover {
+  color: var(--textPrimary);
+}

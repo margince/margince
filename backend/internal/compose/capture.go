@@ -26,7 +26,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/capture/imap"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/telegram"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
@@ -145,7 +144,10 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 // question about the binary, not about any database.
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
 	db := InstallationDB(pool)
-	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault)
+	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
+		// The digest's projects section is answered here because its reads
+		// span the deals module's tables (digestprojects.go).
+		WithDigestProjects(digestProjectsSource)
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
 	// carries it.
@@ -206,7 +208,15 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// reason the counterparty resolver is: capture must not import a
 		// sibling, and which project a subject names is a question about
 		// another module's records.
-		WithProjectAttribution(deals.NewStore(InstallationDB(pool), DealsInstallation())).
+		// The stamp beside it comes from activities, which owns `activity` —
+		// filing an activity under a project qualifies its correspondence as
+		// a Handelsbrief (D5), and that classification commits with the link.
+		// The uncertain rung's two seams (projectattribution.go): the live
+		// projects the message reaches, and the engine that asks a human.
+		WithProjectAttribution(withCandidateSeams(capture.ProjectAttribution{
+			Keys:  ProjectsStore(pool),
+			Stamp: activities.StampCorrespondenceForProject,
+		}, pool)).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

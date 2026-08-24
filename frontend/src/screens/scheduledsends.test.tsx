@@ -200,6 +200,37 @@ it("stays silent about the zone when it is the reader's own", async () => {
   expect(screen.queryByText(new RegExp(`in ${readerZone}`))).toBeNull();
 });
 
+it.each(["Etc/GMT-1", "Etc/GMT+5", "GMT", "+01:00"])(
+  "keeps the list up when the wire names %s, which Intl resolves but the formatter refuses",
+  async (offsetZone) => {
+    // The row's fallback used to ask Intl whether the name RESOLVED, and every
+    // one of these does — so the fallback accepted them and the formatter one
+    // line later threw on the same value, unmounting the whole list over one
+    // row. That is the exact failure the fallback exists to prevent, and it was
+    // reachable from wire data: `scheduled_tz` is a string the server chooses.
+    mount([{ ...WAITING, scheduled_tz: offsetZone }, HELD]);
+    // Both rows drawn, not a blank screen.
+    expect(await screen.findByText("The renewal quote")).toBeTruthy();
+    expect(await screen.findByText("The follow-up")).toBeTruthy();
+    // And the moment falls back to the reader's own zone rather than claiming
+    // the offset: a zone this product will not render is not one it may name.
+    //
+    // Matched as literal TEXT, not through a RegExp built from the zone. Two of
+    // these four names carry a `+`, which a regular expression reads as an
+    // operator — `/in +01:00/` means "in" then one-or-more spaces, so it cannot
+    // match the string it was built from and the assertion passes over anything
+    // at all. A negative assertion that cannot fail is indistinguishable from
+    // one that holds.
+    expect(
+      screen.queryByText(
+        (_, element) =>
+          element?.children.length === 0 &&
+          (element.textContent ?? "").includes(offsetZone),
+      ),
+    ).toBeNull();
+  },
+);
+
 it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);

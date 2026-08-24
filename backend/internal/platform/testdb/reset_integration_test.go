@@ -59,6 +59,7 @@ func nonEmptyTables(ctx context.Context, t *testing.T, owner *pgx.Conn) []string
 		  AND n.nspname <> 'information_schema'
 		  AND c.relkind IN ('r', 'p', 'f')
 		  AND c.relname NOT LIKE 'schema_migrations_%'
+		  AND c.relname <> 'river_migration'
 		  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask')
 		ORDER BY n.nspname, c.relname`)
 	if err != nil {
@@ -94,7 +95,9 @@ func TestResetScopeCoversEveryDataRelation(t *testing.T) {
 		t.Fatalf("listing the reset's scope: %v", err)
 	}
 	// Derived independently and deliberately wider: any relation in a schema the
-	// migration lane owns that stores rows, whatever its relkind, minus the ledger
+	// migration lane owns that stores rows, whatever its relkind, minus the two
+	// migration ledgers (schema_migrations_* and River's own river_migration —
+	// see resetTables for why a ledger is not test data)
 	// and the boot-seeded reference-data tables the reset preserves on purpose
 	// (activity_kind, channel_provider — DESIGN-SP4 §4: migration 0240 seeds rows
 	// a test depends on, breaking this package's former "no migration seeds
@@ -109,6 +112,7 @@ func TestResetScopeCoversEveryDataRelation(t *testing.T) {
 		WHERE n.nspname IN ('public', 'ext')
 		  AND c.relkind IN ('r', 'p')
 		  AND c.relname NOT LIKE 'schema_migrations_%'
+		  AND c.relname <> 'river_migration'
 		  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask')
 		ORDER BY n.nspname, c.relname`)
 	if err != nil {
@@ -150,8 +154,8 @@ func TestResetEmptiesEveryDataTableIncludingTheAppendOnlyOnes(t *testing.T) {
 	// this row is the one that proves the reset suppresses the append-only guards
 	// and not merely the FK triggers.
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO audit_log (workspace_id, actor_type, actor_id, action, entity_type, entity_id)
-		VALUES ($1, 'human', 'human:probe', 'create', 'workspace', $1)`, ws); err != nil {
+		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
+		VALUES ('human', 'human:probe', 'create', 'workspace', $1)`, ws); err != nil {
 		t.Fatalf("seeding audit_log: %v", err)
 	}
 	// TWO rows, so the sequence lands on a value the restart must visibly move.

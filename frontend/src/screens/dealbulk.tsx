@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -7,8 +7,9 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import { dealRecordKeys } from "./activitykeys";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
-import { useRoster } from "./entityref";
+import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -48,6 +49,8 @@ export function DealBulkBar({
   const [ownerId, setOwnerId] = useState("");
   const [stageId, setStageId] = useState("");
   const roster = useRoster("user", true);
+  const rosterPartial = useRosterPartial("user", true);
+  const partialNoteId = useId();
   const [outcomes, setOutcomes] = useState<readonly DealBulkOutcome[]>([]);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const openStages = stages.filter((stage) => stage.semantic === "open");
@@ -57,9 +60,12 @@ export function DealBulkBar({
   // stage chosen for rows that are no longer selected. A verb armed for one
   // selection must not fire at another, so the pickers clear when the
   // membership changes.
+  // Sorted in "en" rather than the reader's locale: this string is compared
+  // against itself to detect a changed selection, so the ordering has to be a
+  // property of the ids and of nothing else.
   const selectionKey = deals
     .map((deal) => deal.id)
-    .sort()
+    .sort((a, b) => a.localeCompare(b, "en"))
     .join(",");
   const [armedFor, setArmedFor] = useState(selectionKey);
   if (armedFor !== selectionKey) {
@@ -117,6 +123,17 @@ export function DealBulkBar({
       // resend the very version that just conflicted. The run stays pending
       // — and the verbs disabled — until the list holds fresh versions.
       await queryClient.invalidateQueries({ queryKey: ["deals"] });
+      // Each row that actually moved carries reads derived from it — the deal
+      // status card says what its stage MEANS — and the list key does not
+      // reach them. A row that refused is unchanged and needs nothing.
+      for (const outcome of result) {
+        if (outcome.error !== undefined) {
+          continue;
+        }
+        for (const queryKey of dealRecordKeys(outcome.id)) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      }
       setOutcomes(result);
       onDone(result);
     },
@@ -186,6 +203,10 @@ export function DealBulkBar({
         placeholder={t("deals.bulkOwnerPick")}
         disabled={run.isPending}
         onChange={setOwnerId}
+        // The caveat cannot sit beside this control (see below), so the control
+        // names it instead — which is the wiring that keeps them together for a
+        // reader who never sees the layout.
+        aria-describedby={rosterPartial ? partialNoteId : undefined}
         options={(roster.data ?? []).map((entry) => ({
           value: entry.id,
           // The user roster: every entry carries a display name; a team
@@ -218,6 +239,12 @@ export function DealBulkBar({
       <Button small disabled={busy} onClick={() => setConfirmingArchive(true)}>
         {t("deals.bulkArchive")}
       </Button>
+      {/* Last, after every verb. The bar is one wrapping flex row, so a sentence
+          placed next to the owner picker becomes a flex item between that picker
+          and the button that applies it — and the point the row breaks on a
+          narrow viewport, splitting the control from its verb. Here it can come
+          between nothing, and the picker points at it by id. */}
+      <RosterPartialNote partial={rosterPartial} id={partialNoteId} />
       {/* Archiving many deals at once is the most destructive thing this bar
           does, and every other archive in the product asks first. One click
           that removes a dozen rows from every list must not be the exception. */}

@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ConnectedAgentsCard } from "./connected-agents";
-import { SettingsScreen } from "./settings";
+import { SettingsScreen, settingsAddress } from "./settings";
 
 // The split GET /passports feeds: a passport the human minted belongs to the
 // passports card, a connection's credential to this one. `connection` decides,
@@ -36,8 +36,20 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   globalThis.localStorage.clear();
 });
+
+// The zone the viewer's browser reports, as `viewerZone()` asks for it.
+// Restored by the afterEach above, so a case pretending to sit elsewhere never
+// decides what the next one renders.
+function pretendViewerZone(timeZone: string): void {
+  const real = Intl.DateTimeFormat().resolvedOptions();
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    ...real,
+    timeZone,
+  });
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -185,6 +197,41 @@ describe("ConnectedAgentsCard", () => {
     expect(screen.getByText(/connected 02\/07\/2026/)).toBeTruthy();
   });
 
+  it("dates the grant on the record's calendar and the deadline on the viewer's", async () => {
+    // One row carries both purposes, so one render proves both halves of the
+    // zone-by-purpose rule — and both instants below fall on a DIFFERENT
+    // calendar day in Berlin than on the US west coast, so picking the wrong
+    // zone for either cannot pass by coincidence:
+    //   connected_at 00:30 UTC  → 2 July in RECORD_ZONE, 1 July in Los Angeles
+    //   expires_at   00:00 UTC  → 31 Dec in RECORD_ZONE, 30 Dec in Los Angeles
+    pretendViewerZone("America/Los_Angeles");
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        passports: [
+          {
+            ...CONNECTED,
+            expires_at: "2026-12-31T00:00:00Z",
+            connection: {
+              ...CONNECTED.connection,
+              connected_at: "2026-07-02T00:30:00Z",
+            },
+          },
+        ],
+      }),
+    );
+    render(<ConnectedAgentsCard />);
+    // When the grant was made is a record fact — every colleague reading this
+    // installation must be able to quote the same day for it.
+    expect(await screen.findByText(/connected 02\/07\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/connected 01\/07\/2026/)).toBeNull();
+    // When the credential runs out is this human's deadline, on this human's
+    // calendar: a fixed zone would promise them a day that, where they are,
+    // has not arrived.
+    expect(screen.getByText(/credential renews by 30\/12\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/credential renews by 31\/12\/2026/)).toBeNull();
+  });
+
   it("leaves a minted passport out, however its label is spelled", async () => {
     vi.stubGlobal("fetch", backend({}));
     render(<ConnectedAgentsCard />);
@@ -198,6 +245,38 @@ describe("ConnectedAgentsCard", () => {
     await waitFor(() =>
       expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
     );
+  });
+
+  // The guide is reference rather than a decision, so it reads last and closed
+  // — EXCEPT in the one state where it is the point of the card. Nobody has
+  // connected, so nothing else on the card can be acted on, and a reader who
+  // has to open a disclosure to find the only thing to do has been given a
+  // puzzle instead of an instruction.
+  it("opens the connect guide by itself while no agent is connected", async () => {
+    vi.stubGlobal("fetch", backend({ passports: [] }));
+    render(<ConnectedAgentsCard />);
+    await waitFor(() =>
+      expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
+    );
+    const guide = screen.getByText("Connect an agent").closest("details");
+    if (!(guide instanceof HTMLDetailsElement)) {
+      throw new Error("the connect guide is not a disclosure");
+    }
+    expect(guide.open).toBe(true);
+  });
+
+  // And leaves it closed once there is something else to read: four commands
+  // nobody runs twice are a footnote to a card whose subject is the clients
+  // already connected.
+  it("leaves the connect guide closed once an agent is connected", async () => {
+    vi.stubGlobal("fetch", backend({}));
+    render(<ConnectedAgentsCard />);
+    await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
+    const guide = screen.getByText("Connect an agent").closest("details");
+    if (!(guide instanceof HTMLDetailsElement)) {
+      throw new Error("the connect guide is not a disclosure");
+    }
+    expect(guide.open).toBe(false);
   });
 
   it("offers a connect command per client, built from the URL the server advertises", async () => {
@@ -255,7 +334,7 @@ describe("ConnectedAgentsCard", () => {
       // command, and a bare text query would match either.
       await vi.waitFor(() =>
         expect(
-          document.querySelector('[data-connection="pp-lapsed"]'),
+          document.querySelector('[data-testid="connection-pp-lapsed"]'),
         ).toBeTruthy(),
       );
       expect(screen.getByText("credential expired")).toBeTruthy();
@@ -285,7 +364,7 @@ describe("ConnectedAgentsCard", () => {
       render(<ConnectedAgentsCard />);
       await vi.waitFor(() =>
         expect(
-          document.querySelector('[data-connection="pp-renewing"]'),
+          document.querySelector('[data-testid="connection-pp-renewing"]'),
         ).toBeTruthy(),
       );
       expect(screen.getByText("renewing")).toBeTruthy();
@@ -319,9 +398,15 @@ describe("ConnectedAgentsCard", () => {
     render(<ConnectedAgentsCard />);
     await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Disconnect Claude Code" }),
-    );
+    // The row's verb names the client it would disconnect; the confirm inside
+    // the dialog names the act alone. Two buttons reading "Disconnect" one
+    // dialog apart are ambiguous for a reader and for a name-based query, so
+    // the query below is the one that proves they are still separable.
+    const opener = screen.getByRole("button", {
+      name: "Disconnect Claude Code",
+    });
+    expect(opener.textContent).toBe("Disconnect");
+    await userEvent.click(opener);
     expect(screen.getByText(/ends the whole connection/)).toBeTruthy();
     const dialog = screen.getByRole("dialog");
     await userEvent.click(
@@ -334,7 +419,7 @@ describe("ConnectedAgentsCard", () => {
     await waitFor(() =>
       expect(screen.getByText("No agent is connected yet.")).toBeTruthy(),
     );
-    expect(document.querySelector("[data-connection]")).toBeNull();
+    expect(document.querySelector('[data-testid^="connection-"]')).toBeNull();
   });
 
   // Ending a connection removes the row the confirm was opened from, so there is
@@ -373,7 +458,7 @@ describe("ConnectedAgentsCard", () => {
 describe("the two passport cards on Your agents", () => {
   it("keeps a connection out of the passports a human may lend", async () => {
     vi.stubGlobal("fetch", backend({}));
-    render(<SettingsScreen tab="agents" />);
+    render(<SettingsScreen route={settingsAddress("agents")} />);
     await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
     // The minted passport is listed as lendable...
     const passports = document.querySelector('[data-passport="pp-minted"]');
@@ -383,7 +468,7 @@ describe("the two passport cards on Your agents", () => {
       document.querySelector('[data-passport="pp-connection"]'),
     ).toBeNull();
     expect(
-      document.querySelector('[data-connection="pp-connection"]'),
+      document.querySelector('[data-testid="connection-pp-connection"]'),
     ).toBeTruthy();
   });
 });

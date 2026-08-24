@@ -59,7 +59,10 @@ func (s *Store) CreateOrganization(ctx context.Context, in CreateOrganizationInp
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = createOrganizationInTx(ctx, tx, in, by, active)
-		return err
+		if err != nil {
+			return err
+		}
+		return s.geocodeANewCompany(ctx, tx, out, in.Address)
 	})
 	return out, err
 }
@@ -83,7 +86,33 @@ func (s *Store) CreateOrganizationTx(ctx context.Context, tx pgx.Tx, in CreateOr
 		return crmcontracts.Organization{}, err
 	}
 	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
-	return createOrganizationInTx(ctx, tx, in, by, nil)
+	out, err := createOrganizationInTx(ctx, tx, in, by, nil)
+	if err != nil {
+		return out, err
+	}
+	return out, s.geocodeANewCompany(ctx, tx, out, in.Address)
+}
+
+// geocodeANewCompany queues the lookup a create earned.
+//
+// It sits on the two store entry points rather than inside
+// createOrganizationInTx because that one is a free function with no store —
+// which is exactly why the enqueue was missed when the update path got it.
+// Both doors call this, so neither can create a company that never asks where
+// it is.
+//
+// A create with no usable address queues nothing: the row is simply not a
+// place yet, and the update path will queue when it becomes one.
+func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
+	out crmcontracts.Organization, address *crmcontracts.Address,
+) error {
+	if !namesAPlace(address) {
+		return nil
+	}
+	if err := s.enqueueGeocode(ctx, tx, ids.From[ids.OrganizationKind](ids.UUID(out.Id))); err != nil {
+		return fmt.Errorf("locating a new company: %w", err)
+	}
+	return nil
 }
 
 // readyOrganizationCreate runs what a create settles BEFORE any transaction
@@ -146,6 +175,17 @@ func createOrganizationInTx(ctx context.Context, tx pgx.Tx, in CreateOrganizatio
 	})
 	if err != nil {
 		return crmcontracts.Organization{}, err
+	}
+
+	// A description supplied at create is authored the same way an edited one
+	// is, and has to say so for the same reason: the site read asks
+	// field_provenance whose sentence it is before replacing it, and a create
+	// that stamped nothing would leave a person's own words unclaimed. `by` is
+	// the authenticated principal, so an agent's create claims nothing.
+	if in.Description != nil && *in.Description != "" {
+		if err := stampDescriptionAuthor(ctx, tx, id, by); err != nil {
+			return crmcontracts.Organization{}, err
+		}
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "organization", id.UUID, nil, map[string]any{"display_name": in.DisplayName})
@@ -264,6 +304,30 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 		if _, changed := after["display_name"]; changed {
 			if _, err := tx.Exec(ctx, `UPDATE organization SET name_source = 'human' WHERE id = $1`, id); err != nil {
 				return fmt.Errorf("stamp organization name provenance: %w", err)
+			}
+		}
+		// The description carries the same lattice on a different layer. A site
+		// read may replace a description no person authored, so an edited one has
+		// to say in field_provenance that a person wrote it — otherwise the next
+		// crawl reads "no row" as "no owner" and takes the sentence somebody
+		// typed.
+		//
+		// The test is whether the VALUE moved, not whether the field was sent.
+		// storekit.Patch records an assignment unconditionally, so `after` holds
+		// every key the request named — and an agent re-sending a human's
+		// description unchanged would otherwise write an agent: row on top of the
+		// human's and hand the column to the next crawl. The display-name stamp
+		// above reads its own key the looser way and is not this change's to move.
+		if describedDifferently(before, after) {
+			// Not the `by` above: stageOrgReplaceSets answers "" unless the edit
+			// also carried a replace-set, and a description edit usually carries
+			// neither, which would stamp the field to nobody.
+			editor, err := storekit.CapturedBy(ctx)
+			if err != nil {
+				return err
+			}
+			if err := stampDescriptionAuthor(ctx, tx, id, editor); err != nil {
+				return err
 			}
 		}
 		if err := recheckRenamedOrganization(ctx, tx, id, after); err != nil {

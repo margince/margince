@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -84,6 +85,7 @@ async function fetchDealCoverage(id: string): Promise<DealCoverage> {
 export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The projection is folded from natively captured participants, which the
   // incumbent mirror does not hold. Show the honest unavailable state rather
   // than a doomed fetch that renders as "nobody knows them".
@@ -125,7 +127,7 @@ export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
               )}
               <span className="t-caption">
                 {colleague.last_at
-                  ? formatDateTime(colleague.last_at, locale, "Europe/Berlin")
+                  ? formatDateTime(colleague.last_at, locale, recordZone)
                   : t("network.neverSpoken")}
               </span>
             </li>
@@ -151,7 +153,8 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
   // testing the risk list first would render "this deal passes every coverage
   // check" over a check that never ran. The server says which of the two
   // happened; the card must not decide for itself.
-  const withheld = (query.data?.sections_omitted ?? []).includes("risks");
+  const omitted = query.data?.sections_omitted ?? [];
+  const withheld = omitted.includes("risks");
 
   return (
     <Card className="net-card" title={t("coverage.title")}>
@@ -169,6 +172,15 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
       {!overlay && query.isSuccess && !withheld && risks.length === 0 && (
         <p className="t-caption">{t("coverage.clear")}</p>
       )}
+      {/* The SEATS are not here any more. They moved to the deal page's rail
+          (deal360/dealseats.tsx) when the readings band started counting them:
+          a reader was meeting the same two facts three times on one screen —
+          once as a figure, once as a chip in Deal360, once as this list. What
+          stays is the FINDINGS, which is what this card was for.
+
+          The seat list still lives in one place, not two: dealseats.tsx moved
+          the markup rather than rewriting it, and both render `.net-seats`
+          from this sheet. */}
       {!overlay && risks.length > 0 && (
         <ul className="net-risks">
           {risks.map((risk) => (

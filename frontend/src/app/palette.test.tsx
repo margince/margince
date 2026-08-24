@@ -10,11 +10,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "./mefixture";
 import {
   ASK_QUERY_KEY,
   type Command,
   CommandPalette,
   paletteHotkeyCaps,
+  useBuiltinCommands,
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
@@ -192,5 +194,93 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
     await userEvent.click(screen.getByText("Dana Buyer at Acme"));
     expect(window.location.hash).toBe("#/contacts/p1");
+  });
+
+  // A project hit carries no snippet, and "project" under two projects both
+  // called Rollout tells them apart by nothing. The row reads the project
+  // itself for its key, and falls back to the company for a project without
+  // one; the hit routes to the project page either way.
+  it("routes a project hit to its page, with the key or the company as its line", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/search")) {
+          return jsonResponse({
+            data: [
+              { type: "project", id: "pr-1", title: "Rollout", snippet: null },
+              { type: "project", id: "pr-2", title: "Rollout", snippet: null },
+            ],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        if (url.endsWith("/projects/pr-1")) {
+          return jsonResponse({ id: "pr-1", name: "Rollout", key: "ACME-CRM" });
+        }
+        if (url.endsWith("/projects/pr-2")) {
+          return jsonResponse({
+            id: "pr-2",
+            name: "Rollout",
+            key: null,
+            organization_id: "o-9",
+          });
+        }
+        if (url.endsWith("/organizations/o-9")) {
+          return jsonResponse({ id: "o-9", display_name: "Brandt Automotive" });
+        }
+        return jsonResponse({ data: [], page: { next_cursor: null } });
+      }),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("textbox"), "roll");
+    expect(await screen.findByText("ACME-CRM")).toBeTruthy();
+    expect(await screen.findByText("Brandt Automotive")).toBeTruthy();
+    expect(screen.queryByText("project")).toBeNull();
+
+    await userEvent.click(screen.getByText("ACME-CRM"));
+    expect(window.location.hash).toBe("#/projects/pr-1");
+  });
+});
+
+// The builtin set is DERIVED from the rail's destinations, so a screen with a
+// rail row is a ⌘K command with no registration of its own — and a screen with
+// neither is reachable only by typing its hash. That derivation is what these
+// assert, end to end: the word a reader types, and the address they land on.
+describe("useBuiltinCommands", () => {
+  function Probe() {
+    return (
+      <CommandPalette open onClose={() => {}} commands={useBuiltinCommands()} />
+    );
+  }
+
+  // A /me with no grant at all, which is the harder case: the two settings
+  // shortcuts drop out, so anything still offered here is offered because the
+  // rail names it rather than because the principal holds something.
+  function renderProbe() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
+    );
+    return render(<Probe />);
+  }
+
+  it("reaches the filter builder by the name the screen prints", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+    // Its own title, not a fourth spelling of it: "views" appears in no other
+    // command, so matching on it proves the row carries the screen's own words.
+    await user.type(screen.getByRole("textbox"), "views");
+    const rows = screen.getAllByRole("button");
+    expect(rows[0].textContent).toContain("Filters & views");
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/filters");
+  });
+
+  it("reaches it by its route id too, so the domain word finds it", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+    await user.type(screen.getByRole("textbox"), "filters");
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/filters");
   });
 });

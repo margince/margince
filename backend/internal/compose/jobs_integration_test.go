@@ -17,10 +17,14 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"slices"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
@@ -100,19 +104,92 @@ const awaitBudget = 30 * time.Second
 //
 // This also puts the helper back in line with its two siblings, awaitRows and
 // waitUntil, which have always owned their own clocks.
+//
+// A wait CONSUMES the subscription, and an event it is not waiting for is gone
+// once read. So awaiting several kinds by calling this in sequence is only
+// sound when each kind cannot complete before the one awaited ahead of it —
+// which for jobs enqueued together is not true, and for jobs on different
+// queues is not close to true. Await a set with awaitKindsCompleted instead.
 func awaitKindCompleted(t *testing.T, sub <-chan *river.Event, kind string) {
+	t.Helper()
+	awaitKindsCompleted(t, sub, kind)
+}
+
+// awaitKindsCompleted blocks until EVERY named kind has reported completion,
+// in whatever order they finish, so no kind's event is discarded while another
+// is being waited for.
+//
+// Each retirement gets a full awaitBudget, exactly as N sequential
+// awaitKindCompleted calls would — the set costs nothing in patience, it only
+// stops the order being asserted where the scheduler never promised one.
+func awaitKindsCompleted(t *testing.T, sub <-chan *river.Event, kinds ...string) {
+	t.Helper()
+	pending := make(map[string]struct{}, len(kinds))
+	for _, kind := range kinds {
+		pending[kind] = struct{}{}
+	}
+	for len(pending) > 0 {
+		awaitOnePending(t, sub, pending)
+	}
+}
+
+// awaitOnePending blocks until one still-pending kind completes, removing it,
+// or its own deadline fires. River's other traffic is skipped without renewing
+// the budget: only progress buys more time.
+func awaitOnePending(t *testing.T, sub <-chan *river.Event, pending map[string]struct{}) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), awaitBudget)
 	defer cancel()
 	for {
 		select {
 		case <-ctx.Done():
-			t.Fatalf("timed out waiting for %q to complete within %s: %v", kind, awaitBudget, ctx.Err())
+			t.Fatalf("timed out waiting for %s to complete within %s: %v",
+				quotedKinds(pending), awaitBudget, ctx.Err())
 		case ev := <-sub:
-			if ev != nil && ev.Job != nil && ev.Job.Kind == kind {
+			if ev == nil || ev.Job == nil {
+				continue
+			}
+			if _, wanted := pending[ev.Job.Kind]; wanted {
+				delete(pending, ev.Job.Kind)
 				return
 			}
 		}
+	}
+}
+
+// quotedKinds names what a wait is still owed, sorted so a failure message is
+// the same on every run.
+func quotedKinds(pending map[string]struct{}) string {
+	quoted := make([]string, 0, len(pending))
+	for kind := range pending {
+		quoted = append(quoted, strconv.Quote(kind))
+	}
+	slices.Sort(quoted)
+	return strings.Join(quoted, ", ")
+}
+
+// The defect this guards: a wait consumes the subscription, so a kind that
+// finishes early is read and dropped by whichever wait is holding at the time,
+// and the wait that actually wants it then waits for an event already gone.
+// The kinds are offered here in the reverse of the order the caller names —
+// the arrival order a sequential await cannot survive, and the one River
+// really produces when capture_digest's default queue beats ai_capture.
+//
+// A regression fails this rather than hanging the suite: the set is complete on
+// the buffered channel, so the only way not to return promptly is to have
+// discarded something.
+func TestAWaitDoesNotDiscardAKindAnotherWaitIsOwed(t *testing.T) {
+	sub := make(chan *river.Event, 4)
+	for _, kind := range []string{"capture_digest", "close_date_sweep", "capture_enrich", "capture_classify"} {
+		sub <- &river.Event{Kind: river.EventKindJobCompleted, Job: &rivertype.JobRow{Kind: kind}}
+	}
+
+	awaitKindsCompleted(t, sub, "capture_classify", "capture_enrich", "capture_digest")
+
+	// close_date_sweep was traffic nobody awaited. It is consumed like any
+	// other event; what matters is that consuming it retired no wanted kind.
+	if len(sub) != 0 {
+		t.Errorf("%d event(s) left unread, want 0 — the set stopped short of draining what it was offered", len(sub))
 	}
 }
 

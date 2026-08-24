@@ -1,7 +1,13 @@
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { useT } from "../i18n";
+import {
+  formatDayMonth,
+  formatMoneyCompact,
+  relativeDays,
+} from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 
 // The relationship state strip (concept §5.3): six facts that change how a
 // reader interprets everything below them.
@@ -25,6 +31,8 @@ export function PersonStrip({
   consentVerdict: string | undefined;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const omitted = new Set(view.sections_omitted ?? []);
   // A withheld slot says so. Rendering it empty would read as "there is none",
   // which is a claim about the record rather than about the reader's grants —
@@ -55,11 +63,14 @@ export function PersonStrip({
       />
       <StatCard
         label={t("person.strip.openDeal")}
-        value={reading(openDeal(view, t), omitted.has("commercial"))}
+        value={reading(openDeal(view, t, locale), omitted.has("commercial"))}
       />
       <StatCard
         label={t("person.strip.nextMeeting")}
-        value={reading(nextMeeting(view, t), omitted.has("next_meeting"))}
+        value={reading(
+          nextMeeting(view, t, locale, recordZone),
+          omitted.has("next_meeting"),
+        )}
       />
       <StatCard
         label={t("person.strip.consent")}
@@ -69,26 +80,6 @@ export function PersonStrip({
       />
     </StatStrip>
   );
-}
-
-// relativeDays reads a timestamp the way a person says it. "Never" is reserved
-// for a read that HAPPENED and found nothing — the caller decides that by
-// passing null only when the section was readable.
-function relativeDays(
-  at: string | null | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  if (!at) {
-    return t("person.strip.never");
-  }
-  const days = Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
-  if (days <= 0) {
-    return t("person.strip.today");
-  }
-  if (days === 1) {
-    return t("person.strip.yesterday");
-  }
-  return t("person.strip.days", { count: days });
 }
 
 // Counts, not a score. A standalone number here would be the composite verdict
@@ -108,7 +99,11 @@ function reciprocity(view: Person360, t: ReturnType<typeof useT>): string {
   return t("person.strip.inOut", { inbound, outbound });
 }
 
-function openDeal(view: Person360, t: ReturnType<typeof useT>): string {
+function openDeal(
+  view: Person360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   const deal = view.commercial?.deal;
   if (!deal) {
     return t("person.strip.noOpenDeal");
@@ -116,18 +111,27 @@ function openDeal(view: Person360, t: ReturnType<typeof useT>): string {
   if (deal.amount_minor == null || !deal.currency) {
     return deal.title;
   }
-  return money(deal.amount_minor, deal.currency);
+  // The design system's glance formatter, which company360 already uses for
+  // the same job on the account page. It reads the scale off the CURRENCY and
+  // abbreviates in the reader's own conventions — German goes to "Mio." where
+  // English goes to "m", and a locale-blind table said "k" to everyone.
+  return formatMoneyCompact(deal.amount_minor, deal.currency, locale);
 }
 
-function nextMeeting(view: Person360, t: ReturnType<typeof useT>): string {
+function nextMeeting(
+  view: Person360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  recordZone: string,
+): string {
   const meeting = view.next_meeting;
   if (!meeting) {
     return t("person.strip.noMeeting");
   }
-  return new Date(meeting.starts_at).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
+  // The record's zone, which is what persontabs.tsx renders the same field in.
+  // Rendered in the reader's own instead, the strip and the tab beside it name
+  // different days for one meeting whenever the reader is not in that zone.
+  return formatDayMonth(meeting.starts_at, locale, recordZone);
 }
 
 // The verdict word and its tone are read from the SERVER's verdict key, never
@@ -157,28 +161,4 @@ function consentTone(
     return "good";
   }
   return verdict === "blocked" ? "danger" : undefined;
-}
-
-// Money arrives in MINOR units and is rendered whole: the strip shows €95k,
-// not €95,000.00, because the slot is a glance and the exact figure lives on
-// the deal card below.
-export function money(minor: number, currency: string): string {
-  const major = minor / 100;
-  if (major >= 1000) {
-    return `${symbolFor(currency)}${Math.round(major / 1000)}k`;
-  }
-  return `${symbolFor(currency)}${major}`;
-}
-
-function symbolFor(currency: string): string {
-  switch (currency) {
-    case "EUR":
-      return "€";
-    case "USD":
-      return "$";
-    case "GBP":
-      return "£";
-    default:
-      return `${currency} `;
-  }
 }

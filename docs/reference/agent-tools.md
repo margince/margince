@@ -6,7 +6,9 @@ live in somebody else's CRM. The governance *model* — passports, the autonomy
 tiers, the one admission gate — is explained in
 [explanation/authorization.md](../explanation/authorization.md) and
 [explanation/agent-surface.md](../explanation/agent-surface.md); this page is the
-inventory.
+inventory. What a tool COSTS an agent that attaches it — the listing rides in
+every step of a tool-fed window — is
+[agent-tool-budget.md](agent-tool-budget.md).
 
 ## How to read this page
 
@@ -61,7 +63,17 @@ Columns:
 
 - **Tier** — 🟢 runs immediately; 🟡 refused until a human releases the staged
   approval; **dynamic** resolves per call from the target stage's semantic
-  (`open` → 🟢, won/lost → 🟡), and may only ever *raise*.
+  (`open` → 🟢, won/lost → 🟡), and may only ever *raise*. **🟢 / 🟡** means the
+  tier depends on the record type the call names: 🟢 for the seven the tool
+  enumerates, 🟡 for `custom_field` and `webhook_subscription`, which the
+  contract still declares confirm-first.
+- Consequential verbs read 🟢 here because ADR-0055 stopped them staging by
+  default: a passport carries the granting human's own seat, grants and row
+  scope, so a verb it can spend is one its holder could spend unaided, and a
+  second confirmation from that same person made the surface weaker rather than
+  safer. The tier a tool RESOLVES to is `agentPolicies` in
+  `compose/agentpolicy_gen.go`, generated from `crm.yaml`; this table is
+  hand-kept and drifted from it once already (#2432).
 - **Scope** — the passport cap `Gate.Admit` demands before `Handle` runs.
 - **Egress** — the spec's `Egress` flag: true when the tool reaches outside the
   workspace. It is what `tools/list` publishes as `openWorldHint`.
@@ -73,14 +85,14 @@ Columns:
 |---|---|---|---|---|
 | `account_coverage` | 🟢 | `read` | — | Native relationship read; carries no mode guard |
 | `advance_deal` | dynamic | `write` | — | `unsupported_by_sor` (no incumbent stage map) |
-| `advance_project_phase` | 🟡 | `write` | — | Runs: a project is native-only, so its table is the live one in either mode |
-| `archive_record` | 🟡 | `write` | — | Seam-routed: write-back through the incumbent |
+| `advance_project_phase` | 🟢 | `write` | — | Runs: a project is native-only, so its table is the live one in either mode |
+| `archive_record` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
 | `at_risk_relationships` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `book_meeting` | 🟡 | `send` | yes | Staging refuses a mirror-held link |
+| `book_meeting` | 🟢 | `send` | yes | Staging refuses a mirror-held link |
 | `catch_me_up_on` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `check_availability` | 🟢 | `read` | — | Calendar seam; not mode-routed |
-| `create_record` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
-| `disqualify_lead` | 🟡 | `write` | — | `unsupported_by_sor`: a lead is mirrored and the provider cannot serve this write, so the native table is empty |
+| `create_record` | 🟢 / 🟡 | `write` | — | Seam-routed: write-back through the incumbent |
+| `disqualify_lead` | 🟢 | `write` | — | `unsupported_by_sor`: a lead is mirrored and the provider cannot serve this write, so the native table is empty |
 | `draft_email` | 🟢 | `draft` | — | Activities seam; not mode-routed |
 | `draft_follow_ups_for` | 🟢 | `draft` | — | `unsupported_by_sor` (native-only guard) |
 | `enrich` | 🟡 | `enrich` | yes | Reads the company's own website, not a record store; the write-back is seam-routed |
@@ -88,10 +100,10 @@ Columns:
 | `list_pipelines` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `list_records` | 🟢 | `read` | — | Mirror-backed unfiltered; a FILTERED call is `unsupported_by_sor` (see below) |
 | `log_activity` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
-| `merge_records` | 🟡 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
+| `merge_records` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
 | `prep_for_meeting` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `progress_deal` | dynamic | `write` | — | `unsupported_by_sor` (shares `advance_deal`'s seam) |
-| `promote_lead` | 🟡 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
+| `promote_lead` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
 | `qualify_lead` | 🟢 | `write` | — | Seam-routed: read + patch through the provider |
 | `read_brief` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `read_record` | 🟢 | `read` | — | Mirror-backed; result carries `trust_tier: external` |
@@ -101,9 +113,9 @@ Columns:
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
 | `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `search_records` | 🟢 | `read` | — | Mirror-backed; results carry `trust_tier: external` |
-| `send_email` | 🟡 | `send` | yes | Staging refuses a mirror-held anchor |
-| `send_message` | 🟡 | `send` | yes | Staging refuses a mirror-held anchor |
-| `update_record` | 🟢 | `write` | — | Seam-routed; see the per-field split below |
+| `send_email` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
+| `send_message` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
+| `update_record` | 🟢 / 🟡 | `write` | — | Seam-routed; see the per-field split below |
 | `whats_slipping_this_week` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `who_knows` | 🟢 | `read` | — | Native relationship read; carries no mode guard |
 

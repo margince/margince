@@ -22,8 +22,15 @@ import {
   useBuiltinCommands,
   usePaletteHotkey,
 } from "./app/palette";
+import { RecordZoneProvider, useConfiguredRecordZone } from "./app/recordzone";
 import { SPA_RELEASE } from "./app/release";
-import { navigate, parseHash, routeHash, type Screen } from "./app/router";
+import {
+  navigate,
+  parseHash,
+  routeHash,
+  routeIdentity,
+  type Screen,
+} from "./app/router";
 import { Shell, type ShellCounts, useRoute } from "./app/shell";
 import { UnsavedGuard } from "./app/unsaved";
 import {
@@ -32,7 +39,7 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
-import { useT } from "./i18n";
+import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import {
   type AuthNotice,
@@ -109,6 +116,13 @@ const DealsScreen = lazy(
     import("./screens/deals").then((m) => ({ default: m.DealsScreen })),
   ),
 );
+const DealRoomPage = lazy(
+  routed(() =>
+    import("./screens/dealroompage").then((m) => ({
+      default: m.DealRoomPage,
+    })),
+  ),
+);
 const DedupeScreen = lazy(
   routed(() =>
     import("./screens/dedupe").then((m) => ({ default: m.DedupeScreen })),
@@ -132,6 +146,20 @@ const LeadScreen = lazy(
 const LeadsScreen = lazy(
   routed(() =>
     import("./screens/leads").then((m) => ({ default: m.LeadsScreen })),
+  ),
+);
+const ProjectScreen = lazy(
+  routed(() =>
+    import("./screens/project360").then((m) => ({
+      default: m.ProjectScreen,
+    })),
+  ),
+);
+const ProjectsScreen = lazy(
+  routed(() =>
+    import("./screens/projects").then((m) => ({
+      default: m.ProjectsScreen,
+    })),
   ),
 );
 const OAuthConsent = lazy(
@@ -172,6 +200,9 @@ const PersonPageV2 = lazy(
   routed(() =>
     import("./screens/personpage").then((m) => ({ default: m.PersonPageV2 })),
   ),
+);
+const BuyerRoomScreen = lazy(() =>
+  import("./screens/buyerroom").then((m) => ({ default: m.BuyerRoomScreen })),
 );
 const PreferenceCenterScreen = lazy(
   routed(() =>
@@ -259,7 +290,10 @@ function ScreenPending() {
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
 // one place — it has its own "new" vs existing-id branch below the id check.
-function DealsRoute({ id }: Readonly<{ id?: string }>) {
+function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
+  if (id && id !== "new" && id2 === "room") {
+    return <DealRoomPage dealId={id} />;
+  }
   return id && id !== "new" ? (
     <DealScreen id={id} />
   ) : (
@@ -395,12 +429,18 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       id ? <CompanyScreen id={id} /> : <CompaniesScreen />,
     partners: () => <PartnersScreen />,
     leads: ({ id }) => (id ? <LeadScreen id={id} /> : <LeadsScreen />),
-    deals: ({ id }) => <DealsRoute id={id} />,
+    deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
+    projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
     tasks: () => <TasksScreen />,
     inbox: () => <InboxScreen />,
     reports: () => <ReportsScreen />,
     ai: () => <AskAiScreen />,
-    settings: ({ id }) => <SettingsScreen tab={id} />,
+    // The screen resolves its own address, because which entry an address names
+    // is the settings IA's question: the admin half lives a segment deeper, and
+    // a legacy link to it is answered and rewritten there rather than here.
+    settings: (args) => (
+      <SettingsScreen route={{ screen: "settings", ...args }} />
+    ),
     dedupe: () => <DedupeScreen />,
     // The object rides the URL so a filter surface can be linked to; an
     // unknown segment falls back to contacts inside the screen rather than
@@ -430,6 +470,9 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // #/preferences/<token> — anonymous; the token in the path is the
     // whole capability (security: [] in the contract).
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
+    // #/room?c=<credential> — the Deal Room's buyer, anonymous; the credential
+    // rides the hash's query and the screen scrubs it on first read.
+    room: () => <BuyerRoomScreen />,
     // reached only via the server's redirect off GET /oauth/authorize
     // (#/oauth-consent?…&consent=<nonce>) — never a rail destination.
     "oauth-consent": () => <OAuthConsent />,
@@ -461,6 +504,11 @@ const screenOfAddress = (address: string) => {
   return SCREEN_VIEWS[route.screen](route);
 };
 
+// What the held address is ABOUT, which is what the screen below is keyed on.
+// Parsed from the same string for the same reason as the view above it.
+const identityOfAddress = (address: string) =>
+  routeIdentity(parseHash(address));
+
 function ScreenView({
   screen,
   id,
@@ -489,17 +537,30 @@ function ScreenView({
   // it into the retry card instead of a blank frame.
   return (
     <Suspense fallback={<ScreenPending />}>
-      {/* Keyed by the whole shown route, which makes an address change a
-          REMOUNT rather than a re-render. Two reasons, and the second is the
-          load-bearing one. A screen carries state about the record it was
-          opened for — an expanded section, a half-typed note, a scroll
-          position — and reconciling one record's screen into another's keeps
-          all of it, which is how a note began on person A ends up on the form
-          for person B. And an arrival animation (design-system/enter.css)
-          plays when a block is INSERTED: without a key the DOM nodes are
-          reused, so walking from one record to the next would be the one
-          navigation in the product where the page changes with no motion at
-          all.
+      {/* Keyed by what the address is ABOUT (app/router.tsx's routeIdentity),
+          which makes moving to another THING a REMOUNT rather than a
+          re-render. Two reasons, and the second is the load-bearing one. A
+          screen carries state about the record it was opened for — an expanded
+          section, a half-typed note, a scroll position — and reconciling one
+          record's screen into another's keeps all of it, which is how a note
+          begun on person A ends up on the form for person B. And an arrival
+          animation (design-system/enter.css) plays when a block is INSERTED:
+          without a key the DOM nodes are reused, so walking from one record to
+          the next would be the one navigation in the product where the page
+          changes with no motion at all.
+
+          The identity, NOT the whole address, and that distinction is the
+          difference between a tab and a destination. A tab segment names a view
+          of the thing already on screen, so remounting on it threw away a page
+          the reader had not left: the header, the readings, the rail and the tab
+          strip they had just clicked all re-animated, and every query on the
+          page re-observed and refetched.
+
+          Two things deliberately still key on the WHOLE address. The guard below
+          does, because a half-typed note is worth asking about however small the
+          move is; and the shell's scroll reset does, because a panel swapped
+          under a reader who had scrolled past the tab strip should still open at
+          its top.
 
           A Fragment rather than a wrapper element: the key belongs to the
           subtree, and the shell's content column must keep the screen's own
@@ -519,7 +580,11 @@ function ScreenView({
           the reader, and the failure mode of getting that wrong is broken
           navigation for everybody. */}
       <UnsavedGuard address={shownAddress} onKeep={navigateToAddress}>
-        {(held) => <Fragment key={held}>{screenOfAddress(held)}</Fragment>}
+        {(held) => (
+          <Fragment key={identityOfAddress(held)}>
+            {screenOfAddress(held)}
+          </Fragment>
+        )}
       </UnsavedGuard>
     </Suspense>
   );
@@ -527,7 +592,11 @@ function ScreenView({
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
-const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set(["book", "preferences"]);
+const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
+  "book",
+  "preferences",
+  "room",
+]);
 
 // Screens the onboarding gate must never navigate away from, beyond
 // onboarding itself. The OAuth consent screen carries a single-use,
@@ -637,6 +706,17 @@ function AuthedApp({
   // signed in" and carries no notice.
   const hadSession = useRef(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
+  // The signed-in person's own language, handed up to the provider that sits
+  // above this component. It cannot ask for `/me` itself, and this is the first
+  // place the answer exists — so a choice made on another browser reaches the
+  // catalog here or nowhere.
+  const { adoptLocale } = useLocale();
+  useEffect(() => {
+    const chosen = me.data?.user?.locale;
+    if (chosen) {
+      adoptLocale(chosen);
+    }
+  }, [me.data, adoptLocale]);
   useEffect(() => {
     if (me.data) {
       hadSession.current = true;
@@ -662,6 +742,11 @@ function AuthedApp({
   const authed = !me.isPending && !me.isError;
   const company = useCompany(authed);
   const described = company.data !== null && company.data !== undefined;
+  // The organization's clock, for every record date under this boundary. Read
+  // here rather than per screen so all of them agree, and gated on the session
+  // for the same reason the company probe is: an unauthenticated read would
+  // 401 and say nothing about the installation.
+  const recordZone = useConfiguredRecordZone(authed);
 
   // route.screen is a dependency on purpose: the gate must hold on every
   // navigation, not only on first load — otherwise the palette or a typed hash
@@ -730,7 +815,12 @@ function AuthedApp({
   // screen to show. The gate lives here rather than on the login path because
   // a live session never passes through login — a reload would otherwise walk
   // straight past onboarding into a company that does not exist.
-  if (company.isPending) {
+  // The record zone joins this gate rather than getting one of its own: both
+  // are answers the authenticated shell needs before it draws, and a second
+  // splash after the first would read as two loads of one page. Holding here
+  // is what lets every screen below take the zone as a settled value — paint
+  // first and the day headings on an open timeline renumber under the reader.
+  if (company.isPending || recordZone.pending) {
     return (
       <RaillessFrame>
         <AuthSplash />
@@ -739,7 +829,7 @@ function AuthedApp({
   }
 
   return (
-    <>
+    <RecordZoneProvider zone={recordZone.zone}>
       <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
         <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
       </AuthedShell>
@@ -748,7 +838,7 @@ function AuthedApp({
         onClose={() => setPaletteOpen(false)}
         commands={commands}
       />
-    </>
+    </RecordZoneProvider>
   );
 }
 

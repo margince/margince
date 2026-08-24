@@ -116,10 +116,12 @@ export const LABELS = {
  * The states no read can reach on this surface, and the sentence each carries.
  *
  * The section reaches `ingest`, `working` and `error` on its own, but about the
- * TOOL: a read in flight, a write in flight, a source it cannot get to. What it
- * cannot report is the same words about the AGENT, because the overnight run
- * happens in the worker and the contract has no run-progress read and no stream.
- * The `agent_run` and `runner_job` tables exist; nothing serves their phase.
+ * TOOL: a read in flight, a write in flight, a source it cannot get to. `working`
+ * about the AGENT is real too now — `useAiActivity` reads the run row and
+ * `RunSection` (`agentrail.tsx`) names it in the reader's own words. What stays
+ * unreachable is narrower: there is no per-step progress stream (a run is
+ * `queued`, `running` or settled, never "40% through"), and `ingest` here is
+ * about the CAPTURE pipeline reading mail, which still has no read of its own.
  *
  * They are here so the vocabulary can be reviewed whole, reachable only from the
  * switcher in the panel under its own review-only heading. Nothing derives them.
@@ -181,6 +183,12 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 export const IDLE_ORDER = [
   "waiting",
   "duplicates",
+  // Third: after the two things a person has to answer for, before the small
+  // print. What the scheduled runner finished overnight is news rather than a
+  // task, so it does not push a queue down the rotation — and it sits above the
+  // cost and the runtime lines because it is about this morning, while those are
+  // standing facts that read the same on any day.
+  "finished",
   "spend",
   "model",
   "licence",
@@ -223,6 +231,14 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
   "deal-edit": ["Editing the %s deal", "Editing a deal"],
   "deal-new": ["Creating a deal on %s", "Creating a deal"],
   dedupe: ["Deciding a duplicate of %s", "Deciding a duplicate"],
+  // SENDING, not drafting. The two are told apart by their mutation key rather
+  // than by this table: `email` is the send, and the AI draft carries
+  // `email-draft` so the rail can own it alone. They used to share one key,
+  // which put one action into two vocabularies at once — the bar saying
+  // "Writing to Anna" from here while the panel said "I'm drafting your reply."
+  // from the server's feed. Deleting this entry fixed that and broke something
+  // else: a send is a real write a rep waits on and the rail knows nothing
+  // about it, so it went silent. Splitting the key is what serves both.
   email: ["Writing to %s", "Writing an email"],
   enrich: ["Enriching %s", "Enriching a contact"],
   ingest: ["Ingesting %s", "Ingesting"],

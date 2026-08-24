@@ -10,8 +10,16 @@ package people
 
 import "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 
-// EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs", and
-// the only definition of a current employment in this product. `date` is the
+// EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs".
+//
+// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/employmentcurrency_test.go)
+// — it reads every hand-written Go source outside this file for a hand-spelled
+// `ended_at` currency test, so a second definition fails rather than drifting.
+// With ONE gap, stated because a binding that overclaims is what this
+// convention exists to stop: the census skips its own file whole, so a
+// hand-written currency test added to `backend/employmentcurrency_test.go`
+// itself is outside this guard.
+// `date` is the
 // end-date expression at the call site: a column on a read, the incoming value
 // on a create, the patched-or-existing one on an update.
 //
@@ -36,6 +44,20 @@ import "github.com/gradionhq/margince/backend/internal/platform/database/storeki
 // is a function of today's date, so every READER derives it instead of trusting
 // a value written months ago. compose reaches this for the same reason the
 // readers in this package do — one definition, or the copies drift.
+//
+// "One definition" is held by TestEveryEmploymentCurrencyTestUsesTheOneDefinition
+// in backend/employmentcurrency_test.go, and it is written down here because
+// this comment used to say "the only definition of a current employment in this
+// product" with nothing holding it — and it was false eleven times over. Eight
+// statements asked with a bare `ended_at IS NULL`, which is the notice-period
+// defect described above; three more hand-spelled the correct form; one of
+// those compared against a Go clock in the same statement as a half that used
+// Postgres', so one query asked its two questions on two different days.
+//
+// The gate cannot reach five statements in activities, projects and signals: a
+// module never imports a sibling (ADR-0054 §3), so those cannot call this at
+// all until the predicate moves tier. They are ratified by name in the gate,
+// with that reason, rather than left looking clean.
 func EmploymentIsCurrentSQL(date string) string {
 	return storekit.SQLf("(%s IS NULL OR %s > current_date)", date, date)
 }
@@ -44,6 +66,10 @@ func EmploymentIsCurrentSQL(date string) string {
 // the flag AND the employment still being theirs. Spelled once so a new reader
 // cannot trust the flag alone, which is what let somebody go on counting at a
 // company after their last day had passed.
+//
+// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/employmentcurrency_test.go)
+// — the same census: a reader that pairs the flag with its own date test is a
+// second definition and fails there.
 //
 // READERS, not every mention of the column. The uniqueness guards must stay
 // date-BLIND and deliberately do — `employmentedge.go`, `domaintriageresolve.go`

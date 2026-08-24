@@ -20,7 +20,9 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
 	"github.com/gradionhq/margince/backend/internal/modules/capture"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/telegram"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
@@ -176,6 +178,10 @@ type JobRunnerConfig struct {
 	// that geocodes nothing — an offline demo, or one that has not been given
 	// a provider — and the worker records that rather than retrying forever.
 	Geocoder geocode.Client
+	// Geocoding carries the backfill's cadence — the sweep that reaches
+	// companies whose address was written before this installation had a
+	// geocoder, and which no write will ever touch again.
+	Geocoding GeocodingConfig
 	// DocumentExtractBrain is the lane a queued document reading runs on. Nil =
 	// no AI configured, and the kind registers anyway so the reading FAILS with
 	// a message the rep can see rather than sitting queued behind a worker that
@@ -333,6 +339,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addWebhookRetryJobs(reg, pool, cfg),
+		addGeocodeBackfillJobs(reg, pool, cfg),
 		addProviderRunJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
@@ -352,6 +359,8 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, VoiceBuildRetryArgs{}),
 		periodicFor(cfg, IdempotencyRetentionArgs{}),
 		periodicFor(cfg, AgentTaskRetentionArgs{}),
+		periodicFor(cfg, AIActivityReconcileArgs{}),
+		periodicFor(cfg, AIActivityRetentionArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),
 		periodicFor(cfg, CaptureClassifyArgs{}),
@@ -428,5 +437,22 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	})
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
+	})
+	addAIActivitySweepJobs(reg, pool, log)
+}
+
+// addAIActivitySweepJobs registers the AI-activity projection's two passes. It
+// is its own function rather than four more lines above because both workers
+// need a store the group's other members do not, and the compiler's closed args
+// set forces one addDeclaredWorker per kind anyway.
+func addAIActivitySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
+	db := InstallationDB(pool)
+	addDeclaredWorker[AIActivityReconcileArgs](reg, &aiActivityReconcileWorker{
+		activities: activities.NewStore(db), identity: identity.NewService(pool),
+		now: time.Now, log: log,
+	})
+	addDeclaredWorker[AIActivityRetentionArgs](reg, &aiActivityRetentionWorker{
+		projection: aiactivity.NewStore(db), identity: identity.NewService(pool),
+		now: time.Now, log: log,
 	})
 }

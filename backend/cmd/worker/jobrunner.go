@@ -59,7 +59,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 	// resolved once, shared; when it is not configured, configuredVault is nil
 	// so an unconfigured deployment never fails worker boot over pollers it has
 	// no connected workspace to run anyway.
-	vault, vaultConfigured, verr := keyvault.FromEnv(pool, config.FromOS)
+	vault, vaultConfigured, verr := keyvault.FromEnv(ctx, pool, config.FromOS)
 	if verr != nil {
 		return nil, fmt.Errorf("worker: keyvault: %w", verr)
 	}
@@ -152,7 +152,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// worker records that it cannot resolve, and radius queries stay
 		// unavailable — which is honest for an installation that geocodes
 		// nothing, and better than answering from an empty table.
-		Geocoder: geocoderFor(cfg.geocodeBaseURL),
+		Geocoder:  geocoderFor(cfg.geocodeBaseURL),
+		Geocoding: compose.GeocodingConfig{BackfillInterval: cfg.geocodeBackfill},
 		// The registry that resolves a staged delivery's mailbox: the SAME
 		// sweep registry the capture polls use, so the connector set that
 		// syncs a mailbox is the one that transmits from it.

@@ -50,10 +50,12 @@ const handoffScanLimit = 50
 func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 	store := activities.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, in agents.CommitmentQuery) (agents.CommitmentSweep, error) {
-		tasks, truncated, err := store.ListOpenTasks(ctx, activities.ListOpenTasksInput{
-			AssigneeID: in.AssigneeID,
-			Limit:      in.Limit,
-		})
+		query := activities.ListOpenTasksInput{AssigneeID: in.AssigneeID, Limit: in.Limit}
+		if in.WithinProjectID != nil {
+			project := ids.From[ids.ProjectKind](*in.WithinProjectID)
+			query.WithinProjectID = &project
+		}
+		tasks, truncated, err := store.ListOpenTasks(ctx, query)
 		if err != nil {
 			return agents.CommitmentSweep{}, err
 		}
@@ -106,11 +108,12 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 // directly would.
 func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	dealStore := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	projectStore := ProjectsStore(pool)
 	peopleStore := people.NewStore(InstallationDB(pool))
 	taskStore := activities.NewStore(InstallationDB(pool))
 	seats := identity.NewService(pool)
 	return func(ctx context.Context, projectID ids.UUID) (agents.HandoffFacts, error) {
-		project, err := dealStore.GetProject(ctx,
+		project, err := projectStore.GetProject(ctx,
 			ids.From[ids.ProjectKind](projectID), storekit.LiveOnly)
 		if err != nil {
 			return agents.HandoffFacts{}, err
@@ -150,7 +153,7 @@ func handoffProject(p crmcontracts.Project) agents.HandoffProject {
 	out := agents.HandoffProject{
 		ProjectID:      ids.UUID(p.Id),
 		Name:           p.Name,
-		OrganizationID: ids.UUID(p.OrganizationId),
+		OrganizationID: (*ids.UUID)(p.OrganizationId),
 		OwnerID:        (*ids.UUID)(p.OwnerId),
 	}
 	if p.Key != nil {

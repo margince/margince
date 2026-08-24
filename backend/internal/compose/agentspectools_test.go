@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
 )
 
 // A catalog entry's allowlist is a list of NAMES, and a name is only as good as
@@ -30,7 +30,7 @@ func TestEveryAgentSpecNamesRegisteredTools(t *testing.T) {
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
 		registered[spec.Name] = true
 	}
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		if len(spec.Tools) == 0 {
 			t.Errorf("agent %q names no tools — an empty allowlist is read as NO narrowing, "+
 				"which hands this goal every verb its passport admits", spec.Name)
@@ -141,7 +141,7 @@ func TestTheShippedAgentsAreNarrowerThanTheirScopesAllow(t *testing.T) {
 	for _, spec := range specs {
 		byName[spec.Name] = string(spec.RequiredScope)
 	}
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		needed := map[string]bool{}
 		for _, name := range spec.Tools {
 			needed[byName[name]] = true
@@ -173,4 +173,40 @@ func containsName(names []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// The wire declares an `awaiting_approval` state, the store puts it in the
+// running list, and agent_run's CHECK admits it — but no locale carries a word
+// for it, on the argument that the shipped catalog cannot stage a confirmation.
+// That argument is a property of the catalog, not of the reader, and the day an
+// entry gains a 🟡 tool the orb turns "working" with nothing said anywhere. So
+// the property is asserted rather than argued: every tool every spec names
+// resolves to the auto-execute tier.
+//
+// TierDynamic fails too, and deliberately: a resolver may only ever RAISE to
+// confirmation_required, so a dynamic tool is a tool that can suspend a run.
+func TestEveryScheduledAgentsToolsAreAutoExecute(t *testing.T) {
+	tiers := map[string]mcp.RiskTier{}
+	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+		tiers[spec.Name] = spec.Tier
+	}
+	for _, spec := range mustScheduledAgents() {
+		for _, name := range spec.Tools {
+			tier, registered := tiers[name]
+			if !registered {
+				// Named-but-unregistered is TestEveryAgentSpecNamesRegisteredTools'
+				// finding; reporting it twice buries the tier failure.
+				continue
+			}
+			if tier != mcp.TierAutoExecute {
+				t.Errorf("agent %q may call %q, which is not auto-execute — the run can suspend on a "+
+					"staged approval, and the AI-activity projection reports a suspended run as "+
+					"`running`. The rail would then tell the reader the AI is working while it is "+
+					"waiting for THEM, and the approvals inbox is the only surface that says otherwise. "+
+					"Either drop the tool from the entry, or give a suspended run its own state on the "+
+					"projection and ship the copy in en/de/vi first",
+					spec.Name, name)
+			}
+		}
+	}
 }

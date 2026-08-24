@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMemo } from "react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./onboarding-payoff.css";
 
@@ -84,8 +84,8 @@ const CELLS: readonly CellSpec[] = [
 
 export type PayoffGridProps = Readonly<{
   counts: PayoffCounts;
-  /** BCP-47 tag for `Intl.NumberFormat` — grouping is a locale decision. */
-  locale: string;
+  /** The reader's chosen locale; `formatNumber` maps it to the BCP-47 tag. */
+  locale: Locale;
 }>;
 
 /**
@@ -98,9 +98,12 @@ export type PayoffGridProps = Readonly<{
  */
 export function PayoffGrid({ counts, locale }: PayoffGridProps) {
   const t = useT();
-  // Grouping separators differ per locale ("1,284" vs "1.284"), and the
-  // formatter is rebuilt only when the locale changes rather than per cell.
-  const format = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  // Grouping separators differ per locale ("1,284" vs "1.284"). Through
+  // `formatNumber` rather than a formatter built here: this prop used to be
+  // documented as a BCP-47 tag and handed straight to Intl, while every caller
+  // passed the app's own code — so "en" resolved to en-US where the rest of
+  // the product is pinned to en-GB.
+  const format = (value: number) => formatNumber(value, locale);
 
   return (
     <dl className="ob-payoff-grid">
@@ -125,7 +128,7 @@ export function PayoffGrid({ counts, locale }: PayoffGridProps) {
             key={cell.name}
           >
             <dt className="ob-payoff-label">{t(cell.label)}</dt>
-            <dd className="ob-payoff-value">{format.format(count)}</dd>
+            <dd className="ob-payoff-value">{format(count)}</dd>
           </div>
         );
       })}
@@ -196,7 +199,7 @@ export function payoffLeadKey(
 
 export type PayoffMessageProps = Readonly<{
   counts: PayoffCounts;
-  locale: string;
+  locale: Locale;
   /**
    * `OnboardingState.created_at` — when this setup began. `null` when the
    * wizard state is not in hand, which is an unknown elapsed time, not a
@@ -247,6 +250,10 @@ export function PayoffMessage({
       <ul className="ob-payoff-next" role="list">
         <li>{t("ob.payoff.defaults")}</li>
         <li>{t("ob.payoff.seats")}</li>
+        <li>
+          {t("ob.payoff.projects")}{" "}
+          <a href="#/projects">{t("ob.payoff.projectsLink")}</a>
+        </li>
       </ul>
     </section>
   );

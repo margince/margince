@@ -25,8 +25,9 @@ import (
 )
 
 func TestAnOmittedMergeTargetOrStakeholderIsNamed(t *testing.T) {
-	// MergePersonJSONBody.target_id, MergeOrganizationJSONBody.target_id and
-	// SetProjectStakeholderRequest.person_id.
+	// MergePersonJSONBody.target_id, MergeOrganizationJSONBody.target_id,
+	// SetProjectStakeholderRequest.person_id and
+	// SetProjectCompanyRequest.organization_id.
 	//
 	// The merge pair is the sharp case: the self-merge guard next to it does NOT
 	// catch an omitted target, because a real source id never equals the zero
@@ -45,6 +46,14 @@ func TestAnOmittedMergeTargetOrStakeholderIsNamed(t *testing.T) {
 		ProjectID: ids.New[ids.ProjectKind](), Role: "sponsor",
 	})
 	faulttest.AssertNamesOmittedID(t, err, "person_id")
+
+	// SetProjectCompanyRequest.organization_id, for the same reason: without
+	// the guard the zero id reaches the company visibility probe, which answers
+	// not-found — telling the caller a company they never named does not exist.
+	_, err = store.SetProjectCompany(ctx, SetProjectCompanyInput{
+		ProjectID: ids.New[ids.ProjectKind](), Role: "partner",
+	})
+	faulttest.AssertNamesOmittedID(t, err, "organization_id")
 }
 
 func TestAnOmittedClaimSourceActivityIsNamed(t *testing.T) {

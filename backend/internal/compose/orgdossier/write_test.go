@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 // describing renders a reply whose one sentence cites a row of this input.
@@ -34,7 +35,7 @@ func TestEveryDossierModelFailureFallsBackToADescribedCompany(t *testing.T) {
 		"lane inventing a section": scriptedLane{reply: describing("pipeline", "They are close to buying.", in)},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, by, _ := WriteDossier(context.Background(), lane, in)
+			got, by, _ := WriteDossier(context.Background(), lane, in, string(textlang.English))
 
 			if by != crmcontracts.Deterministic {
 				t.Errorf("generated_by = %q, want deterministic — the model did not produce this", by)
@@ -60,7 +61,7 @@ func TestAGroundedDossierIsServedAsTheModels(t *testing.T) {
 		reply: describing("summary", "They build load-shifting software for industrial sites.", in),
 	}
 
-	got, by, _ := WriteDossier(context.Background(), lane, in)
+	got, by, _ := WriteDossier(context.Background(), lane, in, string(textlang.English))
 
 	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %q, want model", by)
@@ -108,7 +109,7 @@ func sectionEntry(kind, text string, in Input) string {
 // all — a writer given it starts comparing, which is the growth fit's job and
 // the reason the two surfaces are separate.
 func TestTheDossierRequestDoesNotAskForOurOwnCompanyContext(t *testing.T) {
-	if req := DossierRequest(fourOfSeven()); req.IncludeCompanyContext {
+	if req := DossierRequest(fourOfSeven(), string(textlang.English)); req.IncludeCompanyContext {
 		t.Error("the dossier asked for our own offering; that is the growth fit's input, not this one")
 	}
 }

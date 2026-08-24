@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
@@ -290,7 +291,7 @@ func TestVoiceActAnswersFromServerCorpusNumbersOnly(t *testing.T) {
 	}
 	if !strings.Contains(brain.request.Messages[0].Content, `"corpus_total_words":1240`) ||
 		!strings.Contains(brain.request.System, "never invent a count") ||
-		!strings.Contains(brain.request.System, "Respond in en.") || brain.request.SecretStripper == nil {
+		!strings.Contains(brain.request.System, promptlang.Rule("en")) || brain.request.SecretStripper == nil {
 		t.Fatalf("voice model request = %+v", brain.request)
 	}
 }

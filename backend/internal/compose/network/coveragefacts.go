@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	peoplemod "github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -85,12 +86,20 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // because a colleague fixed a data-entry error is exactly the false alarm that
 // teaches a rep to ignore the flag.
 //
-// "Still employed there" is spelled the same way here and in the two places
-// that ask the opposite question (compose/introseams.go accountContacts,
-// people/linkedinmatch.go suggestGhostsByNameAndEmployer): archived_at IS NULL
-// AND (ended_at IS NULL OR ended_at > today). A future end date is still
-// employment — a person leaving next month is at their desk today — and the
-// two questions must not disagree about the same row.
+// "Still employed there" is people.EmploymentIsCurrentSQL, and both halves of
+// this statement are written from it: the live half asserts it, the departed
+// half is its NEGATION. Spelled that way rather than as an equivalent
+// hand-written `ended_at IS NOT NULL AND ended_at <= today`, because the
+// comment used to promise the two questions "must not disagree about the same
+// row" and nothing held the promise — this file, introseams.go and
+// linkedinmatch.go each carried their own copy, and each one was a chance for
+// them to drift apart.
+//
+// It also removed a clock. The departed half compared against a Go time.Time
+// while the live half compared against Postgres' current_date, so one statement
+// asked its two questions on two different days whenever the server and the
+// database disagreed about the date — which is precisely what
+// EmploymentIsCurrentSQL's own comment says the predicate exists to prevent.
 //
 // No person visibility probe: the caller passes the stakeholder ids it already
 // read under its own person row scope, so a seat this caller cannot see never
@@ -104,13 +113,13 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // stops a future caller arriving another way, and a read whose safety rests on
 // the order its package happens to call things in is one refactor from
 // disclosing.
-func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.UUID, now time.Time) ([]ids.UUID, error) {
+func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.UUID) ([]ids.UUID, error) {
 	if orgID == ids.Nil || len(people) == 0 {
 		return nil, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos, peoplePos, nowPos := arg(orgID), arg(people), arg(now)
+	orgPos, peoplePos := arg(orgID), arg(people)
 	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
 	if err != nil {
 		return nil, err
@@ -125,16 +134,16 @@ func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.U
 		   AND r.organization_id = $%[1]d
 		   AND r.person_id = ANY($%[2]d)
 		   AND r.archived_at IS NULL
-		   AND r.ended_at IS NOT NULL AND r.ended_at <= $%[3]d::date
-		   AND (%[4]s)
+		   AND NOT `+peoplemod.EmploymentIsCurrentSQL("r.ended_at")+`
+		   AND (%[3]s)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship live
 		        WHERE live.kind = 'employment'
 		          AND live.organization_id = r.organization_id
 		          AND live.person_id = r.person_id
 		          AND live.archived_at IS NULL
-		          AND (live.ended_at IS NULL OR live.ended_at > $%[3]d::date))
-		 ORDER BY r.person_id`, orgPos, peoplePos, nowPos, edgeBound), args...)
+		          AND `+peoplemod.EmploymentIsCurrentSQL("live.ended_at")+`)
+		 ORDER BY r.person_id`, orgPos, peoplePos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("network: reading which stakeholders have left the account: %w", err)
 	}

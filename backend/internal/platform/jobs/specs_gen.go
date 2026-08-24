@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "ffaac5dc0d972bdeafec0b3504a6b186fcc90305890cda3d95ecedde8a07f1d0"
+const JobContractHash = "7d4fb22c1893eebf46f262abe414b0ba286f032bd6434cc8c08f9005e449bfcd"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -38,6 +38,26 @@ var specs = map[string]Spec{
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 1 * time.Hour},
+	},
+	"ai_activity_reconcile": {
+		Kind:        "ai_activity_reconcile",
+		GoType:      "AIActivityReconcileArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 15 * time.Minute},
+	},
+	"ai_activity_retention": {
+		Kind:        "ai_activity_retention",
+		GoType:      "AIActivityRetentionArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 24 * time.Hour},
 	},
 	"ai_model_rate_refresh": {
 		Kind:      "ai_model_rate_refresh",
@@ -360,12 +380,23 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Args:      []ArgField{{Name: "RequestedBy"}, {Name: "Workspace"}},
 	},
+	"geocode_backfill": {
+		Kind:         "geocode_backfill",
+		GoType:       "GeocodeBackfillArgs",
+		Role:         Worker,
+		Queue:        "geocode",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsArgs,
+		Cadence:      Cadence{OperatorField: "Geocoding.BackfillInterval", ScheduleWhenPositive: "Geocoding.BackfillInterval"},
+		Registration: Registration{When: []string{"Geocoder"}},
+	},
 	"geocode_organization": {
 		Kind:         "geocode_organization",
 		GoType:       "GeocodeOrganizationArgs",
 		Role:         Worker,
 		Queue:        "geocode",
-		Timeout:      TimeoutPolicy{Fixed: 1 * time.Minute},
+		Timeout:      TimeoutPolicy{Fixed: 3 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"Geocoder"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Workspace"}},

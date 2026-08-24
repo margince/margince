@@ -46,13 +46,45 @@ type ProjectKeyMatcher interface {
 	MatchProjectKey(ctx context.Context, tokens []string) (ids.UUID, error)
 }
 
+// StampProjectCorrespondence marks the activity just filed under a project as
+// commercial correspondence, inside the transaction that wrote the link (D5).
+// `activity` belongs to another module, so this is a seam for the same reason
+// ProjectKeyMatcher is one.
+type StampProjectCorrespondence func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error
+
+// ProjectAttribution is the ladder's two halves, which are one seam because
+// they are one obligation: deciding a message belongs to a project and
+// classifying the correspondence that decision qualifies (D5).
+//
+// They are ONE struct rather than two parameters so a caller cannot supply the
+// first without the second. The two failure modes are not comparable —
+// attributing nothing is an ordinary configuration, attributing without
+// classifying leaves a Handelsbrief the next erasure destroys — so the wiring
+// that could get it wrong does not exist rather than being checked for.
+type ProjectAttribution struct {
+	Keys  ProjectKeyMatcher
+	Stamp StampProjectCorrespondence
+	// Candidates and Propose are the uncertain rung's two halves
+	// (projectcandidate.go): which live projects the message reaches, and the
+	// engine that asks a human. Both or neither — a finder with nobody to ask
+	// would compute candidates nothing records, and a proposer with nothing to
+	// propose is inert — so the rung runs only when both are wired, and the
+	// zero value leaves the ladder at its three deterministic rungs.
+	Candidates ProjectCandidateFinder
+	Propose    ProjectCandidateProposer
+}
+
 // WithProjectAttribution returns a copy that files captured activities under a
-// project. A nil matcher leaves capture exactly as it is without one: messages
-// land, and none of them is attributed — which is also what every rung
-// concluding nothing looks like, so no caller has to special-case the absence.
-func (s *Sink) WithProjectAttribution(matcher ProjectKeyMatcher) *Sink {
+// project and classifies what it files. The zero value leaves capture exactly
+// as it is without one: messages land, and none of them is attributed — which
+// is also what every rung concluding nothing looks like, so no caller has to
+// special-case the absence.
+func (s *Sink) WithProjectAttribution(attribution ProjectAttribution) *Sink {
 	c := *s
-	c.projectKeys = matcher
+	c.projectKeys = attribution.Keys
+	c.stampProject = attribution.Stamp
+	c.projectCandidates = attribution.Candidates
+	c.proposeCandidate = attribution.Propose
 	return &c
 }
 
@@ -64,20 +96,61 @@ func (s *Sink) WithProjectAttribution(matcher ProjectKeyMatcher) *Sink {
 // budget must not wait on this. A fault is recorded for the nightly reconcile
 // and never returned — the message is already on the timeline and stays there.
 func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
-	if s.projectKeys == nil {
+	if s.projectKeys == nil || s.stampProject == nil {
 		return
 	}
 	activityID := ids.From[ids.ActivityKind](ref.ID)
+	var verdict ladderVerdict
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		projectID, err := s.decideProject(ctx, tx, rec, activityID)
-		if err != nil || projectID.IsZero() {
+		var err error
+		verdict, err = s.decideProject(ctx, tx, rec, activityID)
+		if err != nil || verdict.project.IsZero() {
 			return err
 		}
-		return linkActivityToProject(ctx, tx, activityID, projectID)
+		return linkActivityToProject(ctx, tx, activityID, verdict.project, s.stampProject)
 	})
+	if err == nil && verdict.asks {
+		// After the ladder's transaction, not inside it: staging takes the
+		// approval row lock itself and has no in-transaction form
+		// (StageUnlessDeclined), and the ladder wrote nothing a candidate
+		// would need to be atomic with.
+		err = s.offerCandidate(ctx, verdict.candidate)
+	}
 	if err != nil {
 		s.logProjectAttributionFault(ctx, rec, err)
 	}
+}
+
+// offerCandidate asks a human about the uncertain rung's conclusion and records
+// that it asked. Staging first, then the ledger row naming the staged offer:
+// the engine is the one that knows whether this pairing was already refused,
+// and a candidate row for a question nobody is being asked would count as
+// awaiting a decision forever.
+//
+// A crash between the two leaves an offer with no ledger row. The decision
+// still applies — the effect carries everything it needs in the payload and
+// resolves the ledger by proposal id, finding nothing — so the only loss is the
+// coverage count, and the next capture in the thread opens a fresh question.
+func (s *Sink) offerCandidate(ctx context.Context, candidate ProjectCandidate) error {
+	proposalID, staged, err := s.proposeCandidate.ProposeProjectCandidate(ctx, candidate)
+	if err != nil {
+		return fmt.Errorf("capture: offering the project candidate: %w", err)
+	}
+	if !staged {
+		return nil
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return recordCandidate(ctx, tx, candidate, proposalID)
+	})
+}
+
+// ladderVerdict is what one run of the ladder concluded: a project to file
+// under, a candidate to ask about (asks), or neither. Never both — a candidate
+// is only computed when every deterministic rung found nothing.
+type ladderVerdict struct {
+	project   ids.UUID
+	candidate ProjectCandidate
+	asks      bool
 }
 
 // logProjectAttributionFault records a failed attribution in system_log, on its
@@ -125,17 +198,22 @@ func (s *Sink) logProjectAttributionFault(ctx context.Context, rec connector.Nor
 // ever be: uq_activity_link_project admits one per activity, and
 // linkActivityToProject writes ON CONFLICT DO NOTHING. Replacing a filing is a
 // human's relink alone.
-func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.ActivityID) (ids.UUID, error) {
+//
+// Below the three deterministic rungs sits the uncertain one
+// (candidateProject), which reaches the verdict as a CANDIDATE rather than a
+// project: it is asked only when the rungs above found nothing, and what it
+// finds is offered to a human, never filed.
+func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.ActivityID) (ladderVerdict, error) {
 	fields, isActivity := rec.Fields.(ActivityFields)
 	if !isActivity {
-		return ids.Nil, nil
+		return ladderVerdict{}, nil
 	}
 	grant, err := readableProjectScope(ctx)
 	if err != nil || grant.deniedOutright {
 		// No project grant at all: this principal may not learn a project id,
 		// let alone have one copied onto their timeline. Not a fault — a role
 		// that never sees projects is a legitimate role.
-		return ids.Nil, err
+		return ladderVerdict{}, err
 	}
 	for _, rung := range []func() (ids.UUID, error){
 		func() (ids.UUID, error) { return threadProject(ctx, tx, rec, fields, activityID) },
@@ -144,10 +222,11 @@ func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.Norma
 	} {
 		projectID, err := rung()
 		if err != nil || !projectID.IsZero() {
-			return projectID, err
+			return ladderVerdict{project: projectID}, err
 		}
 	}
-	return ids.Nil, nil
+	candidate, asks, err := s.candidateProject(ctx, tx, rec, fields, activityID)
+	return ladderVerdict{candidate: candidate, asks: asks}, err
 }
 
 // subjectProject asks the key matcher about the subject's bracketed keys. A
@@ -285,7 +364,7 @@ func dealProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (ids
 // project link per activity: a concurrent pass that got there first is the
 // system working, not a collision to report. Nothing is audited or bumped when
 // nothing landed — a no-op writes no audit noise and moves no version.
-func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error {
+func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID, stamp StampProjectCorrespondence) error {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil
@@ -306,7 +385,18 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 		return fmt.Errorf("capture: filing the activity under its project: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return nil
+		// A link was already there. Stamp anyway before returning: the early
+		// exit used to skip it on the reasoning that whoever filed the link
+		// also stamped it, and that is exactly the guarantee nothing enforces
+		// — the migration's own backfill exists because pre-stamp project
+		// links do. A missed stamp leaves a Handelsbrief an erasure destroys;
+		// a repeated one costs a no-op, because the stamp is idempotent. The
+		// echo path made the same call for the same reason
+		// (activities/messageidentity.go).
+		//
+		// Nothing else runs: no version bump and no audit row, because nothing
+		// changed about where the activity is filed.
+		return stamp(ctx, tx, activityID, projectID)
 	}
 	// Touch the activity ROW, not just its link table, for the reason the
 	// human relink path does it (activities/lifecycle.go): a staged approval
@@ -318,6 +408,11 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 	// genuine UPDATE of the row.
 	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, activityID); err != nil {
 		return fmt.Errorf("capture: bumping the filed activity's version: %w", err)
+	}
+	// The link is what qualifies the correspondence, so the stamp commits with
+	// it (D5).
+	if err := stamp(ctx, tx, activityID, projectID); err != nil {
+		return fmt.Errorf("capture: classifying the filed activity's correspondence: %w", err)
 	}
 	return auditProjectAttribution(ctx, tx, activityID, projectID)
 }

@@ -1,19 +1,27 @@
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { Avatar } from "../design-system/atoms";
+import { Avatar, Button } from "../design-system/atoms";
 import { GroupedTimelineList } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import {
+  hasTimelineFilters,
+  type RecordTimeline,
+  useRecordTimeline,
+  useTimelineFilters,
+} from "../design-system/recordtimeline";
 import {
   type SectionState,
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
+import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
-import { RECORD_ZONE } from "./company360";
+import { TimelineActions } from "./compose";
 import { PersonCommercialCard, readableRole } from "./personcards";
 import {
   CHRONOLOGY_EMPTY_KEYS,
@@ -55,17 +63,43 @@ export function PersonTimelineTab({
   personId,
   view,
   loading = false,
-}: Readonly<{ personId: string; view?: Person360; loading?: boolean }>) {
+  onBriefMeeting,
+}: Readonly<{
+  personId: string;
+  view?: Person360;
+  loading?: boolean;
+  // Opens the pre-meeting brief for one meeting row. The drawer lives on the
+  // page, so the tab asks rather than renders it.
+  onBriefMeeting?: (activityId: string) => void;
+}>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const [filter, setFilter] = useChronologyFilter(personId);
-  const logged = view?.activities?.data ?? [];
-  const hasMore = view?.activities?.page.has_more ?? false;
+  const [filters, setFilters] = useTimelineFilters(personId);
+  // The 360's own page seeds the list; older pages and every narrowed read
+  // come from the activity list itself.
+  const timeline = useRecordTimeline("person", personId, {
+    filters,
+    firstPage: view?.activities,
+  });
   const chronology = useRecordChronology({
     kind: "person",
     recordId: personId,
     filter,
-    activities: logged,
-    activitiesHaveMore: hasMore,
+    activities: timeline.activities,
+    activitiesHaveMore: timeline.hasNextPage,
+    loadMore: timeline,
+    renderActions: (activity) => (
+      <TimelineActions
+        activity={activity}
+        entityType="person"
+        entityId={personId}
+        personId={personId}
+        extra={(row) => (
+          <MeetingBriefAction activity={row} onBriefMeeting={onBriefMeeting} />
+        )}
+      />
+    ),
   });
   return (
     <Panel
@@ -78,12 +112,16 @@ export function PersonTimelineTab({
       }
     >
       <PanelBody>
+        {filter !== "changes" && (
+          <TimelineFilterBar value={filters} onChange={setFilters} />
+        )}
         <SurfaceState
           state={timelineState(
             view,
             filter,
             chronology,
-            logged.length,
+            timeline,
+            hasTimelineFilters(filters),
             loading,
           )}
           emptyLabel={
@@ -98,8 +136,8 @@ export function PersonTimelineTab({
           }
         >
           <GroupedTimelineList
-            groups={groupChronology(chronology.entries, hasMore)}
-            zone={RECORD_ZONE}
+            groups={groupChronology(chronology.entries, timeline.hasNextPage)}
+            zone={recordZone}
           />
         </SurfaceState>
       </PanelBody>
@@ -117,17 +155,23 @@ function timelineState(
   view: Person360 | undefined,
   filter: TimelineFilter,
   chronology: RecordChronology,
-  activityCount: number,
+  timeline: RecordTimeline,
+  narrowed: boolean,
   loading: boolean,
 ): SectionState {
   if (filter === "activities") {
-    const base = sectionState(
-      view,
-      "activities",
-      Boolean(view?.activities),
-      activityCount,
-      loading,
-    );
+    // A narrowed read is the list's own, not the 360's section: it has its
+    // own wait and its own failure, and a grant that withheld the section
+    // withholds the list the same way through the server's 403.
+    const base = narrowed
+      ? narrowedState(timeline)
+      : sectionState(
+          view,
+          "activities",
+          Boolean(view?.activities),
+          timeline.activities.length,
+          loading,
+        );
     return base === "ready" && chronology.truncated ? "partial" : base;
   }
   if (chronology.loading) {
@@ -137,6 +181,16 @@ function timelineState(
     return "failed";
   }
   return chronology.entries.length === 0 ? "empty" : "ready";
+}
+
+function narrowedState(timeline: RecordTimeline): SectionState {
+  if (timeline.isPending) {
+    return "loading";
+  }
+  if (timeline.isError) {
+    return "failed";
+  }
+  return timeline.activities.length === 0 ? "empty" : "ready";
 }
 
 // --- Deals ------------------------------------------------------------------
@@ -198,6 +252,43 @@ export function PersonDealsTab({
 
 // --- Meetings ---------------------------------------------------------------
 
+// The brief verb for one meeting, booked or already held — the backend
+// assembles a brief for any meeting activity, and reading one afterwards is
+// how a reader recovers what a room agreed.
+//
+// Every reason NOT to offer it is decided here rather than at each call site,
+// because a third caller that forgets one of them ships a button that fails:
+//
+//   - no id, or a surface with no drawer to open — nothing to ask for.
+//   - a row that is not a meeting — the endpoint answers 404 for any other
+//     kind, by design.
+//   - a meeting the reader may DISCOVER but not READ. The timeline carries
+//     those deliberately, as `content_state: "withheld"`, so the reader knows
+//     a conversation happened without seeing it. The brief endpoint applies
+//     the stricter content gate, so offering the verb here would promise a
+//     reader something their own grant refuses.
+function MeetingBriefAction({
+  activity,
+  onBriefMeeting,
+}: Readonly<{
+  activity: Pick<Activity, "id" | "kind" | "content_state"> | undefined;
+  onBriefMeeting?: (activityId: string) => void;
+}>) {
+  const t = useT();
+  if (!activity?.id || !onBriefMeeting) {
+    return null;
+  }
+  if (activity.kind !== "meeting" || activity.content_state === "withheld") {
+    return null;
+  }
+  const activityId = activity.id;
+  return (
+    <Button small onClick={() => onBriefMeeting(activityId)}>
+      {t("person.meeting.brief")}
+    </Button>
+  );
+}
+
 /**
  * PersonMeetingsTab puts the meeting that has not happened yet above the ones
  * that have. The booked meeting is the server's own next-meeting read, taken
@@ -207,12 +298,25 @@ export function PersonDealsTab({
 export function PersonMeetingsTab({
   view,
   loading = false,
-}: Readonly<{ view?: Person360; loading?: boolean }>) {
+  onBriefMeeting,
+}: Readonly<{
+  view?: Person360;
+  loading?: boolean;
+  onBriefMeeting?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const viewerId = useViewerId();
+  // The booked meeting is drawn above, from the server's own next-meeting
+  // read. It is also an activity, so an unfiltered list draws it a second time
+  // under "already held" — which was merely untidy while the rows were inert
+  // and becomes two identical brief buttons for one room now that they carry a
+  // verb.
+  const booked = view?.next_meeting?.activity_id;
   const met = (view?.activities?.data ?? []).filter(
-    (activity: Activity) => activity.kind === "meeting",
+    (activity: Activity) =>
+      activity.kind === "meeting" && activity.id !== booked,
   );
   const hasMore = view?.activities?.page.has_more ?? false;
   const past = sectionState(
@@ -243,8 +347,17 @@ export function PersonMeetingsTab({
                   {next.subject ?? t("person.meetings.untitled")}
                 </p>
                 <p className="pe-brief-line">
-                  {formatDateTime(next.starts_at, locale, RECORD_ZONE)}
+                  {formatDateTime(next.starts_at, locale, recordZone)}
                 </p>
+                {/* next_meeting carries no content_state because the 360
+                    withholds the whole section rather than a redacted row, so
+                    a booked meeting the reader can see here is one they can
+                    read. The kind is stated for the same reason: this section
+                    IS the meeting. */}
+                <MeetingBriefAction
+                  activity={{ id: next.activity_id, kind: "meeting" }}
+                  onBriefMeeting={onBriefMeeting}
+                />
                 {next.participants && next.participants.length > 0 && (
                   <>
                     <Eyebrow as="h3">
@@ -276,8 +389,16 @@ export function PersonMeetingsTab({
             emptyLabel={t("person.meetings.noneLogged")}
           >
             <GroupedTimelineList
-              groups={groupChronology(activityTimeline(met, viewerId), hasMore)}
-              zone={RECORD_ZONE}
+              groups={groupChronology(
+                activityTimeline(met, viewerId, (activity) => (
+                  <MeetingBriefAction
+                    activity={activity}
+                    onBriefMeeting={onBriefMeeting}
+                  />
+                )),
+                hasMore,
+              )}
+              zone={recordZone}
             />
           </SurfaceState>
         </PanelBody>

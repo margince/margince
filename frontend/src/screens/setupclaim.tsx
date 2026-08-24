@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { usePasswordReveal } from "../design-system/passwordreveal";
-import { useT } from "../i18n";
+import { Select } from "../design-system/select";
+import { viewerZone } from "../format/timezone";
+import {
+  detectLocale,
+  LOCALES,
+  type Locale,
+  localeNameKey,
+  useT,
+} from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
 import { AuthExperience } from "./auth-core";
 import { isTooShort } from "./passwordrule";
@@ -19,6 +27,41 @@ import "./auth.css";
 // not honest about what it is doing.
 
 export type SetupStatus = { claimable: boolean };
+
+// A first guess at the currency this installation bills in, from the region the
+// claiming browser reports.
+//
+// It is a GUESS, and the form treats it as one: the value is shown in an
+// editable field with the consequence spelled out beside it. What it replaces
+// is worse than a guess — a literal "EUR" that no human ever saw, on an
+// installation that may bill in none of it.
+//
+// The table is deliberately short. It covers the regions this product is sold
+// into and answers EUR elsewhere, because a longer table would still be
+// incomplete and the field is editable either way. `Intl` knows no
+// region→currency mapping, so there is nothing here to delegate to.
+const REGION_CURRENCY: Readonly<Record<string, string>> = {
+  CH: "CHF",
+  GB: "GBP",
+  US: "USD",
+  VN: "VND",
+  AU: "AUD",
+  CA: "CAD",
+  JP: "JPY",
+  SG: "SGD",
+  PL: "PLN",
+  CZ: "CZK",
+  DK: "DKK",
+  SE: "SEK",
+  NO: "NOK",
+};
+
+function currencyForRegion(
+  locale: string | undefined = globalThis.navigator?.language,
+): string {
+  const region = locale?.toUpperCase().split("-")[1];
+  return (region && REGION_CURRENCY[region]) || "EUR";
+}
 
 /**
  * fetchSetupStatus asks whether this installation is waiting to be claimed.
@@ -56,22 +99,42 @@ type ClaimFields = {
   adminEmail: string;
   adminPassword: string;
   setupToken: string;
+  baseCurrency: string;
+  baseLanguage: Locale;
+  timezone: string;
 };
 
-const EMPTY: ClaimFields = {
-  organizationName: "",
-  adminName: "",
-  adminEmail: "",
-  adminPassword: "",
-  setupToken: "",
-};
+// What the browser can tell us about where this installation is being claimed
+// from. Offered as the answer, never taken as one: each is a field the operator
+// sees and can change before the claim is sent.
+//
+// The currency is the one worth spelling out. It used to be the literal "EUR",
+// on no evidence at all, and it is the hardest of the three to correct later —
+// the base currency stops being changeable once anything has converted against
+// it. A guess from the browser's own region is not right either, but it is
+// shown, which is the whole difference.
+function claimDefaults(): ClaimFields {
+  return {
+    organizationName: "",
+    adminName: "",
+    adminEmail: "",
+    adminPassword: "",
+    setupToken: "",
+    baseCurrency: currencyForRegion(),
+    baseLanguage: detectLocale(),
+    timezone: viewerZone(),
+  };
+}
 
 export function SetupClaimScreen({
   onClaimed,
 }: Readonly<{ onClaimed: () => void }>) {
   const t = useT();
   usePageTitle(t("setup.pageTitle"));
-  const [fields, setFields] = useState<ClaimFields>(EMPTY);
+  // Seeded once, from the browser. A lazy initializer rather than a call in the
+  // render body: re-guessing on every keystroke would overwrite what the
+  // operator typed with what their laptop thinks.
+  const [fields, setFields] = useState<ClaimFields>(claimDefaults);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // The root credential is typed once with no confirm field to disagree with
@@ -84,11 +147,6 @@ export function SetupClaimScreen({
   const set = (key: keyof ClaimFields) => (value: string) =>
     setFields((current) => ({ ...current, [key]: value }));
 
-  // The browser's own timezone, offered as the default. An installation is
-  // almost always claimed from where it will be used, and the alternative is
-  // asking a human to name a zone they have no reason to know.
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -100,8 +158,12 @@ export function SetupClaimScreen({
         body: JSON.stringify({
           setup_token: fields.setupToken.trim(),
           organization_name: fields.organizationName.trim(),
-          timezone,
-          base_currency: "EUR",
+          timezone: fields.timezone.trim(),
+          // Upper-cased on the way out: the server takes ISO-4217 exactly, and
+          // refusing "chf" for its case would be a rule about typing rather
+          // than about currencies.
+          base_currency: fields.baseCurrency.trim().toUpperCase(),
+          base_language: fields.baseLanguage,
           admin_email: fields.adminEmail.trim(),
           admin_name: fields.adminName.trim(),
           admin_password: fields.adminPassword,
@@ -136,11 +198,21 @@ export function SetupClaimScreen({
   }
 
   const passwordShort = isTooShort(fields.adminPassword);
+  // The server refuses a currency that is not three letters, so saying so here
+  // keeps the operator from spending a round-trip to learn it. The check is
+  // shape only: which three letters are a real currency is the server's to
+  // know, and duplicating its table here would be a second answer that drifts.
+  const currencyMalformed =
+    fields.baseCurrency.trim() !== "" &&
+    !/^[A-Za-z]{3}$/.test(fields.baseCurrency.trim());
   const complete =
     fields.setupToken.trim() !== "" &&
     fields.organizationName.trim() !== "" &&
     fields.adminName.trim() !== "" &&
     fields.adminEmail.trim() !== "" &&
+    fields.timezone.trim() !== "" &&
+    fields.baseCurrency.trim() !== "" &&
+    !currencyMalformed &&
     !passwordShort &&
     fields.adminPassword !== "";
 
@@ -179,6 +251,78 @@ export function SetupClaimScreen({
                 onChange={(event) =>
                   set("organizationName")(event.target.value)
                 }
+              />
+            )}
+          </Field>
+          {/* What the installation is MEASURED in, asked once, here. Every one
+              of these was decided silently before — the currency as a literal
+              nobody saw, the zone from whichever machine happened to claim.
+              They are all editable afterwards in Settings, with one exception
+              the currency's own hint names. */}
+          <Field
+            label={t("setup.baseCurrency")}
+            required
+            hint={currencyMalformed ? undefined : t("setup.baseCurrencyHint")}
+            error={
+              currencyMalformed ? t("setup.baseCurrencyMalformed") : undefined
+            }
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                name="base-currency"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                value={fields.baseCurrency}
+                onChange={(event) => set("baseCurrency")(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("setup.baseLanguage")}
+            required
+            hint={t("setup.baseLanguageHint")}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                value={fields.baseLanguage}
+                // Language names are proper nouns and untranslated, so each
+                // option is in a different language from the page — `lang` is
+                // WCAG 2.2 AA 3.1.2, and our locale codes are the BCP 47
+                // subtags it wants.
+                options={LOCALES.map((locale) => ({
+                  value: locale,
+                  label: t(localeNameKey(locale)),
+                  lang: locale,
+                }))}
+                onChange={(next) => {
+                  const picked = LOCALES.find((locale) => locale === next);
+                  if (picked) {
+                    setFields((current) => ({
+                      ...current,
+                      baseLanguage: picked,
+                    }));
+                  }
+                }}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("setup.timezone")}
+            required
+            hint={t("setup.timezoneHint")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                name="timezone"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={fields.timezone}
+                onChange={(event) => set("timezone")(event.target.value)}
               />
             )}
           </Field>

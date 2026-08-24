@@ -86,17 +86,24 @@ func requireParentOrHide(ctx context.Context, entityType string, action principa
 	return nil
 }
 
-// resolveVisibleAttachmentParent is the ONE spelling of "find a live
-// attachment's parent, then require the caller hold `action` on the parent
-// object type and be able to see the parent row" — GetAttachmentMeta and
-// ArchiveAttachment both need exactly this and nothing more. Object denial
-// and row-scope miss both surface as ErrNotFound (existence-hiding), and so
-// does a missing or already-archived row: a soft-deleted attachment has no
-// live parent to resolve against. OpenAttachment does NOT call this: it
-// fetches storage_key in the same round trip, so the key it hands the object
-// store comes from the same snapshot the visibility gates just read rather
-// than from a second query against a row that may have moved since.
-func resolveVisibleAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action principal.Action) (entityType string, err error) {
+// resolveAttachmentParent is the ONE spelling of "find a live attachment's
+// parent, then require the caller hold `action` on the parent object type and
+// the matching authority over the parent ROW" — GetAttachmentMeta and
+// ArchiveAttachment both need exactly this. Object denial and row-scope miss
+// both surface as ErrNotFound (existence-hiding), and so does a missing or
+// already-archived row: a soft-deleted attachment has no live parent to
+// resolve against. OpenAttachment does NOT call this: it fetches storage_key
+// in the same round trip, so the key it hands the object store comes from the
+// same snapshot the visibility gates just read rather than from a second query
+// against a row that may have moved since.
+//
+// The row gate follows the ACTION rather than being visibility for everyone: a
+// read needs only to see the parent, while archiving a file off a record
+// changes that record and needs the parent to be the caller's to change. That
+// distinction used to be invisible because every parent type a rep could see
+// was also one they owned; with a project readable workspace-wide it is the
+// difference between "look at another team's file" and "delete it".
+func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action principal.Action) (entityType string, err error) {
 	var entityID ids.UUID
 	row := tx.QueryRow(ctx,
 		`SELECT entity_type, entity_id FROM attachment WHERE id = $1 AND archived_at IS NULL`, id)
@@ -109,7 +116,19 @@ func resolveVisibleAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID,
 	if err := requireParentOrHide(ctx, entityType, action); err != nil {
 		return "", err
 	}
-	if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
+	// This branch is WAIVED in backend/writeauthority_test.go under
+	// readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible,
+	// because that gate walks the call graph and cannot see which arm a caller
+	// takes. The waiver excuses the FUNCTION, so it would keep passing if the
+	// visibility probe were ever moved onto a write path — read the waiver
+	// before adding a third arm here, and revisit it rather than extend it.
+	if action == principal.ActionRead {
+		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
+			return "", err
+		}
+		return entityType, nil
+	}
+	if err := ensureAttachmentParentWritable(ctx, tx, entityType, entityID); err != nil {
 		return "", err
 	}
 	return entityType, nil
@@ -161,13 +180,13 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 }
 
 // GetAttachmentMeta resolves one attachment's metadata row, gated exactly
-// like resolveVisibleAttachmentParent but without any object-store access:
+// like resolveAttachmentParent but without any object-store access:
 // the extraction read and the request-access courtesy note both need only
 // the row's identity. Archived or invisible reads as ErrNotFound.
 func (s *Store) GetAttachmentMeta(ctx context.Context, id ids.UUID) (crmcontracts.Attachment, error) {
 	var out crmcontracts.Attachment
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := resolveVisibleAttachmentParent(ctx, tx, id, principal.ActionRead); err != nil {
+		if _, err := resolveAttachmentParent(ctx, tx, id, principal.ActionRead); err != nil {
 			return err
 		}
 		att, err := readAttachment(ctx, tx, id)
@@ -187,7 +206,7 @@ func (s *Store) GetAttachmentMeta(ctx context.Context, id ids.UUID) (crmcontract
 // scope). Archived/invisible reads as ErrNotFound.
 func (s *Store) ArchiveAttachment(ctx context.Context, id ids.UUID) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		entityType, err := resolveVisibleAttachmentParent(ctx, tx, id, principal.ActionUpdate)
+		entityType, err := resolveAttachmentParent(ctx, tx, id, principal.ActionUpdate)
 		if err != nil {
 			return err
 		}
@@ -209,51 +228,65 @@ func (s *Store) ListAttachments(ctx context.Context, entityType string, entityID
 	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	lim := storekit.ClampLimit(limit)
-
 	var out []crmcontracts.Attachment
 	var page storekit.Page
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
-			return err
-		}
-		args := []any{entityType, entityID}
-		where := `at.entity_type = $1 AND at.entity_id = $2 AND at.archived_at IS NULL`
-		if cursor != nil && *cursor != "" {
-			c, err := storekit.DecodeCursor(*cursor)
-			if err != nil {
-				return err
-			}
-			args = append(args, c.CreatedAt, c.ID)
-			where += sprintf(` AND (at.created_at, at.id) < ($%d, $%d)`, len(args)-1, len(args))
-		}
-		rows, err := tx.Query(ctx, `SELECT `+attachmentColumns+` FROM attachment at WHERE `+where+
-			sprintf(` ORDER BY at.created_at DESC, at.id DESC LIMIT %d`, lim+1), args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			att, err := scanAttachment(rows)
-			if err != nil {
-				return err
-			}
-			out = append(out, att)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(out) > lim {
-			out = out[:lim]
-			last := out[len(out)-1]
-			page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))}
-		}
-		return nil
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		out, page, err = listAttachments(ctx, tx, entityType, entityID, cursor, limit)
+		return err
 	})
-	if out == nil {
-		out = []crmcontracts.Attachment{}
-	}
 	return out, page, err
+}
+
+// ListAttachmentsTx is ListAttachments inside a caller-opened transaction —
+// the composite record read. Same gate, same parent check; only the
+// transaction is borrowed.
+func (s *Store) ListAttachmentsTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, cursor *string, limit *int) ([]crmcontracts.Attachment, storekit.Page, error) {
+	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return listAttachments(ctx, tx, entityType, entityID, cursor, limit)
+}
+
+func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, cursor *string, limit *int) ([]crmcontracts.Attachment, storekit.Page, error) {
+	if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	lim := storekit.ClampLimit(limit)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
+		arg(entityType), arg(entityID))
+	if cursor != nil && *cursor != "" {
+		c, err := storekit.DecodeCursor(*cursor)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		where += sprintf(` AND (at.created_at, at.id) < ($%d, $%d)`, arg(c.CreatedAt), arg(c.ID))
+	}
+	rows, err := tx.Query(ctx, `SELECT `+attachmentColumns+` FROM attachment at WHERE `+where+
+		sprintf(` ORDER BY at.created_at DESC, at.id DESC LIMIT %d`, lim+1), args...)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	defer rows.Close()
+	out := []crmcontracts.Attachment{}
+	for rows.Next() {
+		att, err := scanAttachment(rows)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		out = append(out, att)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	var page storekit.Page
+	if len(out) > lim {
+		out = out[:lim]
+		last := out[len(out)-1]
+		page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))}
+	}
+	return out, page, nil
 }
 
 // rowScanner is the shared Scan surface of pgx.Row and pgx.Rows.
@@ -264,44 +297,63 @@ func readAttachment(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.A
 }
 
 func scanAttachment(row rowScanner) (crmcontracts.Attachment, error) {
-	var (
-		att         crmcontracts.Attachment
-		aid         ids.UUID
-		entityType  string
-		entityID    ids.UUID
-		contentType *string
-		byteSize    *int64
-		checksum    *string
-		capturedBy  string
-		category    string
-		docState    string
-		supersedes  *ids.UUID
-		orgID       *ids.UUID
-		contractID  *ids.UUID
-	)
-	if err := row.Scan(&aid, &entityType, &entityID, &att.Filename,
-		&contentType, &byteSize, &checksum, &att.Source, &capturedBy, &att.CreatedAt,
-		&category, &att.Title, &docState, &att.Pinned, &supersedes, &orgID, &contractID); err != nil {
+	var cols attachmentScan
+	if err := row.Scan(cols.targets()...); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return crmcontracts.Attachment{}, apperrors.ErrNotFound
 		}
 		return crmcontracts.Attachment{}, err
 	}
-	att.Id = openapi_types.UUID(aid)
-	att.EntityId = openapi_types.UUID(entityID)
-	att.EntityType = crmcontracts.AttachmentEntityType(entityType)
-	att.ContentType = contentType
-	att.ByteSize = byteSize
-	att.Checksum = checksum
+	return cols.attachment(), nil
+}
+
+// attachmentScan holds the columns of attachmentColumns as Scan wants them,
+// so a read that selects MORE than an attachment (the deal's Files area joins
+// the file's origin) can scan one row into these targets plus its own.
+type attachmentScan struct {
+	att         crmcontracts.Attachment
+	aid         ids.UUID
+	entityType  string
+	entityID    ids.UUID
+	contentType *string
+	byteSize    *int64
+	checksum    *string
+	capturedBy  string
+	category    string
+	docState    string
+	supersedes  *ids.UUID
+	orgID       *ids.UUID
+	contractID  *ids.UUID
+}
+
+// targets are the Scan destinations, in attachmentColumns order.
+func (c *attachmentScan) targets() []any {
+	return []any{
+		&c.aid, &c.entityType, &c.entityID, &c.att.Filename,
+		&c.contentType, &c.byteSize, &c.checksum, &c.att.Source, &c.capturedBy, &c.att.CreatedAt,
+		&c.category, &c.att.Title, &c.docState, &c.att.Pinned, &c.supersedes, &c.orgID, &c.contractID,
+	}
+}
+
+// attachment builds the wire shape from what was scanned.
+func (c *attachmentScan) attachment() crmcontracts.Attachment {
+	att := c.att
+	att.Id = openapi_types.UUID(c.aid)
+	att.EntityId = openapi_types.UUID(c.entityID)
+	att.EntityType = crmcontracts.AttachmentEntityType(c.entityType)
+	att.ContentType = c.contentType
+	att.ByteSize = c.byteSize
+	att.Checksum = c.checksum
+	capturedBy := c.capturedBy
 	att.CapturedBy = &capturedBy
-	cat := crmcontracts.AttachmentCategory(category)
+	cat := crmcontracts.AttachmentCategory(c.category)
 	att.Category = &cat
-	state := crmcontracts.AttachmentDocState(docState)
+	state := crmcontracts.AttachmentDocState(c.docState)
 	att.DocState = &state
-	att.SupersedesId = uuidOrNil(supersedes)
-	att.OrganizationId = uuidOrNil(orgID)
-	att.ContractId = uuidOrNil(contractID)
-	return att, nil
+	att.SupersedesId = uuidOrNil(c.supersedes)
+	att.OrganizationId = uuidOrNil(c.orgID)
+	att.ContractId = uuidOrNil(c.contractID)
+	return att
 }
 
 // uuidOrNil maps an absent tenant-local pointer onto the wire's optional uuid

@@ -20,6 +20,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -27,26 +28,39 @@ import (
 )
 
 // seedProject creates a project on a fresh company, owned by the given
-// user (nil = ownerless).
+// user (nil = the creating admin, since a project defaults to its creator).
 type projectFixture struct {
 	ID      ids.ProjectID
 	Version int64
 }
 
-func seedProject(ctx context.Context, t *testing.T, e *Env, name string, key *string, org ids.UUID, owner *ids.UUID) projectFixture {
+func seedProject(ctx context.Context, t *testing.T, e *Env, name string, org ids.UUID, owner *ids.UUID) projectFixture {
 	t.Helper()
-	in := deals.CreateProjectInput{
+	in := projects.CreateProjectInput{
 		Name:           name,
-		Key:            key,
 		OrganizationID: orgIDOf(org),
 		OwnerID:        userIDPtr(owner),
 		Source:         "manual",
 	}
-	p, err := e.Deals.CreateProject(ctx, in)
+	p, err := e.Projects.CreateProject(ctx, in)
 	if err != nil {
 		t.Fatalf("create project %q: %v", name, err)
 	}
 	return projectFixture{ID: projectIDOf(ids.UUID(p.Id)), Version: *p.Version}
+}
+
+// mintedKey reads back the key the server chose for a project. A test that
+// needs the key can no longer state one: it asks the project which key it got.
+func mintedKey(ctx context.Context, t *testing.T, e *Env, id ids.ProjectID) string {
+	t.Helper()
+	got, err := e.Projects.GetProject(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("read the project back for its key: %v", err)
+	}
+	if got.Key == nil {
+		t.Fatal("the project carries no key; the server mints one for every project")
+	}
+	return *got.Key
 }
 
 // A project is born at the head of the ladder with its history already
@@ -55,14 +69,14 @@ func seedProject(ctx context.Context, t *testing.T, e *Env, name string, key *st
 func TestProjectIsBornWithItsHistoryRow(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
 
-	got, err := e.Deals.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
+	got, err := e.Projects.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Phase == nil || string(*got.Phase) != deals.PhaseInitiative {
-		t.Errorf("phase = %v, want %s", got.Phase, deals.PhaseInitiative)
+	if got.Phase == nil || string(*got.Phase) != projects.PhaseInitiative {
+		t.Errorf("phase = %v, want %s", got.Phase, projects.PhaseInitiative)
 	}
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM project_phase_history WHERE project_id = $1 AND from_phase IS NULL AND to_phase = 'initiative'`,
@@ -71,33 +85,46 @@ func TestProjectIsBornWithItsHistoryRow(t *testing.T) {
 	}
 }
 
-// The key is unique among LIVE projects and matched case-insensitively —
-// and the conflict carries the id of the project already holding it, so a
-// caller that collided can open that project rather than hunt for it.
-func TestProjectKeyIsUniqueAmongLiveProjectsAndFreedByArchiving(t *testing.T) {
+// The key is MINTED, not supplied: a caller cannot name one, so a collision is
+// the server's race to resolve rather than a refusal to report. Two projects
+// whose names give the same stem get different numbers, and the shape the
+// column demands holds for both.
+func TestProjectKeysAreMintedUniquePerStem(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	first := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, nil)
 
-	_, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
-		Name: "Second", Key: strPtr("erp-27"), OrganizationID: orgIDOf(org), Source: "manual",
-	})
-	var taken *deals.ProjectKeyTakenError
-	if !errors.As(err, &taken) {
-		t.Fatalf("a case-different duplicate key produced %v, want ProjectKeyTakenError", err)
+	first := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
+	second := seedProject(e.Admin(), t, e, "ERP rollout", org, nil)
+
+	keyOf := func(p projectFixture) string {
+		t.Helper()
+		got, err := e.Projects.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Key == nil {
+			t.Fatal("a created project carries no key; the server mints one for every project")
+		}
+		return *got.Key
 	}
-	if taken.ExistingID == nil || *taken.ExistingID != first.ID.UUID {
-		t.Errorf("conflict named %v, want the live project %v", taken.ExistingID, first.ID.UUID)
+	firstKey, secondKey := keyOf(first), keyOf(second)
+	if firstKey == secondKey {
+		t.Fatalf("both projects were minted the key %q; the number is what separates them", firstKey)
+	}
+	for _, key := range []string{firstKey, secondKey} {
+		if !strings.HasPrefix(key, "ER-") {
+			t.Errorf("minted key %q does not carry the stem its name gives", key)
+		}
 	}
 
-	// Archiving frees the key: the uniqueness index is partial on live rows.
-	if _, err := e.Deals.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
+	// Archiving frees the key for reuse: the uniqueness index is partial on
+	// live rows, so the next project with this stem may take the number back.
+	if _, err := e.Projects.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Deals.CreateProject(e.Admin(), deals.CreateProjectInput{
-		Name: "Reused", Key: strPtr("ERP-27"), OrganizationID: orgIDOf(org), Source: "manual",
-	}); err != nil {
-		t.Fatalf("archiving did not free the key: %v", err)
+	third := seedProject(e.Admin(), t, e, "ERP restart", org, nil)
+	if k := keyOf(third); k == secondKey {
+		t.Errorf("the new project took %q, which a LIVE project still holds", k)
 	}
 }
 
@@ -107,9 +134,9 @@ func TestProjectKeyIsUniqueAmongLiveProjectsAndFreedByArchiving(t *testing.T) {
 func TestAdvanceProjectPhaseWritesHistoryAndTheFirstClassEvent(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, org, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
 
-	moved, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{ToPhase: "delivering"})
+	moved, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: "delivering"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,10 +167,10 @@ func TestAdvanceProjectPhaseWritesHistoryAndTheFirstClassEvent(t *testing.T) {
 func TestClosingAProjectRequiresAReason(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, org, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
 
-	_, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{ToPhase: deals.PhaseClosed})
-	var needsReason *deals.ClosedReasonRequiredError
+	_, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseClosed})
+	var needsReason *projects.ClosedReasonRequiredError
 	if !errors.As(err, &needsReason) {
 		t.Fatalf("closing without a reason produced %v, want ClosedReasonRequiredError", err)
 	}
@@ -153,12 +180,12 @@ func TestClosingAProjectRequiresAReason(t *testing.T) {
 
 	// Re-opening clears the closed reason: a live project must not carry
 	// the explanation of a close that no longer applies.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseClosed, Reason: strPtr("Delivered."),
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: strPtr("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	reopened, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{ToPhase: "delivering"})
+	reopened, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: "delivering"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +202,7 @@ func TestADealCannotPointAtAnotherCompanysProject(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	orgA := e.SeedOrg(t, "BAER Pharma", nil)
 	orgB := e.SeedOrg(t, "Kessler GmbH", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, orgA, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", orgA, nil)
 
 	orgBID := orgIDOf(orgB)
 	_, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -203,7 +230,7 @@ func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), org, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
 
 	orgID := orgIDOf(org)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -221,7 +248,7 @@ func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := e.Deals.ArchiveProject(e.Admin(), p.ID, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), p.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -236,18 +263,23 @@ func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
 	}
 }
 
-// The row-scope case that fails SILENTLY if the activity link-walk has no
-// project branch: an activity linked ONLY to a project must follow that
-// project's visibility, in both directions. Getting this half-right looks
-// exactly like missing data.
-func TestAnActivityLinkedOnlyToAProjectFollowsItsRowScope(t *testing.T) {
+// The case that fails SILENTLY if the activity link-walk has no project
+// branch: an activity linked ONLY to a project is reached through that
+// project, so a seat that reads the project reads its conversation too.
+// Getting this half-right looks exactly like missing data.
+//
+// A project is workspace-readable (platform/auth tableclass.go), so the walk
+// admits every seat here rather than only the owner's team. What the walk
+// still narrows is a link onto a capture-private record, which
+// TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee covers.
+func TestAnActivityLinkedOnlyToAProjectIsReachedThroughIt(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	// Real seeded users: owner_id is a composite FK to app_user, so a
 	// synthetic uuid would be refused before the scope rule is exercised.
-	ownerA := e.Rep1
-	ownerB := e.Rep3
-	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, org, &ownerA)
+	owner := e.Rep1
+	colleague := e.Rep3
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, &owner)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: strPtr("rollout schedule"), Source: "manual",
@@ -256,6 +288,7 @@ func TestAnActivityLinkedOnlyToAProjectFollowsItsRowScope(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	activityID := ids.From[ids.ActivityKind](ids.UUID(act.Id))
 
 	scoped := principal.Permissions{
 		RoleKeys: []string{"rep"},
@@ -265,16 +298,98 @@ func TestAnActivityLinkedOnlyToAProjectFollowsItsRowScope(t *testing.T) {
 		},
 		RowScope: principal.RowScopeOwn,
 	}
-
 	// The project's owner sees the conversation about their project.
-	if _, err := e.Activities.GetActivity(e.As(ownerA, nil, scoped), ids.From[ids.ActivityKind](ids.UUID(act.Id)), storekit.LiveOnly); err != nil {
+	if _, err := e.Activities.GetActivity(e.As(owner, nil, scoped), activityID, storekit.LiveOnly); err != nil {
 		t.Errorf("the project's owner cannot see its activity: %v", err)
 	}
-	// Someone with no claim on the project does not — and reads as absent,
-	// not as forbidden, so existence is not disclosed.
-	_, err = e.Activities.GetActivity(e.As(ownerB, nil, scoped), ids.From[ids.ActivityKind](ids.UUID(act.Id)), storekit.LiveOnly)
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("a stranger to the project got %v, want ErrNotFound", err)
+	// So does a colleague who neither owns it nor was granted it: a project
+	// is the workspace's to read, and its timeline travels with it.
+	if _, err := e.Activities.GetActivity(e.As(colleague, nil, scoped), activityID, storekit.LiveOnly); err != nil {
+		t.Errorf("a colleague on the project's timeline got %v; a project is read by every seat "+
+			"holding the object grant, and the conversation about it is reached through it", err)
+	}
+	// A seat holding no ACTIVITY grant is refused the record type outright —
+	// the link walk decides which rows, never whether the caller may read
+	// activities at all.
+	noActivity := principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"project": {Read: true}},
+		RowScope: principal.RowScopeOwn,
+	}
+	_, err = e.Activities.GetActivity(e.As(colleague, nil, noActivity), activityID, storekit.LiveOnly)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a seat with no activity grant got %v, want ErrPermissionDenied", err)
+	}
+}
+
+// A rep who is neither owner nor stakeholder reads the project and its
+// timeline whole, and still cannot change it. The read class and the write
+// arm are separate rules (platform/auth tableclass.go vs writescope.go), and
+// widening the first must not move the second: a consultant seeing the work
+// is not a consultant who may rewrite it.
+func TestARepReadsAProjectTheyDoNotOwnButCannotWriteIt(t *testing.T) {
+	e := Setup(t)
+	org := e.SeedOrg(t, "BAER Pharma", nil)
+	owner := e.Rep1
+	// Rep3 sits in the other team, so neither own nor team scope reaches the
+	// project — only the read class can.
+	consultant := e.Rep3
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, &owner)
+
+	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: strPtr("kickoff notes"), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "project", EntityID: p.ID.UUID}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reader := e.As(consultant, []ids.UUID{e.Team2}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"project":  {Read: true, Update: true},
+			"activity": {Read: true},
+		},
+		RowScope: principal.RowScopeOwn,
+	})
+
+	got, err := e.Projects.GetProject(reader, p.ID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("a rep working a project they do not own cannot read it: %v", err)
+	}
+	if ids.UUID(got.Id) != p.ID.UUID {
+		t.Fatalf("read back project %s, want %s", ids.UUID(got.Id), p.ID.UUID)
+	}
+
+	// The timeline travels with the record it hangs off.
+	entityType, entityID := "project", p.ID.UUID
+	timeline, _, err := e.Activities.ListActivities(reader, activities.ListActivitiesInput{
+		EntityType: &entityType, EntityID: &entityID,
+	})
+	if err != nil {
+		t.Fatalf("reading the project's timeline: %v", err)
+	}
+	if len(timeline) != 1 || ids.UUID(timeline[0].Id) != ids.UUID(act.Id) {
+		t.Fatalf("the project timeline returned %d activities, want the one linked to it", len(timeline))
+	}
+
+	// The object grant says update; the ROW is still not theirs to change.
+	// The refusal is permission-denied rather than not-found: this caller
+	// legitimately reads the row, so there is no existence left to hide and
+	// saying "not there" about a record they can see would be a lie.
+	renamed := "Renamed by a passer-by"
+	if _, err := e.Projects.UpdateProject(reader, p.ID, projects.UpdateProjectInput{Name: &renamed}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep who does not own the project changed its name → %v, want ErrPermissionDenied — "+
+			"reading a project is not permission to rewrite it", err)
+	}
+	// And the row really is untouched, so the refusal was not a rollback of a
+	// write that had already landed.
+	after, err := e.Projects.GetProject(e.Admin(), p.ID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Name == renamed {
+		t.Fatal("the refused update still landed on the row")
 	}
 }
 
@@ -288,7 +403,7 @@ func TestMergingCompaniesReAnchorsTheProjectWithItsDeals(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	source := e.SeedOrg(t, "BAER Pharma GmbH", nil)
 	target := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, source, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
 
 	sourceID := orgIDOf(source)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -325,8 +440,8 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	e := Setup(t)
 	source := e.SeedOrg(t, "BAER Pharma GmbH", nil)
 	target := e.SeedOrg(t, "BAER Pharma", nil)
-	seedProject(e.Admin(), t, e, "ERP replacement", nil, source, nil)
-	kept := seedProject(e.Admin(), t, e, "Validation", nil, target, nil)
+	seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
+	kept := seedProject(e.Admin(), t, e, "Validation", target, nil)
 
 	_, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
@@ -343,7 +458,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	}
 
 	// And it is actionable: archive one side, then the merge proceeds.
-	if _, err := e.Deals.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
+	if _, err := e.Projects.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.People.MergeOrganization(e.Admin(), orgIDOf(source), orgIDOf(target)); err != nil {
@@ -356,7 +471,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 func TestALeadCanBelongToAProject(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "BAER Pharma", nil)
-	p := seedProject(e.Admin(), t, e, "ERP replacement", nil, org, nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
 
 	lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
 		FullName: strPtr("Anna Weber"), Source: "manual", ProjectID: &p.ID,
@@ -370,8 +485,8 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 
 	// PROJ-LIFE-2: a closed project still accepts work. Nothing about the
 	// phase gates an attachment — only the auto-link ladder consults it.
-	if _, err := e.Deals.AdvanceProjectPhase(e.Admin(), p.ID, deals.AdvanceProjectPhaseInput{
-		ToPhase: deals.PhaseClosed, Reason: strPtr("Delivered."),
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: strPtr("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -391,11 +506,11 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 	e := Setup(t)
 	wanted := e.SeedOrg(t, "BAER Pharma", nil)
 	other := e.SeedOrg(t, "Kessler GmbH", nil)
-	seedProject(e.Admin(), t, e, "ERP replacement", strPtr("ERP-27"), wanted, nil)
-	seedProject(e.Admin(), t, e, "Rollout A", nil, other, nil)
+	erp := seedProject(e.Admin(), t, e, "ERP replacement", wanted, nil)
+	seedProject(e.Admin(), t, e, "Rollout A", other, nil)
 
 	orgID := orgIDOf(wanted)
-	byOrg, _, err := e.Deals.ListProjects(e.Admin(), deals.ListProjectsInput{OrganizationID: &orgID})
+	byOrg, _, err := e.Projects.ListProjects(e.Admin(), projects.ListProjectsInput{OrganizationID: &orgID})
 	if err != nil {
 		t.Fatalf("list by organization: %v", err)
 	}
@@ -405,8 +520,8 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 
 	// Two filters plus a quick-find: three arguments registered after the
 	// prelude, which is where the value-copy bug showed up.
-	phase, query := deals.PhaseInitiative, "ERP"
-	found, _, err := e.Deals.ListProjects(e.Admin(), deals.ListProjectsInput{
+	phase, query := projects.PhaseInitiative, "ERP"
+	found, _, err := e.Projects.ListProjects(e.Admin(), projects.ListProjectsInput{
 		OrganizationID: &orgID, Phase: &phase, Query: &query,
 	})
 	if err != nil {
@@ -416,9 +531,18 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 		t.Errorf("combined filters returned %d rows, want 1", len(found))
 	}
 
-	// And the key lookup, matched case-insensitively like its index.
-	key := "erp-27"
-	byKey, _, err := e.Deals.ListProjects(e.Admin(), deals.ListProjectsInput{Key: &key})
+	// And the key lookup, matched case-insensitively like its index. The key is
+	// minted, so the filter is fed the one the server chose — lower-cased, which
+	// is what proves the match ignores case.
+	minted, err := e.Projects.GetProject(e.Admin(), erp.ID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if minted.Key == nil {
+		t.Fatal("the project carries no key; the server mints one for every project")
+	}
+	key := strings.ToLower(*minted.Key)
+	byKey, _, err := e.Projects.ListProjects(e.Admin(), projects.ListProjectsInput{Key: &key})
 	if err != nil {
 		t.Fatalf("list by key: %v", err)
 	}
@@ -427,20 +551,24 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 	}
 }
 
-// The merge refusal is a read of both sides, so it obeys row scope like any
-// other read. Work the caller cannot see must still BLOCK the merge —
-// otherwise a rep quietly combines two companies whose projects another team
-// owns — but it must not be NAMED, because naming a project is reading it.
-func TestTheMergeRefusalCountsInvisibleProjectsWithoutNamingThem(t *testing.T) {
+// The merge refusal reads both sides, and it must block on work the caller
+// does not own — otherwise a rep quietly combines two companies whose projects
+// another team is delivering.
+//
+// It names them too, and that is not a leak: every seat holding the object
+// grant reads every project (platform/auth tableclass.go), and a project
+// cannot be capture-private since migration 1787320003 narrowed its
+// visibility CHECK to 'workspace'. A refusal that counted these without
+// naming them would be withholding from a caller who can open both records
+// on the project page a moment later — precision, not silence, is the point.
+func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) {
 	e := Setup(t)
 	// The merging rep owns both companies (a merge is a write, and an own-scope
-	// seat only writes what it owns), but not the projects under them.
+	// seat only writes what it owns), but neither project under them.
 	source := e.SeedOrg(t, "Helios GmbH", &e.Rep3)
 	target := e.SeedOrg(t, "Helios AG", &e.Rep3)
-	// Each side's project belongs to a different rep, and the caller below
-	// owns neither.
-	seedProject(e.Admin(), t, e, "Secret migration", nil, source, &e.Rep1)
-	seedProject(e.Admin(), t, e, "Secret rollout", nil, target, &e.Rep2)
+	seedProject(e.Admin(), t, e, "Another team's migration", source, &e.Rep1)
+	seedProject(e.Admin(), t, e, "Another team's rollout", target, &e.Rep2)
 
 	outsider := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
@@ -456,26 +584,17 @@ func TestTheMergeRefusalCountsInvisibleProjectsWithoutNamingThem(t *testing.T) {
 	_, err := e.People.MergeOrganization(outsider, orgIDOf(source), orgIDOf(target))
 	var both *people.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
-		t.Fatalf("the merge produced %v, want a refusal — invisible work still blocks it", err)
+		t.Fatalf("the merge produced %v, want a refusal — another team's work still blocks it", err)
 	}
-	// Blocked on the true state of the world...
 	if both.SourceCount != 1 || both.TargetCount != 1 {
 		t.Errorf("counted %d and %d live projects, want one each", both.SourceCount, both.TargetCount)
 	}
-	// ...and silent about work this caller may not read.
-	if len(both.Source) != 0 || len(both.Target) != 0 {
-		t.Errorf("the refusal named %v and %v to a caller who can see neither", both.Source, both.Target)
-	}
-	for _, secret := range []string{"Secret migration", "Secret rollout"} {
-		if strings.Contains(err.Error(), secret) {
-			t.Errorf("the refusal message leaked %q to a caller who cannot read it: %v", secret, err)
+	// Named, so the rep can act on the refusal instead of hunting for what
+	// blocked it. A count with no name is an instruction to guess.
+	for _, name := range []string{"Another team's migration", "Another team's rollout"} {
+		if !strings.Contains(err.Error(), name) {
+			t.Errorf("the refusal does not name %q, so the caller cannot act on it: %v", name, err)
 		}
-	}
-	// Nor the SIZE of what is hidden. A number here is a census: repeat the
-	// merge against every company you can reach and the refusals report how
-	// much hidden work each carries, and how that moves week to week.
-	if strings.ContainsAny(err.Error(), "0123456789") {
-		t.Errorf("the refusal counted work the caller cannot see: %v", err)
 	}
 }
 
@@ -486,8 +605,8 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 	e := Setup(t)
 	source := e.SeedOrg(t, "Vector Ltd", &e.Rep1)
 	target := e.SeedOrg(t, "Vector Limited", &e.Rep1)
-	seedProject(e.Admin(), t, e, "Mine A", nil, source, &e.Rep1)
-	seedProject(e.Admin(), t, e, "Mine B", nil, target, &e.Rep1)
+	seedProject(e.Admin(), t, e, "Mine A", source, &e.Rep1)
+	seedProject(e.Admin(), t, e, "Mine B", target, &e.Rep1)
 
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
@@ -510,6 +629,53 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 	}
 	if len(both.Target) != 1 || both.Target[0] != "Mine B" {
 		t.Errorf("target projects = %v, want the one this caller owns", both.Target)
+	}
+}
+
+// The other half of the same rule: naming a project is a read of it, so a
+// caller who never held project.read is refused the merge WITHOUT the names.
+//
+// The merge entry point gates on organization.update alone, so this seat is a
+// real one — a rep who may tidy up duplicate companies and has no business
+// with the delivery side. Row scope does not narrow a project any more, but
+// the object grant is a separate gate, and the counts are what tells this
+// caller the work exists without telling them what it is called.
+func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testing.T) {
+	e := Setup(t)
+	source := e.SeedOrg(t, "Kepler GmbH", &e.Rep1)
+	target := e.SeedOrg(t, "Kepler AG", &e.Rep1)
+	seedProject(e.Admin(), t, e, "Secret migration", source, &e.Rep1)
+	seedProject(e.Admin(), t, e, "Secret rollout", target, &e.Rep1)
+
+	// Everything the merge itself demands, and no project grant at all.
+	ungranted := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"organization":          {Read: true, Update: true, Delete: true},
+			"person":                {Read: true, Update: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeOwn,
+	})
+
+	_, err := e.People.MergeOrganization(ungranted, orgIDOf(source), orgIDOf(target))
+	var both *people.BothCompaniesCarryProjectsError
+	if !errors.As(err, &both) {
+		t.Fatalf("the merge produced %v, want a refusal — work the caller cannot see still blocks it", err)
+	}
+	// Still refused, and still on the true counts: the decision is unscoped.
+	if both.SourceCount != 1 || both.TargetCount != 1 {
+		t.Errorf("counted %d and %d live projects, want one each", both.SourceCount, both.TargetCount)
+	}
+	if len(both.Source) != 0 || len(both.Target) != 0 {
+		t.Errorf("the refusal named %v and %v to a caller holding no project grant", both.Source, both.Target)
+	}
+	// And no name reaches the rendered message either, which is what the
+	// handler puts on the wire as the 409 detail.
+	for _, name := range []string{"Secret migration", "Secret rollout"} {
+		if strings.Contains(err.Error(), name) {
+			t.Errorf("the refusal message discloses %q to a caller holding no project grant: %v", name, err)
+		}
 	}
 }
 
@@ -585,31 +751,39 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 	}
 }
 
-// The residual the scoped delete leaves behind, pinned so it cannot widen.
+// Moving an activity from one project to another is a plain success now, and
+// that is the point worth pinning.
 //
-// At most one project link may exist per activity, so replacing an invisible
-// one refuses where replacing nothing succeeds — and that difference tells a
-// caller a project link they cannot see is there. One bit escapes and cannot
-// be closed from the relink path: hiding the link and enforcing
-// one-per-activity are the same question asked twice.
+// The scoped delete in relink only removes links the caller can SEE, and at
+// most one project link may exist per activity. While a project was row-
+// scoped those two rules collided: replacing a project link the caller could
+// not see refused where replacing nothing succeeded, and the difference told
+// them a hidden link was there. One bit escaped, and it could not be closed
+// from the relink path — hiding the link and enforcing one-per-activity were
+// the same question asked twice.
 //
-// What this holds is that the bit is ALL that escapes at the store: the
-// invisible link survives, so a caller who cannot see it also cannot remove
-// it. The refusal's caller-visible WORDING is not this layer's to prove —
-// the store answers a raw uniqueness violation here, and the transport turns
-// it into the message; that message is pinned in
-// TestASecondProjectLinkIsRefusedWithoutNamingTheFirst.
-func TestReplacingAnInvisibleProjectLinkCannotRemoveIt(t *testing.T) {
+// Making a project workspace-readable (platform/auth tableclass.go) closed it
+// by removing the premise: there is no project link a seat holding the object
+// grant cannot see, so the delete reaches every one of them and the move
+// simply works.
+//
+// The closure rests on BOTH halves of "a project is never invisible": no
+// own/team arm, and no capture privacy — migration 1787320003 narrowed the
+// visibility CHECK to 'workspace', so an owner-private project is not a state
+// the database can hold. Widen either and the oracle returns, which is why
+// TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate guards the second half.
+// This case is the witness that the oracle is gone.
+func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "Oracle GmbH", nil)
-	hidden := seedProject(e.Admin(), t, e, "Hidden delivery", nil, org, &e.Rep1)
-	ours := seedProject(e.Admin(), t, e, "Our pursuit", nil, org, &e.Rep3)
+	theirs := seedProject(e.Admin(), t, e, "Their delivery", org, &e.Rep1)
+	ours := seedProject(e.Admin(), t, e, "Our pursuit", org, &e.Rep3)
 	person := e.SeedPerson(t, "Reachable Contact", &e.Rep3)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Source: "manual",
 		Links: []activities.ActivityLinkInput{
-			{EntityType: "project", EntityID: hidden.ID.UUID},
+			{EntityType: "project", EntityID: theirs.ID.UUID},
 			{EntityType: "person", EntityID: person},
 		},
 	})
@@ -617,6 +791,8 @@ func TestReplacingAnInvisibleProjectLinkCannotRemoveIt(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Rep3 owns neither the activity's current project nor sits in Rep1's
+	// team: only the read class reaches that link.
 	outsider := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
@@ -630,15 +806,28 @@ func TestReplacingAnInvisibleProjectLinkCannotRemoveIt(t *testing.T) {
 	if _, err := e.Activities.RelinkActivity(outsider, ids.From[ids.ActivityKind](ids.UUID(act.Id)),
 		activities.RelinkActivityInput{
 			EntityType: "project", EntityID: ours.ID.UUID, ReplaceExistingOfType: true,
-		}); err == nil {
-		t.Fatal("replacing an invisible project link succeeded — it was removed by someone who could not see it")
+		}); err != nil {
+		t.Fatalf("moving the activity onto another project: %v — the replace could not reach the "+
+			"link it had to delete, which is the 23505 the one-project index raises", err)
 	}
-	// An oracle, not a lever: the link they could not see is still there.
+	// The move really happened: the old link is gone and the new one is there.
 	if n := e.WsCount(t, `
 		SELECT count(*) FROM activity_link
 		WHERE activity_id = $1 AND entity_type = 'project' AND project_id = $2`,
-		ids.UUID(act.Id), hidden.ID.UUID); n != 1 {
-		t.Fatalf("the invisible project link was removed (%d remain)", n)
+		ids.UUID(act.Id), theirs.ID.UUID); n != 0 {
+		t.Errorf("the displaced project link survived (%d remain)", n)
+	}
+	if n := e.WsCount(t, `
+		SELECT count(*) FROM activity_link
+		WHERE activity_id = $1 AND entity_type = 'project' AND project_id = $2`,
+		ids.UUID(act.Id), ours.ID.UUID); n != 1 {
+		t.Errorf("the new project link did not land (%d rows)", n)
+	}
+	// And exactly one project link remains, which is what the index is for.
+	if n := e.WsCount(t, `
+		SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'project'`,
+		ids.UUID(act.Id)); n != 1 {
+		t.Errorf("project links = %d, want exactly 1", n)
 	}
 }
 
@@ -649,7 +838,7 @@ func TestReplacingAnInvisibleProjectLinkCannotRemoveIt(t *testing.T) {
 func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "Vocabulary GmbH", nil)
-	project := seedProject(e.Admin(), t, e, "Findable work", nil, org, nil)
+	project := seedProject(e.Admin(), t, e, "Findable work", org, nil)
 	person := e.SeedPerson(t, "Findable Contact", nil)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
@@ -681,5 +870,85 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 				t.Fatalf("filtering by %s returned %d activities, want the one linked to it", kind, len(found))
 			}
 		})
+	}
+}
+
+// The minted number is the LOWEST free one for its stem, and "free" is decided
+// the way the uniqueness index decides it: case-insensitively, over live rows
+// only. Both halves have bitten before — a case-sensitive read hands back a
+// number the index then refuses, and max+1 leaves a permanent hole where an
+// archived project gave its number back.
+func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
+	e := Setup(t)
+	org := e.SeedOrg(t, "Stemmed GmbH", nil)
+
+	first := seedProject(e.Admin(), t, e, "Warehouse rollout", org, nil)
+	second := seedProject(e.Admin(), t, e, "Warehouse refresh", org, nil)
+	if k := mintedKey(e.Admin(), t, e, first.ID); k != "WR-1" {
+		t.Fatalf("first minted key = %q, want WR-1", k)
+	}
+	if k := mintedKey(e.Admin(), t, e, second.ID); k != "WR-2" {
+		t.Fatalf("second minted key = %q, want WR-2", k)
+	}
+
+	// Archiving frees WR-1, so the next project with this stem takes it back
+	// rather than starting above the highest number ever used.
+	if _, err := e.Projects.ArchiveProject(e.Admin(), first.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	third := seedProject(e.Admin(), t, e, "Warehouse rebuild", org, nil)
+	if k := mintedKey(e.Admin(), t, e, third.ID); k != "WR-1" {
+		t.Errorf("after archiving WR-1 the next project minted %q, want WR-1 reused", k)
+	}
+
+	// A key spelled in lower case still blocks its number: uq_project_key
+	// indexes lower(key), so a case-sensitive read would mint a key the index
+	// refuses and turn a create into a 500.
+	e.WsExec(t, `UPDATE project SET key = 'wr-9' WHERE id = $1`, second.ID)
+	fourth := seedProject(e.Admin(), t, e, "Warehouse revamp", org, nil)
+	if k := mintedKey(e.Admin(), t, e, fourth.ID); strings.EqualFold(k, "wr-9") {
+		t.Errorf("minted %q over a live lower-cased key; the index would refuse it", k)
+	}
+}
+
+// A project created without a requested owner belongs to its creator — the
+// same birth default person, organization and deal already apply. The
+// stake is the New-deal form's "New project…" flow: write authority reads an
+// unowned row as nobody's to change, so an ownerless project could never be
+// attached to a deal by the very rep who had just created it.
+func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	org := e.SeedOrg(t, "BAER Pharma", &e.Rep1)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"project":      {Create: true, Read: true, Update: true},
+			"deal":         {Create: true, Read: true, Update: true},
+			"organization": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	})
+
+	p, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+		Name: "ERP rollout", OrganizationID: orgIDOf(org), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("a rep creating a project on their own company: %v", err)
+	}
+	if p.OwnerId == nil || ids.UUID(*p.OwnerId) != e.Rep1 {
+		t.Fatalf("owner = %v, want the creating rep %s", p.OwnerId, e.Rep1)
+	}
+
+	// The flow that exposed the gap: the same rep immediately binds a new
+	// deal to the project they just created.
+	orgID := orgIDOf(org)
+	projID := projectIDOf(ids.UUID(p.Id))
+	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
+		Name: "ERP rollout deal", PipelineID: pipeline, StageID: open,
+		OrganizationID: &orgID, ProjectID: &projID, Source: "manual",
+	}); err != nil {
+		t.Fatalf("the creating rep attaching their new project to a new deal: %v", err)
 	}
 }

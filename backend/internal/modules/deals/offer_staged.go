@@ -95,7 +95,7 @@ func (s *Store) AddStagedOfferLines(ctx context.Context, offerID ids.OfferID, li
 	}
 
 	var out []crmcontracts.OfferLineItem
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err

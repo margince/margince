@@ -104,91 +104,104 @@ func (e PublicEventTeamChangedChange) Valid() bool {
 
 // Defines values for SubscribableEventType.
 const (
-	ActivityArchived          SubscribableEventType = "activity.archived"
-	ActivityCaptured          SubscribableEventType = "activity.captured"
-	ActivityUpdated           SubscribableEventType = "activity.updated"
-	ApprovalDecided           SubscribableEventType = "approval.decided"
-	ApprovalRequested         SubscribableEventType = "approval.requested"
-	AuditAppended             SubscribableEventType = "audit.appended"
-	ColdstartAccepted         SubscribableEventType = "coldstart.accepted"
-	ColdstartReadBackProposed SubscribableEventType = "coldstart.read_back_proposed"
-	ColdstartRejected         SubscribableEventType = "coldstart.rejected"
-	CommissionAccrued         SubscribableEventType = "commission.accrued"
-	CommissionDecided         SubscribableEventType = "commission.decided"
-	ConsentChanged            SubscribableEventType = "consent.changed"
-	ContractArchived          SubscribableEventType = "contract.archived"
-	ContractCreated           SubscribableEventType = "contract.created"
-	ContractStatusChanged     SubscribableEventType = "contract.status_changed"
-	ContractUpdated           SubscribableEventType = "contract.updated"
-	ConversationClaimCaptured SubscribableEventType = "conversation_claim.captured"
-	ConversationClaimChanged  SubscribableEventType = "conversation_claim.changed"
-	DealArchived              SubscribableEventType = "deal.archived"
-	DealCreated               SubscribableEventType = "deal.created"
-	DealOwnerChanged          SubscribableEventType = "deal.owner_changed"
-	DealRestored              SubscribableEventType = "deal.restored"
-	DealStageChanged          SubscribableEventType = "deal.stage_changed"
-	DealUpdated               SubscribableEventType = "deal.updated"
-	EmailSignatureChanged     SubscribableEventType = "email_signature.changed"
-	EngagementReply           SubscribableEventType = "engagement.reply"
-	IncumbentConnected        SubscribableEventType = "incumbent.connected"
-	IncumbentDisconnected     SubscribableEventType = "incumbent.disconnected"
-	LeadCreated               SubscribableEventType = "lead.created"
-	LeadDemoted               SubscribableEventType = "lead.demoted"
-	LeadDisqualified          SubscribableEventType = "lead.disqualified"
-	LeadMerged                SubscribableEventType = "lead.merged"
-	LeadPromoted              SubscribableEventType = "lead.promoted"
-	LeadSlaBreached           SubscribableEventType = "lead.sla_breached"
-	LeadUpdated               SubscribableEventType = "lead.updated"
-	LinkedinAccountChanged    SubscribableEventType = "linkedin_account.changed"
-	LinkedinMatchDecided      SubscribableEventType = "linkedin_match.decided"
-	LinkedinNetworkImported   SubscribableEventType = "linkedin_network.imported"
-	MirrorBudgetDegraded      SubscribableEventType = "mirror.budget_degraded"
-	MirrorConflict            SubscribableEventType = "mirror.conflict"
-	MirrorDeleted             SubscribableEventType = "mirror.deleted"
-	MirrorWriteRejected       SubscribableEventType = "mirror.write_rejected"
-	OfferAccepted             SubscribableEventType = "offer.accepted"
-	OfferCreated              SubscribableEventType = "offer.created"
-	OfferRejected             SubscribableEventType = "offer.rejected"
-	OfferSent                 SubscribableEventType = "offer.sent"
-	OfferSuperseded           SubscribableEventType = "offer.superseded"
-	OnboardingStateChanged    SubscribableEventType = "onboarding.state_changed"
-	OrganizationArchived      SubscribableEventType = "organization.archived"
-	OrganizationCreated       SubscribableEventType = "organization.created"
-	OrganizationMerged        SubscribableEventType = "organization.merged"
-	OrganizationUpdated       SubscribableEventType = "organization.updated"
-	PassportRevoked           SubscribableEventType = "passport.revoked"
-	PersonArchived            SubscribableEventType = "person.archived"
-	PersonCreated             SubscribableEventType = "person.created"
-	PersonMerged              SubscribableEventType = "person.merged"
-	PersonRestored            SubscribableEventType = "person.restored"
-	PersonUpdated             SubscribableEventType = "person.updated"
-	PipelineArchived          SubscribableEventType = "pipeline.archived"
-	PipelineCreated           SubscribableEventType = "pipeline.created"
-	PipelineUpdated           SubscribableEventType = "pipeline.updated"
-	ProjectArchived           SubscribableEventType = "project.archived"
-	ProjectCreated            SubscribableEventType = "project.created"
-	ProjectPhaseChanged       SubscribableEventType = "project.phase_changed"
-	ProjectUpdated            SubscribableEventType = "project.updated"
-	RetentionApplied          SubscribableEventType = "retention.applied"
-	RetentionRestricted       SubscribableEventType = "retention.restricted"
-	RoleChanged               SubscribableEventType = "role.changed"
-	SignalDetected            SubscribableEventType = "signal.detected"
-	SignalResolved            SubscribableEventType = "signal.resolved"
-	StageArchived             SubscribableEventType = "stage.archived"
-	StageCreated              SubscribableEventType = "stage.created"
-	StageUpdated              SubscribableEventType = "stage.updated"
-	TeamChanged               SubscribableEventType = "team.changed"
-	UserDeactivated           SubscribableEventType = "user.deactivated"
-	UserInvited               SubscribableEventType = "user.invited"
-	UserPasswordLinkIssued    SubscribableEventType = "user.password_link_issued"
-	UserReactivated           SubscribableEventType = "user.reactivated"
-	VoiceBuildChanged         SubscribableEventType = "voice.build_changed"
-	VoiceCorpusChanged        SubscribableEventType = "voice.corpus_changed"
-	VoiceDraftOutcomeRecorded SubscribableEventType = "voice.draft_outcome_recorded"
-	VoiceProfileArchived      SubscribableEventType = "voice.profile_archived"
-	VoiceProfileCreated       SubscribableEventType = "voice.profile_created"
-	VoiceProfileUpdated       SubscribableEventType = "voice.profile_updated"
-	VoiceVersionChanged       SubscribableEventType = "voice.version_changed"
+	ActivityArchived                      SubscribableEventType = "activity.archived"
+	ActivityCaptured                      SubscribableEventType = "activity.captured"
+	ActivityUpdated                       SubscribableEventType = "activity.updated"
+	ApprovalDecided                       SubscribableEventType = "approval.decided"
+	ApprovalRequested                     SubscribableEventType = "approval.requested"
+	AuditAppended                         SubscribableEventType = "audit.appended"
+	ColdstartAccepted                     SubscribableEventType = "coldstart.accepted"
+	ColdstartReadBackProposed             SubscribableEventType = "coldstart.read_back_proposed"
+	ColdstartRejected                     SubscribableEventType = "coldstart.rejected"
+	CommissionAccrued                     SubscribableEventType = "commission.accrued"
+	CommissionDecided                     SubscribableEventType = "commission.decided"
+	ConsentChanged                        SubscribableEventType = "consent.changed"
+	ContractArchived                      SubscribableEventType = "contract.archived"
+	ContractCreated                       SubscribableEventType = "contract.created"
+	ContractStatusChanged                 SubscribableEventType = "contract.status_changed"
+	ContractUpdated                       SubscribableEventType = "contract.updated"
+	ConversationClaimCaptured             SubscribableEventType = "conversation_claim.captured"
+	ConversationClaimChanged              SubscribableEventType = "conversation_claim.changed"
+	DealArchived                          SubscribableEventType = "deal.archived"
+	DealCreated                           SubscribableEventType = "deal.created"
+	DealOwnerChanged                      SubscribableEventType = "deal.owner_changed"
+	DealRestored                          SubscribableEventType = "deal.restored"
+	DealRoomArchived                      SubscribableEventType = "deal_room.archived"
+	DealRoomClosed                        SubscribableEventType = "deal_room.closed"
+	DealRoomCommentPosted                 SubscribableEventType = "deal_room.comment_posted"
+	DealRoomDecisionRecorded              SubscribableEventType = "deal_room.decision_recorded"
+	DealRoomOpened                        SubscribableEventType = "deal_room.opened"
+	DealRoomParticipantCredentialReissued SubscribableEventType = "deal_room.participant_credential_reissued"
+	DealRoomParticipantInvited            SubscribableEventType = "deal_room.participant_invited"
+	DealRoomParticipantRevoked            SubscribableEventType = "deal_room.participant_revoked"
+	DealRoomPaused                        SubscribableEventType = "deal_room.paused"
+	DealRoomResumed                       SubscribableEventType = "deal_room.resumed"
+	DealRoomThreadResolved                SubscribableEventType = "deal_room.thread_resolved"
+	DealRoomUpdated                       SubscribableEventType = "deal_room.updated"
+	DealStageChanged                      SubscribableEventType = "deal.stage_changed"
+	DealUpdated                           SubscribableEventType = "deal.updated"
+	EmailSignatureChanged                 SubscribableEventType = "email_signature.changed"
+	EngagementReply                       SubscribableEventType = "engagement.reply"
+	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
+	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
+	LeadCreated                           SubscribableEventType = "lead.created"
+	LeadDemoted                           SubscribableEventType = "lead.demoted"
+	LeadDisqualified                      SubscribableEventType = "lead.disqualified"
+	LeadMerged                            SubscribableEventType = "lead.merged"
+	LeadPromoted                          SubscribableEventType = "lead.promoted"
+	LeadSlaBreached                       SubscribableEventType = "lead.sla_breached"
+	LeadUpdated                           SubscribableEventType = "lead.updated"
+	LinkedinAccountChanged                SubscribableEventType = "linkedin_account.changed"
+	LinkedinMatchDecided                  SubscribableEventType = "linkedin_match.decided"
+	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
+	MirrorBudgetDegraded                  SubscribableEventType = "mirror.budget_degraded"
+	MirrorConflict                        SubscribableEventType = "mirror.conflict"
+	MirrorDeleted                         SubscribableEventType = "mirror.deleted"
+	MirrorWriteRejected                   SubscribableEventType = "mirror.write_rejected"
+	OfferAccepted                         SubscribableEventType = "offer.accepted"
+	OfferCreated                          SubscribableEventType = "offer.created"
+	OfferRejected                         SubscribableEventType = "offer.rejected"
+	OfferSent                             SubscribableEventType = "offer.sent"
+	OfferSuperseded                       SubscribableEventType = "offer.superseded"
+	OnboardingStateChanged                SubscribableEventType = "onboarding.state_changed"
+	OrganizationArchived                  SubscribableEventType = "organization.archived"
+	OrganizationCreated                   SubscribableEventType = "organization.created"
+	OrganizationMerged                    SubscribableEventType = "organization.merged"
+	OrganizationUpdated                   SubscribableEventType = "organization.updated"
+	PassportRevoked                       SubscribableEventType = "passport.revoked"
+	PersonArchived                        SubscribableEventType = "person.archived"
+	PersonCreated                         SubscribableEventType = "person.created"
+	PersonMerged                          SubscribableEventType = "person.merged"
+	PersonRestored                        SubscribableEventType = "person.restored"
+	PersonUpdated                         SubscribableEventType = "person.updated"
+	PipelineArchived                      SubscribableEventType = "pipeline.archived"
+	PipelineCreated                       SubscribableEventType = "pipeline.created"
+	PipelineUpdated                       SubscribableEventType = "pipeline.updated"
+	ProjectArchived                       SubscribableEventType = "project.archived"
+	ProjectCreated                        SubscribableEventType = "project.created"
+	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
+	ProjectUpdated                        SubscribableEventType = "project.updated"
+	RetentionApplied                      SubscribableEventType = "retention.applied"
+	RetentionRestricted                   SubscribableEventType = "retention.restricted"
+	RoleChanged                           SubscribableEventType = "role.changed"
+	SignalDetected                        SubscribableEventType = "signal.detected"
+	SignalResolved                        SubscribableEventType = "signal.resolved"
+	StageArchived                         SubscribableEventType = "stage.archived"
+	StageCreated                          SubscribableEventType = "stage.created"
+	StageUpdated                          SubscribableEventType = "stage.updated"
+	TeamChanged                           SubscribableEventType = "team.changed"
+	UserDeactivated                       SubscribableEventType = "user.deactivated"
+	UserInvited                           SubscribableEventType = "user.invited"
+	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
+	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
+	UserReactivated                       SubscribableEventType = "user.reactivated"
+	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
+	VoiceCorpusChanged                    SubscribableEventType = "voice.corpus_changed"
+	VoiceDraftOutcomeRecorded             SubscribableEventType = "voice.draft_outcome_recorded"
+	VoiceProfileArchived                  SubscribableEventType = "voice.profile_archived"
+	VoiceProfileCreated                   SubscribableEventType = "voice.profile_created"
+	VoiceProfileUpdated                   SubscribableEventType = "voice.profile_updated"
+	VoiceVersionChanged                   SubscribableEventType = "voice.version_changed"
 )
 
 // Valid indicates whether the value is a known member of the SubscribableEventType enum.
@@ -237,6 +250,30 @@ func (e SubscribableEventType) Valid() bool {
 	case DealOwnerChanged:
 		return true
 	case DealRestored:
+		return true
+	case DealRoomArchived:
+		return true
+	case DealRoomClosed:
+		return true
+	case DealRoomCommentPosted:
+		return true
+	case DealRoomDecisionRecorded:
+		return true
+	case DealRoomOpened:
+		return true
+	case DealRoomParticipantCredentialReissued:
+		return true
+	case DealRoomParticipantInvited:
+		return true
+	case DealRoomParticipantRevoked:
+		return true
+	case DealRoomPaused:
+		return true
+	case DealRoomResumed:
+		return true
+	case DealRoomThreadResolved:
+		return true
+	case DealRoomUpdated:
 		return true
 	case DealStageChanged:
 		return true
@@ -345,6 +382,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserDeactivated:
 		return true
 	case UserInvited:
+		return true
+	case UserLocaleChanged:
 		return true
 	case UserPasswordLinkIssued:
 		return true
@@ -630,6 +669,148 @@ type PublicEventDealOwnerChanged struct {
 
 // PublicEventDealRestored Payload for deal.restored. Never emitted today (no restore path exists for deal); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
 type PublicEventDealRestored struct{}
+
+// PublicEventDealRoomArchived Payload for deal_room.archived — the room ended and buyer access is revoked.
+// Its releases survive, so what a buyer was shown stays answerable.
+type PublicEventDealRoomArchived struct {
+	DealId openapi_types.UUID `json:"deal_id"`
+}
+
+// PublicEventDealRoomClosed Payload for deal_room.closed — the room's CONTENT is frozen while buyer ACCESS
+// continues. The buyer keeps reading; nobody writes.
+type PublicEventDealRoomClosed struct {
+	DealId openapi_types.UUID `json:"deal_id"`
+}
+
+// PublicEventDealRoomCommentPosted Payload for deal_room.comment_posted — somebody on either side said
+// something in a room thread, on a document or on the room as a whole. The
+// comment's text is deliberately absent: a subscriber reads it through the
+// room, under the room's own authority, not off the bus.
+type PublicEventDealRoomCommentPosted struct {
+	// AuthorName Who spoke, by name, as the room recorded them at that moment. Additive and optional: an event minted before this field existed carries none.
+	// The comment's TEXT stays off the bus for the reason above, and a name is a different thing from the text — it is who acted, which is what any record of an act has to say. A timeline entry reading "the buyer said something" names no buyer and is not worth the row it occupies.
+	AuthorName *string            `json:"author_name,omitempty"`
+	CommentId  openapi_types.UUID `json:"comment_id"`
+	DealId     openapi_types.UUID `json:"deal_id"`
+
+	// DocumentId The room document the thread is about; null for a room-level exchange.
+	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
+
+	// DocumentTitle The document the thread is about, titled as it stood at that moment. Absent for a room-level exchange, and absent on an event minted before this field existed.
+	// Carried rather than resolved later, for the reason every other field here is: a document can be retitled or removed afterwards, and a timeline entry means what was true when it happened.
+	DocumentTitle *string `json:"document_title,omitempty"`
+
+	// OpensThread True when this comment is the thread's first — a new question, not a reply.
+	OpensThread bool `json:"opens_thread"`
+
+	// RequiredChange True when the thread, as opened, blocks confirming the document until resolved.
+	RequiredChange *bool `json:"required_change,omitempty"`
+
+	// Side Who spoke — `seller` or `buyer`.
+	Side     string             `json:"side"`
+	ThreadId openapi_types.UUID `json:"thread_id"`
+}
+
+// PublicEventDealRoomDecisionRecorded Payload for deal_room.decision_recorded — a buyer asked for changes to a
+// document version, or confirmed it.
+//
+// HISTORICAL ONLY. Deciding on a document version is retired: sharing a
+// document with a buyer is sharing it, and what they want to say about one
+// they say in the thread under it. Nothing emits this any more, and the
+// rows it named are gone. It stays declared because a subscriber may still
+// be reading events emitted before the retirement off the bus.
+type PublicEventDealRoomDecisionRecorded struct {
+	// AttachmentId The exact version decided on.
+	AttachmentId openapi_types.UUID `json:"attachment_id"`
+	DealId       openapi_types.UUID `json:"deal_id"`
+	DecisionId   openapi_types.UUID `json:"decision_id"`
+	DocumentId   openapi_types.UUID `json:"document_id"`
+
+	// Kind `request_changes` or `confirm_version`.
+	Kind string `json:"kind"`
+}
+
+// PublicEventDealRoomOpened Payload for deal_room.opened — a Deal Room was created on a deal. Nothing is
+// buyer-visible yet: the room starts in draft and stays private until a human
+// publishes it.
+type PublicEventDealRoomOpened struct {
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// StewardUserId The named human a buyer is pointed at for help.
+	StewardUserId *openapi_types.UUID `json:"steward_user_id,omitempty"`
+	Title         string              `json:"title"`
+}
+
+// PublicEventDealRoomParticipantCredentialReissued Payload for deal_room.participant_credential_reissued — the credential that
+// admits one participant changed, so whatever they were holding no longer works.
+//
+// Two acts raise it: a resend, and a correction to the address a link was sent
+// to. Both retire the previous credential, which is the fact a subscriber needs;
+// `reason` says which happened. Like every participant event it names nobody's
+// token — a subscriber able to read one off the bus would hold what it grants.
+type PublicEventDealRoomParticipantCredentialReissued struct {
+	DealId        openapi_types.UUID `json:"deal_id"`
+	ParticipantId openapi_types.UUID `json:"participant_id"`
+
+	// Reason `resent` — a fresh credential was issued on request.
+	// `address_corrected` — the address changed, so the link already sent was
+	// retired; no new credential exists until somebody resends.
+	Reason string `json:"reason"`
+}
+
+// PublicEventDealRoomParticipantInvited Payload for deal_room.participant_invited — an outside person was admitted to a
+// Deal Room.
+//
+// The event names the participant and the room, never the credential or its hash:
+// a subscriber that could read the token off the bus would hold everything the
+// invitation grants.
+type PublicEventDealRoomParticipantInvited struct {
+	// Capability view or comment.
+	Capability    string             `json:"capability"`
+	DealId        openapi_types.UUID `json:"deal_id"`
+	ParticipantId openapi_types.UUID `json:"participant_id"`
+}
+
+// PublicEventDealRoomParticipantRevoked Payload for deal_room.participant_revoked — an outside person's access to a Deal
+// Room was taken away. Their live session ended and any unconsumed credential was
+// retired at the same moment.
+type PublicEventDealRoomParticipantRevoked struct {
+	DealId        openapi_types.UUID `json:"deal_id"`
+	ParticipantId openapi_types.UUID `json:"participant_id"`
+}
+
+// PublicEventDealRoomPaused Payload for deal_room.paused — buyer reads are refused while every credential
+// stays valid, so resuming needs no re-invitation.
+type PublicEventDealRoomPaused struct {
+	DealId openapi_types.UUID `json:"deal_id"`
+}
+
+// PublicEventDealRoomResumed Payload for deal_room.resumed — a paused room serves its existing release again.
+type PublicEventDealRoomResumed struct {
+	DealId openapi_types.UUID `json:"deal_id"`
+}
+
+// PublicEventDealRoomThreadResolved Payload for deal_room.thread_resolved — a thread was closed by the seller's side.
+type PublicEventDealRoomThreadResolved struct {
+	DealId     openapi_types.UUID  `json:"deal_id"`
+	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
+	ThreadId   openapi_types.UUID  `json:"thread_id"`
+}
+
+// PublicEventDealRoomUpdated Payload for deal_room.updated — something a buyer reads changed: the
+// room's title or welcome message, or the documents in it. A room is live
+// from creation, so there is no staging step between this event and what
+// an invited buyer sees on their next read.
+type PublicEventDealRoomUpdated struct {
+	// ChangedFields Which editorial fields moved. Names only — the text itself is not published.
+	// Typed as a plain string rather than an inline enum: an inline enum here
+	// generates package-scope Go constants named `Title`, `ExpiresAt` and the
+	// like in the shared contracts package, which collide with, and silently
+	// rename, the constants of any other schema that later declares the same
+	// value. The closed set is stated here and held by the writer.
+	ChangedFields []string           `json:"changed_fields"`
+	DealId        openapi_types.UUID `json:"deal_id"`
+}
 
 // PublicEventDealStageChanged Payload for deal.stage_changed — a deal advanced between stages. Carries the amount/win-probability snapshot frozen at the moment of the move so consumers (the trajectory view, the overnight stalled/forecast sweep, the automation trigger keyed on to_status) never need a read-back.
 type PublicEventDealStageChanged struct {
@@ -1333,6 +1514,12 @@ type PublicEventUserInvited struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventUserLocaleChanged Payload for user_locale.changed — a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this person needs to know which catalog to reach for.
+type PublicEventUserLocaleChanged struct {
+	// Locale The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event.
+	Locale string `json:"locale"`
+}
+
 // PublicEventUserPasswordLinkIssued Payload for user.password_link_issued — on an installation with no outbound-email channel, an admin minted a single-use set-password link for a member and will deliver it out-of-band (ADR-0061 Amendment 1). Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password, which is an account takeover an admin is trusted to perform; this event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is NEVER a property here, and must never be added — the raw value is returned to the issuing admin exactly once, over the response body, and reaches no ledger, log, or bus.
 type PublicEventUserPasswordLinkIssued struct {
 	// By The admin who issued the link.
@@ -1589,6 +1776,60 @@ func (PublicEventDealRestored) EventType() string { return "deal.restored" }
 
 func (PublicEventDealRestored) EntityType() string { return "deal" }
 
+func (PublicEventDealRoomArchived) EventType() string { return "deal_room.archived" }
+
+func (PublicEventDealRoomArchived) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomClosed) EventType() string { return "deal_room.closed" }
+
+func (PublicEventDealRoomClosed) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomCommentPosted) EventType() string { return "deal_room.comment_posted" }
+
+func (PublicEventDealRoomCommentPosted) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomDecisionRecorded) EventType() string { return "deal_room.decision_recorded" }
+
+func (PublicEventDealRoomDecisionRecorded) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomOpened) EventType() string { return "deal_room.opened" }
+
+func (PublicEventDealRoomOpened) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomParticipantCredentialReissued) EventType() string {
+	return "deal_room.participant_credential_reissued"
+}
+
+func (PublicEventDealRoomParticipantCredentialReissued) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomParticipantInvited) EventType() string {
+	return "deal_room.participant_invited"
+}
+
+func (PublicEventDealRoomParticipantInvited) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomParticipantRevoked) EventType() string {
+	return "deal_room.participant_revoked"
+}
+
+func (PublicEventDealRoomParticipantRevoked) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomPaused) EventType() string { return "deal_room.paused" }
+
+func (PublicEventDealRoomPaused) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomResumed) EventType() string { return "deal_room.resumed" }
+
+func (PublicEventDealRoomResumed) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomThreadResolved) EventType() string { return "deal_room.thread_resolved" }
+
+func (PublicEventDealRoomThreadResolved) EntityType() string { return "deal_room" }
+
+func (PublicEventDealRoomUpdated) EventType() string { return "deal_room.updated" }
+
+func (PublicEventDealRoomUpdated) EntityType() string { return "deal_room" }
+
 func (PublicEventDealStageChanged) EventType() string { return "deal.stage_changed" }
 
 func (PublicEventDealStageChanged) EntityType() string { return "deal" }
@@ -1805,6 +2046,10 @@ func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
 
+func (PublicEventUserLocaleChanged) EventType() string { return "user_locale.changed" }
+
+func (PublicEventUserLocaleChanged) EntityType() string { return "user" }
+
 func (PublicEventUserPasswordLinkIssued) EventType() string { return "user.password_link_issued" }
 
 func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
@@ -1847,89 +2092,102 @@ func (PublicEventVoiceVersionChanged) EntityType() string { return "voice_profil
 // both the coverage gate (every subscribable event type must be a key here)
 // and the version gate (VersionOf(type) must equal this map's value).
 var PublicEventVersions = map[string]int{
-	"activity.archived":            1,
-	"activity.captured":            1,
-	"activity.updated":             1,
-	"approval.decided":             1,
-	"approval.requested":           1,
-	"audit.appended":               1,
-	"coldstart.accepted":           1,
-	"coldstart.read_back_proposed": 1,
-	"coldstart.rejected":           1,
-	"commission.accrued":           1,
-	"commission.decided":           1,
-	"consent.changed":              1,
-	"contract.archived":            1,
-	"contract.created":             1,
-	"contract.status_changed":      1,
-	"contract.updated":             1,
-	"conversation_claim.captured":  1,
-	"conversation_claim.changed":   1,
-	"deal.archived":                1,
-	"deal.created":                 1,
-	"deal.owner_changed":           1,
-	"deal.restored":                1,
-	"deal.stage_changed":           1,
-	"deal.updated":                 1,
-	"email_signature.changed":      1,
-	"engagement.reply":             1,
-	"incumbent.connected":          1,
-	"incumbent.disconnected":       1,
-	"lead.created":                 1,
-	"lead.demoted":                 1,
-	"lead.disqualified":            1,
-	"lead.merged":                  1,
-	"lead.promoted":                1,
-	"lead.sla_breached":            1,
-	"lead.updated":                 1,
-	"linkedin_account.changed":     1,
-	"linkedin_match.decided":       1,
-	"linkedin_network.imported":    1,
-	"mirror.budget_degraded":       1,
-	"mirror.conflict":              1,
-	"mirror.deleted":               1,
-	"mirror.write_rejected":        1,
-	"offer.accepted":               1,
-	"offer.created":                1,
-	"offer.rejected":               1,
-	"offer.sent":                   1,
-	"offer.superseded":             1,
-	"onboarding.state_changed":     1,
-	"organization.archived":        1,
-	"organization.created":         1,
-	"organization.merged":          1,
-	"organization.updated":         1,
-	"passport.revoked":             1,
-	"person.archived":              1,
-	"person.created":               1,
-	"person.merged":                1,
-	"person.restored":              1,
-	"person.updated":               1,
-	"pipeline.archived":            1,
-	"pipeline.created":             1,
-	"pipeline.updated":             1,
-	"project.archived":             1,
-	"project.created":              1,
-	"project.phase_changed":        1,
-	"project.updated":              1,
-	"retention.applied":            1,
-	"retention.restricted":         1,
-	"role.changed":                 1,
-	"signal.detected":              1,
-	"signal.resolved":              1,
-	"stage.archived":               1,
-	"stage.created":                1,
-	"stage.updated":                1,
-	"team.changed":                 1,
-	"user.deactivated":             1,
-	"user.invited":                 1,
-	"user.password_link_issued":    1,
-	"user.reactivated":             1,
-	"voice.build_changed":          1,
-	"voice.corpus_changed":         1,
-	"voice.draft_outcome_recorded": 1,
-	"voice.profile_archived":       1,
-	"voice.profile_created":        1,
-	"voice.profile_updated":        1,
-	"voice.version_changed":        1,
+	"activity.archived":                         1,
+	"activity.captured":                         1,
+	"activity.updated":                          1,
+	"approval.decided":                          1,
+	"approval.requested":                        1,
+	"audit.appended":                            1,
+	"coldstart.accepted":                        1,
+	"coldstart.read_back_proposed":              1,
+	"coldstart.rejected":                        1,
+	"commission.accrued":                        1,
+	"commission.decided":                        1,
+	"consent.changed":                           1,
+	"contract.archived":                         1,
+	"contract.created":                          1,
+	"contract.status_changed":                   1,
+	"contract.updated":                          1,
+	"conversation_claim.captured":               1,
+	"conversation_claim.changed":                1,
+	"deal.archived":                             1,
+	"deal.created":                              1,
+	"deal.owner_changed":                        1,
+	"deal.restored":                             1,
+	"deal.stage_changed":                        1,
+	"deal.updated":                              1,
+	"deal_room.archived":                        1,
+	"deal_room.closed":                          1,
+	"deal_room.comment_posted":                  1,
+	"deal_room.decision_recorded":               1,
+	"deal_room.opened":                          1,
+	"deal_room.participant_credential_reissued": 1,
+	"deal_room.participant_invited":             1,
+	"deal_room.participant_revoked":             1,
+	"deal_room.paused":                          1,
+	"deal_room.resumed":                         1,
+	"deal_room.thread_resolved":                 1,
+	"deal_room.updated":                         1,
+	"email_signature.changed":                   1,
+	"engagement.reply":                          1,
+	"incumbent.connected":                       1,
+	"incumbent.disconnected":                    1,
+	"lead.created":                              1,
+	"lead.demoted":                              1,
+	"lead.disqualified":                         1,
+	"lead.merged":                               1,
+	"lead.promoted":                             1,
+	"lead.sla_breached":                         1,
+	"lead.updated":                              1,
+	"linkedin_account.changed":                  1,
+	"linkedin_match.decided":                    1,
+	"linkedin_network.imported":                 1,
+	"mirror.budget_degraded":                    1,
+	"mirror.conflict":                           1,
+	"mirror.deleted":                            1,
+	"mirror.write_rejected":                     1,
+	"offer.accepted":                            1,
+	"offer.created":                             1,
+	"offer.rejected":                            1,
+	"offer.sent":                                1,
+	"offer.superseded":                          1,
+	"onboarding.state_changed":                  1,
+	"organization.archived":                     1,
+	"organization.created":                      1,
+	"organization.merged":                       1,
+	"organization.updated":                      1,
+	"passport.revoked":                          1,
+	"person.archived":                           1,
+	"person.created":                            1,
+	"person.merged":                             1,
+	"person.restored":                           1,
+	"person.updated":                            1,
+	"pipeline.archived":                         1,
+	"pipeline.created":                          1,
+	"pipeline.updated":                          1,
+	"project.archived":                          1,
+	"project.created":                           1,
+	"project.phase_changed":                     1,
+	"project.updated":                           1,
+	"retention.applied":                         1,
+	"retention.restricted":                      1,
+	"role.changed":                              1,
+	"signal.detected":                           1,
+	"signal.resolved":                           1,
+	"stage.archived":                            1,
+	"stage.created":                             1,
+	"stage.updated":                             1,
+	"team.changed":                              1,
+	"user.deactivated":                          1,
+	"user.invited":                              1,
+	"user.password_link_issued":                 1,
+	"user.reactivated":                          1,
+	"user_locale.changed":                       1,
+	"voice.build_changed":                       1,
+	"voice.corpus_changed":                      1,
+	"voice.draft_outcome_recorded":              1,
+	"voice.profile_archived":                    1,
+	"voice.profile_created":                     1,
+	"voice.profile_updated":                     1,
+	"voice.version_changed":                     1,
 }

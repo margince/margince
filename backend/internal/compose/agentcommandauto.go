@@ -4,7 +4,7 @@
 package compose
 
 // The REST door's half of the four auto-execute commands
-// (gradionhq/margince-poc-v1#928 task 7): logging an activity, drafting a
+// (margince/margince#928 task 7): logging an activity, drafting a
 // reply, re-associating an activity, and running a report. All four are 🟢
 // today and none of them stages, so these decoders are reached only if a tier
 // floor (#982) tightens one — registered anyway, for the reason
@@ -31,6 +31,19 @@ import (
 //nolint:ireturn,unparam // ireturn: a decoder's whole product is the erased command-and-resolver pair restCommands is typed by. unparam: the error is always nil TODAY (a create has no id to fail parsing), but every restCommands entry shares this signature
 func logActivityCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	return agents.NewLogActivityCall(agents.LogActivityCommand{Fields: json.RawMessage(body)}), nil
+}
+
+// createTaskCommand decodes POST /v1/tasks. A task is an activity of kind
+// task, so it binds to the same resolver a logged activity does; the kind is
+// stamped here so the staged command names what the door will write.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func createTaskCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	fields, err := agents.TaskAsActivity(json.RawMessage(body))
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewLogActivityCall(agents.LogActivityCommand{Fields: fields}), nil
 }
 
 // draftEmailCommand decodes POST /v1/activities/{id}/draft-email. The optional
@@ -67,6 +80,40 @@ func relinkActivityCommand(_ agentPolicy, deps restCommandDeps, r *http.Request,
 		ActivityID: id,
 		EntityType: in.EntityType,
 		EntityID:   in.EntityID,
+	}), nil
+}
+
+// relinkThreadCommand decodes POST /v1/activities/relink-thread and
+// relinkActivitiesCommand POST /v1/activities/relink-bulk: the batch forms of
+// the relink, carrying the same destination for the same two questions.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func relinkThreadCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	in, err := commandBody[struct {
+		ThreadKey  string   `json:"thread_key"`
+		EntityType string   `json:"entity_type"`
+		EntityID   ids.UUID `json:"entity_id"`
+	}](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewRelinkThreadCall(deps.records, agents.RelinkThreadCommand{
+		ThreadKey: in.ThreadKey, EntityType: in.EntityType, EntityID: in.EntityID,
+	}), nil
+}
+
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func relinkActivitiesCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	in, err := commandBody[struct {
+		ActivityIDs []ids.UUID `json:"activity_ids"`
+		EntityType  string     `json:"entity_type"`
+		EntityID    ids.UUID   `json:"entity_id"`
+	}](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewRelinkActivitiesCall(deps.records, agents.RelinkActivitiesCommand{
+		ActivityIDs: in.ActivityIDs, EntityType: in.EntityType, EntityID: in.EntityID,
 	}), nil
 }
 

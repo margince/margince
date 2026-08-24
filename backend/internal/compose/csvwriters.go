@@ -38,6 +38,11 @@ type csvWriters struct {
 	identities *migration.RunStore
 	runID      migration.RunID
 	object     string
+	// onDuplicate is the run's answer for a row naming a record the estate
+	// already holds: "" or "create" lands it and files a review pair, "skip"
+	// leaves the incumbent alone. Read from the stored mapping, so the commit
+	// honours whatever the dry run reported on.
+	onDuplicate string
 
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
@@ -51,14 +56,15 @@ type csvWriters struct {
 
 var _ migration.Writers = (*csvWriters)(nil)
 
-func newCSVWriters(db *database.DB, runID migration.RunID, object string) *csvWriters {
+func newCSVWriters(db *database.DB, runID migration.RunID, object, onDuplicate string) *csvWriters {
 	return &csvWriters{
-		pool:       db.Pool(),
-		people:     people.NewStore(db),
-		identities: migration.NewRunStore(db),
-		runID:      runID,
-		object:     object,
-		nativeIDs:  map[string]ids.UUID{},
+		pool:        db.Pool(),
+		people:      people.NewStore(db),
+		identities:  migration.NewRunStore(db),
+		runID:       runID,
+		object:      object,
+		onDuplicate: onDuplicate,
+		nativeIDs:   map[string]ids.UUID{},
 	}
 }
 
@@ -130,40 +136,163 @@ const (
 	predictCreate predictedOutcome = iota
 	predictUpdate
 	predictUnchanged
+	// predictUnwritable is a row the commit will refuse. It is counted apart
+	// from the three outcomes above because a dry run that folds it into
+	// `created` promises work that cannot happen.
+	predictUnwritable
+	// predictCollides is a row naming a company the CRM ALREADY holds, found
+	// by the same PO-F-2 ladder the create path runs. The commit still lands
+	// it — and files a review pair — so this is a disclosure, not a refusal:
+	// the preview's job is to say a duplicate is coming while a human can
+	// still fix the file.
+	predictCollides
+	// predictCollidesSkipped is a duplicate this run will NOT land, because it
+	// asked for on_duplicate: skip. Separate from predictCollides so the
+	// preview reports the same outcome the commit will produce.
+	predictCollidesSkipped
 )
 
 // Predict answers what Ensure would do, without writing.
+//
+// The unwritable check comes FIRST, before the identity lookup: a row the
+// store will refuse is refused whether it would have created or updated, and
+// discovering that only on the create branch would let the same bad value pass
+// silently on a re-import.
 func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedOutcome, error) {
+	outcome, _, err := w.predictRow(ctx, row)
+	return outcome, err
+}
+
+// predict answers what the commit will do AND, when it will refuse, the sentence
+// the report shows for it.
+//
+// The reason travels with the outcome rather than being recomputed by the
+// caller. It used to be recomputed — from unwritableReason, which knows about
+// the size_band vocabulary and nothing else — so a refusal from any other source
+// reached the report as a skip with an EMPTY reason, and the person reading it
+// was told a row would not land without being told why.
+func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
+	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
+		return predictUnwritable, reason, nil
+	}
+	// Mirrors Ensure, in the same order: a named record first, then the identity
+	// map. The two must answer alike or an approval decides one thing and the
+	// commit does another.
+	target := w.targetIDOf(ctx, row)
+	if target.named {
+		if target.reason != "" {
+			return predictUnwritable, target.reason, nil
+		}
+		return w.reconcilePrediction(ctx, target.id, row)
+	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
 	if err != nil {
-		return predictCreate, err
+		return predictCreate, "", err
 	}
 	if !found {
-		return predictCreate, nil
+		// Not a row a previous run of THIS importer landed — but the CRM may
+		// hold the company anyway, captured from mail, created by hand or
+		// seeded. The identity map cannot see any of those, so the create the
+		// engine is about to report gets the same dedupe read the create path
+		// itself performs.
+		// Always disclosure-filtered: a PREVIEW reports what it found, whichever
+		// mode asked. Passing the mode through here reported invisible companies
+		// as duplicates on a `skip` run — an existence oracle over a colleague's
+		// owner-private capture, one CSV row at a time.
+		collides, err := w.collidesWithExisting(ctx, row)
+		if err != nil {
+			return predictCreate, "", err
+		}
+		if collides {
+			if w.onDuplicate == string(crmcontracts.Skip) {
+				return predictCollidesSkipped, "", nil
+			}
+			return predictCollides, "", nil
+		}
+		return predictCreate, "", nil
 	}
+	return w.reconcilePrediction(ctx, id, row)
+}
+
+// predictReconcile is what reconcile would do to this record, without writing.
+//
+// Shared by both ways a row reaches an existing record — the identity map, and
+// an `id` column naming it — so the preview cannot answer one thing for a row
+// the file identified and another for a row the importer remembered.
+func (w *csvWriters) reconcilePrediction(
+	ctx context.Context, id ids.UUID, row migration.Row,
+) (predictedOutcome, string, error) {
 	current, err := w.read(ctx, id)
 	if err != nil {
-		return predictCreate, err
+		return predictCreate, "", err
 	}
 	changed, err := changedFields(current, textFields(row.Fields))
 	if err != nil {
-		return predictCreate, err
+		return predictCreate, "", err
 	}
 	if len(changed) == 0 {
-		return predictUnchanged, nil
+		return predictUnchanged, "", nil
 	}
-	return predictUpdate, nil
+	return predictUpdate, "", nil
 }
 
+// collidesWithExisting asks whether the CRM already holds the company this row
+// names, through the SAME ladder the create path runs (PO-F-2). It reads and
+// writes nothing.
+//
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+	// The same refusal the dry run reported, so the two cannot disagree about
+	// this row. Without it the preview would disclose a skip and the commit
+	// would then fail on the store's own constraint instead — a different
+	// answer to the question a human already approved.
+	if reason := unwritableReason(object, textFields(row.Fields)); reason != "" {
+		return migration.EnsureResult{Skipped: true, SkipReason: reason}, nil
+	}
+	// A row that NAMES its record wins over every other way of finding one. The
+	// file said which company this is; nothing the importer could infer beats
+	// that, and inferring anyway is what made name-based updating unsafe.
+	target := w.targetIDOf(ctx, row)
+	if target.named {
+		if target.reason != "" {
+			return migration.EnsureResult{Skipped: true, SkipReason: target.reason}, nil
+		}
+		return w.reconcile(ctx, target.id, row)
+	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	if found {
 		return w.reconcile(ctx, id, row)
+	}
+	// Not a row this importer has landed before — but the estate may hold the
+	// record anyway, and the run says what to do about that. The check runs on
+	// the commit as well as the dry run so the two cannot disagree.
+	if w.onDuplicate == string(crmcontracts.Skip) {
+		// discloseOnly, so a collision this caller may not see is answered as no
+		// collision — and the row CREATES.
+		//
+		// Skipping it instead is the intuitive choice and it leaks. An opaque
+		// reason hides WHICH company was hit; the outcome still says one was.
+		// "Your row was not created" is an answer to "is this company in your
+		// CRM", and a finished run's report is readable on the import_run grant,
+		// so a caller could probe a colleague's owner-private estate one CSV row
+		// at a time. Wording cannot fix that — only the outcome can.
+		//
+		// What creating costs is a twin of a record the caller cannot see, which
+		// the dedupe review queue picks up like any other and a merge resolves.
+		// What skipping costs is a disclosure that no merge undoes. It also keeps
+		// the preview and the commit answering alike, since the preview is
+		// disclosure-filtered for the same reason.
+		collides, err := w.collidesWithExisting(ctx, row)
+		if err != nil {
+			return migration.EnsureResult{}, err
+		}
+		if collides {
+			return migration.EnsureResult{Skipped: true, SkipReason: duplicateSkipReason}, nil
+		}
 	}
 	switch object {
 	case migration.ObjectLead:
@@ -190,7 +319,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// happened would inflate both the disposition table and the audit log.
 		return migration.EnsureResult{Unchanged: true}, nil
 	}
-	if err := w.apply(ctx, id, changed); err != nil {
+	if err := w.apply(ctx, id, changed, current); err != nil {
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
@@ -228,13 +357,27 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization](record T) ([]
 	return encoded, nil
 }
 
-func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string) error {
+// apply writes the changed fields. `current` is the stored record's JSON, which
+// the organization path needs because an address patch is all-or-nothing: the
+// store assigns all six address columns whenever an Address is given, so a file
+// carrying only a City would blank the street, postal code and country a human
+// entered. The mapped components are merged onto what is stored, and only then
+// sent.
+func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte) error {
 	switch w.object {
 	case migration.ObjectLead:
 		_, err := w.people.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
 		return err
 	case migration.ObjectOrganization:
-		_, err := w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), organizationUpdateFrom(changed))
+		in := organizationUpdateFrom(changed)
+		merged, given, err := addressMergedOnto(current, in.Address)
+		if err != nil {
+			return err
+		}
+		if given {
+			in.Address = merged
+		}
+		_, err = w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), in)
 		return err
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
@@ -336,7 +479,7 @@ func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UU
 		if org.ArchivedAt != nil {
 			return nil
 		}
-		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID)); err != nil {
+		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil); err != nil {
 			return fmt.Errorf("import undo: reversing organization %s: %w", nativeID, err)
 		}
 		return nil

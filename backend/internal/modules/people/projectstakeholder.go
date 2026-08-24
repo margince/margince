@@ -62,6 +62,14 @@ func (s *Store) SetProjectStakeholder(ctx context.Context, in SetProjectStakehol
 	if err := auth.Require(ctx, projectObjectName, principal.ActionUpdate); err != nil {
 		return relationshipRow{}, err
 	}
+	// The role grant above says this seat may change projects in general; this
+	// says they may change THIS one. Both are needed, and the row half used to
+	// be redundant only because a project a rep could reach was a project they
+	// owned. A project is now readable across the workspace, so without this
+	// any seat could staff any team's project.
+	if err := s.ensureProjectWritable(ctx, in.ProjectID); err != nil {
+		return relationshipRow{}, err
+	}
 
 	existingID, found, err := s.projectStakeholderEdge(ctx, in.ProjectID, in.PersonID)
 	if err != nil {
@@ -109,6 +117,18 @@ func (s *Store) SetProjectStakeholder(ctx context.Context, in SetProjectStakehol
 //
 // Absent is not an error: on the way in it means "attach", and on the race
 // path it means the winner was archived under us. Only a broken read is.
+// ensureProjectWritable is the ROW half of the anchor gate both stakeholder
+// verbs spell: the role grant says this seat may change projects, this says
+// they may change the one being staffed. A project is readable across the
+// workspace, so without it any seat holding `project.update` could rewrite any
+// team's roster. Out of the caller's reach reads as ErrNotFound; a project they
+// can see but not change answers ErrPermissionDenied.
+func (s *Store) ensureProjectWritable(ctx context.Context, projectID ids.ProjectID) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return auth.EnsureWritableLive(ctx, tx, projectObjectName, projectID.UUID)
+	})
+}
+
 func (s *Store) projectStakeholderEdge(ctx context.Context, projectID ids.ProjectID, personID ids.PersonID) (ids.UUID, bool, error) {
 	var edge ids.UUID
 	found := false
@@ -142,6 +162,9 @@ func (s *Store) RemoveProjectStakeholder(ctx context.Context, projectID ids.Proj
 	if err := auth.Require(ctx, projectObjectName, principal.ActionUpdate); err != nil {
 		return err
 	}
+	if err := s.ensureProjectWritable(ctx, projectID); err != nil {
+		return err
+	}
 	var edgeID ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// The visibility of the edge itself is re-checked by
@@ -170,7 +193,7 @@ func (s *Store) RemoveProjectStakeholder(ctx context.Context, projectID ids.Proj
 	if err != nil {
 		return err
 	}
-	_, err = s.ArchiveRelationship(ctx, edgeID)
+	_, err = s.ArchiveRelationship(ctx, edgeID, nil)
 	return err
 }
 
@@ -195,35 +218,51 @@ func (s *Store) PersonNames(ctx context.Context, people []ids.PersonID) (map[ids
 		return nil, err
 	}
 	names := map[ids.UUID]string{}
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		names, err = personNames(ctx, tx, people)
+		return err
+	})
+	return names, err
+}
+
+// PersonNamesTx is PersonNames inside a caller-opened transaction — the
+// composite record read. Same gate, same row scope; only the transaction is
+// borrowed.
+func (s *Store) PersonNamesTx(ctx context.Context, tx pgx.Tx, people []ids.PersonID) (map[ids.UUID]string, error) {
+	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	return personNames(ctx, tx, people)
+}
+
+func personNames(ctx context.Context, tx pgx.Tx, people []ids.PersonID) (map[ids.UUID]string, error) {
+	names := map[ids.UUID]string{}
 	if len(people) == 0 {
 		return names, nil
 	}
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		args := []any{people}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		scope, err := auth.ScopeClauseFor(ctx, entityPerson, "p", arg)
-		if err != nil {
-			return err
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	q := storekit.SQLf(`SELECT p.id, p.full_name FROM person p
+		WHERE p.id = ANY($%d) AND p.archived_at IS NULL`, arg(people))
+	scope, err := auth.ScopeClauseFor(ctx, entityPerson, "p", arg)
+	if err != nil {
+		return nil, err
+	}
+	if scope != "" {
+		q += " AND " + scope
+	}
+	rows, err := tx.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
 		}
-		q := `SELECT p.id, p.full_name FROM person p
-			WHERE p.id = ANY($1) AND p.archived_at IS NULL`
-		if scope != "" {
-			q += " AND " + scope
-		}
-		rows, err := tx.Query(ctx, q, args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			var name string
-			if err := rows.Scan(&id, &name); err != nil {
-				return err
-			}
-			names[id] = name
-		}
-		return rows.Err()
-	})
-	return names, err
+		names[id] = name
+	}
+	return names, rows.Err()
 }

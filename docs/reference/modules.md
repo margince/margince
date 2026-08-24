@@ -30,8 +30,9 @@ still answer a generated `501` until its handler lands; it is not an implementat
 | Module | Owns (purpose) | Spine | Owns tables | HTTP surface (`/v1/…`) |
 |---|---|---|---|---|
 | **identity** | Workspaces, users, opaque server-side sessions, RBAC roles, Agent Seat Passports, the A2 OAuth server, and the resumable onboarding-wizard state. Auth is in-app — no separate identity service. The singleton organization bootstraps from `margince.yaml`; no request creates a workspace. | Handlers→Service (`NewService`) | `workspace, app_user, team, team_membership, field_mask, session, passport, auth_token, role, role_assignment, record_grant, oauth_client, oauth_authorization_code, onboarding_wizard_state` | `/me`, `/users` (+`/access-preview`, `/{id}/access`), `/teams` (+`/{id}`, `/{id}/members/{userId}`), `/records/{record_type}/{id}/claim` (compose dispatch to people/deals), `/auth/*` (login, logout, capabilities, forgot/reset-password), `/passports`, `/record-grants`, `/onboarding/state` |
-| **people** | The person, organization, and lead aggregates — create, dedupe, list, optimistic update, archive, the two-record merge, lead promotion — plus the company profile/fact substrate and site reads (the typed `CompanyContext` read model, the deep-read and onboarding dossiers; see [company-context.md](../explanation/company-context.md)). | Handlers→Store (`NewStore`) | `person, person_email, person_phone, person_social, organization, organization_domain, organization_profile_field, person_profile_field, organization_fact, site_read, dedupe_candidate, relationship, partner, lead, lead_score_history, lead_manual_signal, lead_source, lead_disqualify_reason` | `/people` (+`/merge`,`/strength`), `/organizations` (+`/merge`,`/partner`,`/enrich`,`/deep-read`,`/site-reads`,`/hierarchy-rollup`), `/relationships`, `/leads` (+`/promote`,`/demote`,`/score`,`/manual-signals`,`/settings`), `/lead-sources`, `/lead-disqualify-reasons`, `/dedupe/candidates`, `/company` (+`/context`,`/site-reads`), `/coldstart` |
-| **deals** | The deal aggregate + pipeline/stage scaffolding, stage advancement (won/lost + FX freeze), the per-workspace default-pipeline seed, and the offer engine (rate-card products + versioned deal-bound offers with server-computed totals). | Handlers→Store (`NewStore`) | `deal, deal_stage_history, pipeline, stage, fx_rate, product, offer, offer_line_item, offer_template` | `/deals` (+`/advance`,`/stakeholders`), `/pipelines`, `/stages`, `/products`, `/offer-templates`, `/offers` (+`/line-items`,`/send`,`/accept`,`/reject`,`/regenerate`,`/render`,`/pdf`) |
+| **people** | The person, organization, and lead aggregates — create, dedupe, list, optimistic update, archive, the two-record merge, lead promotion — plus the company profile/fact substrate and site reads (the typed `CompanyContext` read model, the deep-read and onboarding dossiers; see [company-context.md](../explanation/company-context.md)). | Handlers→Store (`NewStore`) | `person, person_email, person_phone, person_social, organization, organization_domain, organization_profile_field, person_profile_field, organization_fact, site_read, dedupe_candidate, relationship, partner, lead, lead_score_history, lead_manual_signal, lead_source, lead_disqualify_reason` | `/people` (+`/merge`,`/strength`), `/organizations` (+`/merge`,`/partner`,`/enrich`,`/deep-read`,`/site-reads`,`/hierarchy-rollup`), `/relationships`, `/projects/{id}/stakeholders` (project↔person edges, `relationship` rows of kind `project_stakeholder`), `/leads` (+`/promote`,`/demote`,`/score`,`/manual-signals`,`/settings`), `/lead-sources`, `/lead-disqualify-reasons`, `/dedupe/candidates`, `/company` (+`/context`,`/site-reads`), `/coldstart` |
+| **deals** | The deal aggregate + pipeline/stage scaffolding, stage advancement (won/lost + FX freeze), the per-workspace default-pipeline seed, and the offer engine (rate-card products + versioned deal-bound offers with server-computed totals). | Handlers→Store (`NewStore`) | `deal, deal_stage_history, deal_forecast_history, pipeline, stage, fx_rate, product, offer, offer_line_item, offer_template` | `/deals` (+`/advance`,`/stakeholders`), `/pipelines`, `/stages`, `/products`, `/offer-templates`, `/offers` (+`/line-items`,`/send`,`/accept`,`/reject`,`/regenerate`,`/render`,`/pdf`) |
+| **projects** | The project aggregate — the body of work an account's deals and correspondence are filed under: creation with its key, the phase ladder with its history, ownership transfer, archive, and the quiet-project predicate the signal scan and the reports share. Supersedes ADR-0073, which placed it inside `deals`. | Handlers→Store (`NewStore`) | `project, project_phase_history` | `/projects` (+`/advance`,`/transfer-ownership`; `/360` is served by `compose/project360`, `/stakeholders` by `people`) |
 | **contracts** | The agreements an account has signed (ADR-0109/A160): terms, value, renewal dates, cancellation, and the renewal chain. Status is asserted by a human — no date moves it — while *being under contract* is a derived reading computed from the dates, and the two are reported separately. Carries no tenant column (ADR-0091) and no owner column: visibility is inherited from the linked deal, falling back to the organization. | Handlers→Store (`NewStore`) | `contract` | `/contracts` (+`/{id}`, `/{id}/status`, `/{id}/cancellation`, `/{id}/renewal`), `/organizations/{id}/contracts` |
 | **activities** | The activity timeline — idempotent capture-keyed logging, polymorphic links to person/org/deal — plus attachments and scheduling/booking. | Handlers→Store (`NewStore`) | `activity, activity_link, activity_audience_member, attachment, booking_page` | `/activities` (+`/relink`,`/{id}/audience`,`/draft-email`,`/send-email`), `/attachments` (+`/extraction`,`/extraction:accept`,`/request-access`), `/availability`, `/bookings`, `/public/booking`, `/public/preferences` |
 | **approvals** | The 🟡 confirm-first engine — agents stage an action they may not perform, a person decides it (in the inbox, or over the tool surface on a credential they lent), and the agent redeems the decision. The staged row is the authority object. | Handlers→Service (`NewService`) | `approval, workspace_signing_key` | `/approvals` (+`/{id}/approve`,`/{id}/reject`) |
@@ -51,19 +52,34 @@ still answer a generated `501` until its handler lands; it is not an implementat
 | **overlay** | The HubSpot-as-system-of-record adapter — binds the frozen `datasource` seam via an inner `incumbent.Incumbent` seam, mirrors a connected portal into a governed, T2-tagged, per-user-visibility-filtered read model, and meters/degrades force-fresh reads under the shared HubSpot rate budget. Connection lifecycle is admin/ops-only; every role reads status. **Write-back is incumbent-first and partial**: `Update` and `Archive` write to the incumbent, then re-mirror the record it returns; `Create`, `Merge`, `PromoteLead` and `AdvanceDeal` return `unsupported_by_sor`, as does `RunReport`. The ADR-0071 overlay→native cutover is live — see [flip-an-overlay-to-native.md](../how-to/flip-an-overlay-to-native.md). | Handlers→Service (`NewService`) + a seam-shaped substrate (mirror/backfill/reconcile/teardown, no HTTP of their own) | `incumbent_connection, overlay_mirror, overlay_association, overlay_sync_state, mirror_user_map, mirror_user_automap_block, mirror_visibility, overlay_write_ledger, overlay_tombstone, overlay_mirror_halt, overlay_backfill_cursor, overlay_reconcile_watermark` | `/overlay/connection`, `/overlay/sync-status`, `/overlay/reconcile`, `/overlay/budget`, `/overlay/export`, `/overlay/flip:preflight`, `/overlay/flip`, `/overlay/user-map` (+`/{id}`), `/overlay/owners` |
 | **webhooks** | The governed outbound egress surface (E10/S-E10.6) — tenant-registered HTTPS subscriptions to a subset of the published event catalog, and a delivery engine that fans matching domain events off `cg:webhooks` as [Standard Webhooks](https://www.standardwebhooks.com/)-signed POSTs (`webhook-id`/`webhook-timestamp`/`webhook-signature`), retried with exponential backoff, dead-lettered, and human-replayable. Every delivered payload is generated contract-first from the isolated `api/public-events.yaml` (one `PublicEvent<Event>` schema per subscribable event, additive-only versioning) via `backend/tools/gen-payloads`, and bound to its emit site through the typed `storekit.EmitEvent`/`EmitEventForEntity` seam — a schema/code mismatch fails to build. The per-subscription signing secret is AES-256-GCM-sealed at rest (shown once at create/rotate); the fan-out is owner-scoped (BYO-EVT-4 — a webhook never delivers an event its owner may not see, with a ratified deferred-delivery exception for overlay `mirror.*` and two retention-telemetry subjects, ownership model still pending upstream); the dialer is SSRF-guarded. Managing subscriptions is admin/ops config; agent create/update is 🟡. Needs a deployment signing key — unconfigured, reads still list but secret paths answer 503. Also reachable from Settings → Integrations (create/pause/resume/re-target/archive/rotate + a deliveries/dead-letter/replay panel). See [outbound-webhooks.md](../explanation/outbound-webhooks.md). | Handlers→Store (`NewStore`) for CRUD; a bus-consumer + retry-sweep `Deliverer` (worker-driven, no HTTP spine) | `webhook_subscription, webhook_delivery` | `/webhook-subscriptions` (+`/{id}`,`/{id}/rotate-secret`,`/{id}/deliveries`,`/{id}/deliveries/{deliveryId}/replay`) |
 
-Seven tables are owned by the composition layer, not a module: `idempotency_key`
-(HTTP replay protection — transport plumbing), `brief_run`/`brief_item` (the
-morning-brief ranker's own snapshot, `compose/briefs`), `signal_thread_scan`
-(the per-thread scan cursor the signal extraction reads maintain), and three company-view
-tables that are **view state rather than record facts**, written without an audit
-row under the saved-view ruling — `user_record_view` (the per-user visit
-baseline) and `suggestion_dismissal` (the rep's own "not this, not now") in
-`compose/org360`, and `org_brief` (the account brief's per-user, regenerable
-cache) in `compose/orgbrief`. The live list is the map in
-`backend/tableownership_test.go`, which gates it. Compose-level *features* —
-company context, the cold-start transport, reply drafting, deep-read
-orchestration, the AI certification lane — are likewise not modules: they wire
-module stores together
+Sixteen tables are owned by the composition layer rather than by a module, and
+they fall into three kinds.
+
+**Transport plumbing** — `idempotency_key` (HTTP replay protection),
+`activity_participant_replay`, and the two vocabulary tables `activity_kind`
+and `channel_provider`.
+
+**Orchestration state** — `brief_run`/`brief_item` (the morning-brief ranker's
+snapshot, `compose/briefs`), `signal_thread_scan` (the per-thread scan cursor
+the signal-extraction reads maintain), and `agent_task`.
+
+**Per-reader view state and derived caches**, written without an audit row
+under the saved-view ruling: a row generated for one reader is never served to
+another, so regenerating it for somebody else produces different rows
+legitimately and an audit trail over that would record reading rather than
+changing. These are `user_record_view` (the per-user visit baseline) and
+`suggestion_dismissal` in `compose/org360`, `person_moment_dismissal` in
+`compose/person360`, `org_brief` in `compose/orgbrief`, `org_dossier` and
+`org_growth_fit` in `compose/orgdossier`, `person_brief` in
+`compose/personbrief`, and `deal_status_card` in `compose/dealstatus` — the
+deal page's one written card, cached per reader on a fingerprint of the facts
+it was written from.
+
+The live list is the map in `backend/tableownership_test.go`, which gates it;
+this paragraph is prose over that map and the map wins. Compose-level
+*features* — company context, the cold-start transport, reply drafting,
+deep-read orchestration, the AI certification lane — are likewise not modules:
+they wire module stores together
 ([explanation/composition-layer.md](../explanation/composition-layer.md)).
 
 ## Notable subpackages
@@ -81,6 +97,9 @@ A module never reaches a sibling; the composition root injects the edge (how tha
 [explanation/composition-layer.md](../explanation/composition-layer.md)). The current edges (wired in
 `internal/compose/server.go`):
 
+- **deals ← projects**: whether a project may be attached to a deal, and moving a
+  won deal's project into delivery — both inside the deal write's own transaction
+  (`deals/projectseam.go`, bound in `compose/installseam`).
 - **identity's workspace seed** ← deals (default pipeline) + consent (default purposes/retention) +
   automation (starter automations) + activities (booking page) — one bootstrap transaction.
 - **agents' staging/redemption** ← approvals (adapter), and **agents' approval queue** ← approvals

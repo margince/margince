@@ -1,9 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { History, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card } from "../design-system/atoms";
+import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
@@ -159,8 +161,14 @@ function CandidateBanner({
   );
 }
 
-// VoiceHistory is the append-only record: versions with rollback, the
-// "what changed" delta timeline, and the learning-signal counters.
+// VoiceHistory is the append-only record: every version with its rollback, and
+// the learning-signal counters underneath them. It draws no heading of its own
+// — the settings row that holds it names it, and a list that also titled itself
+// would say it twice.
+//
+// The "what changed" delta timeline is its own component below: it is the
+// diagnostic half of the same record, and the card keeps it behind a
+// Disclosure rather than in front of every reader.
 export function VoiceHistory({
   profileId,
   canEdit,
@@ -172,9 +180,7 @@ export function VoiceHistory({
 }>) {
   const t = useT();
   const [versionCursor, setVersionCursor] = useState<string | undefined>();
-  const [deltaCursor, setDeltaCursor] = useState<string | undefined>();
   const [allVersions, setAllVersions] = useState<VoiceProfileVersion[]>([]);
-  const [allDeltas, setAllDeltas] = useState<VoiceProfileDelta[]>([]);
   const versions = useQuery({
     queryKey: ["voice-versions", profileId, versionCursor ?? ""],
     queryFn: async (): Promise<VersionsPage> => {
@@ -188,22 +194,6 @@ export function VoiceHistory({
         throwProblem(error);
       }
       setAllVersions((prev) => mergeById(prev, data.data));
-      return { items: data.data, next: data.page.next_cursor ?? null };
-    },
-  });
-  const deltas = useQuery({
-    queryKey: ["voice-deltas", profileId, deltaCursor ?? ""],
-    queryFn: async (): Promise<DeltasPage> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/deltas", {
-        params: {
-          path: { id: profileId },
-          query: deltaCursor ? { cursor: deltaCursor } : {},
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      setAllDeltas((prev) => mergeById(prev, data.data));
       return { items: data.data, next: data.page.next_cursor ?? null };
     },
   });
@@ -221,10 +211,9 @@ export function VoiceHistory({
   });
 
   return (
-    <div style={{ marginTop: "var(--space-3)" }}>
-      <div className="vdna-label">
-        <History aria-hidden /> {t("voice.history.label")}
-      </div>
+    // `settingrow-measure` is the row primitive's hook for a control that takes
+    // a stacked row's full width, which is the only place this list is drawn.
+    <div className="settingrow-measure">
       <QueryGate query={versions}>
         {(page) =>
           allVersions.length === 0 ? (
@@ -256,40 +245,6 @@ export function VoiceHistory({
           )
         }
       </QueryGate>
-      <QueryGate query={deltas}>
-        {(page) =>
-          allDeltas.length === 0 ? null : (
-            <div className="vdna-deltas">
-              <div className="vdna-label">{t("voice.history.deltasLabel")}</div>
-              <ul className="vdna-list">
-                {[...allDeltas]
-                  .sort((a, b) => b.to_version - a.to_version)
-                  .map((delta) => (
-                    <li key={delta.id} className="vdna-row">
-                      <span>
-                        {t("voice.history.deltaRow", {
-                          from: delta.from_version ?? 0,
-                          to: delta.to_version,
-                        })}
-                        {" · "}
-                        {classificationLabel(t, delta.classification)} ·{" "}
-                        {outcomeLabel(t, delta.activation_outcome)}
-                      </span>
-                    </li>
-                  ))}
-              </ul>
-              {page.next && (
-                <Button
-                  small
-                  onClick={() => setDeltaCursor(page.next ?? undefined)}
-                >
-                  {t("voice.history.loadMore")}
-                </Button>
-              )}
-            </div>
-          )
-        }
-      </QueryGate>
       <QueryGate query={learning}>
         {(summary) => (
           <p className="t-small vdna-learning">
@@ -302,6 +257,73 @@ export function VoiceHistory({
         )}
       </QueryGate>
     </div>
+  );
+}
+
+// VoiceChangeLog is what each build CHANGED, version to version: the
+// classification the evaluator gave it and how it was activated. Diagnostic
+// rather than actionable — nothing here is a control — which is why the card
+// keeps it behind a Disclosure. It draws no heading either: the summary the
+// reader opened is the heading.
+//
+// Its own component, and its own keyset cursor, so the version list beside it
+// pages independently: one list running out of pages must not stop the other.
+export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
+  const t = useT();
+  const [deltaCursor, setDeltaCursor] = useState<string | undefined>();
+  const [allDeltas, setAllDeltas] = useState<VoiceProfileDelta[]>([]);
+  const deltas = useQuery({
+    queryKey: ["voice-deltas", profileId, deltaCursor ?? ""],
+    queryFn: async (): Promise<DeltasPage> => {
+      const { data, error } = await api.GET("/voice-profiles/{id}/deltas", {
+        params: {
+          path: { id: profileId },
+          query: deltaCursor ? { cursor: deltaCursor } : {},
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      setAllDeltas((prev) => mergeById(prev, data.data));
+      return { items: data.data, next: data.page.next_cursor ?? null };
+    },
+  });
+  return (
+    <QueryGate query={deltas}>
+      {(page) =>
+        allDeltas.length === 0 ? (
+          <p className="t-small">{t("voice.history.deltasEmpty")}</p>
+        ) : (
+          <div>
+            <ul className="vdna-list">
+              {[...allDeltas]
+                .sort((a, b) => b.to_version - a.to_version)
+                .map((delta) => (
+                  <li key={delta.id} className="vdna-row">
+                    <span>
+                      {t("voice.history.deltaRow", {
+                        from: delta.from_version ?? 0,
+                        to: delta.to_version,
+                      })}
+                      {" · "}
+                      {classificationLabel(t, delta.classification)} ·{" "}
+                      {outcomeLabel(t, delta.activation_outcome)}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            {page.next && (
+              <Button
+                small
+                onClick={() => setDeltaCursor(page.next ?? undefined)}
+              >
+                {t("voice.history.loadMore")}
+              </Button>
+            )}
+          </div>
+        )
+      }
+    </QueryGate>
   );
 }
 
@@ -339,13 +361,21 @@ function VersionRow({
     onError: (e: Error) => setError(problemMessageOf(e, t)),
   });
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <li className="vdna-row">
       <span>
         {t("voice.history.versionRow", { n: version.profile_version })}{" "}
         <Badge>{versionStatusLabel(t, version.status)}</Badge>
         {" · "}
-        {new Date(version.created_at).toLocaleDateString(locale)}
+        {/* `locale` is the app's own code ("en") — a valid BCP-47 tag, but a
+            language-only one, and an unspecified region is exactly the gap
+            A100 exists to close. Handed straight to Intl it resolves to en-US
+            defaults and prints 8/21/2026 where every other date in this
+            product prints 21/08/2026. The regioned tag comes from format/, and
+            the record's zone with it: a profile version is stamped by the
+            record, not by where its reader sits. */}
+        {formatDate(version.created_at, locale, recordZone)}
       </span>
       {canEdit && version.status === "superseded" && (
         <button

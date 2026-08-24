@@ -54,8 +54,18 @@ func TestOutboundVerbsRequireAnOutboundCap(t *testing.T) {
 				"passport granted only internal authority reaches outside with it",
 				pol.Tool, spec.RequiredScope)
 		}
-		if spec.Tier != mcp.TierConfirmationRequired {
-			t.Errorf("%s admits at tier %v, want TierConfirmationRequired", pol.Tool, spec.Tier)
+		// No tier assertion. An outbound verb is bounded by the CAP — a
+		// passport its granting human never lent `send` or `enrich` cannot
+		// reach outside at all, which is what the check above holds — not by a
+		// second confirmation from the person who already holds it. What the
+		// tier decides is whether that same person is asked twice, and an
+		// installation that wants to be sets a floor.
+		//
+		// The one exception is upstream of this: a verb where the MODEL names
+		// the destination stays confirm-first regardless (tools_enrich.go),
+		// because that is an egress the credential-holder never chose.
+		if spec.Tier == mcp.TierConfirmationRequired && !registry.Stageable(pol.Tool) {
+			t.Errorf("%s is confirm-first but describes no staging — the approval would dead-end", pol.Tool)
 		}
 		if !spec.Egress {
 			t.Errorf("%s does not declare egress; it leaves the workspace", pol.Tool)

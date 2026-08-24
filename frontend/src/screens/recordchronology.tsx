@@ -3,8 +3,9 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { SegmentedControl } from "../design-system/atoms";
+import { EmptyState, SegmentedControl, Skeleton } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
+import type { RecordTimeline } from "../design-system/recordtimeline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { coldFieldLabel, LoadMoreButton, useViewerId } from "./common";
@@ -87,6 +88,11 @@ export type RecordChronology = {
   // activity feed is the shorter of the two, it is not: the merge cuts at its
   // oldest row and every extra change page falls below that line.
   changesAreTheLimit: boolean;
+  // The activity feed's own next page, when the caller can fetch one. Under
+  // "all" it is offered exactly when the changes are NOT the limit — the
+  // activity feed is the cut, so another page of activities lengthens the
+  // merged view and another page of changes would not.
+  activities?: RecordTimeline;
 };
 
 /**
@@ -102,6 +108,7 @@ export function useRecordChronology({
   filter,
   activities,
   activitiesHaveMore,
+  loadMore,
   renderActions,
 }: Readonly<{
   kind: EntityKind;
@@ -109,6 +116,9 @@ export function useRecordChronology({
   filter: TimelineFilter;
   activities: Activity[];
   activitiesHaveMore: boolean;
+  // The paged read behind `activities`, for the footer's Load more. Absent on
+  // a surface that shows one page and says so.
+  loadMore?: RecordTimeline;
   // The per-row verbs (Reply, Relink). Absent on a surface that offers none.
   renderActions?: (activity: Activity) => ReactNode;
 }>): RecordChronology {
@@ -137,6 +147,7 @@ export function useRecordChronology({
       loading: false,
       failed: false,
       changesAreTheLimit: false,
+      activities: loadMore,
     };
   }
   if (filter === "changes") {
@@ -147,6 +158,7 @@ export function useRecordChronology({
       loading,
       failed,
       changesAreTheLimit: changes.hasNextPage,
+      activities: undefined,
     };
   }
   const merged = mergeChronology<TimelineEntry>(
@@ -168,6 +180,7 @@ export function useRecordChronology({
       changeEntries,
       activityEntries,
     ),
+    activities: loadMore,
   };
 }
 
@@ -183,7 +196,8 @@ export function hasChronologyFooter(
   return (
     chronology.truncated ||
     filter === "changes" ||
-    (filter === "all" && chronology.changesAreTheLimit)
+    (filter === "all" && chronology.changesAreTheLimit) ||
+    activitiesCanGrow(filter, chronology)
   );
 }
 
@@ -216,7 +230,25 @@ export function ChronologyFooter({
         (filter === "all" && chronology.changesAreTheLimit)) && (
         <LoadMoreButton query={chronology.changes} />
       )}
+      {activitiesCanGrow(filter, chronology) && chronology.activities && (
+        <LoadMoreButton query={chronology.activities} />
+      )}
     </>
+  );
+}
+
+// Another page of ACTIVITIES lengthens the list under Activities whenever the
+// server holds one, and under All only while the activity feed owns the cut.
+function activitiesCanGrow(
+  filter: TimelineFilter,
+  chronology: RecordChronology,
+): boolean {
+  if (!chronology.activities?.hasNextPage) {
+    return false;
+  }
+  return (
+    filter === "activities" ||
+    (filter === "all" && !chronology.changesAreTheLimit)
   );
 }
 
@@ -243,10 +275,18 @@ function changesOwnTheCut(
   changeEntries: TimelineEntry[],
   activityEntries: TimelineEntry[],
 ): boolean {
-  // Seeded with the first row rather than left to throw on an empty one.
+  // Instants, not the strings that spell them — the same reason
+  // mergeChronology compares numbers: two feeds written by two stores spell
+  // one moment two ways. Seeded with the first row rather than left to throw
+  // on an empty one.
   const oldest = (rows: TimelineEntry[]) =>
     rows.length > 0
-      ? rows.reduce((a, b) => (a.atIso < b.atIso ? a : b), rows[0]).atIso
+      ? Date.parse(
+          rows.reduce(
+            (a, b) => (Date.parse(a.atIso) < Date.parse(b.atIso) ? a : b),
+            rows[0],
+          ).atIso,
+        )
       : undefined;
   const oldestChange = oldest(changeEntries);
   const oldestActivity = oldest(activityEntries);
@@ -256,5 +296,49 @@ function changesOwnTheCut(
       oldestChange === undefined ||
       oldestActivity === undefined ||
       oldestChange >= oldestActivity)
+  );
+}
+
+/**
+ * chronologyNotice keeps four things apart that all render as an empty list
+ * if you let them: still loading, the read failed, the section was never in
+ * the payload, and the record genuinely has nothing to show. Only the last
+ * one may say so — the other three would have a rep conclude nobody has ever
+ * touched this record.
+ *
+ * The empty sentence names what the filter was looking for. "Nothing logged
+ * on this account" under the Changes filter would be a claim about the
+ * activity feed the reader is not looking at. `activitiesEmptyKey` is the
+ * caller's own word for the Activities view, for the same reason
+ * CHRONOLOGY_EMPTY_KEYS leaves that one out.
+ */
+export function chronologyNotice(
+  activitiesEmptyKey: MessageKey,
+  timeline: {
+    loading: boolean;
+    failed: boolean;
+    assembled: boolean;
+    filter: TimelineFilter;
+  },
+  count: number,
+  t: ReturnType<typeof useT>,
+): ReactNode {
+  if (timeline.loading) {
+    return <Skeleton width="100%" height={48} />;
+  }
+  if (timeline.failed || !timeline.assembled) {
+    return <EmptyState>{t("co.section.unavailable")}</EmptyState>;
+  }
+  if (count > 0) {
+    return undefined;
+  }
+  return (
+    <EmptyState>
+      {t(
+        timeline.filter === "activities"
+          ? activitiesEmptyKey
+          : CHRONOLOGY_EMPTY_KEYS[timeline.filter],
+      )}
+    </EmptyState>
   );
 }

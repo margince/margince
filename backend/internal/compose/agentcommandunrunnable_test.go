@@ -230,6 +230,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"confirmOrganizationProfileField": missingOperand(http.MethodPost, "/v1/organizations/%s/profile-fields//confirm", "field"),
 	"updateOrganizationProfileField":  missingOperand(http.MethodPatch, "/v1/organizations/%s/profile-fields/", "field"),
 	"removeProjectStakeholder":        missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
+	"removeProjectCompany":            missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "organization_id"),
 
 	"setProjectStakeholder": {
 		refusal: namedMember("person_id", "invalid",
@@ -238,6 +239,16 @@ var unrunnableCalls = map[string]unrunnableCall{
 			id := ids.NewV7().String()
 			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/stakeholders", id,
 				`{"person_id":"not-a-uuid","role":"champion"}`)
+		},
+	},
+
+	"setProjectCompany": {
+		refusal: namedMember("organization_id", "invalid",
+			"the organization_id in the body is not a uuid, so the edge names no company"),
+		build: func() (*http.Request, []byte) {
+			id := ids.NewV7().String()
+			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/companies", id,
+				`{"organization_id":"not-a-uuid","role":"partner"}`)
 		},
 	},
 }
@@ -263,7 +274,7 @@ func missingOperand(method, path, operand string) unrunnableCall {
 // shape: agents.createRecordShapes carries the types create_record itself
 // writes, and a create outside it is performed by its own module's handler,
 // which is where its body is validated. The seam has no shape to refuse against
-// (gradionhq/margince-poc-v1#1021 is where those types get one), so any body
+// (margince/margince#1021 is where those types get one), so any body
 // this test could send would stage — which is a gap to record, not a fixture to
 // fake.
 var noUnrunnableCall = gatekit.Waive(map[string]string{
@@ -276,15 +287,24 @@ var noUnrunnableCall = gatekit.Waive(map[string]string{
 
 func TestNoConfirmFirstOperationStagesACallItsExecutorWouldRefuse(t *testing.T) {
 	defer noUnrunnableCall.AssertAllMatched(t)
+	// The operations a fixture was written for, plus any the policy table still
+	// floors. The verbs that used to stage by default now execute — but each
+	// one a fixture already covers keeps being checked, because a workspace
+	// tier floor puts it back behind an approval and a staged call its executor
+	// would refuse spends a human's yes on something that was never going to
+	// run. What this gate does NOT do is demand a new fixture for every verb
+	// that merely became stageable-in-principle; that is a wider obligation
+	// than the one this change makes.
 	subject := map[string]bool{}
 	for op, route := range agentReachableMutations() {
-		if agentPolicies[route].Tier != tierConfirmationRequired {
+		_, covered := unrunnableCalls[op]
+		if agentPolicies[route].Tier != tierConfirmationRequired && !covered {
 			continue
 		}
 		subject[op] = true
 	}
 	if len(subject) == 0 {
-		t.Fatal("the policy table declares no confirm-first agent-reachable mutation — this gate checked nothing")
+		t.Fatal("no agent-reachable mutation is floored or covered — this gate checked nothing")
 	}
 	for op := range subject {
 		fixture, written := unrunnableCalls[op]

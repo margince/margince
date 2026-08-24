@@ -357,7 +357,7 @@ the allowlisted `pkg/extension` surface. So it asks, with the same declared clas
 under:
 
 ```go
-// zalo-oa: an unreachable provider needs nobody, so the tick runs again instead of dying.
+// An unreachable provider needs nobody, so the tick runs again instead of dying.
 return extension.Reschedule(classProviderUnavailable, pollRetryDelay, cause)
 ```
 
@@ -398,7 +398,7 @@ same delay right there is that it is the *healthy* cadence — a throttled tick 
 no more load on the provider than a successful one does, and it is strictly gentler than the behaviour
 it replaces, where River's ladder retried within seconds and then discarded the row. Neither connector
 reads `Retry-After`, so a provider naming a longer wait is answered on our clock
-([#1809](https://github.com/gradionhq/margince-poc-v1/issues/1809)); `capture/telegram` already
+([#1809](https://github.com/margince/margince/issues/1809)); `capture/telegram` already
 honours the interval Telegram names, and is the pattern to follow.
 
 **Only a failure that needs nobody may postpone itself.** A refused credential, a lapsed service

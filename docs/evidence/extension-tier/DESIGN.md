@@ -13,7 +13,7 @@ Review history is in `REVIEW-v1.md`. Demo detail is in `NOTES-SCOPE.md`.
 > written from, and it is the thing a follow-on author reads first — so it has been corrected in place
 > against what fifteen task slices, two whole-branch reviews (Codex, Fable) and two acceptance runs
 > actually produced on `feat/extension-tier-capabilities` (PR
-> [#659](https://github.com/gradionhq/margince-poc-v1/pull/659)). Corrections are made where the claim
+> [#659](https://github.com/margince/margince/pull/659)). Corrections are made where the claim
 > was, not appended elsewhere; where a correction came from a demonstrated failure the demonstration is
 > named. **Where the ledger and the code disagreed, the code won.** The evidence, in order of
 > authority: the code; `.superpowers/sdd/extension-tier-slices/progress.md` (the ledger — every task,
@@ -989,7 +989,7 @@ the generic descriptor card, which is what makes that fallback a tested path rat
 
 **What actually shipped: one PR, not four.** The whole tier landed on
 `feat/extension-tier-capabilities` as PR
-[#659](https://github.com/gradionhq/margince-poc-v1/pull/659) — fifteen task slices internally, staged A–E
+[#659](https://github.com/margince/margince/pull/659) — fifteen task slices internally, staged A–E
 with a verified-green `make check-q` at each stage boundary, but a single reviewable branch. The 1a–1d split
 above is useful only as a reading order for §4. **PR 2 (`zalo-personal`) was not built.**
 

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
@@ -208,7 +209,10 @@ func TestOnboardingCompanyMessageUsesTheLiveDraftAndRequestedLanguage(t *testing
 	if len(reply.RemainingRequiredFields) != 0 || reply.AvailableAction == nil {
 		t.Fatalf("live draft was not used: %+v", reply)
 	}
-	if !strings.Contains(brain.request.System, "Respond in de.") ||
+	// German, and asserted through the renderer: the point of this line is that
+	// the REQUESTED locale reached the prompt, so it must fail if the prompt
+	// comes back naming any other language.
+	if !strings.Contains(brain.request.System, promptlang.Rule("de")) ||
 		!strings.Contains(brain.request.Messages[0].Content, `"display_name":"Acme"`) {
 		t.Fatalf("locale or live draft missing from model request: %+v", brain.request)
 	}

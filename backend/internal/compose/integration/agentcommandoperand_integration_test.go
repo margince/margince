@@ -91,53 +91,34 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 	}
 }
 
-func TestTwoFactKeysOnOneOrganizationStageDistinguishableApprovals(t *testing.T) {
+// Two staged calls that differ only in their ARGUMENTS must be told apart, or
+// one approval could redeem the other and a human triaging the inbox cannot see
+// which of the two they are answering.
+//
+// Driven through createWebhookSubscription, which the contract still floors:
+// two subscriptions naming different URLs are the same verb on the same
+// (absent) target, which is exactly the shape this needs. It used to use two
+// fact keys on one organization, until confirming a fact stopped asking a
+// second time — a passport does what its holder could do unaided.
+func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	bearer := agentBearer(t, e, "fact-confirm agent")
+	bearer := agentBearer(t, e, "subscription agent")
 
-	orgID := createdID(t, e, "/v1/organizations", apptest.AnyMap{"display_name": "Distinguishable Facts Inc"})
+	approvalA := stageWebhookCreate(t, e, bearer, "https://example.test/alpha")
+	approvalB := stageWebhookCreate(t, e, bearer, "https://example.test/beta")
 
-	approvalA := stageFactConfirm(t, e, bearer, orgID, "named_customer:acme-inc")
-	approvalB := stageFactConfirm(t, e, bearer, orgID, "annual_revenue:2026")
+	_, _, hashA, summaryA := readApproval(t, e, approvalA)
+	_, _, hashB, summaryB := readApproval(t, e, approvalB)
 
-	typeA, idA, hashA, summaryA := readApproval(t, e, approvalA)
-	typeB, idB, hashB, summaryB := readApproval(t, e, approvalB)
-
-	if typeA != "organization" || typeB != "organization" {
-		t.Errorf("staged target types = (%q,%q), want both \"organization\"", typeA, typeB)
-	}
-	if idA == nil || idB == nil {
-		t.Fatal("a staged approval names no target id — a decision about which organization was never captured")
-	}
-	if *idA != orgID || *idB != orgID {
-		t.Fatalf("staged target ids = (%s,%s), want both %s — both facts belong to the SAME organization, so a "+
-			"target id alone cannot be what tells the two apart", *idA, *idB, orgID)
-	}
 	if hashA == hashB {
-		t.Error("two different fact keys on the same organization staged the SAME diff_hash — one approval " +
+		t.Error("two calls differing in their arguments staged the SAME diff_hash — one approval " +
 			"could redeem either")
 	}
 	if summaryA == summaryB {
-		t.Error("two different fact keys on the same organization staged the SAME summary — a human triaging " +
-			"the inbox cannot tell which fact they are confirming")
+		t.Error("two calls differing in their arguments staged the SAME summary — a human triaging " +
+			"the inbox cannot tell which one they are answering")
 	}
-}
-
-// stageFactConfirm provokes a refused agent fact confirmation and returns
-// the approval id it staged.
-func stageFactConfirm(t *testing.T, e *apptest.AppEnv, bearer map[string]string, orgID, factKey string) string {
-	t.Helper()
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	path := "/v1/organizations/" + orgID + "/facts/" + factKey + "/confirm"
-	if status := e.Call(t, "POST", path, nil, bearer, &problem); status != http.StatusForbidden ||
-		problem.Code != "approval_required" {
-		t.Fatalf("agent fact confirm %q → %d %q, want 403 approval_required", factKey, status, problem.Code)
-	}
-	return ExtractStagedApprovalID(t, problem.Detail)
 }
 
 // readApproval reads the staged row's target and the two fields that must
@@ -150,4 +131,20 @@ func readApproval(t *testing.T, e *apptest.AppEnv, approvalID string) (targetTyp
 		t.Fatalf("reading approval %s: %v", approvalID, err)
 	}
 	return targetType, targetID, diffHash, summary
+}
+
+// stageWebhookCreate provokes a refused agent subscription create and returns
+// the approval id it staged.
+func stageWebhookCreate(t *testing.T, e *apptest.AppEnv, bearer map[string]string, url string) string {
+	t.Helper()
+	var problem struct {
+		Code   string `json:"code"`
+		Detail string `json:"detail"`
+	}
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+		"target_url": url, "event_types": []string{"organization.created"},
+	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
+		t.Fatalf("agent subscription create %q → %d %q, want 403 approval_required", url, status, problem.Code)
+	}
+	return ExtractStagedApprovalID(t, problem.Detail)
 }

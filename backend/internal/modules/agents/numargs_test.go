@@ -195,7 +195,7 @@ func (p boundProbeProvider) Search(context.Context, datasource.SearchQuery) (dat
 
 func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(registry, boundProbeProvider{t: t}, nil, nil, nil)
+	RegisterCoreTools(registry, boundProbeProvider{t: t}, nil, nil, nil, nil)
 	RegisterSlippingTools(registry,
 		func(context.Context) ([]SlippingDeal, error) {
 			t.Error("the deal lister ran for a limit the schema forbids")

@@ -217,11 +217,19 @@ func (a *archiveResolver) Subject(ctx context.Context, cmd ArchiveCommand) (Stag
 	return info, nil
 }
 
-// Guards refuses, before anything is staged, the two archives that were never
-// going to run: one whose target the caller cannot see (the read answers the
+// Guards refuses, before anything is staged, every archive that was never going
+// to run: one whose target the caller cannot see (the read answers the
 // row-scope miss as not-found, which is the existence-hiding answer the caller
-// would get from the archive itself), and one whose authority lives in another
-// system of record.
+// would get from the archive itself), one whose authority lives in another
+// system of record, and — asked of the executor rather than assumed here —
+// every refusal the archive's own store would answer with.
+//
+// The third is last on purpose. refuseStagingElsewhere is a fact about the
+// RECORD that the read in hand already answers, while the executor's refusals
+// cost a probe; and a record held in another system of record has no local
+// authority to ask about, so asking would be a question with no true answer.
+// Hoisting the probe ahead of it would also turn that deliberate
+// unsupported-by-SoR refusal into whatever the probe said first.
 func (a *archiveResolver) Guards(ctx context.Context, cmd ArchiveCommand) error {
 	rec, served, err := a.target(ctx, cmd)
 	if err != nil {
@@ -230,7 +238,10 @@ func (a *archiveResolver) Guards(ctx context.Context, cmd ArchiveCommand) error 
 	if !served {
 		return nil
 	}
-	return refuseStagingElsewhere(rec)
+	if err := refuseStagingElsewhere(rec); err != nil {
+		return err
+	}
+	return refuseArchiveHere(ctx, a.records, rec.Ref)
 }
 
 // CreateCommand is one record creation, whichever door asked for it.
@@ -380,7 +391,7 @@ func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
 // see, and the human's yes is then spent on a call the handler answers 404.
 // Closing it needs a visibility question this seam cannot ask through the
 // record provider, which is why it is filed rather than patched here:
-// gradionhq/margince-poc-v1#1021.
+// margince/margince#1021.
 func servedByTheRecordSeam(recordType string) bool {
 	return slices.Contains(datasource.EntityTypes(), datasource.EntityType(recordType))
 }
@@ -410,7 +421,7 @@ type routedRecordTarget struct {
 // never heard of, reusing servedByTheRecordSeam rather than a resolver-local
 // opinion about which of this family's types are governed here, so the two
 // cannot drift the way a second, hand-restated list would
-// (gradionhq/margince-poc-v1#1021).
+// (margince/margince#1021).
 func (t routedRecordTarget) refuse(ctx context.Context, id ids.UUID) error {
 	if !servedByTheRecordSeam(t.recordType) {
 		return nil

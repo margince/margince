@@ -42,6 +42,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/authz"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -197,7 +198,7 @@ func archiveRequestFor(as context.Context, person ids.UUID) *http.Request {
 type repSeat struct{ e *integration.Env }
 
 func (s repSeat) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
-	return authz.RBAC{Permissions: integration.RepPerms, TeamIDs: []ids.UUID{s.e.Team1}}, nil
+	return authz.RBAC{Permissions: archiveRepPerms, TeamIDs: []ids.UUID{s.e.Team1}}, nil
 }
 
 func (repSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
@@ -207,10 +208,27 @@ func (repSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType
 // archiveRegistry is the tool door over the real provider and the real
 // approvals engine — the same adapter the composed api server injects, so the
 // row this door writes is written by production's own stager.
+// archiveRegistry builds the tool door with a FLOOR on archive_record for a
+// person, which is how this operation reaches confirm-first now: the verb
+// executes by default — a passport does what its holder could do unaided — and
+// an installation that wants it confirmed declares the floor. The policy this
+// test compares against (archivePersonPolicy) declares exactly that, so both
+// doors are asked the same question.
 func archiveRegistry(e *integration.Env) *agents.Registry {
 	native := NewProvider(e.Pool)
-	reg := agents.NewRegistry(approvalsAdapter{svc: approvals.NewService(e.DB())}, auth.NewGate(repSeat{e}))
-	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool})
+	reg := agents.NewRegistry(approvalsAdapter{svc: approvals.NewService(e.DB())}, auth.NewGate(repSeat{e}),
+		agents.WithTierFloor(func(tool, recordType string) (mcp.RiskTier, bool) {
+			if tool == "archive_record" && recordType == string(recordTypePerson) {
+				return mcp.TierConfirmationRequired, true
+			}
+			return mcp.TierAutoExecute, false
+		}))
+	// No consumer-mail seam: this registry exists to exercise the ARCHIVE tier
+	// floor, and qualify_lead is not on its path. A nil seam is safe rather
+	// than latent — the tool refuses on the terms an unreadable list refuses
+	// on, so an accidental call here would fail loudly instead of deriving a
+	// company from the compiled-in baseline.
+	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil)
 	return reg
 }
 

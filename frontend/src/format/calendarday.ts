@@ -93,7 +93,7 @@ export function localDateTimeValue(utcIso: string): string {
 
 // The instant that is NOON of a picked calendar day in a named zone — for a
 // backdated entry whose screens render dates in that zone (the record pages'
-// RECORD_ZONE): filing it at the zone's own midday is what keeps it on the
+// own record zone): filing it at the zone's own midday is what keeps it on the
 // picked day both there and in the wall clock of any writer within twelve
 // hours of that zone.
 //

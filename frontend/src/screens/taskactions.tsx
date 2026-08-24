@@ -7,11 +7,12 @@ import {
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal, Skeleton } from "../design-system/atoms";
 import { formatDate, formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
-import { RECORD_ZONE } from "./company360";
 import { EntityRef } from "./entityref";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
@@ -180,6 +181,7 @@ export function TaskDetailModal({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const titleId = useId();
   const query = useQuery({
     queryKey: ["activity", activityId],
@@ -212,7 +214,14 @@ export function TaskDetailModal({
             {task.due_at ? (
               <span>
                 {t("co.next.due", {
-                  when: formatDate(task.due_at, locale, RECORD_ZONE),
+                  // The one viewer-clock reading on this record surface, and it
+                  // is not a preference: `dueInstant` mints a due date as the
+                  // end of the picked day in the BROWSER's zone, so the stored
+                  // instant already carries the picker's clock. Read in the
+                  // organization's zone it names a different calendar day than
+                  // the one the picker chose, for every reader outside that
+                  // zone — there is no organization reading of it to prefer.
+                  when: formatDate(task.due_at, locale, viewerZone()),
                 })}
               </span>
             ) : (
@@ -220,7 +229,7 @@ export function TaskDetailModal({
             )}
             <span>
               {t("tasks.logged")}{" "}
-              {formatDateTime(task.occurred_at, locale, RECORD_ZONE)}
+              {formatDateTime(task.occurred_at, locale, recordZone)}
             </span>
             {task.is_done && <Badge tone="success">{t("tasks.isDone")}</Badge>}
             {task.assignee_id && (

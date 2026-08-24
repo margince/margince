@@ -188,7 +188,7 @@ func TestEmbedRecordsConfiguredDimensionInProviderParams(t *testing.T) {
 		map[Tier]routeMeta{TierEmbedLane: {provider: "fake", model: "fake-embed"}},
 		false, nil,
 	)
-	stamped := r.binding().withConfigSnapshot("routing-hash", 768)
+	stamped := r.binding().withConfigSnapshot(RoutingConfig{sourceHash: "routing-hash", Embeddings: EmbeddingsConfig{Dimensions: 768}})
 	r.bound.Store(&stamped)
 
 	if _, err := r.Embed(wsCtx(), model.EmbedRequest{Inputs: []string{"embed me"}}); err != nil {

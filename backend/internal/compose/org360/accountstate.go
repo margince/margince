@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -51,6 +52,7 @@ func (a *assembly) readLastTouch() error {
 	if scope != "" {
 		where += " AND " + scope
 	}
+	where += a.opts.projectScope(arg)
 	// Two ordered LIMIT-1 arms in ONE round trip, rather than two FILTERed
 	// max() aggregates. An aggregate has to see every qualifying row before it
 	// can answer; each arm here stops at the first, so the cost is bounded by
@@ -216,7 +218,7 @@ func (a *assembly) readHealth() error {
 	health := crmcontracts.Organization360Health{}
 
 	if inbound := a.out.LastInboundAt; inbound != nil {
-		days := int(a.now.Sub(*inbound).Hours() / 24)
+		days := elapsed.Days(*inbound, a.now)
 		health.DaysSinceLastInbound = &days
 	}
 

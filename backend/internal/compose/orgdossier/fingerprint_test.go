@@ -11,18 +11,20 @@ package orgdossier
 import (
 	"testing"
 	"time"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestTheDossierFingerprintMovesWithItsInputsAndItsLane(t *testing.T) {
 	in := fourOfSeven()
-	base, err := Fingerprint(in, "routing-1")
+	base, err := Fingerprint(in, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
 
 	// The same input hashes the same way twice, or nothing could ever be a
 	// cache HIT and every read would rewrite.
-	again, err := Fingerprint(in, "routing-1")
+	again, err := Fingerprint(in, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -34,7 +36,7 @@ func TestTheDossierFingerprintMovesWithItsInputsAndItsLane(t *testing.T) {
 	// company that has since been re-read.
 	moved := fourOfSeven()
 	moved.ProfileFields[0].Value = "Something else entirely"
-	changed, err := Fingerprint(moved, "routing-1")
+	changed, err := Fingerprint(moved, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -43,7 +45,7 @@ func TestTheDossierFingerprintMovesWithItsInputsAndItsLane(t *testing.T) {
 			"would keep describing the old value indefinitely")
 	}
 
-	repointed, err := Fingerprint(in, "routing-2")
+	repointed, err := Fingerprint(in, "routing-2", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -58,11 +60,11 @@ func TestTheDossierFingerprintMovesWithItsInputsAndItsLane(t *testing.T) {
 // a workspace that has since described itself.
 func TestTheGrowthFitFingerprintMovesWhenOurOwnOfferingIsConfirmed(t *testing.T) {
 	in := fourOfSeven()
-	unconfirmed, err := growthFitFingerprint(in, "routing-1", Offering{Fingerprint: "offer-a"})
+	unconfirmed, err := growthFitFingerprint(in, "routing-1", Offering{Fingerprint: "offer-a"}, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	confirmed, err := growthFitFingerprint(in, "routing-1", Offering{Confirmed: true, Fingerprint: "offer-a"})
+	confirmed, err := growthFitFingerprint(in, "routing-1", Offering{Confirmed: true, Fingerprint: "offer-a"}, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -76,7 +78,7 @@ func TestTheGrowthFitFingerprintMovesWhenOurOwnOfferingIsConfirmed(t *testing.T)
 	// that edit, so a key carrying only the boolean would keep serving bands
 	// measured against an offering this workspace no longer has.
 	edited, err := growthFitFingerprint(in, "routing-1",
-		Offering{Confirmed: true, Fingerprint: "offer-b"})
+		Offering{Confirmed: true, Fingerprint: "offer-b"}, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -90,11 +92,11 @@ func TestTheGrowthFitFingerprintMovesWhenOurOwnOfferingIsConfirmed(t *testing.T)
 // other's freshness check.
 func TestTheTwoSurfacesDoNotShareAFingerprint(t *testing.T) {
 	in := fourOfSeven()
-	dossier, err := Fingerprint(in, "routing-1")
+	dossier, err := Fingerprint(in, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	fit, err := growthFitFingerprint(in, "routing-1", Offering{Confirmed: true, Fingerprint: "offer-a"})
+	fit, err := growthFitFingerprint(in, "routing-1", Offering{Confirmed: true, Fingerprint: "offer-a"}, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}

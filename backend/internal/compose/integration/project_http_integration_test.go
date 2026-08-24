@@ -124,15 +124,17 @@ func TestProjectLifecycleOverHTTP(t *testing.T) {
 
 	var created projectDTO
 	if status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
-		"name": "Warehouse rollout", "key": "WHR", "organization_id": org, "source": "manual",
+		"name": "Warehouse rollout", "organization_id": org, "source": "manual",
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("POST /projects → %d, want 201", status)
 	}
 	if created.Phase != "initiative" {
 		t.Fatalf("a new project opens in phase %q, want initiative", created.Phase)
 	}
-	if created.Key == nil || *created.Key != "WHR" {
-		t.Fatalf("key = %v, want WHR", created.Key)
+	// The key is minted by the server from the name, never sent by the caller:
+	// "Warehouse rollout" gives the stem WR and the first free number on it.
+	if created.Key == nil || *created.Key != "WR-1" {
+		t.Fatalf("key = %v, want the minted WR-1", created.Key)
 	}
 
 	var read projectDTO
@@ -196,32 +198,37 @@ func TestProjectLifecycleOverHTTP(t *testing.T) {
 	}
 }
 
-// The key is the human handle, so a second live project may not take one that
-// is already in use — and the refusal says which key, not a server fault.
-func TestProjectKeyCollisionIsRefusedOverHTTP(t *testing.T) {
+// A caller cannot name a key, so two projects whose names give the same stem
+// must still come back with different keys — the server resolves the collision
+// by taking the next number rather than refusing the second create.
+func TestTwoProjectsWithOneStemGetDifferentMintedKeys(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	org := anchorOrg(t, e, "Contoso")
 
-	body := apptest.AnyMap{"name": "First", "key": "DUP", "organization_id": org, "source": "manual"}
-	if status := e.Call(t, "POST", "/v1/projects", body, nil, nil); status != http.StatusCreated {
-		t.Fatalf("first POST /projects → %d, want 201", status)
+	keyOf := func(name string) string {
+		t.Helper()
+		var created struct {
+			Key *string `json:"key"`
+		}
+		body := apptest.AnyMap{"name": name, "organization_id": org, "source": "manual"}
+		if status := e.Call(t, "POST", "/v1/projects", body, nil, &created); status != http.StatusCreated {
+			t.Fatalf("POST /projects %q → %d, want 201", name, status)
+		}
+		if created.Key == nil {
+			t.Fatalf("the project created for %q carries no key; the server mints one for every project", name)
+		}
+		return *created.Key
 	}
 
-	var problem projectProblem
-	status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
-		"name": "Second", "key": "dup", "organization_id": org, "source": "manual",
-	}, nil, &problem)
-	if status != http.StatusConflict {
-		t.Fatalf("a taken key → %d, want 409", status)
+	first, second := keyOf("Warehouse rollout"), keyOf("Warehouse refresh")
+	if first == second {
+		t.Fatalf("both projects were minted %q; the number is what separates them", first)
 	}
-	if problem.Code != "project_key_taken" {
-		t.Fatalf("conflict code = %q, want project_key_taken", problem.Code)
-	}
-	// The holder is visible to this caller, so the refusal names it — that is
-	// the whole point of probing before the write rather than after.
-	if problem.Details.ExistingID == "" {
-		t.Fatal("the conflict named no existing project, so a caller who collided cannot open it")
+	for _, key := range []string{first, second} {
+		if !strings.HasPrefix(key, "WR-") {
+			t.Errorf("minted key %q does not carry the stem its name gives", key)
+		}
 	}
 }
 
@@ -500,23 +507,6 @@ func TestEachProjectRefusalAnswersItsOwnCode(t *testing.T) {
 		t.Fatalf("POST /projects → %d, want 201", status)
 	}
 
-	t.Run("a key that is not key-shaped", func(t *testing.T) {
-		// Letter-led on purpose: a bare number would match dates, amounts and
-		// order numbers in an inbound subject line.
-		var problem projectProblem
-		if status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
-			"name": "Numeric", "key": "2026", "organization_id": org, "source": "manual",
-		}, nil, &problem); status != http.StatusUnprocessableEntity {
-			t.Fatalf("a numeric key → %d, want 422", status)
-		}
-		if problem.fieldCode() != "invalid_key" {
-			t.Errorf("rule = %q, want invalid_key", problem.fieldCode())
-		}
-		if problem.fieldName() != "key" {
-			t.Errorf("refusal points at %q, want the key input", problem.fieldName())
-		}
-	})
-
 	t.Run("an end date before the start", func(t *testing.T) {
 		var problem projectProblem
 		if status := e.Call(t, "PATCH", "/v1/projects/"+project.ID, apptest.AnyMap{
@@ -644,4 +634,68 @@ func callDescription(e *apptest.AppEnv, t *testing.T, id string) string {
 		return ""
 	}
 	return *out.Description
+}
+
+// The bulk handover over HTTP: two of the admin's projects move to an invited
+// colleague and the answer counts them; a handover onto a deactivated member
+// is a 422 naming to_owner_id, and moves nothing.
+func TestProjectOwnershipTransferOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	org := anchorOrg(t, e, "Northwind")
+
+	var me struct {
+		User struct {
+			ID string `json:"id"`
+		} `json:"user"`
+	}
+	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("GET /me → %d, want 200", status)
+	}
+	var colleague struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/users", apptest.AnyMap{
+		"email": "colleague@northwind.test", "display_name": "Colleague", "role": "rep",
+	}, nil, &colleague); status != http.StatusCreated {
+		t.Fatalf("POST /users → %d, want 201", status)
+	}
+	for _, name := range []string{"Warehouse rollout", "ERP replacement"} {
+		if status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
+			"name": name, "organization_id": org, "source": "manual", "owner_id": me.User.ID,
+		}, nil, nil); status != http.StatusCreated {
+			t.Fatalf("POST /projects %s → %d, want 201", name, status)
+		}
+	}
+
+	var result struct {
+		Transferred int `json:"transferred"`
+	}
+	if status := e.Call(t, "POST", "/v1/projects/transfer-ownership", apptest.AnyMap{
+		"from_owner_id": me.User.ID, "to_owner_id": colleague.ID,
+	}, nil, &result); status != http.StatusOK {
+		t.Fatalf("POST /projects/transfer-ownership → %d, want 200", status)
+	}
+	if result.Transferred != 2 {
+		t.Errorf("transferred = %d, want 2", result.Transferred)
+	}
+	var listed projectListDTO
+	if status := e.Call(t, "GET", "/v1/projects?owner_id="+colleague.ID, nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("GET /projects?owner_id → %d, want 200", status)
+	}
+	if len(listed.Data) != 2 {
+		t.Errorf("the colleague now owns %d projects, want 2", len(listed.Data))
+	}
+
+	if status := e.Call(t, "POST", "/v1/users/"+colleague.ID+"/deactivate", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("POST /users/{id}/deactivate → %d, want 200", status)
+	}
+	var problem projectProblem
+	status := e.Call(t, "POST", "/v1/projects/transfer-ownership", apptest.AnyMap{
+		"from_owner_id": me.User.ID, "to_owner_id": colleague.ID,
+	}, nil, &problem)
+	if status != http.StatusUnprocessableEntity || problem.fieldName() != "to_owner_id" || problem.fieldCode() != "owner_not_active" {
+		t.Errorf("handover to a deactivated member → %d %q/%q, want 422 to_owner_id/owner_not_active",
+			status, problem.fieldName(), problem.fieldCode())
+	}
 }

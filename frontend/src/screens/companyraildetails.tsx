@@ -8,6 +8,7 @@ import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { throwProblem } from "./common";
 import {
   CompanyLifecycleControl,
   CompanyOwnerControl,
@@ -206,7 +207,12 @@ function DomainRow({
         readOnlyReason={readOnlyReason}
         onSave={(next) => {
           if (!next) {
-            throw new Error(t("field.domainRequired"));
+            // A refusal this screen decided, carrying copy it already
+            // translated. It rides as a problem body rather than a bare Error
+            // because that is the one carrier the reader's side reads: a plain
+            // throw is wording nobody wrote for a user, and is replaced by the
+            // shared failure line rather than shown.
+            throwProblem({ detail: t("field.domainRequired") });
           }
           const rest = domains.filter((domain) => domain !== primary);
           return patch({

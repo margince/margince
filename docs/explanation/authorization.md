@@ -76,12 +76,21 @@ and how a per-record share widens visibility on top, is its own page:
 An action's autonomy tier is **declared once in the contract** (`x-mcp-tool: { tier: … }`) and enforced
 **below the transport**, so REST and MCP behave identically:
 
-- **🟢 `auto_execute`** — reversible internal actions **auto-execute**, audited, with agent-stamped provenance.
-- **🟡 `confirmation_required`** — outbound / irreversible actions (send, merge, archive, close a deal, …) **stage a
-  confirm-first approval** that a human decides in the inbox; the agent then redeems the decision by
-  re-issuing the same call.
+- **🟢 `auto_execute`** — the default, and what a passport's holder could already do unaided. A passport
+  carries the granting human's own seat, grants and row scope, so requiring a second confirmation from
+  that same person made the agent surface weaker than the person behind it rather than safer. Audited,
+  with agent-stamped provenance. This is ADR-0055's argument — already accepted for *deciding* an
+  approval — applied to doing the thing itself.
+- **🟡 `confirmation_required`** — kept for the calls whose destination the credential-holder did **not**
+  choose. `enrich` is the standing case: the MODEL names the URL the server fetches, so persuading the
+  model reaches an address nobody with the credential picked, which is an egress question rather than an
+  authority one. An installation can also **floor** a verb back to confirm-first per record type by
+  declaring `tier: confirmation_required` on the operation, and every verb still carries the staging
+  machinery that makes the floor land in a human's inbox rather than dead-ending as a refusal.
 - **Human-only** routes (consent, DSR, passport issuance, pipeline configuration) **refuse an agent
-  principal outright** — each one would let a credential widen what a credential may do.
+  principal outright** — each one would let a credential widen what a credential may do. This is the
+  boundary that matters: the things a credential must not widen, not the things its holder can already
+  do.
 - A mutating operation carrying **no tier is default-denied** for agents (the agent-policy generator
   refuses to ship an un-tiered mutation in the first place — see
   [contract-first.md](contract-first.md)).

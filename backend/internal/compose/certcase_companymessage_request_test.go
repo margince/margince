@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
@@ -121,7 +122,11 @@ func TestCompanyMessageCaseReplaysTheConversationItWasGiven(t *testing.T) {
 	if last := req.Messages[len(req.Messages)-1]; last.Content != fixture.Message {
 		t.Errorf("the current message is not the last turn: %+v", last)
 	}
-	if !strings.Contains(req.System, "Respond in en.") {
+	// Through promptlang.Rule rather than a literal: this asserts that the
+	// fixture's locale reached the prompt, and a copy of the rule's wording
+	// here would have to be re-edited every time that wording changed — which
+	// is how it came to assert a sentence the product had stopped sending.
+	if !strings.Contains(req.System, promptlang.Rule("en")) {
 		t.Errorf("the traced request does not name the fixture's locale: %q", req.System)
 	}
 	marker, declared := promptfence.MarkerIn(req.System)

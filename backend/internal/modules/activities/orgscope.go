@@ -9,9 +9,12 @@ package activities
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -126,6 +129,65 @@ func OrgReachSet() string {
 		    WHERE o.org_id IS NOT NULL`, orgArms)
 }
 
+// ActivityWithinProject is the ONE spelling of "this activity belongs to the
+// body of work being asked about", for a query that aliases activity as a.
+//
+// The rule (D7): filed under THIS project, or filed under none. Not "not filed
+// elsewhere" — those two readings differ on an activity linked to this project
+// AND another, which this one keeps and that one drops.
+// `uq_activity_link_project` makes that row unreachable today, but the rule is
+// what the predicate owes its reader, so it is spelled as the rule rather than
+// inferred from an index a later migration could relax without ever touching
+// this file.
+//
+// KEEPING THE UNFILED ROWS IS THE POINT. Attribution is optional, so most
+// correspondence on an account carries no project at all: a plain equality test
+// would drop the general relationship history and describe an account as though
+// nobody had ever spoken to it.
+//
+// It must be a subquery over the activity's links rather than a test on a link
+// row already joined — `activity_link_shape` admits exactly ONE target per row,
+// so a person-link row carries a NULL project_id by construction and a
+// predicate on it would be true everywhere and narrow nothing. Both arms probe
+// `uq_activity_link_project`, which is keyed on activity_id.
+//
+// search.projectScope.clause is the same predicate for the context walk. The
+// two are deliberate copies, not an oversight: a module never imports a sibling
+// (ADR-0054), and this rule is about SUBJECT MATTER rather than authority, so
+// platform/auth — where the activity scope clauses both modules do share
+// already live — is the wrong home for it. Change one, change both.
+//
+// projectPos is the bind position carrying the project id.
+func ActivityWithinProject(projectPos int) string {
+	return sprintf(`(
+			EXISTS (
+			    SELECT 1 FROM activity_link scoped
+			    WHERE scoped.activity_id = a.id AND scoped.project_id = $%[1]d)
+			OR NOT EXISTS (
+			    SELECT 1 FROM activity_link filed
+			    WHERE filed.activity_id = a.id AND filed.project_id IS NOT NULL))`,
+		projectPos)
+}
+
+// RequireProjectScope is the authority check every read narrowed BY a project
+// owes before it filters on one. Filtering by a record is a read of it: the
+// scoped page answers "these activities are filed under this project", which
+// a caller with no project grant may not learn, and a caller outside its row
+// scope may not learn it exists. Object denial is a 403; an invisible,
+// archived or missing project is the same existence-hiding 404 a direct read
+// gives.
+//
+// The LIVE probe, not the plain one: EnsureVisible lets an unbounded caller
+// through without touching the table, so a scope naming a project nobody ever
+// created would answer a full page as though the filter had matched, and an
+// archived project is no longer a body of work a page can be narrowed to.
+func RequireProjectScope(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID) error {
+	if err := auth.Require(ctx, string(datasource.RecordProject), principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.EnsureVisibleLive(ctx, tx, string(datasource.RecordProject), projectID.UUID)
+}
+
 // openTaskAssigneeClause narrows the timeline to the OPEN tasks one person
 // holds — the queue read the contract declares ("Open tasks for an
 // assignee"), spelled as the predicate the partial index behind it is built
@@ -217,6 +279,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 			where = append(where, sprintf("al.%s = $%d", column, arg(*in.EntityID)))
 		}
 	}
+	if in.WithinProjectID != nil {
+		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
+	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
@@ -226,6 +291,12 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		// searches for a percent sign rather than matching everything.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
+	}
+	if in.OccurredAfter != nil {
+		where = append(where, sprintf("a.occurred_at >= $%d", arg(*in.OccurredAfter)))
+	}
+	if in.OccurredBefore != nil {
+		where = append(where, sprintf("a.occurred_at < $%d", arg(*in.OccurredBefore)))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
 		c, decodeErr := storekit.DecodeCursor(*in.Cursor)

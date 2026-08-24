@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCan } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Avatar,
@@ -30,9 +31,15 @@ import {
   type SectionState,
   SurfaceState,
 } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatDayMonth, relativeDays } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
-import { problemMessageOf, throwProblem, useSorMode } from "./common";
+import {
+  ProblemError,
+  problemMessageOf,
+  throwProblem,
+  useSorMode,
+} from "./common";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
 import { consentWord } from "./personstrip";
@@ -322,7 +329,7 @@ function EmailRow({ person }: Readonly<{ person: Person }>) {
         placeholder={t("field.unset")}
         canEdit={false}
         readOnlyReason={reason}
-        onSave={() => Promise.reject(new Error(reason))}
+        onSave={() => Promise.reject(new ProblemError({ detail: reason }))}
       />
     </FieldRow>
   );
@@ -339,7 +346,7 @@ function PhoneRow({ person }: Readonly<{ person: Person }>) {
         placeholder={t("field.unset")}
         canEdit={false}
         readOnlyReason={reason}
-        onSave={() => Promise.reject(new Error(reason))}
+        onSave={() => Promise.reject(new ProblemError({ detail: reason }))}
       />
     </FieldRow>
   );
@@ -557,9 +564,12 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
   // identity as a new search space and clears the picker's candidates —
   // so the set only gets a new identity when the set of ids it names
   // actually changes.
+  // "en" rather than the reader's locale, because this string is only ever
+  // compared against a previous rendering of itself: whose locale produced it
+  // must not be part of the answer.
   const connectedOrgKey = employments
     .map((employment) => employment.organization_id)
-    .sort()
+    .sort((a, b) => a.localeCompare(b, "en"))
     .join(",");
   const connectedOrgIds = useMemo(
     () => (connectedOrgKey === "" ? [] : connectedOrgKey.split(",")),
@@ -665,7 +675,9 @@ function EmploymentRow({
   onRemove: () => void;
 }>) {
   const t = useT();
-  const detail = employmentDetail(employment, t);
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const detail = employmentDetail(employment, t, locale, recordZone);
   const ending =
     actions.end.isPending &&
     actions.end.variables?.relationship_id === employment.relationship_id;
@@ -915,10 +927,12 @@ function AddEmploymentModal({
 }
 
 // The date range only — role is now its own InlineText control above, so
-// repeating it here would be the same fact twice. The same day-month
-// convention personmemory.tsx's own `dayMonth` renders every other date on
-// this page with, so the two rail sections never disagree about what
-// "12 Jan" means.
+// repeating it here would be the same fact twice. Through `formatDayMonth`,
+// which is the same function every other date on this page goes through — an
+// earlier version of this comment claimed the two sections could not disagree
+// about what "12 Jan" means while each held its own private copy of the
+// rendering, and both read the browser's guessed locale rather than the
+// reader's chosen one.
 // An employment that has ENDED says so even when nobody recorded when it
 // began: a period is a nicety, but a former employer that reads like a current
 // one is a rep writing to the wrong company. Only a connection with neither
@@ -926,11 +940,21 @@ function AddEmploymentModal({
 function employmentDetail(
   employment: Employment,
   t: ReturnType<typeof useT>,
+  locale: Locale,
+  recordZone: string,
 ): string {
+  // The record's zone. These arrive as instants (`format: date-time`), but they
+  // are WRITTEN from a date picker, so what is stored is midnight on the day a
+  // human chose and the time carries no information. Rendered in a reader's own
+  // zone west of UTC that midnight falls on the previous day, and two
+  // colleagues would quote different start dates for one employment. The
+  // record's zone is never behind UTC, so it renders the day that was picked.
   const start = employment.started_at
-    ? dayMonth(employment.started_at)
+    ? formatDayMonth(employment.started_at, locale, recordZone)
     : undefined;
-  const end = employment.ended_at ? dayMonth(employment.ended_at) : undefined;
+  const end = employment.ended_at
+    ? formatDayMonth(employment.ended_at, locale, recordZone)
+    : undefined;
   if (start && end) {
     return `${start} – ${end}`;
   }
@@ -941,13 +965,6 @@ function employmentDetail(
     return `${start} – ${t("rel.current")}`;
   }
   return "";
-}
-
-function dayMonth(at: string): string {
-  return new Date(at).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
 }
 
 // --- Relationship pulse ----------------------------------------------------
@@ -1355,19 +1372,11 @@ function daysSince(at: string | null | undefined): number | null {
   return Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
 }
 
+// sinceWords is the shared spelling, kept as a local name because two dozen
+// call sites in this file read better with it.
 function sinceWords(
   at: string | null | undefined,
   t: ReturnType<typeof useT>,
 ): string {
-  const days = daysSince(at);
-  if (days == null) {
-    return t("person.strip.never");
-  }
-  if (days <= 0) {
-    return t("person.strip.today");
-  }
-  if (days === 1) {
-    return t("person.strip.yesterday");
-  }
-  return t("person.strip.days", { count: days });
+  return relativeDays(at, t);
 }

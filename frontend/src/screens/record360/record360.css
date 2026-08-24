@@ -1,0 +1,86 @@
+/* The record-360 kit's own styles. Tokens only, like every other sheet here. */
+
+/* The verdict head: one loud element, and the line it rests on.
+   It is the only thing on the card allowed this much weight — a page where
+   three things shout has no emphasis at all. */
+.r360-verdict {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The call, as a WORD and not a colour alone: a reader who cannot tell the
+   tints apart still reads "blocked". Same reasoning the deal card's own
+   standing pill carries, and deliberately the same shape. */
+.r360-standing {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.r360-standing-calm {
+  background: var(--successBg);
+  color: var(--success);
+}
+
+/* A standing this build does not recognise. Neutral on purpose: it is not the
+   all-clear, and painting it green told a reader a word nobody could read was
+   good news. */
+.r360-standing-unknown {
+  background: var(--bgHover);
+  color: var(--textSecondary);
+}
+
+.r360-standing-accent {
+  background: var(--accentLight);
+  color: var(--accent);
+}
+
+.r360-standing-warn {
+  background: var(--warnBg);
+  color: var(--warn);
+}
+
+.r360-standing-danger {
+  background: var(--dangerBg);
+  color: var(--danger);
+}
+
+.r360-because {
+  color: var(--textMuted);
+  min-width: 0;
+}
+
+/* The findings, as a strip to scan rather than a list to read. Wrapping
+   rather than scrolling: a chip that runs off the edge is a finding nobody
+   sees, and these are the findings the card exists to surface. */
+.r360-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.r360-signals > li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  /* The figure belongs to the label beside it: "Going cold" over "95 days" on
+     two lines reads as two findings, and the number loses the rule it counts
+     for. The chip wraps as a unit or not at all. */
+  white-space: nowrap;
+}
+
+/* The number that tripped the rule, beside the rule's own words. Tabular so a
+   column of them lines up when several deals are read together. */
+.r360-figure {
+  color: var(--textMuted);
+  font-variant-numeric: tabular-nums;
+}

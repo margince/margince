@@ -20,12 +20,29 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // The product name of the buyer surface, and a title that is only the
+  // deal's own name in a placeholder.
+  "room.card.title",
+  "deal360.title",
+  // Vietnamese uses "Email" for the noun; German has its own spelling and
+  // carries it. Only the vi value matches English, and it is the right word.
+  "dealmail.title",
+  // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
+  // keeps "Email". German translates it, and does.
+  "deal.forecast.pipeline",
+  "persondealrooms.title",
+  "room.create.defaultTitle",
+  "buyer.poweredBy",
+  "buyer.poweredByMargince",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "today.exchange.subjectWhen",
   // Two names and a separator: every word is a placeholder and the only
   // literal is punctuation.
   "today.route.headline",
+  // Two phase names and an arrow: the same shape.
+  "project.history.moved",
+  "home.digestPhaseChange",
   // An em dash standing in for a figure nobody can compute yet. A glyph, not a
   // word — the sentence explaining it is the detail line beside it.
   "co.strip.financeUnknown",
@@ -99,6 +116,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "people.email",
   "create.email",
   "restricted.kind.email",
+  "timeline.filters.kind.email",
   "auth.email",
   "person.identity.email",
   "person.action.email",

@@ -39,7 +39,7 @@ import (
 // its arguments, and the REST door has no word at all — its two routes ARE the
 // two depths, so its decoders set the value structurally (commandrecord.go).
 // A string would let the second of those be spelled wrong in a way every
-// schema accepts (gradionhq/margince-poc-v1#928 task 7).
+// schema accepts (margince/margince#928 task 7).
 //
 // EXPORTED because the implementation of CompanyEnricher lives in the
 // composition layer and routes on it — a second spelling there would silently
@@ -80,7 +80,14 @@ type enrichCompany struct {
 func (t enrichCompany) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "enrich", Title: "Enrich an organization from its website", Version: toolVersionV1,
-		Description:   enrichCopy.render(),
+		Description: enrichCopy.render(),
+		// Stays confirm-first, against the general rule that a passport does
+		// what its holder could do unaided. The argument does not reach this
+		// verb: a person picking a URL in the browser chose it, while here the
+		// MODEL names the address the server fetches — a destination nobody
+		// chose, reachable by persuading the model rather than by holding the
+		// credential. TestUrlTakingOperationsAreNeverAutoExecuteForAgents is
+		// the gate that says so, and it is about egress, not about authority.
 		RequiredScope: principal.ScopeEnrich, Tier: mcp.TierConfirmationRequired, Egress: true,
 		OpenAPIOp: "scrapeCompany/deepReadCompany",
 		InputSchema: schema(`{"type":"object","required":["organization_id"],"properties":{
@@ -89,7 +96,7 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 				"description":"Absolute http(s) URL to read instead of the organization's own domain"},
 			"depth":{"type":"string","enum":["page","site"],"default":"page",
 				"description":"page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after approval"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		// The other declared exception. This tool answers one of two different
 		// things depending on the depth it was called with — a page read comes

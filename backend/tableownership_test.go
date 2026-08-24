@@ -131,13 +131,27 @@ var tableOwners = map[string]string{
 	"pipeline":           "internal/modules/deals",
 	"stage":              "internal/modules/deals",
 	"deal_stage_history": "internal/modules/deals",
+	// The Deal Room is its own capability rather than a corner of deals: it
+	// owns an external audience, its own credentials and an immutable
+	// publication history, none of which the deal spine has a place for.
+	"deal_room":             "internal/modules/dealrooms",
+	"deal_room_release":     "internal/modules/dealrooms",
+	"deal_room_participant": "internal/modules/dealrooms",
+	"deal_room_invitation":  "internal/modules/dealrooms",
+	"deal_room_session":     "internal/modules/dealrooms",
+	"deal_room_document":    "internal/modules/dealrooms",
+	"deal_room_thread":      "internal/modules/dealrooms",
+	"deal_room_comment":     "internal/modules/dealrooms",
+	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
 	"deal_forecast_history": "internal/modules/deals",
-	// The project lives in the deals bounded context (ADR-0073): it is the
-	// body of work the deals hang off, not a context of its own.
-	"project":               "internal/modules/deals",
-	"project_phase_history": "internal/modules/deals",
+	// The project is its own bounded context, superseding ADR-0073 — see
+	// modules/projects/doc.go. This entry is what makes that a rule rather than
+	// a layout: a statement writing either table from any other package fails
+	// TestEveryPackageOnlyWritesTablesItOwns.
+	"project":               "internal/modules/projects",
+	"project_phase_history": "internal/modules/projects",
 	"fx_rate":               "internal/modules/deals",
 	"product":               "internal/modules/deals",
 	"offer":                 "internal/modules/deals",
@@ -171,6 +185,7 @@ var tableOwners = map[string]string{
 	"linkedin_account":    "internal/modules/people",
 	"linkedin_connection": "internal/modules/people",
 	"attachment":          "internal/modules/activities",
+	"deal_document_hide":  "internal/modules/activities",
 	"booking_page":        "internal/modules/activities",
 	// approvals (signing_key backs the approval-token JWS)
 	"approval":    "internal/modules/approvals",
@@ -203,6 +218,7 @@ var tableOwners = map[string]string{
 	"workspace_email_domain":       "internal/modules/capture",
 	"capture_exclusion":            "internal/modules/capture",
 	"capture_digest":               "internal/modules/capture",
+	"project_link_candidate":       "internal/modules/capture",
 	"capture_auto_enrich_state":    "internal/modules/capture",
 	"capture_pending_counterparty": "internal/modules/capture",
 	"capture_auto_enrich_budget":   "internal/modules/capture",
@@ -253,6 +269,10 @@ var tableOwners = map[string]string{
 	// agents (incl. the runner subpackage)
 	"agent_run":  "internal/modules/agents",
 	"runner_job": "internal/modules/agents",
+	// The AI-activity projection. Derived read-model state written by exactly
+	// one consumer, so it carries no audit or outbox row of its own — the
+	// events that FEED it carry the write shape at their own writers.
+	"ai_task_run": "internal/modules/aiactivity",
 	// automation (the deterministic trigger-and-action catalog)
 	"workflow_run": "internal/modules/automation",
 	"automation":   "internal/modules/automation",
@@ -349,6 +369,11 @@ var tableOwners = map[string]string{
 	// The relationship brief's per-user cache — the person-side sibling of
 	// org_brief, and the same ruling for the same reasons.
 	"person_brief": "internal/compose/personbrief",
+	// The deal status card's per-user cache — the deal-side sibling of the
+	// two above, and the same ruling: derived content, regenerable from the
+	// records at any time, readable by nobody but the user it was written
+	// for.
+	"deal_status_card": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other
@@ -368,12 +393,6 @@ var tableOwners = map[string]string{
 // keyed "module-dir:table". Every entry carries its rationale inline so the
 // gate is self-contained on a clean checkout.
 var crossStoreWrites = gatekit.Waive(map[string]string{
-	// One visit baseline per user per record, and a person is a record. A
-	// second table keyed the same way would be the same fact under a second
-	// name, and the two would answer "when did you last look at this?"
-	// differently the first time one write path changed.
-	"internal/compose/person360:user_record_view": "the person view's visit acknowledgement rides org360's table because since-last-visit is one fact per (user, record) — migration 0184 widened its entity_type CHECK to admit a person rather than adding a parallel table that would drift",
-
 	// people's merge/promotion relink rows across aggregates inside their
 	// single transaction — the primary aggregate owns the single-tx
 	// cross-aggregate write, because a merge that could half-commit its
@@ -411,6 +430,13 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	"internal/modules/deals:list_member":  "archiving a deal removes its list memberships in the archive transaction",
 	"internal/modules/deals:taggable":     "archiving a deal removes its tag rows in the archive transaction",
 	"internal/modules/deals:relationship": "archiving a deal archives its stakeholder relationships in the archive transaction — a live relationship to an archived deal would leak it into row-scope walks",
+	// The project's archive carries the same three, for the same reasons: the
+	// edges are attributes of the grouping being archived, and each must go in
+	// the SAME transaction or a reader sees a live edge to a record that no
+	// longer exists.
+	"internal/modules/projects:list_member":  "archiving a project removes its list memberships in the archive transaction",
+	"internal/modules/projects:taggable":     "archiving a project removes its tag rows in the archive transaction",
+	"internal/modules/projects:relationship": "archiving a project archives its stakeholder relationships in the archive transaction — a live relationship to an archived project would leak it into row-scope walks",
 
 	// privacy is the module whose JOB is crossing stores: a data-subject
 	// obligation (erasure Art. 17, retention ADR-0011) must reach every
@@ -419,6 +445,9 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	// through the owning module's API would trade the atomicity that IS
 	// the guarantee for boundary hygiene.
 	"internal/modules/privacy:person":                       "erasure/retention anonymize the person row in place in the single erasure transaction (Art. 17)",
+	"internal/modules/privacy:deal_room_participant":        "erasure anonymizes the subject's Deal Room seat in place — the one named outside person stored without a person row — in the single erasure transaction",
+	"internal/modules/privacy:deal_room_session":            "erasure deletes the erased subject's live room credentials in the same transaction: access they did not consent to keep must not outlive the request",
+	"internal/modules/privacy:deal_room_engagement":         "erasure deletes the erased subject's room activity trail (when they signed in, what they took) in the same transaction",
 	"internal/modules/privacy:person_email":                 "erasure deletes the subject's email channel rows in the single erasure transaction",
 	"internal/modules/privacy:preference_token":             "erasure deletes the subject's preference-center token in the single erasure transaction — it is a live capability over their consent record on a session-less edge, and anonymize-in-place means 0048's ON DELETE CASCADE never fires, so an erased subject would keep accruing consent rows through the capability the erasure certifies destroyed",
 	"internal/modules/privacy:activity_participant":         "erasure nulls the subject's person and address arms on the interaction participants in the single erasure transaction — the address arm exists precisely for a party who never became a record, so it survives the person_email purge and would keep the erased address readable and re-matchable; the ROW is kept where other participants remain, because the other people in that conversation are not the subject",

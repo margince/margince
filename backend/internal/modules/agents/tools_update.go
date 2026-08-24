@@ -71,18 +71,6 @@ type stagedApprovalNote struct {
 	Message    string          `json:"message"`
 }
 
-// RecordTypeOf lets the contract's per-record-type tier floor see which record
-// this call patches (tierfloor.go).
-func (updateRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
-
-// ServesRecordType reports the record types this verb can actually patch — the
-// contract's own update bodies. The floor reads it so a type this verb cannot
-// patch is never tightened into an approval that could only ever fail.
-func (updateRecord) ServesRecordType(recordType string) bool {
-	_, served := updateShapes[datasource.EntityType(recordType)]
-	return served
-}
-
 // StageInfo puts a patch the contract tightened to confirm-first in the inbox
 // instead of dead-ending it (#982).
 //

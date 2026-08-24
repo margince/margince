@@ -26,12 +26,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/geocode"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -94,16 +94,20 @@ type geocodeEnqueuer interface {
 func geocodeInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
 		Queue: geocodeQueue,
-		// The states matter as much as ByArgs. River's default duplicate set
-		// includes running and completed, which is wrong here: a company edited
-		// while its lookup is in flight would have its successor job silently
-		// dropped, and the row would sit stale forever with nothing to resolve
-		// it. Only a job still WAITING is a duplicate — one already running
-		// resolved a different address, and one that completed is history.
-		UniqueOpts: river.UniqueOpts{
-			ByArgs:  true,
-			ByState: []rivertype.JobState{rivertype.JobStateAvailable, rivertype.JobStateScheduled},
-		},
+		// ByArgs across every ACTIVE state. River requires the unique set to
+		// include pending and running and refuses a narrower one outright —
+		// "UniqueOpts.ByState must contain all required states" — which the
+		// first cut of this never learned, because nothing had ever queued a
+		// lookup to find out.
+		//
+		// The narrower set was trying to say something real: a company edited
+		// while its lookup is in flight should queue a successor rather than
+		// have it dropped, because the running job resolved the OLD address.
+		// The row is not lost. It is marked stale by the trigger and carries no
+		// coordinates, so the backfill sweep — which takes stale rows — picks
+		// it up on its next pass. Correctness now rests on the sweep rather
+		// than on a state set River will not accept.
+		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 		// The provider is asked at most this many times for one address. River's
 		// own default would keep retrying past the point the attempt ledger
 		// stops caring, spending the installation's shared rate on a lookup
@@ -164,6 +168,15 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	// The lookup reads and writes under an actor of its own, and it needs one:
+	// AddressForGeocode takes organization:read and RecordGeocode takes
+	// organization:update, both of which refuse a context with no principal.
+	//
+	// Nobody noticed until the backfill queued the first job. Every enqueue
+	// before it rode an address WRITE, and no address had been written on an
+	// installation whose companies were seeded before the geocoder was
+	// configured — so the worker had never actually run.
+	wsCtx = geocodeJobActor(wsCtx)
 	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
@@ -201,6 +214,31 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 
 	point, found, err := w.geocoder.Resolve(wsCtx, address.Query)
 	if err != nil {
+		// A job STOPPED BEFORE IT ASKED never learned anything about this
+		// address, so it must not spend one of its three attempts.
+		//
+		// The pacer holds a lookup for up to the policy interval before the
+		// request is even built, and it gives up when the context does — so
+		// every lookup waiting its turn when the worker shuts down came back
+		// here cancelled. Recording that as `failed` burned an attempt, set a
+		// day-long backoff, and left a company unlocated for a reason that had
+		// nothing to do with its address. Six companies sat that way, every one
+		// a valid German address that resolves in under a second.
+		//
+		// The test is the CONTEXT's own state, not the error's. A slow provider
+		// surfaces as context.DeadlineExceeded too — the http.Client's timeout
+		// says exactly that — and that IS a failed lookup worth counting, since
+		// a provider too slow to answer is one this address cannot be resolved
+		// against right now. Asking the context tells the two apart: it is done
+		// when the worker was stopped, and live when only the HTTP call gave up.
+		//
+		// Returned unrecorded: River re-queues the job, and the next worker
+		// asks properly.
+		if wsCtx.Err() != nil {
+			return jobs.FaultContext(wsCtx,
+				fmt.Errorf("geocoding %q was cut short before the provider was asked: %w",
+					address.Query, err))
+		}
 		// The lookup did not complete. Recorded as failed so the ledger counts
 		// the attempt, and returned so River retries — a rate limit or a network
 		// fault is worth asking again, unlike an address that does not exist.
@@ -217,8 +255,18 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		if errors.As(err, &refused) && refused.RetryAfter > 0 {
 			recErr = store.RecordGeocodeBackoff(wsCtx, orgID, address.InputHash, refused.RetryAfter)
 		}
+		// Wrapped so the ROW says what kind of thing went wrong. Unclassified,
+		// it published "the diagnosis is in the process log", which is true and
+		// useless once the process has restarted — exactly when somebody looks.
+		//
+		// The ADDRESS stays out of the published sentence and rides the log
+		// instead: that column is fleet-visible and a provider's prose
+		// routinely quotes what it refused, which is why classified failures
+		// publish a fixed sentence rather than a formatted cause. FaultContext
+		// logs the cause for us, so the wrap below is what an operator reads.
 		return jobs.FaultContext(wsCtx, errors.Join(
-			fmt.Errorf("geocoding %q: %w", address.Query, err), recErr))
+			fmt.Errorf("geocoding %q: %w: %w", address.Query, apperrors.ErrProviderUnusable, err),
+			recErr))
 	}
 	if !found {
 		// The geocoder answered, and the answer is that this address is not a
@@ -243,6 +291,16 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		cacheErr))
 }
 
+// geocodeJobActor binds the principal a geocode lookup runs as: the
+// installation asking where its own company is, named so an audit row does not
+// have to invent a person who was not involved.
+func geocodeJobActor(ctx context.Context) context.Context {
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:geocode",
+	})
+	return principal.WithCorrelationID(ctx, ids.NewV7())
+}
+
 // geocodeProvider names what answered, recorded on the row so a later change
 // of provider is visible in the data rather than only in the config.
 const geocodeProvider = "nominatim"
@@ -260,6 +318,13 @@ const geocodeProvider = "nominatim"
 // enforceable at one worker.
 func WithGeocoding(inserter *jobs.Runner) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		s.peopleStore = s.peopleStore.WithGeocodeEnqueue(GeocodeEnqueueFor(inserter))
+		enqueue := GeocodeEnqueueFor(inserter)
+		// BOTH, because they are two stores. The services read s.peopleStore
+		// and the HTTP transport carries its own, built by newPeopleHandlers —
+		// so wiring one left every address a rep writes marked stale with
+		// nothing coming to resolve it.
+		s.peopleStore = s.peopleStore.WithGeocodeEnqueue(enqueue)
+		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
+		s.peopleHandlers = s.peopleHandlers.WithGeocodeEnqueue(enqueue)
 	}
 }

@@ -17,6 +17,7 @@ const (
 	pgCheckViolation      = "23514"
 	pgExclusionViolation  = "23P01"
 	pgQueryCanceled       = "57014"
+	pgLockNotAvailable    = "55P03"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -27,6 +28,15 @@ func pgViolation(err error, code string) (constraint string, ok bool) {
 		return pgErr.ConstraintName, true
 	}
 	return "", false
+}
+
+// IsLockTimeout detects a 55P03: a statement gave up waiting for a lock under
+// the caller's own lock_timeout. It is not a failure of the write — the row is
+// simply held by a transaction that has not committed — so a caller that set
+// the bound is expected to answer it rather than surface it.
+func IsLockTimeout(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgLockNotAvailable
 }
 
 // IsUniqueViolation detects the 23505 dedupe path (409 + existing id).

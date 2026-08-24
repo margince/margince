@@ -15,9 +15,21 @@
 # (OPS-CFG-1): defaults -> this file -> the overlay -> env vars -> flags.
 version: 1
 
+# These four are what the installation IS, and they are read ONCE — the first
+# time this build boots against an empty database. After that the settings rows
+# are authoritative and this block is never consulted again, so a real
+# deployment replaces the demo values below BEFORE first boot.
+#
+# Getting one wrong is not fatal: Settings → General edits all four afterwards.
+# But base_currency stops being changeable once anything has converted against
+# it (a closed deal, a sent offer, a mirrored invoice, a loaded rate sheet), so
+# it is the one worth checking twice.
 organization:
   name: Demo Workspace
   base_currency: EUR
+  # The language AI writes in for the whole team — en, de or vi. Not a person's
+  # display language, which each user picks for themselves.
+  base_language: en
   timezone: Europe/Berlin
 
 bootstrap_admin:
@@ -73,6 +85,51 @@ bootstrap_admin:
 #   retention:
 #     default_policy: retain_only
 
+# The tier→model binding a FRESH installation is bootstrapped with (optional).
+#
+# Declared here so a deployment names its models in the file it already reviews,
+# rather than having to call an API after first boot — which is what keeps an
+# infrastructure-as-code install declarative. Consumed exactly once, like every
+# other seed: the database is authoritative afterwards, and an admin re-points a
+# lane through PUT /v1/ai/routing without a restart.
+#
+# Omitted, the installation binds nothing and its AI lanes are simply absent.
+# That is a state, not a fault — nothing guesses which vendor your text goes to.
+#
+# Held to the same bar the routing file always was, at BOOTSTRAP, which is the
+# one moment somebody is watching: an unknown tier, a cloud provider under the
+# sovereign profile, or an embeddings width outside [1,2000] fails the boot
+# rather than surfacing at the first model call.
+#
+# Credentials are NOT here and never will be. A binding names providers; each
+# one's BYOK key lives in the key vault, put there by an admin under
+# Settings -> AI -> Model provider keys, so this section is safe to commit.
+#
+# The conventional environment variables (GEMINI_API_KEY, ANTHROPIC_API_KEY, …)
+# are still read, but only to SEED: a boot that finds one MAY seal it into the
+# vault and record where, after which the variable can be unset. It needs a
+# key-vault root key and a stored model binding to do that — the sealing runs on
+# the path that resolves a binding — so an unbound installation keeps the
+# environment as its only copy. Unset the variable once the boot log says the key
+# was sealed, not merely because it was set.
+#
+# A key in the environment is readable by every process in the container and
+# survives in shell history and process listings; one in the vault is encrypted
+# at rest and rotatable without a restart, which is why the vault is the home.
+#
+# seeds:
+#   ai_routing:
+#     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+#     tiers:
+#       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
+#       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
+#       premium:     { provider: gemini, model: gemini-3.5-flash }
+#       frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
+#     embeddings:
+#       provider: gemini
+#       model: gemini-embedding-001
+#       dimensions: 1536
+
 # Entitlement (optional). The token is verified offline against the validation
 # module bundled in the binary — no callout, so an air-gapped installation proves
 # its entitlement like any other. A file reference, never an inline value: the
@@ -90,8 +147,16 @@ bootstrap_admin:
 #
 # What the license grants is also enforced: once every licensed full seat is in
 # use, inviting a member is refused. Nobody already working loses anything.
+#
+# Sealed on the first boot that resolves it: the token goes into the key vault
+# and the installation records where. The boot log says so, and from then on
+# this whole block can be DELETED and the vault answers instead — deleting only
+# the file it points at, and leaving the block, fails the boot instead.
+# To rotate, put the new token back here — the declaration still wins, and the
+# next boot re-seals it. docs/reference/configuration.md, "the vault also holds
+# the two deployment credentials".
 # license:
-#   token_file: config/margince-license
+#   token: ${file:config/margince-license}
 
 # AI runtime posture (optional). Uncomment to turn on Layer-3 AI payload capture
 # (ai_call_payload) — OFF by default because it stores special-category-adjacent

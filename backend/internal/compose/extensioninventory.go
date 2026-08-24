@@ -68,11 +68,17 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		// api and worker boot concurrently and both observe: without a
 		// lock the two check-and-insert transactions each read the same
-		// previous inventory and one change lands twice. bootLedgerLock
-		// carries why the statement coalesces the GUC — a NULL argument
-		// takes no lock at all and says nothing.
+		// previous inventory and one change lands twice.
 		if _, err := tx.Exec(ctx, bootLedgerLock, extensionLedgerFact); err != nil {
-			return err
+			return fmt.Errorf("compose: serializing the inventory observation: %w", err)
+		}
+
+		// Plus the legacy workspace-qualified key, for the rolling-deploy
+		// window storekit.LockWriteIdentity explains. bootLedgerLockLegacy
+		// carries why that statement coalesces the GUC — a NULL argument
+		// takes no lock at all and says nothing.
+		if _, err := tx.Exec(ctx, bootLedgerLockLegacy, extensionLedgerFact); err != nil {
+			return fmt.Errorf("compose: serializing the inventory observation (legacy key): %w", err)
 		}
 		last, err := lastObservedExtensions(ctx, tx)
 		if err != nil {
@@ -82,7 +88,8 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 			return nil
 		}
 		_, err = storekit.LogSystem(ctx, tx, extensionCompositionObserved, map[string]any{
-			"extensions": current,
+			"extensions":   current,
+			"installation": installationMarker(ctx),
 		})
 		if err != nil {
 			return err
@@ -110,16 +117,11 @@ func lastObservedExtensions(ctx context.Context, tx pgx.Tx) ([]observedExtension
 	// within one process, and api + worker mint theirs independently —
 	// same-millisecond rows could sort against observation order on id
 	// alone. id stays as the deterministic tiebreak.
-	// Scoped to this installation's workspace, in the spelling storekit uses.
-	// Row-level security used to supply this predicate; 0217 retired it, and an
-	// archived workspace's rows outlive the resolver that skips it — so a newer
-	// observation of its own would otherwise read as this installation's.
 	err := tx.QueryRow(ctx,
 		`SELECT detail->'extensions' FROM system_log
-		  WHERE action = $1
-		    AND workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+		  WHERE action = $1 AND detail->>'installation' = $2
 		  ORDER BY occurred_at DESC, id DESC LIMIT 1`,
-		extensionCompositionObserved).Scan(&detail)
+		extensionCompositionObserved, installationMarker(ctx)).Scan(&detail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

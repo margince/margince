@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
 import { Avatar, Badge, Disclosure } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
@@ -16,7 +17,7 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "./common";
-import { RECORD_ZONE, signalKindLabel, worstOf } from "./company360";
+import { worstOf } from "./company360";
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RANK,
@@ -29,6 +30,7 @@ import { SectionSummary, sectionAnswered } from "./companyrailshared";
 import { TagsSection } from "./companyrailtags";
 import { byReach } from "./coverage";
 import { roleOf } from "./provider-status";
+import { signalKindLabel } from "./record360";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,
@@ -400,6 +402,7 @@ function signalDotTone(severity: string): "warn" | "danger" | undefined {
 function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const query = useQuery({
     queryKey: ["signals", "organization", orgId],
     queryFn: async () => {
@@ -450,9 +453,21 @@ function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
                 {signalKindLabel(signal.kind, t)}
               </span>
               <span className="co-signal-summary">{signal.summary}</span>
+              {/* A signal ABOUT one of the account's projects sends the
+                  reader to that project: the summary names it, the link
+                  opens it. An account- or person-subject signal already
+                  sits on the page it is about. */}
+              {signal.entity_type === "project" && signal.entity_id && (
+                <a
+                  className="co-rowlink co-signal-link"
+                  href={routeHash({ screen: "projects", id: signal.entity_id })}
+                >
+                  {t("co.signals.openProject")}
+                </a>
+              )}
             </span>
             <span className="co-row-meta">
-              {formatDate(signal.detected_at, locale, RECORD_ZONE)}
+              {formatDate(signal.detected_at, locale, recordZone)}
             </span>
           </PanelRow>
         ))

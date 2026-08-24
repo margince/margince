@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -75,7 +76,10 @@ type CommitmentSweep struct {
 // CommitmentQuery narrows one sweep to what the caller asked for.
 type CommitmentQuery struct {
 	AssigneeID *ids.UUID
-	Limit      int
+	// WithinProjectID keeps the promises filed under this project or under
+	// none; ones filed under another project drop out.
+	WithinProjectID *ids.UUID
+	Limit           int
 }
 
 // CommitmentLister serves the row-scoped open-promise set. Compose
@@ -128,6 +132,7 @@ func (t reviewCommitments) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listActivities",
 		InputSchema: schema(`{"type":"object","properties":{
 			"assignee_id":{"type":"string","format":"uuid","description":"Narrow to one owner's promises; omit for everyone's"},
+			"project_id":{"type":"string","format":"uuid","description":"Keep only promises filed under this project or under none"},
 			"limit":{"type":"integer","minimum":1,"maximum":50,"description":"Cap the set; omit for 50, the server-side ceiling"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ReviewCommitmentsResult](),
@@ -141,6 +146,7 @@ func (t reviewCommitments) Spec() mcp.ToolSpec {
 func (t reviewCommitments) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		AssigneeID *ids.UUID `json:"assignee_id"`
+		ProjectID  *ids.UUID `json:"project_id"`
 		Limit      int       `json:"limit"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
@@ -149,7 +155,7 @@ func (t reviewCommitments) Handle(ctx context.Context, in json.RawMessage) (json
 	if err := requireCommitmentLimit(args.Limit); err != nil {
 		return nil, err
 	}
-	sweep, err := t.list(ctx, CommitmentQuery{AssigneeID: args.AssigneeID, Limit: args.Limit})
+	sweep, err := t.list(ctx, CommitmentQuery{AssigneeID: args.AssigneeID, WithinProjectID: args.ProjectID, Limit: args.Limit})
 	if err != nil {
 		return nil, err
 	}
@@ -204,31 +210,23 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 	return item
 }
 
-// commitmentState judges one promise against the instant the set was swept
-// at. A due date exactly equal to that instant reads as overdue: the moment
-// it was promised for has arrived and it is not done.
+// commitmentState judges one promise against the instant the set was swept at.
+//
+// The boundary is deadline.Passed's, so this surface and every list, card and
+// figure the same person can open agree about the same promise.
 func commitmentState(dueAt *time.Time, asOf time.Time) string {
 	switch {
 	case dueAt == nil:
 		return commitmentUndated
-	case dueAt.After(asOf):
-		return commitmentUpcoming
-	default:
+	case deadline.Passed(dueAt, asOf):
 		return commitmentOverdue
+	default:
+		return commitmentUpcoming
 	}
 }
 
-// daysOverdue answers how many WHOLE days a promise has been past its date,
-// and whether it is past it at all.
-//
-// Whole days elapsed, not calendar days crossed — the second needs a timezone
-// this build does not store, and would report a promise made at 23:00 and
-// judged at 01:00 as a day late. Zero is a real answer here: a promise hours
-// past its date is overdue by no whole days, which is not the same as not
-// being overdue.
+// daysOverdue answers how many WHOLE days a promise has been past its date, and
+// whether it is past it at all.
 func daysOverdue(dueAt *time.Time, asOf time.Time) (int, bool) {
-	if dueAt == nil || dueAt.After(asOf) {
-		return 0, false
-	}
-	return int(asOf.Sub(*dueAt) / (24 * time.Hour)), true
+	return deadline.DaysPast(dueAt, asOf)
 }

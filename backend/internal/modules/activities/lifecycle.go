@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -141,7 +140,37 @@ func ensureAssigneeExists(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID
 	return nil
 }
 
-func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID) (crmcontracts.Activity, error) {
+// RefuseArchiveActivity answers every authority refusal ArchiveActivity would
+// answer with, and writes nothing.
+//
+// It exists so a confirm-first archive is refused BEFORE a human is asked
+// rather than after they have answered: the two probes below are the whole of
+// what the archive requires of a caller, and asking them here is what keeps a
+// staged approval from being spent on a call the store was always going to
+// refuse. Deliberately NO version probe — a version that is right at staging
+// can be wrong by the time the human answers, so the pin is the write's
+// business and never a reason to refuse a staging.
+func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) error {
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return auth.EnsureActivityWritable(ctx, tx, id.UUID)
+	})
+}
+
+// ArchiveActivity retires one activity, conditioned on ifVersion wherever the
+// caller's authority named a version.
+//
+// The write rides storekit's guarded patch rather than a bare UPDATE, for the
+// reason ApplyGuarded's own doc gives — *an unguarded update is not
+// expressible* — which the archive verb was quietly the exception to. With a
+// pin it is the optimistic CAS, so an archive a human released against version
+// 4 lands on version 4 or answers skew; without one it takes the row lock, so
+// it is never LESS guarded than the bare statement it replaces. The gone and
+// already-archived cases keep answering ErrNotFound, which is the same
+// existence-hiding answer as before.
+func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -150,12 +179,10 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID) (crmcont
 		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `UPDATE activity SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id)
-		if err != nil {
+		p := storekit.NewPatch()
+		p.Set("archived_at", nil, time.Now().UTC())
+		if err := p.ApplyGuarded(ctx, tx, "activity", id.UUID, ifVersion); err != nil {
 			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return apperrors.ErrNotFound
 		}
 		auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
 		if err != nil {
@@ -179,79 +206,14 @@ type RelinkActivityInput struct {
 }
 
 func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in RelinkActivityInput) (crmcontracts.Activity, error) {
-	// Relinking moves an activity ONTO a record; without an entity_id there is
-	// nowhere to move it. Required by the contract, and true only here: the zero
-	// UUID reaches the link-target gate and answers not-found for a record the
-	// caller never named.
-	if err := httperr.RequireBodyID("entity_id", in.EntityID); err != nil {
+	column, err := admitRelink(ctx, in)
+	if err != nil {
 		return crmcontracts.Activity{}, err
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	column := linkColumn(in.EntityType)
-	if column == "" {
-		return crmcontracts.Activity{}, &InvalidLinkTypeError{EntityType: in.EntityType}
 	}
 	var out crmcontracts.Activity
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := relinkAdmittedRow(ctx, tx, id, in, column); err != nil {
 			return err
-		}
-		// The relink target is a client-supplied reference (H1).
-		if err := auth.EnsureLinkTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
-			return err
-		}
-		var displaced []ids.UUID
-		if in.ReplaceExistingOfType {
-			var err error
-			displaced, err = deleteVisibleLinksOfType(ctx, tx, id, in.EntityType, column)
-			if err != nil {
-				return err
-			}
-		}
-		if in.EntityType == linkEntityPerson && in.ReplaceExistingOfType && len(displaced) > 0 {
-			if err := repointDisplacedParticipants(ctx, tx, id, in.EntityID, displaced); err != nil {
-				return err
-			}
-		}
-
-		// Idempotent: replaying the same association is a no-op, and a
-		// no-op writes no audit noise.
-		tag, err := tx.Exec(ctx, storekit.SQLf(`
-			INSERT INTO activity_link (activity_id, entity_type, %s)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (activity_id, entity_type, `+linkIDCoalesce+`) DO NOTHING`, column),
-			id, in.EntityType, in.EntityID)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() > 0 {
-			// Touch the activity ROW itself, not just its link table: a
-			// staged approval pins activity.version (versionTables includes
-			// objectActivity), and that pin is the only defense between an
-			// approved "send this body on this conversation" and the
-			// conversation being silently repointed to someone else before
-			// the approval is redeemed. A relink that changes who the
-			// activity reaches must therefore move the version the pin
-			// re-checks, or a stale approval keeps redeeming as if nothing
-			// had changed. The trigger (set_updated_at_bump_version,
-			// 0008_activity.up.sql) does the actual bump; this only has to
-			// be a genuine UPDATE of the row.
-			if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, id); err != nil {
-				return err
-			}
-			auditID, err := storekit.Audit(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
-				"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
-			})
-			if err != nil {
-				return err
-			}
-			if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-				ChangedFields: relinkedChangedFields(in.EntityType, in.EntityID),
-			}); err != nil {
-				return err
-			}
 		}
 		var err2 error
 		out, err2 = readActivity(ctx, tx, id, storekit.LiveOnly)
@@ -261,6 +223,43 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
 	return out, err
+}
+
+// RelinkActivityInTx is the single relink on the CALLER's transaction: the
+// same admission, the same target probe and the same guarded row write as
+// RelinkActivity, for a caller that must commit the link together with a
+// record of its own — the confirm of a project attribution candidate closes
+// the candidate in the transaction that writes the link, so neither can be
+// read without the other. It answers whether a link was written; replaying an
+// association the activity already carries is a no-op.
+func RelinkActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) (bool, error) {
+	column, err := admitRelink(ctx, in)
+	if err != nil {
+		return false, err
+	}
+	return relinkAdmittedRow(ctx, tx, id, in, column)
+}
+
+// LockActivityLive takes the row lock on one live activity for the rest of the
+// caller's transaction, for a caller that must read something about the
+// activity and then relink it as ONE state — the attribution confirm reads
+// where the message is filed before filing it. The lock belongs to this
+// module because the row does; a gone or archived activity answers the same
+// not-found every live read gives.
+func LockActivityLive(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	_, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly)
+	return err
+}
+
+// relinkAdmittedRow is the transactional half both doors share: the target
+// probe, then the guarded row write. The admission stays outside it so the
+// single door can refuse a malformed request before it opens a transaction.
+func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (bool, error) {
+	// The relink target is a client-supplied reference (H1).
+	if err := auth.EnsureLinkTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
+		return false, err
+	}
+	return relinkActivityRow(ctx, tx, id, in, column)
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and
@@ -274,14 +273,21 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 // reached this activity through one link cut another — dropping a team's sight
 // of a record by rewriting an association they were never shown.
 //
-// A link outside the caller's scope survives instead. For `project` that
-// leaves a residual worth naming rather than glossing: at most one project
-// link may exist, so the insert then hits the partial index and refuses, and
-// the difference between that refusal and a success tells the caller a project
-// link they cannot see is there. One bit escapes, and it cannot be closed from
-// here — hiding the link's existence and enforcing one-per-activity are the
-// same question asked twice. Its CONTENT stays hidden, which is what the scope
-// is for, and losing the link outright would be worse.
+// A link outside the caller's scope survives instead, and for `project` that
+// used to leave a residual: at most one project link may exist, so the insert
+// then hit the partial index and refused, and the difference between that
+// refusal and a success told the caller a project link they could not see was
+// there. One bit escaped, and hiding a link's existence while enforcing
+// one-per-activity looked like the same question asked twice.
+//
+// It is closed, and closed on both halves rather than narrowed. A project
+// carries no own/team arm (platform/auth tableclass.go) and no capture privacy
+// either — migration 1787320003 narrowed its visibility CHECK to 'workspace',
+// because nothing auto-creates a project and an owner-private one was a state
+// no writer could reach. So no project link can be invisible to a caller
+// holding the object grant: the delete reaches every one, and the move
+// succeeds. The 23505 path below still stands for the caller who asks to
+// associate rather than move.
 func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID, entityType, column string) ([]ids.UUID, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -379,7 +385,7 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 func updateDelta(in UpdateActivityInput) map[string]any {
 	delta := map[string]any{}
 	if in.Subject != nil {
-		delta["subject"] = *in.Subject
+		delta[fieldSubject] = *in.Subject
 	}
 	if in.Body != nil {
 		delta["body"] = true // presence, not content — bodies can be large

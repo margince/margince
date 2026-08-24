@@ -114,12 +114,12 @@ func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string
 
 	id := ids.NewV7()
 	_, err = tx.Exec(ctx,
-		// The tenant comes from the TRANSACTION's binding, not from the caller:
-		// the ledger row must name the workspace its domain row landed in, and
-		// the GUC is the one thing that decides both. Read from ctx they could
-		// disagree, and the disagreement would be invisible.
-		`INSERT INTO audit_log (id, workspace_id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule)
-		 VALUES ($1, NULLIF(current_setting('app.workspace_id', true), '')::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		// No tenant column. It came from the TRANSACTION's binding until
+		// ADR-0091 §8 phase D reached the ledgers — the last two tables that
+		// carried one — so an audit row now names WHAT happened and WHO did it,
+		// and the installation is the only answer to where.
+		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
 		action, entityType, entityID, beforeJSON, afterJSON, evidenceJSON,
 		auth.AuthzRule(p, entityType, action))
@@ -134,7 +134,7 @@ func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string
 // is an evidence parameter threaded through every core write path — hundreds of
 // call sites, all of which would have to keep passing it — and a parameter that
 // every site must remember is one a new site forgets. Resolving it here is how
-// Audit already resolves the actor and the workspace, so attribution follows a
+// Audit already resolves the actor, so attribution follows a
 // core write wherever it happens, including inside a tx-accepting seam a unit
 // reached through the port.
 //
@@ -163,10 +163,10 @@ func withExtensionAttribution(ctx context.Context, evidence map[string]any) (map
 // LogSystem writes one append-only system_log row inside the current
 // transaction — the ledger for a SYSTEM / non-entity operational event
 // (login, bulk export, capture skip) that mutates no record and so has no
-// place in audit_log (the P12 record-mutation spine). Actor and workspace
-// are derived exactly as Audit derives them — from the authenticated
-// principal and the workspace GUC — so a caller with no actor bound is a
-// programming error, refused before any SQL runs. It returns the row id so
+// place in audit_log (the P12 record-mutation spine). The actor is derived
+// exactly as Audit derives it — from the authenticated principal — so a
+// caller with no actor bound is a programming error, refused before any SQL
+// runs. It returns the row id so
 // an entity-less pipeline event can carry it as trace.audit_log_id (the
 // repurposed "ledger row id", events.md §2). detail is nil-safe: nil writes
 // SQL NULL.
@@ -177,9 +177,9 @@ func LogSystem(ctx context.Context, tx pgx.Tx, action string, detail map[string]
 	}
 	id := ids.NewV7()
 	_, err = tx.Exec(ctx,
-		// The tenant is the transaction's, like every other ledger row here.
-		`INSERT INTO system_log (id, workspace_id, actor_type, actor_id, passport_id, on_behalf_of, action, detail)
-		 VALUES ($1, NULLIF(current_setting('app.workspace_id', true), '')::uuid, $2, $3, $4, $5, $6, $7)`,
+		// No tenant column, for the same reason as the audit row above.
+		`INSERT INTO system_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, detail)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
 		action, JSONArg(detail))
 	return id, err
@@ -306,6 +306,18 @@ func EmitPipeline(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, eventType s
 	return Emit(ctx, tx, ledgerID, eventType, "", ids.Nil, payload)
 }
 
+// EmitPipelinePayload is EmitPipeline with the payload bound to its event type
+// by the compiler (events.Payload, the gen-payloads seam) instead of by a
+// string literal at the call site. Prefer it: the literal spelling is one typo
+// away from an unroutable envelope that wedges the relay, and the generated
+// struct cannot disagree with the schema it came from.
+func EmitPipelinePayload(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, p events.Payload) error {
+	if !events.IsPipelineEvent(p.EventType()) {
+		return fmt.Errorf("store: %s is not an entity-less pipeline event — use EmitEvent with its entity ref", p.EventType())
+	}
+	return Emit(ctx, tx, ledgerID, p.EventType(), "", ids.Nil, p)
+}
+
 // UUIDOrNil maps a zero UUID to SQL NULL / JSON null (the Principal uses
 // the zero value for "not an agent action").
 func UUIDOrNil(id ids.UUID) *ids.UUID {
@@ -315,33 +327,73 @@ func UUIDOrNil(id ids.UUID) *ids.UUID {
 	return &id
 }
 
-// MustWorkspace is the workspace the caller's context names, for the domain
-// INSERTs that still stamp a `workspace_id` column of their own.
+// MustWorkspace is the installation's workspace as the caller's context names
+// it — for the job envelopes, blob keys and audit ENTITY ids that still name a
+// workspace, not for a tenant column: ADR-0091 §8 phase D has taken the last of
+// those off the schema, the ledgers included.
 //
-// The ledger writes above no longer use it: they take the tenant from the
-// TRANSACTION's binding, which is the only thing that can agree with the
-// domain row by construction. These callers follow when the column itself
-// goes (ADR-0091 §8 phase D).
+// It survives that phase rather than following it, because what its callers
+// need is an identifier for the installation, which the collapse of
+// WithWorkspaceTx into a plain Tx (§5) is what actually retires.
 func MustWorkspace(ctx context.Context) ids.UUID {
 	wsID, _ := principal.WorkspaceID(ctx)
 	return wsID
 }
 
 // LockWriteIdentity serializes every writer of one logical record identity
-// for the transaction (workspace-scoped pg advisory xact lock). A
-// precondition read and its dependent write must both run under it — READ
-// COMMITTED alone leaves a window where a concurrent standalone write
-// commits between the two statements and is silently overwritten. The lock
-// is reentrant within one transaction, so a caller that locked at its
-// precondition read may write through the same store path without deadlock.
+// for the transaction (a pg advisory xact lock). A precondition read and its
+// dependent write must both run under it — READ COMMITTED alone leaves a
+// window where a concurrent standalone write commits between the two
+// statements and is silently overwritten. The lock is reentrant within one
+// transaction, so a caller that locked at its precondition read may write
+// through the same store path without deadlock.
+//
+// # Why the migrated workspace-qualified locks currently take TWO keys
+//
+// This applies to the eight sites whose key USED to carry the workspace, not to
+// advisory locks in general — a lock that never had a workspace in it needs
+// nothing here. Those eight point at this doc, and the gate named below
+// enumerates them.
+//
+// ADR-0091 §5 removed the workspace from these lock identities: with one
+// organization per installation (ADR-0061) it distinguished nothing. But a
+// lock identity is not a private detail — it is a rendezvous between
+// PROCESSES, and a rolling deploy runs two builds at once. A process on the
+// old build takes the workspace-qualified key while one on the new build
+// takes the bare key, and the two do not contend. For the last-admin guard
+// that means two concurrent removals can leave an installation with no active
+// human administrator.
+//
+// So each site takes the new key AND the legacy one for one release, in that
+// order everywhere, which is what keeps the pair from introducing a deadlock
+// order of its own. Both are transaction-scoped. The cost is one extra lock
+// per key taken — for LockSubjectKeys, which locks per identifier, that is
+// double the lock-table slots for the length of the transaction, not one
+// extra.
+//
+// Each legacy statement is the previous release's, BYTE FOR BYTE — including
+// where that release read the GUC without missing_ok, or without coalescing a
+// NULL. Those are not defects to tidy on the way past: the key has to hash to
+// what the old build hashes, and the bare key taken first is what serializes
+// this build regardless. TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease
+// pins every one of them, because an innocuous edit to one of those SQL
+// literals would break the rendezvous with nothing failing.
+//
+// The legacy half comes out one release after this ships, when no old build
+// can still be running. Tracked as #2528 rather than left to be noticed.
 func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity string) error {
-	// The workspace in the key is the TRANSACTION's, read where the lock is
-	// taken: a key built from a ctx that disagreed with the binding would put
-	// two writers of one record on different locks and serialize neither.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
+		$1 || ':' || $2, 0))`,
+		entityType+"_write", identity); err != nil {
+		return fmt.Errorf("lock %s write identity: %w", entityType, err)
+	}
+	// The legacy workspace-qualified key. coalesce because
+	// pg_advisory_xact_lock is STRICT: an unset GUC would make the argument
+	// NULL, take NO lock, and report nothing.
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
 		$1 || ':' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $2, 0))`,
 		entityType+"_write", identity); err != nil {
-		return fmt.Errorf("lock %s write identity: %w", entityType, err)
+		return fmt.Errorf("lock %s write identity (legacy key): %w", entityType, err)
 	}
 	return nil
 }

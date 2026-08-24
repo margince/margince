@@ -140,11 +140,7 @@ func transformAmountMinorByCurrency(v any) (any, error) {
 			return nil, fmt.Errorf("overlay: amount_minor_by_currency: amount expects a string, got %T", amountRaw)
 		}
 		if amount := strings.TrimSpace(amountStr); amount != "" {
-			scale := int64(1)
-			for i := 0; i < ISO4217MinorUnitExponent(code); i++ {
-				scale *= 10
-			}
-			minor, err := decimalStringToMinor(amount, scale)
+			minor, err := decimalStringToMinor(amount, values.MinorUnitScale(code))
 			if err != nil {
 				return nil, fmt.Errorf("overlay: amount_minor_by_currency could not convert %q (%s): %w", amount, code, err)
 			}
@@ -156,25 +152,6 @@ func transformAmountMinorByCurrency(v any) (any, error) {
 	// value with a nil error is exactly that "null, and not an error" —
 	// applyTransform lands it as a JSON null on the column.
 	return nil, nil //nolint:nilnil // deliberate: null amount_minor is a valid, non-error mapping result
-}
-
-// ISO4217MinorUnitExponent returns a currency's minor-unit exponent. Two is
-// ISO-4217's own default and covers the vast majority; the exceptions are the
-// zero-decimal and three-decimal currencies enumerated here. Choosing the
-// exponent from the code — not a blanket ×100 — is what the money model
-// (data-semantics §1 / DM-CONV-9) requires. Exported so the HubSpot write
-// mapping (hubspot.mapWrite, OVA-MAP-W2) scales amount_minor BACK to a decimal
-// string against the SAME exponent table the read transform scales it in by —
-// one spelling of the ISO fact, never a second copy that could drift.
-func ISO4217MinorUnitExponent(code string) int {
-	// The table itself lives in shared/kernel/values, beside Money, because
-	// three callers now need it and they sit on different sides of the DAG:
-	// this module, the offer-draft price check in compose, and the account
-	// brief in compose/orgbrief, which compose imports. This function's own
-	// promise — one spelling of the ISO fact, never a second copy that could
-	// drift — is what forced the move: the second copy had already appeared,
-	// and the two tables had already disagreed about UYI, CLF and UYW.
-	return values.MinorUnitDigits(code)
 }
 
 // stringField reads a string-valued property from a gathered assembler map,

@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -71,9 +73,10 @@ func onboardingCompanyAnswerRequest(
 	}
 	messages = append(messages, model.Message{Role: chatRoleUser, Content: message})
 	return model.Request{
-		System: companyReadMessageSystem + "\n" + fence.Rule("dossier evidence and application state") + `
+		System: companyReadMessageSystem + "\n" + promptvoice.Rule + "\n" +
+			fence.Rule("dossier evidence and application state") + `
 The current_company_draft is application state, not an administrator statement. remaining_required_fields is the deterministic completion plan. If the administrator directly answers next_required_field, classify the response as correction and propose that exact value for that field. After answering an in-scope question, briefly return to the next required field.
-Respond in ` + locale + `.`,
+` + promptlang.Rule(locale),
 		Messages: messages, MaxTokens: ai.ReasoningOutputMaxTokens,
 		ResponseSchema: companyReadMessageSchema, SecretStripper: ai.NewSecretStripper(),
 	}, nil

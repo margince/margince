@@ -1608,9 +1608,16 @@ export interface paths {
         /** Read the partner extension on an org (404 if the org is not a partner). */
         get: operations["getPartner"];
         /**
-         * Create/update the partner extension on an org (sets classification='partner').
+         * Create/update the partner extension on an org (adds `partner` to its relationship types).
          * @description Promotes an org to a first-class partner (A41/ADR-0032) by upserting its `partner` row and
-         *     setting `classification='partner'`. Company identity is never duplicated. 🟢 admin write.
+         *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
+         *     set here — ADR-0079/A124 replaced it, because what a company IS to us is multi-valued.)
+         *     Company identity is never duplicated. Admin write, and a HUMAN one.
+         *
+         *     Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
+         *     commission ledger multiplies a won deal by, so this sets what a partner is paid on every
+         *     future deal. Reopening it to an agent is a deliberate act, and the tier is part of that
+         *     decision — a rate change is not an auto-execute shape.
          */
         put: operations["upsertPartner"];
         post?: never;
@@ -2035,12 +2042,43 @@ export interface paths {
         put?: never;
         /**
          * Create a project on a company.
-         * @description `organization_id` is required — a project has exactly one anchor company.
-         *     A `key` is optional but must match `^[A-Za-z][A-Za-z0-9_-]{1,23}$` and be unique
-         *     among live projects; a collision is `409` carrying the existing project's id.
+         * @description `organization_id` names the project's CUSTOMER — the company the work is for. A project is
+         *     work several companies do together, and the others are put on with
+         *     `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
+         *     The `key` is MINTED BY THE SERVER from the name (initials plus the lowest free
+         *     number, e.g. `ERA-1`) and is read-only thereafter: it is what a human writes in a
+         *     subject line to file mail under this project, so a caller-chosen one is a matcher
+         *     a caller can get wrong. A collision is resolved by taking the next number, never
+         *     reported.
          *     The project starts in `initiative` and its creation row is appended to the phase history.
          */
         post: operations["createProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move every live project one user owns to another user, in one transaction.
+         * @description The bulk twin of `updateProject.owner_id`, for a handover or a leaver. Every live
+         *     project owned by `from_owner_id` that the caller may write (own/team row scope or a
+         *     `write` share) moves to `to_owner_id`; archived projects and projects the caller cannot
+         *     write are left where they are and are not counted. Each moved project gets its own
+         *     `update` audit row with the `owner_id` before/after images, so its field history shows
+         *     the move, and its own `project.updated` event. `to_owner_id` must name an active user of
+         *     the workspace, else `422`.
+         */
+        post: operations["transferProjectOwnership"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2103,6 +2141,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/360": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The whole project page in one round trip — the project, its company, its phase history, its deals, stakeholders, contracts, documents, commitments, timeline and filing coverage.
+         * @description One composite read assembled inside ONE workspace transaction, so the sections describe
+         *     one consistent moment rather than a stack of independently-timed round trips. `as_of`
+         *     stamps that moment; the isolation level is Read Committed, so a write committed mid-read
+         *     may land in a later section — the stamp is what makes that honest rather than hidden.
+         *
+         *     **Authorization is per section.** Reading the project itself is mandatory: a caller who
+         *     cannot see it gets the usual 403/404. Every other section needs its own object grant,
+         *     and a section the caller may not read is *omitted* and named in `sections_omitted` —
+         *     never returned empty, because empty and forbidden are different facts. Counts and
+         *     totals admit only rows the viewer can see.
+         *
+         *     **Nested collections are summaries, not paging surfaces.** Each carries at most 25
+         *     rows with `page.has_more` saying whether it was cut, and `page.next_cursor` is always
+         *     null: page two comes from the endpoint that owns that collection — `GET /deals`,
+         *     `GET /projects/{id}/stakeholders`, `GET /activities`, `GET /attachments` — each with
+         *     its own cursor vocabulary.
+         *
+         *     Agent-readable: every section is assembled from reads an agent already holds through
+         *     `read_record`, `list_records` and `search_records`, so withholding the assembled page
+         *     while granting all of its parts would be a distinction the surface cannot honestly
+         *     explain. It is governed exactly as those reads are — object RBAC and row scope apply
+         *     per section — and it writes nothing.
+         *
+         *     Native system-of-record only: a workspace reading from an incumbent mirror has no
+         *     project to assemble a page for and gets `422 unsupported_in_overlay_mode`.
+         */
+        get: operations["getProject360"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}/stakeholders": {
         parameters: {
             query?: never;
@@ -2145,6 +2230,58 @@ export interface paths {
         post?: never;
         /** Detach a person from a project (archives the edge). */
         delete: operations["removeProjectStakeholder"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a company on a project with a role (idempotent per company).
+         * @description A project is work several companies do together — a customer, a partner, a subcontractor —
+         *     so a company is an edge (`relationship` of kind `project_company`), not the project's one
+         *     anchor. Sending a company already on the project re-roles the edge that exists rather than
+         *     adding a second one.
+         */
+        put: operations["setProjectCompany"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/companies/{organization_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a company off a project (archives the edge).
+         * @description The company keeps every record it owns; only its place on this project ends. Taking the
+         *     LAST company off a project is refused: a project no company is on is work nobody is doing,
+         *     and it would vanish from every company page that could lead a reader back to it.
+         */
+        delete: operations["removeProjectCompany"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2287,6 +2424,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a task — a commitment with an owner, on the records it is about.
+         * @description A task is an activity of kind `task`, and this is the one door that says so:
+         *     `POST /activities` with `kind: task` stores the same row, but a caller
+         *     (an agent above all) should not have to know that a to-do is a species of
+         *     timeline entry. Takes what a task needs and nothing a meeting does.
+         */
+        post: operations["createTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities": {
         parameters: {
             query?: never;
@@ -2395,6 +2555,13 @@ export interface paths {
          *     Degrades rather than fails: with no model lane configured the model-written sections are
          *     a deterministic composition occupying the same place, and `generated_by` says which
          *     wrote them.
+         *
+         *     **One brief, both surfaces.** The `prep_for_meeting` tool serves THIS assembly for a
+         *     meeting anchor rather than composing its own, so an agent and the person it acts for
+         *     read the same eight sections rather than two answers to one question. The read was
+         *     human-only until that split was found; nothing about it widened when the gate came
+         *     off, because every gate that decides what a brief may say is the caller's own and a
+         *     passport is already capped by the granting human's live seat.
          */
         get: operations["getMeetingBrief"];
         put?: never;
@@ -2468,6 +2635,60 @@ export interface paths {
          *     row (`activity_relink`). 🟢 — it is an internal association, not an outbound action.
          */
         post: operations["relinkActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/relink-thread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-associate every activity of one conversation thread to a chosen record, in one transaction.
+         * @description The thread twin of `relinkActivity`: the same association applied to every non-archived
+         *     activity carrying `thread_key` that the caller may write. A mis-filed conversation is
+         *     usually mis-filed whole, and one call here is the remedy rather than one call per message.
+         *     Each moved activity gets its own `audit_log` row (`activity_relink`) and its own
+         *     `activity.updated` event, exactly as the single relink writes them; filing under a project
+         *     stamps each one as commercial correspondence the same way. An activity in the thread the
+         *     caller cannot write is left where it is and is not counted — the response says how many
+         *     moved. An activity already carrying the link is not counted either (the single
+         *     relink's idempotency, per row). All rows commit together or none do.
+         */
+        post: operations["relinkThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/relink-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-associate a named set of activities to a chosen record, in one transaction.
+         * @description The explicit-id twin of `relinkThread`, for a selection that is not one conversation. The
+         *     caller names up to 500 activities; each is relinked exactly as `relinkActivity` would
+         *     relink it, with its own `audit_log` row and `activity.updated` event. Unlike the thread
+         *     form, every named id must be one the caller can see and write: an id outside the caller's
+         *     sight answers `404` and one they may read but not write answers `403`, and in either case
+         *     NOTHING moves — the whole set is one transaction. An activity already carrying the link is
+         *     left as it is and not counted.
+         */
+        post: operations["relinkActivities"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2599,9 +2820,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a (possibly edited) email draft — 🟡 confirm-first / gated.
-         * @description The `send_email` MCP verb. Outbound + irreversible → 🟡 confirm-first: an agent
-         *     caller must supply an approval token; a human caller's own action is the approval.
+         * Send a (possibly edited) email draft — runs directly, consent-gated.
+         * @description The `send_email` MCP verb. It RUNS DIRECTLY (ADR-0055): a passport carries the
+         *     granting human's own seat, grants and row scope, so a send it can make is one its
+         *     holder could make unaided in the app, and asking that same person to confirm again
+         *     made the agent surface weaker than the person behind it rather than safer. An
+         *     installation that wants sends confirmed sets a tier floor on `send_email`, which
+         *     stages the call for a human exactly as it always did.
          *     Consent gate is **default-deny per purpose** (A22/ADR-0011, data-model §3.4): the send is
          *     suppressed (409, `code: consent_not_granted`) unless an active, proven `granted`
          *     `person_consent` row exists for the *purpose* this send falls under (passed as
@@ -2625,7 +2850,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Start a new email conversation from a record — 🟡 confirm-first / gated.
+         * Start a new email conversation from a record — runs directly, consent-gated.
          * @description The account-started twin of `send_email` (ADR-0087/A132). "Write email" from a company,
          *     a person or a deal is a NEW conversation: there is no prior message to anchor to, and
          *     the product refuses to fabricate a placeholder activity to obtain one — that would put a
@@ -2646,11 +2871,12 @@ export interface paths {
          *     - every entry in `links` is row-scope probed, so a record the caller cannot see is
          *       refused 404 exactly as reading it directly would be.
          *
-         *     Governed identically to the reply, with no new authority (ADR-0087 §6): an agent caller
-         *     is confirm-first and stages for approval, a human caller's own action IS the approval
-         *     (ADR-0055). What is staged is a CREATE — this send answers no message, so there is no
-         *     anchor to name and no version to pin — and it is released by a human holding
-         *     `activity.create`, the grant `send_email` already asks of its approver. Whichever door
+         *     Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
+         *     directly on the passport holder's own authority (ADR-0055). Under a tier floor on
+         *     `send_account_email` it stages instead, and what is staged is a CREATE — this send
+         *     answers no message, so there is no anchor to name and no version to pin — released
+         *     by a human holding `activity.create`, the grant `send_email` already asks of its
+         *     approver. Whichever door
          *     the call arrives at, every entry in `links` is row-scope probed before the message is
          *     sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
          *     see is refused before a human is asked about it at all.
@@ -2749,10 +2975,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reply on a captured messaging-channel conversation — 🟡 confirm-first / gated.
-         * @description The `send_message` MCP verb — the channel twin of `send_email`. Outbound + irreversible
-         *     → 🟡 confirm-first: an agent caller must supply an approval token; a human caller's own
-         *     action is the approval.
+         * Reply on a captured messaging-channel conversation — runs directly, consent-gated.
+         * @description The `send_message` MCP verb — the channel twin of `send_email`. It RUNS DIRECTLY
+         *     (ADR-0055), on the passport holder's own seat, grants and row scope: a reply it can
+         *     send is one that person could send unaided in the app. An installation that wants
+         *     replies confirmed sets a tier floor on `send_message`.
          *
          *     The `{id}` activity is the conversation being answered, and its `channel_provider` names
          *     the transport the reply transmits through — NOT its `kind`, which since ADR-0107/A158 says
@@ -2785,7 +3012,7 @@ export interface paths {
          * Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
          * @description Reads connected-calendar free/busy and returns candidate slots. 🟢 read-only — proposes,
          *     never books. Scheduling is a **governed MCP tool** (`features/07 §5c`): this read pairs with
-         *     the 🟡 `book_meeting` action below.
+         *     the `book_meeting` action below, which writes.
          */
         get: operations["getAvailability"];
         put?: never;
@@ -2806,9 +3033,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Book a meeting at a chosen slot — 🟡 confirm-first / gated (the `book_meeting` MCP verb).
-         * @description Outbound + creates a calendar event and sends an invite → 🟡 confirm-first: an agent caller
-         *     must supply an approval token; a human caller's own action is the approval. On success a
+         * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+         * @description Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+         *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
+         *     the same check the app applies. An installation that wants bookings confirmed sets a
+         *     tier floor on `book_meeting`. On success a
          *     `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
          *     `Idempotency-Key`.
          */
@@ -2863,6 +3092,219 @@ export interface paths {
          *     no approval token (the host pre-authorized the public page).
          */
         post: operations["bookPublicMeeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/peek": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Whether a Deal Room credential can still be exchanged (anonymous).
+         * @description Lets the buyer screen tell "open the room" from "ask for a new link" before
+         *     the one-time exchange consumes the credential. Answers the same for a paused
+         *     room as for a live one — the paused message is delivered only after
+         *     authentication, to the person the link was sent to.
+         */
+        post: operations["peekDealRoomCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a one-time Deal Room credential for a room session (anonymous).
+         * @description Consumes the credential — a second exchange of the same string is refused —
+         *     and issues a session token the buyer presents as a Bearer on every other
+         *     `/public/rooms` operation. The session is bound to ONE participant in ONE
+         *     room and is resolved fresh on every request, so revocation binds on the next
+         *     call. A paused room still exchanges: the session is established and the
+         *     room bootstrap then says access is paused.
+         */
+        post: operations["exchangeDealRoomCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/link-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a fresh Deal Room link by email (anonymous, always 202).
+         * @description A buyer whose link lapsed asks for another. If the address belongs to a live
+         *     participant of a room that can still admit them, a new credential is minted
+         *     and mailed, retiring the old one. The response is 202 whatever happened —
+         *     an address that is not in any room gets the same answer as one that is, so
+         *     the endpoint cannot be used to discover who was invited where.
+         */
+        post: operations["requestDealRoomLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The room as its buyer sees it — the room itself, never the live deal.
+         * @description What the session admits the caller to. `access` says whether content is
+         *     served: `live` and `closed` carry the room (closed is read-only), `paused`
+         *     and `expired` carry none — only the participant and whom to contact.
+         *     Everything editorial comes from the latest published release, so a change
+         *     the seller has not published is invisible here.
+         */
+        get: operations["getBuyerRoom"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The documents as published, grouped.
+         * @description The manifest frozen in the latest release. A document the seller added or
+         *     removed since is not reflected until they publish again. Empty while the
+         *     room is paused or expired.
+         */
+        get: operations["listBuyerRoomDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/documents/{documentId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The bytes of one published document.
+         * @description Served only for a document named in the latest release of the session's room,
+         *     and only while the room serves content. The file is the exact version that
+         *     release froze.
+         */
+        get: operations["downloadBuyerRoomDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The room's conversation as the buyer sees it.
+         * @description Optionally narrowed to one published document. Empty while the room serves no content.
+         */
+        get: operations["listBuyerRoomThreads"];
+        put?: never;
+        /**
+         * Ask a question on a published document, or post a room-level update, as the buyer.
+         * @description Needs the `comment` capability. A document thread may be
+         *     marked `required_change`, which is how the buyer says this document needs
+         *     work — it stays open until the seller resolves it. Refused while the room is paused, closed or
+         *     expired.
+         */
+        post: operations["openBuyerRoomThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/threads/{threadId}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply in a thread as the buyer.
+         * @description Needs the `comment` capability. Refused on a resolved thread.
+         */
+        post: operations["replyBuyerRoomThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rooms/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the room session.
+         * @description Revokes this session only. The participant keeps their standing; a fresh
+         *     link admits them again. Works in every room state, because ending a session
+         *     is an access act, not a content one.
+         */
+        post: operations["signOutBuyerRoom"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3156,7 +3598,9 @@ export interface paths {
          *     person. Sets `person.converted_from_lead_id`, carries provenance + activities (zero
          *     orphaned FKs), marks lead `status=promoted` + archives it. One audit row recording
          *     trigger + evidence; emits `lead.promoted` + `person.*`. Cold outbound with no reply
-         *     must NOT call this path. 🟡 confirm-first when triggered by an agent.
+         *     must NOT call this path. Runs directly for an agent too (ADR-0055), on the passport
+         *     holder's own authority; an installation that wants promotions confirmed sets a tier
+         *     floor on `promote_lead`.
          */
         post: operations["promoteLead"];
         delete?: never;
@@ -3876,7 +4320,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tags. */
+        /**
+         * List tags.
+         * @description The workspace's tag vocabulary. Read it before applying one: apply_tag takes a tag_name and
+         *     creates the word when there is none, so a caller who cannot see the existing words invents a
+         *     near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and the vocabulary stops being one.
+         */
         get: operations["listTags"];
         put?: never;
         /** Create a tag. */
@@ -3919,7 +4368,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Apply a tag to an entity (person/org/deal/lead). */
+        /** Apply a tag to an entity (person/org/deal/lead/project). */
         post: operations["applyTag"];
         /**
          * Take one tag off one entity, leaving the tag itself in place.
@@ -5213,6 +5662,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which model vendors hold a credential (admin/ops).
+         * @description Every cloud provider this build can serve, and whether a key is held for each. Governed
+         *     by the same `ai_routing` object the binding is: a seat that may not re-point a model may
+         *     not reach the credential that model would call with either.
+         *
+         *     The KEY is never returned, by any caller, at any time. A credential that can be read
+         *     back is one a support bundle, a browser cache and a screenshare can all carry. What this
+         *     answers is `configured` — which is what a screen needs to know whether to offer "add" or
+         *     "rotate".
+         *
+         *     `env_var` names the variable the same key may arrive in, so an operator can see which
+         *     export seeded a vendor rather than guessing. That path still works and is how an existing
+         *     installation's key reached the vault without anyone doing anything.
+         *
+         *     Human session only. An agent never reads the installation's credential inventory,
+         *     whatever its passport scopes admit.
+         */
+        get: operations["listAiProviderKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-keys/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Store or rotate one vendor's BYOK key (admin/ops).
+         * @description Seals the key in the installation's key vault and records only an opaque, workspace-bound
+         *     reference. `api_key` is WRITE-ONLY: no read path returns it, and the setting that points
+         *     at it holds the reference and never the bytes.
+         *
+         *     Sending a key for a vendor that already has one ROTATES it. The new credential is sealed
+         *     before the reference moves, and the superseded one is destroyed only after the move
+         *     commits — so no window exists in which the recorded reference names nothing, and a
+         *     half-completed rotation leaves the previous key still serving.
+         *
+         *     Takes effect without a restart: every role re-reads on an interval and rebinds its model
+         *     clients when the credential changes, which is tracked separately from the binding's own
+         *     version so a rotation does not invalidate content a model already wrote. Leading and trailing whitespace is trimmed, because a pasted credential carries
+         *     whatever the clipboard did and a key with a trailing newline authenticates nothing while
+         *     looking exactly like one that would.
+         *
+         *     422 for a vendor this build serves with no key at all (a local model needs none), and for
+         *     an empty key — removing a credential is DELETE, not an empty write.
+         *
+         *     Requires a key vault. Without one there is nowhere to put the bytes, and the refusal says
+         *     so rather than recording a reference to something that was never written.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setAiProviderKey"];
+        post?: never;
+        /**
+         * Remove one vendor's BYOK key (admin/ops).
+         * @description Drops the reference and destroys the sealed credential. A vendor that holds nothing
+         *     succeeds: the caller asked for a state and that state already holds, which is why this is
+         *     204 rather than 404 — and why it is safe to retry.
+         *
+         *     Removing a credential does not unbind a model; that is `PUT /ai/routing`. A NEW process
+         *     binding that vendor fails closed with the error that names what is missing, exactly as it
+         *     did before any key was ever stored.
+         *
+         *     A process already running is a different case, and worth knowing: a role re-reads the
+         *     binding on an interval and rebinds when the credential changes, but a binding it can no
+         *     longer build clients for leaves the running one in place rather than taking the AI lanes
+         *     down. So where the removed key was the only one for a bound vendor, that role keeps
+         *     serving on it until it restarts.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteAiProviderKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/calls": {
         parameters: {
             query?: never;
@@ -5599,7 +6144,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -5680,7 +6225,7 @@ export interface paths {
          * @description One entry per field change, newest first, for the given `entity_type` + `entity_id`.
          *     A read-only projection over the append-only audit spine — no second history store.
          *     Only audit verbs whose before/after are honest field images project (create, update,
-         *     archive, restore, advance_stage); evidence-shaped rows (merge, promote, exports,
+         *     archive, restore, advance_stage, advance_phase); evidence-shaped rows (merge, promote, exports,
          *     tombstones) never fabricate field entries. The projection stops at the erasure
          *     boundary: after an Art. 17 erase or a retention anonymize, the scrub's tombstone row
          *     and everything older are withheld — the spine keeps its rows, the read refuses them —
@@ -6126,14 +6671,19 @@ export interface paths {
         /**
          * Share one record with a user or team (human-only).
          * @description Grants `read` or `write` on a single record to a user or team otherwise out of their own/team/all
-         *     scope. Enforced by widening BOTH the application visibility WHERE clause AND the RLS backstop
-         *     policy (`data-model §1.3c/§2.5`). Idempotent on `(record_type, record_id, subject_type, subject_id)` —
+         *     scope. Enforced by the application visibility WHERE clause: the grant arm is rendered into the
+         *     row-scope predicate and into the write-authority arm, and the tenant predicate is bound by the
+         *     `WithWorkspaceTx` GUC contract. There is no row-level-security backstop — core RLS was retired
+         *     and `record_grant` carries no policy — so the application predicate is the whole of the
+         *     enforcement. Idempotent on `(record_type, record_id, subject_type, subject_id)` —
          *     a re-assert RESTATES the grant rather than amending it: `access`, `expires_at`, `reason` and
          *     `granted_by` all take the values of the new request, so a field the caller omits is cleared and
          *     accountability moves to the re-asserting principal. `id` and `created_at` do not move — it is the
-         *     same share, not a new one. A grant can never exceed the granting principal's own access
-         *     (scope-intersection, ADR-0039: a granter can never share wider than they hold — a caller
-         *     holding only `read` on the record may pass `read` on and is refused `write`).
+         *     same share, not a new one. Because a re-assert restates the whole grant — its TERM as well as its
+         *     width — asserting one requires authority to CHANGE the record, at every access level: own/team
+         *     scope, an unbounded scope, or a live `write` grant. A caller whose only claim is a `read` share
+         *     may therefore neither pass it on nor restate its terms, while a `write` share carries both
+         *     (scope-intersection, ADR-0039: a granter can never share wider than they hold).
          *     Audited (`action: record_share`). Bounded:
          *     flat explicit grants only — no sharing hierarchies, criteria-rules, or grant-of-grant delegation.
          *
@@ -6948,6 +7498,493 @@ export interface paths {
         patch: operations["updateProduct"];
         trace?: never;
     };
+    "/deal-rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Deal Rooms (live by default; cursor-paginated).
+         * @description Scoped by the parent deal's visibility: a room whose deal the caller cannot
+         *     see is absent, indistinguishable from one that does not exist.
+         */
+        get: operations["listDealRooms"];
+        put?: never;
+        /**
+         * Open a Deal Room on a deal.
+         * @description Starts LIVE, and reaches nobody: the invitation is what decides who may read
+         *     a room, so a room nobody has been invited to is private without a second gate.
+         *     At most one active room per deal: a second create while the first is still
+         *     building, ready, publishing, live or paused is rejected
+         *     (409 `deal_room_already_open`). Archiving the first frees the deal for another.
+         *
+         *     The steward defaults to the deal's owner and is the named human a buyer is
+         *     pointed at for help; a room whose steward left the company points its buyers
+         *     at nobody, so the field transfers deliberately rather than following the deal.
+         */
+        post: operations["createDealRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get a Deal Room by id. */
+        get: operations["getDealRoom"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive a Deal Room, ending buyer access.
+         * @description Terminal and deliberate: archiving revokes every live session, so buyers lose
+         *     access immediately. Releases survive — what a buyer was shown stays answerable
+         *     after the room itself is gone. Archiving frees the deal for a new room.
+         */
+        delete: operations["archiveDealRoom"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a Deal Room's title and welcome message (partial).
+         * @description Edits the WORKING copy only. A live room keeps serving its last published
+         *     release until a human publishes again, so changing the title or welcome text
+         *     here never changes what a buyer is currently reading.
+         *
+         *     `state` is not editable — it moves through the lifecycle operations
+         *     (publish/pause/resume/close), which are human-only for that reason.
+         */
+        patch: operations["updateDealRoom"];
+        trace?: never;
+    };
+    "/deal-rooms/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause buyer access without ending it.
+         * @description A paused room refuses buyer reads while every credential stays valid, so
+         *     resuming restores access without re-inviting anyone. Only a `live` room
+         *     pauses (409 `deal_room_not_pausable` otherwise).
+         */
+        post: operations["pauseDealRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume a paused Deal Room.
+         * @description Returns a `paused` room to `live` on its existing release — no republish, and
+         *     every credential that worked before works again. 409 `deal_room_not_paused`
+         *     from any other state.
+         */
+        post: operations["resumeDealRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Freeze the room's content, keeping buyer access.
+         * @description Closing freezes CONTENT, not ACCESS. The buyer keeps reading documents and
+         *     history; no comment or decision is accepted after it.
+         *
+         *     Access management deliberately keeps working on a closed room — a steward can
+         *     still revoke a participant — because being unable to remove someone from a
+         *     room holding your signed contract is a real hazard months after the deal
+         *     closed. 409 `deal_room_not_closable` unless the room is live or paused.
+         */
+        post: operations["closeDealRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/expiry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set or clear when buyer access lapses.
+         * @description HUMAN-ONLY: this moves the moment an outside party stops being able to read
+         *     the deal's material, and extending it is a decision somebody has to own. An
+         *     agent may open a room, which nobody can read yet; it may not widen the window
+         *     in which a buyer can read one.
+         *
+         *     Null clears the bound, leaving access open until the room is closed or
+         *     archived. A past instant is accepted and takes effect immediately — that is
+         *     how access is cut short without ending the room.
+         */
+        put: operations["setDealRoomExpiry"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * See the room as a buyer would — a real buyer session, minted for the caller.
+         * @description Issues a one-time credential for a PREVIEW participant: the caller's own
+         *     seat, as a read-only buyer the real buyers never see. It goes through the
+         *     exact public edge a buyer uses, so what the rep sees is what the buyer gets
+         *     — only the latest release, the paused page, the closed page. The credential
+         *     lives ten minutes and the session one hour; every earlier preview session
+         *     of this rep is ended first. A preview session is refused by every public
+         *     write. Refused in `draft` (there is nothing published to see) and in
+         *     `archived`.
+         */
+        post: operations["previewDealRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the people admitted to a room.
+         * @description Revoked participants are included by default and marked: their comments and
+         *     decisions stay attributed to them, so a roster that hid them would
+         *     leave unexplained names on the room's history.
+         */
+        get: operations["listDealRoomParticipants"];
+        put?: never;
+        /**
+         * Admit a named person to the room.
+         * @description HUMAN-ONLY. Records the person and mints one credential for them. Whether that
+         *     credential is delivered depends on the installation having outbound mail
+         *     configured; the participant and the invitation are recorded either way, so a
+         *     mail failure never leaves a half-admitted person.
+         *
+         *     One live seat per address: inviting an address that already holds one is
+         *     rejected (409 `deal_room_participant_already_invited`). Re-inviting an address
+         *     whose access was revoked is allowed and creates a fresh participant — the old
+         *     row stays, keeping their earlier comments attributed.
+         *
+         *     The raw credential is returned ONCE, in this response, and never again. Only its
+         *     hash is stored, so it cannot be recovered — a resend mints a new one.
+         *
+         *     This operation deliberately takes NO Idempotency-Key. The replay cache keeps a
+         *     response body in plaintext for 24 hours, and this body carries a live
+         *     credential, so making the call replayable would put every invitation issued in
+         *     that window into a second table in recoverable form. A retry therefore mints a
+         *     fresh credential and retires the previous one, which is the safe failure: the
+         *     caller sends the newer link, and the older one has already stopped working.
+         */
+        post: operations["inviteDealRoomParticipant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/participants/{participantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct a participant's name, address or capability.
+         * @description HUMAN-ONLY. Correcting the ADDRESS is only possible while their credential is
+         *     still unconsumed — once someone has signed in, changing where their link goes
+         *     would hand their access to a different person. Correcting it invalidates the
+         *     credential already sent and mints nothing: resend to issue a new one.
+         *
+         *     Capability may be changed at any time and binds on the participant's next
+         *     request.
+         */
+        patch: operations["updateDealRoomParticipant"];
+        trace?: never;
+    };
+    "/deal-rooms/{id}/participants/{participantId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a fresh credential, retiring the previous one.
+         * @description HUMAN-ONLY. Supersedes rather than accumulates: the moment a new credential is
+         *     issued the previous one stops working, so an old link sitting in an old mailbox
+         *     cannot still admit anyone.
+         *
+         *     Available while the participant's access stands, including on a closed or
+         *     paused room — a buyer who lost their link to a closed room still needs to reach
+         *     what they were shown.
+         */
+        post: operations["resendDealRoomInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/participants/{participantId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a person's access away.
+         * @description HUMAN-ONLY, and deliberately available in EVERY room state including closed and
+         *     archived. Revocation is a security control: being unable to remove somebody
+         *     from a room holding your signed contract is a real hazard months after the deal
+         *     closed, so this is never frozen along with the room's content.
+         *
+         *     Ends their live session immediately and retires any unconsumed credential. The
+         *     participant row survives, so their comments stay attributed. Revoking
+         *     twice is accepted and changes nothing further.
+         */
+        post: operations["revokeDealRoomParticipant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the documents a room puts in front of its buyer.
+         * @description Each entry points at an attachment already filed on the room's deal; the room
+         *     holds no bytes of its own. Grouped by one of four fixed groups and ordered
+         *     within each.
+         */
+        get: operations["listDealRoomDocuments"];
+        put?: never;
+        /**
+         * Put an attachment of the deal in front of the buyer.
+         * @description The attachment must be filed on THIS room's deal (`entity_type: deal`, the
+         *     room's `deal_id`); any other id is 404. The attachment row is the exact
+         *     version the buyer will be shown. Editorial: the buyer sees it at the next
+         *     publish. Refused once the room can no longer reach a buyer.
+         */
+        post: operations["addDealRoomDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a document out of the room.
+         * @description Marks the entry removed; the attachment itself is untouched. The buyer stops
+         *     seeing it at the next publish — a release already published keeps naming it,
+         *     because that release is what they were shown.
+         */
+        delete: operations["removeDealRoomDocument"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename, regroup or reorder a room document.
+         * @description Editorial, like adding one — the buyer sees the change at the next publish.
+         */
+        patch: operations["updateDealRoomDocument"];
+        trace?: never;
+    };
+    "/deal-rooms/{id}/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The room's conversation — every thread with its comments.
+         * @description Live on both sides: nothing here waits for a publish. Optionally narrowed to
+         *     one document. A room-level thread has no `document_id`.
+         */
+        get: operations["listDealRoomThreads"];
+        put?: never;
+        /**
+         * Open a thread as the seller's side — a question on a document, or a room-level update.
+         * @description The first comment is the body. Refused once the room can no longer reach a
+         *     buyer (closed, expired, archived). A document thread is pinned to the
+         *     document's current version.
+         */
+        post: operations["openDealRoomThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/threads/{threadId}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply in a thread as the seller's side.
+         * @description Refused on a resolved thread and in a room that can no longer reach a buyer.
+         */
+        post: operations["replyDealRoomThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-rooms/{id}/threads/{threadId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a thread — the seller's side saying the point is settled.
+         * @description Human-only: resolving a required-change thread is the seller answering the
+         *     buyer's objection, so a person stands behind it. Resolving an already
+         *     resolved thread answers 200 with the thread unchanged.
+         */
+        post: operations["resolveDealRoomThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/offer-templates": {
         parameters: {
             query?: never;
@@ -7377,8 +8414,8 @@ export interface paths {
          *     organization), the relationship we have, and a concrete suggested next move with a
          *     drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
          *     warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
-         *     send rides the 🟡 confirm-first send tool (POST /activities/{id}/send-email); the
-         *     warm room proposes, the rep sends.
+         *     send rides the governed send tool (POST /activities/{id}/send-email); the warm
+         *     room proposes, the rep sends.
          */
         get: operations["getSignalIntroPath"];
         put?: never;
@@ -7636,6 +8673,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The deal's Files area — its own uploads and the files of every message linked to it.
+         * @description Every attachment whose parent is the deal, plus every attachment of an activity
+         *     linked to the deal: that is where a captured email's files live, so without
+         *     this read an emailed contract is unreachable from the deal it is about.
+         *
+         *     **Each row is scoped through its own parent.** A captured file follows the
+         *     message's audience, so a colleague outside that audience sees a shorter list
+         *     than the mailbox owner — correct, and never widened here.
+         *
+         *     Inline mail images (small `image/*` parts of a captured message) are left out:
+         *     a logo in every signature would bury the one contract among thirty icons.
+         *     Files hidden from this deal are left out unless `include_hidden` is set, and
+         *     then carry `hidden: true`. Newest first.
+         */
+        get: operations["listDealDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/documents/{attachmentId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Stop listing a captured file on this deal without touching the file.
+         * @description A captured attachment belongs to its message: it stays on the activity and in
+         *     the company library. Hiding only takes it off THIS deal's Files area. A file
+         *     already shared in a Deal Room keeps its entry there for the seller to remove,
+         *     but stops being listed or downloadable for the buyer at once.
+         *
+         *     Needs update on the deal, and the file must be in the deal's Files area for
+         *     this caller; anything else answers 404. Idempotent.
+         */
+        put: operations["hideDealDocument"];
+        post?: never;
+        /** List the file on this deal again. */
+        delete: operations["unhideDealDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Where the deal stands, what could lose it, and the one thing to do next.
+         * @description The deal page's one written card, replacing the three that stood beside each
+         *     other and disagreed: a brief that restated records, a health score with no
+         *     words, and a next-move box that read an open task back to you and then said
+         *     it had nothing to add.
+         *
+         *     Written by the model from the deal's own facts — its stage and value, its
+         *     timeline, its open tasks, its health factors and what the buyer said in the
+         *     Deal Room — and assembled under the CALLER's row scope, so a record they
+         *     cannot see never reaches a sentence.
+         *
+         *     Three parts, each earning its place. `standing` says where the deal is.
+         *     `risk` says what could lose it, and is absent when nothing is wrong rather
+         *     than padded with a reassurance. `next` is the one move to make, carrying the
+         *     verb the client performs on click — the same three verbs the retired
+         *     next-best-action named, so nothing about performing an action changed.
+         *
+         *     CACHED ON THE FACTS, not on a clock. The key is a fingerprint over the
+         *     assembled input plus the prompt and routing versions, so a deal nobody
+         *     touched costs one model call ever, and a deal that just moved is rewritten
+         *     before the request answers rather than served stale. A five-minute floor caps
+         *     how often the MODEL is asked, not how fresh the card is: inside it a changed
+         *     deal is still rewritten, deterministically, and `generated_by` says so.
+         *
+         *     DEGRADES RATHER THAN FAILS. With no model lane, an exhausted budget, or a
+         *     reply the grounding filter refuses, the same card is composed
+         *     deterministically and `generated_by` says which wrote it. There is no blank
+         *     AI card and no spinner that never resolves.
+         */
+        get: operations["getDealStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/coverage": {
         parameters: {
             query?: never;
@@ -7811,6 +8962,84 @@ export interface paths {
          *     stored here is exactly what arrives under every message the caller sends.
          */
         put: operations["saveMyEmailSignature"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/locale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the language your own interface is in.
+         * @description Always the CALLER's own, never anybody else's — an admin does not pick a
+         *     colleague's display language through this API.
+         *
+         *     This is a person's own interface, not the installation's basis. It does
+         *     not change what AI writes for the whole team, which is the installation's
+         *     `base_language` and is admin/ops to set.
+         *
+         *     Stored so the choice follows the person to their next browser. Until they
+         *     make one there is no row and no value, which is not the same as `en`:
+         *     somebody who never chose follows whatever their browser asks for, and
+         *     writing a choice they did not make would freeze one browser's guess
+         *     forever.
+         */
+        put: operations["saveMyLocale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ai-activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the AI is doing for THIS person, right now and lately.
+         * @description Every AI-backed occurrence attributable to this account, as facts rather than
+         *     sentences: the kind, the state, and when. The client renders the sentence in the
+         *     reader's own locale, so this never returns prose.
+         *
+         *     ONE PROJECTION, not a union of sources. A scheduled agent run, a document reading,
+         *     and (later) a capture sweep all reach this feed the same way — their writer
+         *     publishes a state change, one consumer projects it into `ai_task_run`, and this
+         *     reads that table. A new kind of AI work therefore adds an emitter, never an arm to
+         *     this read.
+         *
+         *     Personal by construction: an occurrence is this caller's when the actor its
+         *     originating event carried resolves to them. Work that belongs to nobody by nature
+         *     (a system sweep) is never attributed to whoever asks, and an occurrence whose
+         *     person has been deleted stays as history and is shown to no one. No RBAC object
+         *     gates it, because there is no wider set to withhold.
+         *
+         *     `recent` is BOUNDED (since local midnight, at most 10). An unbounded per-person
+         *     history is a per-person activity ledger, which this installation does not keep.
+         *
+         *     `kinds` is how a client that renders only part of the record asks for its part.
+         *     Every AI task reports into this feed, so a caller that shows three kinds and is
+         *     served the newest ten of twenty-three can be handed ten it will draw nothing for
+         *     — the bound would fall on rows the reader never sees, and the rail would go blank
+         *     while its work was reported correctly. Naming the kinds moves the bound inside
+         *     the client's own set. Omit it to receive the complete record, which is what an
+         *     auditor or an operator's client wants.
+         *
+         *     Read-only; no audit or event row (EVT-NOEVT-3).
+         */
+        get: operations["getMyAiActivity"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -8967,13 +10196,38 @@ export interface components {
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
             /**
-             * @description True once a deal has frozen a conversion rate against the base currency, after
-             *     which it can no longer be changed (ADR-0085 §7).
+             * @description The language AI writes in when what it writes is read by the whole team — claims,
+             *     signals, extracted facts, agent answers. Not a user's display language, which is
+             *     per-user.
+             *
+             *     It does not govern everything a model writes: correspondence keeps the language of
+             *     the correspondence, so a German thread still gets a German reply, and a brief cached
+             *     for one reader keeps that reader's language.
+             * @enum {string}
+             */
+            base_language: "en" | "de" | "vi";
+            /**
+             * @description The month the installation's business year begins, 1..12. January (1) is the
+             *     default, which is the calendar year every installation reported by before this
+             *     setting existed.
+             *
+             *     It buckets period reports on READ and stores nothing, so changing it re-labels
+             *     every report immediately and re-means no stored row.
+             *
+             *     The label spells both calendar years a non-January year spans — `FY2026/27` — so
+             *     a reader can tell which twelve months a bucket covers without knowing the
+             *     convention. A January year is not a span and keeps the plain `2026`.
+             */
+            fiscal_year_start_month: number;
+            /**
+             * @description True once a conversion rate has been frozen against the base currency — by a closed
+             *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
+             *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
              */
             base_currency_locked: boolean;
             /**
-             * @description Why the currency is locked, naming how many deals have already converted against
-             *     it. Absent when it is still changeable.
+             * @description Why the currency is locked, naming what has already converted against it. Absent
+             *     when it is still changeable.
              */
             base_currency_locked_reason?: string;
             /**
@@ -8996,10 +10250,22 @@ export interface components {
             /** @description The IANA reporting zone. */
             timezone?: string;
             /**
-             * @description ISO-4217 code. Refused with `setting_frozen` once any deal has frozen a conversion
+             * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
              *     rate against the current base.
              */
             base_currency?: string;
+            /**
+             * @description The language shared AI writing is written in. Never frozen: changing it re-means
+             *     nothing already written, so artifacts stay in the language they were written in.
+             * @enum {string}
+             */
+            base_language?: "en" | "de" | "vi";
+            /**
+             * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
+             *     reports on read and stores nothing, so moving it re-labels every period report at
+             *     once and re-means no stored row.
+             */
+            fiscal_year_start_month?: number;
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -9208,6 +10474,22 @@ export interface components {
              *     excluded (cold start reads it). Default is ON (the testing posture).
              */
             auto_enrich: boolean;
+        };
+        AiProviderKeyList: {
+            providers: components["schemas"]["AiProviderKeyStatus"][];
+        };
+        /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
+        AiProviderKeyStatus: {
+            /** @description The routing name of the vendor, the same string a binding uses. */
+            provider: string;
+            /** @description Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer. */
+            configured: boolean;
+            /** @description The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix. */
+            env_var: string;
+        };
+        AiProviderKeyInput: {
+            /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
+            api_key: string;
         };
         /**
          * @description The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
@@ -9661,6 +10943,56 @@ export interface components {
                 last_synced_at?: string | null;
                 last_sync_error_class?: string | null;
             }[];
+            /**
+             * @description What moved on the bodies of work in the window, and which have gone quiet. Absent
+             *     from a digest built without the section; each list is empty when nothing happened.
+             *     Workspace-level like the counts above: a project is read by every seat holding the
+             *     grant.
+             */
+            projects?: {
+                /** @description The ladder moves recorded in the window (from `project_phase_history`), newest first. */
+                phase_changes: {
+                    /** Format: uuid */
+                    project_id: string;
+                    name: string;
+                    key?: string | null;
+                    /** @description A rung of the project ladder (initiative, pursuing, delivering, closed); null for the birth row. */
+                    from_phase?: string | null;
+                    /** @description A rung of the project ladder. */
+                    to_phase: string;
+                    /** Format: date-time */
+                    occurred_at: string;
+                }[];
+                /** @description The projects that gained still-open tasks in the window, most first. */
+                new_commitments: {
+                    /** Format: uuid */
+                    project_id: string;
+                    name: string;
+                    key?: string | null;
+                    new_open_commitments: number;
+                }[];
+                /**
+                 * @description The projects being pursued or delivered that nothing has been filed against for
+                 *     30 days — the `projects-gone-quiet` report's rule, the same one the
+                 *     `project_gone_quiet` signal is raised on — quietest first.
+                 */
+                gone_quiet: {
+                    /** Format: uuid */
+                    project_id: string;
+                    name: string;
+                    key?: string | null;
+                    /** @description A rung of the project ladder: pursuing or delivering, the two the quiet rule watches. */
+                    phase: string;
+                    /**
+                     * Format: date-time
+                     * @description When the silence began: the last filed activity, or the project's creation when nothing was ever filed.
+                     */
+                    quiet_since: string;
+                    days_quiet: number;
+                    /** Format: uuid */
+                    owner_id?: string | null;
+                }[];
+            };
         };
         /** @description One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8). */
         DedupeCandidate: {
@@ -10041,22 +11373,98 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description From `uploadImportSource`. */
             source_ref: string;
-            /** @description `{source column → target field}`, as the human settled it. Validated against the object's live field catalog before the run is created. */
+            /**
+             * @description `{source column → target field}`, as the human settled it. Validated against
+             *     the object's live field catalog before the run is created.
+             *
+             *     One target is not a field: a column mapped to **`id`** names the record the
+             *     row IS, by the id this CRM gave it, and the row UPDATES that record. Nothing
+             *     is written to `id` itself. This is the correction workflow — read the
+             *     companies out with their ids, edit the file, import it back.
+             *
+             *     A row whose `id` is empty names no record and is an ordinary create, so one
+             *     file can carry corrections and new companies together — as long as some other
+             *     mapped column identifies every row (see `source_key`).
+             *
+             *     An id is the only safe way to say which record a row means. Matching by NAME
+             *     cannot be: the dedupe ladder exists to answer "should a human look at these
+             *     two?" and blurs to do it — it strips legal forms, so `Acme Inc` and
+             *     `Acme GmbH` are one string; it scores a trading name against a registered
+             *     one; and where several records tie it picks the lowest uuid. Every blur is
+             *     free when the answer is "show a human" and is a way to overwrite the wrong
+             *     company when the answer decides a write, which no `undo` reverses.
+             *
+             *     A row naming an id nothing answers to is reported as a skipped row saying so,
+             *     never created quietly under a new id.
+             */
             mapping: {
                 [key: string]: string;
             };
             /**
-             * @description The source column holding the row's stable id, written to the row's
-             *     provenance so a re-uploaded file updates rather than duplicates
-             *     (IEM-AC-9) and an undo can find what one run created (S-E15.4c).
-             *     Absent means the mapped natural key is used instead; the report
-             *     says which was chosen rather than leaving it to be inferred.
+             * @description The source column holding the row's stable id. For a row this run
+             *     CREATES it is written to the row's provenance, so a re-uploaded file
+             *     updates rather than duplicates (IEM-AC-9) and an undo can find what
+             *     the run created (S-E15.4c). A row that names an existing record by
+             *     `id` records nothing: the run did not create that company, and undo
+             *     must not archive it.
+             *
+             *     Absent means the mapped natural key is used instead; the report says
+             *     which was chosen rather than leaving it to be inferred. A file whose
+             *     only identifying column is `id` falls back to it — a corrections
+             *     export can be `id,city` and nothing else — and then EVERY row needs
+             *     an id, because a row with no source key cannot be identified at all
+             *     and is reported as an unusable line. A file mixing corrections with
+             *     new companies therefore maps a column every row carries, and the
+             *     `id` column says which rows are corrections.
              */
             source_key?: string;
+            on_duplicate?: components["schemas"]["ImportOnDuplicate"];
         };
+        /**
+         * @description What to do with a row naming a record the estate ALREADY holds — found
+         *     by the same dedupe ladder every create path runs, not by this
+         *     importer's own memory of what it once wrote.
+         *
+         *     A collision with a record the CALLER MAY NOT SEE is answered as no
+         *     collision: the row is not counted as a duplicate, not named in the
+         *     report, and CREATES. The question is asked of EVERY candidate the dedupe
+         *     ladder matched rather than of its winner — the winner is the highest
+         *     score with the lowest uuid breaking ties, so an invisible record ranking
+         *     first would otherwise mask a visible one behind it and decide the outcome
+         *     without being disclosed. Skipping it would be the intuitive choice and it
+         *     leaks — hiding which company was hit still says one was, and "your row
+         *     was not created" answers "is this company in your CRM" about a
+         *     colleague's owner-private capture, probed one row at a time against a
+         *     report readable on the `import_run` grant. The cost is a twin the dedupe
+         *     review queue picks up and a merge resolves; the cost of the alternative
+         *     is a disclosure no merge undoes.
+         *
+         *     `create` is the historical behaviour and stays the default: the row
+         *     lands and the pair goes on the dedupe review queue, exactly as a manual
+         *     create does. That is right for one company typed by a human and wrong
+         *     for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+         *
+         *     `skip` leaves the incumbent alone and reports the row as skipped.
+         *
+         *     The DRY RUN counts duplicates either way, so a person is told "100
+         *     companies, 94 duplicates" before deciding — which is the whole reason
+         *     the count is separate from `created`.
+         * @default create
+         * @enum {string}
+         */
+        ImportOnDuplicate: "create" | "skip";
         /** @description What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something. */
         ImportRunDisposition: {
             created: number;
+            /**
+             * @description Rows naming a record the estate already holds. NOT a fifth outcome
+             *     and never added to the other four — each duplicate is already
+             *     counted in `created` (it lands and files a review pair) or in
+             *     `skipped` (when the run asked for `on_duplicate: skip`). It is the
+             *     number a human needs before approving: "100 companies, 94 of them
+             *     already here" is a different decision from "100 new companies".
+             */
+            duplicates?: number;
             /** @description Rows matched to an existing record whose mapped values differ. An editable source re-imported after a correction lands here — this is not the frozen-snapshot case, where a match can never differ. */
             updated: number;
             /** @description Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail. */
@@ -10678,6 +12086,8 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /** @description { linkedin, twitter, github, ... } */
             social?: {
                 [key: string]: unknown;
@@ -10861,6 +12271,8 @@ export interface components {
             address?: components["schemas"]["Address"];
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /**
              * Format: uuid
              * @description Single-level hierarchy FK; no cycles.
@@ -11212,6 +12624,25 @@ export interface components {
             generated_by: components["schemas"]["WrittenBy"];
         };
         /**
+         * @description What a read narrowed to one project reports about the narrowing, so a surface can
+         *     say "Scoped to KEY · N of M activities" from the server's own count rather than
+         *     guessing. Present only when the request named a `project_id`.
+         *
+         *     `in_scope` counts the activities the scoped read could see — filed under this
+         *     project or under none — and `total` the same anchor's activities unscoped, both
+         *     under the caller's own row scope. Both are ABSENT, not zero, when the caller holds
+         *     no activity grant: the project is still named, the count is not invented.
+         */
+        ProjectScope: {
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description The subject-line handle, when the project has one. */
+            key?: string | null;
+            in_scope?: number;
+            total?: number;
+        };
+        /**
          * @description A written brief over one account, assembled from what the READER can see.
          *     Every sentence carries the records it was written from, so the reader can open
          *     the evidence rather than take the sentence on trust.
@@ -11222,6 +12653,8 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
+            /** @description The project this was narrowed to, when the request named one. */
+            scope?: components["schemas"]["ProjectScope"];
             /**
              * @description The brief, in the order a reader asks its questions: what this company is and why it
              *     matters to us, how the relationship stands, what happened lately, and what to do next.
@@ -11274,6 +12707,8 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
+            /** @description The project this was narrowed to, when the request named one. */
+            scope?: components["schemas"]["ProjectScope"];
             /**
              * @description The answer, one claim per entry. Empty when the caller's grants leave the
              *     question nothing to answer from — an honest "nothing here I can show you"
@@ -11522,7 +12957,7 @@ export interface components {
                 converted_count: number;
                 /**
                  * Format: date
-                 * @description The OLDEST rate date among the converted deals: each freezes its rate on its own issue date, so this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
+                 * @description The OLDEST rate date among the converted deals. An open deal has frozen no rate — that happens on close — so each converts at the latest rate stored on or before this read's day, and an installation does not hold every currency's rate for every day: the dates behind one total can differ, and this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
                  */
                 fx_as_of?: string | null;
                 /** @description The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the workspace's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is. */
@@ -11655,6 +13090,28 @@ export interface components {
             expected_close_date?: string | null;
             /** @description No linked activity inside the 60-day stall window. */
             stalled: boolean;
+        };
+        /**
+         * @description Where a project stands on the record page; the same ladder the project's own `phase` walks.
+         * @enum {string}
+         */
+        Organization360ProjectPhase: "initiative" | "pursuing" | "delivering" | "closed";
+        /** @description One body of work on the record page: enough to name it, say where it stands and who holds it. The full row is `GET /projects/{id}`. Shared by the company page and the person page, so a project reads the same on both. */
+        Organization360Project: {
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description The subject-line handle, when the project has one. */
+            key?: string | null;
+            phase: components["schemas"]["Organization360ProjectPhase"];
+            /** Format: date-time */
+            last_activity_at?: string | null;
+            /** Format: date */
+            target_end_date?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            /** @description The owner's display name; null when the project has no owner or the owner is no longer an active member. */
+            owner_name?: string | null;
         };
         /** @description The account's open deals plus the two lifetime figures the header needs. */
         Organization360Deals: {
@@ -11841,6 +13298,8 @@ export interface components {
              */
             as_of: string;
             organization: components["schemas"]["Organization"];
+            /** @description The project this was narrowed to, when the request named one. */
+            scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
              * @description When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's organization, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
@@ -11855,12 +13314,14 @@ export interface components {
             next_meeting?: components["schemas"]["Organization360NextMeeting"];
             health?: components["schemas"]["Organization360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("people" | "deals" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting")[];
+            sections_omitted: ("people" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting")[];
             people?: {
                 data: components["schemas"]["Organization360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
             deals?: components["schemas"]["Organization360Deals"];
+            /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
+            projects?: components["schemas"]["Organization360Project"][];
             strength?: components["schemas"]["OrganizationStrength"];
             activities?: components["schemas"]["ActivityListResponse"];
             tags?: components["schemas"]["Tag"][];
@@ -12034,6 +13495,8 @@ export interface components {
              */
             as_of: string;
             person: components["schemas"]["Person"];
+            /** @description The project this was narrowed to, when the request named one. */
+            scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
              * @description When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
@@ -12045,8 +13508,10 @@ export interface components {
              */
             last_outbound_at?: string | null;
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("employments" | "deal_roles" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile")[];
+            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile")[];
             strength?: components["schemas"]["RelationshipStrength"];
+            /** @description The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
+            projects?: components["schemas"]["Organization360Project"][];
             /** @description The purchased person-data snapshot (PO-EXT-9): what a connected provider returned about this person, kept beside the canonical record and never silently folded into it. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
             provider_profile?: components["schemas"]["PersonProviderProfile"];
             /** @description What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold. */
@@ -12352,19 +13817,34 @@ export interface components {
              */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
+            /** @description The project this was narrowed to, when the request named one. */
+            scope?: components["schemas"]["ProjectScope"];
             /** @description The sections that had something to say, in ADR-0097 D5's fixed order. A section with no surviving sentence is absent, never present-and-empty: `risks` in particular is specified as omitted when empty, and the same rule reads honestly for every other. */
             sections: components["schemas"]["MeetingBriefSection"][];
+            /** @description What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at. */
+            omitted?: components["schemas"]["MeetingBriefOmission"][];
         };
-        /** @description One of the eight fixed sections, with its cited sentences. */
+        /** @description One source this reader may not see, and what that costs the brief. */
+        MeetingBriefOmission: {
+            /** @description `deal_room` today. A machine key, so a client can render its own wording. */
+            source: string;
+            /** @description One sentence a reader can act on, naming what is missing and why. */
+            reason: string;
+        };
+        /** @description One of the nine fixed sections, with its cited sentences. */
         MeetingBriefSection: {
             /**
-             * @description The eight of ADR-0097 D5, in the order a reader reads them. A closed enum rather
-             *     than a free-text heading, so a surface can label, order and collapse them and no
-             *     writer can invent a ninth.
+             * @description The eight of ADR-0097 D5 plus `what_changed`, in the order a reader reads them. A
+             *     closed enum rather than a free-text heading, so a surface can label, order and
+             *     collapse them and no writer can invent a tenth.
              *
              *     `header` — meeting, time, company, deal and how long since the last touch (deterministic).
              *     `goal` — the single next-step target; it leads because burying the ask is the
              *     canonical prep failure.
+             *     `what_changed` — what happened after the READER last dealt with this deal's people:
+             *     promises made, objections raised, decisions taken, conversations held, files that
+             *     changed hands. Its first line names the baseline; when the reader has never dealt
+             *     with them it says so ("first contact") rather than "nothing changed".
              *     `attendees` — who is in the room, with the first-timers flagged.
              *     `commitments` — what was promised, ours and theirs, each with its source and status.
              *     `deal_state` — where the deal stands: last conversation, objections, open questions.
@@ -12373,7 +13853,7 @@ export interface components {
              *     `company_context` — background, collapsed and last.
              * @enum {string}
              */
-            kind: "header" | "goal" | "attendees" | "commitments" | "deal_state" | "risks" | "talking_points" | "company_context";
+            kind: "header" | "goal" | "what_changed" | "attendees" | "commitments" | "deal_state" | "risks" | "talking_points" | "company_context";
             /** @description The section's lines, each citing the records it was written from. A sentence whose citations do not resolve is dropped whole rather than shown uncited. */
             sentences: components["schemas"]["OrganizationBriefSentence"][];
         };
@@ -12722,6 +14202,8 @@ export interface components {
         DealCoverageSeat: {
             /** Format: uuid */
             person_id: string;
+            /** @description The person's display name. Null when the caller may not read that person — the seat still counts toward coverage, because how many people carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous. */
+            person_name?: string | null;
             role: string;
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
@@ -12743,6 +14225,118 @@ export interface components {
              *     61 days cannot appear on one surface and not the other.
              */
             days_since_touch?: number | null;
+        };
+        /**
+         * @description Deal360 — the deal page's written briefing, the thing a rep reads in a
+         *     minute before a call.
+         *
+         *     It is a reading of the deal, not a restatement of it. The page already
+         *     shows the stage, the value and the timeline; this says what they MEAN:
+         *     why the deal is where it is, what the buyer is actually after, whether
+         *     it is still alive, and what to say next.
+         *
+         *     Every section is optional except `story`, and an absent one means the
+         *     records do not support saying anything — never that the section was
+         *     forgotten. A section invented to fill the layout is the failure this
+         *     shape exists to prevent.
+         */
+        DealStatusCard: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description What has happened and where that leaves things, in the order it
+             *     happened. The section a reader with no memory of the deal starts at.
+             */
+            story: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description What is actually holding the deal up, named as a thing somebody can
+             *     act on — an unsent mail, an unanswered objection, a decision-maker
+             *     who has never replied. Absent when nothing is holding it up. "Time
+             *     has passed" is not a blocker.
+             */
+            blocker?: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description What the buyer wants, read from what they have said. What they are
+             *     optimising for, what they have not objected to, what they asked for
+             *     and never got. Absent when the buyer has said too little to read.
+             */
+            buyer?: components["schemas"]["DealStatusCardSection"];
+            /**
+             * @description Whether this deal is real, and what that judgement rests on.
+             *     Includes being willing to say it looks dead.
+             */
+            verdict?: components["schemas"]["DealStatusCardVerdict"];
+            /** @description The one move to make, with the verb to perform it. */
+            next?: components["schemas"]["DealStatusCardMove"];
+            /**
+             * Format: uuid
+             * @description The inbound message an email from here would answer: the most recent
+             *     one this deal has received that nobody has replied to. Null when the
+             *     buyer has never written, or when the last thing they wrote has been
+             *     answered — then a mail from here starts a thread rather than
+             *     continuing one.
+             *
+             *     Independent of `next` on purpose. Whether there is something to reply
+             *     to is a fact about the deal; which move ranks first is a judgement,
+             *     and the two must not have to agree for the reply to be reachable.
+             */
+            reply_to?: string | null;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+        };
+        /**
+         * @description An honest call on whether the deal closes, and why.
+         *
+         *     `standing` is the call itself. It is deliberately coarse — a reader acts
+         *     on "this is drifting", not on a percentage, and a number would imply a
+         *     precision the records cannot support.
+         */
+        DealStatusCardVerdict: {
+            /**
+             * @description `live` — moving, with a next step both sides expect.
+             *     `drifting` — nothing wrong, nothing happening; it dies of neglect if
+             *     nobody acts.
+             *     `blocked` — something specific is in the way and is named in `blocker`.
+             *     `cold` — long silence after real engagement; treat as lost unless
+             *     something changes.
+             *     A plain string, not an inline enum, for the reason
+             *     `DealRoomParticipantCapability` gives.
+             */
+            standing: string;
+            /** @description What the call rests on, cited like every other sentence. */
+            because: components["schemas"]["DealStatusCardSection"];
+        };
+        DealStatusCardSection: {
+            /**
+             * @description Each sentence cites the record it rests on. A sentence whose citations do
+             *     not resolve is dropped whole rather than shown uncited.
+             */
+            sentences: components["schemas"]["OrganizationBriefSentence"][];
+        };
+        /**
+         * @description The one thing to do next, and what performing it means. `action` is one of
+         *     `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
+         *     the retired next-best-action carried, so a client that already performs them
+         *     needs no new code. `arguments` is the body or operand the verb takes, ready
+         *     to send; absent for `none`.
+         */
+        DealStatusCardMove: {
+            action: string;
+            /** @description One sentence saying why this move and not another. */
+            reason: string;
+            /** @description `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
+            arguments?: {
+                [key: string]: unknown;
+            };
+            evidence: components["schemas"]["DealNextBestActionEvidence"][];
+        };
+        DealNextBestActionEvidence: {
+            text: string;
+            /** Format: uuid */
+            activity_id?: string | null;
+            /** Format: date-time */
+            occurred_at?: string | null;
         };
         DealCoverage: {
             /** Format: uuid */
@@ -12785,6 +14379,16 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+        };
+        SaveMyLocaleRequest: {
+            /**
+             * @description The language to render this person's own interface in. One of the
+             *     languages the product ships a catalog for — a tag it does not
+             *     (`en-GB`, `fr`) is refused rather than approximated, because a locale
+             *     with no catalog renders as raw message keys.
+             * @enum {string}
+             */
+            locale: "en" | "de" | "vi";
         };
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
@@ -13046,7 +14650,10 @@ export interface components {
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
-         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_stakeholder`
+         *     `employment` (person↔org), `deal_stakeholder` (deal↔person), `project_company`
+         *     (project↔org, READ-ONLY here — it is written through `/projects/{id}/companies`, which
+         *     holds the two rules this surface cannot: write authority over the project ROW, and the
+         *     refusal that keeps a project's last company on it), `project_stakeholder`
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
          *     (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
          *     org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
@@ -13055,7 +14662,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
@@ -13069,7 +14676,7 @@ export interface components {
             deal_id?: string | null;
             /**
              * Format: uuid
-             * @description The project on a project_stakeholder edge. Null for every other kind.
+             * @description The project on a project_stakeholder or project_company edge. Null for every other kind.
              */
             project_id?: string | null;
             /** @description employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project. */
@@ -13176,6 +14783,8 @@ export interface components {
             project_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /**
              * @default open
              * @enum {string}
@@ -13630,13 +15239,19 @@ export interface components {
             name: string;
             /** @description The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it. */
             key?: string | null;
+            /** @description The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
+            /** @description The companies working this project, in the order they were attached. A project is work several companies do together — a customer, a partner, a subcontractor — so this is a list rather than one anchor. A company the caller may not read is OMITTED rather than named, so an empty list can mean either "no companies yet" or "none you can see". */
+            readonly organizations?: components["schemas"]["ProjectCompany"][];
             /**
              * Format: uuid
-             * @description The anchor company — required and singular. A company has many projects; a project has one company.
+             * @description The project's CUSTOMER — the first company attached with that role, or null when the caller may not read it (in which case `masked_fields` names it) or when the project has no customer. It is a view of `organizations`, kept because a project's client is the one company most readers mean; the full picture is the list.
              */
-            organization_id: string;
+            organization_id?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             /**
              * @description Read-only here — transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
              * @default initiative
@@ -13673,9 +15288,150 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * @description The project page in one payload. Every section except `project` is optional: absent
+         *     means the caller lacks its grant, and `sections_omitted` names it. `documents` rides the
+         *     project grant itself, so it is present whenever the page is.
+         */
+        Project360: {
+            /**
+             * Format: date-time
+             * @description The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+             */
+            as_of: string;
+            project: components["schemas"]["Project"];
+            /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
+            sections_omitted: components["schemas"]["Project360Section"][];
+            organization?: components["schemas"]["Project360Organization"];
+            phase_history?: components["schemas"]["Project360PhaseHistory"];
+            /** @description The deals rolled up to the project, newest first, every status. */
+            deals?: {
+                data: components["schemas"]["Deal"][];
+                page: components["schemas"]["PageInfo"];
+            };
+            /** @description The people seated on the project (`project_stakeholder` edges), each with the name the caller may read. */
+            stakeholders?: {
+                data: components["schemas"]["Project360Stakeholder"][];
+                page: components["schemas"]["PageInfo"];
+            };
+            contracts?: components["schemas"]["ContractListResponse"];
+            /** @description The files attached to the project itself, newest first. */
+            documents?: {
+                data: components["schemas"]["Attachment"][];
+                page: components["schemas"]["PageInfo"];
+            };
+            /** @description The open tasks filed under the project, soonest due first, undated last. */
+            commitments?: {
+                data: components["schemas"]["Project360Commitment"][];
+                page: components["schemas"]["PageInfo"];
+            };
+            activities?: components["schemas"]["ActivityListResponse"];
+            coverage?: components["schemas"]["Project360Coverage"];
+            rollups?: components["schemas"]["Project360Rollups"];
+        };
+        /**
+         * @description One section of the project page, as `sections_omitted` names it.
+         * @enum {string}
+         */
+        Project360Section: "organization" | "phase_history" | "deals" | "stakeholders" | "contracts" | "commitments" | "activities" | "coverage" | "rollups";
+        /** @description The company the project is for — the two fields a page header needs, read under the organization grant and row scope. */
+        Project360Organization: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /**
+         * @description Every phase transition the project has made, oldest first — the birth row has
+         *     `from_phase` null — and the fold over them: how long the project has spent in each
+         *     phase so far, in the order the phases were first entered. A re-opened project visits a
+         *     phase twice; its seconds are summed.
+         */
+        Project360PhaseHistory: {
+            data: components["schemas"]["Project360PhaseTransition"][];
+            phase_durations: components["schemas"]["Project360PhaseDuration"][];
+        };
+        Project360PhaseTransition: {
+            /** Format: uuid */
+            id: string;
+            /** @description Null on the birth row. */
+            from_phase: string | null;
+            to_phase: string;
+            reason: string | null;
+            /** Format: date-time */
+            changed_at: string;
+            /** @description The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user. */
+            changed_by: {
+                id: string;
+                display_name: string | null;
+            };
+        };
+        Project360PhaseDuration: {
+            phase: string;
+            /**
+             * Format: int64
+             * @description Time spent in the phase so far, summed over every visit, measured up to `as_of` for the current one.
+             */
+            seconds: number;
+            /** @description True for the phase the project is in at `as_of`. */
+            current: boolean;
+        };
+        Project360Stakeholder: {
+            /** Format: uuid */
+            relationship_id: string;
+            /** Format: uuid */
+            person_id: string;
+            /** @description Null when the caller may not read the person, or the person is archived; the seat is still reported. */
+            person_name: string | null;
+            role: string | null;
+        };
+        Project360Commitment: {
+            /** Format: uuid */
+            activity_id: string;
+            subject: string;
+            /** Format: date-time */
+            due_at: string | null;
+            /** Format: uuid */
+            assignee_id: string | null;
+            assignee_name: string | null;
+            /** @description Dated and already past at `as_of`. */
+            overdue: boolean;
+        };
+        /**
+         * @description How well the project's correspondence is filed, counted over the caller's activity row
+         *     scope. `attributed` is every live activity linked to the project (its whole lifecycle,
+         *     and the same number as `rollups.activity_count`); `unattributed_nearby` is every live
+         *     activity linked to one of the project's deals or stakeholder people that carries no
+         *     project link at all — the filing debt a rep can work down. `awaiting_decision` is every
+         *     live activity the attribution ladder proposed for this project and nobody has answered
+         *     yet: a `project_attribution` approval standing in an inbox, not a link.
+         */
+        Project360Coverage: {
+            attributed: number;
+            unattributed_nearby: number;
+            awaiting_decision: number;
+        };
+        /**
+         * @description The header figures. Money is in the installation's base currency at each deal's frozen
+         *     rate, summed over the caller's deal row scope; the counts are over the caller's
+         *     activity row scope. Present only when the caller holds both the deal and the activity
+         *     grant, since a header that showed one half would read as a project with no deals or
+         *     no work.
+         */
+        Project360Rollups: {
+            open_deal_value: components["schemas"]["Money"];
+            won_deal_value: components["schemas"]["Money"];
+            /** @description Open tasks filed under the project, whole lifecycle. */
+            open_commitments: number;
+            /**
+             * Format: date-time
+             * @description The newest activity filed under the project; null when nothing is filed yet.
+             */
+            last_activity_at: string | null;
+            /** @description Every live activity filed under the project. */
+            activity_count: number;
+        };
         CreateProjectRequest: {
             name: string;
-            key?: string | null;
             /** Format: uuid */
             organization_id: string;
             /** Format: uuid */
@@ -13689,10 +15445,33 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description Note `phase` is absent by design — it moves only through advanceProjectPhase. */
+        SetProjectCompanyRequest: {
+            /** Format: uuid */
+            organization_id: string;
+            /** @description What this company is to the project; defaults to `customer` when omitted. */
+            role?: string;
+        };
+        ProjectCompanyListResponse: {
+            data: components["schemas"]["ProjectCompany"][];
+        };
+        /** @description One company's place on a project. */
+        ProjectCompany: {
+            /** Format: uuid */
+            organization_id: string;
+            display_name: string;
+            /** @description What this company is to the project — `customer` is its client, and the rest name the other sides of a joint delivery. Free text rather than an enum: an installation whose deliveries have a shape this vocabulary does not carry should not have to rename it. */
+            role: string;
+        };
+        /**
+         * @description Note `phase` is absent by design — it moves only through advanceProjectPhase.
+         *     `key` is absent for a different reason: the server mints it from the name and
+         *     it is read-only thereafter. A key is what a human writes in a subject line to
+         *     file mail under a project, so a caller-chosen one is a matcher a caller can
+         *     get wrong — a project keyed after a person's name would claim every bracketed
+         *     mention of that word.
+         */
         UpdateProjectRequest: {
             name?: string;
-            key?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
             description?: string | null;
@@ -13710,6 +15489,19 @@ export interface components {
             to_phase: "initiative" | "pursuing" | "delivering" | "closed";
             /** @description Required when to_phase=closed (422 closed_reason_required); recorded on the phase-history row either way. */
             reason?: string | null;
+        };
+        TransferProjectOwnershipRequest: {
+            /** Format: uuid */
+            from_owner_id: string;
+            /**
+             * Format: uuid
+             * @description An active user of the workspace (422 otherwise).
+             */
+            to_owner_id: string;
+        };
+        TransferProjectOwnershipResult: {
+            /** @description Live projects the caller could write that moved; archived and unwritable ones are not counted. */
+            transferred: number;
         };
         SetProjectStakeholderRequest: {
             /** Format: uuid */
@@ -13819,6 +15611,52 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        /**
+         * @description The destination for every writable, non-archived activity of one conversation thread.
+         *     `entity_type`/`entity_id`/`replace_existing_of_type` mean exactly what they mean on
+         *     `relinkActivity`.
+         */
+        RelinkThreadRequest: {
+            /** @description The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter). */
+            thread_key: string;
+            entity_type: components["schemas"]["RelinkDestinationType"];
+            /** Format: uuid */
+            entity_id: string;
+            /**
+             * @description When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
+             * @default false
+             */
+            replace_existing_of_type: boolean;
+        };
+        /**
+         * @description The destination for a named set of activities. Every id must be one the caller can see and
+         *     write, or the whole request is refused and nothing moves.
+         */
+        RelinkActivitiesRequest: {
+            activity_ids: string[];
+            entity_type: components["schemas"]["RelinkDestinationType"];
+            /** Format: uuid */
+            entity_id: string;
+            /**
+             * @description When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
+             * @default false
+             */
+            replace_existing_of_type: boolean;
+        };
+        /**
+         * @description A count and nothing else. The moved ids are deliberately not echoed: a replay of the same
+         *     Idempotency-Key, or an approval inbox showing the staged call, would otherwise hand back
+         *     rows the reader may since have lost sight of.
+         */
+        RelinkBatchResult: {
+            /** @description Activities that gained the link. One the caller could not write (thread form) or that already carried it is not counted. */
+            relinked: number;
+        };
+        /**
+         * @description The record kinds an activity may be filed under.
+         * @enum {string}
+         */
+        RelinkDestinationType: "person" | "organization" | "deal" | "lead" | "project";
         /**
          * @description One record an activity is filed under, as a caller supplies it. The read shape
          *     (ActivityLink) carries the ids the server assigned; this carries only the target.
@@ -14028,6 +15866,31 @@ export interface components {
                 max_body_with_files: number;
             };
         };
+        /** @description What a task needs. Stored as an activity of kind `task`. */
+        CreateTaskRequest: {
+            /** @description What has to be done, as one line. */
+            subject: string;
+            /** @description Detail, if one line is not enough. */
+            body?: string | null;
+            /**
+             * Format: date-time
+             * @description When it is due. Optional — a task without a date is still a task.
+             */
+            due_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Who owes it. Defaults to the caller.
+             */
+            assignee_id?: string | null;
+            /** @description The records the task is about. Omit it and the task appears on no timeline. */
+            links?: {
+                /** @enum {string} */
+                entity_type: "person" | "organization" | "deal" | "lead" | "project";
+                /** Format: uuid */
+                entity_id: string;
+            }[];
+            source: string;
+        };
         CreateActivityRequest: {
             /** @enum {string} */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
@@ -14191,6 +16054,32 @@ export interface components {
             data: components["schemas"]["Attachment"][];
             page: components["schemas"]["PageInfo"];
         };
+        /**
+         * @description One file in a deal's Files area: the attachment, whether it is hidden from this
+         *     deal, and where a captured file came from, so a reader can tell "the contract
+         *     Laura mailed on the 12th" from "the draft I uploaded".
+         */
+        DealDocument: {
+            attachment: components["schemas"]["Attachment"];
+            hidden: boolean;
+            origin?: components["schemas"]["DealDocumentOrigin"];
+        };
+        /** @description Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal. */
+        DealDocumentOrigin: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @description The activity kind the file arrived with: email, message, meeting. */
+            kind: string;
+            subject?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
+            /** Format: email */
+            counterparty_email?: string | null;
+        };
+        DealDocumentListResponse: {
+            data: components["schemas"]["DealDocument"][];
+            page: components["schemas"]["PageInfo"];
+        };
         /** @description One attempted grounded field from the staged AI-extraction read (RD-T10). */
         ExtractedField: {
             field: string;
@@ -14318,6 +16207,8 @@ export interface components {
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
             to?: string[];
+            /** @description The project this was narrowed to, when the request named one. */
+            scope?: components["schemas"]["ProjectScope"];
             /**
              * @description What the draft was written from, as separate claims rather than a sentence in
              *     the body. A SIBLING of the body on purpose (DRAFT-AC-N-4): a body that
@@ -14691,6 +16582,8 @@ export interface components {
             readonly score_computed?: number | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
+            readonly writable?: boolean;
             source_system?: string | null;
             source_id?: string | null;
             /**
@@ -15142,14 +17035,18 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description The first six are what a human files by hand. The last four are what the producers
+             * @description The first six are what a human files by hand. The rest are what the producers
              *     raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
              *     out of a settled conversation by the `signal_extract` site, each citing the message
              *     it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-             *     interaction is ours, nobody answered it, and the account is one worth chasing.
+             *     interaction is ours, nobody answered it, and the account is one worth chasing;
+             *     `project_gone_quiet` is the same kind of comparison on a project — it is being
+             *     pursued or delivered and nothing has been filed against it for 30 days (the
+             *     `projects-gone-quiet` report's own rule). Its subject is the project
+             *     (`entity_type: project`), attributed to the project's company.
              * @enum {string}
              */
-            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread";
+            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet";
             /**
              * @description Where the raw signal came from.
              * @default derived
@@ -15162,7 +17059,7 @@ export interface components {
              * @description The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
              * @enum {string|null}
              */
-            entity_type?: "deal" | "organization" | "person" | null;
+            entity_type?: "deal" | "organization" | "person" | "project" | null;
             /** Format: uuid */
             entity_id?: string | null;
             /**
@@ -15226,7 +17123,7 @@ export interface components {
              * @description Subject record, both entity fields together or neither: with a subject the signal enters `resolved`; without one it enters `unresolved` (a raw item needing a raw_ref for POST /signals/{id}/resolve).
              * @enum {string|null}
              */
-            entity_type?: "deal" | "organization" | "person" | null;
+            entity_type?: "deal" | "organization" | "person" | "project" | null;
             /** Format: uuid */
             entity_id?: string | null;
             /**
@@ -15297,7 +17194,7 @@ export interface components {
         /**
          * @description An actionable warm-intro path — names the route-in contact, the relationship we
          *     have, and a concrete next move with a drafted message. Proposal only: the send is
-         *     the 🟡 confirm-first send tool, never this read.
+         *     the governed send tool, never this read.
          */
         SignalIntroPath: {
             /** Format: uuid */
@@ -15508,6 +17405,18 @@ export interface components {
              */
             custom: boolean;
             /**
+             * @description A picklist field's allowed values, present (non-empty) when
+             *     `type=picklist` and absent otherwise. Offer these rather than a text
+             *     box: a value outside the set compiles and matches nothing, so a typo
+             *     reads as a settled answer instead of a mistake.
+             *
+             *     For a workspace-defined field these are the catalog's own `options`
+             *     for the same column. For a core field they are the values the
+             *     contract enumerates, minus null — a null in one of those enums is the
+             *     column's nullability, and `exists` is how a filter asks about that.
+             */
+            options?: string[];
+            /**
              * @description The record type this field's ids point at — present for every `id`
              *     field, absent for every other type. Offer the record rather than a
              *     box for its uuid.
@@ -15560,6 +17469,11 @@ export interface components {
             data: components["schemas"]["Tag"][];
             page: components["schemas"]["PageInfo"];
         };
+        /**
+         * @description The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
+         * @enum {string}
+         */
+        SavedViewResource: "people" | "organizations" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @description A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow. */
         SavedView: {
             /** Format: uuid */
@@ -15572,8 +17486,7 @@ export interface components {
              * @enum {string}
              */
             shared_scope: "private" | "team" | "workspace";
-            /** @enum {string} */
-            resource: "people" | "organizations" | "deals" | "activities" | "leads" | "partners" | "projects";
+            resource: components["schemas"]["SavedViewResource"];
             name: string;
             /** @description The saved column choice, sort, and filter state (§13.5 vocabulary); persisted verbatim and restored exactly. */
             query: {
@@ -15592,8 +17505,7 @@ export interface components {
             archived_at?: string | null;
         };
         CreateSavedViewRequest: {
-            /** @enum {string} */
-            resource: "people" | "organizations" | "deals" | "activities" | "leads" | "partners" | "projects";
+            resource: components["schemas"]["SavedViewResource"];
             name: string;
             query: {
                 [key: string]: unknown;
@@ -15646,6 +17558,12 @@ export interface components {
              * @default UTC
              */
             timezone: string;
+            /**
+             * @description The language this person chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS person sees.
+             *     Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
             /**
              * @default active
              * @enum {string}
@@ -15857,7 +17775,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -15992,8 +17910,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            actor_type: "human" | "agent" | "system" | "connector";
-            /** @description User uuid, agent id, connector name (e.g. connector:gmail), or 'system'. */
+            actor_type: "human" | "agent" | "system" | "connector" | "buyer";
+            /** @description User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external person with no seat, who appears in no member directory. */
             actor_id: string;
             /**
              * Format: uuid
@@ -16016,16 +17934,38 @@ export interface components {
             /** @description Resolved display name for on_behalf_of. */
             on_behalf_of_name?: string | null;
             /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay";
+            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke";
             entity_type: string;
             /**
              * Format: uuid
              * @description Every audit_log row names the record it mutated (NOT NULL since 0075).
              */
             entity_id: string;
+            /**
+             * @description The record image before the change. For an `activity` row this read
+             *     REDACTS content the caller's audience does not admit. What survives
+             *     is what the activity READ surface answers on a withheld row — the
+             *     record's markers (`kind`, `direction`, `occurred_at`,
+             *     `source_system`) and the record of the mutation itself (`audience`,
+             *     `member_count`, a relink's `entity_type`/`entity_id`/`replaced`, a
+             *     merge's `merged_into_id`, and a task's `due_at`, `remind_at`,
+             *     `assignee_id`, `is_done`). `body` survives only as the presence flag
+             *     its writer records, never as text. What does not survive is content:
+             *     `subject`, body text, and the provider message id. Every
+             *     non-surviving key is REMOVED ENTIRELY, not emptied or renamed, and
+             *     `content_state: withheld` is added to say something was removed.
+             *     So a change that touched only withheld content answers as
+             *     `{"content_state": "withheld"}` alone: a client cannot infer which
+             *     field moved, and must not present the absence as "nothing changed".
+             *     An image needing no redaction is answered unchanged and carries no
+             *     such key. The row itself is always present — actor, action, entity
+             *     and timestamp are never withheld — because a compliance trail with
+             *     holes in it is its own defect.
+             */
             before?: {
                 [key: string]: unknown;
             } | null;
+            /** @description The record image after the change, redacted on the same terms as `before`. */
             after?: {
                 [key: string]: unknown;
             } | null;
@@ -16048,7 +17988,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "activity";
+            entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
             /** Format: uuid */
             entity_id: string;
             field: string;
@@ -16057,7 +17997,7 @@ export interface components {
             /** Format: date-time */
             changed_at: string;
             /** @enum {string} */
-            actor_type: "human" | "agent" | "system" | "connector";
+            actor_type: "human" | "agent" | "system" | "connector" | "buyer";
             actor_id: string;
             /**
              * Format: uuid
@@ -16090,7 +18030,7 @@ export interface components {
              * @description The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
              * @enum {string}
              */
-            object: "person" | "organization" | "deal" | "lead" | "activity";
+            object: "person" | "organization" | "deal" | "lead" | "project";
             /** @description Display label; the only thing a rename updates. */
             label: string;
             /** @description Admin-facing key the column_name derives from. */
@@ -16138,7 +18078,7 @@ export interface components {
          */
         CreateCustomFieldRequest: {
             /** @enum {string} */
-            object: "person" | "organization" | "deal" | "lead" | "activity";
+            object: "person" | "organization" | "deal" | "lead" | "project";
             label: string;
             /** @enum {string} */
             type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
@@ -16164,7 +18104,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            actor_type: "human" | "agent" | "system" | "connector";
+            actor_type: "human" | "agent" | "system" | "connector" | "buyer";
             actor_id: string;
             /** @description Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves. */
             actor_name?: string | null;
@@ -16336,6 +18276,72 @@ export interface components {
             anchor: components["schemas"]["ContextEntityRef"];
             sections: components["schemas"]["ContextSection"][];
         };
+        AiActivity: {
+            /**
+             * Format: date-time
+             * @description When the server read this.
+             */
+            as_of: string;
+            /** @description Occurrences that are queued, running, or live past their lease. Empty means the AI is at rest — not that nothing was read. */
+            running: components["schemas"]["AiActivityItem"][];
+            /** @description Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10. */
+            recent: components["schemas"]["AiActivityItem"][];
+        };
+        /**
+         * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
+         *     because a task that reports nothing is AI work the product performed and then denied.
+         *     What a reader is SHOWN is a separate decision and belongs to the client: a complete
+         *     record is the server's obligation, an edited one is the interface's.
+         *
+         *     Three names come from a durable carrier that owns its own occurrence and can say
+         *     queued and running: the two scheduled kinds match a name in runner.Catalog(), and
+         *     `document_extract` is a reading of an attached document a human asked for. Every other
+         *     name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
+         *     settled when it appears, because the router learns of a call once the call is over.
+         *
+         *     Its own schema because the item that reports a kind and the query that asks for kinds
+         *     must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
+         *     edits one.
+         * @enum {string}
+         */
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build";
+        AiActivityItem: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["AiActivityKind"];
+            /**
+             * @description `done` is a clean finish; `degraded` kept partial state and MUST NOT read as done.
+             *
+             *     `stalled` is DERIVED at read time and never stored: the occurrence's own source
+             *     declared how long a live attempt stays believable, and this one is past it. It is
+             *     what stops a worker that died without saying so from being displayed as working —
+             *     a row cannot be left stalled by a writer that forgot, because no writer writes it.
+             * @enum {string}
+             */
+            state: "queued" | "running" | "stalled" | "done" | "degraded" | "failed";
+            /**
+             * Format: date-time
+             * @description When the current attempt became current — its claim, or its enqueue while queued.
+             *     An occurrence can start on one day and settle on the next, so this is NOT what
+             *     `recent` is bounded by.
+             */
+            started_at: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /**
+             * @description Why it stopped early, in the SOURCE's own words. Server-authored prose, never a
+             *     model provider's or a parser's own message: those carry vendor text and can echo
+             *     credential material, and this field reaches an ordinary rep. The underlying cause
+             *     goes to the operator log instead.
+             */
+            degrade_reason?: string | null;
+            /**
+             * @description The occurrence's own prose when it wrote any, capped on the way to the wire. It is
+             *     optional by construction: nothing validates that a finishing occurrence produced one,
+             *     and it is never the status line — the reader's locale decides those words.
+             */
+            summary?: string | null;
+        };
         AgentTool: {
             /** @description The tool name (tools/list identity). */
             name: string;
@@ -16390,7 +18396,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -17510,8 +19516,14 @@ export interface components {
             restricted_until: string;
             /** @description The retention class that holds it (e.g. commercial_correspondence), plus the statutory basis. Never free text from a user. */
             reason: string;
-            /** @description Every transaction the record qualifies through, by name. Both id and name are required, so a qualification whose deal has since been deleted — and a controller pin that never named one (germany-package DEPACK-AC-5h: supplier correspondence has no deal in this product) — is reported through `reason` rather than as a half-populated entry. */
+            /** @description Every deal the record qualifies through, by name. Both id and name are required, so a qualification whose deal has since been deleted — and a controller pin that never named one (germany-package DEPACK-AC-5h: supplier correspondence has no deal in this product) — is reported through `reason` rather than as a half-populated entry. Empty is also the ordinary answer for a record held by a project alone; see `projects`. */
             deals: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            }[];
+            /** @description Every project the record qualifies through, by name, on the same terms as `deals`. A project qualifies its correspondence by existing — it is a commercial engagement, so the mail filed under it is about an actual transaction whether or not a deal on it has closed. A record can qualify through both a deal and a project; neither list is a summary of the other. */
+            projects?: {
                 /** Format: uuid */
                 id: string;
                 name: string;
@@ -18196,6 +20208,475 @@ export interface components {
             active?: boolean;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * @description Where the room stands. A room is created `live`, and `live` and `closed` are
+         *     the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
+         *     retired: no writer produces them, and the enum keeps them so an old audit
+         *     image still reads.
+         *
+         *     `closed` stops the room taking new work while KEEPING access — the buyer goes
+         *     on reading it, and neither side adds a document or a comment. It is not a
+         *     frozen copy: what the buyer reads is the live room, so a file later removed
+         *     from the deal stops being served here too. `expired` is access lapsing on its
+         *     own. `archived` ends the room outright and frees the deal for another.
+         * @enum {string}
+         */
+        DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";
+        /**
+         * @description One buyer-facing room per deal. Mirrors the `deal_room` table.
+         *
+         *     The fields here are the WORKING copy — what a buyer actually reads is the
+         *     latest release, which freezes these values at publish time. Editing a live
+         *     room's title changes nothing for the buyer until someone publishes again.
+         */
+        DealRoom: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The deal this room projects. Immutable — a room never moves between deals.
+             */
+            deal_id: string;
+            title: string;
+            /** @description The buyer's first paragraph on opening the room. */
+            welcome_message?: string | null;
+            state: components["schemas"]["DealRoomState"];
+            /**
+             * Format: uuid
+             * @description The named human a buyer is pointed at for help. Defaults to the deal's owner
+             *     at create time and transfers deliberately thereafter; null once that user is
+             *     deleted, which is the state a steward transfer exists to repair.
+             */
+            steward_user_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When buyer access lapses on its own. Extending is an explicit human act.
+             */
+            expires_at?: string | null;
+            /** Format: date-time */
+            closed_at?: string | null;
+            source: string;
+            /** @description Server-stamped from the authenticated principal; never client-supplied. */
+            readonly captured_by: string;
+            version?: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        DealRoomListResponse: {
+            data: components["schemas"]["DealRoom"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        CreateDealRoomRequest: {
+            /** Format: uuid */
+            deal_id: string;
+            title: string;
+            welcome_message?: string | null;
+            /**
+             * Format: uuid
+             * @description Defaults to the deal's owner when omitted.
+             */
+            steward_user_id?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            source: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
+         *     reads the new wording on their next load, with nothing staged in between.
+         *
+         *     `expires_at` is deliberately NOT here: moving the moment a buyer loses access
+         *     is a change to what an outside party can reach, so it has its own human-only
+         *     operation rather than riding an auto-execute patch.
+         */
+        UpdateDealRoomRequest: {
+            title?: string;
+            welcome_message?: string | null;
+            /** Format: uuid */
+            steward_user_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        SetDealRoomExpiryRequest: {
+            /**
+             * Format: date-time
+             * @description When buyer access lapses. Null removes the bound entirely, which is why
+             *     the field is required rather than optional — clearing an expiry must be
+             *     something a caller asked for, never something an omitted key did.
+             */
+            expires_at: string | null;
+        };
+        /**
+         * @description What a participant may do in the room. Coarse and room-wide on purpose — a
+         *     per-document permission matrix is a product nobody asked for.
+         *
+         *     `view` reads. `comment` also writes comments and messages.
+         *
+         *     Typed as a plain string rather than an inline enum: `view` and `comment`
+         *     would generate package-scope Go constants named `View` and `Comment` in the
+         *     shared contracts package, which collide with — and silently rename — the
+         *     constants of any other schema declaring the same value. The closed set is
+         *     stated here and held by the writer and the schema CHECK.
+         */
+        DealRoomParticipantCapability: string;
+        /**
+         * @description What happened to the credential we last sent this person — delivery, modelled
+         *     apart from access. A bounced invitation and a revoked one look identical
+         *     otherwise, and a seller chasing silence needs to tell them apart.
+         *
+         *     `pending` was minted but not handed to a mail relay (the installation may have
+         *     none configured). `sent` left the building. `delivered` was accepted by the
+         *     recipient's server. `failed` bounced. `consumed` was exchanged for a session —
+         *     they are in. `superseded` was retired by a later resend. `none` means no
+         *     credential currently stands, which is what a revoked participant shows.
+         * @enum {string}
+         */
+        DealRoomDeliveryState: "none" | "pending" | "sent" | "delivered" | "failed" | "consumed" | "superseded";
+        /**
+         * @description One named person admitted to one room. Not an app_user: a participant consumes
+         *     no licence, holds no CRM authority, and their whole reach is this one room.
+         */
+        DealRoomParticipant: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            room_id: string;
+            full_name: string;
+            /**
+             * Format: email
+             * @description Stored lowercase.
+             */
+            email: string;
+            capability: components["schemas"]["DealRoomParticipantCapability"];
+            delivery_state: components["schemas"]["DealRoomDeliveryState"];
+            /**
+             * Format: uuid
+             * @description The user who admitted them. Null once that user is deleted.
+             */
+            invited_by?: string | null;
+            /**
+             * Format: date-time
+             * @description When the standing credential lapses. Null when none stands.
+             */
+            credential_expires_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When they last made a request. Null if they have never signed in.
+             */
+            last_seen_at?: string | null;
+            /**
+             * @description How many documents this person has taken out of the room, counting each
+             *     download. Absent until they take one.
+             *
+             *     A seller previewing their own room as a buyer is never counted: the panel
+             *     would otherwise report the buyer opening what the rep opened.
+             */
+            readonly download_count?: number | null;
+            /** @description The titles of the documents they downloaded, each named once. */
+            readonly documents_downloaded?: string[] | null;
+            /**
+             * @description Whether this person has ever exchanged a credential for a session.
+             *
+             *     Distinct from `delivery_state == consumed`, which reports the LATEST
+             *     invitation attempt and therefore moves when one is resent. This does not
+             *     move: it is what fixes their address, because redirecting a link somebody
+             *     has already signed in with would hand their standing access to whoever the
+             *     new address belongs to.
+             */
+            readonly has_signed_in?: boolean;
+            /**
+             * Format: date-time
+             * @description When this person last asked for a new link from the public page. The
+             *     seller sees it beside the row so a buyer whose mail never arrived (no
+             *     relay configured, or a link still standing) can be handed one by hand.
+             */
+            readonly link_requested_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When their access was taken away. The row survives revocation so their
+             *     comments stay attributed to a name.
+             */
+            revoked_at?: string | null;
+            source: string;
+            readonly captured_by: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        } & {
+            [key: string]: unknown;
+        };
+        DealRoomParticipantListResponse: {
+            data: components["schemas"]["DealRoomParticipant"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        InviteDealRoomParticipantRequest: {
+            full_name: string;
+            /** Format: email */
+            email: string;
+            /** @description Defaults to `view` — the least that lets someone read the room. */
+            capability?: components["schemas"]["DealRoomParticipantCapability"];
+            source: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description Any subset; omit a field to leave it unchanged. */
+        UpdateDealRoomParticipantRequest: {
+            full_name?: string;
+            /**
+             * Format: email
+             * @description Only while their credential is unconsumed. Changing it invalidates the link
+             *     already sent; resend to issue a new one.
+             */
+            email?: string;
+            capability?: components["schemas"]["DealRoomParticipantCapability"];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description A participant and the credential just minted for them.
+         *
+         *     `credential` is returned ONCE and never again — only its hash is stored, so it
+         *     cannot be recovered, only replaced by a resend. Treat it as a secret: it admits
+         *     the bearer to everything the room has published.
+         */
+        DealRoomInvitationIssued: {
+            participant: components["schemas"]["DealRoomParticipant"];
+            /** @description The raw one-time credential. Put it in the link's fragment, never its path. */
+            credential: string;
+            /** Format: date-time */
+            credential_expires_at: string;
+            /**
+             * @description Whether the invitation was handed to a mail relay. False when the
+             *     installation has no outbound mail configured — the participant and the
+             *     credential are still recorded, and the caller is expected to deliver the
+             *     link itself rather than being told the invitation failed.
+             */
+            delivered: boolean;
+        };
+        DealRoomPreviewIssued: {
+            /** @description The one-time `mdr_` credential. Shown once; the server keeps only its digest. */
+            credential: string;
+            /** Format: date-time */
+            credential_expires_at: string;
+        };
+        /**
+         * @description One of four fixed groups, as a machine key: `commercial`, `legal`,
+         *     `security_privacy`, `delivery_operations`. Labels are the client's i18n; the
+         *     key never carries a display string. Not configurable, not AI-assigned — the
+         *     person adding the document picks. A plain string rather than an inline enum
+         *     for the reason `DealRoomParticipantCapability` gives.
+         */
+        DealRoomDocumentGroup: string;
+        /**
+         * @description One document a room puts in front of its buyer: a pointer at an attachment
+         *     filed on the deal, with a buyer-facing title, a group and an order. The
+         *     attachment row is the exact version shown.
+         */
+        DealRoomDocument: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            room_id: string;
+            /** Format: uuid */
+            attachment_id: string;
+            group_key: components["schemas"]["DealRoomDocumentGroup"];
+            title: string;
+            position: number;
+            /** @description The attachment's stored filename, for the seller's reference. */
+            readonly filename: string;
+            readonly content_type?: string | null;
+            /** Format: int64 */
+            readonly byte_size?: number | null;
+            /** Format: date-time */
+            archived_at?: string | null;
+            source: string;
+            readonly captured_by?: string;
+            version: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        } & {
+            [key: string]: unknown;
+        };
+        DealRoomDocumentListResponse: {
+            data: components["schemas"]["DealRoomDocument"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        AddDealRoomDocumentRequest: {
+            /**
+             * Format: uuid
+             * @description An attachment filed on this room's deal.
+             */
+            attachment_id: string;
+            group_key: components["schemas"]["DealRoomDocumentGroup"];
+            /** @description The buyer-facing name. Defaults to the attachment's filename. */
+            title?: string;
+            /** @description Order within the group. Defaults to 0. */
+            position?: number;
+            source: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description Any subset; omit a field to leave it unchanged. */
+        UpdateDealRoomDocumentRequest: {
+            group_key?: components["schemas"]["DealRoomDocumentGroup"];
+            title?: string;
+            position?: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One published document as the buyer sees it. No seller-side ids beyond its own. */
+        BuyerRoomDocument: {
+            /** Format: uuid */
+            id: string;
+            group_key: components["schemas"]["DealRoomDocumentGroup"];
+            title: string;
+            position: number;
+            filename: string;
+            content_type?: string | null;
+            /** Format: int64 */
+            byte_size?: number | null;
+        };
+        BuyerRoomDocumentListResponse: {
+            data: components["schemas"]["BuyerRoomDocument"][];
+        };
+        /** @description Who spoke — which side, and the name that side knows them by. */
+        DealRoomAuthor: {
+            /** @description `seller` or `buyer`. */
+            side: string;
+            name: string;
+        };
+        DealRoomComment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            thread_id: string;
+            body: string;
+            author: components["schemas"]["DealRoomAuthor"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description One thread of the room's conversation, with its comments. Served to both
+         *     sides in the same shape: the buyer and the seller read the same
+         *     conversation, and neither side's ids beyond the thread's own are in it.
+         */
+        DealRoomThread: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            room_id: string;
+            /**
+             * Format: uuid
+             * @description Null for a room-level thread.
+             */
+            document_id?: string | null;
+            required_change: boolean;
+            /** @description `open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives. */
+            state: string;
+            author: components["schemas"]["DealRoomAuthor"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            version?: components["schemas"]["RowVersion"];
+            comments: components["schemas"]["DealRoomComment"][];
+        };
+        DealRoomThreadListResponse: {
+            data: components["schemas"]["DealRoomThread"][];
+        };
+        OpenDealRoomThreadRequest: {
+            /**
+             * Format: uuid
+             * @description The room document the thread is about. Omit for a room-level exchange.
+             */
+            document_id?: string | null;
+            /** @description The first comment. */
+            body: string;
+            /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
+            required_change?: boolean;
+            /** @description Provenance. Defaults to `ui` on the public edge. */
+            source?: string;
+        };
+        PostDealRoomCommentRequest: {
+            body: string;
+            source?: string;
+        };
+        DealRoomCredentialRequest: {
+            /** @description The one-time credential from the invitation link's fragment. */
+            credential: string;
+        };
+        DealRoomPeekResponse: {
+            /** @description True only for a credential that can be exchanged right now. Identical for a paused and a live room. */
+            exchangeable: boolean;
+        };
+        DealRoomSessionIssued: {
+            /** @description Present as `Authorization: Bearer`. Returned once; only its hash is stored. */
+            session_token: string;
+            /**
+             * Format: date-time
+             * @description Absolute expiry. The buyer exchanges a fresh link after it.
+             */
+            expires_at: string;
+        };
+        DealRoomLinkRequest: {
+            /** Format: email */
+            email: string;
+        };
+        /**
+         * @description Whether the session admits the caller to content right now. `live` — the room
+         *     is open and the list can be worked. `closed` — the deal is done; everything
+         *     reads, nothing writes. `paused` — the seller has paused access; the link
+         *     stays valid and nothing is served until it resumes. `expired` — access has
+         *     lapsed on its own; ask for a new link.
+         *
+         *     A plain string, not an inline enum, for the reason `DealRoomState` and its
+         *     siblings give: the same four words generated as package-scope constants
+         *     would collide with the lifecycle's.
+         */
+        BuyerRoomAccess: string;
+        /** @description The caller, as the room knows them. Nothing about anyone else in the room. */
+        BuyerRoomParticipant: {
+            /** Format: uuid */
+            id: string;
+            full_name: string;
+            /** Format: email */
+            email: string;
+            capability: components["schemas"]["DealRoomParticipantCapability"];
+        };
+        /**
+         * @description What the buyer reads at the top of the room, as it stands now. A room is
+         *     live from creation, so there is no release between an edit and this: the
+         *     seller changes the wording and the buyer reads it on their next load.
+         *     The live DEAL is still never read on this path — only the room's own row.
+         */
+        BuyerRoomContent: {
+            title: string;
+            welcome_message?: string | null;
+            /** @description The named person on the seller's side to contact. Null when the steward's seat is gone. */
+            steward_name?: string | null;
+            /** Format: date-time */
+            closed_at?: string | null;
+        };
+        BuyerRoomView: {
+            access: components["schemas"]["BuyerRoomAccess"];
+            participant: components["schemas"]["BuyerRoomParticipant"];
+            /** @description True when this session is a seller previewing the room as a buyer. Such a session can read and never write. */
+            preview?: boolean;
+            /** @description Whom to contact. Present in every access state, because a paused buyer needs it most. */
+            steward_name?: string | null;
+            /** @description Omitted while access is `paused` or `expired`, and when nothing has been published yet. */
+            room?: components["schemas"]["BuyerRoomContent"];
         };
         /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like Quota/CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
         OfferTemplate: {
@@ -18939,6 +21420,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
+        BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
         ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history";
         /**
@@ -19761,7 +22244,16 @@ export interface operations {
     archivePerson: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -19782,6 +22274,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updatePerson: {
@@ -19907,7 +22400,10 @@ export interface operations {
     };
     getPerson360: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
+                project_id?: string;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -20028,6 +22524,11 @@ export interface operations {
                 "application/json": {
                     /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
                     intent?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
+                     */
+                    project_id?: string | null;
                 };
             };
         };
@@ -20774,7 +23275,16 @@ export interface operations {
     archiveOrganization: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -20793,6 +23303,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateOrganization: {
@@ -20990,7 +23501,10 @@ export interface operations {
     };
     getOrganization360: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
+                project_id?: string;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -21182,7 +23696,10 @@ export interface operations {
     };
     getOrganizationBrief: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
+                project_id?: components["parameters"]["BriefProjectId"];
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -21209,7 +23726,10 @@ export interface operations {
     };
     regenerateOrganizationBrief: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
+                project_id?: components["parameters"]["BriefProjectId"];
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -21288,6 +23808,11 @@ export interface operations {
             content: {
                 "application/json": {
                     question: components["schemas"]["OrganizationQuestion"];
+                    /**
+                     * Format: uuid
+                     * @description Which body of work the question is about. When set, the answer is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the answer's `scope` says so. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
+                     */
+                    project_id?: string | null;
                 };
             };
         };
@@ -21330,6 +23855,11 @@ export interface operations {
                      * @description Which open deal the message is about. Absent draws on the account as a whole.
                      */
                     deal_id?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
+                     */
+                    project_id?: string | null;
                     /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
                     intent?: string | null;
                 };
@@ -22005,7 +24535,16 @@ export interface operations {
     archiveDeal: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -22024,6 +24563,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateDeal: {
@@ -22313,6 +24853,51 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    transferProjectOwnership: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferProjectOwnershipRequest"];
+            };
+        };
+        responses: {
+            /** @description How many projects moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferProjectOwnershipResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getProject: {
         parameters: {
             query?: never;
@@ -22526,6 +25111,33 @@ export interface operations {
             };
         };
     };
+    getProject360: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's 360 view. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project360"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listProjectStakeholders: {
         parameters: {
             query?: never;
@@ -22627,6 +25239,85 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    setProjectCompany: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProjectCompanyRequest"];
+            };
+        };
+        responses: {
+            /** @description The companies on the project, after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCompanyListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeProjectCompany: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Taken off. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listPipelines: {
@@ -22968,6 +25659,53 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    createTask: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description The task, as an activity. */
+            201: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listActivities: {
         parameters: {
             query?: {
@@ -23010,8 +25748,14 @@ export interface operations {
                 /** @description Open tasks for an assignee. */
                 assignee_id?: string;
                 q?: string;
+                /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
+                project_id?: string;
                 /** @description One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread. */
                 thread_key?: string;
+                /** @description Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone. */
+                occurred_after?: string;
+                /** @description Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`. */
+                occurred_before?: string;
             };
             header?: never;
             path?: never;
@@ -23123,7 +25867,16 @@ export interface operations {
     archiveActivity: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -23142,6 +25895,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateActivity: {
@@ -23242,7 +25996,10 @@ export interface operations {
     };
     getMeetingBrief: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The body of work to prepare for, for a meeting filed under NO project. A meeting filed under a project scopes itself by that filing: naming the same project here is accepted, naming a different one is `404` — the brief for a meeting about one engagement is not available as a brief about another. Must be a live project the caller can read. */
+                project_id?: string;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -23346,6 +26103,98 @@ export interface operations {
                     "application/json": components["schemas"]["Activity"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    relinkThread: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelinkThreadRequest"];
+            };
+        };
+        responses: {
+            /** @description How many activities moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelinkBatchResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    relinkActivities: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelinkActivitiesRequest"];
+            };
+        };
+        responses: {
+            /** @description How many activities moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelinkBatchResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -24117,6 +26966,342 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    peekDealRoomCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealRoomCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description Whether the credential is exchangeable. Never 404 — absence is a false. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomPeekResponse"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    exchangeDealRoomCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealRoomCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description The session token, returned once. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomSessionIssued"];
+                };
+            };
+            /** @description The credential admits nobody — unknown, already used, lapsed, retired or revoked; which one is deliberately not said. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    requestDealRoomLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealRoomLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. If the address is known, a link is on its way. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getBuyerRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The buyer's view. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuyerRoomView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listBuyerRoomDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The published documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuyerRoomDocumentListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    downloadBuyerRoomDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listBuyerRoomThreads: {
+        parameters: {
+            query?: {
+                document_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The threads. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThreadListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    openBuyerRoomThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenDealRoomThreadRequest"];
+            };
+        };
+        responses: {
+            /** @description The new thread. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThread"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replyBuyerRoomThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostDealRoomCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description The thread as it now stands. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThread"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    signOutBuyerRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getPreferenceCenter: {
@@ -25406,7 +28591,7 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
                 person_id?: string;
                 organization_id?: string;
                 deal_id?: string;
@@ -25459,7 +28644,16 @@ export interface operations {
     archiveRelationship: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -25478,6 +28672,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateRelationship: {
@@ -25741,7 +28936,7 @@ export interface operations {
     listSavedViews: {
         parameters: {
             query?: {
-                resource?: "people" | "organizations" | "deals" | "activities" | "leads" | "partners" | "projects";
+                resource?: components["schemas"]["SavedViewResource"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
             };
@@ -28044,6 +31239,106 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listAiProviderKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per servable provider, in the routing table's order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderKeyList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no credential inventory to report. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProviderKeyInput"];
+            };
+        };
+        responses: {
+            /** @description Sealed. The key is not echoed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+            /** @description This installation has no key vault, so a provider key cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or there was nothing to remove. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no sealed credential to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAiCalls: {
         parameters: {
             query?: {
@@ -28635,7 +31930,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -28705,12 +32000,12 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                entity_type: "person" | "organization" | "deal" | "lead" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
                 entity_id: string;
                 /** @description Narrow to one field name. */
                 field?: string;
                 /** @description Narrow to one actor category. */
-                actor_type?: "human" | "agent" | "system" | "connector";
+                actor_type?: "human" | "agent" | "system" | "connector" | "buyer";
             };
             header?: never;
             path?: never;
@@ -28761,7 +32056,7 @@ export interface operations {
                  */
                 sort?: components["parameters"]["Sort"];
                 /** @description Target core object (CUSTOM-FIELDS-PARAM-2). */
-                object: "person" | "organization" | "deal" | "lead" | "activity";
+                object: "person" | "organization" | "deal" | "lead" | "project";
                 /** @description Filter to one lifecycle state. Omitted returns both active and retired — this admin list intentionally does not default-exclude retired rows. */
                 status?: "active" | "retired";
             };
@@ -31318,6 +34613,765 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listDealRooms: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
+                 *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
+                 *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
+                 *     accepted multi-field spelling; any other comma-separated multi-field spec returns
+                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
+                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
+                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
+                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
+                 */
+                sort?: components["parameters"]["Sort"];
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+                /** @description Only the room belonging to this deal. */
+                deal_id?: string;
+                state?: components["schemas"]["DealRoomState"];
+                /** @description Only rooms this address may currently enter — a live, non-revoked seat. The admin's path to "which rooms is this departed contact still in". */
+                participant_email?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of Deal Rooms. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createDealRoom: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDealRoomRequest"];
+            };
+        };
+        responses: {
+            /** @description The new Deal Room, live and awaiting its first invitation. */
+            201: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Deal Room. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    archiveDealRoom: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The archived Deal Room. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateDealRoom: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDealRoomRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated Deal Room. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    pauseDealRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The paused Deal Room. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    resumeDealRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The resumed Deal Room. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    closeDealRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The closed Deal Room. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    setDealRoomExpiry: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetDealRoomExpiryRequest"];
+            };
+        };
+        responses: {
+            /** @description The Deal Room with its new expiry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoom"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewDealRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The one-time credential, returned exactly once. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomPreviewIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listDealRoomParticipants: {
+        parameters: {
+            query?: {
+                /** @description Only participants whose access has not been revoked. */
+                active_only?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The room's roster. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomParticipantListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    inviteDealRoomParticipant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteDealRoomParticipantRequest"];
+            };
+        };
+        responses: {
+            /** @description The participant, with the one-time credential. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomInvitationIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateDealRoomParticipant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDealRoomParticipantRequest"];
+            };
+        };
+        responses: {
+            /** @description The corrected participant. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomParticipant"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resendDealRoomInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant, with the new one-time credential. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomInvitationIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    revokeDealRoomParticipant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The revoked participant. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomParticipant"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDealRoomDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The room's documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomDocumentListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addDealRoomDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDealRoomDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description The added document. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeDealRoomDocument: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The removed document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateDealRoomDocument: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDealRoomDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listDealRoomThreads: {
+        parameters: {
+            query?: {
+                document_id?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The threads, oldest first, each with its comments oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThreadListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    openDealRoomThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenDealRoomThreadRequest"];
+            };
+        };
+        responses: {
+            /** @description The new thread with its first comment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThread"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replyDealRoomThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostDealRoomCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description The thread as it now stands. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThread"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resolveDealRoomThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The resolved thread. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomThread"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listOfferTemplates: {
         parameters: {
             query?: {
@@ -32935,6 +36989,126 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listDealDocuments: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                include_hidden?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDocumentListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    hideDealDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hidden. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unhideDealDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listed again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDealStatus: {
+        parameters: {
+            query?: {
+                /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealStatusCard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getDealCoverage: {
         parameters: {
             query?: never;
@@ -33108,6 +37282,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyLocale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyLocaleRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the chosen locale. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMyAiActivity: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
+                 *     Omitted means every kind.
+                 *
+                 *     An empty list is a 422, and so is a name this enum does not carry. Both come
+                 *     back as an empty feed, and an empty feed is the TRUE answer for an AI at rest —
+                 *     so serving either would report "the AI did nothing" about a question the server
+                 *     never actually asked. A client that lost its list and a client that typed the
+                 *     vocabulary by hand both get told, rather than reassured.
+                 */
+                kinds?: components["schemas"]["AiActivityKind"][];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own AI activity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiActivity"];
                 };
             };
             401: components["responses"]["Unauthorized"];

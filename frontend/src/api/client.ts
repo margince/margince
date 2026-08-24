@@ -22,6 +22,20 @@ import createClient from "openapi-fetch";
 // resolves its singleton organization itself — the client sends no tenant
 // selector, only the session cookie.
 
+// The reader's language, read from where the shell stores it. Sent on every
+// request as Accept-Language so a server-side writer — the model-written
+// briefs — answers in the language the reader is reading, rather than making
+// them translate a summary they asked for. Storage can throw (private windows,
+// blocked site data), and a client that cannot read a preference still has to
+// make the call, so a failure is simply no header.
+function readerLanguage(): string | undefined {
+  try {
+    return globalThis.localStorage?.getItem("margince.locale") ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const api = createClient<paths>({
   // same-origin absolute base + the /v1 mount: contract paths are
   // unprefixed, the server serves them under /v1 (same as curl :8080/v1/me)
@@ -31,7 +45,13 @@ export const api = createClient<paths>({
       : `${globalThis.location.origin}/v1`,
   credentials: "include",
   // resolve the CURRENT global fetch per call (test stubs, SW interception)
-  fetch: (request) => globalThis.fetch(request),
+  fetch: (request) => {
+    const language = readerLanguage();
+    if (language && !request.headers.has("Accept-Language")) {
+      request.headers.set("Accept-Language", language);
+    }
+    return globalThis.fetch(request);
+  },
 });
 
 // The cursor a first page asks with: none. Named and typed once, because

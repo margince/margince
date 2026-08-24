@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
@@ -117,6 +118,7 @@ func (c CompanyContext) OnboardingEnabled() bool {
 type Organization struct {
 	Name         string `yaml:"name"`
 	BaseCurrency string `yaml:"base_currency"`
+	BaseLanguage string `yaml:"base_language"`
 	Timezone     string `yaml:"timezone"`
 }
 
@@ -175,18 +177,6 @@ func (b BootstrapAdmin) passwordRef() Secret {
 		return b.Password.withField("bootstrap_admin.password")
 	}
 	return Secret{kind: secretFromFile, arg: b.PasswordFile, field: "bootstrap_admin.password_file"}
-}
-
-// Seeds externalizes the workspace defaults bootstrap previously seeded
-// from code. Every key is optional — an omitted key seeds the built-in
-// default, so a minimal file behaves exactly like the historical
-// bootstrap. Values are consumed once, at organization creation.
-type Seeds struct {
-	Pipeline           *PipelineSeed    `yaml:"pipeline"`
-	ConsentPurposes    []ConsentPurpose `yaml:"consent_purposes"`
-	Retention          *RetentionSeed   `yaml:"retention"`
-	StarterAutomations *bool            `yaml:"starter_automations"`
-	BookingPage        *bool            `yaml:"booking_page"`
 }
 
 // RetentionSeed selects the retention POSTURE a fresh installation is
@@ -342,8 +332,11 @@ func (c Config) validate() error {
 			return fmt.Errorf("deployconfig: organization.timezone: %w", err)
 		}
 	}
-	if cur := c.Organization.BaseCurrency; cur != "" && !isCurrencyCode(cur) {
+	if cur := c.Organization.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
 		return fmt.Errorf("deployconfig: organization.base_currency %q is not a 3-letter ISO 4217 code", cur)
+	}
+	if lang := c.Organization.BaseLanguage; lang != "" && !textlang.Known(lang) {
+		return fmt.Errorf("deployconfig: organization.base_language %q is not a language this build speaks (en, de, vi)", lang)
 	}
 	if err := c.Rates.validate(); err != nil {
 		return err
@@ -465,18 +458,4 @@ func (p PipelineSeed) validate() error {
 		}
 	}
 	return nil
-}
-
-// isCurrencyCode accepts the ISO 4217 shape (three ASCII uppercase
-// letters); the currency's existence is the workspace table's concern.
-func isCurrencyCode(s string) bool {
-	if len(s) != 3 {
-		return false
-	}
-	for _, r := range s {
-		if r < 'A' || r > 'Z' {
-			return false
-		}
-	}
-	return true
 }

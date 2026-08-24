@@ -12,11 +12,7 @@ package people
 // overwrite it, gated by organization.name_source (nameSourceDomain marks a
 // name still provisional).
 
-import (
-	"strings"
-
-	"golang.org/x/net/publicsuffix"
-)
+import "github.com/gradionhq/margince/backend/internal/platform/freemail"
 
 // The organization.name_source provenance values (0120). Ordered weakest to
 // strongest: a stronger source may overwrite a weaker one, never the reverse,
@@ -28,66 +24,17 @@ const (
 	nameSourceDomain    = "domain"
 )
 
-// DisplayNameFromDomain turns a mail domain into a readable organization name
-// by title-casing its registrable label: "gitex.com" → "Gitex",
-// "acme-corp.co.uk" → "Acme Corp", "eu.docusign.net" → "Docusign". It uses the
-// public-suffix list so a multi-label eTLD (co.uk, com.au) never leaks into the
-// name. Falls back to the raw (lowercased) domain only when no registrable
-// label can be found — an honest last resort, never a fabrication. The result
-// is stamped with name_source='domain' by the caller: provisional, overwritable.
+// DisplayNameFromDomain turns a mail domain into a readable organization name.
+//
+// It delegates: the derivation is a public-suffix walk, and the SAME walk
+// already answers "is this a mailbox host" for the same caller at the same
+// moment. Keeping the two in one package is what stops a second door growing
+// its own copy of each — the agent tool `qualify_lead` had done exactly that,
+// with a 15-domain list beside a split on the first dot that named
+// "eu.docusign.net" as "Eu".
+//
+// The result is stamped with name_source='domain' by the caller: provisional,
+// overwritable.
 func DisplayNameFromDomain(domain string) string {
-	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
-	if domain == "" {
-		return ""
-	}
-	label := registrableLabel(domain)
-	if label == "" {
-		return domain
-	}
-	return titleizeLabel(label)
-}
-
-// registrableLabel returns the single label immediately left of the public
-// suffix — the part a human reads as the company. "eu.docusign.net" →
-// "docusign"; "acme.co.uk" → "acme". Empty when the domain is a bare public
-// suffix or otherwise has no registrable label.
-func registrableLabel(domain string) string {
-	etldPlusOne, err := publicsuffix.EffectiveTLDPlusOne(domain)
-	if err != nil {
-		// No known suffix (a bare hostname, an intranet label): take the first
-		// label as the best available name.
-		if first, _, ok := strings.Cut(domain, "."); ok {
-			return first
-		}
-		return domain
-	}
-	label, _, _ := strings.Cut(etldPlusOne, ".")
-	return label
-}
-
-// titleizeLabel renders a registrable label as a display name: word-split on
-// '-' and '_', each word capitalized. "acme-corp" → "Acme Corp". A label with
-// no separators is simply capitalized ("gitex" → "Gitex").
-func titleizeLabel(label string) string {
-	words := strings.FieldsFunc(label, func(r rune) bool { return r == '-' || r == '_' })
-	for i, w := range words {
-		words[i] = capitalizeFirst(w)
-	}
-	if len(words) == 0 {
-		return capitalizeFirst(label)
-	}
-	return strings.Join(words, " ")
-}
-
-// capitalizeFirst upper-cases the first rune and leaves the rest untouched.
-// The input is always an already-lowercased domain label (mail domains are
-// case-insensitive, so the domain's own casing carries no signal and is
-// discarded at DisplayNameFromDomain's entry) — leaving the tail as-is is
-// simply the cheapest correct thing, not a bid to preserve inner case.
-func capitalizeFirst(w string) string {
-	if w == "" {
-		return ""
-	}
-	r := []rune(w)
-	return strings.ToUpper(string(r[0])) + string(r[1:])
+	return freemail.DisplayName(domain)
 }

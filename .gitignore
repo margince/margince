@@ -1,6 +1,11 @@
 /bin/
 *.test
 coverage.out
+# The extension units' merged profile (make test-extensions EXT_COVER_OUT=…).
+# Same debris as coverage.out and it was never listed: only CI wrote it until
+# main-health's backend gate started writing it too, and now anyone reproducing
+# that gate locally has it in `git status`.
+coverage-extensions.out
 .env
 .build/
 .DS_Store
@@ -36,9 +41,7 @@ coverage.out
 !/extensions/notes
 !/extensions/de
 !/extensions/yogi
-!/extensions/dispact-connector
-!/extensions/zalo-oa
-!/extensions/zalo-personal
+!/extensions/relay-probe
 # A unit's installed frontend dependencies. Its package.json and the workspace
 # lockfile are what ship; node_modules is what pnpm makes from them, and it is
 # per-member now that a unit's frontend layer is a workspace package.
@@ -58,9 +61,15 @@ coverage.out
 /backend/migrate
 /backend/mcp
 
-# Same for the tools module. `go build ./tools/seed-demo` from backend/ drops
-# an 18 MB binary here, which a `git add -A` will happily commit — it did once.
+# Same for the tools module, and BOTH paths it lands on: `go build ./tools/...`
+# from backend/ drops the binary at the first, `go build ./...` from
+# backend/tools/ drops it beside its own source at the second. A `git add -A`
+# will happily commit either — it has done both, the second time because only
+# the first was anchored here. An anchored rule is right for a build artifact
+# whose name collides with a package directory, so the two are listed rather
+# than loosened to a bare `seed-demo`.
 /backend/seed-demo
+/backend/tools/seed-demo/seed-demo
 
 # Session working notes — local only, not part of the published repo
 /review_*.md
@@ -114,6 +123,9 @@ workspace/
 #   - the pnpm content-addressable store (machine-local build cache)
 #   - a repo-root scratch dir (real scratch belongs in the session temp dir)
 #   - Codex visualization exports (conversation artifacts, not product source)
+#   - agent worktrees. A dispatched agent working on an isolated copy of the repo
+#     puts it here; it is a second checkout, not product, and staging it would
+#     commit the whole tree twice.
 #   - screenshots dropped at the repo root. Root-ANCHORED so tracked product
 #     assets like frontend/src/assets/*.png are unaffected.
 #   - screen RECORDINGS, by the same rule and for the same reason. Proving an
@@ -128,6 +140,7 @@ workspace/
 /node_modules/
 /scratchpad/
 /.codex/visualizations/
+/.claude/worktrees/
 /*.png
 /*.jpg
 /*.jpeg
@@ -145,3 +158,21 @@ workspace/
 # same as the IDE state above.
 /.impeccable/
 /config/margince-setup-token
+
+# Compiled generator binaries. `go build` inside a tool directory drops one
+# beside the source, and it is machine debris the same way a build cache is.
+# The .exe half is Windows, where `go build` names the binary that way.
+/backend/tools/gen-aitasks/gen-aitasks
+/backend/tools/gen-aitasks/gen-aitasks.exe
+/backend/tools/gen-jobs/gen-jobs
+/backend/tools/gen-jobs/gen-jobs.exe
+/backend/tools/gen-stubs/gen-stubs
+/backend/tools/gen-stubs/gen-stubs.exe
+/backend/tools/gen-agentpolicy/gen-agentpolicy
+/backend/tools/gen-agentpolicy/gen-agentpolicy.exe
+/backend/tools/gen-recordfields/gen-recordfields
+/backend/tools/gen-recordfields/gen-recordfields.exe
+/backend/tools/gen-perfdoc/gen-perfdoc
+/backend/tools/gen-perfdoc/gen-perfdoc.exe
+/backend/tools/contract-overlay/contract-overlay
+/backend/tools/contract-overlay/contract-overlay.exe

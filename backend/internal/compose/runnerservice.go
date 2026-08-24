@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/overlay"
@@ -37,14 +38,21 @@ const claimBatch = 4
 // entry point: TickWorkspace seeds + executes one tenant's due jobs,
 // HandleEvent resumes suspended runs when their approval is decided.
 type RunnerService struct {
+	// pool reads the installation's base language, which a run's final summary
+	// is written in. A summary is filed on a record the whole team reads, so it
+	// takes the shared language rather than any one reader's.
+	pool      *pgxpool.Pool
 	store     *runner.Store
 	runner    *runner.Runner
 	identity  *identity.Service
 	retriever retrieval.Retriever
 	log       *slog.Logger
 	// specByName resolves a stored job's catalog entry. It defaults to
-	// runner.SpecByName — the catalog IS code and this does not make it
-	// configuration.
+	// ScheduledAgentSpecByName — the catalog IS code and this does not make it
+	// configuration. What that default adds is the declared allowlist: a
+	// resolver that returned the runner's bare entry would hand back empty
+	// Tools, which is read as no narrowing, and the run would be bounded by
+	// its passport alone.
 	//
 	// It is a seam because the integration lane needs a spec that can stage
 	// an approval, and no shipped agent has one: every tool both catalog
@@ -60,8 +68,12 @@ type RunnerService struct {
 type RunnerOption func(*RunnerService)
 
 // WithSpecResolver replaces the catalog lookup. ONLY the integration lane
-// passes it: production always resolves against runner.Catalog, and a
-// deployment cannot reach this.
+// passes it: production always resolves against ScheduledAgentSpecByName, and
+// a deployment cannot reach this.
+//
+// A resolver passed here OWNS the allowlist for every name it answers,
+// including the shipped agents. Fall back to ScheduledAgentSpecByName for
+// those rather than to the runner catalog, whose entries carry no tools.
 func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOption {
 	return func(s *RunnerService) { s.specByName = resolve }
 }
@@ -76,13 +88,19 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 // (reads and non-SoR tools are unaffected).
 func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain completer, retriever retrieval.Retriever, log *slog.Logger, resolveIncumbent func(context.Context) (overlay.Incumbent, error), send SendPath, opts ...RunnerOption) *RunnerService {
 	svc := &RunnerService{
+		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
 		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, resolveIncumbent, send), brain),
 		identity:   identity.NewService(pool),
-		specByName: runner.SpecByName,
+		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,
 		log:        log,
 	}
+	// Read the join HERE, before any option can replace the resolver and before
+	// a worker goroutine could be the first to touch it: a contract that
+	// disagrees with the catalog must refuse to start, not fail tick after tick
+	// inside River's panic recovery.
+	mustScheduledAgents()
 	for _, opt := range opts {
 		opt(svc)
 	}
@@ -104,8 +122,16 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 // schedule must still run when the accounting for last week's crash cannot.
 func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	now = now.UTC()
+	// The pass's own identity, bound once for everything it does.
+	//
+	// It is not decoration: seeding, sweeping and finishing all announce their
+	// occurrence to the AI-activity projection now, and an announcement carries
+	// the write shape — a ledger row and an outbox row, both of which take their
+	// actor from the context. A pass with no actor bound could not write either,
+	// and the rail would silently never learn that the 06:00 brief was queued.
+	ctx = schedulerContext(ctx)
 	s.reapAbandonedRuns(ctx)
-	for _, spec := range runner.Catalog() {
+	for _, spec := range mustScheduledAgents() {
 		if due := spec.DueAt(now); !now.Before(due) {
 			// Cron-seeded jobs carry no passport yet: execution fails
 			// loudly rather than running with ambient authority.
@@ -122,6 +148,24 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 		s.executeJob(ctx, job)
 	}
 	return nil
+}
+
+// schedulerActor is who the scheduling pass is. The runs it seeds are executed
+// under their own passports later; this names only the pass that placed them.
+const schedulerActor = "system:agent_scheduler"
+
+// resumeActor is who closes or resumes a parked run when an approval is
+// decided. The resumed leg itself runs under the run's own passport; this names
+// only the consumer that reacted to the decision.
+const resumeActor = "system:agent_resume"
+
+// schedulerContext binds the pass's actor and one correlation id, so every row
+// a single tick writes groups under the tick that wrote it.
+func schedulerContext(ctx context.Context) context.Context {
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: schedulerActor,
+	})
 }
 
 // stuckRunGrace is how far past its wall clock a 'running' row must be before
@@ -143,7 +187,7 @@ const stuckRunGrace = 2 * RunWallClock
 // changes what they do next: the run's tools write as they execute, and trace is
 // only persisted at SaveOutcome, so a swept row is empty and yet its writes may
 // well have landed.
-const abandonedRunReason = "abandoned: still running past twice the run wall clock, so no process is " +
+const abandonedRunReason runner.FailureReason = "abandoned: still running past twice the run wall clock, so no process is " +
 	"coming back for it. Its tools may already have written — check the audit log for this run id " +
 	"before assuming nothing landed."
 
@@ -189,7 +233,12 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 	}
 	agentIdentity, err := s.identity.AuthenticateAgentByID(ctx, *job.PassportID)
 	if err != nil {
-		s.finishJob(ctx, job.ID, nil, "passport resolution failed: "+err.Error())
+		// The cause goes to the operator, never onto the row: this reason is
+		// announced to the AI-activity rail, where an ordinary rep reads it, and
+		// identity's own message names internals they cannot act on.
+		s.log.Warn("runner: a job's passport would not resolve",
+			"job", job.ID, "trigger_ref", job.TriggerRef, "cause", err)
+		s.finishJob(ctx, job.ID, nil, string(runner.FailureCouldNotStart))
 		return
 	}
 	// One correlation id per run: every event the run's writes emit
@@ -198,7 +247,11 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 
 	runID, created, err := s.store.StartRun(runCtx, spec, job.TriggerRef, *job.PassportID)
 	if err != nil {
-		s.finishJob(ctx, job.ID, nil, err.Error())
+		// Same rule as the resolution failure above: a write error carries the
+		// driver's words, which must not reach the column a rep reads.
+		s.log.Warn("runner: a run row could not be written",
+			"job", job.ID, "trigger_ref", job.TriggerRef, "cause", err)
+		s.finishJob(ctx, job.ID, nil, string(runner.FailureCouldNotStart))
 		return
 	}
 	if !created {
@@ -226,8 +279,11 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
 		Grounding:  grounding,
+		// The rendered rule, not a code: the runner is a module and may not
+		// import compose, where the one spelling of this block lives.
+		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
 	})
-	s.landOutcome(runCtx, runID, res, err)
+	s.landOutcome(runCtx, runID, job.TriggerRef, res, err)
 	s.finishJob(ctx, job.ID, &runID, "")
 }
 
@@ -247,6 +303,16 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 		return err
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
+	// The resume path's own actor, for the same reason Tick binds one: every
+	// terminal write below announces the occurrence to the AI-activity
+	// projection, and an announcement carries the write shape — a ledger row and
+	// an outbox row, both of which take their actor from the context. Without it
+	// MarkFailed rolls back, the claim is not undone, and the run is parked
+	// forever in a state no redelivery can close.
+	ctx = principal.WithCorrelationID(ctx, env.EventID)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: resumeActor,
+	})
 
 	// The payload is read BEFORE the run is claimed: claiming is one-way, so
 	// every step after it must end in a terminal status rather than in a
@@ -275,7 +341,7 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 	// exactly that — the originally staged args no longer redeem.
 	if payload.Verdict == "approved" && payload.Edited {
 		if len(payload.EditedChange) == 0 {
-			return s.store.MarkFailed(ctx, suspended.RunID, "approval was edited but the decision event carries no edited_change")
+			return s.store.MarkFailed(ctx, suspended.RunID, runner.FailureEditedApprovalCarriedNoChange)
 		}
 		suspended.Pending.Args = payload.EditedChange
 	}
@@ -283,8 +349,12 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 	agentIdentity, err := s.identity.AuthenticateAgentByID(ctx, suspended.PassportID)
 	if err != nil {
 		// The passport died while the run was parked (revoked, expired,
-		// human deactivated). The run cannot act anymore — close it.
-		return s.store.MarkFailed(ctx, suspended.RunID, "passport no longer valid at resume: "+err.Error())
+		// human deactivated). The run cannot act anymore — close it. WHICH of
+		// those happened is the identity module's own message, so it goes to the
+		// operator and not to the column the person reads.
+		s.log.Warn("runner: a suspended run's authority died before it could resume",
+			"trigger_ref", suspended.TriggerRef, "run", suspended.RunID, "cause", err)
+		return s.store.MarkFailed(ctx, suspended.RunID, runner.FailurePassportNoLongerValid)
 	}
 	// The resumed leg is the SAME logical run but a new causal moment;
 	// it groups its writes under a fresh correlation id.
@@ -293,7 +363,9 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 
 	spec, known := s.specByName(suspended.SpecName)
 	if !known {
-		return s.store.MarkFailed(ctx, suspended.RunID, fmt.Sprintf("agent spec %q left the catalog while suspended", suspended.SpecName))
+		s.log.Warn("runner: a suspended run's agent left the catalog",
+			"trigger_ref", suspended.TriggerRef, "run", suspended.RunID, "spec", suspended.SpecName)
+		return s.store.MarkFailed(ctx, suspended.RunID, runner.FailureSpecLeftTheCatalog)
 	}
 
 	bounded, cancel := context.WithTimeout(runCtx, RunWallClock)
@@ -306,17 +378,28 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 		TriggerRef: suspended.TriggerRef,
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
+		// Resolved fresh on resume rather than carried in the suspended row:
+		// the summary is written after the human answers, so it takes the
+		// language the installation has NOW, the same way Tools rides the
+		// current catalog entry above.
+		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
 	}, runner.Decision{
 		Pending:  suspended.Pending,
 		Approved: payload.Verdict == "approved",
 	})
-	s.landOutcome(runCtx, suspended.RunID, res, err)
+	s.landOutcome(runCtx, suspended.RunID, suspended.TriggerRef, res, err)
 	return nil
 }
 
-func (s *RunnerService) landOutcome(ctx context.Context, runID ids.UUID, res runner.Result, runErr error) {
+// landOutcome persists how a run ended. triggerRef names the occurrence for the
+// operator log, which is where a fault's cause goes: the run's own error is a
+// wrapped internal one, and agent_run.degrade_reason is read by the human the run
+// acted for.
+func (s *RunnerService) landOutcome(ctx context.Context, runID ids.UUID, triggerRef string, res runner.Result, runErr error) {
 	if runErr != nil {
-		if err := s.store.MarkFailed(ctx, runID, runErr.Error()); err != nil {
+		s.log.Error("runner: a run faulted outside its own degrade path",
+			"trigger_ref", triggerRef, "run", runID, "cause", runErr)
+		if err := s.store.MarkFailed(ctx, runID, runner.FailureRunFaulted); err != nil {
 			s.log.Error("runner: marking run failed", "run", runID, "err", err)
 		}
 		return

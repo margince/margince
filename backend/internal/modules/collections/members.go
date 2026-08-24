@@ -106,7 +106,7 @@ func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, listID ids.Lis
 	if cursor != "" {
 		after, err := ids.Parse(cursor)
 		if err != nil {
-			return nil, storekit.Page{}, &BadInputError{Field: "cursor", Reason: "malformed"}
+			return nil, storekit.Page{}, &storekit.MalformedCursorError{}
 		}
 		sql += fmt.Sprintf(" AND lm.id > $%d", arg(after))
 	}
@@ -241,7 +241,7 @@ func (s *Store) evaluateSegment(ctx context.Context, listID ids.ListID, listEnti
 	if cursor != "" {
 		parsed, err := ids.Parse(cursor)
 		if err != nil {
-			return nil, storekit.Page{}, &BadInputError{Field: "cursor", Reason: "malformed"}
+			return nil, storekit.Page{}, &storekit.MalformedCursorError{}
 		}
 		after = &parsed
 	}

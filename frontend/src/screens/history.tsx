@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
+import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Card,
@@ -26,6 +27,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
   LoadMoreButton,
+  provenanceOf,
   QueryStates,
   throwProblem,
   useViewerId,
@@ -80,17 +82,24 @@ export function useRecordHistory(
   });
 }
 
-// captured_by-style strings aren't on this projection — both the record-level
-// and field-level history rows already split actor_type/actor_id, so the
-// Provenance maps straight off actor_type (system/connector read as "agent":
-// neither is a human typing). Structurally typed off just those two fields so
-// it serves AuditHistoryEntry and FieldHistoryEntry alike.
+// Both the record-level and field-level history rows split actor_type/actor_id,
+// so the two are read for different things: the TYPE says what acted, and the ID
+// supplies a name only when it holds one. Structurally typed off just those two
+// fields so it serves AuditHistoryEntry and FieldHistoryEntry alike.
 function provenanceOfEntry(
   entry: Pick<AuditHistoryEntry, "actor_type" | "actor_id">,
   viewerUserId?: string,
 ): Provenance {
+  // A buyer is a person, not a machine, and drawing them with the machine
+  // treatment is the mislabel the actor kind exists to prevent. Provenance has
+  // no buyer variant yet, so `unknown` is the honest placeholder: it says the
+  // source is not recorded rather than naming the wrong kind of source. Giving
+  // Provenance a buyer variant is a design-system change, tracked separately.
+  if (entry.actor_type === "buyer") {
+    return { kind: "unknown" };
+  }
   if (entry.actor_type !== "human") {
-    return { kind: "agent", agent: entry.actor_id };
+    return machineProvenance(entry.actor_type, entry.actor_id);
   }
   // The spine stores the principal id, which for a human is `human:<uuid>`
   // (principal.Principal.ID), while the session reports the bare user id.
@@ -106,6 +115,31 @@ function provenanceOfEntry(
   };
 }
 
+// What a change nobody typed reads as.
+//
+// The three non-human kinds are three different facts about a record and were
+// collapsed into one: every non-human actor read as "Automated by <actor_id>",
+// so a scheduled sweep and a mailbox connector both named an agent that had not
+// acted, and a passport uuid went in front of a reader who cannot look one up.
+//
+// actor_type is the authority on WHICH of them acted — a closed enum on this
+// projection — and the id is read only for the NAME inside it, by the one
+// function that spells that principal grammar out: `provenanceOf` resolves both
+// connector grammars and drops an id that is a bare uuid rather than printing
+// it. The id is expected to carry its own kind, and where it does not the kind
+// is put back from actor_type, so a row stamped with a bare id reads the same as
+// one stamped with the whole principal.
+function machineProvenance(
+  actorType: Exclude<AuditHistoryEntry["actor_type"], "human">,
+  actorId: string,
+): Provenance {
+  const prefix = `${actorType}:`;
+  // An id that is JUST the kind names nothing, and prefixing it would promote
+  // the kind to a name: a bare `system` would read "System task system".
+  const carriesKind = actorId === actorType || actorId.startsWith(prefix);
+  return provenanceOf(carriesKind ? actorId : prefix + actorId);
+}
+
 function HistoryEntryRow({
   entry,
   locale,
@@ -114,6 +148,7 @@ function HistoryEntryRow({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const viewerId = useViewerId();
+  const recordZone = useRecordZone();
   return (
     <li>
       <span className="tl-body">
@@ -123,9 +158,7 @@ function HistoryEntryRow({
             sentence would now say the same person twice. */}
         <span className="tl-title">{entry.summary}</span>
         <span className="tl-meta">
-          <span>
-            {formatDateTime(entry.occurred_at, locale, "Europe/Berlin")}
-          </span>
+          <span>{formatDateTime(entry.occurred_at, locale, recordZone)}</span>
           <ProvenanceTag
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name
@@ -259,6 +292,7 @@ function ChangeGrounding({ change }: Readonly<{ change: FieldHistoryEntry }>) {
 
 function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <div className="fgroup">
       <div className="fgroup-head">{group.field}</div>
@@ -270,7 +304,7 @@ function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
               newValue={change.new_value ?? null}
             />
             <span className="tl-meta">
-              {formatDateTime(change.changed_at, locale, "Europe/Berlin")}
+              {formatDateTime(change.changed_at, locale, recordZone)}
             </span>
             <ChangeWho change={change} />
           </li>

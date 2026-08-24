@@ -68,7 +68,7 @@ prefix of a failing group.**
 
 `max_entries_to_merge` starts at **2** rather than higher on purpose: a batched
 queue multiplies the cost of a flaky job by the group size, and
-[#1494](https://github.com/gradionhq/margince-poc-v1/issues/1494) is open against
+[#1494](https://github.com/margince/margince/issues/1494) is open against
 exactly that noise. It is a live ruleset knob — raise it once the queue has a
 measured baseline.
 
@@ -181,7 +181,7 @@ Consequences:
   who finds it is whoever tries to release next. Stated plainly because it is a
   real regression in coverage, not a trade that still balances — restoring a
   build-only, push-nothing image job scoped to those three paths is
-  https://github.com/gradionhq/margince-poc-v1/issues/1965.
+  https://github.com/margince/margince/issues/1965.
 - A **backend-only PR** skips the frontend + UAT lanes; a **frontend-only PR**
   skips the Go build/gate + the integration lane — except for
   `frontend/src/mcp-apps/forbidden.json`, which is authored under `frontend/`
@@ -527,9 +527,10 @@ beside the gate, deliberately outside it:
   [The shared Go build cache](#the-shared-go-build-cache) for why it is scheduled
   rather than per-push.
 
-- **`main-health.yml`** — every two hours on `main`: the backend gate plus the
-  real-Postgres lane (called, not copied — it `uses:` `_lane-integration.yml`),
-  and `main`'s SonarCloud analysis published from the coverage that lane produces.
+- **`main-health.yml`** — every two hours on `main`: the backend gate, the
+  real-Postgres lane and the SPA lane (the last two called, not copied — it
+  `uses:` `_lane-integration.yml` and `_lane-frontend.yml`), and `main`'s
+  SonarCloud analysis published from the three coverage reports they produce.
   **It is not a gate and never will be**: it reports on a tree that has already
   landed.
 
@@ -550,7 +551,22 @@ beside the gate, deliberately outside it:
   does not vanish when it stops being refreshed, it FREEZES, while the nightly
   quality-gate job goes on reporting that frozen verdict as current.
 
-  The cadence is the knob: two hours costs ~11 jobs a run and narrows the suspect
+  Being the only publisher is what makes the scan job's inputs load-bearing, and
+  they were wrong. It downloaded `backend/coverage.out` alone while
+  `sonar-project.properties` names three reports, so the scanner's Zero Coverage
+  Sensor published `frontend/src` at 0.0% over 17,781 lines to cover and
+  `extensions/` at 0.0% over 708, while the vitest suite and the extension units
+  were both reporting real coverage on every run that measured them. That was
+  the whole of `main`'s `new_coverage` gate failure (72.1 against a threshold of
+  80; the `ci.yml` scan that downloaded all three read 84.0). The job now `needs` every
+  producer and requires each to have SUCCEEDED: a red lane freezes the analysis
+  for two hours, which the report job files an issue about, while a scan missing
+  a report replaces it with a number describing a tree that does not exist. The
+  report job now watches the scan itself for the same reason — a failed publish
+  leaves the previous analysis answering, which reads identically to a current
+  one, so it was the one failure here nobody was told about.
+
+  The cadence is the knob: two hours costs ~15 jobs a run and narrows the suspect
   range to roughly a dozen commits at eight merges an hour.
 
 - **`scheduled.yml`** — daily on `main`, the checks whose answer changes when
@@ -623,7 +639,7 @@ beside the gate, deliberately outside it:
   A release is now a decision somebody makes. Two consequences are recorded
   where they bite rather than here — the role images lose their only build
   (the Dockerfile-only bullet above,
-  https://github.com/gradionhq/margince-poc-v1/issues/1965) and the patch range
+  https://github.com/margince/margince/issues/1965) and the patch range
   degenerates to one commit (below).
   The release-management CLI cuts the
   incremental patch and uploads it with `draft-release`
@@ -659,7 +675,7 @@ beside the gate, deliberately outside it:
   because nothing consumes the stream today. Deriving the base from the last
   **published** release is what fixes it, and is the prerequisite for any
   automatic trigger ever coming back
-  ([#1798](https://github.com/gradionhq/margince-poc-v1/issues/1798)).
+  ([#1798](https://github.com/margince/margince/issues/1798)).
   Concurrency still matters only for two deliberate dispatches: `draft` and
   `docker-image` each carry a cancelling group so a superseded bake stops, while
   `publish` carries a group that **serializes instead of cancelling** — a publish
@@ -667,7 +683,7 @@ beside the gate, deliberately outside it:
   arrives gives up its place. That is mutual exclusion, not ordering: nothing on
   this path rejects a stale version, so a re-run or a dispatch of an older commit
   can still publish after a newer one
-  ([#1810](https://github.com/gradionhq/margince-poc-v1/issues/1810)) — a
+  ([#1810](https://github.com/margince/margince/issues/1810)) — a
   sharper edge now that dispatching an arbitrary ref is the only way in.
   Not a gate — it never blocks a merge.
 

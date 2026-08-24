@@ -14,18 +14,32 @@ package backendarch
 // else", permanently. That is exactly how saved_view, webhook_subscription,
 // relationship and partner reached production ungranted.
 //
-// The proof of the whole obligation is the replay in backend/migrations: seed
-// the documents an old installation held, upgrade it to head, and assert the
-// end state equals the matrix the server seeds today. That test executes the
-// property instead of approximating it, which is why no list of objects, and
-// no scan of the migration SQL for '{objects,<name>}', survives here.
+// THE PROOF THIS FILE FED NO LONGER EXISTS, and the obligation above does.
 //
-// This file owns the replay's starting state. The cohort an old installation
-// held is DERIVED from git rather than restated, because a hand-written cohort
-// is a waiver in disguise: moving an object into it silently excuses that
-// object from ever having to reach an existing installation, which is the
-// defect the replay exists to catch. What IS pinned — and says so below — is
-// the pair of coordinates that reach the derivation.
+// That proof was the replay in backend/migrations: seed the documents an old
+// installation held, upgrade it to head, assert the end state equals the matrix
+// the server seeds today. The baseline consolidation deleted it along with the
+// migration history it replayed — correctly, because no database can move from
+// a pre-baseline schema onto the baseline at all (dbmigrate refuses; see
+// migrations.go). So the UPGRADE half of the obligation is genuinely void.
+//
+// The FRESH-INSTALL half is not, and it is gated again — in
+// compose/integration/rbacseedparity_integration_test.go rather than here,
+// because proving it needs a database and a real bootstrap. Two obligations
+// live there: what the bootstrap actually writes equals the seeded matrix, and
+// every backfill migration converges an installation that predates it ON that
+// matrix. The pre-backfill state is derived per migration (today's matrix minus
+// the object the backfill grants), which is why no cohort fixture is involved.
+//
+// So the fixture below no longer feeds a replay. It is kept because it still
+// answers a question nothing else does: which objects an installation older than
+// every backfill actually held.
+//
+// What this file still does, and all it does: own the cohort fixture, DERIVED
+// from git rather than restated, because a hand-written cohort is a waiver in
+// disguise — moving an object into it would silently excuse that object. What IS
+// pinned, and says so below, is the pair of coordinates that reach the
+// derivation.
 
 import (
 	"encoding/json"
@@ -63,14 +77,15 @@ const (
 
 // installDocument is one role's permissions document as an old installation
 // held it. Grants stay json.RawMessage: this gate owns which OBJECTS a cohort
-// contains, never what they grant — the replay proves the grants by execution,
-// and a second opinion on them here would only be a transcription to drift.
+// contains, never what they grant — proving the grants by execution is the job
+// of the parity gate in compose/integration, and a second opinion on them here
+// would only be a transcription to drift.
 type installDocument struct {
 	Objects  map[string]json.RawMessage `json:"objects"`
 	RowScope string                     `json:"row_scope"`
 }
 
-// legacyInstalls is the committed fixture the replay seeds. Two installations,
+// legacyInstalls is the committed cohort. Two installations,
 // because one oldest-possible document is the worst case only while every
 // backfill is an unconditional additive write — true of the SQL as written
 // today, but an assumption about future migrations. A mid-life document that
@@ -92,7 +107,7 @@ func TestLegacyInstallFixtureIsTheInitialCommitVocabulary(t *testing.T) {
 	fixture := readLegacyInstalls(t)
 	install, ok := fixture.Installs["initial_commit"]
 	if !ok {
-		t.Fatalf("%s carries no 'initial_commit' installation; the replay has nothing to seed", legacyInstallsFixture)
+		t.Fatalf("%s carries no 'initial_commit' installation, so the cohort describes nothing", legacyInstallsFixture)
 	}
 
 	for role, document := range install {
@@ -111,8 +126,8 @@ func TestLegacyInstallFixturePinsTheInitialCommitMigrationHead(t *testing.T) {
 	fixture := readLegacyInstalls(t)
 	if fixture.LegacyCoreVersion != derived {
 		t.Errorf("%s pins legacy_core_version %q, but %s's newest core migration is %q.\n"+
-			"The replay applies core up to and including this version before seeding, so a version "+
-			"later than the initial commit's would silently run backfills the replay is meant to test.",
+			"This pins the schema version the cohort was captured at, so a version later than the "+
+			"initial commit's would describe an installation that had already run backfills.",
 			legacyInstallsFixture, fixture.LegacyCoreVersion, legacyCommit, derived)
 	}
 }
@@ -137,8 +152,8 @@ func TestMidlifeInstallFixtureSitsBetweenTheInitialCohortAndHead(t *testing.T) {
 	// nothing at all in the loop below — the mid-life case would be gone while
 	// this gate reported success.
 	if len(midlife) != len(fixture.Installs["initial_commit"]) {
-		t.Fatalf("the midlife fixture carries %d roles and the initial_commit fixture %d; the replay "+
-			"seeds both and compares every system role, so they must describe the same role set",
+		t.Fatalf("the midlife fixture carries %d roles and the initial_commit fixture %d; both describe "+
+			"the same installation at different ages, so they must name the same role set",
 			len(midlife), len(fixture.Installs["initial_commit"]))
 	}
 
@@ -184,7 +199,7 @@ func legacyObjectsFromHistory(t *testing.T) []string {
 }
 
 // legacyCoreHeadFromHistory returns the newest core migration version that
-// existed at legacyCommit — the point the replay's prefix apply stops at.
+// existed at legacyCommit — the age this cohort describes.
 func legacyCoreHeadFromHistory(t *testing.T) string {
 	t.Helper()
 	listing := gitLsTree(t, legacyMigrationDir)

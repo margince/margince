@@ -16,7 +16,6 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -53,6 +52,20 @@ func NewHandlers(db *database.DB) Handlers {
 // simply wait for the hourly sweep, which is composed with the seam.
 func (h Handlers) WithMatchStager(stage func(context.Context) error) Handlers {
 	h.stageMatches = stage
+	return h
+}
+
+// WithGeocodeEnqueue wires the coordinate lookup an address write queues, into
+// the TRANSPORT's own store.
+//
+// It has to be said here as well as on the store, because the two are not the
+// same object: compose builds the handlers from newPeopleHandlers and keeps a
+// separate s.peopleStore for the services. Wiring only the latter left every
+// address written over HTTP marked stale by the trigger with no job coming —
+// the enqueue existed, was correct, and was reachable from nothing a rep
+// touches.
+func (h Handlers) WithGeocodeEnqueue(enqueue GeocodeEnqueue) Handlers {
+	h.store = h.store.WithGeocodeEnqueue(enqueue)
 	return h
 }
 
@@ -165,14 +178,6 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 			e.Details = map[string]any{auditKeyMergedInto: alreadyMerged.IntoID.String()}
 		}
 		httperr.Write(w, r, e)
-		return
-	}
-	// Defense-in-depth net: a CHECK constraint is a business rule, so a
-	// breach that slipped past the per-path validations still answers a
-	// typed 422 naming the rule — never an opaque 500.
-	if constraint, ok := storekit.CheckViolation(err); ok {
-		httperr.Write(w, r, httperr.Validation(constraint, "constraint_violated",
-			"the request violates the "+constraint+" business rule"))
 		return
 	}
 	httperr.Write(w, r, err)

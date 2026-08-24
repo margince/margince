@@ -32,6 +32,11 @@ func seedSurfaces(c *client, seats *sessions, cfg demoConfig, refs pipelineRefs,
 		{"tags", func() (int, error) { return seedTags(c, refs, plan, mode) }},
 		{"lists", func() (int, error) { return seedLists(c, refs, mode) }},
 		{"projects", func() (int, error) { return seedProjects(c, refs, plan, mode) }},
+		// After projects, and reading them back rather than taking their ids
+		// from the step above: a re-run creates no project, so a pass that
+		// staffed only what it had just created would leave every earlier
+		// project empty forever.
+		{"project stakeholders", func() (int, error) { return seedProjectStakeholders(c, mode) }},
 		{"quotas", func() (int, error) { return seedQuotas(c, cfg, refs, mode) }},
 	} {
 		n, err := step.run()
@@ -214,7 +219,7 @@ func seedLists(c *client, refs pipelineRefs, mode runMode) (int, error) {
 // created in.
 func seedProjects(c *client, refs pipelineRefs, plan map[string]profile, mode runMode) (int, error) {
 	created := 0
-	existing, err := projectKeys(c, mode)
+	existing, err := projectIndex(c, mode)
 	if err != nil {
 		return 0, err
 	}
@@ -227,22 +232,23 @@ func seedProjects(c *client, refs pipelineRefs, plan map[string]profile, mode ru
 		if !ok {
 			continue
 		}
-		key := projectKey(domain)
-		if existing[key] {
+		name := projectNameFor(localeFor(domain), refs.orgNameByID[orgID])
+		index := projectIndexKey(orgID, name)
+		if existing[index] {
 			continue
 		}
+		// Claimed in the SAME map the snapshot filled, because the index is no
+		// longer unique per plan entry: two domains that resolve to one
+		// organization derive one name, and a snapshot taken before the loop
+		// cannot see the project the loop itself just created. The old key was
+		// per-domain and could not collide, so this is the cost of indexing by
+		// what the server leaves us.
+		existing[index] = true
 		if mode == modeDryRun {
 			created++
 			continue
 		}
-		locale := localeFor(domain)
-		body := jsonBody{
-			"name":            projectNameFor(locale, refs.orgNameByID[orgID]),
-			"key":             key,
-			"organization_id": orgID,
-			"source":          seedSource,
-			"started_at":      refs.date(-(30 + hashIndex("projstart:"+domain, 180))),
-		}
+		body := projectCreateBody(orgID, name, refs.date(-(30 + hashIndex("projstart:"+domain, 180))))
 		if owner, ok := refs.usersByRef[refs.ownerRefByDomain[domain]]; ok {
 			body["owner_id"] = owner
 		}
@@ -285,10 +291,6 @@ func advanceProject(c *client, projectID, want, domain string) error {
 	return nil
 }
 
-func projectKey(domain string) string {
-	return fmt.Sprintf("SEED-%s", shortDomain(domain))
-}
-
 func projectNameFor(locale docLocale, company string) string {
 	switch locale {
 	case localeVI:
@@ -300,20 +302,50 @@ func projectNameFor(locale docLocale, company string) string {
 	}
 }
 
-func projectKeys(c *client, mode runMode) (map[string]bool, error) {
+// projectCreateBody is the create payload, in one place so what it does NOT
+// carry is visible: no "key". The server mints a project's key from its name and
+// refuses a caller who sends one (422 read_only, projects/keymint.go) — the key
+// is the token a person types in a subject line to file mail under a project, so
+// it is not a demo's to choose.
+//
+// Nothing else may be added loosely either: this contract takes extra body
+// properties as CUSTOM FIELD values, so a stray key is not ignored here, it is
+// data. Every field below is one the contract declares.
+func projectCreateBody(orgID, name, startedAt string) jsonBody {
+	return jsonBody{
+		"name":            name,
+		"organization_id": orgID,
+		"source":          seedSource,
+		"started_at":      startedAt,
+	}
+}
+
+// projectIndexKey identifies a seeded project by what the seeder still controls.
+//
+// Convergence used to ask "does a project with MY key exist", which is a
+// question a caller who no longer mints the key cannot ask. Organization plus
+// name is the pair the seeder derives deterministically (projectNameFor over the
+// company name), so a second run recognises its own work and creates nothing —
+// and two companies with the same project name stay two projects.
+func projectIndexKey(orgID, name string) string {
+	return orgID + "\x00" + name
+}
+
+func projectIndex(c *client, mode runMode) (map[string]bool, error) {
 	out := map[string]bool{}
 	if mode == modeDryRun {
 		return out, nil
 	}
 	err := c.getAll("/v1/projects", nil, func(raw json.RawMessage) error {
 		var rows []struct {
-			Key string `json:"key"`
+			Name           string `json:"name"`
+			OrganizationID string `json:"organization_id"`
 		}
 		if err := json.Unmarshal(raw, &rows); err != nil {
 			return err
 		}
 		for _, row := range rows {
-			out[row.Key] = true
+			out[projectIndexKey(row.OrganizationID, row.Name)] = true
 		}
 		return nil
 	})
@@ -363,7 +395,11 @@ func seedQuotas(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (int
 			"period_end":   end,
 			// A round quarterly target, varied per seat so the attainment bars
 			// are not all the same length.
-			"target_minor": int64(150000+hashIndex("quota:"+ref, 12)*25000) * 100,
+			// money-scale-exempt: this MINTS a euro figure rather than converting
+			// a stored one, and the currency it is minted for is the literal on
+			// the very next line. There is no amount here whose scale a table
+			// could be asked about.
+			"target_minor": int64(150000+hashIndex("quota:"+ref, 12)*25000) * 100, // money-scale-exempt: minted in EUR, see above
 			"currency":     "EUR",
 		}
 		if err := c.post("/v1/quotas", body, nil); err != nil {

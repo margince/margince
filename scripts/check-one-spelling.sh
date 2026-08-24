@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+# Choke-point gate: three predicates this tree owns in exactly one place, each
+# here because a hand-written second copy already shipped and was wrong.
+#
+#   1. SQLSTATE. The codes the stores branch on are named once, in
+#      platform/database/storekit/sqlstate.go. A literal "23505" at a call
+#      site is a second spelling of the same judgement, and the copies drift:
+#      one path answers a dedupe hit as a conflict, its sibling as a 500.
+#
+#   2. CONSTRAINT DISCLOSURE. A CHECK breach is answered by
+#      platform/httperr's constraint net, which deliberately names NO field —
+#      the only thing that knows one at that depth is the constraint name, and
+#      that is our schema. Five modules had each re-spelled the translation to
+#      put that name in the caller's `field` slot; one of them also pre-empted
+#      the net's 423 for a held activity, telling the caller to fix a value
+#      when nothing they could send would work until the retention window
+#      closed.
+#
+#   3. ISO-4217 SHAPE. `values.ValidCurrency` is the Go spelling of the
+#      schema's currency CHECK. It had three private copies — a rune loop, a
+#      regexp under a different name, and a verbatim copy of the values regexp
+#      var under the SAME name.
+#
+# WHAT THIS GATE IS, AND IS NOT. It is a token scanner, not a proof. It catches
+# the SHAPES that actually shipped here, cheaply, on every push. It does not
+# understand Go: `scale := int64(100)` and then a divide by `scale` is a real
+# instance of defect 1 that it will not see, and the same is true of any of the
+# four expressed indirectly enough. Treat a green run as "the four known shapes
+# are absent", never as "the invariant holds" — the invariants are held by
+# values, storekit and httperr owning them, and by review; this only stops the
+# regrowth we have already watched happen.
+#
+# It reads CODE, not prose: comment text is stripped before matching, so the
+# explanations above (and the ones in the source that name each defect) do not
+# fail the build while the same token in a literal still does. Tests are out of
+# scope — they construct these errors and describe these defects on purpose.
+#
+# A genuine false positive — `protocolMinor / 100` is not money — is waived in
+# source, on the offending line, with a reason:
+#
+#     x := protocolMinor / 100 // one-spelling-exempt: a protocol version, not money
+#
+# matching the `// rls-exempt: <reason>` escape scripts/check-rls-store-path.sh
+# already uses. scripts/test-check-one-spelling.sh proves each arm fires, each
+# arm's waiver works, and the named non-money lookalikes stay silent.
+set -euo pipefail
+# THE ONE PLACE IN THIS PAIR THAT IS DUPLICATED ON PURPOSE, and the rulebook's
+# own instruction for that case is to say why beside it rather than in a pull
+# request nobody re-reads.
+#
+# It cannot be sourced from a library: finding the library needs the answer this
+# block produces. Invoked through a symlink, `dirname "$0"` is the link's
+# directory, which holds no library.
+#
+# scripts/test-selfdir-identical.sh asserts the two copies are BYTE-IDENTICAL,
+# and that assertion is what makes the duplication safe rather than merely
+# explained. Edit one, edit both.
+# Resolve $0 through any symlinks BEFORE deriving the directory: `cd -P` on
+# `dirname "$0"` canonicalizes the LINK's directory, which is not where the
+# libraries are. `readlink -f` is GNU-only, so the loop is the portable form.
+CDPATH=
+self="$0"
+# Terminating: a symlink CYCLE (a -> b -> a) would otherwise spin here forever,
+# and a merge gate that hangs is worse than one that refuses — nobody can tell
+# it from a slow runner. The stop condition is a path seen twice, not a hop
+# count: a cap refuses a long-but-valid chain, which is a gate failing on
+# somebody's directory layout rather than on their code. Every other failure
+# here (dangling link, missing file) is already caught by the existence check
+# below.
+# An ARRAY and not a delimited string: a path may legally contain any character
+# except NUL and `/`, so framing each visited path inside a `|…|` in one string
+# lets a path holding a `|` collide with a different one — a valid chain
+# refused as cyclic, which is a gate failing on somebody's directory name.
+seen=()
+while [[ -L "$self" ]]; do
+  for prior in ${seen+"${seen[@]}"}; do
+    [[ "$prior" == "$self" ]] && { echo "FAIL: $0 resolves through a symlink cycle at $self"; exit 1; }
+  done
+  seen+=("$self")
+  link="$(readlink -- "$self")"
+  case "$link" in
+    /*) self="$link" ;;
+     *) self="$(cd -P -- "$(dirname -- "$self")" && pwd)/$link" ;;
+  esac
+done
+SELF_DIR="$(cd -P -- "$(dirname -- "$self")" && pwd)"
+# Resolved BEFORE the cd, so they are found however the script is invoked.
+COMMENT_SCAN="$SELF_DIR/lib-commentscan.awk"
+STRIP_PROG="$SELF_DIR/one-spelling-strip.awk"
+cd "$SELF_DIR/.."
+for lib in "$COMMENT_SCAN" "$STRIP_PROG"; do
+  [[ -f "$lib" ]] || { echo "FAIL: $lib is missing — this gate cannot read code without it"; exit 1; }
+done
+
+# Every hand-written Go tree. extensions/ and fixtures/ are separate modules but
+# the same product; backend/tools is a separate module too and its generators
+# emit the code the product runs; backend/pkg is the PUBLISHED surface, where a
+# second spelling is worse than internal because a fork inherits it.
+#
+# Overridable so scripts/test-check-one-spelling.sh can point the same regexes
+# at a throwaway tree. It plants deliberate defects, and planting them in the
+# real tree makes `make -j` a race — a concurrent one-spelling would read the
+# probe as a finding, and gofmt/license/craft would read it as an unlicensed
+# file. The default is the real answer; the override only moves where it looks.
+# An overridden root is taken WHOLE, not word-split: the self-test hands this a
+# mktemp path, and splitting one that contains a space would silently scan two
+# directories that do not exist — a gate reading green over an empty universe.
+if [[ -n "${ONE_SPELLING_SCAN:-}" ]]; then
+  scan=("$ONE_SPELLING_SCAN")
+else
+  scan=(backend/internal backend/cmd backend/pkg backend/tools extensions fixtures)
+fi
+waiver='one-spelling-exempt:'
+
+# The gate reads CODE, so the whole tree is stripped of comments ONCE, into a
+# `file:line:content` corpus the three arms then grep. Stripping after grep
+# cannot work: grep hands on only the lines that already matched, so the line
+# that OPENED a multi-line block comment never arrives and its interior looks
+# like code. scripts/test-check-one-spelling.sh plants a three-line block
+# comment holding two banned tokens; that case is what forced this shape.
+#
+# Dropped: a whole-line comment, a trailing ` // …`, an inline /* … */ span,
+# and the interior of a multi-line block. A line carrying the waiver marker is
+# dropped whole.
+#
+# There is no residue paragraph here any more, and that is the point. The three
+# holes this file used to state — a `/*` inside a string opening a block, a `//`
+# inside one truncating the line, a waiver marker inside one silencing it — are
+# all closed by scripts/lib-commentscan.awk, which reads a string as a string.
+#
+# What is left is not stated, it is DETECTED. A construct the scanner cannot
+# follow leaves it inside a string at the end of the file, and the run refuses
+# by name rather than reporting OK over code it never read. A residue paragraph
+# asks the reader to trust that the hole is small; the assertion below does not
+# need trusting.
+corpus="$(mktemp)"
+trap 'rm -f "$corpus"' EXIT
+find "${scan[@]}" -type f -name '*.go' \
+     ! -name '*_test.go' ! -name '*_gen.go' ! -name '*.gen.go' -print0 \
+  | xargs -0 awk -f "$COMMENT_SCAN" -f "$STRIP_PROG" -v waiver="$waiver" > "$corpus"
+
+# A file the scanner left mid-string or mid-comment is a file it stopped reading
+# correctly, so an OK over it means nothing. Refusing here rather than stating
+# it as residue: this is the one failure mode where the gate cannot tell the
+# difference between clean and blind.
+# `|| true` would swallow status 2 as well, which is grep saying it could not
+# READ the corpus — and a gate that cannot read its own corpus must not go on to
+# report it clean. Only status 1, "no matches", is the ordinary answer.
+# `set +e` around it and not `|| true`: the fallback would swallow status 2 as
+# well, which is grep saying it could not READ the corpus — and a gate that
+# cannot read its own corpus must not go on to report it clean. Only status 1,
+# "no matches", is an ordinary answer. `$?` is read here and not inside an
+# `if !`, where the negation has already replaced it with 0.
+set +e
+unclosed="$(grep '^commentscan-unclosed:' "$corpus")"
+grep_status=$?
+set -e
+[[ $grep_status -le 1 ]] || { echo "FAIL: could not read the scanned corpus (grep exited $grep_status)"; exit 1; }
+if [[ -n "$unclosed" ]]; then
+  echo "FAIL: the comment scanner reached the end of a file still inside a string or a block comment,"
+  echo "      so everything after that point was read as something it is not and this gate saw none of it."
+  echo "$unclosed" | sed 's/^commentscan-unclosed:/  /'
+  echo "      Usually a backtick inside a TypeScript regex literal (/[\`]/), which opens a template"
+  echo "      literal the language never closes. Rewrite it as a character escape, or if the construct"
+  echo "      is genuinely needed, teach scripts/lib-commentscan.awk about it — do not waive the file."
+  exit 1
+fi
+grep -v '^commentscan-unclosed:' "$corpus" > "$corpus.clean" && mv "$corpus.clean" "$corpus"
+
+
+# scan_for <regex> [exclude-path-regex]: matching CODE rows, or nothing.
+scan_for() {
+  grep -nE "$1" "$corpus" 2>/dev/null | cut -d: -f2- \
+    | { [[ -n "${2:-}" ]] && grep -vE "$2" || cat; } || true
+}
+
+failed=0
+report() {
+  printf 'FAIL: %s\n%s\n\n' "$1" "$2"
+  failed=1
+}
+
+# 1. A SQLSTATE spelled at a call site.
+# The code list is READ from sqlstate.go, not re-typed: a list typed here is
+# itself a second spelling of that census, and the sixth code somebody adds to
+# storekit would be silently un-gated by the gate that exists to stop exactly
+# that.
+sqlstate_src='backend/internal/platform/database/storekit/sqlstate.go'
+codes="$(grep -oE '"[0-9]{2}[0-9A-Z]{3}"' "$sqlstate_src" | tr -d '"' | sort -u | paste -sd'|' -)"
+[[ -n "$codes" ]] || { echo "FAIL: no SQLSTATE constants found in $sqlstate_src — this gate is reading the wrong file"; exit 1; }
+sqlstate="\"($codes)\""
+sqlstate_hits="$(scan_for "$sqlstate" 'storekit/sqlstate\.go')"
+[[ -n "$sqlstate_hits" ]] && report \
+  "SQLSTATE literal outside storekit (use storekit.UniqueViolation / IsForeignKeyViolation / CheckViolation / ExclusionViolation / IsQueryCanceled):" \
+  "$sqlstate_hits"
+
+# 2. The wire code the deleted copies used. A path that can name the caller's
+#    OWN field still refuses with a specific code (invalid_date_range,
+#    amount_currency_pair, project_link_exists); this catches the generic
+#    re-spelling of httperr's net, which is the one that carried our
+#    constraint name out.
+disclosure='"constraint_violated"'
+disclosure_hits="$(scan_for "$disclosure")"
+[[ -n "$disclosure_hits" ]] && report \
+  "a hand-rolled CHECK-to-422 translation (let httperr's constraint net answer, or refuse earlier naming the caller's own field with its own code):" \
+  "$disclosure_hits"
+
+# 3. The ISO-4217 shape, spelled again — the REGEXP only. The copies also
+#    included a `r < 'A' || r > 'Z'` rune loop, and that is deliberately not
+#    matched: it is the shape any string scanner uses, and matching it refuses
+#    an alphanumeric word splitter (compose/documentextractvalid.go) that has
+#    nothing to do with currency. A gate whose escape hatch gets used routinely
+#    stops being read; a narrower one that never cries wolf keeps being read.
+currency='\^\[A-Z\]\{3\}\$'
+currency_hits="$(scan_for "$currency" 'shared/kernel/values/')"
+[[ -n "$currency_hits" ]] && report \
+  "a private ISO-4217 shape check (use values.ValidCurrency, so Go and the schema's CHECK admit the same set):" \
+  "$currency_hits"
+
+[[ $failed -eq 1 ]] && exit 1
+echo "OK: one spelling for SQLSTATE, CHECK refusals and ISO-4217"

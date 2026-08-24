@@ -379,6 +379,17 @@ jobs:
           # In CI a missing base ref is a broken checkout, never a skip.
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
+          # A migration baseline consolidation reuses a namespace's lowest
+          # versions under new names, which check-migration-versions.sh cannot
+          # tell from the collision outage it exists to report. This declares
+          # that it may happen; the script decides whether it DID, per namespace,
+          # by requiring the tree and the base to share no version at all.
+          #
+          # Safe to leave here. Once a consolidation merges, the base IS the
+          # baseline and every version keeps its name, so the script refuses the
+          # declaration and the gate enforces again — it goes inert on its own
+          # rather than waiting for somebody to remember to delete this line.
+          MIGRATION_VERSIONS_BASELINE_RESET: "1"
         run: make check-backend
 
   # The composed-build lane (ADR-0069): materialize the walking-skeleton
@@ -828,7 +839,7 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: 11
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -935,7 +946,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: 11
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

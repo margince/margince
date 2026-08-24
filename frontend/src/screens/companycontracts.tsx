@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -17,7 +18,6 @@ import { formatBytes, formatDate, formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { RECORD_ZONE } from "./company360";
 import { ContractForm } from "./contractform";
 import { useContractPaper } from "./contractpaper";
 
@@ -417,6 +417,7 @@ function ContractPaper({
 function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
 
   // Its dates have run out and nobody has moved the status. Saying only
   // "active" here would present an approval queue as a live agreement.
@@ -432,7 +433,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
           when: formatDate(
             contract.cancellation_effective_on,
             locale,
-            RECORD_ZONE,
+            recordZone,
           ),
         })}
       </Badge>
@@ -442,7 +443,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <span className="t-caption">
         {t("contracts.renewsOn", {
-          when: formatDate(contract.renewal_on, locale, RECORD_ZONE),
+          when: formatDate(contract.renewal_on, locale, recordZone),
         })}
       </span>
     );
@@ -481,7 +482,8 @@ export function basisLabel(contract: Contract): MessageKey | "" {
 function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const on = (date: string) => formatDate(date, locale, RECORD_ZONE);
+  const recordZone = useRecordZone();
+  const on = (date: string) => formatDate(date, locale, recordZone);
   if (!contract.starts_on && !contract.ends_on) {
     return <span className="t-caption">{t("contracts.noTerm")}</span>;
   }

@@ -83,9 +83,22 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// then see of those signals is decided on the read side, by
 	// auth.SignalScopeClause.
 	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the organization it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
+	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the organization it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single organization a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
 
 	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
+
+	// The project reports' company columns. The scope IS applied — by
+	// referenceScopeClauses (reportsql.go), which renders
+	// auth.ScopeClauseFor("organization") around every expression the spec
+	// declares in referenceScopes, and both of these are declared there. This
+	// gate reads SQL text and cannot follow a clause built from a map at query
+	// time; reportreferencescope_test.go is what holds the declaration honest,
+	// by failing when a company-bearing dimension has no entry.
+	"internal/compose:projectRowDimensions":   "the project report's dimension set: its company expressions are declared in referenceScopes, and referenceScopeClauses wraps each in the organization row scope before the query runs",
+	"internal/compose:projectsByPhaseSpec":    "the same declaration on the projects-by-phase spec, applied the same way at query time",
+	"internal/compose:projectCommitmentsSpec": "the same declaration on the project-commitments spec, applied the same way at query time",
+	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
 	"internal/compose/network:readDealFacts": "the coverage view's deal row: the organization id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
 })

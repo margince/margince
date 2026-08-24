@@ -51,8 +51,8 @@ the workspace but changes none of them.
 |---|---|---|
 | `admin` | Admin | all |
 | `management` | Management | all |
-| `manager` | Team Lead | team |
-| `rep` | Member | team |
+| `manager` | Team Lead | own |
+| `rep` | Member | own |
 | `read_only` | Read-only | all |
 | `ops` | Ops / Integrations | all |
 
@@ -72,6 +72,7 @@ the workspace but changes none of them.
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `custom_field` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `deal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `finance` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `fx_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |

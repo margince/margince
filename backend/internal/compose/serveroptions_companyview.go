@@ -23,6 +23,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
+	"github.com/gradionhq/margince/backend/internal/compose/dealstatus"
+	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
 )
@@ -105,5 +107,42 @@ func WithGrowthFit(brain completer, routingVersion string) Option {
 			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now)
 		s.orgDossierHandlers = orgdossier.NewHandlers(
 			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+	}
+}
+
+// WithMeetingBriefWriter binds the summarize lane that rewrites a pre-meeting
+// brief in Margince's own voice.
+//
+// Without it the brief serves its deterministic floor rather than failing: a
+// role that runs no model still answers the endpoint, and generated_by tells
+// the reader which of the two they have. There is no routing version to carry
+// here, unlike the account brief's: the meeting brief caches nothing, so no
+// stored text can outlive a re-pointed lane.
+func WithMeetingBriefWriter(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.meetingBriefSvc == nil {
+			return
+		}
+		s.meetingBriefHandlers = meetingbrief.NewHandlers(
+			s.meetingBriefSvc.WithLane(brain), s.sorDispatch.isOverlay)
+	}
+}
+
+// WithDealStatusWriter binds the deal_health lane that writes the deal status
+// card's words.
+//
+// Without it the card is its deterministic composition rather than a failure:
+// a role that runs no model still answers the endpoint, and generated_by tells
+// the reader which writer they have.
+//
+// The routing version rides along because the card IS cached: a card written
+// under one routing configuration must not be served after the configuration
+// changes, so the version is part of the fingerprint.
+func WithDealStatusWriter(brain completer, routingVersion string) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.dealStatusSvc == nil {
+			return
+		}
+		s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc.WithLane(brain, routingVersion))
 	}
 }

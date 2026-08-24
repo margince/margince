@@ -34,7 +34,7 @@ import (
 // is not the fallback — so a restore that reached one of them CHANGES the row
 // instead of coincidentally rewriting it with what was already there.
 var configBootstrap = InstallationBootstrap{
-	BaseCurrency: "CHF", Timezone: "Europe/Berlin",
+	BaseCurrency: "CHF", BaseLanguage: "de", Timezone: "Europe/Berlin",
 	AdminName: "Admin", AdminPassword: "a bootstrap password!",
 }
 
@@ -114,7 +114,7 @@ func TestResetWorkspaceConfigRestoresSettingsAndKeepsIdentity(t *testing.T) {
 
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
 	if err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
-		return ResetWorkspaceConfig(wsCtx, tx)
+		return ResetWorkspaceConfig(wsCtx, tx, ws)
 	}); err != nil {
 		t.Fatalf("ResetWorkspaceConfig: %v", err)
 	}
@@ -294,8 +294,8 @@ func TestAResetWorkspaceMatchesAFreshlyBootstrappedOne(t *testing.T) {
 	// createInstallation writes it there, and this test can only see it if
 	// configBootstrap sets it off-default. Neither is checkable from here, so
 	// the field count is the tripwire that sends the next author to look.
-	if got := reflect.TypeOf(InstallationBootstrap{}).NumField(); got != 6 {
-		t.Errorf("InstallationBootstrap has %d fields, this test was written against 6 — if the new one lands on the workspace row, declare its column in preservedWorkspaceColumns and give it an off-default value in configBootstrap, then update this count", got)
+	if got := reflect.TypeOf(InstallationBootstrap{}).NumField(); got != 7 {
+		t.Errorf("InstallationBootstrap has %d fields, this test was written against 7 — if the new one lands on the workspace row, declare its column in preservedWorkspaceColumns and give it an off-default value in configBootstrap, then update this count", got)
 	}
 
 	// ONE bootstrapped workspace, snapshotted before it is configured away.
@@ -317,7 +317,7 @@ func TestAResetWorkspaceMatchesAFreshlyBootstrappedOne(t *testing.T) {
 
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
 	if err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
-		return ResetWorkspaceConfig(wsCtx, tx)
+		return ResetWorkspaceConfig(wsCtx, tx, ws)
 	}); err != nil {
 		t.Fatalf("ResetWorkspaceConfig: %v", err)
 	}
@@ -376,9 +376,10 @@ func TestResetWorkspaceConfigOnARowThatIsIdentityAndNothingElse(t *testing.T) {
 
 	// On the OWNER connection, not the app pool WithWorkspaceTx uses: ALTER
 	// TABLE needs table ownership, and the app role deliberately does not have
-	// it. The GUC is set by hand for the same reason — ResetWorkspaceConfig
-	// scopes its UPDATE with current_setting('app.workspace_id'), which the
-	// helper would normally have bound.
+	// it. The GUC is still set by hand, because this transaction stands in for
+	// one WithWorkspaceTx would have bound and the extension tables' RLS
+	// policies read it — ResetWorkspaceConfig itself no longer does, and takes
+	// the workspace it writes as an argument (ADR-0091 §5).
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the probe transaction: %v", err)
@@ -401,7 +402,7 @@ func TestResetWorkspaceConfigOnARowThatIsIdentityAndNothingElse(t *testing.T) {
 	}
 
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
-	if err := ResetWorkspaceConfig(wsCtx, tx); err != nil {
+	if err := ResetWorkspaceConfig(wsCtx, tx, ws); err != nil {
 		t.Fatalf("ResetWorkspaceConfig on an identity-only row: %v — want it to do nothing and succeed", err)
 	}
 

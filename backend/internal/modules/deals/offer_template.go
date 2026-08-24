@@ -170,7 +170,7 @@ func (s *Store) CreateOfferTemplate(ctx context.Context, in CreateOfferTemplateI
 	}
 
 	var out crmcontracts.OfferTemplate
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		id := ids.New[ids.OfferTemplateKind]()
 		var noExclusion ids.OfferTemplateID
 		if err := s.checkTemplateNameConflict(ctx, tx, noExclusion, in.Name); err != nil {
@@ -212,7 +212,7 @@ func (s *Store) GetOfferTemplate(ctx context.Context, id ids.OfferTemplateID, ar
 		return crmcontracts.OfferTemplate{}, err
 	}
 	var out crmcontracts.OfferTemplate
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = readOfferTemplate(ctx, tx, id, archived)
 		return err
 	})
@@ -257,20 +257,20 @@ func (s *Store) ListOfferTemplates(ctx context.Context, in ListOfferTemplatesInp
 	}
 	// Templates carry no custom columns, so the vocabulary is the fixed one
 	// and there is nothing to append to the select.
-	pre, err := buildListPrelude(ctx, "", offerTemplateListFields, nil,
+	pre, err := storekit.BuildListPrelude(ctx, "", offerTemplateListFields, nil,
 		in.Sort, in.Limit, in.Cursor, nil)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where := pre.where
+	where := pre.Where()
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
 	if in.Locale != nil && *in.Locale != "" {
-		where = append(where, storekit.SQLf(offerTemplateLocaleColumn+" = $%d", pre.arg(*in.Locale)))
+		where = append(where, storekit.SQLf(offerTemplateLocaleColumn+" = $%d", pre.Arg(*in.Locale)))
 	}
 
-	return runListPage(ctx, s, pre, "offer_template", offerTemplateColumns, nil, where, scanOfferTemplatePage,
+	return storekit.RunListPage(ctx, s, pre, "offer_template", offerTemplateColumns, nil, where, scanOfferTemplatePage,
 		func(t crmcontracts.OfferTemplate) (time.Time, ids.UUID) { return t.CreatedAt, ids.UUID(t.Id) })
 }
 
@@ -329,7 +329,7 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 	}
 
 	var out crmcontracts.OfferTemplate
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, err := readOfferTemplate(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -372,7 +372,7 @@ func (s *Store) ArchiveOfferTemplate(ctx context.Context, id ids.OfferTemplateID
 		return crmcontracts.OfferTemplate{}, err
 	}
 	var out crmcontracts.OfferTemplate
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, err := readOfferTemplate(ctx, tx, id, storekit.IncludeArchived)
 		if err != nil {
 			return err

@@ -64,3 +64,51 @@ func refuseIfAnchor(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, fi
 	}
 	return nil
 }
+
+// refuseIfSoleCompanyOnALiveProject stops an organization archive that would
+// leave a live project with no company.
+//
+// The archive cascades over `relationship`, which takes the company off every
+// project it is on. That is right for most edges and wrong for this one: a
+// project keeps at least one company (projectcompany.go), and a cascade is not
+// a place to make that decision — the operator archiving a company is not
+// looking at the projects it is the only company on, and the write grant they
+// hold is on the ORGANIZATION, not on those projects.
+//
+// So it refuses and names them. The fix is a decision somebody makes on the
+// project — put another company on it, or archive the project — and both are
+// one call away.
+func refuseIfSoleCompanyOnALiveProject(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+	var stranded int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*)
+		  FROM relationship mine
+		  JOIN project p ON p.id = mine.project_id AND p.archived_at IS NULL
+		 WHERE mine.kind = 'project_company' AND mine.organization_id = $1
+		   AND mine.archived_at IS NULL
+		   AND NOT EXISTS (
+		       SELECT 1 FROM relationship other
+		        WHERE other.kind = 'project_company' AND other.project_id = mine.project_id
+		          AND other.organization_id <> $1 AND other.archived_at IS NULL)`,
+		orgID).Scan(&stranded); err != nil {
+		return fmt.Errorf("people: counting the projects organization %s is the only company on: %w", orgID, err)
+	}
+	if stranded > 0 {
+		return &SoleProjectCompanyError{Projects: stranded}
+	}
+	return nil
+}
+
+// SoleProjectCompanyError maps to 422: archiving this company would leave live
+// projects with no company at all.
+type SoleProjectCompanyError struct{ Projects int }
+
+func (e *SoleProjectCompanyError) Error() string {
+	return fmt.Sprintf("this company is the only one on %d live project(s); "+
+		"put another company on each, or archive them, before archiving this company", e.Projects)
+}
+
+// FieldFault names the company the caller tried to archive.
+func (e *SoleProjectCompanyError) FieldFault() (field, code, message string) {
+	return "id", "sole_project_company", e.Error()
+}

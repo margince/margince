@@ -25,13 +25,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/installseam"
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	collectionsmod "github.com/gradionhq/margince/backend/internal/modules/collections"
 	customfieldsmod "github.com/gradionhq/margince/backend/internal/modules/customfields"
 	dealsmod "github.com/gradionhq/margince/backend/internal/modules/deals"
 	peoplemod "github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -72,7 +72,7 @@ type fixture struct {
 	ctx      context.Context
 	svc      *customfieldsmod.Service
 	people   *peoplemod.Store
-	projects *dealsmod.Store
+	projects *projects.Store
 	lists    *collectionsmod.Store
 }
 
@@ -89,7 +89,7 @@ func setupFixture(t *testing.T) fixture {
 		ctx:      e.As(e.Rep1, nil, testPerms),
 		svc:      svc,
 		people:   peoplemod.NewStore(e.DB()).WithFieldCatalog(svc),
-		projects: dealsmod.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(svc),
+		projects: integration.ProjectsStore(e.DB()).WithFieldCatalog(svc),
 		lists:    collectionsmod.NewStore(e.DB()).WithFieldCatalog(svc),
 	}
 }
@@ -330,20 +330,20 @@ func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 	}
 	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
 
-	matching, err := f.projects.CreateProject(f.ctx, dealsmod.CreateProjectInput{
+	matching, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
 		Name: "Match", OrganizationID: orgID, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create matching project: %v", err)
 	}
-	if _, err := f.projects.CreateProject(f.ctx, dealsmod.CreateProjectInput{
+	if _, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
 		Name: "Other", OrganizationID: orgID, Source: "manual",
 	}); err != nil {
 		t.Fatalf("create non-matching project: %v", err)
 	}
 	// Set through the update path, not at create: a field a customer fills
 	// in later must filter exactly as one set at creation would.
-	if _, err := f.projects.UpdateProject(f.ctx, ids.From[ids.ProjectKind](ids.UUID(matching.Id)), dealsmod.UpdateProjectInput{
+	if _, err := f.projects.UpdateProject(f.ctx, ids.From[ids.ProjectKind](ids.UUID(matching.Id)), projects.UpdateProjectInput{
 		CustomFields: map[string]any{column: "retainer"},
 	}); err != nil {
 		t.Fatalf("setting the custom field through the update path: %v", err)
@@ -533,9 +533,16 @@ func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T)
 	for _, m := range checkLiteralRe.FindAllStringSubmatch(def, -1) {
 		got[m[1]] = true
 	}
-	want := map[string]bool{"person": true, "organization": true, "deal": true, "lead": true, "project": true}
+	// Derived from the Go slice, not restated: TaggableEntityTypes feeds the
+	// segment engines AND the apply_tag/remove_tag schemas, so this equality is
+	// what proves that slice complete against the CHECK — a type dropped from
+	// it fails here instead of silently vanishing from the tool surface.
+	want := map[string]bool{}
+	for _, entity := range collectionsmod.TaggableEntityTypes() {
+		want[entity] = true
+	}
 	if !maps.Equal(got, want) {
-		t.Fatalf("taggable's CHECK admits %v, want %v", got, want)
+		t.Fatalf("taggable's CHECK admits %v, TaggableEntityTypes answers %v — the two must agree", got, want)
 	}
 
 	// Every generated enum over the SAME vocabulary, asked about the CHECK's own
@@ -881,7 +888,7 @@ func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
 	}
 	assertSoleMember(t, f, list.ID, deal)
 
-	if _, err := f.people.ArchiveOrganization(f.ctx, org); err != nil {
+	if _, err := f.people.ArchiveOrganization(f.ctx, org, nil); err != nil {
 		t.Fatalf("archive organization: %v", err)
 	}
 	assertSoleMember(t, f, list.ID, deal)

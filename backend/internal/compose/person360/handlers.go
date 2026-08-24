@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -46,11 +47,15 @@ func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
 }
 
 // GetPerson360 implements GET /people/{id}/360.
-func (h Handlers) GetPerson360(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) GetPerson360(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetPerson360Params) {
 	if !h.nativeOnly(w, r) {
 		return
 	}
-	view, err := h.svc.Assemble(r.Context(), ids.From[ids.PersonKind](ids.UUID(id)))
+	var opts AssembleOptions
+	if params.ProjectId != nil {
+		opts.ProjectID = ptr(ids.From[ids.ProjectKind](ids.UUID(*params.ProjectId)))
+	}
+	view, err := h.svc.AssembleScoped(r.Context(), ids.From[ids.PersonKind](ids.UUID(id)), opts)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -134,13 +139,12 @@ func (s *Service) Acknowledge(ctx context.Context, personID ids.PersonID) (crmco
 		if err := auth.EnsureVisibleLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `
-			INSERT INTO user_record_view (user_id, entity_type, entity_id, last_viewed_at)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (user_id, entity_type, entity_id)
-			DO UPDATE SET last_viewed_at = GREATEST(user_record_view.last_viewed_at, EXCLUDED.last_viewed_at)
-			RETURNING last_viewed_at`,
-			userID, entityTypePerson, personID, now).Scan(&stored)
+		// org360's writer, not a copy of its statement: it owns
+		// user_record_view (tableownership_test.go names it), and the upsert's
+		// GREATEST is the whole correctness argument. The gate ABOVE is this
+		// package's own, because that is the part that legitimately differs.
+		stored, err = org360.RecordVisit(ctx, tx, userID, entityTypePerson, personID.UUID, now)
+		return err
 	})
 	if err != nil {
 		return crmcontracts.RecordViewAck{}, err

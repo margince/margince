@@ -30,11 +30,6 @@
 /* The table scrolls inside its own box: a file with twenty columns must not
    push the settings column sideways, and the column names and fill rates below
    are deliberately nowrap. */
-.import__scroll {
-  width: 100%;
-  overflow-x: auto;
-}
-
 .import__table {
   width: 100%;
   border-collapse: collapse;

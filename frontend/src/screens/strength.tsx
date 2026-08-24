@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { Meter } from "../design-system/readings";
 import { formatDateTime } from "../format/format";
@@ -108,6 +109,7 @@ function StrengthBody({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   // The contract guarantees factors/bucket/score, but a single data-driven
   // card must never crash the whole 360 if a response arrives malformed —
   // degrade to the honest zero/dormant reading instead (craft T7).
@@ -176,7 +178,7 @@ function StrengthBody({
               when: formatDateTime(
                 strength.last_interaction,
                 locale,
-                "Europe/Berlin",
+                recordZone,
               ),
             })
           : t("strength.none")}

@@ -198,6 +198,9 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 // so no message can close its own span — and therefore none can reach the text
 // of another sender's mail and label it. It is minted here, per request: a
 // boundary reused across calls is one a previous sender has already been shown.
+//
+//promptlang:exempt the reply is a closed set of label enum values keyed by id, never a sentence — validateClassifyPayload refuses anything outside classifySchema's vocabulary, so a language instruction could only translate an enum into a parse failure.
+//promptvoice:exempt the reply is a closed set of label enum values keyed by id, never a sentence.
 func classifyRequest(batch []unlabeledMessage) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder

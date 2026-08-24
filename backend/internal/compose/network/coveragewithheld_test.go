@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -75,7 +76,7 @@ func TestCoverageNamesTheWithheldSectionsWithoutReachingAStatement(t *testing.T)
 // call things in, and that is one refactor from a disclosure.
 func TestTheDepartureReadRefusesBeforeItReachesAStatement(t *testing.T) {
 	_, err := readDeparted(coverageReaderWithoutTheEdgeGrant(), nil,
-		ids.NewV7(), []ids.UUID{ids.NewV7()}, time.Now().UTC())
+		ids.NewV7(), []ids.UUID{ids.NewV7()})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("readDeparted(no edge grant) = %v, want ErrPermissionDenied", err)
 	}
@@ -84,15 +85,45 @@ func TestTheDepartureReadRefusesBeforeItReachesAStatement(t *testing.T) {
 // The wire payload carries the omission as an array that is present and empty
 // on the ordinary read. Absent would make a client guess at the difference
 // between "nothing was withheld" and "the server did not say".
+// A seat has to reach the wire NAMED. The deal page rendered these rows as the
+// bare role — "economic_buyer" — because nothing on the payload said who the
+// person was, and a rep could not tell one stakeholder from another.
+//
+// The withheld half is the other assertion: a person the caller may not read
+// still occupies a seat, because how many people carry a deal is not the
+// secret. Its name goes absent rather than empty, so a client renders its own
+// "cannot read this contact" rather than a blank that looks like a data fault.
+func TestASeatCarriesItsPersonsNameUnlessTheCallerMayNotReadThem(t *testing.T) {
+	named, hidden := ids.NewV7(), ids.NewV7()
+	out := wireCoverage(DealCoverage{
+		DealID: ids.NewV7(),
+		Stakeholders: []deals.DealStakeholder{
+			{PersonID: named, Role: "economic_buyer", Engaged: true},
+			{PersonID: hidden, Role: "champion"},
+		},
+	}, nil, map[ids.UUID]string{named: "Thorsten Sifferlien"})
+
+	if len(out.Stakeholders) != 2 {
+		t.Fatalf("the payload carries %d seats, want both — a seat the caller cannot name still counts",
+			len(out.Stakeholders))
+	}
+	if out.Stakeholders[0].PersonName == nil || *out.Stakeholders[0].PersonName != "Thorsten Sifferlien" {
+		t.Errorf("the readable seat reached the wire unnamed: %+v", out.Stakeholders[0])
+	}
+	if out.Stakeholders[1].PersonName != nil {
+		t.Errorf("a seat the caller may not read was named %q", *out.Stakeholders[1].PersonName)
+	}
+}
+
 func TestTheWirePayloadCarriesTheOmissionAndIsNeverNull(t *testing.T) {
 	withheld := wireCoverage(DealCoverage{
 		DealID:          ids.NewV7(),
 		SectionsOmitted: []string{SectionStakeholders, SectionOurSide, SectionRisks},
-	}, nil)
+	}, nil, nil)
 	if len(withheld.SectionsOmitted) != 3 {
 		t.Errorf("the withheld payload names %v, want three sections", withheld.SectionsOmitted)
 	}
-	ordinary := wireCoverage(DealCoverage{DealID: ids.NewV7()}, nil)
+	ordinary := wireCoverage(DealCoverage{DealID: ids.NewV7()}, nil, nil)
 	if ordinary.SectionsOmitted == nil {
 		t.Error("the ordinary payload's sections_omitted is null, want an empty array")
 	}

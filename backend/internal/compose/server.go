@@ -18,16 +18,19 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/briefs"
 	"github.com/gradionhq/margince/backend/internal/compose/network"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
 	"github.com/gradionhq/margince/backend/internal/modules/automation"
 	"github.com/gradionhq/margince/backend/internal/modules/commissions"
 	"github.com/gradionhq/margince/backend/internal/modules/consent"
 	"github.com/gradionhq/margince/backend/internal/modules/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/customfields"
+	"github.com/gradionhq/margince/backend/internal/modules/dealrooms"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/finance"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/modules/quotas"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/modules/signals"
@@ -93,7 +96,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		authHandlers:        authH,
 		peopleHandlers:      newPeopleHandlers(pool).WithUploadLimit(limits.LinkedInImport),
 		dealsHandlers:       dealsH,
+		projectsHandlers:    projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers:   contracts.NewHandlers(InstallationDB(pool)),
+		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
 		searchHandlers:      search.NewHandlers(InstallationDB(pool)),
@@ -126,7 +131,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers:          briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
-		Reads:             network.NewReads(pool),
+		Reads:             network.NewReads(pool, people.NewStore(InstallationDB(pool))),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},
 		// The schema-change pool is boot-optional; nil
@@ -134,6 +139,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		quotasHandlers:       quotas.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf),
+		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
+		// the store bounds "today" at midnight in the clock's own location, and a
+		// UTC clock would name the wrong day on a non-UTC installation for the
+		// hours either side of local midnight.
+		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
 		// The accept-write needs no option to wire: it resolves the reading a
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read

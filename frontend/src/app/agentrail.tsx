@@ -20,6 +20,7 @@ import {
 } from "../design-system/margince-core";
 import { formatMoney, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useOrganization360 } from "../screens/company360";
 import { useConnectors } from "../screens/connectors";
 import { useDedupeQueue } from "../screens/dedupe";
@@ -38,6 +39,8 @@ import {
 } from "./agentrail-copy";
 import { type DemoRun, useDemoRun } from "./agentrail-demo";
 import { useAgentTicker } from "./agentrail-ticker";
+import { type AiActivity, useAiActivity } from "./ai-activity";
+import { lineFor, PANEL_HEADING, RUN_DETAIL_LABEL } from "./ai-activity-lines";
 import { useAgentTierMap } from "./autonomy";
 import { useCan } from "./capability";
 import { usePopoverDismiss } from "./popover";
@@ -80,7 +83,7 @@ const RECAP_ROWS = 5;
 const MARK_FADE = 0.16;
 
 /** Where the whole trace lives, and where a model gets bound. Same tab. */
-const AI_SETTINGS_HREF = "#/settings/ai";
+const AI_SETTINGS_HREF = "#/settings/admin/ai";
 
 /** What the installation can actually tell us, and what it cannot. */
 type Signals = Readonly<{
@@ -505,10 +508,66 @@ function RuntimeRows({
   );
 }
 
+/** One AI occurrence, as the server reports it. */
+type AiActivityItem = components["schemas"]["AiActivityItem"];
+
+/**
+ * One list of scheduled runs, in the reader's words, under its own heading.
+ *
+ * A kind or state the copy map has no line for draws NOTHING — not a fallback
+ * sentence, not the message key. `lineFor` returning null is the map saying it
+ * has never heard of this run, and a surface that answers that with an invented
+ * sentence is a surface a reader cannot trust about the runs it DOES name. When
+ * that empties the section, the section is absent too.
+ *
+ * `degrade_reason` is server-authored operator vocabulary and untranslated, so
+ * it lives here as detail under its own label and never inside the line: a raw
+ * internal token in a localized sentence is the defect, whichever sentence it
+ * is.
+ */
+function RunSection({
+  heading,
+  items,
+}: Readonly<{ heading: MessageKey; items: readonly AiActivityItem[] }>) {
+  const t = useT();
+  // flatMap rather than map+filter: the empty array drops the run AND narrows
+  // the line to a string, where a filtered predicate would only have claimed it.
+  const said = items.flatMap((item) => {
+    const line = lineFor(item, t);
+    return line === null ? [] : [{ item, line }];
+  });
+  if (said.length === 0) {
+    return null;
+  }
+  return (
+    <div className="arsect">
+      <h4>{t(heading)}</h4>
+      <ul className="arruns">
+        {said.map(({ item, line }) => (
+          <li className="arbox arrun" key={item.id}>
+            <span className="arrunline">{line}</span>
+            {item.degrade_reason ? (
+              <span className="arrundetail">
+                <i>{t(RUN_DETAIL_LABEL.stopped)}</i>
+                {item.degrade_reason}
+              </span>
+            ) : null}
+            {item.summary ? (
+              <span className="arrundetail">{item.summary}</span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AgentPanel({
   state,
   setState,
   line,
+  running,
+  recent,
   signals,
   model,
   spend,
@@ -520,6 +579,10 @@ function AgentPanel({
   setState: (next: MarginceCoreState) => void;
   /** The same line the card carries, so the two never disagree. */
   line: string;
+  /** The scheduled runs the server reports as live. */
+  running: readonly AiActivityItem[];
+  /** The runs that settled since local midnight, newest first. */
+  recent: readonly AiActivityItem[];
   signals: Signals;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Readonly<{
@@ -568,6 +631,15 @@ function AgentPanel({
         )}
       </header>
 
+      {/* Above the counts: a run happening this second outranks a queue that has
+          been waiting since yesterday, and what finished overnight outranks it
+          too — it is the work the reader slept through. Settled runs are read
+          HERE and nowhere else: the terminal states, and with them every
+          `degrade_reason` and `summary`, exist only on a run that has finished.
+          Either section is absent when its list is, rather than drawn empty. */}
+      <RunSection heading={PANEL_HEADING.running} items={running} />
+      <RunSection heading={PANEL_HEADING.settled} items={recent} />
+
       {/* The counts, as tiles rather than rows: they are the two numbers somebody
           opens this panel to act on, and a number in a list of rows reads as one
           more line of text. The strip carries whichever of them answered, which
@@ -585,7 +657,7 @@ function AgentPanel({
                 alone is not a sentence about anything. */}
             {signals.waiting !== undefined && (
               <a
-                className="artile"
+                className="arbox artile"
                 href="#/inbox"
                 aria-label={`${LABELS.approvals} ${signals.waiting}`}
               >
@@ -595,7 +667,7 @@ function AgentPanel({
             )}
             {signals.duplicates !== undefined && (
               <a
-                className="artile"
+                className="arbox artile"
                 href="#/dedupe"
                 aria-label={`${LABELS.duplicatesRow} ${signals.duplicates}`}
               >
@@ -776,7 +848,11 @@ function warningLine(signals: Signals): string {
  * running. Amber is the fault that can wait, and an unlicensed installation is
  * the case it exists for. Everything else is the tool working or at rest.
  */
-function derive(activity: AppActivity, signals: Signals): MarginceCoreState {
+function derive(
+  activity: AppActivity,
+  signals: Signals,
+  server: AiActivity,
+): MarginceCoreState {
   if (signals.ai === "unconfigured" || signals.offline.length > 0) {
     return "error";
   }
@@ -785,7 +861,11 @@ function derive(activity: AppActivity, signals: Signals): MarginceCoreState {
   if (signals.license === "none" || signals.license === "refused") {
     return "warning";
   }
-  if (activity.working) {
+  // Below the two faults, because a source the agent cannot reach outranks work
+  // in progress. Either side of the or is the same standing: the scheduled
+  // runner works while nobody is looking at this tab, and a rail that moved only
+  // for its own fetches reported an agent at rest whenever the reader was.
+  if (server.working || activity.working) {
     return "working";
   }
   if (activity.reading) {
@@ -811,8 +891,15 @@ function idleLines(
   spend: Readonly<{ allowed: boolean; minor: number | undefined }>,
   money: string,
   devLine: string,
+  /** The newest run that settled today, or null when there is none to name. */
+  settledLine: string | null,
 ): readonly string[] {
   const said: Partial<Record<IdleKind, string>> = {
+    // What the scheduled runner finished while nobody was looking. It rotates
+    // rather than pinning the bar: `recent` is bounded to today, so a line
+    // pinned to it would still be announcing this morning's brief at six in the
+    // evening. In the rotation it is one true thing among the others.
+    finished: settledLine ?? undefined,
     waiting:
       signals.waiting !== undefined && signals.waiting > 0
         ? `${signals.waiting} ${LABELS.waiting}`
@@ -872,6 +959,9 @@ function barLine(
   signals: Signals,
   record: Readonly<{ reading: boolean }>,
   devLine: string,
+  /** What the server says it is doing, or null when it says nothing this
+   *  surface has words for. */
+  serverLine: string | null,
 ): string {
   if (state === "error") {
     // Red says NOT CONNECTED, and the line says what is not connected: a
@@ -889,7 +979,9 @@ function barLine(
     return warningLine(signals);
   }
   if (state === "working") {
-    return LABELS.working;
+    // The named run outranks the generic word: "Working" is true of both a local
+    // save and an overnight brief, and only one of them is news.
+    return serverLine ?? LABELS.working;
   }
   if (state === "ingest") {
     return record.reading ? LABELS.readingRecord : LABELS.reading;
@@ -921,13 +1013,14 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
   const model = useRecentCalls();
   const record = useRecordRead(route);
   const activity = useAppActivity();
+  const server = useAiActivity();
   const ticker = useAgentTicker();
   const spend = useAiSpend();
   const { locale } = useLocale();
   const demo = useDemoRun();
   // A run outranks everything, including a held state: it is the reviewer's own
   // request, and it lasts seconds.
-  const state = demo.state ?? override ?? derive(activity, signals);
+  const state = demo.state ?? override ?? derive(activity, signals, server);
 
   // What the screen's margins draw, published rather than re-derived: the run,
   // the switcher and the reads above are all local to this component, so a second
@@ -972,8 +1065,11 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
       : formatMoney(spend.minor, spend.currency, locale);
   // Above the early return with every other hook: a screen this section draws
   // nothing on is still a render it has to make the same calls in.
+  // The newest settled run, for the rotation; the newest live one, for the bar.
+  // The bar keeps the live run because that is what is true this second.
+  const settledLine = server.recent[0] ? lineFor(server.recent[0], t) : null;
   const resting = useIdleLine(
-    idleLines(signals, spend, money, t("auth.coreDevelopment")),
+    idleLines(signals, spend, money, t("auth.coreDevelopment"), settledLine),
   );
 
   // The one screen it absents itself from, and the reason is not layout: the Ask
@@ -991,12 +1087,16 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
   // because a reviewer asked for that state; then whatever the state itself has
   // to say, because a fault outranks small talk; and at rest, the rotation of
   // true readings.
+  // The first run the server reports, when this surface has words for it. It
+  // outranks the resting rotation: a live run is what is true right now, and the
+  // rotation is what is true in general.
+  const serverLine = server.running[0] ? lineFor(server.running[0], t) : null;
   const line =
     demo.said ??
     (override && REVIEW_ONLY[override]) ??
     (state === "idle"
       ? resting
-      : barLine(state, signals, record, t("auth.coreDevelopment")));
+      : barLine(state, signals, record, t("auth.coreDevelopment"), serverLine));
   return (
     <section
       className="arblock"
@@ -1020,6 +1120,8 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
               frame={frame}
               demo={demo}
               line={line}
+              running={server.running}
+              recent={server.recent}
               spend={spend}
             />
           </div>,

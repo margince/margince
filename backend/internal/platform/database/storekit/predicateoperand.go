@@ -19,8 +19,12 @@ import (
 
 // comparisonSQL is closed over the operator constants above; compileLeaf
 // only reaches it after the operator passed the typed matrix.
+//
+// `neq` is deliberately absent. It compiles to IS DISTINCT FROM, which is not a
+// comparison operator this table can hold, and leaving a `<>` here would offer
+// the next author the spelling that drops unset rows.
 var comparisonSQL = map[string]string{
-	OpEq: "=", OpNeq: "<>", OpGt: ">", OpGte: ">=", OpLt: "<", OpLte: "<=",
+	OpEq: "=", OpGt: ">", OpGte: ">=", OpLt: "<", OpLte: "<=",
 }
 
 // existsOperand validates the operand of an exists operator: must be

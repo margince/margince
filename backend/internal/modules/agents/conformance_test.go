@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -165,10 +166,10 @@ func (inertRetriever) AssembleContext(context.Context, datasource.EntityRef, ret
 func fullRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, nil, nil, nil, nil)
+	RegisterCoreTools(r, nil, nil, nil, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog)
-	RegisterIntentTools(r, inertRetriever{})
+	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, nil },
@@ -178,6 +179,9 @@ func fullRegistry(t *testing.T) *Registry {
 	})
 	RegisterHandoffTool(r, func(context.Context, ids.UUID) (HandoffFacts, error) {
 		return HandoffFacts{}, nil
+	})
+	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
+		return crmcontracts.Project360{}, nil
 	})
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, nil },
@@ -210,6 +214,14 @@ func fullRegistry(t *testing.T) *Registry {
 type inertLifecycle struct{}
 
 func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) RelinkThread(context.Context, string, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
 	return nil, nil
 }
 
@@ -412,9 +424,16 @@ func TestReadOnlyIsDerivedFromTheEnforcedScope(t *testing.T) {
 // reading it as one. Derived from the registered set, so a new confirm-first
 // tool is enrolled the day it is written.
 func TestEveryConfirmFirstToolAdvertisesItsApprovalArgument(t *testing.T) {
+	// Selected by whether the tool CAN be confirmed, not by whether it is
+	// today. These verbs execute directly by default, but a workspace tier
+	// floor puts any of them back behind an approval — and a tool that could
+	// not then advertise approval_id would be advertised and unredeemable.
+	registry := fullRegistry(t)
 	checked := 0
-	for _, spec := range fullRegistry(t).Specs() {
-		if spec.Tier != mcp.TierConfirmationRequired {
+	for _, spec := range registry.Specs() {
+		if _, stageable := registry.tools[spec.Name].(interface {
+			StageInfo(context.Context, json.RawMessage) (StageInfo, error)
+		}); !stageable {
 			continue
 		}
 		checked++
@@ -442,7 +461,7 @@ func TestEveryConfirmFirstToolAdvertisesItsApprovalArgument(t *testing.T) {
 		}
 	}
 	if checked == 0 {
-		t.Fatal("no confirm-first tool resolved — this gate asserted nothing")
+		t.Fatal("no stageable tool resolved — this gate asserted nothing")
 	}
 }
 

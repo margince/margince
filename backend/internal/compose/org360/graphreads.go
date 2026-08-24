@@ -61,7 +61,7 @@ func (g *graphAssembly) readEmployment() error {
 			FROM relationship r
 			JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
 			WHERE r.kind = 'employment' AND r.organization_id = $%d
-			  AND r.ended_at IS NULL AND r.archived_at IS NULL
+			  AND `+people.EmploymentIsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			  AND (%s) AND (%s)
 		)
 		SELECT id, full_name, title, role, count(*) OVER () AS headcount

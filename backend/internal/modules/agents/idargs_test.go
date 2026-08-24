@@ -36,6 +36,7 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -116,6 +117,24 @@ func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInpu
 	return datasource.EntityRef{}, errSeamReached
 }
 
+// The RecordArchiverV2 half. It is on the SHARED stub rather than on the
+// archive suites alone because the production seam answers all three questions
+// for every provider this tree ships: a stub that speaks only v1 is a fork's
+// bespoke adapter, and staging is refused for one of those on purpose. A suite
+// that means to probe THAT case uses its own v1-only stub and says so.
+func (seamProbeProvider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
+	return []datasource.EntityType{
+		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
+	}, nil
+}
+
+func (seamProbeProvider) RefuseArchive(context.Context, datasource.EntityRef) error { return nil }
+
+func (p seamProbeProvider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (datasource.EntityRef, error) {
+	return p.Archive(ctx, in.Ref)
+}
+
 func (seamProbeProvider) Archive(context.Context, datasource.EntityRef) (datasource.EntityRef, error) {
 	return datasource.EntityRef{}, errSeamReached
 }
@@ -153,6 +172,14 @@ func (seamProbeRetriever) AssembleContext(context.Context, datasource.EntityRef,
 type seamProbeLifecycle struct{}
 
 func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) RelinkThread(context.Context, string, string, ids.UUID, bool) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 
@@ -195,12 +222,12 @@ func (seamProbeInbox) DecideApprovalBundle(context.Context, ids.UUID, bool, stri
 func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{})
+	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	}, probeReportCatalog)
-	RegisterIntentTools(r, inertRetriever{})
+	RegisterIntentTools(r, inertRetriever{}, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, errSeamReached },
@@ -210,6 +237,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	})
 	RegisterHandoffTool(r, func(context.Context, ids.UUID) (HandoffFacts, error) {
 		return HandoffFacts{}, errSeamReached
+	})
+	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
+		return crmcontracts.Project360{}, errSeamReached
 	})
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, errSeamReached },

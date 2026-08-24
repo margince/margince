@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -12,11 +13,12 @@ import {
 import { EvidenceMark } from "../design-system/evidencemark";
 import { FactList } from "../design-system/factlist";
 import type { ConfidenceLevel } from "../design-system/trust";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import { provenanceOf, throwProblem } from "./common";
-import { dealRoleLabel } from "./company360";
 import { currentEmployer, formerEmployers } from "./employmentcurrency";
 import { EntityRef } from "./entityref";
+import { dealRoleLabel } from "./record360";
 
 export type Person360 = components["schemas"]["Person360"];
 type ProfileField = components["schemas"]["PersonProfileField"];
@@ -142,6 +144,8 @@ export function ThinState({
  */
 export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const s = view.strength;
   const warmest = view.network?.colleagues[0];
 
@@ -161,15 +165,18 @@ export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
             {
               key: "last-inbound",
               term: t("person.pulse.lastInbound"),
+              // The record's zone, not the reader's: when a message arrived
+              // is a fact about the record, and two colleagues comparing the
+              // same relationship have to name the same day for it.
               value: view.last_inbound_at
-                ? new Date(view.last_inbound_at).toLocaleDateString()
+                ? formatDate(view.last_inbound_at, locale, recordZone)
                 : t("person.pulse.neverInbound"),
             },
             {
               key: "last-outbound",
               term: t("person.pulse.lastOutbound"),
               value: view.last_outbound_at
-                ? new Date(view.last_outbound_at).toLocaleDateString()
+                ? formatDate(view.last_outbound_at, locale, recordZone)
                 : t("person.pulse.neverOutbound"),
             },
           ]}
@@ -429,6 +436,8 @@ function confidenceBand(score?: number | null): ConfidenceLevel | undefined {
 /** WhoKnowsThem ranks colleagues by warmth — the ordering IS the answer. */
 export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const colleagues = view.network?.colleagues ?? [];
   if (colleagues.length === 0) {
     return null;
@@ -442,7 +451,7 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
             <li key={c.user_id} style={{ padding: "8px 0" }}>
               <strong>{c.display_name}</strong>
               <div style={{ fontSize: 12, opacity: 0.75 }}>
-                {proofLine(c, t)}
+                {proofLine(c, t, locale, recordZone)}
               </div>
             </li>
           ))}
@@ -457,7 +466,12 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
  * Two-way traffic is named as such: six unanswered sends and six real
  * exchanges are different relationships wearing the same count.
  */
-function proofLine(c: Colleague, t: ReturnType<typeof useT>): string {
+function proofLine(
+  c: Colleague,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  recordZone: string,
+): string {
   const twoWay = (c.inbound_90d ?? 0) > 0 && (c.outbound_90d ?? 0) > 0;
   const parts = [
     twoWay
@@ -467,7 +481,7 @@ function proofLine(c: Colleague, t: ReturnType<typeof useT>): string {
   if (c.last_inbound_at) {
     parts.push(
       t("person.network.replied", {
-        when: new Date(c.last_inbound_at).toLocaleDateString(),
+        when: formatDate(c.last_inbound_at, locale, recordZone),
       }),
     );
   }

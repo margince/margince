@@ -20,7 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/modules/commissions"
+	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/integrations"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
@@ -31,6 +31,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
 	"github.com/gradionhq/margince/backend/internal/platform/events"
+	"github.com/gradionhq/margince/backend/internal/platform/geocode"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
@@ -190,7 +191,7 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// need: an adapter to call and the vault that unseals its credential.
 	// keyvault.FromEnv is resolved here rather than passed down because this
 	// is the first lane in this role that needs it.
-	providerVault, vaultConfigured, err := keyvault.FromEnv(pool, config.FromOS)
+	providerVault, vaultConfigured, err := keyvault.FromEnv(ctx, pool, config.FromOS)
 	if err != nil {
 		return lanes, fmt.Errorf("worker: keyvault: %w", err)
 	}
@@ -201,11 +202,42 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		return lanes, err
 	}
 
+	announceGeocoding(cfg.geocodeBaseURL, stdout)
+
 	if err := startWebhookLane(laneCtx, cfg, pool, rdb, &lanes, logger, stdout); err != nil {
 		return lanes, err
 	}
 	startWorkflowLane(laneCtx, pool, rdb, modelPath, lanes.background, logger, stdout)
 	return lanes, nil
+}
+
+// announceGeocoding says at boot whether company addresses become coordinates,
+// and it is the ONLY lane announcement that speaks when the feature is ABSENT.
+//
+// Every other one here says something when its half is configured and stays
+// quiet otherwise, which is right for a feature whose absence shows up the
+// moment it is asked for: an unconfigured blobstore answers 501, an
+// unconfigured webhook key answers 503. Geocoding has no such moment. An
+// address writes, the row is saved, nothing is queued, and no coordinate ever
+// appears — so the only symptom is that `within_radius` answers "unavailable"
+// weeks later, in a different surface, with nothing to search for.
+//
+// A line naming the variable is what turns that into a question an operator
+// can answer.
+func announceGeocoding(baseURL string, stdout io.Writer) {
+	if baseURL == "" {
+		_, _ = fmt.Fprintln(stdout,
+			"worker geocoding OFF (MARGINCE_GEOCODE_BASE_URL unset) — company addresses "+
+				"keep no coordinates and every within_radius query answers unavailable")
+		return
+	}
+	where := baseURL
+	if baseURL == "public" {
+		// Named rather than echoed: "public" is the flag's word, and an
+		// operator reading the log wants to know whose service this is.
+		where = geocode.PublicBaseURL + " (OpenStreetMap's own; 4 requests/minute)"
+	}
+	_, _ = fmt.Fprintf(stdout, "worker geocoding company addresses via %s\n", where)
 }
 
 // startExtensionSubscriptionLanes starts one consumer per composed unit
@@ -322,7 +354,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// the workspace's own vaulted incumbent token; wire the FromEnv
 	// vault-backed resolver so an autonomous run can write back (nil vault
 	// → clean errNoWriteIncumbent, never a crash).
-	runnerVault, _, rverr := keyvault.FromEnv(pool, config.FromOS)
+	runnerVault, _, rverr := keyvault.FromEnv(ctx, pool, config.FromOS)
 	if rverr != nil {
 		return rverr
 	}
@@ -382,15 +414,21 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	_, _ = fmt.Fprintln(stdout, "worker matching LinkedIn connections as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:linkedin-match", matcher.HandleEvent, logger, 0) })
 
-	// Turning a won deal into what its partner earned, and reversing it when a
-	// win is undone. Deterministic like the projections above, so it runs on
-	// every worker: a workspace where nobody accrues is indistinguishable from
-	// one where no partner ever brought a deal.
-	accrual := compose.NewCommissionGen(pool,
-		commissions.NewStore(compose.InstallationDB(pool)),
-		people.NewStore(compose.InstallationDB(pool)), logger)
-	_, _ = fmt.Fprintln(stdout, "worker accruing partner commission on won deals")
-	background.Go(func() { runSubscriber(ctx, rdb, "cg:commissions", accrual.HandleEvent, logger, 0) })
+	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
+
+	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
+
+	// What the AI is doing for one person, projected into the table the UI
+	// reads. Deterministic like the projections above, so it runs on every
+	// worker: an installation whose lane is not running has a rail that is not
+	// wrong so much as frozen, and a frozen rail reads as an idle one.
+	//
+	// The default reclaim window is right here, unlike the resume lane's: this
+	// handler is one guarded upsert, so a consumer that looks slow really is
+	// stuck and a peer should take the entry.
+	projection := aiactivity.NewConsumer(aiactivity.NewStore(compose.InstallationDB(pool)), logger)
+	_, _ = fmt.Fprintln(stdout, "worker projecting AI activity for the rail")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:ai-activity", projection.HandleEvent, logger, 0) })
 
 	// Filling a contact from what their employer's site already published, and
 	// from public search metadata when a provider is bound. Same trigger as the
@@ -437,7 +475,7 @@ func relayUntilSignal(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool,
 // (keyvault.FromEnv); a mid-backfill failure is logged and non-fatal — capture
 // keeps resolving from the auth column and the next boot retries.
 func backfillConnectorCredentials(ctx context.Context, pool *pgxpool.Pool, stdout io.Writer, logger *slog.Logger) error {
-	vault, configured, err := keyvault.FromEnv(pool, config.FromOS)
+	vault, configured, err := keyvault.FromEnv(ctx, pool, config.FromOS)
 	if err != nil {
 		return fmt.Errorf("worker: keyvault: %w", err)
 	}

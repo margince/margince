@@ -21,8 +21,10 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -46,11 +48,11 @@ func inputFixture() Input {
 
 func TestFingerprintTracksTheAccountNotTheRecordVersion(t *testing.T) {
 	base := inputFixture()
-	first, err := Fingerprint(base, "routing-1")
+	first, err := Fingerprint(base, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	again, err := Fingerprint(inputFixture(), "routing-1")
+	again, err := Fingerprint(inputFixture(), "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -62,7 +64,7 @@ func TestFingerprintTracksTheAccountNotTheRecordVersion(t *testing.T) {
 	// the key is the input rather than that row's version.
 	moved := inputFixture()
 	moved.OpenDeals[0].Stage = "Negotiation"
-	changed, err := Fingerprint(moved, "routing-1")
+	changed, err := Fingerprint(moved, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -82,11 +84,11 @@ func TestFingerprintTracksTheAccountNotTheRecordVersion(t *testing.T) {
 		ID: "77777777-7777-4777-8777-777777777777", Name: "Send the paperwork",
 		Due: "2026-07-21T09:00:00Z",
 	}}
-	withoutDue, err := Fingerprint(undated, "routing-1")
+	withoutDue, err := Fingerprint(undated, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	withDue, err := Fingerprint(dated, "routing-1")
+	withDue, err := Fingerprint(dated, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -96,7 +98,7 @@ func TestFingerprintTracksTheAccountNotTheRecordVersion(t *testing.T) {
 
 	// Re-pointing the lane rewrites briefs rather than leaving text
 	// attributed to a model that no longer writes it.
-	rebound, err := Fingerprint(base, "routing-2")
+	rebound, err := Fingerprint(base, "routing-2", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -113,11 +115,11 @@ func TestFingerprintSeparatesReadersWithDifferentGrants(t *testing.T) {
 	restricted.OpenDeals = nil
 	restricted.SectionsOmitted = []string{"deals"}
 
-	a, err := Fingerprint(full, "routing-1")
+	a, err := Fingerprint(full, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	b, err := Fingerprint(restricted, "routing-1")
+	b, err := Fingerprint(restricted, "routing-1", string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -255,7 +257,7 @@ func TestWriteFallsBackRatherThanFailing(t *testing.T) {
 		"lane answering prose": nonsenseLane{},
 	} {
 		t.Run(name, func(t *testing.T) {
-			sections, by, err := Write(context.Background(), lane, orgID, in)
+			sections, by, err := Write(context.Background(), lane, orgID, in, string(textlang.English))
 			if err != nil {
 				t.Fatalf("write: %v", err)
 			}
@@ -480,7 +482,7 @@ func TestModelBriefKeepsWhatItGroundsAndDropsWhatItDoesNot(t *testing.T) {
 			{"text":"This account is a poor fit.","nature":"assessment","evidence":[{"entity_type":"organization","entity_id":"` + briefOrgID + `"}]}]}
 	]}`}
 
-	written, by, err := Write(context.Background(), lane, briefOrgID, in)
+	written, by, err := Write(context.Background(), lane, briefOrgID, in, string(textlang.English))
 	if err != nil {
 		t.Fatalf("Write: %v", err)
 	}
@@ -525,7 +527,7 @@ func TestTheBriefReadsTheCompanyProfileAndAskDoesNot(t *testing.T) {
 	in := inputFixture()
 	in.Profile = []ProfileIn{{Field: "offer_summary", Value: "Managed hosting for shops"}}
 
-	brief := BriefRequest(in).Messages[0].Content
+	brief := BriefRequest(in, string(textlang.English)).Messages[0].Content
 	if !strings.Contains(brief, "Managed hosting for shops") {
 		t.Errorf("the brief cannot assess fit without the profile:\n%s", brief)
 	}
@@ -533,7 +535,7 @@ func TestTheBriefReadsTheCompanyProfileAndAskDoesNot(t *testing.T) {
 		t.Errorf("the brief request lost the account itself:\n%s", brief)
 	}
 
-	ask := AskRequest(crmcontracts.OrganizationQuestionWhatsOpen, in).Messages[0].Content
+	ask := AskRequest(crmcontracts.OrganizationQuestionWhatsOpen, in, string(textlang.English)).Messages[0].Content
 	if strings.Contains(ask, "Managed hosting for shops") {
 		t.Errorf("Ask carries the approved company prose it should quote instead:\n%s", ask)
 	}
@@ -580,7 +582,7 @@ func TestQuotedCompanyLinesKeepTheAuthorsOwnTerminator(t *testing.T) {
 
 type fixedAssembler struct{ view crmcontracts.Organization360 }
 
-func (f fixedAssembler) Assemble(context.Context, ids.OrganizationID) (crmcontracts.Organization360, error) {
+func (f fixedAssembler) AssembleScoped(context.Context, ids.OrganizationID, org360.AssembleOptions) (crmcontracts.Organization360, error) {
 	return f.view, nil
 }
 
@@ -600,12 +602,12 @@ func TestAssembleFailsRatherThanCachingABriefThatLostItsCompanyHalf(t *testing.T
 		view:    fixedAssembler{view: crmcontracts.Organization360{}},
 		profile: failingProfile{err: boom},
 	}
-	if _, err := s.assemble(context.Background(), ids.OrganizationID{}, true); !errors.Is(err, boom) {
+	if _, _, err := s.assemble(context.Background(), ids.OrganizationID{}, true, nil); !errors.Is(err, boom) {
 		t.Fatalf("assemble err = %v, want the profile read's own failure", err)
 	}
 	// A prepared question never reads it, so a broken profile store must not
 	// take the three answers down with the brief.
-	if _, err := s.assemble(context.Background(), ids.OrganizationID{}, false); err != nil {
+	if _, _, err := s.assemble(context.Background(), ids.OrganizationID{}, false, nil); err != nil {
 		t.Fatalf("assemble without the profile = %v, want it not to read the store at all", err)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -71,6 +72,22 @@ type ListActivitiesInput struct {
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
+	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
+	// another project and keeping what belongs to none.
+	//
+	// It is not a second spelling of EntityType="project"+EntityID, and the
+	// difference is the whole point. That pair asks "what is filed under this
+	// project"; this asks "what is on this account, minus the other
+	// engagement" — the anchor stays the person or company, and the general
+	// correspondence that carries no project at all stays with it. A reader
+	// preparing for an ERP meeting still wants the relationship's history;
+	// they do not want the datacentre migration.
+	WithinProjectID *ids.ProjectID
+	// OccurredAfter / OccurredBefore bound the timeline to a range: the
+	// lower end inclusive, the upper end exclusive, so a calendar day is
+	// [day 00:00, next day 00:00) with no double-counting at midnight.
+	OccurredAfter  *time.Time
+	OccurredBefore *time.Time
 }
 
 // ListActivities is the timeline read: newest first, optionally scoped to
@@ -100,6 +117,11 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	// is what happened on it" to someone with no right to either fact.
 	if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
 		return nil, storekit.Page{}, err
+	}
+	if in.WithinProjectID != nil {
+		if err := RequireProjectScope(ctx, tx, *in.WithinProjectID); err != nil {
+			return nil, storekit.Page{}, err
+		}
 	}
 	limit := storekit.ClampLimit(in.Limit)
 	join, where, content, args, err := listActivitiesFilter(ctx, in)

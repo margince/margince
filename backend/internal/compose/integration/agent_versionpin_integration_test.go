@@ -29,92 +29,74 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
 )
 
-func TestApprovedOfferArchiveRefusesAfterTheAgentRewritesTheTerms(t *testing.T) {
+func TestAnAgentDraftsPricesAndArchivesAnOfferOnItsOwnPassport(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.Slug = "offers-pin"
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Pin", "pin@fable.test", "Admin")
+	_, token, offer := seedOfferForPin(t, e)
+	bearer := map[string]string{"Authorization": "Bearer " + token}
+
+	// The agent prices the terms, then archives — neither asks a human.
+	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+offer.LineItems[0].ID, apptest.AnyMap{
+		"unit_price_minor": 100,
+	}, bearer, nil); status != http.StatusOK {
+		t.Fatalf("agent line-item rewrite → %d", status)
+	}
+	if status := e.Call(t, "DELETE", "/v1/offers/"+offer.ID, nil, bearer, nil); status == http.StatusForbidden {
+		t.Fatal("agent offer archive → 403 — a passport archives what its holder could archive unaided")
+	}
+
+	// An archive sets archived_at; the offer's own status stays whatever it was.
+	var archived bool
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT archived_at IS NOT NULL FROM offer WHERE id = $1`, offer.ID).Scan(&archived); err != nil {
+		t.Fatalf("reading the offer back: %v", err)
+	}
+	if !archived {
+		t.Error("the offer is still live after the agent archived it")
+	}
+}
+
+// pinOffer is the drafted offer both tests act on: its id, its version, and the
+// one line item whose price the rewrite moves.
+type pinOffer struct {
+	ID        string `json:"id"`
+	Version   int64  `json:"version"`
+	LineItems []struct {
+		ID string `json:"id"`
+	} `json:"line_items"`
+}
+
+// seedOfferForPin mints a write-scoped passport and drafts one offer through it,
+// answering the deal, the passport token and the offer. Both tests need exactly
+// this and differ only in what they do next.
+func seedOfferForPin(t *testing.T, e *apptest.AppEnv) (string, string, pinOffer) {
+	t.Helper()
 	dealID := offerFixture(t, e)
 
 	var minted struct {
 		Token string `json:"token"`
 	}
 	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
-		// The version-pin race this test proves happens inside archive_record's
-		// approval, so the passport must be able to spend `write` to get there.
+		// The version-pin race happens inside archive_record's approval, so the
+		// passport must be able to spend `write` to get there.
 		"label": "pin agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	var offer struct {
-		ID        string `json:"id"`
-		Version   int64  `json:"version"`
-		LineItems []struct {
-			ID string `json:"id"`
-		} `json:"line_items"`
-	}
+	var offer pinOffer
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
 		"currency": "EUR", "source": "mcp",
-		"line_items": []apptest.AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
+		"line_items": []apptest.AnyMap{
+			{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0},
+		},
 	}, bearer, &offer); status != http.StatusCreated {
 		t.Fatalf("agent offer draft → %d", status)
 	}
 	if len(offer.LineItems) != 1 {
 		t.Fatalf("draft carries %d line items, want 1", len(offer.LineItems))
 	}
-
-	// Stage the archive WITHOUT If-Match — the omission that would defeat
-	// the pin entirely if it were taken from the caller instead of the row.
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	if status := e.Call(t, "DELETE", "/v1/offers/"+offer.ID, nil, bearer, &problem); status != http.StatusForbidden ||
-		problem.Code != "approval_required" {
-		t.Fatalf("agent archive → %d %q, want 403 approval_required", status, problem.Code)
-	}
-	approvalID := ExtractStagedApprovalID(t, problem.Detail)
-
-	// The staged row carries a pin the agent never supplied.
-	var pin *int64
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT target_version FROM approval WHERE id = $1`, approvalID).Scan(&pin); err != nil {
-		t.Fatal(err)
-	}
-	if pin == nil {
-		t.Fatal("the staged approval carries no target_version — omitting If-Match must not opt out of the binding")
-	}
-
-	// The human approves the offer they were shown: Pilot at 250000 minor.
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
-	}
-
-	// The agent then rewrites the priced terms through the auto_execute
-	// child route. The offer's version moves; the approval's does not.
-	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+offer.LineItems[0].ID, apptest.AnyMap{
-		"unit_price_minor": 100,
-	}, bearer, nil); status != http.StatusOK {
-		t.Fatalf("agent line-item rewrite → %d", status)
-	}
-
-	// The byte-identical retry now refuses: same path, same empty body, same
-	// diff_hash — and a row that is no longer the one the human approved.
-	withToken := map[string]string{
-		"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID,
-	}
-	var refusal struct {
-		Code string `json:"code"`
-	}
-	if status := e.Call(t, "DELETE", "/v1/offers/"+offer.ID, nil, withToken, &refusal); status != http.StatusConflict ||
-		refusal.Code != "version_skew" {
-		t.Fatalf("redeeming against rewritten terms → %d %q, want 409 version_skew", status, refusal.Code)
-	}
-
-	// And nothing was archived.
-	var after offerBody
-	if status := e.Call(t, "GET", "/v1/offers/"+offer.ID, nil, bearer, &after); status != http.StatusOK || after.Status != "draft" {
-		t.Fatalf("offer status = %q after a refused redemption, want draft", after.Status)
-	}
+	return dealID, minted.Token, offer
 }

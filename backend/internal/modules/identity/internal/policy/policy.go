@@ -22,7 +22,7 @@ import (
 // (features/04 §1). A policy naming anything else is rejected — a typo'd
 // object would otherwise silently grant nothing and read as a bug in the
 // role, not the document.
-var coreObjects = []string{"person", "organization", "deal", "lead", "activity", "pipeline", "list", "tag", "relationship", "partner", "automation", "voice_profile", "product", "offer", "signal", "saved_view", "custom_field", "computed_field", "quota", "offer_template", "overlay_connection", "embedding_reindex", "webhook_subscription", "fx_rate", "ai_model_rate", "capture_settings", "project", "channel_connection", "import_run", "installation_settings", "finance", "integrations", "retention_policy", "capture_trace", "license", "contract", "ai_routing", "commission"}
+var coreObjects = []string{"person", "organization", "deal", "lead", "activity", "pipeline", "list", "tag", "relationship", "partner", "automation", "voice_profile", "product", "offer", "signal", "saved_view", "custom_field", "computed_field", "quota", "offer_template", "overlay_connection", "embedding_reindex", "webhook_subscription", "fx_rate", "ai_model_rate", "capture_settings", "project", "channel_connection", "import_run", "installation_settings", "finance", "integrations", "retention_policy", "capture_trace", "license", "contract", "ai_routing", "commission", "deal_room"}
 
 // IsCoreObject reports whether an RBAC object is in the closed set a role
 // document may grant. Parse enforces it on stored documents; it is also the
@@ -114,11 +114,11 @@ var (
 // and migrate-in screens are admin surfaces.
 // managerObjects is the grid a team lead (`manager`) and the whole-organization
 // `management` seat share; only their row scope differs.
-var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud)
+var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud)
 
 var defaults = map[string]Document{
 	"admin": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud),
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
@@ -132,8 +132,17 @@ var defaults = map[string]Document{
 		RowScope: principal.RowScopeAll,
 	},
 	"manager": {
-		Objects:  managerObjects,
-		RowScope: principal.RowScopeTeam,
+		Objects: managerObjects,
+		// Own scope, not team: membership of a team is not by itself permission
+		// to rewrite a teammate's records. Writing somebody else's customer
+		// record takes an explicit share — a record_grant naming the user or
+		// one of their teams — or an unbounded seat.
+		//
+		// The team ARM survives in the write predicate and is not dead: a
+		// record_grant may name a team, and an operator may still author a
+		// custom role at team scope. What changed is only what the seeded
+		// roles claim by default.
+		RowScope: principal.RowScopeOwn,
 	},
 	"rep": {
 		// Reps create and work records but never delete them — except
@@ -213,18 +222,31 @@ var defaults = map[string]Document{
 			// commission — a rep sees what their partner-sourced deal earned, and
 			// nothing more: approving and paying are the business's decisions, and
 			// an entry is written by the won-deal accrual rather than by hand.
-			readOnly),
-		RowScope: principal.RowScopeTeam,
+			readOnly,
+			// deal_room — a rep opens and runs the room on their own deal:
+			// create, publish, invite, revoke. Deleting one stays manager/admin,
+			// the same posture every other record the rep works carries.
+			grant{Create: true, Read: true, Update: true}),
+		// Own scope, not team: membership of a team is not by itself permission
+		// to rewrite a teammate's records. Writing somebody else's customer
+		// record takes an explicit share — a record_grant naming the user or
+		// one of their teams — or an unbounded seat.
+		//
+		// The team ARM survives in the write predicate and is not dead: a
+		// record_grant may name a team, and an operator may still author a
+		// custom role at team scope. What changed is only what the seeded
+		// roles claim by default.
+		RowScope: principal.RowScopeOwn,
 	},
 	"read_only": {
 		// A read-only role still owns its personal view state: saved views
 		// are P1-exempt per-user prefs (runtime-config-surface.md §3), not
 		// shared records, so full self-service is correct even here.
-		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly),
+		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly),
 		RowScope: principal.RowScopeAll,
 	},
 	"ops": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud),
 		RowScope: principal.RowScopeAll,
 	},
 }
@@ -237,7 +259,7 @@ var defaults = map[string]Document{
 // and rbacfixture_test.go holds the result to the matrix the server seeds. Five
 // map literals of every key is what this replaced. Shortening it is a refactor of
 // the seed rather than of this call.
-func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, quota, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
+func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, quota, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
 	return map[string]grant{
 		"person": person, "organization": organization, "deal": deal,
 		"lead": lead, "activity": activity, "pipeline": pipeline,
@@ -281,6 +303,7 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		// visibility is inherited from its deal — so the row scope that reaches
 		// it is the deal's, not one of its own.
 		"commission": commission,
+		"deal_room":  dealRoom,
 		// Which vendor this installation's text is sent to (ai-operational-spec
 		// §1.4). Deliberately NOT folded into installation_settings: whoever may
 		// rename the organization has no business re-pointing where its people's

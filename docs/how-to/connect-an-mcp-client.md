@@ -100,6 +100,23 @@ The same token is a REST Bearer credential, governed identically (ADR-0055):
 the granting human's live seat and RBAC. See
 [mint-a-passport.md](mint-a-passport.md) to issue one directly.
 
+**What a passport can do without asking you.** Most consequential verbs run
+directly — importing a file, sending mail, booking, merging, archiving. The
+reasoning is that a passport acts as *you*: it carries your seat, your grants and
+your row scope, so it can only reach what you could already reach in the app, and
+a second confirmation from the same person adds ceremony rather than safety. The
+limits that still apply are your limits — RBAC, row scope, the seat ceiling, the
+passport's expiry, and the scopes you chose to lend when you minted it.
+
+Two things do not follow that rule:
+
+- **`enrich`** stays confirm-first. The model names the URL the server fetches,
+  so persuading the model reaches an address nobody with the credential picked.
+  That is a question about egress, not about authority.
+- **Anything an installation floors.** A workspace can require confirmation for a
+  particular verb and record type by declaring it in the contract, and the verb
+  then stages for a human exactly as it always did.
+
 ## Inspect the surface
 
 The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) speaks

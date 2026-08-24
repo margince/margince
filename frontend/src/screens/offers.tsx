@@ -422,9 +422,11 @@ function NumericCell({
 
 function UnitPriceCell({
   line,
+  currency,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
+  currency: string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
   const [minor, setMinor] = useState(line.unit_price_minor);
@@ -432,6 +434,7 @@ function UnitPriceCell({
     <MoneyInput
       data-testid={`line-unit-price-${line.id}`}
       style={{ width: 90 }}
+      currency={currency}
       valueMinor={minor}
       onChangeMinor={setMinor}
       onBlur={() => {
@@ -592,7 +595,11 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         line.price_grounded === false ? (
           <UnpricedCaption label={t("offer.unpriced")} />
         ) : (
-          <UnitPriceCell line={line} onSave={saveLine(line.id)} />
+          <UnitPriceCell
+            line={line}
+            currency={offer.currency}
+            onSave={saveLine(line.id)}
+          />
         ),
     },
     {
@@ -652,6 +659,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   return (
     <Card testId="offer-line-editor" title={t("offer.lines")}>
       <DataTable
+        label={t("offer.lines")}
         columns={columns}
         rows={offer.line_items}
         rowKey={(line) => `${line.id}:${line.version ?? 0}`}
@@ -720,6 +728,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               <MoneyInput
                 {...control}
                 data-testid="new-line-unit-price"
+                currency={offer.currency}
                 valueMinor={newLine.unit_price_minor}
                 onChangeMinor={(minor) => {
                   setPriceTouched(true);

@@ -13,9 +13,9 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
-  type TextareaHTMLAttributes,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -27,7 +27,13 @@ import "./atoms.css";
 // arrives through props — callers translate with t(); atoms never hard-code
 // user-facing words.
 
-type ButtonVariant = "primary" | "ghost" | "danger";
+// `federated` is the door into another company's sign-in: full-width,
+// unfilled, and carrying that company's own mark. It is a variant rather than a
+// screen's own control because the alternative was tried — the sign-in surface
+// hand-rolled a button with its own border, fill, radius, weight, padding,
+// hover, focus and two dim states, and a control that redeclares every one of a
+// variant's properties has left the design system rather than reused it.
+type ButtonVariant = "primary" | "ghost" | "danger" | "federated";
 
 /**
  * The turning mark a control shows while a write it started is in flight.
@@ -67,6 +73,7 @@ export function Button({
   className,
   reason,
   reasonId,
+  unavailable,
   pending,
   busyLabel,
   disabled,
@@ -106,6 +113,24 @@ export function Button({
    * and still reaches a screen reader from each of them.
    */
   reasonId?: string;
+  /**
+   * A control the installation ADVERTISES and cannot complete.
+   *
+   * The RESTING refusal, and what separates it from the other two is how long
+   * it lasts: `disabled` is a precondition that clears and the control comes
+   * back, `pending` is a wait measured in seconds, and this is a door drawn
+   * because the installation offers it with nothing behind it yet. It refuses
+   * the press by itself, the way `reason` does, so the dead treatment cannot
+   * end up drawn over a live control.
+   *
+   * It carries no sentence of its own — a caller that has one passes `reason`
+   * as well and gets both — because the surface that needs this state may have
+   * nothing it is allowed to say: the federated sign-in button is named by the
+   * installation's own label, and a provider it advertises is not ours to
+   * explain. So the drawing IS the whole claim, which is why it is a deeper
+   * fade than `disabled` rather than the same one.
+   */
+  unavailable?: boolean;
   /**
    * Whether a write this button started is still in flight.
    *
@@ -161,17 +186,22 @@ export function Button({
     `btn-${variant}`,
     small ? "btn-sm" : "",
     iconOnly ? "btn-icon" : "",
+    unavailable ? "btn-unavailable" : "",
     className ?? "",
   ]
     .filter(Boolean)
     .join(" ");
   const refused = reason !== undefined || reasonId !== undefined;
-  // Refusal beats busy in BOTH its spellings. `disabled` used to be missing
-  // from this test, and the result was the exact failure `pending` exists to
-  // prevent: a caller passing both got a natively disabled button — focus gone
-  // — that announced itself busy and drew the dimmed refused chrome with a
-  // spinner turning inside it. `Switch` reads the same way.
-  const busy = pending === true && !refused && disabled !== true;
+  // Every way this control can be barred, in one value, because `disabled` and
+  // `busy` both have to agree about it. Refusal beats busy in ALL its
+  // spellings: `disabled` used to be missing from this test, and the result was
+  // the exact failure `pending` exists to prevent — a caller passing both got a
+  // natively disabled button, focus gone, that announced itself busy and drew
+  // the dimmed refused chrome with a spinner turning inside it. `unavailable`
+  // joins them for the same reason: a door with nothing behind it cannot also
+  // be mid-press. `Switch` reads the same way.
+  const barred = refused || disabled === true || unavailable === true;
+  const busy = pending === true && !barred;
   // Everything this component computes for itself is destructured out of
   // `rest`, so a caller's props cannot land on top of it. That is not tidiness:
   // a `disabled={false}` passed alongside `reason` re-enabled a control the
@@ -201,7 +231,7 @@ export function Button({
       type="button"
       {...attrs}
       className={classes}
-      disabled={disabled || refused}
+      disabled={barred}
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
       aria-describedby={describedBy}
@@ -468,8 +498,12 @@ export function SearchField(props: InputHTMLAttributes<HTMLInputElement>) {
  * listbox, because a native `<select>` draws its own option list in the
  * platform's idiom and no CSS reaches inside it. It still reads `.input` for its
  * closed face — a dropdown and a text input are the same field on screen.
+ *
+ * `ComponentPropsWithRef`, for the same reason `TextInput` takes it: a caller
+ * that has to move focus HERE needs the node, and a dialog whose fields are
+ * mostly prose has no single-line input to land on instead.
  */
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea(props: ComponentPropsWithRef<"textarea">) {
   return (
     <textarea
       {...props}
@@ -948,10 +982,48 @@ export function PendingBody({
   );
 }
 
-export function EmptyState({ children }: Readonly<{ children: ReactNode }>) {
+/**
+ * EmptyState is the one "nothing here" plate.
+ *
+ * Bare, it is a one-liner: the caller's sentence, centred, in the meta tone —
+ * the shape a filtered list or a section with no rows takes. With `title` it
+ * becomes the INSTRUCTIONAL variant a first-run surface needs: a heading that
+ * names what the page holds, the caller's paragraph saying how a record of
+ * this kind comes to exist, and the one primary `action` that makes the first
+ * one. The two are one component rather than two because they are the same
+ * plate with more or less on it, and a second spelling of the plate is how a
+ * page's first-run state came to look like a different product from its
+ * filtered-empty state.
+ *
+ * The words stay the caller's, translated with `t()`; nothing here knows what
+ * kind of record is missing.
+ */
+export function EmptyState({
+  title,
+  action,
+  children,
+}: Readonly<{
+  // The instructional variant's heading. Present, the children render as the
+  // explanatory paragraph under it rather than as the whole plate.
+  title?: string;
+  // The one verb that ends the empty state — a create button. Rendered only
+  // with `title`: a bare one-liner that offered a verb would be a filtered
+  // list inviting the reader to create what the filter hid.
+  action?: ReactNode;
+  children: ReactNode;
+}>) {
+  if (title === undefined) {
+    return (
+      <Card as="div" inset className="empty">
+        {children}
+      </Card>
+    );
+  }
   return (
-    <Card as="div" inset className="empty">
-      {children}
+    <Card as="div" inset className="empty empty-instructional">
+      <h2 className="t-h2 empty-title">{title}</h2>
+      <div className="empty-body">{children}</div>
+      {action && <div className="empty-action">{action}</div>}
     </Card>
   );
 }
@@ -1075,7 +1147,16 @@ export function Modal({
   useEffect(() => {
     returnFocus.current = returnFocusTo;
   }, [returnFocusTo]);
-  useEffect(() => {
+  // A LAYOUT effect, because a passive one is scheduled after the browser
+  // paints: between the commit that puts this dialog on screen and a passive
+  // effect attaching the listener, the dialog is visible, hit-testable, and
+  // deaf to Escape. A key pressed in that window is not queued, it is lost —
+  // and for a dialog whose dismissal is the safe answer, losing it strands the
+  // reader in front of a question that no longer answers the one key everyone
+  // reaches for. React runs a layout effect during the commit, before yielding
+  // to the browser, so there is no frame in which this dialog can be seen and
+  // not respond.
+  useLayoutEffect(() => {
     if (!open) {
       return;
     }
@@ -1132,10 +1213,9 @@ export function Modal({
   // menu — would otherwise be hidden along with it, and the click that opened
   // the dialog is the same click that collapses the menu.
   return createPortal(
-    // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop dismiss is a convention; Esc is the keyboard path
     // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handles the keyboard path above
-    <div
+    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
       className={placement === "right" ? "overlay overlay-right" : "overlay"}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -1277,19 +1357,126 @@ export function AttainmentRing({
   );
 }
 
+/** Whether a box is holding more width than it is showing. */
+function overflowsSideways(element: HTMLElement | null): boolean {
+  return element !== null && element.scrollWidth - element.clientWidth > 1;
+}
+
+/** Spread onto the scrolling box. Empty while it has nothing hidden to reach. */
+type ScrollRegion = Readonly<{
+  tabIndex?: 0;
+  role?: "region";
+  "aria-label"?: string;
+}>;
+
+/**
+ * Make a box that scrolls sideways reachable, and only then.
+ *
+ * A region holding content past its right edge is content pointer users can
+ * drag to and keyboard users cannot reach at all, so it takes a tab stop and
+ * announces itself by name. It takes neither while it fits: a tab stop in front
+ * of every table in the product, most of which fit, is a cost every keyboard
+ * reader pays for the few that do not. That is the same bargain
+ * `useTruncationTooltip` strikes for a string that fits its row.
+ *
+ * Both spellings of a scrolling table body use this — `TableScroll` below, and
+ * the list surface's own `.lt-scroll` (listtable.tsx) — so a reader meets the
+ * same behaviour whichever table they land in.
+ */
+export function useScrollRegion(
+  box: RefObject<HTMLElement | null>,
+  label: string,
+): ScrollRegion {
+  const [scrolls, setScrolls] = useState(false);
+  const [watched, setWatched] = useState<HTMLElement | null>(null);
+  // Measured after every render rather than when the rows change: the answer
+  // moves for reasons this hook never sees — a column the reader dragged, a
+  // cell whose badge arrived — and re-reading it is two property reads. Setting
+  // either answer twice is a no-op, so this cannot loop. The element goes into
+  // state as well, so a box that unmounts and comes back (a list switching
+  // between a board and a table) is re-watched rather than leaving the observer
+  // below holding a node that is no longer on the page.
+  useLayoutEffect(() => {
+    setScrolls(overflowsSideways(box.current));
+    setWatched(box.current);
+  });
+  // A window resize is only one of the ways the box changes size, and the least
+  // interesting one: the sidebar collapsing, a rail opening beside the table,
+  // a settings card that is 720px on one route and full width on the next all
+  // move the edge without the window moving at all. So the BOX is watched, and
+  // the table inside it too — a table that grew is the other half of the same
+  // question.
+  useEffect(() => {
+    // Measured once wherever the observer is unavailable (jsdom): the answer is
+    // still right for the render that just happened, it simply stops following
+    // a resize.
+    if (!watched || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() =>
+      setScrolls(overflowsSideways(watched)),
+    );
+    observer.observe(watched);
+    const content = watched.firstElementChild;
+    if (content) {
+      observer.observe(content);
+    }
+    return () => observer.disconnect();
+  }, [watched]);
+  return scrolls ? { tabIndex: 0, role: "region", "aria-label": label } : {};
+}
+
+/**
+ * The box a table too wide for its column scrolls sideways INSIDE.
+ *
+ * The one spelling of `.table-scroll`. A settings page is 720px wide and a
+ * record's finance table is eight columns, so the overflow is a property of the
+ * TABLE rather than a knob each page answers for — and the four screens that
+ * had each written this wrapper by hand were four chances to forget the part
+ * below.
+ *
+ * Reachability is `useScrollRegion`'s, above: the tab stop and the name arrive
+ * only while the box is actually holding something past its right edge.
+ *
+ * `label` is what the region is called ("Recent invoices", "Spend by task") and
+ * is the caller's to translate. It is required rather than defaulted because a
+ * region announced as "region" tells a reader nothing about which of the page's
+ * tables they have just landed in.
+ */
+export function TableScroll({
+  label,
+  className,
+  children,
+}: Readonly<{ label: string; className?: string; children: ReactNode }>) {
+  const box = useRef<HTMLDivElement | null>(null);
+  const region = useScrollRegion(box, label);
+  return (
+    <div
+      ref={box}
+      className={["table-scroll", className ?? ""].filter(Boolean).join(" ")}
+      {...region}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function DataTable<Row>({
   columns,
   rows,
   rowKey,
   onRowClick,
+  label,
 }: Readonly<{
   columns: { key: string; header: string; render: (row: Row) => ReactNode }[];
   rows: Row[];
   rowKey: (row: Row) => string;
   onRowClick?: (row: Row) => void;
+  /** What the scroll region is called once the table is wider than its box. */
+  label: string;
 }>) {
   return (
-    <div className="table-scroll">
+    <TableScroll label={label}>
       <table className="table">
         <thead>
           <tr>
@@ -1312,7 +1499,7 @@ export function DataTable<Row>({
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScroll>
   );
 }
 

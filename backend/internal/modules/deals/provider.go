@@ -52,18 +52,12 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 			return datasource.Record{}, err
 		}
 		return datasource.NewRecord(r, v, v.Version)
-	case datasource.EntityProject:
-		v, err := p.store.GetProject(ctx, ids.From[ids.ProjectKind](r.ID), storekit.LiveOnly)
-		if err != nil {
-			return datasource.Record{}, err
-		}
-		return datasource.NewRecord(r, v, v.Version)
 	default:
 		return datasource.Record{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
 	}
 }
 
-// SearchEntity lists deals and projects under the shared search contract.
+// SearchEntity lists deals under the shared search contract.
 //
 // A filter this type has no binding for is an ERROR rather than a dropped
 // clause — see listfilters.go. It is unreachable while the composition root
@@ -85,24 +79,6 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		records := make([]datasource.Record, 0, len(rows))
 		for _, v := range rows {
 			rec, err := datasource.NewRecord(ref(datasource.EntityDeal, v.Id), v, v.Version)
-			if err != nil {
-				return nil, "", false, err
-			}
-			records = append(records, rec)
-		}
-		return records, page.NextCursor, page.HasMore, nil
-	case datasource.EntityProject:
-		in := ListProjectsInput{Query: text, Limit: &limit, Cursor: cursor}
-		if err := projectListFilters.Apply(&in, filters); err != nil {
-			return nil, "", false, err
-		}
-		rows, page, err := p.store.ListProjects(ctx, in)
-		if err != nil {
-			return nil, "", false, err
-		}
-		records := make([]datasource.Record, 0, len(rows))
-		for _, v := range rows {
-			rec, err := datasource.NewRecord(ref(datasource.EntityProject, v.Id), v, v.Version)
 			if err != nil {
 				return nil, "", false, err
 			}
@@ -132,18 +108,6 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		}
 		v, err := p.store.CreateDeal(ctx, mapped)
 		return ref(datasource.EntityDeal, v.Id), err
-	case datasource.EntityProject:
-		var req crmcontracts.CreateProjectRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
-			return datasource.EntityRef{}, err
-		}
-		req.Source = in.Source
-		mapped, err := projectCreateInput(req)
-		if err != nil {
-			return datasource.EntityRef{}, err
-		}
-		v, err := p.store.CreateProject(ctx, mapped)
-		return ref(datasource.EntityProject, v.Id), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.EntityType)}
 	}
@@ -162,35 +126,40 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		}
 		v, err := p.store.UpdateDeal(ctx, ids.From[ids.DealKind](in.Ref.ID), dealUpdateInput(req, in.IfVersion))
 		return ref(datasource.EntityDeal, v.Id), err
-	case datasource.EntityProject:
-		var req crmcontracts.UpdateProjectRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
-			return datasource.EntityRef{}, err
-		}
-		update, err := projectUpdateInput(req, in.IfVersion)
-		if err != nil {
-			return datasource.EntityRef{}, err
-		}
-		v, err := p.store.UpdateProject(ctx, ids.From[ids.ProjectKind](in.Ref.ID), update)
-		return ref(datasource.EntityProject, v.Id), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
 }
 
 func (p *Provider) Archive(ctx context.Context, r datasource.EntityRef) (datasource.EntityRef, error) {
+	return p.ArchiveAt(ctx, datasource.ArchiveInput{Ref: r})
+}
+
+// ArchivableTypes is datasource.RecordArchiverV2's: the one this module's
+// switch below actually serves.
+func (p *Provider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
+	return []datasource.EntityType{datasource.EntityDeal}, nil
+}
+
+// RefuseArchive is datasource.RecordArchiverV2's stage-time half: each store's
+// own authority probes, run without the write.
+func (p *Provider) RefuseArchive(ctx context.Context, r datasource.EntityRef) error {
 	switch r.Type {
 	case datasource.EntityDeal:
-		v, err := p.store.ArchiveDeal(ctx, ids.From[ids.DealKind](r.ID))
-		return ref(datasource.EntityDeal, v.Id), err
-	case datasource.EntityProject:
-		// No If-Match on the seam's archive verb: the agent surface has no
-		// version to carry, so the archive runs unguarded exactly as the
-		// deal's does.
-		v, err := p.store.ArchiveProject(ctx, ids.From[ids.ProjectKind](r.ID), nil)
-		return ref(datasource.EntityProject, v.Id), err
+		return p.store.RefuseArchiveDeal(ctx, ids.From[ids.DealKind](r.ID))
 	default:
-		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
+		return &datasource.UnsupportedEntityError{Type: string(r.Type)}
+	}
+}
+
+// ArchiveAt is Archive carrying the version the caller's authority named.
+func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (datasource.EntityRef, error) {
+	switch in.Ref.Type {
+	case datasource.EntityDeal:
+		v, err := p.store.ArchiveDeal(ctx, ids.From[ids.DealKind](in.Ref.ID), in.IfVersion)
+		return ref(datasource.EntityDeal, v.Id), err
+	default:
+		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
 }
 

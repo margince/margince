@@ -160,7 +160,15 @@ services:
     # slowdown. The lane has more packages than 16 and keeps growing; keep this
     # in step with REDIS_DBS in scripts/test-integration-parallel.sh, which
     # refuses to run rather than wrap the mapping.
-    command: ["redis-server", "--databases", "64"]
+    # 80 logical databases, in three blocks that must not overlap:
+    #   0        bare `make dev`
+    #   1..63    the parallel integration lane, one per package
+    #            (REDIS_DBS in scripts/test-integration-parallel.sh,
+    #             testdb.RedisDBs — the two must agree)
+    #   64..79   DEV_SLUG stacks, one per slug (scripts/dev.sh)
+    # A slug sharing a db with a test package would have its streams FLUSHDB'd
+    # mid-run, and the test would read a dev stack's events as its own.
+    command: ["redis-server", "--databases", "80"]
     ports:
       - "16379:6379"
     healthcheck:

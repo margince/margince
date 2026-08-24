@@ -115,11 +115,33 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 	}
 	out := make([]Row, 0, limit)
 	delivered := 0
+	// Rebuilt per call, and every call re-walks the file from the top, so this
+	// sees the whole file whatever page is being served. It is not run state and
+	// must not become any: a resumed run walks the same rows again on purpose.
+	claimed := map[string]int{}
 	err := s.walk(ctx, func(line int, record []string, index map[string]int) error {
 		row, ok := s.rowFrom(line, record, index)
 		if !ok {
 			return nil
 		}
+		// A source key is a row's IDENTITY — what re-import matches on and what
+		// undo finds a created row by. Two rows claiming one identity is a
+		// question the file has to answer, not one the importer can: which of
+		// them is the record, and what should a re-import of the other do?
+		//
+		// Accepting them looked harmless and was not. The identity map holds one
+		// binding per key, so the second row silently reconciled onto the first
+		// row's record; the report deduplicated by the same key, so two refusals
+		// arrived as one skip and a phantom `unchanged`, and the four counts
+		// stopped summing to rows_read.
+		if first, seen := claimed[row.ExternalID]; seen {
+			s.skip(line, fmt.Sprintf(
+				"the %q value %q is already used by line %d; each row needs its own, because it is "+
+					"what a re-import matches on and what an undo finds this row by",
+				s.sourceKey, row.ExternalID, first))
+			return nil
+		}
+		claimed[row.ExternalID] = line
 		position := delivered
 		delivered++
 		if position < offset {

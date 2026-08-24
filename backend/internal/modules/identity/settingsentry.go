@@ -15,23 +15,23 @@ package identity
 import (
 	"context"
 	"fmt"
-	"regexp"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
 // installationSettingsObject is the RBAC object gating the installation
 // settings surface. Read is broad — a rep seeing amounts in the base currency
 // benefits from knowing which one it is — and write is admin/ops.
 const installationSettingsObject = "installation_settings"
-
-// iso4217 is the shape of a currency code, matching the CHECK that guarded
-// the column this replaces (0002: base_currency ~ '^[A-Z]{3}$').
-var iso4217 = regexp.MustCompile(`^[A-Z]{3}$`)
 
 // Name is the organization's display name. Seeded from margince.yaml at
 // bootstrap; the row is authoritative afterwards, so renaming the
@@ -97,8 +97,71 @@ var BaseCurrency = settings.Define[string](
 	"update",
 	"EUR",
 	func(v string) error {
-		if !iso4217.MatchString(v) {
+		if !values.ValidCurrency(v) {
 			return fmt.Errorf("a base currency is three uppercase ISO-4217 letters, like EUR")
+		}
+		return nil
+	},
+).AsInstallationIdentity()
+
+// BaseLanguage is the language AI writes in when what it writes is read by the
+// whole team rather than by one person.
+//
+// A model asked nothing about language answers in whatever language its input
+// happened to be in, so a Vietnamese thread produced a Vietnamese claim on a
+// record a German colleague then had to read. The installation names one
+// language for that shared writing, the way it names one currency for money.
+//
+// It does NOT govern everything a model writes. Correspondence keeps the
+// language of the correspondence — a German thread gets a German reply however
+// this is set — and a brief cached for one reader keeps that reader's language.
+// This is the language of the shared record.
+//
+// No freeze, unlike BaseCurrency. Changing it re-means nothing already stored:
+// old artifacts stay in the language they were written in, and nothing converts
+// against the answer the way money does.
+var BaseLanguage = settings.Define[string](
+	"installation.base_language",
+	installationSettingsObject,
+	"update",
+	string(textlang.English),
+	func(v string) error {
+		if !textlang.Known(v) {
+			return fmt.Errorf("a base language is one of en, de, vi")
+		}
+		return nil
+	},
+).AsInstallationIdentity()
+
+// FiscalYearStartMonth is the month the installation's business year begins,
+// 1..12. January is the default, which is what every installation reported by
+// before this existed — so an installation that never touches it sees no
+// change, and no saved report view moves under it.
+//
+// It buckets reports on READ and stores nothing, so changing it re-labels every
+// period report immediately and re-means no stored row. That is the opposite of
+// BaseCurrency, which freezes: a fiscal year is a way of cutting time, not a
+// value anything has already converted against.
+//
+// It does re-point a SAVED report view, which is a real gap rather than a
+// property of this setting: a period bucket's text travels out in a derivation
+// handle and binds back as an equality filter (reportperiod.go), so a view
+// saved under one fiscal start names a different span after it moves. Tracked
+// as its own decision — re-point, invalidate, or warn — rather than settled
+// here, because none of the three is obviously right and the label cannot fix
+// it either way.
+//
+// What the label DOES fix is the reader's half: spelling both years means the
+// answer they get is unambiguous about which twelve months it covers, even when
+// the filter that produced it is stale.
+var FiscalYearStartMonth = settings.Define[int](
+	"installation.fiscal_year_start_month",
+	installationSettingsObject,
+	"update",
+	int(time.January),
+	func(month int) error {
+		if month < int(time.January) || month > int(time.December) {
+			return fmt.Errorf("a fiscal year starts in month 1..12, not %d", month)
 		}
 		return nil
 	},
@@ -106,7 +169,15 @@ var BaseCurrency = settings.Define[string](
 
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
-	return []settings.Definition{Name, Timezone, BaseCurrency}
+	return []settings.Definition{
+		Name,
+		Timezone,
+		BaseCurrency,
+		BaseLanguage,
+		FiscalYearStartMonth,
+		SMTPPasswordRef,
+		LicenseTokenRef,
+	}
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a
@@ -145,4 +216,68 @@ func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // where one is unset has the other two unset as well.
 func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.RequireTx(ctx, tx, Name)
+}
+
+// BaseLanguageOf resolves the language shared AI writing is written in, inside
+// a transaction the caller already holds.
+//
+// GetTx rather than RequireTx, which is the opposite choice from the three
+// above, and the reason is the upgrade rather than the value: every
+// installation bootstrapped before this setting existed has no row for it. The
+// three others are seeded together at bootstrap, so an absent row there means a
+// broken installation and refusing is right. Here an absent row means an older
+// one, and a brief that refuses to generate because nobody has named a language
+// is worse than one that comes out in English — which is what those
+// installations get today anyway.
+func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.GetTx(ctx, tx, BaseLanguage)
+}
+
+// FiscalYearStartMonthOf resolves the month the installation's business year
+// begins, inside a transaction the caller already holds.
+//
+// GetTx for the same reason BaseLanguageOf uses it: an installation
+// bootstrapped before this setting existed carries no row, and the default is
+// January — the calendar year those installations have always reported by. So
+// an absent row is not a broken installation, it is an older one that agrees
+// with the default.
+func FiscalYearStartMonthOf(ctx context.Context, tx pgx.Tx) (int, error) {
+	return settings.GetTx(ctx, tx, FiscalYearStartMonth)
+}
+
+// BaseLanguageForPrompt resolves the base language for a caller that holds a
+// POOL rather than a transaction, opening the workspace transaction itself.
+//
+// It sits beside BaseLanguageOf rather than in either caller because both a
+// compose engine and the deal-status service need exactly this, and the six
+// lines are identical either way — two copies of one settings read is how one
+// question comes to have two answers that drift.
+//
+// It never fails the caller. A prompt is being built, and the language is the
+// least important thing in it: refusing to extract a meeting's next steps
+// because a settings read timed out trades a whole feature for a formatting
+// preference. On any error the answer is English, which is what these prompts
+// produced before the setting existed.
+//
+// The failure IS logged, and it has to be: this returns a string and nothing
+// else, so a caller has no way to notice a degraded resolve and say so itself.
+// A missing row does NOT reach that line — BaseLanguageOf answers the
+// registered default for one — so a log here always means something actually
+// went wrong.
+func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
+	lang := string(textlang.English)
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		resolved, err := BaseLanguageOf(ctx, tx)
+		if err != nil {
+			return err
+		}
+		lang = resolved
+		return nil
+	})
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's base language could not be read; this prompt asks for English",
+			"reason", err)
+		return string(textlang.English)
+	}
+	return lang
 }

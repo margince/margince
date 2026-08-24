@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -16,11 +22,20 @@ import {
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
+  liveProjects,
+  type PickableProject,
+  ProjectPicker,
+  type ProjectScope,
+  useSoleProjectDefault,
+} from "../design-system/projectpicker";
+import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select, type SelectOption } from "../design-system/select";
+import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
+import { entityTimelineKeys } from "./activitykeys";
 import {
   isConsentNotGranted,
   ProblemError,
@@ -30,6 +45,13 @@ import {
 } from "./common";
 import { useOrganization360 } from "./company360";
 import { useConsentPurposes } from "./consent";
+import {
+  stripEveryKeyTag,
+  stripSubjectTag,
+  subjectTag,
+  useProjectRecord,
+  withSubjectTag,
+} from "./projectrecord";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
@@ -90,14 +112,21 @@ function useSearchTargets() {
 // A 🟢 internal association (no autonomy dot): move or also-link a captured
 // activity's typed link to the right person/org/deal/lead. Idempotent on the
 // backend — re-relinking the same target is a no-op that still answers 200.
+// `threadKey` is the activity's conversation key when it has one. With it the
+// dialog offers to move the whole thread through `relinkThread`, which applies
+// this same association to every message of the conversation the rep may
+// edit, in one transaction — a mis-filed conversation is usually mis-filed
+// whole.
 export function RelinkModal({
   activityId,
+  threadKey,
   entityType,
   entityId,
   open,
   onClose,
 }: Readonly<{
   activityId: string;
+  threadKey?: string | null;
   entityType: RelinkKind;
   entityId: string;
   open: boolean;
@@ -108,6 +137,7 @@ export function RelinkModal({
   const { search, kindOf } = useSearchTargets();
   const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
   const [replace, setReplace] = useState(false);
+  const [wholeThread, setWholeThread] = useState(false);
 
   // The picked target arrives as the mutation's variable: read through this
   // closure it would be the one from the render before the confirm was
@@ -120,6 +150,19 @@ export function RelinkModal({
       const kind = kindOf(target.id);
       if (!kind) {
         throwProblem({ title: t("compose.relinkTarget") });
+      }
+      if (threadKey && wholeThread) {
+        const { data, error } = await api.POST("/activities/relink-thread", {
+          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          body: {
+            thread_key: threadKey,
+            entity_type: kind,
+            entity_id: target.id,
+            replace_existing_of_type: replace,
+          },
+        });
+        if (error) throwProblem(error);
+        return data;
       }
       const { data, error } = await api.POST("/activities/{id}/relink", {
         params: {
@@ -136,9 +179,14 @@ export function RelinkModal({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["activities", entityType, entityId],
-      });
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      // A relink is exactly the write that changes where a reply files, and the
+      // composer's filing line reads the activity to say so. Without this the
+      // line keeps naming the project the activity was moved AWAY from, which
+      // is a wrong answer to the one question it exists to answer.
+      queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
       onClose();
     },
   });
@@ -168,6 +216,17 @@ export function RelinkModal({
           onChange={(event) => setReplace(event.target.checked)}
         />
         <p className="t-caption">{t("compose.relinkReplaceHint")}</p>
+        {threadKey && (
+          <>
+            <Checkbox
+              className="t-body"
+              label={t("compose.relinkThread")}
+              checked={wholeThread}
+              onChange={(event) => setWholeThread(event.target.checked)}
+            />
+            <p className="t-caption">{t("compose.relinkThreadHint")}</p>
+          </>
+        )}
       </div>
     </ConfirmModal>
   );
@@ -195,11 +254,20 @@ function fillFromDraft(
     setDraftRef: (next: string | null) => void;
     setProvenance: (next: DraftProvenance) => void;
     setReasoning: (next: components["schemas"]["AccountDraftReason"][]) => void;
+    setScope: (next: ProjectScope | undefined) => void;
   }>,
 ) {
   const drafted = result.draft;
-  if (!form.subject) {
-    form.setSubject(drafted.subject);
+  // A subject holding only the project tag is a subject the rep has not written
+  // yet: the composer put it there, not them. The drafted subject fills in
+  // behind the tag rather than being dropped as "the field is taken".
+  const written = stripEveryKeyTag(form.subject).trim();
+  if (!written) {
+    form.setSubject(
+      form.subject.trim()
+        ? withSubjectTag(drafted.subject, form.subject.trim())
+        : drafted.subject,
+    );
   }
   if (!form.body) {
     form.setBody(drafted.body);
@@ -213,6 +281,7 @@ function fillFromDraft(
       voice_profile_version: drafted.voice_profile_version,
     });
     form.setReasoning(result.reasoning ?? []);
+    form.setScope(result.scope);
   }
   if (form.toEmpty && drafted.to?.length) {
     form.setTo(drafted.to);
@@ -248,6 +317,97 @@ async function draftFromActivity({
   return { available: true as const, draft: data };
 }
 
+// Where a REPLY will be filed, said rather than chosen.
+//
+// A reply inherits its thread's project on its own — capture's stickiness rung,
+// "a conversation is about one body of work" — so a picker here would offer a
+// choice the product has already made, and offer it wrongly: filing ONE message
+// of a conversation under a different project is the split that rule exists to
+// prevent.
+//
+// What was missing is not the choice but the SENTENCE. A rep pressed "Draft a
+// reply", saw no project anywhere, and concluded the feature was not there.
+// This says where the message is going, and points at the one control that can
+// change it — which moves the whole conversation, not one message of it.
+/**
+ * What survives clearing a subject: the project tag, and nothing else.
+ *
+ * A tag is not the rep's words and not the draft's — the composer put it there
+ * to route the reply. Wiping it with the rejected draft would leave the filing
+ * checkbox asserting a routing the subject no longer performs.
+ */
+function keptTag(subject: string): string {
+  const words = stripEveryKeyTag(subject);
+  return subject.slice(0, subject.length - words.length).trim();
+}
+
+/**
+ * The one control that says which project a message belongs to — on a reply
+ * and on a message started from an account alike.
+ *
+ * It carries no explanation of its own. The tag it puts in the Subject field
+ * is visible there, and a rep who does not want it deletes it like any other
+ * text; a sentence saying so would restate what the field already shows.
+ *
+ * Choosing None takes the tag out. Choosing a project puts it in. Nothing
+ * renders when the record reaches no live project, because a list whose only
+ * entry is None asks a question with one answer.
+ */
+function ProjectFiling({
+  projects,
+  projectId,
+  onChange,
+}: Readonly<{
+  projects: readonly PickableProject[];
+  projectId: string;
+  onChange: (next: string) => void;
+}>) {
+  return (
+    <ProjectPicker
+      projects={projects}
+      projectId={projectId}
+      onChange={onChange}
+    />
+  );
+}
+
+/**
+ * The project link a reply's own thread already carries, if any.
+ *
+ * Read from the anchor activity rather than assumed, because the thread is the
+ * first rung of the same ladder the capture side walks: a sibling message that
+ * was filed — by capture or by a human relink — is the settled answer, and it
+ * outranks anything the deal says.
+ */
+function useThreadProject(activityId?: string): {
+  projectId?: string;
+  settled: boolean;
+} {
+  const query = useQuery({
+    queryKey: ["activity", activityId, "filing"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/activities/{id}", {
+        params: { path: { id: activityId ?? "" } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    enabled: Boolean(activityId),
+  });
+  return {
+    projectId: (query.data?.links ?? []).find(
+      (link) => link.entity_type === "project",
+    )?.entity_id,
+    // A read that has not answered — or FAILED — is not "no project". Treating
+    // an error as absence falls through to the deal's project, which the send
+    // would then contradict: the server re-reads the anchor and inherits the
+    // thread's own filing. Unsettled means say nothing.
+    settled: !activityId || (!query.isPending && !query.isError),
+  };
+}
+
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
 // rather than in a message, so it needs the recipient named before it can say
 // anything — that is the one thing this path knows that an empty compose box
@@ -261,6 +421,7 @@ async function draftFromAccount({
   entityId,
   recipientId,
   dealId,
+  projectId,
   intent,
   t,
 }: Readonly<{
@@ -268,6 +429,7 @@ async function draftFromAccount({
   entityId: string;
   recipientId: string;
   dealId: string;
+  projectId: string;
   intent: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
@@ -284,6 +446,10 @@ async function draftFromAccount({
       body: {
         person_id: recipientId,
         ...(dealId ? { deal_id: dealId } : {}),
+        // The project the rep attributed the message to. The server grounds
+        // the draft in the 360 SCOPED to it, so the other projects'
+        // correspondence never reaches the model.
+        ...(projectId ? { project_id: projectId } : {}),
         ...(intent.trim() ? { intent: intent.trim() } : {}),
       },
     },
@@ -292,7 +458,12 @@ async function draftFromAccount({
   if (!response.ok || !data) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
-  return { available: true as const, draft: data, reasoning: data.reasoning };
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
 }
 
 // What either drafting path answers.
@@ -319,10 +490,14 @@ type DraftResult =
       // Present only on the account-started path; a reply explains itself by
       // the message it is answering.
       reasoning?: components["schemas"]["AccountDraftReason"][];
+      // Likewise account-only: what the scoped read kept, when a project was
+      // chosen.
+      scope?: ProjectScope;
     };
 
 // The account-started path's own state: who the draft is grounded on, which
-// open deal it is about, and what the server said it wrote from.
+// open deal and which project it is about, and what the server said it wrote
+// from.
 //
 // Held together because the three move together — a new recipient invalidates
 // the reasons as surely as an emptied body does — and held OUT of ComposeModal
@@ -334,9 +509,15 @@ function useAccountGrounding(
 ) {
   const [recipientId, setRecipientId] = useState(personId ?? "");
   const [dealId, setDealId] = useState("");
+  // One choice, two effects: the project scopes the draft's grounding AND
+  // files the sent message under the project (composedLinks).
+  const [projectId, setProjectId] = useState("");
   const [reasoning, setReasoning] = useState<
     components["schemas"]["AccountDraftReason"][]
   >([]);
+  // The server's scope report for the draft on screen; retired with the
+  // reasons, because it describes the same read.
+  const [scope, setScope] = useState<ProjectScope | undefined>(undefined);
   // Changing who the draft is to, or which deal it is about, retires the draft
   // that was written for the previous pair. Leaving it would show a message
   // addressed to B carrying A's words, A's disclosure and A's reasons — and
@@ -345,6 +526,7 @@ function useAccountGrounding(
   const reground = (apply: (next: string) => void) => (next: string) => {
     apply(next);
     setReasoning([]);
+    setScope(undefined);
     onGroundingChanged();
   };
   return {
@@ -352,9 +534,79 @@ function useAccountGrounding(
     setRecipientId: reground(setRecipientId),
     dealId,
     setDealId: reground(setDealId),
+    projectId,
+    setProjectId: reground(setProjectId),
+    grounding: { recipientId, dealId, projectId } satisfies Grounding,
     reasoning,
     setReasoning,
+    scope,
+    setScope,
   };
+}
+
+// What a sent message files under: the page it was written from, and every
+// record the rep named while writing it.
+//
+// The anchor alone is not enough. A rep who picks "Related to → Acme Renewal"
+// has said what the message is about, and a send that files only under the
+// organization loses that: the deal's own timeline never sees the message, and
+// nothing downstream can attribute the correspondence to the work it belongs
+// to. The grounding choices ARE the attribution — they are the same statement,
+// so they travel together.
+//
+// Duplicates are dropped rather than sent twice: on a person page the anchor
+// and the recipient are the same record, and the link table treats a repeat as
+// a conflict rather than a no-op. A link is identified by BOTH of its fields,
+// the way the server identifies it — matching on the id alone would drop a
+// legitimate second link whenever two records of different kinds happened to
+// share a uuid, and the message would then be missing from that record's
+// timeline with nothing to say why.
+//
+// `chosen` is null on a reply, whose links are the thread's own business: the
+// rep picked nothing, and the recipient is already a participant on the
+// activity being answered.
+// Grounding is the three choices a rep made on the account-started path. It
+// travels as the mutation VARIABLE of both the draft and the send, never out
+// of the mutationFn's closure: the click handler belongs to the committed
+// render, so a selection it passes cannot be older than the picker that shows
+// it (see mutation-variable-coverage.test.ts for the stale-closure window).
+export type Grounding = {
+  recipientId: string;
+  dealId: string;
+  projectId: string;
+};
+
+function composedLinks(
+  anchor: { entityType: RelinkKind; entityId: string },
+  chosen: Grounding | null,
+  // The project this send files under when the rep CHOSE nothing — derived
+  // from the thread or from the anchor record, and already declinable in the
+  // UI. Empty means no project link, which is what a decline produces.
+  derivedProjectId = "",
+): { entity_type: RelinkKind; entity_id: string }[] {
+  const links: { entity_type: RelinkKind; entity_id: string }[] = [
+    { entity_type: anchor.entityType, entity_id: anchor.entityId },
+  ];
+  const add = (kind: RelinkKind, id: string) => {
+    const already = links.some(
+      (l) => l.entity_type === kind && l.entity_id === id,
+    );
+    if (!id || already) {
+      return;
+    }
+    links.push({ entity_type: kind, entity_id: id });
+  };
+  if (!chosen) {
+    // An anchored send: the record it was started from, plus the filing it
+    // states. A reply that states no filing still sends anchor-only, which is
+    // the shape every existing reply has.
+    add("project", derivedProjectId);
+    return links;
+  }
+  add("person", chosen.recipientId);
+  add("deal", chosen.dealId);
+  add("project", chosen.projectId);
+  return links;
 }
 
 // A freeform email-chip input: typed address + Enter/comma (or blur) adds a
@@ -413,10 +665,10 @@ function RecipientField({
   );
 }
 
-// The account-started path's two choices: who this is to, and which open deal
-// it is about.
+// The account-started path's three choices: who this is to, which open deal
+// it is about, and which project it belongs to.
 //
-// Both are read off the account's own 360 rather than a fresh search, for the
+// All are read off the account's own 360 rather than a fresh search, for the
 // reason the whole draft is: the endpoint grounds itself in the caller's view
 // of the account, so a contact this picker offers that the view does not carry
 // would be one the draft then refuses.
@@ -440,9 +692,19 @@ function AccountDraftContext({
   const view = query.data?.state === "ready" ? query.data.view : undefined;
   const contacts = view?.people?.data ?? [];
   const deals = view?.deals?.data ?? [];
-  // No contact on the account is an honest dead end for a GROUNDED draft, and
-  // saying so beats an empty picker the rep tries and cannot use. They can
-  // still type an address into To and write the mail themselves.
+
+  // No contact on the account is an honest dead end for the DRAFT — the model
+  // has no relationship to write from — and saying so beats an empty picker the
+  // rep tries and cannot use. They can still type an address into To and write
+  // the mail themselves.
+  //
+  // The PROJECT picker survives that dead end, and must: which body of work a
+  // message is about has nothing to do with whether the account has a contact
+  // yet. Returning early here took the project choice away from exactly the
+  // message that most needs it — a check-in to an account nobody has spoken to
+  // in a while, which is the first mail on a fresh delivery and the one with no
+  // thread to inherit a project from. It would land unfiled, and the ladder
+  // would ask about it in Approvals afterwards instead.
   if (query.isSuccess && contacts.length === 0) {
     return <p className="t-caption">{t("compose.noGroundableRecipient")}</p>;
   }
@@ -879,7 +1141,7 @@ export function scheduleFields(local: string): {
   if (Number.isNaN(at.getTime())) return {};
   return {
     scheduled_at: at.toISOString(),
-    scheduled_tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    scheduled_tz: viewerZone(),
   };
 }
 
@@ -1014,7 +1276,6 @@ function useDraftMutation({
   entityType,
   entityId,
   intent,
-  account,
   onUnavailable,
   onDrafted,
   resetUnavailable,
@@ -1024,15 +1285,14 @@ function useDraftMutation({
   entityType: RelinkKind;
   entityId: string;
   intent: string;
-  account: ReturnType<typeof useAccountGrounding>;
   onUnavailable: () => void;
   onDrafted: (result: Extract<DraftResult, { available: true }>) => void;
   resetUnavailable: () => void;
   t: ReturnType<typeof useT>;
 }>) {
   return useMutation({
-    mutationKey: ["email", entityId],
-    mutationFn: async (): Promise<DraftResult> => {
+    mutationKey: ["email-draft", entityId],
+    mutationFn: async (grounding: Grounding): Promise<DraftResult> => {
       resetUnavailable();
       // A reply answers the message it is anchored to; an account-started
       // message has none, so it is grounded in the account itself and needs
@@ -1043,8 +1303,7 @@ function useDraftMutation({
       return draftFromAccount({
         entityType,
         entityId,
-        recipientId: account.recipientId,
-        dealId: account.dealId,
+        ...grounding,
         intent,
         t,
       });
@@ -1057,6 +1316,136 @@ function useDraftMutation({
       onDrafted(result);
     },
   });
+}
+
+/**
+ * The project the anchor RECORD names, for the sends whose anchor can name one.
+ *
+ * Only a deal does today: it carries `project_id` as a column, and a message
+ * about a deal is a message about that deal's work. A company or a person
+ * reaches several projects at once and names none of them, so there is nothing
+ * to derive — those anchors answer nothing here and the account path's picker
+ * is what asks.
+ */
+function useAnchorProject(
+  entityType: RelinkKind,
+  entityId: string,
+): { projectId?: string | null; companyId?: string; settled: boolean } {
+  const query = useQuery({
+    // The SAME key the deal page's own read uses, so opening the composer on a
+    // deal costs no request and cannot disagree with the page behind it. A
+    // second key would be a second answer to one question.
+    queryKey: ["deal", entityId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals/{id}", {
+        params: { path: { id: entityId } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    enabled: entityType === "deal",
+    staleTime: 60_000,
+  });
+  return {
+    projectId: query.data?.project_id,
+    // The company whose projects the picker offers. A deal names one; a
+    // company page IS one; the other anchors reach none this composer can ask
+    // about.
+    companyId:
+      entityType === "deal"
+        ? (query.data?.organization_id ?? undefined)
+        : entityType === "organization"
+          ? entityId
+          : undefined,
+    // A read that failed says nothing about this deal's project. Reporting it
+    // as "no project" would drop the filing silently; unsettled keeps the
+    // composer quiet instead, which is the same rule the thread read follows.
+    settled: entityType !== "deal" || (!query.isPending && !query.isError),
+  };
+}
+
+/**
+ * Which project this message files under, and the subject tag that follows it.
+ *
+ * The rep chooses; the composer only SUGGESTS. The suggestion is the thread's
+ * own project when the conversation is already filed — a conversation is one
+ * body of work and a sibling settled it — and otherwise the anchor's, which is
+ * a deal's project. It is adopted once, when it first arrives, so a rep who
+ * then picks None is not overruled on the next render.
+ *
+ * The tag is KEPT in the subject for as long as a project is chosen, put back
+ * whenever the field stops carrying it — a subject is replaced wholesale by a
+ * draft arriving or by a rep retyping it, and a tag written once at the moment
+ * of choosing does not survive either. Removing it is done through the picker,
+ * which is what the send honours; there is no state where the text and the
+ * picker disagree.
+ */
+function useProjectFiling(input: {
+  activityId?: string;
+  anchorProjectId?: string | null;
+  anchorSettled: boolean;
+  projects: readonly PickableProject[];
+  subject: string;
+  setSubject: (next: string) => void;
+}): { projectId: string; setProjectId: (next: string) => void } {
+  const thread = useThreadProject(input.activityId);
+  // Empty string is a real answer ("None"), so unanswered is undefined.
+  const [picked, setPicked] = useState<string | undefined>(undefined);
+  const settled = thread.settled && input.anchorSettled;
+  const suggested = settled
+    ? (thread.projectId ?? input.anchorProjectId ?? "")
+    : "";
+  // Adopted once, when the suggestion first arrives. `picked` then holds it, so
+  // a rep who chooses None is not overruled on the next render.
+  const adopted = useRef("");
+  useEffect(() => {
+    if (suggested && adopted.current !== suggested) {
+      adopted.current = suggested;
+      setPicked(suggested);
+    }
+  }, [suggested]);
+  const chosen = picked ?? suggested;
+  // The account path has no thread and no deal to suggest from, so its rule is
+  // the older one: a company with exactly ONE live project defaults to it. The
+  // two never both fire — a suggestion above means there was something to
+  // inherit, and this only applies when there was not.
+  useSoleProjectDefault(input.projects, chosen, setPicked);
+  // A value the option list does not carry is not shown as chosen — the control
+  // would render blank while the subject claimed a filing nobody can see named.
+  // Read rather than written: writing it back would race the adoption above,
+  // clearing the suggestion on the render before the list arrives and leaving
+  // `adopted` unwilling to try again. The list settling is what makes it
+  // appear.
+  const offered =
+    chosen === "" ||
+    input.projects.some((project) => project.project_id === chosen);
+  const projectId = offered ? chosen : "";
+  const { project } = useProjectRecord(projectId || undefined);
+  const tag = subjectTag(project);
+  // Keeping the tag in the subject is a rule about the FIELD, not an action
+  // taken once when the picker moves. A subject is replaced wholesale — by a
+  // draft arriving, or by a rep selecting all and retyping — and a tag written
+  // only at the moment of choosing is gone the first time either happens.
+  //
+  // So the tag is kept at the front of the subject for as long as a project is
+  // chosen. Taking it off is done through the picker (choose No project), which
+  // is the control that means it; there is no way to half-choose a project by
+  // editing the text, because that state is not one the send could honour.
+  const setSubject = input.setSubject;
+  const subject = input.subject;
+  const previousTag = useRef("");
+  useEffect(() => {
+    const priorTag = previousTag.current;
+    previousTag.current = tag;
+    const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
+    const wanted = tag ? withSubjectTag(withoutOld, tag) : withoutOld;
+    if (wanted !== subject) {
+      setSubject(wanted);
+    }
+  }, [tag, subject, setSubject]);
+  return { projectId, setProjectId: setPicked };
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement. The drafting call, the form fill, the body edit and both draft controls are already extracted; what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
@@ -1137,6 +1526,29 @@ export function ComposeModal({
   // recipient server-side and has no draft endpoint at all.
   const groundable =
     !activityId && entityType === "organization" && !isChannelReply;
+  // Where this send files, and the subject tag that travels with it. The
+  // account path keeps its own picker (it chooses a project rather than
+  // inheriting one), so this covers the anchored sends: a reply, and a message
+  // started from a deal.
+  const anchorProject = useAnchorProject(entityType, entityId);
+  // The projects this message may be filed under: the live ones the anchor's
+  // company reaches. That set already includes the projects the company works
+  // as a partner or a subcontractor, because the 360's own section is built
+  // from the company edges rather than from a project's anchor column.
+  const anchorCompany = useOrganization360(anchorProject.companyId ?? "");
+  const reachableProjects = liveProjects(
+    anchorCompany.data?.state === "ready"
+      ? anchorCompany.data.view.projects
+      : undefined,
+  );
+  const projectFiling = useProjectFiling({
+    activityId,
+    anchorProjectId: anchorProject.projectId,
+    anchorSettled: anchorProject.settled,
+    projects: reachableProjects,
+    subject,
+    setSubject,
+  });
 
   // An emptied body no longer holds the served draft, so everything that
   // describes those words goes with it: the reference would bind the next
@@ -1151,6 +1563,7 @@ export function ComposeModal({
     setDraftRef(null);
     setProvenance(null);
     account.setReasoning([]);
+    account.setScope(undefined);
   };
 
   const draft = useDraftMutation({
@@ -1158,7 +1571,6 @@ export function ComposeModal({
     entityType,
     entityId,
     intent,
-    account,
     onUnavailable: () => setDraftUnavailable(true),
     onDrafted: (result) =>
       fillFromDraft(result, {
@@ -1171,6 +1583,7 @@ export function ComposeModal({
         setDraftRef,
         setProvenance,
         setReasoning: account.setReasoning,
+        setScope: account.setScope,
       }),
     resetUnavailable: () => setDraftUnavailable(false),
     t,
@@ -1217,8 +1630,10 @@ export function ComposeModal({
     },
     onSuccess: () => {
       // The rejected words leave with the judgment; the recipients the rep
-      // addressed are their own work and stay.
-      setSubject("");
+      // addressed are their own work and stay. So does the project tag: it is
+      // not part of the draft being rejected, and clearing it would leave the
+      // checkbox claiming a filing the subject no longer carries.
+      setSubject((current) => keptTag(current));
       setBody("");
       setProvenance(null);
     },
@@ -1226,7 +1641,9 @@ export function ComposeModal({
 
   const send = useMutation({
     mutationKey: ["email", entityId],
-    mutationFn: async () => {
+    // The grounding is the variable, not a closure read: a stale closure
+    // could file the mail under a project the picker no longer shows.
+    mutationFn: async (grounding: Grounding | null) => {
       setSendUnavailable(false);
       // No X-Approval-Token, no Idempotency-Key on either path: the human's
       // own click IS the approval on the REST path (ADR-0055).
@@ -1244,7 +1661,11 @@ export function ComposeModal({
         isChannelReply,
         mail,
         channelBody: { body, consent_purpose: purpose },
-        links: [{ entity_type: entityType, entity_id: entityId }],
+        links: composedLinks(
+          { entityType, entityId },
+          grounding,
+          projectFiling.projectId,
+        ),
       });
       if (response.status === 501) return { sent: false as const };
       // Only a real 202 is a send. openapi-fetch returns a falsy `error` for a
@@ -1267,9 +1688,9 @@ export function ComposeModal({
         setSendUnavailable(true);
         return;
       }
-      queryClient.invalidateQueries({
-        queryKey: ["activities", entityType, entityId],
-      });
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       onClose();
     },
   });
@@ -1302,7 +1723,14 @@ export function ComposeModal({
   // picker directly above it, rather than running and coming back with a
   // refusal about a field already on screen.
   const draftControl = {
-    run: () => draft.mutate(),
+    // The project the PICKER holds, not the account hook's own copy: one
+    // control owns that answer now, and the draft must be grounded in the
+    // project the reader can see chosen.
+    run: () =>
+      draft.mutate({
+        ...account.grounding,
+        projectId: projectFiling.projectId,
+      }),
     pending: draft.isPending,
     disabled:
       draft.isPending ||
@@ -1370,12 +1798,27 @@ export function ComposeModal({
       placement={groundable ? "right" : "center"}
       confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
       confirmDisabled={!canSend || rejectionInFlight}
-      onConfirm={() => send.mutate()}
+      onConfirm={() =>
+        send.mutate(
+          groundable
+            ? { ...account.grounding, projectId: projectFiling.projectId }
+            : null,
+        )
+      }
       pending={send.isPending}
       error={sendError}
     >
       <div className="compose-fields">
         {accountContext}
+        {/* A reply says where it is going. The picker above is for the
+            account-started message, which has no thread to inherit from. */}
+        {!isChannelReply && (
+          <ProjectFiling
+            projects={reachableProjects}
+            projectId={projectFiling.projectId}
+            onChange={projectFiling.setProjectId}
+          />
+        )}
         {/* AI drafting is mail-only — there is no draft-message endpoint, and
             a channel reply's recipient is resolved server-side, so neither
             the draft controls nor the To/Cc/Subject fields apply to it. */}
@@ -1560,16 +2003,22 @@ export function ChannelReplyAction({
 // `links` to gate on regardless. It is offered unconditionally.
 //
 // It owns the two open states so the timeline mapper stays presentational.
+//
+// `extra` is how a surface adds a verb only it can serve — the person page's
+// meeting brief opens a drawer this file cannot see. It renders before Relink
+// so the row's own subject-matter verbs lead and the corrective ones follow.
 export function TimelineActions({
   activity,
   entityType,
   entityId,
   personId,
+  extra,
 }: Readonly<{
   activity: Activity;
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  extra?: (activity: Activity) => ReactNode;
 }>) {
   const t = useT();
   const [relink, setRelink] = useState(false);
@@ -1583,6 +2032,7 @@ export function TimelineActions({
         entityId={entityId}
         personId={personId}
       />
+      {extra?.(activity)}
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
@@ -1594,6 +2044,7 @@ export function TimelineActions({
       {relink && (
         <RelinkModal
           activityId={activity.id}
+          threadKey={activity.thread_key}
           entityType={entityType}
           entityId={entityId}
           open={relink}
@@ -1645,9 +2096,9 @@ export function AudienceAction({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["activities", entityType, entityId],
-      });
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       setOpen(false);
     },
   });

@@ -17,8 +17,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
 )
 
 // recordingComms captures what the tool handed the seam.
@@ -130,13 +128,13 @@ func (mirroredActivityProvider) Read(_ context.Context, ref datasource.EntityRef
 // tier, same egress declaration. A transport difference is not a governance
 // difference.
 func TestSendMessageToolGovernsAsSendEmailDoes(t *testing.T) {
-	spec := sendMessageTool{}.Spec()
+	spec, mail := sendMessageTool{}.Spec(), sendEmailTool{}.Spec()
 
 	if spec.RequiredScope != principal.ScopeSend {
 		t.Errorf("RequiredScope = %q, want %q", spec.RequiredScope, principal.ScopeSend)
 	}
-	if spec.Tier != mcp.TierConfirmationRequired {
-		t.Errorf("Tier = %v, want TierConfirmationRequired", spec.Tier)
+	if spec.Tier != mail.Tier {
+		t.Errorf("Tier = %v, want its mail twin's %v", spec.Tier, mail.Tier)
 	}
 	if !spec.Egress {
 		t.Error("Egress = false; the reply leaves the workspace")
@@ -378,22 +376,22 @@ func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
 		},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
-			approvals := &recordingApprovals{}
-			registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
+			// Asked of StageInfo directly. These verbs execute by default now,
+			// so Invoke no longer stages — but the subject each would put in
+			// front of a human must stay correct, because a workspace tier
+			// floor brings the confirm-first path straight back.
+			registry := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
 			RegisterCommsTools(registry, &recordingComms{}, &multiLinkProvider{})
 
-			_, err := registry.Invoke(sendCtx(), tc.tool, json.RawMessage(tc.args))
-
-			var staged *workflow.StagedApprovalError
-			if !errors.As(err, &staged) {
-				t.Fatalf("Invoke err = %v, want a StagedApprovalError — the refusal must mint an approval, not dead-end", err)
+			stager, ok := registry.tools[tc.tool].(interface {
+				StageInfo(context.Context, json.RawMessage) (StageInfo, error)
+			})
+			if !ok {
+				t.Fatalf("%s describes no staging; a floored installation could not confirm it", tc.tool)
 			}
-			if len(approvals.staged) != 1 {
-				t.Fatalf("staged %d approvals, want 1", len(approvals.staged))
-			}
-			got := approvals.staged[0]
-			if got.Tool != tc.tool {
-				t.Errorf("staged under tool %q, want %q", got.Tool, tc.tool)
+			got, err := stager.StageInfo(sendCtx(), json.RawMessage(tc.args))
+			if err != nil {
+				t.Fatalf("StageInfo: %v", err)
 			}
 			if got.TargetType != tc.wantTarget {
 				t.Errorf("TargetType = %q, want %q", got.TargetType, tc.wantTarget)
@@ -403,9 +401,6 @@ func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
 			}
 			if got.Summary != tc.wantSummary {
 				t.Errorf("Summary = %q, want %q", got.Summary, tc.wantSummary)
-			}
-			if got.DiffHash == "" {
-				t.Error("no diff hash — the approval would not be bound to this exact call")
 			}
 		})
 	}

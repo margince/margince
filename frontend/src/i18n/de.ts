@@ -25,6 +25,9 @@ export const de = {
   "trust.typedByPrefix": "eingetragen von",
   "trust.sourceUnknown": "Herkunft nicht erfasst",
   "trust.agentTag": "Automatisiert durch {agent}",
+  "trust.agentUnnamed": "Automatisiert durch einen Agenten",
+  "trust.systemTag": "Systemvorgang {job}",
+  "trust.systemUnnamed": "Systemvorgang",
   "trust.connectorTag": "über {connector}",
   "trust.dismissed": "Vorschlag verworfen.",
   "trust.stagedProposal": "vorgemerkter Vorschlag",
@@ -164,6 +167,8 @@ export const de = {
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
+  "record.notYoursToChange":
+    "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.fullHistory": "Vollständiger Verlauf",
@@ -285,6 +290,26 @@ export const de = {
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.outstanding": "Noch offen",
+  "commission.column.actions": "Entscheidung",
+  "commission.decide.withheld": "Nicht Ihre Entscheidung",
+  "commission.decide.approve": "Freigeben",
+  "commission.decide.pay": "Als ausgezahlt markieren",
+  "commission.decide.void": "Stornieren",
+  "commission.decide.approveConfirm":
+    "Mit der Freigabe halten Sie fest, dass diese Provision vereinbart ist. Ausgezahlt wird dadurch nichts — zahlen Sie in Ihrem Finanzsystem und markieren Sie es danach hier.",
+  "commission.decide.payConfirm":
+    "Markieren Sie erst als ausgezahlt, wenn Ihr Finanzsystem tatsächlich gezahlt hat. Margince hält die Tatsache fest und bewegt kein Geld.",
+  "commission.decide.voidConfirm":
+    "Eine Stornierung schreibt eine Gegenbuchung daneben. Nichts wird gelöscht, der ursprüngliche Eintrag bleibt lesbar.",
+  "commission.decide.reasonLabel": "Warum wird storniert?",
+  "commission.decide.reasonRequired":
+    "Eine Stornierung braucht einen Grund — damit lässt sie sich dem Partner später erklären.",
+  "commission.decide.approved": "Provision freigegeben",
+  "commission.decide.paid": "Provision als ausgezahlt markiert",
+  "commission.decide.voided": "Provision storniert",
+  "commission.decide.settledElsewhere":
+    "Ausgezahlt wird im Finanzsystem. Hier wird festgehalten, was dort passiert ist.",
   "partner.setup": "Zum Partner machen",
   "partner.edit": "Partner bearbeiten",
   "partner.none": "Noch kein Partner",
@@ -337,6 +362,7 @@ export const de = {
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Beteiligter",
   "rel.kind.projectStakeholder": "Projekt-Beteiligter",
+  "rel.kind.projectCompany": "Unternehmen im Projekt",
   "rel.kind.partnerOf": "Partner von",
   "rel.kind.referredBy": "Empfohlen von",
   "rel.kind.coSellWith": "Co-Sell mit",
@@ -344,11 +370,16 @@ export const de = {
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
+  "common.permissionDenied":
+    "Du hast keine Berechtigung für diese Aktion. Bitte einen Admin oder die Person, die diesen Datensatz mit dir geteilt hat, deinen Zugriff zu erweitern.",
+  "common.seatReadOnly":
+    "Dieser Sitzplatz ist nur lesend, daher wurde die Anfrage abgelehnt. Bitte einen Betreiber, den Sitzplatz höherzustufen.",
   "common.retry": "Erneut versuchen",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name konnte nicht geladen werden",
+  "ref.notInRoster": "Aktuell zugeordnet (nicht mehr in der Nutzerliste)",
 
   // "Funktioniert nicht mehr", nicht "Fehler aufgetreten": die Ansicht ist
   // stehengeblieben, und das ist die Beobachtung, die der Lesende selbst
@@ -452,6 +483,8 @@ export const de = {
     "Du hast keine Berechtigung, die HubSpot-Verbindung zu ändern.",
   "overlay.region": "Region",
   "overlay.regionEu1": "EU",
+  "overlay.connectionLabel": "Verbindung",
+  "overlay.notConnectedYet": "Nicht verbunden",
   "overlay.regionUs": "USA",
   "overlay.token": "Private-App-Token",
   "overlay.tokenHint": "Wird im Vault versiegelt; wird nie wieder angezeigt.",
@@ -519,11 +552,12 @@ export const de = {
   "overlay.userMap.you": "Du",
   "overlay.userMap.matchEmail": "Über E-Mail zugeordnet",
   "overlay.userMap.matchManual": "Manuell gesetzt",
-  "overlay.userMap.map": "Zuordnen…",
-  "overlay.userMap.change": "Ändern…",
+  "overlay.userMap.map": "Zuordnen",
+  "overlay.userMap.change": "Ändern",
   "overlay.userMap.unmap": "Zuordnung aufheben",
   "overlay.userMap.cancel": "Abbrechen",
   "overlay.userMap.pickerLabel": "{principal}-Nutzer suchen",
+  "overlay.userMap.pickTitle": "Einem {principal}-Nutzer zuordnen",
   "overlay.userMap.truncated":
     "Das {principal}-Verzeichnis ist länger als diese Liste — wen du hier nicht findest, liegt vielleicht hinter der Grenze.",
   "overlay.userMap.directoryFailed":
@@ -576,6 +610,7 @@ export const de = {
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
   "views.name": "Name",
+  "views.rail": "Gespeicherte Ansichten",
   "list.viewMine": "Meine",
   "list.viewCustomers": "Kunden",
   "list.viewProspects": "Interessenten",
@@ -696,6 +731,19 @@ export const de = {
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Ganzen Verlauf ansehen",
   "timeline.group.mayContinue": "kann früher weitergehen",
+  "timeline.filters.kind": "Aktivitätsart",
+  "timeline.filters.kind.all": "Alle Arten",
+  "timeline.filters.kind.email": "E-Mail",
+  "timeline.filters.kind.message": "Nachrichten",
+  "timeline.filters.kind.call": "Anrufe",
+  "timeline.filters.kind.meeting": "Termine",
+  "timeline.filters.kind.note": "Notizen",
+  "timeline.filters.kind.task": "Aufgaben",
+  "timeline.filters.search": "In dieser Chronik suchen",
+  "timeline.filters.from": "Von",
+  "timeline.filters.to": "Bis",
+  "timeline.filters.searchOmitsLimited":
+    "Unterhaltungen, deren Inhalt Sie nicht öffnen dürfen, bleiben bei einer Suche außen vor.",
   "tab.people": "Personen",
   "tab.deals": "Deals",
   "tab.tasks": "Aufgaben",
@@ -745,6 +793,7 @@ export const de = {
   "signal.kind.new_opportunity": "Neue Chance",
   "signal.kind.commitment_made": "Etwas wurde zugesagt",
   "signal.kind.ghosted_thread": "Keine Antwort",
+  "signal.kind.project_gone_quiet": "Projekt ist still geworden",
   "co.routeIn.open": "Zugang",
   "co.routeIn.title": "Wer hier mit {name} spricht",
   "co.routeIn.none": "Bisher hat hier niemand geschrieben.",
@@ -758,6 +807,120 @@ export const de = {
   "co.routeIn.band.unknown": "Kontakt vorhanden, noch kein Muster",
   "record.profile": "Profil",
   "record.context": "Kontext",
+  "room.editorial":
+    "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
+  "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
+  "room.finished":
+    "Dieser Raum ist abgeschlossen, das Geteilte ist jetzt ein Protokoll.",
+  "room.card.title": "Deal Room",
+  "room.card.people": "{invited} eingeladen · {active} angemeldet",
+  "room.card.lastSeen": "Zuletzt von einem Käufer gesehen: {when}",
+  "room.card.open": "Deal Room öffnen",
+  "room.create.sub":
+    "Ein Raum, den der Käufer per Link betritt, um zu lesen, was Sie teilen, und darüber zu sprechen.",
+  "room.create.open": "Deal Room eröffnen",
+  "room.create.confirm": "Eröffnen",
+  "room.create.titleLabel": "Titel des Raums",
+  "room.create.titleHint":
+    "Was der Käufer als Überschrift sieht. Später änderbar.",
+  "room.create.defaultTitle": "{deal}",
+  "roompage.none":
+    "Dieser Deal hat noch keinen Deal Room. Eröffnen Sie einen auf der Deal-Seite.",
+  "roompage.backToDeal": "← Zurück zum Deal",
+  "roompage.accessMenu": "Zugang zum Raum",
+  "roompage.pause": "Pausieren",
+  "roompage.pauseHint":
+    "Käufer behalten ihre Links, sehen aber eine Pausenseite, bis Sie fortsetzen.",
+  "roompage.resume": "Fortsetzen",
+  "roompage.close": "Raum schließen",
+  "roompage.closeHint":
+    "Käufer lesen weiter; nichts kann mehr hinzugefügt oder gesagt werden.",
+  "roompage.setExpiry": "Enddatum setzen",
+  "roompage.setExpiryHint": "Der Zugang endet an diesem Tag.",
+  "roompage.closeTitle": "Diesen Deal Room schließen?",
+  "roompage.closeBody":
+    "Käufer lesen den Raum weiter. Danach wird kein Dokument, Kommentar oder Beschluss mehr angenommen. Sie können weiterhin Zugänge entziehen und Links ausstellen.",
+  "roompage.expiryLabel": "Zugang endet am",
+  "roompage.expiryHint": "Leer lassen für kein Enddatum.",
+  "roompage.banner.paused":
+    "Pausiert. Käufer sehen eine Pausenseite, bis Sie fortsetzen.",
+  "roompage.banner.closed":
+    "Geschlossen. Käufer können den Raum weiter lesen; mehr wird nicht angenommen.",
+  "roompage.banner.expired":
+    "Abgelaufen. Käufer-Links funktionieren nicht mehr.",
+  "roompage.banner.archived": "Archiviert. Niemand kann diesen Raum betreten.",
+  "roompage.banner.liveUntil": "Live. Der Zugang endet am {when}.",
+  "roompage.text.title": "Titel und Begrüßung",
+  "roompage.text.sub": "Was der Käufer zuerst liest. Er sieht es sofort.",
+  "roompage.text.titleLabel": "Titel des Raums",
+  "roompage.text.welcomeLabel": "Begrüßungstext",
+  "roompage.viewAsBuyer": "Als Käufer ansehen",
+  "roompage.previewArchived": "Ein archivierter Raum hat keine Vorschau.",
+  "access.title": "Zugang",
+  "access.sub": "Wer eintreten darf und was jede Person tun kann.",
+  "access.invite": "Einladen",
+  "access.empty": "Noch niemand eingeladen.",
+  "access.cap.view": "Nur lesen",
+  "access.cap.viewHint": "Kann Dokumente und Unterhaltung lesen.",
+  "access.cap.comment": "Lesen und kommentieren",
+  "access.cap.commentHint": "Kann außerdem Fragen stellen und antworten.",
+  "access.state.invited": "eingeladen",
+  "access.state.active": "angemeldet",
+  "access.state.revoked": "entzogen",
+  "access.lastSeen": "zuletzt gesehen {when}",
+  "access.downloads": "{count} Dokument(e) heruntergeladen",
+  "access.linkRequested":
+    "Hat {when} um einen neuen Link gebeten. Stellen Sie einen aus und senden Sie ihn selbst.",
+  "access.rowActions": "Aktionen für {name}",
+  "access.issueLink": "Neuen Link ausstellen",
+  "access.changeCapability": "Rechte ändern",
+  "access.revoke": "Zugang entziehen",
+  "access.inviteTitle": "Jemanden in den Deal Room einladen",
+  "access.inviteConfirm": "Einladen",
+  "access.done": "Fertig",
+  "access.save": "Speichern",
+  "access.nameLabel": "Name",
+  "access.emailLabel": "E-Mail",
+  "access.capabilityLegend": "Was darf die Person tun?",
+  "access.inviteNote":
+    "Sie erhalten den Link zum Kopieren. Ist ein Mail-Relay konfiguriert, wird er zusätzlich versandt.",
+  "access.issued.title": "Link für {name}",
+  "access.issued.mailed":
+    "An {email} gesendet. Sie können ihn unten auch kopieren.",
+  "access.issued.notMailed":
+    "Es wurde keine Mail gesendet. Kopieren Sie den Link und senden Sie ihn selbst.",
+  "access.issued.linkLabel": "Der Link",
+  "access.issued.copy": "Link kopieren",
+  "access.issued.copied": "Kopiert",
+  "access.issued.copyFailed":
+    "Kopieren fehlgeschlagen; markieren und kopieren Sie den Link.",
+  "access.issued.oneTime":
+    "Persönlicher Einmal-Link. Er funktioniert einmal, auf einem Gerät. Jede Person braucht ihre eigene Einladung.",
+  "access.issueLinkTitle": "Neuen Link für {name} ausstellen",
+  "access.issueLinkBody":
+    "Der bisherige Link funktioniert dann nicht mehr. Sie erhalten den neuen zum Kopieren.",
+  "access.revokeTitle": "Zugang für {name} entziehen?",
+  "access.neverSignedIn": "nie angemeldet",
+  "access.revokeBody":
+    "Die Sitzung endet sofort und der Link funktioniert nicht mehr. Kommentare bleiben sichtbar und zugeordnet. Der Zugang lässt sich nicht durch eine Link-Anfrage wiederherstellen.",
+  "access.changeCapabilityTitle": "Was darf {name} tun?",
+  "persondealrooms.title": "Deal Rooms",
+  "persondealrooms.sub": "Räume, die dieser Kontakt noch betreten kann.",
+  "persondealrooms.open": "Öffnen",
+  "persondealrooms.seatGone":
+    "Diese Adresse hat in dem Raum keinen Platz mehr.",
+  "persondealrooms.cut":
+    "Nur die ersten Räume werden gezeigt; dieser Kontakt sitzt in weiteren.",
+  "persondealrooms.revokeTitle": "Zugang zu {room} entziehen?",
+  "room.state.draft": "Entwurf",
+  "room.state.building": "Wird erstellt",
+  "room.state.ready": "Bereit",
+  "room.state.publishing": "Wird veröffentlicht",
+  "room.state.live": "Live",
+  "room.state.paused": "Pausiert",
+  "room.state.closed": "Abgeschlossen",
+  "room.state.expired": "Abgelaufen",
+  "room.state.archived": "Archiviert",
   "co.pulse.created": "Erstellt {when}",
   "co.pulse.lastExchange": "Letzter Austausch {when}",
   "co.pulse.neverTouched": "Noch nie kontaktiert",
@@ -765,7 +928,6 @@ export const de = {
   "co.pulse.strongestLead": "Zugang \u00fcber",
   "co.pulse.strengthTail.one": "\u2014 der einzige Kontakt hier",
   "co.pulse.strengthTail.other": "\u2014 von {count} Kontakten hier",
-  "co.owner.notInRoster": "Aktuell zugeordnet (nicht mehr in der Nutzerliste)",
   "co.pulse.unowned": "Nicht zugewiesen",
   "co.since.first": "Du öffnest diesen Account zum ersten Mal.",
   "co.partial":
@@ -795,6 +957,7 @@ export const de = {
   "finance.col.invoice": "Rechnung",
   "finance.paidOn": "bezahlt {when}",
   "finance.col.dates": "Ausgestellt → fällig",
+  "finance.recentInvoices": "Letzte Rechnungen",
   "finance.paidDayLate": "1 Tag zu spät bezahlt",
   "finance.paidDaysLate": "{days} Tage zu spät bezahlt",
   "finance.overdueDay": "{days} Tag überfällig",
@@ -999,6 +1162,7 @@ export const de = {
   "approval.kind.site_lead": "Person von der Website aufnehmen",
   "approval.kind.capture_counterparty": "Person aus deiner Mail aufnehmen",
   "approval.kind.org_name_promotion": "Account umbenennen",
+  "approval.kind.project_attribution": "Unter einem Projekt ablegen",
   "approval.kind.lifecycle_change": "Account-Phase",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus einem Transkript übernehmen",
@@ -1068,18 +1232,20 @@ export const de = {
   "linkedinImport.title": "LinkedIn-Kontakte",
   "linkedinImport.sub":
     "Eigenen Export importieren und sehen, wen das Team bereits kennt",
-  "linkedinImport.explainer":
-    "LinkedIn stellt dir unter Einstellungen → Datenschutz → Kopie deiner Daten eine Connections.csv bereit. Hochgeladen zeigt sie, wer im Team bereits jemanden im Unternehmen kennt. Die Kontakte werden NICHT zu Personen — sie erscheinen weder in der Suche noch in Listen oder auf Kontaktseiten, und niemand kann ihnen schreiben.",
   "linkedinImport.profileLabel": "Deine LinkedIn-Profil-URL",
   "linkedinImport.profilePlaceholder": "https://www.linkedin.com/in/…",
   "linkedinImport.saveProfile": "Profil speichern",
+  "linkedinImport.editProfile": "\u00c4ndern",
+  "linkedinImport.editProfileTitle": "Ihr LinkedIn-Profil",
+  "linkedinImport.profileNotSet": "Noch nicht erfasst",
   "linkedinImport.connectedNote":
     "Verbunden. Importierte Kontakte werden diesem Profil zugeordnet, damit das CRM sagen kann, welche Kollegin jemanden kennt \u2014 und nicht nur, dass \u201edas Unternehmen\u201c ihn kennt.",
   "linkedinImport.notConnectedNote":
-    "Noch nicht verbunden. Mit deiner Profil-URL werden importierte Kontakte dir namentlich zugeordnet.",
+    "Mit deiner hinterlegten Profil-URL werden importierte Kontakte dir namentlich zugeordnet.",
   "linkedinImport.whichFile":
-    "Gesucht ist die Datei Connections.csv \u2014 das Export-Archiv enth\u00e4lt ein Dutzend weitere.",
+    "LinkedIn stellt dir Connections.csv unter Einstellungen \u2192 Datenschutz \u2192 Kopie deiner Daten bereit; das Archiv enth\u00e4lt ein Dutzend weitere, gesucht ist diese eine. Was du hochl\u00e4dst, wird niemals zu Kontakten: die Verbindungen erscheinen weder in der Suche noch in Listen oder auf Kontaktseiten, und niemand kann ihnen schreiben oder mailen.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
+  "linkedinImport.importLabel": "Kontakt-Export",
   "linkedinImport.noMatchesYet":
     "Noch keine Treffer, und das ist in einer neuen Organisation normal: Deine Kontakte werden mit den Personen abgeglichen, die das CRM kennt, und die entstehen erst beim Lesen deiner E-Mails. Der Abgleich l\u00e4uft st\u00fcndlich erneut, Treffer erscheinen also nach und nach.",
   "linkedinImport.working": "Export wird gelesen…",
@@ -1095,6 +1261,7 @@ export const de = {
     "Noch keine deiner Verbindungen arbeitet bei einer erfassten Firma.",
   "linkedinReach.allUnresolved":
     "Alle {unresolved} deiner Verbindungen arbeiten bei Firmen, die noch nicht erfasst sind.",
+  "linkedinReach.accountsLabel": "Firmen, die du erreichst",
   "linkedinReach.account": "Firma",
   "linkedinReach.connections": "Du kennst",
   "linkedinReach.onFile": "Bereits Personen",
@@ -1109,6 +1276,7 @@ export const de = {
   "co.connections.group.intro_path": "der warme Einstieg",
   "co.signals.title": "Signale",
   "co.signals.empty": "Kein offenes Signal zu diesem Account.",
+  "co.signals.openProject": "Projekt öffnen",
   "chronology.label": "Was im Verlauf angezeigt wird",
   "chronology.activities": "Aktivitäten",
   "chronology.changes": "Änderungen",
@@ -1275,6 +1443,10 @@ export const de = {
   "leadSources.removeBody":
     "„{label}“ wird von keinem Lead genutzt und verschwindet aus der Liste.",
   "leadSources.newLabel": "Neue Quelle",
+  "leadSources.labelField": "Bezeichnung",
+  "leadSources.addOpen": "Neue Quelle",
+  "leadSources.listLabel": "Quellen in der Liste",
+  "leadSources.discovered": "Entdeckte Werte",
   "leadSources.newPlaceholder": "Messe",
   "leadSources.add": "Quelle hinzufügen",
   "leadSources.discoveredSub":
@@ -1288,6 +1460,7 @@ export const de = {
   "leadReasons.inUse":
     "{count} Leads tragen diesen Grund — stattdessen abschalten.",
   "leadReasons.newLabel": "Neuer Grund",
+  "leadReasons.listLabel": "Gründe in der Liste",
   "leadReasons.add": "Grund hinzufügen",
   "leadReasons.removeTitle": "Diesen Grund entfernen?",
   "leadReasons.removeBody":
@@ -1546,13 +1719,50 @@ export const de = {
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
-  "deal.stakeholders": "Beteiligte",
   "deal.edit": "Deal bearbeiten",
   "deal.ownerKeep": "Aktuellen Inhaber behalten",
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerOrg": "über Partner",
+  "deal.companyWithheld": "Firma nicht sichtbar",
+  "deal.partnerWithheld": "Partner nicht sichtbar",
   "deal.forecastCategory": "Forecast-Kategorie",
+  "deal.strip.title": "Wie es um den Deal steht",
+  "deal.seats.title": "Wer an diesem Deal beteiligt ist",
+  "deal.seats.empty": "Für diesen Deal ist niemand erfasst",
+  "deal.seats.ours": "{count} von uns tragen ihn",
+  "deal.strip.money": "Das Geld",
+  "deal.strip.money.offer": "Angebot {number} · {status}",
+  "deal.strip.money.noOffer": "Noch kein Angebot geschrieben",
+  "deal.strip.close": "Der Abschluss",
+  "deal.strip.close.none": "Kein Datum",
+  "deal.strip.close.noneDetail":
+    "Niemand hat gesagt, wann das abgeschlossen wird",
+  "deal.strip.close.inDays": "in {days} Tagen",
+  "deal.strip.close.overdue": "{days} Tage über dem Datum",
+  "deal.strip.close.provisional": "vorläufig, von niemandem bestätigt",
+  "deal.strip.close.waiting": "wir sollen bis {date} warten",
+  "deal.strip.people": "Die Menschen",
+  "deal.strip.people.count": "{engaged} von {total} im Austausch",
+  "deal.strip.people.champion": "ein Fürsprecher ist benannt",
+  "deal.strip.people.noChampion": "kein Fürsprecher benannt",
+  "deal.strip.people.none": "Niemand",
+  "deal.strip.people.noneDetail": "Für diesen Deal ist niemand erfasst",
+  "deal.strip.momentum": "Die Bewegung",
+  "deal.strip.momentum.detail": "seit dem letzten Kontakt",
+  "deal.strip.withheld": "Verborgen",
+  "deal.strip.withheldDetail":
+    "Sie dürfen nicht sehen, wer an diesem Deal beteiligt ist",
+  "deal.forecast.commit": "zugesagt",
+  "deal.forecast.bestCase": "bester Fall",
+  "deal.forecast.pipeline": "Pipeline",
+  "deal.forecast.omitted": "nicht in der Prognose",
+  "deal.pulse.yourMove": "Sie sind am Zug.",
+  "deal.pulse.theirMove": "Die andere Seite ist am Zug.",
+  "deal.pulse.theirMoveWhy": "Hier wartet niemand auf eine Antwort.",
+  "deal.pulse.wroteOn": "Zuletzt geschrieben am {date} — vor {days} Tagen.",
+  "deal.pulse.wroteUnknown":
+    "Sie haben geschrieben und niemand hat geantwortet.",
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
@@ -1573,6 +1783,8 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur ins Stocken geraten",
   "deals.filterOwnerMe": "Meine Deals",
+  "deals.filterPartner": "Partner",
+  "deals.filterPartnerAnyOne": "Alle Partner",
   "deals.filterPartnerSourced": "Über Partner",
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterOrgAll": "Alle Firmen",
@@ -1758,6 +1970,13 @@ export const de = {
   "home.digestDedupe": "Dubletten zu prüfen",
   "home.digestClassify":
     "Über Nacht einsortiert: {commitments} Zusagen · {meetings} Termine · {noise} Rauschen",
+  "home.digestProjects": "Projekte",
+  "home.digestPhaseChanges": "Phasenwechsel",
+  "home.digestNewCommitments": "Neue Zusagen",
+  "home.digestGoneQuiet": "Still geworden",
+  "home.digestPhaseChange": "{from} → {to}",
+  "home.digestCommitmentCount": "{count} neue offene Zusagen",
+  "home.digestQuietDays": "seit {days} Tagen still",
 
   "enrich.title": "Von der Website lesen",
   "enrich.sub":
@@ -1913,7 +2132,7 @@ export const de = {
   "today.source.nextSteps": "offene Aufgaben",
   "today.source.nextMeeting": "der Kalender",
   "today.source.deals": "Deals",
-  "today.meeting.prepare": "Termin vorbereiten",
+  "today.meeting.prepare": "Meeting vorbereiten",
   "today.source.people": "die Kontakte",
   "today.source.standing": "wer am Zug ist und die Signale",
   "today.source.activities": "was gesprochen wurde",
@@ -2056,6 +2275,27 @@ export const de = {
   "docs.category.email": "E-Mail-Anhang",
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
+  "files.title": "Dateien",
+  "files.sub":
+    "Was Sie an diesem Deal hochgeladen haben und was mit seinen E-Mails und Nachrichten eingegangen ist.",
+  "files.empty":
+    "Noch keine Dateien an diesem Deal. Laden Sie eine hoch oder verknüpfen Sie eine E-Mail mit Anhang.",
+  "files.origin": "Anhang einer Nachricht von {who}, {when}",
+  "files.originUnknown": "unbekanntem Absender",
+  "files.uploaded": "Hochgeladen {when}",
+  "files.hiddenBadge": "Ausgeblendet",
+  "files.rowActions": "Aktionen für {name}",
+  "files.hide": "Aus diesem Deal ausblenden",
+  "files.unhide": "Wieder an diesem Deal zeigen",
+  "files.delete": "Löschen",
+  "files.hideTitle": "{name} aus diesem Deal ausblenden?",
+  "files.hideBody":
+    "Die Nachricht und ihr Anhang bleiben an der Aktivität und in der Bibliothek des Unternehmens. Nur dieser Deal führt sie nicht mehr auf.",
+  "files.deleteTitle": "{name} löschen?",
+  "files.deleteBody":
+    "Die Datei wird aus diesem Deal entfernt – und aus jedem Deal Room, der sie teilt.",
+  "files.showHidden": "Ausgeblendete Dateien zeigen",
+  "files.hideHidden": "Ausgeblendete verbergen",
   "docs.state.draft": "Entwurf",
   "docs.state.current": "Aktuell",
   "docs.state.final": "Final",
@@ -2106,6 +2346,11 @@ export const de = {
   "compose.draftToUnset": "Kontakt wählen",
   "compose.relatedTo": "Bezug",
   "compose.relatedToNone": "Der Account allgemein",
+  "compose.project": "Projekt",
+  "compose.projectNone": "Kein Projekt",
+  "compose.scopedToCounted":
+    "Bezogen auf {key} · {inScope} von {total} Aktivitäten",
+  "compose.scopedTo": "Bezogen auf {key}",
   "compose.basedOn": "Grundlage: {inputs}",
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachricht",
@@ -2142,11 +2387,15 @@ export const de = {
   "compose.multiRecipientWarning":
     "Dieser Zweck führt einen Abmeldelink mit sich; ein Versand an mehr als eine Adresse wird deshalb abgelehnt. Senden Sie einzeln, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
-  "compose.relinkTarget": "Person, Organisation, Deal oder Lead suchen",
+  "compose.relinkTarget":
+    "Person, Organisation, Deal, Lead oder Projekt suchen",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",
   "compose.relinkReplaceHint":
     "Ersetzt die bestehende Verknüpfung desselben Typs, statt eine weitere hinzuzufügen.",
   "compose.relinkConfirm": "Neu verknüpfen",
+  "compose.relinkThread": "Auch den Rest dieser Konversation verschieben",
+  "compose.relinkThreadHint":
+    "Jede Nachricht dieses Threads, die Sie bearbeiten dürfen, wird in einem Schritt mit verschoben.",
   "compose.emptyRecipients": "Fügen Sie mindestens einen Empfänger hinzu.",
   "compose.removeRecipient": "{recipient} entfernen",
   "compose.actionFailed":
@@ -2203,8 +2452,7 @@ export const de = {
     "Erstell in den Einstellungen einen Passport und häng einen MCP-fähigen Agenten an deine Organisation. Er liest nur, was du sehen kannst.",
   "ai.paletteHint": "Frag von überall mit",
 
-  "settings.identity": "Profil",
-  "settings.preferences": "Voreinstellungen",
+  "settings.accountCard": "Ihr Konto",
   "unsaved.title": "Du hast ungespeicherte Änderungen",
   "unsaved.body":
     "Wenn du die Seite jetzt verlässt, gehen deine Eingaben verloren. Geh zurück, um sie zuerst zu speichern.",
@@ -2218,8 +2466,10 @@ export const de = {
   "settings.signatureHint":
     "Nur Text. Leer lassen heißt: ohne Signatur senden. Die KI schreibt nie eine Grußformel — diese hier geht raus.",
   "settings.signatureSaving": "Wird gespeichert…",
-  "settings.preferencesSub":
-    "Das Design merkt sich dieser Browser. Die Sprache gilt für diese Sitzung.",
+  "settings.signatureEdit": "Signatur bearbeiten",
+  "settings.signatureNone": "Keine Grußformel gesetzt",
+  "settings.signatureCancel": "Abbrechen",
+  "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",
@@ -2230,7 +2480,7 @@ export const de = {
   "rbac.masked": "Verborgener Wert",
   "settings.passports": "Agenten-Passports",
   "settings.passportsSub":
-    "ein Agent handelt als du, nie über dir — jeder Aufruf prüft deine Rechte neu",
+    "Ein Agent handelt als du, nie über dir: jeder Aufruf prüft deine Rechte neu.",
   "passport.scope.read": "Datensätze lesen",
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
@@ -2245,11 +2495,82 @@ export const de = {
   "settings.minting": "Wird ausgestellt…",
   "settings.mintCancel": "Abbrechen",
   "settings.mintDone": "Fertig",
+  "settings.mintOpen": "Neuer Passport",
   "settings.passportScopes": "Was dieser Agent darf",
   "settings.passportScopesHint":
     "Mindestens eins auswählen. Ein Agent darf nie mehr als Sie selbst.",
   "settings.passportScopesRequired":
     "Wählen Sie mindestens eine Sache aus, die dieser Agent tun darf.",
+  // Was der geplante Agent gerade für diese Leserin tut. "Morgenbriefing" ist
+  // dasselbe Wort wie auf der Startseite; ein abgebrochener Lauf darf nie
+  // klingen, als wäre er fertig.
+  "agent.activity.morningBrief.queued": "Dein Morgenbriefing ist eingereiht.",
+  "agent.activity.morningBrief.running":
+    "Ich stelle dein Morgenbriefing zusammen.",
+  "agent.activity.morningBrief.done": "Dein Morgenbriefing ist fertig.",
+  "agent.activity.morningBrief.degraded":
+    "Ich bin bei deinem Morgenbriefing nur zum Teil gekommen und habe gestoppt.",
+  "agent.activity.morningBrief.failed":
+    "Ich konnte dein Morgenbriefing nicht abschließen.",
+  "agent.activity.morningBrief.stalled":
+    "Dein Morgenbriefing läuft ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.riskSweep.queued":
+    "Die nächtliche Risikoprüfung ist eingereiht.",
+  "agent.activity.riskSweep.running": "Ich prüfe deine Deals auf Risiken.",
+  "agent.activity.riskSweep.done":
+    "Fertig. Ich habe deine Deals nachts auf Risiken geprüft.",
+  "agent.activity.riskSweep.degraded":
+    "Ich bin bei der Risikoprüfung nur zum Teil gekommen und habe gestoppt.",
+  "agent.activity.riskSweep.failed":
+    "Ich konnte die nächtliche Risikoprüfung nicht abschließen.",
+  "agent.activity.riskSweep.stalled":
+    "Die Risikoprüfung läuft ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
+  "agent.activity.documentExtract.queued":
+    "Dein Dokument steht zum Lesen in der Warteschlange.",
+  "agent.activity.documentExtract.running": "Ich lese dein Dokument.",
+  "agent.activity.documentExtract.stalled":
+    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.documentExtract.done": "Ich habe dein Dokument gelesen.",
+  "agent.activity.documentExtract.degraded":
+    "Ich bin bei deinem Dokument nur teilweise durchgekommen und habe gestoppt.",
+  "agent.activity.documentExtract.failed":
+    "Ich konnte dein Dokument nicht lesen.",
+  "agent.activity.summarize.queued":
+    "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
+  "agent.activity.summarize.running":
+    "Ich trage zusammen, was ich über dieses Unternehmen weiß.",
+  "agent.activity.summarize.done":
+    "Was ich über dieses Unternehmen weiß, ist fertig.",
+  "agent.activity.summarize.degraded":
+    "Ich habe über dieses Unternehmen nur teilweise Informationen zusammengetragen und dann aufgehört.",
+  "agent.activity.summarize.failed":
+    "Ich konnte das Zusammentragen zu diesem Unternehmen nicht abschließen.",
+  "agent.activity.summarize.stalled":
+    "Das Zusammentragen zu diesem Unternehmen dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.draftReply.queued":
+    "Deine Antwort steht zum Entwerfen in der Warteschlange.",
+  "agent.activity.draftReply.running": "Ich entwerfe deine Antwort.",
+  "agent.activity.draftReply.done": "Dein Antwortentwurf ist fertig.",
+  "agent.activity.draftReply.degraded":
+    "Ich bin bei deiner Antwort nur teilweise durchgekommen und habe gestoppt.",
+  "agent.activity.draftReply.failed":
+    "Ich konnte deine Antwort nicht entwerfen.",
+  "agent.activity.draftReply.stalled":
+    "Das Entwerfen deiner Antwort dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.offerDraft.queued":
+    "Dein Angebot steht zum Entwerfen in der Warteschlange.",
+  "agent.activity.offerDraft.running": "Ich entwerfe dein Angebot.",
+  "agent.activity.offerDraft.done": "Dein Angebotsentwurf ist fertig.",
+  "agent.activity.offerDraft.degraded":
+    "Ich bin bei deinem Angebot nur teilweise durchgekommen und habe gestoppt.",
+  "agent.activity.offerDraft.failed":
+    "Ich konnte dein Angebot nicht entwerfen.",
+  "agent.activity.offerDraft.stalled":
+    "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.panel.runningNow": "Läuft jetzt",
+  "agent.panel.finishedToday": "Heute abgeschlossen",
+  "agent.panel.stoppedEarly": "Warum es gestoppt hat",
+
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
     "MCP-Clients mit eigenem Credential, abgeleitet aus einem Passport, den du verliehen hast",
@@ -2257,13 +2578,14 @@ export const de = {
   "agents.connectedOn": "verbunden {date}",
   "agents.lentFrom": "verliehen aus „{label}“",
   "agents.disconnect": "Trennen",
+  "agents.disconnectOpen": "Trennen",
   "agents.disconnectNamed": "{client} trennen",
   "agents.disconnected": "getrennt",
   "agents.lapsed": "Credential abgelaufen",
   "agents.renewing": "wird erneuert",
   "agents.renewsBy": "Credential erneuert bis {date}",
   "agents.expiredOn": "Credential abgelaufen {date}",
-  "agents.revokeGrant": "Verbindung beenden",
+  "agents.revokeGrantOpen": "Verbindung beenden",
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.disconnectConfirm":
     "Das beendet die ganze Verbindung, nicht nur ein Credential: der Agent verliert den Zugriff beim nächsten Aufruf und kann nicht erneuern. Für eine neue Verbindung verleihst du wieder einen Passport.",
@@ -2299,6 +2621,8 @@ export const de = {
   "import.title": "Datei importieren",
   "import.sub":
     "Eine CSV mit Interessenten oder Firmen einlesen. Es wird nichts geschrieben, bevor Sie gelesen haben, was passieren wird.",
+  "import.startLabel": "CSV-Datei importieren",
+  "import.start": "Import starten",
   "import.objectLabel": "Was die Zeilen sind",
   "import.object.lead": "Interessenten",
   "import.object.organization": "Firmen",
@@ -2310,6 +2634,7 @@ export const de = {
   "import.choose": "Datei wählen",
   "import.chooseAnother": "Andere Datei wählen",
   "import.profiled": "Aus den ersten {rows} Zeilen der Datei gelesen.",
+  "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
   "import.col.filled": "Gefüllt",
   "import.col.samples": "Werte",
@@ -2361,7 +2686,9 @@ export const de = {
     "Nur nicht-produktiv — auf dieser Installation nicht rückgängig zu machen.",
   "settings.resetDataDesc":
     "Setzt diese Installation auf den Zustand nach der Ersteinrichtung zurück. Fach- und Konfigurationsdaten werden gelöscht; die Organisation und ihre Nutzer bleiben erhalten und angemeldet.",
-  "settings.resetDataButton": "Daten zurücksetzen…",
+  "settings.resetDataButton": "Daten zurücksetzen",
+  "settings.resetDataLabel": "Alle Daten zurücksetzen",
+  "settings.resetDataConfirmButton": "Alles zurücksetzen",
   "settings.resetDataConfirmTitle": "Alle Daten zurücksetzen?",
   "settings.resetDataConfirmBody":
     "Gib zur Bestätigung den Namen deiner Organisation ein. Dies kann nicht rückgängig gemacht werden.",
@@ -2420,9 +2747,11 @@ export const de = {
 
   "audit.you": "Du",
   "audit.system": "System",
+  "audit.unknownBuyer": "Teilnehmer im Deal Room",
   "audit.unknownMember": "Unbekanntes Mitglied",
   "audit.viaAgent": "über einen Agenten",
   "audit.viaConnector": "über einen Connector",
+  "audit.viaDealRoom": "im Deal Room",
   "audit.viaNamed": "über {client}",
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
   "settings.auditSub": "jede Aktion, zugeordnet — Mensch, Agent oder Connector",
@@ -2430,6 +2759,7 @@ export const de = {
     "Nur Admins lesen den vollständigen Verlauf. Er hält jede handelnde Person und jeden berührten Datensatz fest — deshalb ist er nicht weiter zugänglich.",
   "settings.auditFilters": "Filter",
   "settings.auditEntries": "Audit-Log",
+  "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
   "settings.auditActor": "Akteur",
   "settings.auditEntity": "Entitätstyp",
   "settings.auditEntityId": "Entitäts-ID",
@@ -2446,6 +2776,7 @@ export const de = {
   "privacy.purposesReadOnly":
     "Nur-Lese-Ansicht — nur ein Admin oder Ops kann einen Zweck anlegen.",
   "privacy.addPurpose": "Zweck hinzufügen",
+  "privacy.purposesRegistry": "Erfasste Zwecke",
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeDoi": "Erfordert Double-Opt-in",
@@ -2470,6 +2801,7 @@ export const de = {
   "privacy.fulfil": "Erfüllen",
   "privacy.reject": "Ablehnen",
   "privacy.newRequest": "Neuer Antrag",
+  "privacy.queue": "Anträge",
   "privacy.kind": "Art",
   "privacy.person": "Person",
   "privacy.subjectRef": "Betroffenen-Referenz",
@@ -2494,6 +2826,7 @@ export const de = {
     "Nur ein Admin oder Ops sieht, welche Datensätze eine gesetzliche Pflicht zurückhält. Es gilt dieselbe Berechtigung wie für die Aufbewahrungsregeln.",
   "restricted.empty":
     "Kein Datensatz wird zurückgehalten — jede bisherige Löschung konnte vollständig ausgeführt werden.",
+  "restricted.heldLabel": "Aktuell zurückgehaltene Datensätze",
   "restricted.kind": "Datensatz",
   "restricted.occurred": "Datiert",
   "restricted.deals": "Geschäft",
@@ -2519,6 +2852,7 @@ export const de = {
     "Die Freigabe LÖSCHT den Datensatz. Er kehrt nicht in den Betrieb zurück: Das Löschersuchen, das diese Pflicht ausgesetzt hat, ist weiterhin offen — die Freigabe führt es aus. Das lässt sich nicht rückgängig machen.",
   "restricted.release.confirm": "Freigeben und löschen",
   "restricted.pin.action": "Datensatz festsetzen",
+  "restricted.pin.submit": "Anheften",
   "restricted.pin.idHint":
     "Für Korrespondenz, die die automatische Regel nicht erkennt — Lieferanten- und Einkaufspost ist nach §257 HGB aufbewahrungspflichtig und hat in diesem Produkt kein Geschäft, an dem sie hängt. Die Datensatz-ID steht im Audit-Eintrag.",
   "restricted.pin.idMalformed":
@@ -2894,6 +3228,7 @@ export const de = {
   "dedupe.confidence": "Übereinstimmung:",
   "dedupe.field": "Feld",
   "dedupe.signal": "Signal",
+  "dedupe.evidenceTable": "Beleg je Feld",
   "dedupe.signalAgree": "übereinstimmend",
   "dedupe.signalCollide": "Konflikt",
   "dedupe.signalOneSided": "nur eine Seite",
@@ -2955,6 +3290,8 @@ export const de = {
   // Die Einheiten dieser Installation, auf der Einstellungsseite, die bereits
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
+  "extUnits.open": "Öffnen",
+  "extUnits.openNamed": "Seite {name} öffnen",
   "extUnits.user.title": "Deine weiteren Konten",
   "extUnits.user.sub":
     "Konten, die diese Installation in deinem Namen verbinden kann. Jedes gehört dir allein — niemand sonst sieht es, und ein Trennen betrifft nur dich.",
@@ -3035,12 +3372,22 @@ export const de = {
     "Diese Installation kann die Verbindung noch nicht abschließen — die API des Anbieters ist dafür nicht aktiviert. Ein Administrator muss sie aktivieren; das Server-Log nennt die betroffene API.",
   "connectors.dismissOutcome": "Schließen",
 
-  // Das immer sichtbare "Verbindung hinzufügen"-Element (Task 1): der
-  // Leerzustand und die Fußzeile der Liste teilen sich dieselben Buttons für
-  // noch nicht verbundene Anbieter.
+  // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
+  // der Karte öffnet einen Dialog mit allen noch verfügbaren Anbietern, jeder
+  // mit dem Satz, den er braucht.
   "connectors.addConnection": "Verbindung hinzufügen",
-  "connectors.googleSeparateNote":
-    "Gmail und Google Kalender werden separat verbunden.",
+  "connectors.addOpen": "Konto verbinden",
+  "connectors.connect": "Verbinden",
+  "connectors.connectProvider": "{provider} verbinden",
+  "connectors.rosterLabel": "Erfassende Postfächer",
+  "connectors.addGmailBrings":
+    "Die Mails, die du sendest und empfängst, von Google — und die einzige Verbindung, über die Margince senden kann.",
+  "connectors.addGcalBrings":
+    "Dein Google Kalender. Er wird separat von Gmail verbunden.",
+  "connectors.addGraphBrings":
+    "Mail und Kalender eines Microsoft-Geschäftskontos, über die Graph-API. Nur Erfassung.",
+  "connectors.addImapBrings":
+    "Jeder andere Mail-Host, mit einem App-Passwort. Nur Erfassung.",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 
@@ -3072,6 +3419,8 @@ export const de = {
   "connectors.telegramNotConfigured":
     "Messaging-Kanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
+  "connectors.telegramRosterLabel": "Bot, der Nachrichten überträgt",
+  "connectors.telegramEmpty": "Noch kein Bot verbunden.",
   "connectors.telegramEditToken": "Token ersetzen",
   "connectors.telegramDisconnectTitle": "Diesen Bot trennen?",
   "connectors.telegramDisconnectBody":
@@ -3089,6 +3438,8 @@ export const de = {
   "consumerMail.title": "Consumer-Mail-Domains",
   "consumerMail.sub":
     "Mail von einem privaten Postfach legt weiterhin die Person an — nur eben keine Firma. Margince liefert eine Liste dieser Anbieter mit; ergänze, was fehlt, oder nimm eine Domain wieder heraus, die zu Unrecht darauf steht.",
+  "consumerMail.addedTitle": "Hier hinzugefügt",
+  "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",
   "consumerMail.domainPlaceholder": "anbieter.example",
   "consumerMail.kindLabel": "Was diese Domain ist",
@@ -3096,6 +3447,7 @@ export const de = {
   "consumerMail.kind.never":
     "Eine echte Firma — mitgelieferte Liste ignorieren",
   "consumerMail.add": "Hinzufügen",
+  "consumerMail.addOpen": "Domain hinzufügen",
   "consumerMail.remove": "Entfernen",
   "consumerMail.none":
     "Nichts ergänzt. Die mitgelieferte Liste entscheidet über jede Domain.",
@@ -3114,6 +3466,9 @@ export const de = {
   "blockedDomains.title": "Abgelehnte Domains",
   "blockedDomains.sub":
     "Welchen Domains diese Installation die Firma verweigert und was das jeweils entschieden hat — ein Modellurteil, eine Heuristik oder ein Mensch. Eine Domain wieder zuzulassen stellt die Firmenfrage neu, statt nur eine Markierung zu entfernen.",
+  "blockedDomains.listTitle": "Erfasste Entscheidungen",
+  "blockedDomains.record": "Entscheidung erfassen",
+  "blockedDomains.recordOpen": "Entscheidung erfassen",
   "blockedDomains.domainLabel": "Domain",
   "blockedDomains.domainPlaceholder": "anbieter.example",
   "blockedDomains.admissionLabel": "Entscheidung",
@@ -3655,6 +4010,9 @@ export const de = {
   "ob.payoff.seats":
     "Es fehlen nur noch deine Kollegen. Sitze sind kostenpflichtig, deshalb legst du sie unter Einstellungen → Nutzer selbst an.",
   "ob.payoff.understood": "Verstanden",
+  "ob.payoff.projects":
+    "Wird aus einem Deal Arbeit, leg dafür ein Projekt an: Ein Projekt beginnt während des Deals und bleibt nach dem Gewinn bestehen, damit die Lieferung ihre eigene Chronik behält.",
+  "ob.payoff.projectsLink": "Projekte ansehen",
 
   // --- die Übergabe in die App ------------------------------------------
   "ob.enter.cta": "Margince öffnen",
@@ -3720,17 +4078,16 @@ export const de = {
   "auth.loginSub":
     "Konten legt eine Admin-Person an. Selbst registrieren kannst du dich nicht.",
   "auth.coreDisclosure": "Margince · KI-System",
-  "auth.coreBoundary":
-    "Ich kann deinen Kontext erst nutzen, nachdem Margince bestätigt hat, dass du es bist.",
-  // "Postfach", nicht "Mailbox": eine Mailbox ist im Deutschen der
-  // Anrufbeantworter. Auf einer Zeile, die den Umfang des Zugriffs offenlegt,
-  // benennt das eine andere Datenquelle als die englische Fassung.
-  "auth.coreScope":
-    "Dieser Kontext ist dein Postfach, dein Kalender und was ich öffentlich im Web lesen kann. Nichts anderes und nichts ohne deine Freigabe.",
-  "auth.corePermission": "Ich nutze deine Berechtigungen.",
-  "auth.coreCites": "Ich belege, was ich finde.",
-  "auth.coreWaits": "Vor externen Aktionen warte ich auf deine Freigabe.",
-  "auth.coreMarks": "Ich markiere jeden Wert, den ich geschrieben habe.",
+  "auth.coreGreeting": "Hallo, ich bin Margince.",
+  "auth.corePurpose": "Ich kümmere mich um die Arbeit rund um deine Arbeit.",
+  // Gedankenstrich mit Leerzeichen, nicht der englische Geviertstrich ohne:
+  // im Deutschen ist das die einzige Setzung, die nicht wie ein Bindestrich
+  // zwischen zwei Wörtern liest.
+  "auth.coreWork":
+    "Ich halte dein CRM aktuell, erkenne, was Aufmerksamkeit braucht, und bereite den nächsten Schritt vor – damit du dich um Kunden kümmern kannst.",
+  "auth.corePromise":
+    "Und keine Sorge: Ich sende nie eine E-Mail oder Nachricht, ohne dich vorher zu fragen.",
+  "auth.coreHandover": "Zuerst stelle ich sicher, dass du es wirklich bist …",
   "auth.coreConfigured": "Konfiguriert",
   "auth.coreUnconfigured": "KI nicht konfiguriert",
   // "auch ohne", nicht "weiterhin": "weiterhin" ist zeitlich und liest sich neben
@@ -3803,7 +4160,9 @@ export const de = {
   "password.signsYouOut":
     "Die Änderung meldet dich überall ab, auch hier. Melde dich mit dem neuen Passwort erneut an.",
   "password.changing": "Passwort wird geändert…",
-  "password.submit": "Passwort ändern",
+  "password.open": "Passwort ändern",
+  "password.cancel": "Abbrechen",
+  "password.submit": "Neues Passwort speichern",
   "password.done": "Passwort geändert. Melde dich mit dem neuen an.",
   "password.errorGeneric":
     "Das Passwort konnte nicht geändert werden. Versuche es erneut.",
@@ -3815,6 +4174,17 @@ export const de = {
   "setup.tokenHint":
     "Aus der Token-Datei, die der Server beim ersten Start geschrieben hat — das Serverprotokoll nennt ihren Pfad und enthält das Token selbst, falls die Datei nicht geschrieben werden konnte.",
   "setup.organization": "Name der Organisation",
+  "setup.baseCurrency": "Basiswährung",
+  "setup.baseCurrencyHint":
+    "Jeder Betrag im Produkt wird in diese Währung umgerechnet. Sie lässt sich in den Einstellungen ändern, aber nur solange noch kein Betrag dagegen umgerechnet wurde — es lohnt sich also, sie jetzt richtig zu setzen.",
+  "setup.baseCurrencyMalformed":
+    "Eine Währung besteht aus drei Buchstaben, zum Beispiel EUR, CHF oder USD.",
+  "setup.baseLanguage": "Basissprache",
+  "setup.baseLanguageHint":
+    "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Jede Person wählt ihre eigene Anzeigesprache weiterhin selbst, und Antworten an Kunden folgen der Sprache des Gesprächs.",
+  "setup.timezone": "Zeitzone für Auswertungen",
+  "setup.timezoneHint":
+    "IANA-Zonenname. Jeder Auswertungszeitraum wird darin berechnet — aus diesem Browser übernommen, also ändere ihn, wenn du nicht dort bist, wo das Team arbeitet.",
   "setup.adminName": "Dein Name",
   "setup.adminEmail": "Deine E-Mail-Adresse",
   "setup.adminPassword": "Passwort wählen",
@@ -3912,6 +4282,102 @@ export const de = {
     "Jeder Zweck steht für sich — hier ist nicht alles oder nichts. Transaktionale Nachrichten lassen sich hier nicht abschalten, weil du sie brauchst; alles andere bestimmst du selbst.",
   "prefs.invalidLink":
     "Dieser Link ist nicht mehr gültig. Präferenz-Links laufen ab oder können widerrufen werden — frag in einer aktuellen E-Mail nach einem neuen.",
+  "buyer.opening": "Ihr Deal Room wird geöffnet …",
+  "buyer.deadTitle": "Dieser Link funktioniert nicht mehr",
+  "buyer.deadAskContact":
+    "Bitten Sie Ihren Ansprechpartner um einen neuen Link.",
+  "buyer.linkDead":
+    "Der Link wurde bereits geöffnet, ist abgelaufen oder durch einen neueren ersetzt worden. Fordern Sie unten einen neuen Link an.",
+  "buyer.noLink":
+    "Öffnen Sie diese Seite über den Link, den Sie erhalten haben. Falls Sie ihn nicht mehr haben, fordern Sie unten einen neuen an.",
+  "buyer.emailLabel": "Ihre E-Mail-Adresse",
+  "buyer.emailHint": "Die Adresse, an die die Einladung ging.",
+  "buyer.requestLink": "Neuen Link schicken",
+  "buyer.linkRequested":
+    "Falls diese Adresse eingeladen wurde, ist ein neuer Link unterwegs.",
+  "buyer.pausedTitle": "Zugang pausiert",
+  "buyer.pausedBody":
+    "{steward} hat diesen Raum vorerst pausiert. Ihr Link bleibt gültig; sobald der Raum wieder geöffnet wird, können Sie weitermachen.",
+  "buyer.expiredTitle": "Zugang beendet",
+  "buyer.expiredBody":
+    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward} oder fordern Sie unten einen neuen Link an.",
+  "buyer.eyebrow": "Ihr Deal Room",
+  "buyer.contact": "Ihr Ansprechpartner: {steward}.",
+  "buyer.closed":
+    "Dieser Raum ist geschlossen; das Geteilte ist jetzt ein Protokoll.",
+  "buyer.previewBanner":
+    "Sie sehen diesen Raum als Vorschau, so wie ein Käufer ihn sieht. Sie können alles lesen und nichts ändern.",
+  "buyer.previewReadOnly":
+    "Eine Vorschau kann nicht schreiben. Schließen Sie diesen Tab, um zur Deal-Room-Seite zurückzukehren.",
+  "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
+  "buyer.stewardUnknown": "Ihr Ansprechpartner",
+  "buyer.signOut": "Abmelden",
+  "room.docs.title": "Dokumente",
+  "room.docs.sub":
+    "Was der Käufer lesen kann, mit dem Gespräch zu jedem Dokument darunter.",
+  "room.docs.empty": "Noch keine Dokumente im Raum.",
+  "room.docs.fileLabel": "Datei aus diesem Deal",
+  "room.docs.fileHint":
+    "Alles aus dem Dateibereich des Deals kann hinein: Uploads und die Dateien seiner E-Mails.",
+  "room.docs.pickFile": "Datei wählen",
+  "room.docs.noFiles": "Der Dateibereich des Deals ist leer",
+  "room.docs.groupLabel": "Gruppe",
+  "room.docs.add": "In den Raum legen",
+  "room.docs.remove": "{title} aus dem Raum entfernen",
+  "room.docs.group.commercial": "Kommerziell",
+  "room.docs.group.legal": "Rechtliches",
+  "room.docs.group.security_privacy": "Sicherheit & Datenschutz",
+  "room.docs.group.delivery_operations": "Lieferung & Betrieb",
+  "buyer.docs.title": "Dokumente",
+  "buyer.docs.sub":
+    "Was mit Ihnen geteilt wurde, mit dem Gespräch zu jedem Dokument darunter.",
+  "buyer.docs.empty": "Noch keine Dokumente.",
+  "buyer.docs.download": "{title} herunterladen",
+  "buyer.docs.downloadFailed":
+    "Der Download hat nicht begonnen. Versuchen Sie es erneut oder wenden Sie sich an Ihren Ansprechpartner.",
+  "buyer.docs.downloadShort": "Herunterladen",
+  "buyer.poweredBy": "Powered by",
+  "buyer.poweredByMargince": "Powered by Margince",
+  "threads.roomTitle": "Der Raum als Ganzes",
+  "threads.roomSub": "Alles, was nicht ein einzelnes Dokument betrifft.",
+  "threads.aboutThis": "{count} Threads zu diesem Dokument",
+  "threads.aboutThisOne": "1 Thread zu diesem Dokument",
+  "threads.askAbout": "Zu diesem Dokument fragen",
+  "threads.cancel": "Abbrechen",
+  "threads.empty": "Noch nichts gesagt.",
+  "threads.requiredChange": "Änderung nötig",
+  "threads.resolved": "Erledigt",
+  "threads.sideBuyer": "Käufer",
+  "threads.sideSeller": "Anbieter",
+  "threads.replyLabel": "Antwort",
+  "threads.reply": "Antworten",
+  "threads.resolve": "Erledigen",
+  "threads.newLabel": "Neuer Thread",
+  "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
+  "threads.open": "Absenden",
+  "threads.readOnly": "Ihr Zugang ist schreibgeschützt.",
+  "deal360.title": "Deal360",
+  "deal360.sub":
+    "Wie es um den Deal steht, und was ich als Nächstes tun würde.",
+  "deal360.blocker": "Was den Deal aufhält",
+  "deal360.buyer": "Was der Käufer will",
+  "deal360.verdict.live": "Aktiv",
+  "deal360.verdict.drifting": "Schläft ein",
+  "deal360.verdict.blocked": "Blockiert",
+  "deal360.verdict.cold": "Kalt",
+  "deal360.next": "Was als Nächstes zu tun ist",
+  "dealmail.title": "E-Mail",
+  "dealmail.sub.reply":
+    "Sie haben geschrieben, und noch hat niemand geantwortet.",
+  "dealmail.sub.fresh": "Schreiben Sie den Beteiligten dieses Deals.",
+  "dealmail.reply": "Antwort entwerfen",
+  "dealmail.send": "E-Mail senden",
+  "deal360.rewrite": "Neu schreiben",
+  "deal360.readFull": "Vollständige Einschätzung lesen",
+  "deal360.createTask": "Aufgabe anlegen",
+  "deal360.openBrief": "Meeting-Briefing öffnen",
+  "deal360.unreadable":
+    "Dieses Briefing konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
   "prefs.rateLimited":
     "Gerade zu viele Versuche von hier aus. Warte eine Minute und lade neu.",
   "prefs.subscribed": "Abonniert",
@@ -4032,6 +4498,9 @@ export const de = {
   "network.bucket.moderate": "Mittel",
   "network.bucket.strong": "Stark",
   "coverage.title": "Abdeckung",
+  "coverage.engaged": "Im Austausch",
+  "coverage.quiet": "Kein beidseitiger Kontakt",
+  "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
   "coverage.clear":
     "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",
   "coverage.withheld":
@@ -4053,17 +4522,18 @@ export const de = {
   "cf.obj.organization": "Firma",
   "cf.obj.person": "Kontakt",
   "cf.obj.lead": "Lead",
+  "cf.listLabel": "Felder auf {object}",
   "cf.col.field": "Feld",
   "cf.col.type": "Typ",
   "cf.col.addedBy": "Hinzugefügt von",
   "cf.addedByYou": "Du",
   "cf.addedByAdmin": "Admin",
   "cf.empty.deal":
-    "Noch keine benutzerdefinierten Felder auf Deal. Füge unten eines hinzu, wenn du etwas erfasst, das wir nicht mitgeliefert haben.",
+    "Noch keine benutzerdefinierten Felder auf Deal. Füge eines hinzu, wenn du etwas erfasst, das wir nicht mitgeliefert haben.",
   "cf.empty.organization":
-    "Noch keine benutzerdefinierten Felder auf Firma. Füge unten eines hinzu, wenn du etwas erfasst, das wir nicht mitgeliefert haben.",
+    "Noch keine benutzerdefinierten Felder auf Firma. Füge eines hinzu, wenn du etwas erfasst, das wir nicht mitgeliefert haben.",
   "cf.empty.person":
-    "Noch keine benutzerdefinierten Felder auf Kontakt. Die Kernfelder decken den Kontaktdatensatz ab; füge unten eines hinzu, wenn du mehr erfasst.",
+    "Noch keine benutzerdefinierten Felder auf Kontakt. Die Kernfelder decken den Kontaktdatensatz ab; füge eines hinzu, wenn du mehr erfasst.",
   "cf.empty.lead":
     "Noch keine benutzerdefinierten Felder auf Lead. Ein Feld, das du hier hinzufügst, erscheint auch, sobald ein Lead zu einem Kontakt befördert wird.",
   "cf.type.text": "Text",
@@ -4073,6 +4543,7 @@ export const de = {
   "cf.type.picklist": "Auswahlliste",
   "cf.type.boolean": "Ja / Nein",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",
+  "cf.builder.open": "Feld hinzufügen",
   "cf.builder.noCode": "ohne Code",
   "cf.builder.intro":
     "Ein neues Feld ist eine echte Spalte auf der bestehenden Tabelle — es filtert, erscheint in Berichten, Exporten und in der API wie jedes Kernfeld. Es ist kein neues Objekt.",
@@ -4099,7 +4570,6 @@ export const de = {
   "cf.refuse.route":
     "Leite es über den Entwicklungsweg — deine eigenen Entwickler, einen Implementierungspartner oder Gradion-Services.",
   "cf.confirm": "Bestätigen & Feld hinzufügen",
-  "cf.reset": "Zurücksetzen",
   "cf.writing": "wird geschrieben…",
   "cf.added":
     'Feld "{label}" hinzugefügt — live auf 360, Filtern, Export & API',
@@ -4135,6 +4605,8 @@ export const de = {
   "captureActivity.sub":
     "Was in den letzten 24 Stunden mit Ihren Nachrichten geschehen ist.",
   "captureActivity.scope.label": "Wessen Aktivität",
+  "captureActivity.outcomes": "Ergebnisse",
+  "captureActivity.messages": "Nachrichten",
   "captureActivity.scope.mine": "Meine",
   "captureActivity.scope.workspace": "Gemeinsame Kanäle",
   "captureActivity.scopeNote":
@@ -4268,6 +4740,7 @@ export const de = {
   "license.state.licensed": "Lizenziert",
   "license.state.uncapped": "Lizenziert, ohne Sitzplatzgrenze",
   "license.state.unlicensed": "Keine Lizenz konfiguriert",
+  "license.seats.title": "Plätze",
   "license.seats.used": "Belegte Sitzplätze",
   "license.seats.granted": "Gewährte Sitzplätze",
   "license.seats.uncapped": "Keine Grenze",
@@ -4291,7 +4764,7 @@ export const de = {
   "license.counting":
     "Volle Sitzplätze, die weder deaktiviert noch gesperrt sind, Agenten eingeschlossen. Lesende Sitzplätze sind unbegrenzt und werden nie gezählt. Gegen diese Zahl wird ein neues Mitglied zugelassen.",
   "settings.group.you": "Persönlich",
-  "settings.group.org": "Organisation",
+  "settings.group.admin": "Admin-Einstellungen",
   "settings.rates.fxTitle": "Währungskurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Fremdwährungsbeträge in deine Basiswährung umrechnen. Neue Kurse gelten ab heute oder später; vergangene Kurse werden nie geändert.",
@@ -4301,6 +4774,7 @@ export const de = {
     "Nur ein Admin oder Ops sieht, was die Modelle kosten. Die Preise sind Betriebsinformationen und werden deshalb nicht breiter gezeigt.",
   "settings.rates.readOnly":
     "Nur-Lese-Ansicht — du hast keine Berechtigung, Kurse zu ändern.",
+  "settings.rates.fxTableLabel": "Geltende Kurse",
   "settings.rates.fxAdd": "Kurs setzen",
   "settings.rates.fxEmpty": "Noch keine Währungskurse.",
   "settings.rates.fxModalTitle": "Währungskurs setzen",
@@ -4308,6 +4782,7 @@ export const de = {
   "settings.rates.modelTitle": "KI-Modellkosten",
   "settings.rates.modelIntro":
     "Preise je Modell in USD pro 1 Mio. Token zur Schätzung der KI-Kosten. Nur zur Transparenz — Preise ändern das Modell-Routing nie.",
+  "settings.rates.modelTableLabel": "Geltende Preise",
   "settings.rates.modelAdd": "Modellpreis hinzufügen",
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis setzen",
@@ -4348,6 +4823,7 @@ export const de = {
     "Notizen dazu, wie du klingen willst — genau so behalten, wie du sie schreibst; das Modell überschreibt das nie.",
   "settings.voice.savePreferences": "Vorgaben speichern",
   "settings.voice.corpusLabel": "Schreibproben",
+  "settings.voice.corpusRowLabel": "Aktuell in deinem Korpus",
   "settings.voice.meter": "{count} von {target} W\u00f6rtern",
   "settings.voice.register.email": "E-Mail",
   "settings.voice.register.social": "Social",
@@ -4399,6 +4875,8 @@ export const de = {
   "voice.history.empty":
     "Noch keine Versionen \u2014 baue zuerst deine Stimme.",
   "voice.history.deltasLabel": "Was sich ge\u00e4ndert hat",
+  "voice.history.deltasEmpty":
+    "Noch nichts zu vergleichen \u2014 ab deinem zweiten Build steht hier eine \u00c4nderung.",
   "voice.history.deltaRow": "v{from} \u2192 v{to}",
   "voice.history.learning":
     "Lernt kontinuierlich \u2014 erstellte Entw\u00fcrfe: {drafted} \u00b7 vor dem Senden bearbeitet: {edited} \u00b7 abgelehnt: {rejected}.",
@@ -4410,7 +4888,10 @@ export const de = {
   "settings.voice.addPlaceholder":
     "Füg eine E-Mail, einen Post oder etwas Geschriebenes ein…",
   "settings.voice.addSource": "Probe hinzufügen",
+  "settings.voice.addSourceOpen": "Text einfügen",
+  "settings.voice.pasteCancel": "Abbrechen",
   "settings.voice.addFirstLabel": "Deine erste Schreibprobe",
+  "settings.voice.addFirstOpen": "Erste Probe einfügen",
   "settings.voice.addFirstCta": "Hinzufügen und Voice DNA starten",
   "settings.voice.browseFiles": "Dateien auswählen",
   "settings.voice.dropHint":
@@ -4442,6 +4923,7 @@ export const de = {
   "settings.voice.refusalUnsupported":
     "{name} liegt in einem Format vor, das nicht gelesen werden kann.",
   "settings.voice.buildsTitle": "Builds",
+  "settings.voice.buildRowLabel": "Aus deinen Proben bauen",
   "settings.voice.building": "Baue…",
   "settings.voice.rebuild": "Voice DNA neu bauen",
   "settings.voice.buildNeedsWords":
@@ -4472,7 +4954,6 @@ export const de = {
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrundjobs",
   "extAccess.brings.none": "Keine",
-  "extAccess.grants.heading": "Wer sie nutzen darf",
   "extAccess.noObjects":
     "Diese Einheit registriert keine Berechtigungsobjekte — es gibt nichts zu vergeben.",
   "extAccess.roleColumn": "Rolle",
@@ -4495,9 +4976,10 @@ export const de = {
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Wer welche Datensätze bearbeiten darf: Mitglieder eines Teams bearbeiten die Datensätze aller Teammitglieder. Lesen dürfen Kunden, Kontakte, Leads und Deals alle.",
-  "users.teamMembers": "{count} Mitglieder",
   "users.archiveTeam": "Team {name} archivieren",
   "users.newTeamLabel": "Neues Team",
+  "users.newTeamOpen": "Neues Team",
+  "users.teamNameLabel": "Teamname",
   "users.newTeamPlaceholder": "z. B. DACH Sales",
   "users.createTeam": "Team anlegen",
   "users.access.title": "Das sieht dieses Mitglied",
@@ -4541,9 +5023,11 @@ export const de = {
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Handelt mit einem Pass, nicht mit einer Rolle",
   "users.roleLabel": "Rolle für das neue Mitglied",
+  "users.inviteOpen": "Mitglied einladen",
   "users.invite": "Einladen",
   "users.setRole": "Rolle setzen…",
   "users.setRoleFor": "Rolle für {name} setzen",
+  "users.rowActions": "Aktionen für {name}",
   "users.rolesHeld": "Hat {roles}. Eine auszuwählen ersetzt alle",
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
@@ -4573,7 +5057,6 @@ export const de = {
     "Server nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
   "users.link.retry": "Erneut versuchen",
   "users.link.done": "Fertig",
-  "settings.companyKicker": "Firmenwissen",
   "settings.companyReadOnly":
     "Nur-Lese-Ansicht — das Unternehmensprofil zu ändern braucht Schreibrechte auf die Organisation.",
   "settings.companyTitle": "Was Margince über dein Unternehmen weiß",
@@ -4583,13 +5066,20 @@ export const de = {
     "Nur bestätigtes Wissen — Website-Texte werden nie zu Anweisungen.",
   "settings.companyConfirmed": "bestätigte Aussagen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
+  "settings.companyWebsiteHint":
+    "Die öffentliche Website, von der jede Website-Lesung ausgeht.",
+  "settings.companySourceTitle": "Woher wir es lesen",
+  "settings.companyRefreshRow": "Website erneut lesen",
+  "settings.companyRefreshHint":
+    "Wir rufen deine öffentlichen Seiten ab und schlagen Änderungen vor. Nichts landet im Profil, bevor du es geprüft und übernommen hast.",
+  "settings.companyEdit": "Bearbeiten",
+  "settings.companyEditField": "{field} bearbeiten",
   "settings.companyWebsiteRequired":
     "Füge vor der Aktualisierung eine Unternehmenswebsite hinzu.",
   "settings.companyRefresh": "Von Website aktualisieren",
   "settings.companyEssentials": "Die drei Grundlagen",
   "settings.companyPositioning": "Positionierung, Käufer und Vertrieb",
   "settings.companyIdentity": "Identität und rechtliche Angaben",
-  "settings.companyViewSource": "Quelle ansehen",
   "settings.companySave": "Firmenkontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companyRefreshUnreadable":
@@ -4664,6 +5154,8 @@ export const de = {
     "Die geregelte Oberfläche, die ein Passport aufrufen kann — dieselbe Liste, die ein MCP-Client sieht.",
   "tools.egress": "ruft nach außen",
   "tools.scopeAll": "Alle Passports",
+  "tools.inventory": "Alle {count} Werkzeuge",
+  "tools.scopeLabel": "Auf einen Passport eingrenzen",
   "tools.scopedTo": "Erreichbar durch {label}",
   "tools.unreachable": "Bereich nicht gewährt",
 
@@ -4686,8 +5178,9 @@ export const de = {
   "aiusage.col.tokensOut": "Tokens aus",
   "aiusage.col.cost": "Geschätzte Kosten",
   "aiusage.costNote": "Kosten sind Schätzungen zu den konfigurierten Tarifen.",
+  "aiusage.monthLabel": "Monat",
+  "aiusage.spendLabel": "Verbrauch nach Aufgabe",
   "aiusage.days.show": "Tage anzeigen",
-  "aiusage.days.hide": "Tage ausblenden",
   "aiusage.empty": "Keine KI-Aufrufe in diesem Zeitraum.",
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
@@ -4714,6 +5207,7 @@ export const de = {
   "aicalls.badge.cacheHit": "Cache-Treffer",
   "aicalls.badge.degraded": "reduziert",
   "aicalls.badge.retries": "Wiederholung ×{count}",
+  "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
   "aicalls.loadMore": "Mehr laden",
   "aicalls.empty": "Noch keine KI-Aufrufe aufgezeichnet.",
@@ -4808,7 +5302,8 @@ export const de = {
   "quotas.team": "Team",
   "quotas.pickOwner": "Inhaber auswählen…",
   "quotas.pickTeam": "Team auswählen…",
-  "quotas.amountHint": "Ganze Euro — keine Dezimalstellen",
+  "quotas.amountHint":
+    "Ganze Einheiten der unten gewählten Währung. Keine Dezimalstellen.",
   "quotas.periodStart": "Zeitraum-Beginn",
   "quotas.periodEnd": "Zeitraum-Ende",
   "quotas.amount": "Zielbetrag",
@@ -4831,15 +5326,44 @@ export const de = {
     "Wird überall dort angezeigt, wo das Produkt Ihre Organisation benennt.",
   "installationSettings.timezone": "Zeitzone für Auswertungen",
   "installationSettings.timezoneHint":
-    "IANA-Zonenname (zum Beispiel Europe/Berlin). Periodengrenzen aller Auswertungen werden darin berechnet, unabhängig von Ihrer eigenen Anzeigezeitzone.",
+    "IANA-Zonenname (zum Beispiel Europe/Berlin). Die Uhr Ihrer Organisation: Periodengrenzen aller Auswertungen werden darin berechnet, und jedes Datum eines Datensatzes — Abschlusstermine, Rechnungstage, Verlaufsüberschriften — wird darin angezeigt, damit ein Datum für das ganze Team gleich lautet. Unabhängig von Ihrer eigenen Anzeigezeitzone.",
+  "installationSettings.fiscalYearStart": "Geschäftsjahr beginnt",
+  "installationSettings.fiscalYearStartHint":
+    "Der Monat, in dem Ihr Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal — ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
   "installationSettings.baseCurrency": "Basiswährung",
   "installationSettings.baseCurrencyHint":
-    "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Deal dagegen umgerechnet wurde.",
+    "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Betrag dagegen umgerechnet wurde.",
   "installationSettings.baseCurrencyLocked":
-    "Gesperrt: Es wurden bereits Deals gegen diese Währung umgerechnet — eine Änderung würde jede darauf aufbauende Auswertung neu bedeuten.",
+    "Gesperrt: Es wurden bereits Beträge gegen diese Währung umgerechnet — eine Änderung würde jede darauf aufbauende Auswertung neu bedeuten.",
+  "installationSettings.baseLanguage": "Basissprache",
+  "installationSettings.baseLanguageHint":
+    "Die Sprache, in der die KI schreibt, wenn das ganze Team mitliest. Ihre eigene Anzeigesprache ist davon getrennt, und Antworten an Kunden folgen weiterhin der Sprache des Gesprächs.",
   "installationSettings.readOnly":
     "Nur ein Admin oder Ops kann diese Einstellungen ändern.",
+  "installationSettings.edit": "Ändern",
+  "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
+  "aiProviderKeys.title": "Anbieter-Schlüssel",
+  "aiProviderKeys.sub":
+    "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
+  "aiProviderKeys.configured": "Schlüssel gespeichert",
+  "aiProviderKeys.absent": "Kein Schlüssel",
+  "aiProviderKeys.configuredHint":
+    "Im Schlüsseltresor versiegelt. Er kann nicht ausgelesen werden — füge einen neuen ein, um ihn zu ersetzen. Er kann auch über {envVar} ankommen.",
+  "aiProviderKeys.absentHint":
+    "Für diesen Anbieter liegen keine Zugangsdaten vor, ein daran gebundenes Modell kann also nicht aufgerufen werden. Sie können auch über {envVar} ankommen.",
+  "aiProviderKeys.addPlaceholder": "API-Schlüssel einfügen",
+  "aiProviderKeys.replacePlaceholder": "Neuen Schlüssel zum Ersetzen einfügen",
+  "aiProviderKeys.add": "Hinzufügen",
+  "aiProviderKeys.replace": "Ersetzen",
+  "aiProviderKeys.removeConfirmTitle": "Den {provider}-Schlüssel entfernen?",
+  "aiProviderKeys.removeConfirmBody":
+    "Die Zugangsdaten werden aus dem Schlüsseltresor gelöscht und lassen sich nicht wiederherstellen — sie sind nie auslesbar, es gibt also keine Kopie. Jede an diesen Anbieter gebundene KI-Strecke steht, bis ein neuer Schlüssel eingefügt wird.",
+  "aiProviderKeys.withheld":
+    "Nur wer die Modellbindung ändern darf, sieht, für welche Anbieter ein Schlüssel vorliegt.",
+  "aiProviderKeys.remove": "Entfernen",
+  "aiRouting.withheld":
+    "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
@@ -4872,6 +5396,7 @@ export const de = {
     "Adressen und Domains, deren Nachrichten gar nicht erst ins CRM gelangen. Eigene Regeln gelten nur für die Postfächer, die Sie selbst verbunden haben; Regeln der Organisation gelten für alle.",
   "captureExclusions.notRetroactive":
     "Wirkt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben.",
+  "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
   "captureExclusions.scope.user": "Nur ich",
   "captureExclusions.scope.workspace": "Ganze Organisation",
@@ -4883,10 +5408,12 @@ export const de = {
   "captureExclusions.placeholder.address": "name@beispiel.de",
   "captureExclusions.placeholder.domain": "beispiel.de",
   "captureExclusions.add": "Ausschließen",
+  "captureExclusions.addOpen": "Neuer Ausschluss",
   "captureExclusions.remove": "{value} wieder erfassen",
   "ownDomains.title": "Eigene E-Mail-Domains",
   "ownDomains.sub":
     "Die Domains, die zu diesem Unternehmen gehören. Schreiben sich Kolleg:innen untereinander, wird diese Nachricht nicht gespeichert. Auch nicht für dich.",
+  "ownDomains.curatedTitle": "Hier verwaltet",
   "ownDomains.irreversible":
     "Eine Domain hier einzutragen wirkt ab der nächsten Nachricht. Wird sie später entfernt, wird ab diesem Zeitpunkt wieder erfasst. Was übersprungen wurde, solange sie eingetragen war, liefert kein Postfach ein zweites Mal. Bereits erfasste E-Mails bleiben.",
   "ownDomains.fromCompany": "Aus dem Unternehmensprofil. Dort zu ändern:",
@@ -4897,6 +5424,7 @@ export const de = {
   "ownDomains.candidate":
     "aus einem verbundenen Postfach, noch nicht bestätigt",
   "ownDomains.add": "Hinzufügen",
+  "ownDomains.addOpen": "Domain hinzufügen",
   "ownDomains.addLabel": "Eigene Domain hinzufügen",
   "ownDomains.placeholder": "beispiel.de",
   "ownDomains.remove": "{domain} entfernen",
@@ -4937,6 +5465,7 @@ export const de = {
   "webhooks.deliveries.show": "Zustellungen anzeigen",
   "webhooks.deliveries.hide": "Zustellungen ausblenden",
   "webhooks.deliveries.empty": "Noch keine Zustellversuche.",
+  "webhooks.deliveries.title": "Zustellversuche",
   "webhooks.deliveries.deadLetterGroup": "Dead-Letter ({count})",
   "webhooks.deliveries.allGroup": "Weitere Versuche",
   "webhooks.deliveries.column.status": "Status",
@@ -4963,6 +5492,13 @@ export const de = {
     "Der Neuindizierungsstatus des Embedding-Speichers — nur admin/ops, auch zum Ansehen.",
   "embedreindex.withheld":
     "Nur ein Admin oder Ops sieht den Suchindex. Ihn neu aufzubauen kostet Tokens für die ganze Installation, deshalb wird sein Status nicht breiter gezeigt.",
+  "embedreindex.statusLabel": "Indexstatus",
+  "embedreindex.reindexLabel": "Geändertes neu indexieren",
+  "embedreindex.reindexHelp":
+    "Bettet nur die Datensätze neu ein, deren Text sich seit dem letzten Durchlauf geändert hat.",
+  "embedreindex.rebuildLabel": "Gesamten Index neu aufbauen",
+  "embedreindex.rebuildHelp":
+    "Bettet jeden Datensatz von Neuem ein. Dafür gedacht, wenn ein Lauf feststeckt oder das Embedding-Modell gewechselt hat.",
   "embedreindex.statusIdle": "Aktuell",
   "embedreindex.statusNeeded": "Neuindizierung erforderlich",
   "embedreindex.statusReembedding": "Neuindizierung läuft…",
@@ -5029,10 +5565,6 @@ export const de = {
   "person.thin.remediation.employer":
     "Hinterlegen Sie den Arbeitgeber, dann liest Margince dessen Website nach ihrer Rolle.",
   "person.thin.logFirst": "Ersten Kontakt erfassen",
-  "person.timeline.all": "Alle",
-  "person.timeline.messages": "Nachrichten",
-  "person.timeline.meetings": "Termine",
-  "person.timeline.tasks": "Aufgaben",
   "person.enriched.title": "Was Margince gelesen hat",
   "person.enriched.sub":
     "Jeder Wert mit dem Text, aus dem er gelesen wurde. Eine Korrektur bleibt bestehen.",
@@ -5343,17 +5875,20 @@ export const de = {
   "person.research.evidenceOrOmit":
     "KI-unterstützt · nur mit Beleg · ausschließlich öffentliche Informationen",
   "person.meeting.title": "Meeting-Briefing",
+  "person.meeting.brief": "Briefing öffnen",
+  "person.meeting.empty": "Zu diesem Meeting ist noch nichts erfasst.",
   "person.meeting.loading": "Briefing wird zusammengestellt…",
   "person.meeting.assembledNow":
     "Soeben aus den aktuellen Daten zusammengestellt",
   "person.meeting.header": "Auf einen Blick",
+  "person.meeting.what_changed": "Seit dem letzten Kontakt",
   "person.meeting.goal": "Ziel dieses Meetings",
   "person.meeting.attendees": "Teilnehmende",
   "person.meeting.commitments": "Offene Zusagen",
   "person.meeting.deal_state": "Stand des Deals",
   "person.meeting.risks": "Risiken und Warnsignale",
   "person.meeting.talking_points": "Vorgeschlagene Gesprächspunkte",
-  "person.meeting.company_context": "Unternehmenskontext",
+  "person.meeting.company_context": "Letztes Treffen",
 
   "co.strip.healthSummary": "Zustand",
   "co.strip.healthSummary.failingOf": "{failing} von {rated} gefährdet",
@@ -5419,7 +5954,6 @@ export const de = {
   "provider.spend.heldHead": "Reserviert",
   "provider.spend.runsHead": "Abfragen",
   "provider.spend.none": "Es wurde noch nichts gekauft.",
-  "provider.mode": "Wann angereichert wird",
 
   // Der Abschnitt auf der Personenseite. Die drei „nichts da"-Zustände sind
   // mit Absicht drei verschiedene Sätze: nur bei einem davon kann der Leser
@@ -5514,6 +6048,7 @@ export const de = {
   "filters.matchCompanies": "{count} Firmen treffen zu",
   "filters.matchDeals": "{count} Gesch\u00e4fte treffen zu",
   "filters.noFilterYet": "Bedingung hinzuf\u00fcgen, um die Treffer zu sehen",
+  "filters.countUnavailable": "Anzahl nicht verf\u00fcgbar",
   "filters.loadingVocabulary": "Filterbare Felder werden geladen\u2026",
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
@@ -5523,6 +6058,7 @@ export const de = {
   "filters.loadView": "Gespeicherten Filter laden",
   "filters.pickRecord": "Eintrag wählen",
   "filters.loadingRecords": "Auswahl wird geladen…",
+  "filters.pickValue": "Wert wählen",
   "filters.saveList": "Als Liste speichern",
   "filters.saveListTitle": "Diesen Filter als dynamische Liste speichern",
   "filters.listName": "Listenname",
@@ -5583,4 +6119,126 @@ export const de = {
   "sched.skew":
     "Diese Liste ist nicht mehr aktuell: die Nachricht, auf die Sie eingewirkt haben, war schon hinausgegangen, zurückgezogen oder auf einen anderen Zeitpunkt verschoben. Lesen Sie die Liste erneut.",
   "sched.reload": "Erneut lesen",
+  "nav.projects": "Projekte",
+  "unit.projects": "Projekte",
+  "companyProjects.title": "Projekte",
+  "companyProjects.empty":
+    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist — als Kunde, Partner oder Subunternehmer.",
+  "projectCompanies.title": "Unternehmen",
+  "projectCompanies.empty":
+    "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",
+  "projectCompanies.attach": "Unternehmen verknüpfen",
+  "projectCompanies.detachTitle": "Dieses Unternehmen entfernen?",
+  "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
+  "personProjects.title": "Projekte",
+  "personProjects.empty":
+    "Dieser Kontakt erscheint hier, sobald er an einer Lieferung beteiligt ist — als Sponsor, Ansprechpartner oder wer sonst daran arbeitet.",
+  "projectRole.customer": "Kunde",
+  "projectRole.partner": "Partner",
+  "projectRole.subcontractor": "Subunternehmer",
+  "personRole.sponsor": "Sponsor",
+  "personRole.projectLead": "Projektleitung",
+  "personRole.deliveryLead": "Lieferverantwortung",
+  "personRole.expert": "Fachexperte",
+  "personRole.user": "Anwender",
+  "projectLinks.new": "Neues Projekt",
+  "projectLinks.attach": "Projekt verknüpfen",
+  "projectLinks.move": "Zu anderem Projekt verschieben",
+  "projectLinks.detach": "Verknüpfung lösen",
+  "projectLinks.detachConfirm": "Verknüpfung lösen",
+  "projectLinks.detachNamed": "{name} lösen",
+  "projectLinks.roleLabel": "Als",
+  "projectLinks.detachTitle": "Verknüpfung zu diesem Projekt lösen?",
+  "projectLinks.detachBody":
+    "{name} bleibt unverändert. Nur die Verknüpfung zu diesem Datensatz endet — es wird nichts gelöscht.",
+  "projectLinks.emptyTitle": "Noch keine Projekte",
+  "projectLinks.searchLabel": "Projekte nach Name oder Kürzel suchen",
+  "project.name": "Projektname",
+  "project.keyMinted":
+    "Margince vergibt jedem Projekt ein kurzes Kürzel. Steht [{key}] im Betreff einer E-Mail, wird sie diesem Projekt zugeordnet.",
+  "project.company": "Unternehmen",
+  "project.owner": "Verantwortlich",
+  "project.ownerKeep": "Aktuelle Verantwortung behalten",
+  "project.ownerMe": "Ich",
+  "project.ownerUnassign": "Niemand",
+  "project.description": "Beschreibung",
+  "project.targetEnd": "Geplantes Ende",
+  "project.targetEndShort": "Ziel {date}",
+  "project.new": "Neues Projekt",
+  "project.edit": "Projekt bearbeiten",
+  "project.archive": "Projekt archivieren",
+  "project.archiveConfirm":
+    "Durch das Archivieren verschwindet dieses Projekt aus der aktiven Liste und sein Kürzel wird frei. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
+  "project.archivedReadOnly":
+    "Dieses Projekt ist archiviert und nimmt keine Änderungen an.",
+  "project.railLabel": "Projektprofil",
+  "project.phaseLabel": "Phase",
+  "project.filterPhaseAll": "Alle Phasen",
+  "project.viewDelivering": "In Umsetzung",
+  "project.phase.initiative": "Initiative",
+  "project.phase.pursuing": "Im Vertrieb",
+  "project.phase.delivering": "In Umsetzung",
+  "project.phase.closed": "Abgeschlossen",
+  "project.emptyTitle": "Noch keine Projekte",
+  "project.emptyBody":
+    "Ein Projekt ist das Vorhaben, um das es in einem Deal geht. Es beginnt während des Deals in der Phase Initiative und überlebt den Abschluss: Ist der Deal gewonnen, wird die Umsetzung hier verfolgt.",
+  "project.emptyKey":
+    "Jedes Projekt bekommt ein kurzes Kürzel. Jede E-Mail, die es in eckigen Klammern im Betreff trägt, wird dem Projekt automatisch zugeordnet.",
+  "project.rollups.empty": "Noch keine Kennzahlen zu diesem Projekt.",
+  "project.rollups.openValue": "Offenes Dealvolumen",
+  "project.rollups.wonValue": "Gewonnenes Dealvolumen",
+  "project.rollups.openCommitments": "Offene Zusagen",
+  "project.rollups.lastActivity": "Letzte Aktivität",
+  "project.rollups.never": "noch nichts",
+  "project.rollups.activityCount": "Aktivitäten",
+  "project.history.title": "Phasenverlauf",
+  "project.history.empty": "Noch kein Phasenwechsel erfasst.",
+  "project.history.current": "aktuell",
+  "project.history.moved": "{from} → {to}",
+  "project.history.born": "Gestartet in {phase}",
+  "project.history.bySystem": "System",
+  "project.deals.title": "Deals",
+  "project.deals.empty":
+    "Noch kein Deal nennt dieses Projekt. Ein Deal wählt sein Projekt in seinem eigenen Formular.",
+  "project.deals.more": "Mehr Deals als hier gezeigt — öffne die Pipeline.",
+  "project.stakeholders.title": "Beteiligte",
+  "project.stakeholders.empty":
+    "Noch niemand ist an diesem Projekt beteiligt. Beteiligte sind Personen mit einer Rolle hier — Sponsor, Projektleitung, Champion.",
+  "project.role.sponsor": "Sponsor",
+  "project.role.project_lead": "Projektleitung",
+  "project.role.delivery_lead": "Umsetzungsleitung",
+  "project.role.subject_matter_expert": "Fachexperte",
+  "project.contracts.title": "Verträge",
+  "project.contracts.empty":
+    "Unter diesem Projekt ist kein Vertrag abgelegt. Ein Vertrag nennt sein Projekt beim Erfassen.",
+  "project.documents.title": "Dokumente",
+  "project.documents.empty":
+    "An diesem Projekt hängt keine Datei. Dateien an seinen Deals bleiben bei den Deals.",
+  "project.commitments.title": "Offene Zusagen",
+  "project.commitments.empty":
+    "Unter diesem Projekt ist keine offene Aufgabe abgelegt. Verknüpfte Aufgaben erscheinen hier, die nächste Fälligkeit zuerst.",
+  "project.commitments.overdue": "überfällig",
+  "project.timeline.empty":
+    "Unter diesem Projekt ist noch nichts abgelegt. E-Mails mit dem Kürzel im Betreff und verknüpfte Aktivitäten erscheinen hier.",
+  "project.advance.title": "Wechsel zu {phase}",
+  "project.advance.confirm": "Wechseln",
+  "project.advance.close": "Projekt abschließen",
+  "project.advance.body":
+    "Der Wechsel wird mit deiner Begründung im Phasenverlauf festgehalten.",
+  "project.advance.closeBody":
+    "Der Abschluss beendet die Umsetzung. Das Projekt kann später wieder geöffnet werden; die Begründung bleibt erhalten.",
+  "project.advance.reason": "Begründung",
+  "project.advance.reasonRequired":
+    "Ein abgeschlossenes Projekt braucht eine Begründung.",
+  "deal.project": "Projekt",
+  "deal.projectNew": "Neues Projekt …",
+  "deal.projectNeedsCompany":
+    "Wähle zuerst das Unternehmen des Deals — ein Projekt wird an einem Unternehmen gestartet.",
+  "deal.projectUnnamed": "Projekt",
+  "deal.startDeliveryTitle": "Umsetzung starten",
+  "deal.startDelivery": "Umsetzung starten",
+  "deal.startDeliveryAttached":
+    "Dieser Deal hängt an {project}, das Projekt ist aber noch nicht in der Umsetzung. Jetzt wechseln?",
+  "deal.startDeliveryBody":
+    "Dieser Deal ist gewonnen und nennt kein Projekt. An {project} anhängen und das Projekt in die Umsetzung bringen?",
 } as const satisfies Record<MessageKey, string>;

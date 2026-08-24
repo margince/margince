@@ -24,6 +24,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -181,7 +182,7 @@ func TestTheWriterIsToldWhichSubjectsToStayOffOf(t *testing.T) {
 
 	// End to end into the bytes the model receives, not just into the struct: the
 	// instruction is worthless if the payload never names the section.
-	payload := AskRequest(crmcontracts.OrganizationQuestionMeetingPrep, FromView(restricted)).Messages[0].Content
+	payload := AskRequest(crmcontracts.OrganizationQuestionMeetingPrep, FromView(restricted), string(textlang.English)).Messages[0].Content
 	if !strings.Contains(payload, `"sections_omitted":["deals"]`) {
 		t.Errorf("the prompt payload does not name the withheld section, so the "+
 			"instruction to stay silent about it applies to nothing: %s", payload)
@@ -277,7 +278,7 @@ func declaredQuestions(t *testing.T) []crmcontracts.OrganizationQuestion {
 // activity subjects written outside this workspace; a prompt naming a different
 // nonce than the wrap would fence nothing.
 func TestTheAskPromptFencesTheAccountWithItsOwnNonce(t *testing.T) {
-	req := AskRequest(crmcontracts.OrganizationQuestionWhatsOpen, askInput())
+	req := AskRequest(crmcontracts.OrganizationQuestionWhatsOpen, askInput(), string(textlang.English))
 	if len(req.Messages) != 1 {
 		t.Fatalf("got %d messages, want the one fenced summary", len(req.Messages))
 	}
@@ -400,7 +401,7 @@ func TestAnAnswerSpellingIDsFallsBackToTheFloor(t *testing.T) {
 	in := threeCheckIns()
 	lane := idSpellingLane{tasks: in.OpenTasks}
 
-	answered, by, err := Answer(context.Background(), lane, crmcontracts.OrganizationQuestionWhatsOpen, askOrgID, in)
+	answered, by, err := Answer(context.Background(), lane, crmcontracts.OrganizationQuestionWhatsOpen, askOrgID, in, string(textlang.English))
 	if err != nil {
 		t.Fatalf("answer: %v", err)
 	}

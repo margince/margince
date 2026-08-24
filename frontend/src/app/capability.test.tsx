@@ -11,6 +11,9 @@ import {
   useCanMutate,
   useCanUpsert,
   useCanWrite,
+  useCanWriteRecord,
+  useHoldsConsentAdminRole,
+  useHoldsOperatorSeat,
 } from "./capability";
 import { meFixture } from "./mefixture";
 
@@ -47,6 +50,21 @@ function wrapper({ children }: { children: ReactNode }) {
 async function can(object: RbacObject, action: RbacAction): Promise<boolean> {
   const { result } = renderHook(
     () => ({ me: useMe(), allowed: useCan(object, action) }),
+    { wrapper },
+  );
+  await waitFor(() => {
+    expect(result.current.me.isPending).toBe(false);
+  });
+  return result.current.allowed;
+}
+
+// The three-axis answer for ONE record, asked the same way.
+async function canWriteRecord(
+  object: RbacObject,
+  record: { readonly writable?: boolean } | undefined,
+): Promise<boolean> {
+  const { result } = renderHook(
+    () => ({ me: useMe(), allowed: useCanWriteRecord(object, record) }),
     { wrapper },
   );
   await waitFor(() => {
@@ -244,5 +262,116 @@ describe("useCanMutate / useCanWrite — the licensing seat", () => {
 
     expect(await mutate()).toBe(true);
     expect(await write("automation", "update")).toBe(false);
+  });
+});
+
+describe("useHoldsOperatorSeat — the Admin settings section's gate", () => {
+  // The one predicate that decides whether a reader is offered the installation's
+  // configuration at all, so both of its answers are worth pinning: an operator is
+  // admin OR ops, and every other seeded role is outside it. A role list is text
+  // the server sends, so "does this set contain an operator" is exactly the kind
+  // of question that fails silently when it drifts — the section would simply
+  // appear for a rep, and no other assertion in the app would move.
+  //
+  // Asked together with the consent predicate on purpose: that one now READS this
+  // one, and the two have to keep answering the same set. Their NAMES stay apart
+  // because their authorities do, so nothing but a case like this would notice
+  // the delegation quietly stopping.
+  async function operator(): Promise<boolean> {
+    const { result } = renderHook(
+      () => ({
+        me: useMe(),
+        seat: useHoldsOperatorSeat(),
+        consentAdmin: useHoldsConsentAdminRole(),
+      }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    expect(result.current.consentAdmin).toBe(result.current.seat);
+    return result.current.seat;
+  }
+
+  it("admits an admin", async () => {
+    stubMe(meFixture({ roles: ["admin"] }));
+
+    expect(await operator()).toBe(true);
+  });
+
+  it("admits an ops seat, which the server serves the same operator surfaces", async () => {
+    stubMe(meFixture({ roles: ["ops"] }));
+
+    expect(await operator()).toBe(true);
+  });
+
+  it.each(["manager", "rep", "read_only"])(
+    "refuses a seeded %s, however much it is granted",
+    async (role) => {
+      // Grants deliberately present: the seat is not a grant question, and a
+      // predicate that consulted the objects would admit all three — every seeded
+      // role holds `automation:read`, which is what used to open the AI page for
+      // them.
+      stubMe(meFixture({ roles: [role], allow: { automation: ["read"] } }));
+
+      expect(await operator()).toBe(false);
+    },
+  );
+
+  it("refuses a principal the server sends no role for at all", async () => {
+    // Absence is not authority, and what this gates is the installation's own
+    // configuration — the one place where reading an empty list as permissive
+    // would be worst.
+    stubMe(meFixture({ roles: [] }));
+
+    expect(await operator()).toBe(false);
+  });
+});
+
+describe("useCanWriteRecord", () => {
+  // Each case holds the object grant AND a full seat, so the only thing moving
+  // is the row. A test that varied two axes at once could not say which one
+  // produced the answer.
+  const granted = { allow: { organization: ["read", "update"] } } as const;
+
+  it("admits a record the server marked writable", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", { writable: true })).toBe(true);
+  });
+
+  it("refuses a record the server marked not writable, grant and seat notwithstanding", async () => {
+    // The case the whole field exists for: a rep holds organization.update on
+    // the OBJECT and still may not edit a colleague's company.
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", { writable: false })).toBe(
+      false,
+    );
+  });
+
+  it("refuses a record carrying no writable flag at all", async () => {
+    // A server too old to send it, or a projection that does not carry it.
+    // Absence is not authority — the same fail-closed answer every predicate
+    // in this file gives.
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", {})).toBe(false);
+  });
+
+  it("refuses while the record has not arrived", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("organization", undefined)).toBe(false);
+  });
+
+  it("refuses a writable record when the OBJECT grant is missing", async () => {
+    // The row half cannot buy the object half. A seat with no
+    // organization.update writes no company, however the row is marked.
+    stubMe(meFixture({ allow: { organization: ["read"] } } as const));
+
+    expect(await canWriteRecord("organization", { writable: true })).toBe(
+      false,
+    );
   });
 });

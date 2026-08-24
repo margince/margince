@@ -114,12 +114,23 @@ func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConf
 	if next.Unconfigured() {
 		return false
 	}
-	// The version is the whole comparison. It is a digest of what the binding
-	// BINDS, so it changes exactly when the models change and not when the
-	// document is merely rewritten — which is what keeps this from rebinding,
-	// and dropping every cached completion, on every tick.
+	// TWO comparands, because a binding and a credential change independently
+	// and only one of them moves the routing digest.
+	//
+	// RoutingVersion is a digest of what the binding BINDS — tiers, models, base
+	// URLs — so it changes exactly when the models change and not when the
+	// document is merely rewritten, which is what keeps this from rebinding and
+	// dropping every cached completion on every tick.
+	//
+	// It is also blind to the credential, deliberately: it is a brief cache key,
+	// and folding a key into it would regenerate every stored brief through paid
+	// models on each rotation. So a rotated or removed key changes nothing it can
+	// see, and comparing it alone left every running role calling the vendor with
+	// the credential it resolved at boot — including one an admin had just
+	// revoked. Revoking a credential through the product has to stop its use.
 	previous := w.target.RoutingVersion()
-	if next.RoutingVersion() == previous {
+	previousCredentials := w.target.CredentialVersion()
+	if next.RoutingVersion() == previous && next.CredentialVersion() == previousCredentials {
 		return false
 	}
 	if err := w.target.Rebind(next); err != nil {
@@ -130,7 +141,10 @@ func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConf
 			"error", err, "routing_version", previous)
 		return false
 	}
+	// Which of the two moved, because the operator's next question differs: a
+	// re-pointed tier is a routing edit, a moved credential is a rotation.
 	w.log.InfoContext(ctx, "adopted a changed model binding without restarting",
-		"from", previous, "to", next.RoutingVersion())
+		"from", previous, "to", next.RoutingVersion(),
+		"credentials_changed", next.CredentialVersion() != previousCredentials)
 	return true
 }

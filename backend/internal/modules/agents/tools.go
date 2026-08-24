@@ -12,6 +12,7 @@ package agents
 // provenance any more than a browser can.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -59,15 +60,16 @@ type StageResolver interface {
 // Every verb the contract declares with `x-mcp-tool` is registered by one of
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership) {
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail) {
 	r.Register(searchRecords{p: p})
 	r.Register(readRecord{p: p})
 	r.Register(createRecord{p: p})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals})
 	r.Register(logActivity{p: p})
+	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages})
 	r.Register(progressDeal{p: p, stages: stages})
-	r.Register(qualifyLead{p: p})
+	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p})
 	r.Register(promoteLead{p: p, promoter: promoter})
 	r.Register(mergeRecords{p: p})
@@ -82,7 +84,26 @@ type FieldOwnership interface {
 	HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error)
 }
 
-func schema(s string) json.RawMessage { return json.RawMessage(s) }
+// schema turns a hand-written JSON schema into the wire form, COMPACTED.
+//
+// The compaction is not tidiness. Every spec's InputSchema is rendered
+// verbatim into the tool listing that rides every Surface-B prompt
+// (runner.ToolListing), so the tabs and newlines these literals are indented
+// with are paid for on every run — ~210 tokens across the core surface, out of
+// a listing already held to a two-thirds budget of the window.
+//
+// Doing it here rather than by unindenting forty literals keeps the source
+// readable: a schema stays legible where it is written, and costs nothing
+// where it is read. A literal that is not valid JSON is left exactly as it
+// was, so a malformed schema still fails the test that reads it rather than
+// being hidden by this.
+func schema(s string) json.RawMessage {
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, []byte(s)); err != nil {
+		return json.RawMessage(s)
+	}
+	return json.RawMessage(compact.String())
+}
 
 // --- search_records (🟢 read) ---
 
@@ -100,8 +121,8 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		// tools claiming one operation family between them.
 		OpenAPIOp: "search",
 		InputSchema: schema(`{"type":"object","properties":{
-			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched."},
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","project"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these"},
+			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
+			"record_type":{"type":"string","enum":["person","organization","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
 			"additionalProperties":false}`),
@@ -185,9 +206,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
 		Description:   readRecordCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getPerson/getOrganization/getDeal/getLead/getActivity/getProject",
+		OpenAPIOp: "getPerson/getOrganization/getDeal/getLead/getActivity/getProject/getPartner",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project"]},
+			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project","partner"],"description":"partner is addressed by its ORGANIZATION's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
@@ -223,7 +244,8 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		OpenAPIOp: "createPerson/createOrganization/createDeal/createLead/createProject/createRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
 			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project","relationship"]},
-			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `}},
+			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}
@@ -249,19 +271,6 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		return nil, err
 	}
 	return readBack(ctx, t.p, ref)
-}
-
-// RecordTypeOf lets the contract's per-record-type tier floor see which record
-// this call creates (tierfloor.go).
-func (createRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
-
-// ServesRecordType reports the record types this verb can actually create — the
-// contract's own create bodies, which is the same vocabulary the schema
-// advertises. The floor reads it so a type this verb cannot create is never
-// tightened into an approval that could only ever fail.
-func (createRecord) ServesRecordType(recordType string) bool {
-	_, served := createShapes[datasource.EntityType(recordType)]
-	return served
 }
 
 // StageInfo puts a create the contract tightened to confirm-first in the inbox
@@ -340,7 +349,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Which messaging transport carried this — required when kind is \"message\", and not allowed otherwise. Name a provider this installation has registered; list_channel_providers reports them."},
+			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider list_channel_providers names."},
 			"subject":{"type":"string"},"body":{"type":"string"},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
@@ -348,7 +357,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"What the activity is about. Omit it and the activity is stored unattached to any record — it will not appear on a person's, company's or deal's timeline."},
+				"description":"What it is about; unlinked, it appears on no timeline."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

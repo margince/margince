@@ -150,65 +150,47 @@ func TestReleaseGuardIsInertOnAnUnbootstrappedInstallation(t *testing.T) {
 	}
 }
 
-// TestReleaseGuardIgnoresAnArchivedWorkspacesRelease: the guard reads the release
-// of THIS installation, and of no other tenant that ever lived in this database.
+// TestReleaseGuardIgnoresAPredecessorsRelease is the property a workspace
+// predicate used to give and the installation marker gives now.
 //
-// This is a regression gate for a scope that used to be free and is not any more.
-// Row-level security applied the workspace predicate to every statement, so an
-// unscoped read returned zero rows; migration 0217 retired it and says plainly
-// what that costs — a statement that forgets its scope returns another tenant's
-// rows, and no test fails by construction. This is that test.
-//
-// An ARCHIVED workspace is the reachable case, not two live ones. The
-// installation resolver refuses two live organizations outright, but it skips an
-// archived workspace by `archived_at IS NULL` while that workspace's system_log
-// rows remain. A newer release row of its own would then decide what release this
-// installation is running, and every correctly deployed role would refuse to
-// start against it.
-func TestReleaseGuardIgnoresAnArchivedWorkspacesRelease(t *testing.T) {
+// An installation that merged an archived predecessor still holds that
+// predecessor's release rows: the ledgers are exempt from the archived-residue
+// gate BY NAME, because their immutability trigger makes clearing them
+// impossible. So the rows are there, they can be newer than ours by occurred_at,
+// and before the marker the guard read one of them as this installation's — a
+// worker would refuse to start against a release nobody here is running.
+func TestReleaseGuardIgnoresAPredecessorsRelease(t *testing.T) {
 	env := Setup(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	owner := OwnerConn(t)
 
-	// This installation is release 1970.42.
 	if err := compose.RecordInstallationRelease(ctx, env.Pool, logger, "1970.42"); err != nil {
-		t.Fatalf("RecordInstallationRelease: %v", err)
+		t.Fatalf("recording this installation's release: %v", err)
 	}
 
-	// A second tenant that used to live here, at a different release, recorded
-	// LATER than ours so it wins every ordering the read could use. Written while
-	// the workspace is still live, then archived — which is the order the residue
-	// actually arrives in, and the order the archived-tenant write guards permit.
-	other := ids.NewV7()
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, 'archived-tenant')`, other); err != nil {
-		t.Fatalf("seeding the second workspace: %v", err)
-	}
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO system_log (workspace_id, actor_type, actor_id, action, detail, occurred_at)
-		 VALUES ($1, 'system', 'system:release-version', 'release.version_observed',
-		         '{"release_version":"1970.99"}'::jsonb, now() + interval '1 hour')`, other); err != nil {
-		t.Fatalf("seeding the second workspace's release row: %v", err)
-	}
-	if _, err := owner.Exec(ctx,
-		`UPDATE workspace SET archived_at = now() WHERE id = $1`, other); err != nil {
-		t.Fatalf("archiving the second workspace: %v", err)
+	// The predecessor's row, written directly because no live code can produce
+	// one any more — an installation records only under its own marker. Stamped
+	// an hour AHEAD so it wins every ordering the read could use, which is what
+	// makes this about the marker rather than about occurred_at.
+	if _, err := OwnerConn(t).Exec(ctx, `
+		INSERT INTO system_log (actor_type, actor_id, action, detail, occurred_at)
+		VALUES ('system', 'system:release-version', 'release.version_observed',
+		        jsonb_build_object('release_version', '1970.99', 'installation', $1::text),
+		        now() + interval '1 hour')`, ids.NewV7()); err != nil {
+		t.Fatalf("seeding the predecessor's release row: %v", err)
 	}
 
-	// A role at THIS installation's release starts. Without the workspace
-	// predicate the read answers 1970.99 and this call refuses.
+	// A role at THIS installation's release still starts.
 	if err := compose.AssertInstallationRelease(ctx, env.Pool, logger, "1970.42"); err != nil {
-		t.Fatalf("a role at this installation's release refused to start, because "+
-			"another tenant's row was read as ours: %v", err)
+		t.Fatalf("a role at this installation's release refused to start, so a predecessor's row was read as ours: %v", err)
 	}
-	// And the guard is still armed, rather than reading nothing at all.
+	// The guard is still armed rather than reading nothing at all.
 	if err := compose.AssertInstallationRelease(ctx, env.Pool, logger, "1970.41"); err == nil {
-		t.Fatal("a role at the wrong release started; the scoped read must still find our own row")
+		t.Fatal("a role at the wrong release started; the marked read must still find our own row")
 	}
-	// The archived tenant's release is not ours even when it is the only value a
-	// role could match, which is what proves the predicate rather than the order.
+	// And the predecessor's release is not ours even though it is the newest
+	// row in the ledger — which is what proves the marker rather than the order.
 	if err := compose.AssertInstallationRelease(ctx, env.Pool, logger, "1970.99"); err == nil {
-		t.Fatal("a role matched the ARCHIVED workspace's release; that row is not this installation's")
+		t.Fatal("a role matched the PREDECESSOR's release; that row is not this installation's")
 	}
 }

@@ -112,21 +112,32 @@ describe("AuthScreen login", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
 
     expect(screen.getByText("Margince · AI system")).toBeTruthy();
-    // The statement is TYPED now (ADR-0076 Decision 5), so the visible layer
-    // holds a partial string for the first second and there are three nodes
-    // carrying this sentence. Assert on the `.sr-only` one: it is what a screen
-    // reader is handed, it is complete on the first render, and reading the
-    // visible layer instead would be asserting on a race.
+    // The greeting is TYPED (ADR-0076 Decision 5), so the visible layer holds a
+    // partial string for the first second and there are three nodes carrying it.
+    // Assert on the `.sr-only` one: it is what a screen reader is handed, it is
+    // complete on the first render, and reading the visible layer instead would
+    // be asserting on a race.
+    expect(
+      screen.getByText("Hi, I’m Margince.", { selector: ".sr-only" }),
+    ).toBeTruthy();
+    // The rest of the region's paragraph, in the order it is said. All four,
+    // because the copy is one voice speaking and a region that lost the promise
+    // or the handover would still pass an assertion on the first line alone.
+    expect(
+      screen.getByText("I’m here to take care of the work around your work."),
+    ).toBeTruthy();
     expect(
       screen.getByText(
-        "I can only use your context after Margince verifies that it's you.",
-        { selector: ".sr-only" },
+        "I’ll keep your CRM up to date, spot what needs attention, and prepare the next step—so you can focus on customers.",
       ),
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "That context is your mail, your calendar, and what I can read on the open web. Nothing else, and nothing without your permission.",
+        "And don’t worry: I’ll never send an email or message without asking you first.",
       ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("First, let me make sure it’s really you…"),
     ).toBeTruthy();
     expect(await screen.findByText("Configured")).toBeTruthy();
     expect(
@@ -481,7 +492,7 @@ describe("federated sign-in", () => {
       name: "Continue with Microsoft",
     });
     expect(microsoft.disabled).toBe(true);
-    expect(microsoft.classList.contains("is-unavailable")).toBe(true);
+    expect(microsoft.classList.contains("btn-unavailable")).toBe(true);
     // Inert, and that is the point of the switch: it draws the design, it does
     // not invent a redirect. Clicking must neither navigate nor hit the wire.
     const calls = stubApi({ password: true, password_reset: true }, () =>
@@ -527,7 +538,7 @@ describe("federated sign-in", () => {
         expect(label).toContain(brand);
       }
     }
-    expect(document.querySelector(".is-unavailable")).toBeNull();
+    expect(document.querySelector(".btn-unavailable")).toBeNull();
   });
 
   // The preview marker (app/ui-preview.ts), on the component that renders it.
@@ -546,8 +557,9 @@ describe("federated sign-in", () => {
       />,
     );
 
-    // The state is `disabled` plus a class the stylesheet draws, and the
-    // accessible name is left as the installation's own string. That is the
+    // The state is `Button`'s `unavailable`, which refuses the press itself and
+    // draws the resting dim, and the accessible name is left as the
+    // installation's own string. That is the
     // assertion worth pinning: the marker must not append copy to somebody
     // else's label, so an unrecognised provider on a real installation could
     // never have words we wrote spliced onto the words they wrote.
@@ -555,7 +567,7 @@ describe("federated sign-in", () => {
       name: "Continue with Microsoft",
     });
     expect(microsoft.disabled).toBe(true);
-    expect(microsoft.classList.contains("is-unavailable")).toBe(true);
+    expect(microsoft.classList.contains("btn-unavailable")).toBe(true);
     // What names the button, not its raw text: the phone layout's short brand
     // word is `aria-hidden` beside an `.sr-only` copy of the served label. What
     // must never happen is a word of OURS reaching the name.

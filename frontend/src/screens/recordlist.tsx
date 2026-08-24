@@ -1,7 +1,6 @@
 import type { ListColumn } from "../design-system/listtable";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
-import { RECORD_ZONE } from "./company360";
 import { OwnerName } from "./entityref";
 import type { ViewSpec } from "./listquery";
 
@@ -44,6 +43,7 @@ export function ownerColumn<Row extends OwnedRecord>(
 export function createdColumn<Row extends OwnedRecord>(
   t: Translate,
   locale: Locale,
+  recordZone: string,
 ): ListColumn<Row> {
   return {
     key: "created",
@@ -51,7 +51,7 @@ export function createdColumn<Row extends OwnedRecord>(
     cell: (row) => (
       <span className="t-caption">
         {row.created_at
-          ? formatDateAbbrev(row.created_at, locale, RECORD_ZONE)
+          ? formatDateAbbrev(row.created_at, locale, recordZone)
           : ""}
       </span>
     ),
@@ -66,6 +66,7 @@ export function createdColumn<Row extends OwnedRecord>(
 export function lastActivityColumn<Row extends OwnedRecord>(
   t: Translate,
   locale: Locale,
+  recordZone: string,
 ): ListColumn<Row> {
   return {
     key: "lastActivity",
@@ -73,7 +74,7 @@ export function lastActivityColumn<Row extends OwnedRecord>(
     cell: (row) => (
       <span className="t-caption">
         {row.last_activity_at
-          ? formatDateAbbrev(row.last_activity_at, locale, RECORD_ZONE)
+          ? formatDateAbbrev(row.last_activity_at, locale, recordZone)
           : ""}
       </span>
     ),

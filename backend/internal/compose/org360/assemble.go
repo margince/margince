@@ -15,8 +15,10 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
@@ -31,6 +33,7 @@ import (
 const (
 	sectionPeople          = crmcontracts.Organization360SectionsOmitted("people")
 	sectionDeals           = crmcontracts.Organization360SectionsOmitted("deals")
+	sectionProjects        = crmcontracts.Organization360SectionsOmitted("projects")
 	sectionStrength        = crmcontracts.Organization360SectionsOmitted("strength")
 	sectionActivities      = crmcontracts.Organization360SectionsOmitted("activities")
 	sectionLastTouch       = crmcontracts.Organization360SectionsOmitted("last_touch")
@@ -49,6 +52,8 @@ const (
 type Service struct {
 	pool      *pgxpool.Pool
 	people    *people.Store
+	deals     *deals.Store
+	projects  *projects.Store
 	approvals *approvals.Service
 	now       func() time.Time
 }
@@ -57,8 +62,18 @@ type Service struct {
 // now is the read's injected clock (the house shape: a test pins a fixed
 // instant so a strength half-life or a stall window cannot flake between
 // seeding and reading).
-func NewService(pool *pgxpool.Pool, peopleStore *people.Store, approvalsSvc *approvals.Service, now func() time.Time) *Service {
-	return &Service{pool: pool, people: peopleStore, approvals: approvalsSvc, now: now}
+func NewService(
+	pool *pgxpool.Pool,
+	peopleStore *people.Store,
+	dealsStore *deals.Store,
+	projectStore *projects.Store,
+	approvalsSvc *approvals.Service,
+	now func() time.Time,
+) *Service {
+	return &Service{
+		pool: pool, people: peopleStore, deals: dealsStore, projects: projectStore,
+		approvals: approvalsSvc, now: now,
+	}
 }
 
 // Assemble reads the whole company page inside ONE workspace transaction.
@@ -66,6 +81,22 @@ func NewService(pool *pgxpool.Pool, peopleStore *people.Store, approvalsSvc *app
 // refusal; every other section is attempted, and a section refused for
 // lack of a grant is omitted and named rather than returned empty.
 func (s *Service) Assemble(ctx context.Context, orgID ids.OrganizationID) (crmcontracts.Organization360, error) {
+	return s.AssembleScoped(ctx, orgID, AssembleOptions{})
+}
+
+// AssembleOptions narrows what the page reads. The zero value is the whole
+// record.
+type AssembleOptions struct {
+	// ProjectID scopes the timeline and the last-touch dates to one body of
+	// work: rows filed under this project or under none, never rows filed
+	// under another project. The rule is activities.ActivityWithinProject;
+	// contacts, deals and tags describe the account, not a project, and stay
+	// whole.
+	ProjectID *ids.ProjectID
+}
+
+// AssembleScoped is Assemble narrowed by opts.
+func (s *Service) AssembleScoped(ctx context.Context, orgID ids.OrganizationID, opts AssembleOptions) (crmcontracts.Organization360, error) {
 	now := s.now().UTC()
 	out := crmcontracts.Organization360{AsOf: now, SectionsOmitted: []crmcontracts.Organization360SectionsOmitted{}}
 	// The custom-field catalog is read above the transaction, not inside it:
@@ -81,7 +112,10 @@ func (s *Service) Assemble(ctx context.Context, orgID ids.OrganizationID) (crmco
 			return err
 		}
 		out.Organization = org
-		return s.sections(ctx, tx, orgID, now, &out)
+		if err := opts.admit(ctx, tx, orgID, &out); err != nil {
+			return err
+		}
+		return s.sections(ctx, tx, orgID, now, opts, &out)
 	})
 	if err != nil {
 		return crmcontracts.Organization360{}, err
@@ -95,8 +129,8 @@ func (s *Service) Assemble(ctx context.Context, orgID ids.OrganizationID) (crmco
 // apperrors.ErrPermissionDenied is omitted and named; any other error
 // fails the whole read, because a section that broke for a real reason
 // must never be reported as one the caller may not see.
-func (s *Service) sections(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time, out *crmcontracts.Organization360) error {
-	a := &assembly{svc: s, ctx: ctx, tx: tx, orgID: orgID, now: now, out: out}
+func (s *Service) sections(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time, opts AssembleOptions, out *crmcontracts.Organization360) error {
+	a := &assembly{svc: s, ctx: ctx, tx: tx, orgID: orgID, now: now, opts: opts, out: out}
 	each := []struct {
 		name crmcontracts.Organization360SectionsOmitted
 		read func() error
@@ -104,6 +138,7 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, orgID ids.Organizatio
 		{sectionPeople, a.readContacts},
 		{sectionStrength, a.readStrength},
 		{sectionDeals, a.readDeals},
+		{sectionProjects, a.readProjects},
 		{sectionActivities, a.readTimeline},
 		{sectionLastTouch, a.readLastTouch},
 		{sectionStateStrip, a.readStateStrip},
@@ -145,6 +180,7 @@ type assembly struct {
 	tx    pgx.Tx
 	orgID ids.OrganizationID
 	now   time.Time
+	opts  AssembleOptions
 	out   *crmcontracts.Organization360
 
 	// baseCurrency is the installation's reporting currency, resolved at most
@@ -262,9 +298,10 @@ func (a *assembly) readTimeline() error {
 	entityType := "organization"
 	limit := sectionLimit
 	data, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
-		EntityType: &entityType,
-		EntityID:   &orgUUID,
-		Limit:      &limit,
+		EntityType:      &entityType,
+		EntityID:        &orgUUID,
+		Limit:           &limit,
+		WithinProjectID: a.opts.ProjectID,
 	})
 	if err != nil {
 		return err
@@ -321,7 +358,7 @@ func (a *assembly) readNextSteps() error {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	data, page, err := nextStepsSection(a.ctx, a.tx, a.orgID, a.now)
+	data, page, err := nextStepsSection(a.ctx, a.tx, a.orgID, a.now, a.opts)
 	if err != nil {
 		return err
 	}
@@ -339,7 +376,7 @@ func (a *assembly) readNextMeeting() error {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	meeting, err := nextMeetingSection(a.ctx, a.tx, a.orgID, a.now)
+	meeting, err := nextMeetingSection(a.ctx, a.tx, a.orgID, a.now, a.opts)
 	if err != nil {
 		return err
 	}

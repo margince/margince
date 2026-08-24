@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -264,6 +265,71 @@ describe("RelinkModal", () => {
       entity_id: "o-2",
       replace_existing_of_type: true,
     });
+  });
+
+  it("moves the whole conversation through relinkThread when asked", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({
+      "GET /search": () =>
+        jsonResponse({
+          data: [{ type: "project", id: "pr-4", title: "ERP rollout" }],
+          page: { has_more: false },
+        }),
+      "POST /activities/relink-thread": () => jsonResponse({ relinked: 3 }),
+    });
+    render(
+      <RelinkModal
+        activityId="act-1"
+        threadKey="thread:abc"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={onClose}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole("searchbox"), "ERP");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "ERP rollout" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Also move the rest of this conversation",
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const thread = sent.find((r) => r.key === "POST /activities/relink-thread");
+    expect(thread?.body).toEqual({
+      thread_key: "thread:abc",
+      entity_type: "project",
+      entity_id: "pr-4",
+      replace_existing_of_type: false,
+    });
+    expect(thread?.headers.get("Idempotency-Key")).toBeTruthy();
+    // The single-activity route is not called on the way.
+    expect(sent.find((r) => r.key === "POST /activities/act-1/relink")).toBe(
+      undefined,
+    );
+  });
+
+  it("offers the conversation toggle only when the activity has a thread", () => {
+    stubRoutes({});
+    render(
+      <RelinkModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "Also move the rest of this conversation",
+      }),
+    ).toBeNull();
   });
 
   it("drops activity results — relink has no activity target", async () => {
@@ -1811,5 +1877,252 @@ describe("ComposeModal started from an account", () => {
     expect(screen.getByPlaceholderText("Body")).toHaveProperty("value", "");
     expect(screen.queryByText(/Based on/)).toBeNull();
     expect(screen.queryByText(/AI assistance/)).toBeNull();
+  });
+
+  // A check-in mail to an account nobody has spoken to in a while is the FIRST
+  // message on a delivery: no thread exists, so nothing files it automatically,
+  // and it is exactly the message that needs a project chosen. The account
+  // having no contact yet is a dead end for the DRAFT — the model has no
+  // relationship to write from — and it used to take the project picker with
+  // it, so the mail landed unfiled and the ladder asked about it afterwards.
+  it("still offers the project when the account has no contact yet", async () => {
+    stubRoutes({
+      "GET /organizations/org-1/360": () =>
+        jsonResponse({
+          state: "ready",
+          as_of: "2026-08-09T09:00:00Z",
+          organization: {
+            id: "org-1",
+            display_name: "Acme",
+            source: "manual",
+            captured_by: "human:u1",
+            created_at: "2026-08-01T00:00:00Z",
+            updated_at: "2026-08-01T00:00:00Z",
+          },
+          sections_omitted: [],
+          people: { data: [], page: { has_more: false } },
+          projects: [
+            {
+              project_id: "pr-1",
+              name: "Zeta migration",
+              key: "ZM-1",
+              phase: "initiative",
+            },
+          ],
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/No contact on this account yet/),
+    ).toBeTruthy();
+    // The dead end is about the DRAFT, not about which body of work the
+    // message is for.
+    expect(
+      await screen.findByRole("combobox", { name: /Project/ }),
+    ).toBeTruthy();
+  });
+
+  // The composer's project control, on a reply. A reply inherits its thread's
+  // project on its own (capture's stickiness rung), and the composer suggests
+  // that project so the rep does not retype what is already true — but it is a
+  // SUGGESTION in a picker they can set to None, not a fact stated at them.
+  const replyBackend = (
+    links: { entity_type: string; entity_id: string }[],
+    projects: { project_id: string; name: string; key: string }[],
+  ) =>
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          occurred_at: "2026-08-09T09:00:00Z",
+          source: "gmail",
+          created_at: "2026-08-09T09:00:00Z",
+          updated_at: "2026-08-09T09:00:00Z",
+          version: 1,
+          links,
+        }),
+      "GET /deals/d-1": () =>
+        jsonResponse({
+          id: "d-1",
+          name: "netcare",
+          organization_id: "o-1",
+          project_id: "pr-9",
+        }),
+      "GET /organizations/o-1/360": () =>
+        jsonResponse({
+          as_of: "2026-08-09T09:00:00Z",
+          organization: {
+            id: "o-1",
+            display_name: "netcare",
+            source: "manual",
+            captured_by: "human:u1",
+            created_at: "2026-08-01T00:00:00Z",
+            updated_at: "2026-08-01T00:00:00Z",
+          },
+          sections_omitted: [],
+          people: { data: [], page: { next_cursor: null } },
+          deals: { data: [], page: { next_cursor: null } },
+          projects: projects.map((one) => ({
+            ...one,
+            phase: "delivering",
+          })),
+        }),
+      "GET /projects/pr-9": () =>
+        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
+      "GET /projects/pr-1": () =>
+        jsonResponse({ id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" }),
+    });
+
+  const openReply = async () => {
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="deal"
+        entityId="d-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    return () => screen.getByPlaceholderText("Subject") as HTMLInputElement;
+  };
+
+  it("offers the company's projects and defaults to the thread's own", async () => {
+    replyBackend(
+      [
+        { entity_type: "deal", entity_id: "d-1" },
+        { entity_type: "project", entity_id: "pr-1" },
+      ],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
+    );
+    const subject = await openReply();
+
+    const picker = await screen.findByLabelText("Project");
+    // The thread's own project is the default, not the deal's: a conversation
+    // already filed settled this.
+    await waitFor(() =>
+      expect(picker.textContent).toContain("ERP rollout Acme"),
+    );
+    // Both of the company's projects are on offer, plus None.
+    await userEvent.setup().click(picker);
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual([
+      "No project",
+      "ERP-27 · ERP rollout Acme",
+      "N2P-1 · Netcare 2 project",
+    ]);
+    await userEvent.setup().keyboard("{Escape}");
+    // And the tag is already in the subject — nothing explains it, because the
+    // field shows it.
+    await waitFor(() => expect(subject().value).toBe("[ERP-27]"));
+  });
+
+  it("defaults to the deal's project when the thread names none", async () => {
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
+    );
+    const subject = await openReply();
+
+    const picker = await screen.findByLabelText("Project");
+    await waitFor(() =>
+      expect(picker.textContent).toContain("Netcare 2 project"),
+    );
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+  });
+
+  it("takes the tag out when the rep picks None, and puts another one in", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
+    );
+    const subject = await openReply();
+    const picker = await screen.findByLabelText("Project");
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+    // `[` opens a key descriptor in user-event's parser, so the tag is typed
+    // through fireEvent rather than escaped into unreadability.
+    await user.clear(subject());
+    fireEvent.change(subject(), {
+      target: { value: "[N2P-1] Re: Angebot" },
+    });
+
+    await pickOption(user, picker, "No project");
+    await waitFor(() => expect(subject().value).toBe("Re: Angebot"));
+
+    // Choosing a different project stamps that one instead.
+    await pickOption(user, picker, "ERP-27 · ERP rollout Acme");
+    await waitFor(() => expect(subject().value).toBe("[ERP-27] Re: Angebot"));
+  });
+
+  it("offers nothing when the company reaches no live project", async () => {
+    replyBackend([{ entity_type: "deal", entity_id: "d-1" }], []);
+    const subject = await openReply();
+
+    await screen.findByRole("button", { name: "Draft with AI" });
+    // A list whose only entry is None asks a question with one answer.
+    expect(screen.queryByLabelText("Project")).toBeNull();
+    expect(subject().value).toBe("");
+  });
+
+  it("keeps the tag when the rep types a subject over it", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+    );
+    const subject = await openReply();
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    // The ordinary thing a rep does next: type the subject. The field is
+    // replaced wholesale, and the tag has to survive that — writing it once
+    // when the picker moved is what lost it.
+    await user.clear(subject());
+    await user.type(subject(), "Re: Kurzer Austausch?");
+
+    await waitFor(() =>
+      expect(subject().value).toBe("[N2P-1] Re: Kurzer Austausch?"),
+    );
+  });
+
+  it("puts the tag back when the subject loses it, while a project is chosen", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+    );
+    const subject = await openReply();
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    // Deleting the tag out of the text is not how a project is unset — the
+    // picker is, and it still names one. Leaving the text without it would put
+    // the field and the picker in two different states, and the send would
+    // honour the picker.
+    await user.clear(subject());
+    await user.type(subject(), "Re: ohne Tag");
+
+    await waitFor(() => expect(subject().value).toBe("[N2P-1] Re: ohne Tag"));
+
+    // The way to have no tag is to choose No project.
+    await pickOption(user, screen.getByLabelText("Project"), "No project");
+    await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
   });
 });

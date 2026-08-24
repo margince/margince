@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 repository. It is the long form: the full operating detail lives here.
 [AGENTS.md](AGENTS.md) is a deliberately shorter digest for other agent
 harnesses that links back here. Most sections differ on purpose, so do not sync
-them line by line. **Three sections are the exception** — *The write shape*,
-*License headers*, and *Rules learned from the review loop* — which both files
-carry in full because both are read in isolation. They must stay byte-identical,
-and `TestSharedRulebookSectionsAreIdenticalInBothDocs` in
-`backend/agentsdocparity_test.go` fails when they drift: edit one, edit both.
+them line by line. **Four sections are the exception** — *The write shape*,
+*Reuse before you build*, *License headers*, and *Rules learned from the review
+loop* — which both files carry in full because both are read in isolation. They
+must stay byte-identical, and `TestSharedRulebookSectionsAreIdenticalInBothDocs`
+in `backend/agentsdocparity_test.go` fails when they drift: edit one, edit both.
 
 AGENTS.md is machine-read, so keep it accurate: `cli/craft` feeds the **whole**
 nearest AGENTS.md into the gate prompt (`gate.Assembler.nearestAgents` walks up
@@ -75,6 +75,21 @@ other net under them.
 A decision number (`ADR-0054`) may appear as a label, but never cite it as
 though a reader could open it — the records are not in this tree. Write the rule
 itself out here, where a public contributor can read it.
+
+**[docs/principles/](docs/principles/README.md) explains these rules** — six
+pages, one per principle, each naming the rulebook section it explains, the
+method for checking the tree still holds it, and what it explicitly does not ask
+for. That is the PUBLIC explanation and the audit method, which is a different
+thing from the private decision rationale described above: a principle page
+tells you how to check a rule, not why the team chose it.
+
+The binding short form stays in the rulebooks, and specifically in `AGENTS.md`:
+`cli/craft` feeds the whole nearest `AGENTS.md` into its gate prompt, so a rule
+relocated to `docs/` stops reaching the gate. Read a principle when you need to
+know *why* a rule is shaped the way it is, or when you are auditing a subsystem
+against it rather than obeying it on one diff —
+[one-source-of-truth.md](docs/principles/one-source-of-truth.md) carries the
+six-probe scan for finding a capability that got built twice.
 
 **Start at [STATUS.md](STATUS.md)** — open work and the session-pickup point.
 Read its *Open work, in one screen* index first and open only the sections that
@@ -311,7 +326,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
   activity link-walk), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr` (RFC 7807 + wire helpers), `httpserver` (chassis).
-- `internal/modules/` — twenty bounded capabilities, flat by default per
+- `internal/modules/` — twenty-one bounded capabilities, flat by default per
   ADR-0054 §3 (store + mapping + transport + provider in one package),
   growing subpackages only when a named trigger fires (split for a reason,
   never symmetry). **A module NEVER imports a sibling** — if capability A
@@ -319,7 +334,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   owns, declared in its `doc.go` and gated by
   `backend/tableownership_test.go`.
   Which module owns what — purpose, spine shape, owned tables, and HTTP
-  surface for all twenty, plus the compose-owned tables and the notable
+  surface for all twenty-one, plus the compose-owned tables and the notable
   subpackages — is the table in
   [docs/reference/modules.md](docs/reference/modules.md). Read it to place a
   change; don't guess from the package name.
@@ -366,10 +381,11 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
 - `extensions/<name>/` — the stable extension tier (ADR-0120): each unit
   is its own Go module importing ONLY the marker-allowlisted
   `backend/pkg/**` surface; presence under `extensions/` is the
-  enablement. The vanilla tree ships six first-party units: `de` (the
+  enablement. The vanilla tree ships four first-party units: `de` (the
   German jurisdiction pack — GoBD calendar-year retention floors),
-  `dispact-connector`, `notes`, `yogi` (one served 🟢/read agent tool — the
-  worked example of the governed-tool kind), `zalo-oa` and `zalo-personal`.
+  `notes`, `relay-probe` (the provider-facing reference — capture, a
+  merge-key declaration and a transport) and `yogi` (one served 🟢/read
+  agent tool — the worked example of the governed-tool kind).
   Read `extensions/` for the live list rather than trusting this sentence — a
   count in prose goes stale the first time somebody adds a unit. `make composition` (run by every build lane)
   generates the ignored `build/composition/` wiring; `composition/` at
@@ -382,17 +398,33 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
 - `migrations/core/*` that have shipped — additive migrations only. An applied
   version never re-runs, so editing one changes what FRESH installations get
   while every deployed database keeps the old behaviour: the two diverge
-  silently. The 2026-08 tenant-scope sweep is the
-  one authorized exception in this tree's history, and it only holds because it
-  shipped WITH additive repair migrations (core `0190`,
-  custom `20260806120000`) that reach the already-deployed databases. Editing
-  history without that second half is how an installation ends up permanently
-  missing a backfill nobody can see is missing.
+  silently. Editing history without a second, additive half that reaches
+  already-deployed databases is how an installation ends up permanently missing
+  a backfill nobody can see is missing.
+
+  **Two authorized exceptions in this tree's history**, and both name the reason
+  they were safe rather than the fact that they happened:
+
+  1. The 2026-08 tenant-scope sweep edited applied migrations and shipped WITH
+     additive repair migrations, so every already-deployed database was reached.
+  2. The 2026-08-21 baseline consolidation replaced core's 318 migrations and
+     custom's 24 with one baseline file each. It carries NO repair half and
+     needs none, because at the time there was no production installation and
+     every database was rebuildable — and rather than reach a stale database it
+     STOPS one: the baseline reuses version `0001`, whose ledger row on such a
+     database names a migration that no longer exists, so
+     `dbmigrate.assertLedgerMatches` refuses and says `make dev-fresh`.
+
+  Neither exception generalizes. The second is available only while no
+  installation holds data somebody cannot rebuild, and it was checkable only
+  because `scripts/migration-baseline.sh verify` could prove the baseline builds
+  the schema the history built, byte for byte.
 - The `database.WithWorkspaceTx` GUC contract — every tenant query goes through
   it; there is no raw-pool path for tenant data. Core tenant isolation is a
   per-statement predicate bound by that contract and held by
-  `scripts/check-rls-store-path.sh`; migration `0217` retired row-level security
-  in core. Extension tables still carry FORCE RLS.
+  `scripts/check-rls-store-path.sh`; core carries no row-level security at all
+  (a migration retired it, and the baseline has never declared a policy).
+  Extension tables still carry FORCE RLS.
 - `internal/shared/apperrors` — the fixed sentinel registry; extend it only
   alongside the error contract it implements, never for one call site.
 
@@ -412,6 +444,72 @@ point is RBAC-gated (`auth.Require` + `auth.EnsureVisible` + the list
 scope clauses in `platform/auth`): object denial →
 `apperrors.ErrPermissionDenied` (403), row-scope miss →
 `apperrors.ErrNotFound` (404, existence-hiding).
+
+## Reuse before you build (non-negotiable)
+
+A second implementation of one capability is not untidy — it is two answers to
+one question, and the two drift until they disagree in front of a user. Five
+rules, each of them here because this tree has already paid for it.
+
+**1. Search the whole tree, not your directory.** Before adding a capability,
+grep its nouns across `backend/`, `frontend/src/` and `extensions/`. The
+duplicate is almost never in the package you are editing — that is precisely why
+it gets missed. The agent tool `prep_for_meeting` was written beside a working
+`compose/meetingbrief/` that a one-word grep would have found, and the two
+answered one question with different grounding rules until a seam was written.
+
+**2. The tool surface and the web surface share ONE engine.** An MCP tool never
+re-derives what an HTTP handler already computes. The binding is a
+`compose/*seam*.go` file, and the seams that exist each state the rule in their
+own words — `briefseam.go`: "one queue rather than two readings of it";
+`importseam.go`: "it delegates rather than reimplementing, and that is the whole
+design". **If no seam exists for the capability you need, write the seam** — do
+not write a second assembler. A module may not import a sibling or `compose`
+(ADR-0054 §3), so rolling your own will always look like the cheaper path; it is
+the wrong one, and this is the case where saying so out loud is the only thing
+that helps.
+
+**3. Never hand-type a SQL placeholder.** Derive `$N` from the argument slice —
+`args = append(args, v)` then `fmt.Sprintf("%s = $%d", col, len(args))`, as
+`deals/offer_lines.go` does — or use `storekit.InsertFragments`. Nothing in this
+repo checks that a statement's column count, placeholder count and argument
+count agree, so a hand-numbered statement is one careless sweep away from
+binding every column to the wrong value. That is not hypothetical: it shipped in
+`people/researchclaim.go`, and the accept path was dead for two days because no
+test executed the statement.
+
+The `%s` in that pattern is the COLUMN, and it carries its own rule: a compile-
+time literal, or a catalog name quoted with `pgx.Identifier.Sanitize` — the one
+spelling this repo uses (`storekit/customcolumns.go`). Never a string off a
+request body. Values are always `$N`; only identifiers are ever formatted, and
+an identifier a caller chose is an injection with a placeholder's manners.
+
+**4. A comment may not claim to be the only implementation unless a test holds
+it.** "the one spelling of X", "the only writer of Y", "the same anonymization
+the eraser performs" — if no test fails when a second one appears, delete the
+claim or write the test. Nine of the ten claims counted in this tree were
+false. A false uniqueness claim is worse than silence: the next author greps,
+finds it, and stops looking.
+
+**5. A gate that hard-codes any part of its subject has become a second copy of
+it.** A census over consumer-mail domains that carries its own sample of them, a
+design gate that restates the element list it forbids, a parity test with a
+hand-maintained coverage map — each is the duplicate it was written to refuse,
+and it goes quietly short the day somebody extends the owner. Derive the gate's
+corpus from the owner it protects — `freemail.Domains()`, the contract, the tree
+— or say in the test why it cannot be. Every gate the duplication sweep produced
+was found, after shipping and by a reviewer, to have hard-coded part of its own
+subject; two reviewers independently named the domain sample that a
+consumer-mail gate kept inside the test forbidding second consumer-mail lists.
+
+**Two writers of one invariant either share a helper or say why they do not.**
+If you are adding the second, put the reason in the code beside it, not in the
+pull request where the next reader will not see it.
+
+Catalogs to read before building anything they might already list:
+[docs/reference/modules.md](docs/reference/modules.md) for backend capabilities,
+[frontend/src/design-system/README.md](frontend/src/design-system/README.md) for
+every control that already exists.
 
 ## Craftsmanship
 
@@ -454,9 +552,10 @@ your push.
   are 80 CODE lines / 500 file lines for product code and 160 / 1000 for `*_test.go`
   — a long scenario test that sets up, acts and asserts once is not the
   god-function smell, but a suite still splits when it stops being navigable.
-  A comment-only line is not length: the ceiling asks how much a reader must hold
-  at once, and an explanation reduces that. The whole-tree file-length check in
-  `scripts/check-go-file-length.sh` counts the same way.
+  A comment-only line is not length for the FUNCTION ceiling: it asks how much a
+  reader must hold at once, and an explanation reduces that. The whole-tree file
+  check in `scripts/check-go-file-length.sh` is a plain `wc -l` and counts every
+  line, with a ratchet file freezing each pre-existing offender.
 - A *genuine* false positive is waived **in-source with a reason**: `//craft:ignore <check> <reason>`
   (a reasonless waiver is itself a finding).
 
@@ -508,4 +607,26 @@ the short form:
    (integration tests live directly in `package compose` so unexported
    adapters are in scope). An unexpectedly uncovered new file usually
    means a test double stands where the real thing should.
-
+7. **One invariant spelled on both sides of a wire is ONE item, not
+   two.** Most topics are implemented once — but where Go and TypeScript
+   each carry a spelling of the same rule, fixing one side alone can be
+   a REGRESSION rather than half a fix: a money scale wrong in both
+   directions cancels, the screen agrees with itself, and making the
+   server correct by itself prints a hundred times the price on the
+   offer a buyer signs. So check for the other side before you fix this
+   one, and land both in one change. Then make one side a DECLARED
+   mirror of the other, held by a gate that fails in BOTH directions —
+   `values.MinorUnitExceptions()` against
+   `frontend/src/format/minorunits.ts`, in
+   `backend/frontendminorunits_test.go` — rather than two tables that
+   only happen to agree today.
+8. **A census that can fail short has already failed.**
+   Under-recognition is the one way a gate must not break: it reads a
+   smaller tree and reports the same word for it, PASS, and there is no
+   failing assertion to notice. So — no prefilter, skip-list or file
+   shortcut in front of a scan unless you have MEASURED that it buys
+   something (parsing the whole tree is usually a couple of seconds, and
+   one shortcut here was slower than the parse it avoided); match
+   STATEMENTS, not lines, and bound the join; and once the gate is green,
+   ask what shape of the defect it CANNOT see and plant that case. Prefer
+   deleting a dimension to narrowing it a seventh time.

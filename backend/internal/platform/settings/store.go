@@ -125,14 +125,8 @@ func (s *Store) SetRawTx(ctx context.Context, tx pgx.Tx, key string, next json.R
 	if err := def.ValidateJSON(next); err != nil {
 		return err
 	}
-	// Serialize writers of THIS key for the rest of the transaction. Two
-	// concurrent writes would otherwise both read the same `before`, and the
-	// later one would audit a value that was never current — or, setting the
-	// same value, write a second audit row for a change that happened once. A
-	// row lock cannot do this: the row may not exist yet, and the first write
-	// to a setting is exactly when it does not.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, key); err != nil {
-		return fmt.Errorf("settings: serializing writes to %s: %w", key, err)
+	if err := LockForWrite(ctx, tx, key); err != nil {
+		return err
 	}
 	{
 		stored, err := hasRow(ctx, tx, key)
@@ -184,11 +178,37 @@ func (s *Store) SetRawTx(ctx context.Context, tx pgx.Tx, key string, next json.R
 			key, next); err != nil {
 			return fmt.Errorf("settings: writing %s: %w", key, err)
 		}
+		// Through the entry's own image, so a setting holding the address of a
+		// secret is redacted here rather than at each writer — there is only one
+		// writer today, and the next one would not know to.
 		if _, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
-			map[string]any{key: json.RawMessage(before)},
-			map[string]any{key: json.RawMessage(next)}); err != nil {
+			map[string]any{key: def.AuditImage(before)},
+			map[string]any{key: def.AuditImage(next)}); err != nil {
 			return fmt.Errorf("settings: auditing %s: %w", key, err)
 		}
+	}
+	return nil
+}
+
+// LockForWrite serializes writers of ONE key for the rest of the transaction.
+//
+// Two concurrent writes would otherwise both read the same `before`, and the
+// later one would audit a value that was never current — or, setting the same
+// value, write a second audit row for a change that happened once. A row lock
+// cannot do this: the row may not exist yet, and the first write to a setting is
+// exactly when it does not.
+//
+// Exported because a caller whose new value is computed FROM the old one has to
+// take it before its own read, and SetRawTx taking it later is too late — both
+// readers would already hold the same snapshot and the second write would drop
+// the first's change. `ai.ProviderKeyStore` is that caller: its value is a
+// provider→ref map, so two admins keying two different vendors are a lost
+// update rather than a conflict anybody sees. Exposing the lock rather than
+// letting that caller spell the statement again keeps one definition of what
+// serializes a setting write.
+func LockForWrite(ctx context.Context, tx pgx.Tx, key string) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, key); err != nil {
+		return fmt.Errorf("settings: serializing writes to %s: %w", key, err)
 	}
 	return nil
 }
