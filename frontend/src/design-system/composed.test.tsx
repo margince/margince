@@ -35,11 +35,14 @@ describe("DealCard + PipelineBoard", () => {
     stalled: true,
   };
 
+  // Staleness reaches the reader as a WORD, and only as a word: a card that also
+  // carried an edge stripe said one thing twice, and the half of it that a
+  // reader who cannot see colour gets is the badge.
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
     render(<DealCard deal={deal} />);
     expect(screen.getByText("€48,000.00")).toBeTruthy();
     expect(screen.getByText("stalled")).toBeTruthy();
-    expect(screen.getByRole("button").className).toContain("stalled");
+    expect(screen.getByRole("button").className).not.toContain("stalled");
   });
 
   // A company has three readings on a card and only one of them is blank. The

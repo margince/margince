@@ -185,9 +185,11 @@ export function DealCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  // No `stalled` class: the warn Badge below says it in words, and an edge
+  // stripe saying the same thing is one statement drawn twice — the reader who
+  // cannot see colour reads the badge, and the reader who can read both.
   const classes = [
     "deal-card",
-    deal.stalled ? "stalled" : "",
     deal.staged ? "staged" : "",
     deal.archived ? "archived" : "",
   ]

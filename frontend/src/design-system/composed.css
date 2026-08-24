@@ -80,9 +80,6 @@
   width: 100%;
   font-family: var(--f-body);
 }
-.deal-card.stalled {
-  border-left: 3px solid var(--away);
-}
 .deal-card.staged {
   background: var(--aiLight);
   border: 1.5px dashed var(--aiMed);
