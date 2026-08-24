@@ -5,11 +5,11 @@ import {
   CheckSquare,
   Home,
   Kanban,
+  Layers,
   ListFilter,
   type LucideIcon,
   Merge,
   Sparkles,
-  Stamp,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -111,11 +111,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // beside a check-in-square was two ticks in two boxes at 20px, and this
       // is a different shape entirely.
       //
-      // A stamp, not a bell. A bell says a notification arrived and has been
+      // Layers, not a bell. A bell says a notification arrived and has been
       // read; what is here is work nobody has decided yet, and it stays until
-      // somebody does. The product also has no notification system at all, so
-      // the bell promised the one thing it could not deliver.
-      { screen: "inbox", labelKey: "nav.inbox", icon: Stamp },
+      // somebody does — and the product has no notification system at all, so
+      // the bell promised the one thing it could not deliver. A stack of layers
+      // is what the surface IS: a pile of proposals to work through one at a
+      // time, which is exactly how the deck on Home draws it.
+      { screen: "inbox", labelKey: "nav.inbox", icon: Layers },
     ],
   },
   {

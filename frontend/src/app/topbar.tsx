@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen, Search, Stamp } from "lucide-react";
+import { Layers, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settings";
@@ -149,9 +149,10 @@ function TopBarSearch({
  * Silent at zero. A mark that is always on screen with nothing behind it teaches
  * a reader to stop looking at it, which is the one thing a queue cannot afford.
  *
- * A stamp rather than a bell: what waits here is a decision nobody has taken,
- * not a notification somebody can read and be done with — and this product has
- * no notification system for a bell to stand for.
+ * A stack of layers rather than a bell: what waits here is a pile of decisions
+ * nobody has taken, not a notification somebody can read and be done with — and
+ * this product has no notification system for a bell to stand for. The same mark
+ * the sidebar row carries, because two glyphs for one queue read as two queues.
  */
 function DecisionsMark({ waiting }: Readonly<{ waiting?: number }>) {
   const t = useT();
@@ -166,7 +167,7 @@ function DecisionsMark({ waiting }: Readonly<{ waiting?: number }>) {
           : t("shell.approvals")
       }
     >
-      <Stamp size={17} strokeWidth={1.8} aria-hidden />
+      <Layers size={17} strokeWidth={1.8} aria-hidden />
       {/* The number is in the name above, so the chip is decoration: read out it
           would say the count twice, and the second time without the word for
           what is counted. */}
