@@ -5,12 +5,12 @@ package person360
 
 // A provider's confidence reaches this contract through `value_json`, which
 // carries no CHECK. The column beside it is bounded 0..1 and is NOT where this
-// number comes from — so between a vendor and a reader there was nothing at
-// all.
+// number comes from, so the bound on it governs nothing here.
 //
-// The contract declares the field `minimum: 0, maximum: 1`. A vendor that
-// scores out of 100, which is a normal thing for a vendor to do, would put 87
-// on it, and the page renders a confidence as a percentage.
+// The contract declares the field `minimum: 0, maximum: 1`, and the page renders
+// a confidence as a percentage — so a vendor scoring out of 100 would read as
+// 8700%. Every Surfe score in this tree is a proportion today; what is guarded
+// is that nothing makes it one.
 
 import (
 	"encoding/json"
@@ -65,6 +65,38 @@ func TestAConfidenceTheContractCannotCarryIsNotServed(t *testing.T) {
 				t.Errorf("dropped a confidence of %v, which the contract can carry", *tc.score)
 			case tc.want != nil && *got != *tc.want:
 				t.Errorf("served %v, want %v", *got, *tc.want)
+			}
+		})
+	}
+}
+
+// The claim's own column is the fallback when an entry carries no score of its
+// own, and it passes through the same guard. The column is CHECK-bounded, so a
+// value that fails here cannot come from a live database — but the guard runs
+// after the fallback merge, and a branch with no test is a branch that stops
+// working quietly.
+func TestTheColumnFallbackPassesThroughTheSameGuard(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		column float64
+		want   *float32
+	}{
+		{"a bounded column is used when the entry has no score", 0.42, providerPtr(float32(0.42))},
+		{"an out-of-range column states nothing either", 42, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			claim := phoneClaim(t, nil)
+			claim.confidence = providerPtr(tc.column)
+			var out crmcontracts.PersonProviderProfile
+			if err := foldPhones(claim, &out); err != nil {
+				t.Fatalf("folding: %v", err)
+			}
+			got := out.MobilePhones[0].Confidence
+			switch {
+			case tc.want == nil && got != nil:
+				t.Errorf("served %v from a column of %v", *got, tc.column)
+			case tc.want != nil && (got == nil || *got != *tc.want):
+				t.Errorf("served %v, want %v", got, *tc.want)
 			}
 		})
 	}
