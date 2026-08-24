@@ -355,7 +355,7 @@ func (e *embedReindexEngine) statusBody(ctx context.Context) (crmcontracts.Embed
 // embedReindexPreviewWire maps the priced per-workspace rows plus the
 // fleet total onto the contract's preview shape. now is the estimate's
 // computed_at stamp (the engine's injected clock — never time.Now() here,
-// T11).
+// P3).
 func embedReindexPreviewWire(rows []costestimate.Row, total costestimate.Row, now time.Time) crmcontracts.EmbedReindexPreview {
 	currency := total.Currency
 	tokens := int(total.Tokens)

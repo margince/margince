@@ -58,7 +58,7 @@ const (
 
 // incumbentEpoch is the fixed modified-at every fixture record carries. A
 // literal keeps the backfill and the mirror baseline deterministic — a
-// wall-clock stamp would make the run depend on when it happened (T11).
+// wall-clock stamp would make the run depend on when it happened (P3).
 var incumbentEpoch = time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 
 // overlayUserMapAdminPerms is what the user-map surface actually gates on:

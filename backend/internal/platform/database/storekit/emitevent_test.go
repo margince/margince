@@ -41,7 +41,7 @@ func TestPilotPayloadSatisfiesPayloadInterface(t *testing.T) {
 	}
 }
 
-// fakeTx is the true-DB-boundary fake (T11): it implements only Exec
+// fakeTx is the true-DB-boundary fake (P3): it implements only Exec
 // meaningfully and captures the statement + args Emit hands it. Every
 // other pgx.Tx method panics — Emit never calls them, so reaching one
 // would be this test's own bug, not a legitimate path to stub out.

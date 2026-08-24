@@ -86,7 +86,9 @@ after core (`YYYYMMDDHHMMSS`-named, `x_`-prefixed columns) and survives upstream
 
 ## Why a shipped migration is never edited
 
-An applied version never re-runs. Editing one therefore changes what a FRESH
+On the ordinary `up` path an applied version never re-runs — `migrate down`
+is the one thing that lets a version execute again, deliberately and by hand.
+Editing an applied migration therefore changes what a FRESH
 installation gets while every already-deployed database keeps the old behaviour,
 and the two diverge with nothing reporting it. Editing history without a second,
 additive half that reaches deployed databases is how an installation ends up

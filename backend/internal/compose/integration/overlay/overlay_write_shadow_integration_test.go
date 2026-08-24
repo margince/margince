@@ -114,7 +114,7 @@ func setupOverlayWrite(t *testing.T) overlayWriteEnv {
 // fails its OWN staleness guard and the re-mirrored row keeps the old
 // fields. Seeding safely in fake.Adapter's past avoids the fallback
 // branch entirely — this is a fixture-precision concern, not a real-clock
-// assertion in the test itself (T11).
+// assertion in the test itself (P3).
 var seedModifiedAt = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // seed lands one record both in the fake incumbent's own write-path store

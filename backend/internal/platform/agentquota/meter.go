@@ -61,7 +61,7 @@ func New(rdb *redis.Client, limits Limits, window time.Duration) *Meter {
 
 // NewWithClock takes the clock as a dependency so the fixed window a charge
 // lands in is asserted by advancing time rather than by sleeping against the
-// real one (T11): the clock's reading picks both the Redis key and the expiry,
+// real one (P3): the clock's reading picks both the Redis key and the expiry,
 // deterministically.
 func NewWithClock(rdb *redis.Client, limits Limits, window time.Duration, now func() time.Time) *Meter {
 	if window <= 0 {

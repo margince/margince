@@ -190,7 +190,7 @@ makes it different. An undeclared N is the finding; a declared N is a decision
 somebody already made and wrote down. This is the probe that found `person_profile_field`'s five writers
 and `relationship`'s four.
 
-## The four rules, and what each one cost
+## The rules, and what each one cost
 
 The rulebook states these as imperatives. Here is the incident behind each, since
 a rule whose price nobody remembers is a rule that gets argued away.

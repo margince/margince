@@ -30,7 +30,7 @@ type Adapter struct {
 	accountID string // the portal/account id AccountID reports (empty = unset)
 	// writeSeq drives deterministic Create ids and modified-at stamps for the
 	// write seam — a monotonic counter, never a real clock, so a test
-	// exercising write-back never flakes on wall-time (T11).
+	// exercising write-back never flakes on wall-time (P3).
 	writeSeq int
 }
 

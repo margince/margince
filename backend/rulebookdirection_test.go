@@ -63,31 +63,21 @@ func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
 			return readErr
 		}
 		scanned++
-		// Fenced blocks and inline code are stripped first, using the same
-		// codeSpan/fence patterns docslinktargets_test.go already owns rather
-		// than a second spelling of them. A page teaching this very rule wants to
-		// SHOW the forbidden link — `[rules](../AGENTS.md)` — and a matcher that
-		// reads raw markdown fails it for the example, which is a gate that makes
-		// its own subject undocumentable.
-		inFence := false
-		for i, line := range strings.Split(string(raw), "\n") {
-			if fence.MatchString(line) {
-				inFence = !inFence
-				continue
-			}
-			if inFence {
-				continue
-			}
-			for _, hit := range upwardLink.FindAllString(codeSpan.ReplaceAllString(line, ""), -1) {
+		// Through the shared prose walk, so fences and code spans are stripped the
+		// same way docslinktargets_test.go strips them. A page teaching this rule
+		// wants to show the forbidden link as an example, and a matcher over raw
+		// markdown fails the page for its own illustration.
+		eachProseLine(string(raw), func(lineNo int, text string) {
+			for _, hit := range upwardLink.FindAllString(text, -1) {
 				t.Errorf("%s:%d links up to a rulebook: %s\n"+
 					"The reference direction is one-way — AGENTS.md links down into docs/, never the reverse. "+
 					"An upward link points at a heading, and a reworded heading breaks it without breaking any "+
 					"build: the anchor silently scrolls to the top and the reader concludes the rule is missing. "+
 					"Name the rule in prose instead (\"the rulebook's *Reuse before you build*\"), which survives "+
 					"the rename, and add the downward link from AGENTS.md if one is missing.",
-					path, i+1, hit)
+					path, lineNo, hit)
 			}
-		}
+		})
 		return nil
 	})
 	if err != nil {

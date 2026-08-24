@@ -176,13 +176,19 @@ in `lastactivity_integration_test.go`.
 | `storybook` | The component workbench on `:6006` — the design-system catalog and the story surface `fe-uat` renders. Stories live beside their component as `<name>.stories.tsx` |
 | `fe-uat` | Change-scoped Storybook render+capture UAT for frontend-only diffs: renders THIS branch's changed component's stories in headless Chromium and screenshots them (no live stack, no DB). Fails on an unclean render, an unregistered story, or a changed component with no story. Artifact: `.tmp/fe-uat/manifest.json`. Deliberately **not** in `make check` — the fe-only UAT lane a coordinator runs instead of the full stack. `ARGS="--allow-missing"` |
 
-A `DEV_SLUG` stack is the one thing the sweep leaves alone, so it outlives a bare
-`make dev` — but only until the next one, by design. Tear yours down explicitly
-when you are done with it:
+A `DEV_SLUG` stack is spared while it starts — a slugged `make dev` sweeps
+nothing, so it can come up beside the base stack. It is NOT spared afterwards:
+the next **bare** `make dev` stops it like any other and drops its per-slug
+database, because exclusivity is what that sweep is for. Tear yours down
+explicitly when you are done with it:
 
-```
+```sh
 DEV_SLUG=x make dev-stop DROP=1
 ```
+
+Re-running `make dev DEV_SLUG=x` while that stack is already up does not restart
+it: slugged startup sweeps nothing, so it stops at the port guard with `port
+:… already in use`. Stop it first.
 
 `DROP=1` removes the per-slug databases; without it the stack stops and its data
 stays.
@@ -196,16 +202,18 @@ backend change — a new endpoint, a migration, a handler fix — needs `make de
 again before it reaches the browser at all.
 
 This is worth its own heading because of how it fails. The stale binary keeps
-answering on :8080 perfectly happily, so the SPA calls endpoints it has never
-heard of and the app breaks in ways that look exactly like a bug in the code you
-just wrote. An old server is indistinguishable from a broken feature.
+answering perfectly happily, so the SPA calls endpoints it has never heard of and
+the app breaks in ways that look exactly like a bug in the code you just wrote. An
+old server is indistinguishable from a broken feature.
 
 The same shape catches you across branches, and this working tree is often shared
 with parallel agent sessions that switch branches underneath you. So before you
 trust **any** manual test, confirm both:
 
 - `git branch --show-current` is the branch you think it is, and
-- the API on :8080 was started *after* your last backend change.
+- the **API** process was started *after* your last backend change. That is the
+  one on `:18080` (or the slug's API port) — `:8080` is Vite, which hot-reloads,
+  so its start time tells you nothing about the binary that does not.
 
 Neither costs anything to check, and skipping them costs a debugging session.
 

@@ -90,10 +90,15 @@ type docsLink struct {
 	target string
 }
 
-// relativeLinkTargets returns the in-tree link targets of one markdown document,
-// with fenced blocks and inline code removed and anchors trimmed.
-func relativeLinkTargets(doc string) []docsLink {
-	var links []docsLink
+// eachProseLine calls fn with the 1-based number and the code-free text of every
+// PROSE line in a markdown document: fenced blocks are skipped and inline code
+// spans are blanked out.
+//
+// Both link gates need exactly this. A page that teaches a link rule wants to
+// SHOW the link it forbids, and a matcher reading raw markdown fails the page for
+// its own example — so each gate has to strip first, and two spellings of the
+// stripping is the shape *Reuse before you build* is about. One writer, here.
+func eachProseLine(doc string, fn func(lineNo int, text string)) {
 	inFence := false
 	for i, line := range strings.Split(doc, "\n") {
 		if fence.MatchString(line) {
@@ -103,12 +108,29 @@ func relativeLinkTargets(doc string) []docsLink {
 		if inFence {
 			continue
 		}
-		for _, m := range markdownLink.FindAllStringSubmatch(codeSpan.ReplaceAllString(line, ""), -1) {
+		fn(i+1, codeSpan.ReplaceAllString(line, ""))
+	}
+}
+
+// relativeLinkTargets returns the in-tree link targets of one markdown document,
+// with fenced blocks and inline code removed and anchors trimmed.
+//
+// INLINE links only — `[text](target)`. A reference-style `[text][label]` with a
+// `[label]: target` definition is not resolved, so a broken one of those would go
+// unseen: this census can fail short in exactly that shape. Nothing under docs/
+// uses the form for an in-tree path today (the two definitions that exist are
+// external URLs, which this gate skips anyway), and resolving labels means
+// carrying a second markdown parser. Named here rather than left to be discovered
+// as a silent PASS.
+func relativeLinkTargets(doc string) []docsLink {
+	var links []docsLink
+	eachProseLine(doc, func(lineNo int, text string) {
+		for _, m := range markdownLink.FindAllStringSubmatch(text, -1) {
 			if target := inTreeTarget(m[1]); target != "" {
-				links = append(links, docsLink{line: i + 1, target: target})
+				links = append(links, docsLink{line: lineNo, target: target})
 			}
 		}
-	}
+	})
 	return links
 }
 

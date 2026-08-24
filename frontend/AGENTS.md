@@ -1,7 +1,8 @@
 # AGENTS.md — working in `frontend/`
 
-Scoped to this directory. The root [CLAUDE.md](../CLAUDE.md) still governs
-everything else: the branch/PR loop, the license header, the commit rules.
+Scoped to this directory. The root [AGENTS.md](../AGENTS.md) still governs
+everything else: the branch/PR loop, the license header, the commit rules. (The
+`CLAUDE.md` beside it is a one-line import of that file, not a second rulebook.)
 Three things are frontend-only and none has a gate that will catch it for
 you, so they are written down here.
 
@@ -50,8 +51,8 @@ existed**, wrote a reasonable-looking component, and passed review on it. So:
   can find gets rebuilt by the next person, and then there are two.
 
 Four script gates hold parts of this deterministically —
-`check-native-controls.sh`, `check-ds-purity.sh`, `check-ds-spacing.sh`,
-`check-space-tokens.sh` — but none of them can tell that the perfectly good
+`make native-controls` (a vitest suite, not a script), plus
+`check-ds-purity.sh`, `check-ds-spacing.sh` and `check-space-tokens.sh` — but none of them can tell that the perfectly good
 component you just wrote already existed under a different name. That part is
 yours.
 

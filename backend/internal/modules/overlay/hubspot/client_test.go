@@ -479,7 +479,7 @@ func TestClientWithHTTPClientOverridesTheTransport(t *testing.T) {
 
 // recordingTransport wraps inner, flagging used when RoundTrip is called
 // — the minimal proof WithHTTPClient's http.Client actually sends the
-// request, without asserting anything about call ORDER (T11: mock only
+// request, without asserting anything about call ORDER (P3: mock only
 // the true boundary, the RoundTripper).
 type recordingTransport struct {
 	inner http.RoundTripper

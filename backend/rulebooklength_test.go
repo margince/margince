@@ -40,11 +40,10 @@ const defaultRulebookCeiling = 400
 // copy of the tree that *Reuse before you build* rule 5 is about, and it would go
 // quietly short the day a directory grew one.
 var ceilings = map[string]int{
-	// 322, not the 318 this file first landed at: review found a rule genuinely
-	// missing — how a directory's own AGENTS.md relates to this one — and four
-	// lines is what stating it costs. Recorded here rather than paid for by
-	// shaving link lines elsewhere to hit a number chosen an hour earlier, which
-	// is the ratchet working: it made the growth argue for itself in a diff.
+	// Each number is the size that rulebook actually is. Raising one is how a new
+	// rule pays for itself in a diff a reviewer can see; the alternative — trimming
+	// unrelated lines elsewhere to stay under a fixed number — buys the number and
+	// loses the rule.
 	"AGENTS.md":          322,
 	"frontend/AGENTS.md": 160,
 }

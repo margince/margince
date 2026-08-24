@@ -166,7 +166,7 @@ func (m *Meter) RebindFrom(src *Meter) {
 
 // NewWithClock takes the clock as a dependency so the fixed-window bucket a
 // charge lands in is a property tests assert by advancing time, not by
-// sleeping against the real clock (T11): the clock's reading picks the
+// sleeping against the real clock (P3): the clock's reading picks the
 // per-second / per-day Redis key and the expiry, deterministically.
 func NewWithClock(rdb *redis.Client, cfg Config, now func() time.Time) *Meter {
 	return &Meter{rdb: rdb, cfg: cfg, now: now}

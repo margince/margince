@@ -78,21 +78,26 @@ var numberWord = regexp.MustCompile(`(?i)\b(?:twenty|thirty)(?:[ -](?:one|two|th
 // mistake a green run here for proof that no tally is stale.
 var countable = regexp.MustCompile(`(?i)\b(?:bounded capabilit\w*|modules?|extension units?|first-party units?|principle pages?|tables?)\b`)
 
-// tallyHits reports whether a file's prose spells out a tally of a countable
-// noun. One implementation: the gate below runs it over the real rulebooks, and
-// the markdown table tests run it over fixtures. A test that restated the scan
-// would be a second copy of the rule it is checking.
-func tallyHits(path string) bool {
+// tallyParagraphs returns the paragraphs of a file's prose that spell out a tally
+// of a countable noun.
+//
+// It returns the PARAGRAPHS rather than a yes/no so that a caller needing the
+// text and the line — the gate does, to point a reader at something they can
+// open — does not have to run the scan again to get them. While this answered
+// true/false, the gate restated the same `numberWord && countable` scan inline,
+// and the two were free to drift.
+func tallyParagraphs(path string) []prosePara {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return false
+		return nil
 	}
+	var hits []prosePara
 	for _, para := range prose(string(raw)) {
 		if numberWord.MatchString(para.text) && countable.MatchString(para.text) {
-			return true
+			hits = append(hits, para)
 		}
 	}
-	return false
+	return hits
 }
 
 func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
@@ -101,14 +106,10 @@ func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
 		// sends a reader to, so all of them exist. An unreadable one is a
 		// broken gate, never a clean tree — skipping it would report the same
 		// word for a file nobody looked at.
-		raw, err := os.ReadFile(path)
-		if err != nil {
+		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for _, para := range prose(string(raw)) {
-			if !numberWord.MatchString(para.text) || !countable.MatchString(para.text) {
-				continue
-			}
+		for _, para := range tallyParagraphs(path) {
 			t.Errorf("%s:%d spells out a tally of something the tree can be asked for:\n  %s\n"+
 				"Name the directory or the catalog instead of the number — a count in prose goes stale the "+
 				"first time somebody adds one, and the sentence looks no different when it has.",
@@ -267,7 +268,7 @@ func TestTheTallyGateReadsMarkdownCorrectly(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.md), 0o600); err != nil {
 				t.Fatalf("write fixture: %v", err)
 			}
-			if got := tallyHits(path); got != tc.wantHit {
+			if got := len(tallyParagraphs(path)) > 0; got != tc.wantHit {
 				t.Errorf("hit=%v want=%v — %s\n--- input ---\n%s", got, tc.wantHit, tc.why, tc.md)
 			}
 		})

@@ -5,9 +5,10 @@
 reaches it through a one-line `CLAUDE.md` that imports it. Do not add a second
 copy — `backend/rulebookdelegation_test.go` fails one.
 
-A directory may carry its own `AGENTS.md` for rules binding only inside it
-(`frontend/AGENTS.md` does). Those ADD — a delta, never an override or a
-restatement — and a rule binding the whole tree belongs here instead.
+A directory may carry its own `AGENTS.md` for rules that bind only inside it —
+`frontend/AGENTS.md` does. Such a file only ADDS: it states what is true in that
+directory and nothing more, never overriding a rule here and never restating one.
+A rule that binds the whole tree belongs in this file instead.
 
 **Rules live here; everything else lives in [docs/](docs/README.md).** Every line
 here is paid for by every session — the right price for a rule that binds a change,
@@ -91,15 +92,14 @@ Commands and flags: [docs/reference/make-targets.md](docs/reference/make-targets
 Config and endpoints: [docs/reference/configuration.md](docs/reference/configuration.md).
 CI: [infra/ci-pipeline.md](infra/ci-pipeline.md).
 
-## One dev stack per worktree
+## Exactly one dev stack at a time
 
-`make dev` starts a stack for THIS worktree and touches nobody else's. A linked
-worktree claims its own database, Redis logical database, port pair and object
-bucket automatically. The primary worktree keeps `:8080` and the shared
-`margince` database, which is what `make migrate` and `make seed-dev` target.
-
-`make dev-stop` stops this worktree's stack. `make dev-sweep` clears every stack
-on the machine and is the only thing that does.
+`make dev` sweeps first: it kills every margince api, worker and Vite on the
+machine, evicts whatever holds `:8080`, drops stray `margince_dev_*` databases,
+and then boots one stack. So it is always safe to run, and you never stop the old
+one by hand. Bare `make dev-stop` is the mirror and stops every stack;
+`DEV_SLUG=x` gives an isolated stack that the sweep spares — until the next bare
+`make dev` takes it down.
 
 **The API does not hot-reload.** Vite does, so the frontend is live as you type;
 the API is a compiled binary, and every backend change needs `make dev` again. A
@@ -107,7 +107,7 @@ stale binary keeps answering happily, so the app breaks in ways that look exactl
 like a bug in the code you just wrote.
 
 Before you trust any manual test, confirm both: `git branch --show-current` is
-the branch you think it is, and the api on your port was started after your last
+the branch you think it is, and the api on `:8080` was started after your last
 backend change.
 
 ## Shipping a change

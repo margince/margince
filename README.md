@@ -361,7 +361,11 @@ Findings are routed, not lost:
   the decision records. What binds a change here is enforced by a gate, and
   a gate that refuses names what to do instead.
 - **Anything found but not fixed** — a bug, a gap, a follow-up — becomes a
-  GitHub issue in this repo, labelled.
+  GitHub issue in this repo, labelled. With one exception that is not a
+  preference: an exploitable weakness goes to a private security advisory and
+  never to a public issue or pull request, because this repository is public and
+  a report that lands before the fix does puts every deployment at risk. See
+  [SECURITY.md](SECURITY.md).
 - **Open work** — in-flight work and where to pick up — lives in GitHub issues.
   There is no status file: an issue is the only place a finding survives a
   session, and the commit and PR are the record of what was done.

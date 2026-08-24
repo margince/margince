@@ -26,9 +26,11 @@ or the other, and say which.
 The rulebook sections stay where they are. `cli/craft` feeds the **whole**
 nearest `AGENTS.md` into its gate prompt, so a rule moved out of that file stops
 reaching the gate — these pages carry the reasoning and the method, the rulebook
-carries the binding short form. There is one rulebook, at the root, and the
-`CLAUDE.md` beside it holds nothing but an `@AGENTS.md` import, so a rule has one
-home and no copy to drift from.
+carries the binding short form. Every `CLAUDE.md` holds nothing but an
+`@AGENTS.md` import, so no rule has a second copy to drift from. A directory may
+carry its own `AGENTS.md` for rules that bind only inside it — `frontend/` does —
+and those only ADD: a rule binding the whole tree lives in the root rulebook and
+nowhere else.
 
 ## Adding a principle
 

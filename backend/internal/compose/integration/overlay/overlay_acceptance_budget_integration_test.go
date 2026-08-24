@@ -57,7 +57,7 @@ func contactsTranslator(canonical string) ([]string, bool) {
 // latency budgets) is pinned upstream as "unset — open"
 // (subsystems/overlay-augmentation.md), so asserting a specific
 // millisecond threshold here would either fabricate an unpinned number
-// or flake on a loaded CI runner (T11 bars real-clock-dependent
+// or flake on a loaded CI runner (P3 bars real-clock-dependent
 // assertions). Instead this proves the actual, load-bearing DISTINCTION
 // AC-OV-3 requires: a mirror-served Provider.Read never touches the OVB
 // meter at all — it rides the same always-available budget a native SoR

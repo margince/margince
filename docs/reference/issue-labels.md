@@ -13,11 +13,7 @@ work at a glance. File an issue without labels and you have quietly told the nex
 reader something false about your own finding — it looks like nobody has assessed
 it, when in fact you just did.
 
-An unlabeled issue is indistinguishable from an untriaged one, and that is the
-invariant the labels exist to protect: **unlabeled means nobody has looked at it
-yet.** File an issue without labels and you have quietly told the next reader a
-falsehood about your own finding. Every issue you open carries **exactly one
-`priority:` and exactly one `area:`**.
+Every issue you open carries **exactly one `priority:` and exactly one `area:`**.
 
 ## Priority
 
@@ -51,11 +47,10 @@ misleads about.
 **Status**, when it applies — these mark an issue that is not yet workable, and
 leaving them off puts unactionable work in somebody's queue:
 
-- `status: needs-decision` — unactionable until a human rules ("decide or decline X").
-- `status: needs-decision` also covers work that is blocked on a product ruling
-  rather than a technical one. Say what the options are and which you recommend;
-  an issue that only asks "what should we do?" gives the decider nothing to
-  decide from.
+- `status: needs-decision` — unactionable until a human rules, whether the ruling
+  is technical or a product call. Say what the options are and which you
+  recommend: an issue that only asks "what should we do?" gives the decider
+  nothing to decide from.
 
 ## Provenance
 

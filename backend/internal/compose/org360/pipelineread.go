@@ -69,8 +69,8 @@ type stalledDeal struct {
 // bumps on writes no person made: CloseDateCorrector patches expected_close_date
 // from a sweep, and keying on it would hand a rep back advice they dismissed
 // because a nightly job touched the row. Which edits count as working a deal is a
-// product question rather than one to infer from the schema; it is open in #2478,
-// and this fingerprint should derive from the answer, not the reverse.
+// product question rather than one to infer from the schema, and it has not been
+// answered: this fingerprint should derive from that answer, not stand in for it.
 //
 // wait_until is deliberately NOT here, though the stall rule reads it: a deferral
 // can be set, expire, and be cleared, returning the deal to a shape the rep already

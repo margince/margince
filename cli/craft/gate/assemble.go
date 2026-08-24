@@ -2,6 +2,7 @@ package gate
 
 import (
 	"context"
+	"github.com/gradionhq/margince/cli/craft/rubric"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -116,7 +117,7 @@ func (a *Assembler) nearestAgents(dirs map[string]bool) string {
 	for _, dir := range ordered {
 		for d := dir; ; d = filepath.Dir(d) {
 			if content, ok := a.read(filepath.Join(d, "AGENTS.md")); ok {
-				if section, found := craftsmanshipSection(content); found {
+				if section, found := rubric.CraftsmanshipSection(content); found {
 					return section
 				}
 			}
@@ -127,32 +128,6 @@ func (a *Assembler) nearestAgents(dirs map[string]bool) string {
 	}
 	return ""
 }
-
-// craftsmanshipSection returns the body of the ## Craftsmanship heading, from the
-// heading itself up to the next H2 or end of file.
-func craftsmanshipSection(content string) (string, bool) {
-	lines := strings.Split(content, "\n")
-	start := -1
-	for i, line := range lines {
-		if strings.HasPrefix(line, craftsmanshipHeading) {
-			start = i
-			break
-		}
-	}
-	if start < 0 {
-		return "", false
-	}
-	end := len(lines)
-	for i := start + 1; i < len(lines); i++ {
-		if strings.HasPrefix(lines[i], "## ") {
-			end = i
-			break
-		}
-	}
-	return strings.TrimSpace(strings.Join(lines[start:end], "\n")), true
-}
-
-const craftsmanshipHeading = "## Craftsmanship"
 
 func (a *Assembler) read(path string) (string, bool) {
 	b, err := os.ReadFile(filepath.Join(a.Root, path)) //nolint:gosec // G304: path comes from git diff output for files under a.Root

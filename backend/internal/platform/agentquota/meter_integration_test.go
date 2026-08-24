@@ -36,7 +36,7 @@ func meteredCall(t *testing.T, ws ids.UUID, passport ids.UUID) context.Context {
 // frozen is the clock every test here reads. The window a charge lands in must
 // be chosen by the test, not by whether the suite happened to run across a UTC
 // boundary — a bound tested against the wall clock is a bound that fails on the
-// hour (T11).
+// hour (P3).
 func frozen(at *time.Time) func() time.Time { return func() time.Time { return *at } }
 
 // aWorkspace is one workspace id, for the tests that need only that they have one.

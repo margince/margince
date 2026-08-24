@@ -7,7 +7,8 @@ required value is a boot error, as is an invalid `--log-level` /
 
 **One installation serves one organization** (A107/ADR-0061). No request selects
 a tenant — the server resolves its singleton organization itself, so a call
-carries only the caller's session. A worked first call is in
+carries only the caller's own credential: a `crm_session` cookie for a human, a
+bearer passport for an agent or an MCP client. A worked first call is in
 [tutorials/getting-started.md](../tutorials/getting-started.md).
 
 

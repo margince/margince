@@ -81,8 +81,11 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   `kernel/{ids,events,provenance,principal}`, `apperrors` (the fixed
   sentinel registry — extend it only alongside the error contract it
   implements, never for one call site), and
-  `ports/{authz,datasource,mcp,connector,workflow,model,retrieval,extraction,fieldcatalog,jurisdiction}`
-  (the frozen seam interfaces + additive provider mechanics).
+  the `ports/` seam interfaces (`authz`, `datasource`, `mcp`, `connector`,
+  `workflow`, `model`, `retrieval`, `extraction`, `fieldcatalog`, `jurisdiction`
+  at the time of writing) plus their additive provider mechanics. Read `ports/`
+  itself before adding a seam rather than trusting that list: a seam missing from
+  a page is how a second one gets written for a question already answered.
 - `internal/platform/` — technical plumbing, owns no domain:
   `database` (pg pool + the `WithWorkspaceTx` GUC contract that binds every
   tenant statement's workspace predicate) +
@@ -106,12 +109,9 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   the catalog is editorial, so a directory it has not caught up with is
   still a module.
 
-  Two sanctioned spine shapes, and ONLY two — don't invent a third:
-  **Handlers→Store** for CRUD modules (people, deals, activities, …:
-  the store owns the transactional write shape and the RBAC gate at its
-  entry points) and **Handlers→Service** for engine modules (approvals,
-  identity: a service owns the multi-step domain logic and drives the
-  SQL inside it).
+  Two sanctioned spine shapes, and ONLY two — don't invent a third. Which they
+  are, and how to choose: [The two spine shapes](#the-two-spine-shapes) below,
+  which is where they are described rather than in two places that can drift.
 - `internal/compose/` — the composition layer every process role shares:
   the contract HTTP surface (`Server` embeds every module's handler set and
   asserts `crmcontracts.ServerInterface` itself — a contract operation with
@@ -126,15 +126,20 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   entity.
 - `internal/contracts/` — GENERATED from `backend/api/crm.yaml`. Never edit.
 - `backend/api/crm.yaml` — the authoritative OpenAPI 3.1 contract.
-- `backend/migrations/core|custom/` — the ADR-0017 namespaces.
-  `modules/<name>/custom/` + `migrations/custom/` — the fork-owned seam:
-  upstream never writes there (ADR-0054 §7).
+- `backend/migrations/core|custom/` — the ADR-0017 namespaces, and both are
+  directories the migration runner loads. `migrations/custom/` is the fork-owned
+  one: upstream never writes there (ADR-0054 §7). A fork's own migration goes
+  THERE — a SQL file under `modules/<name>/custom/` is not in a loaded directory
+  and is silently never applied.
 - `backend/tools/` — the codegen tool chain (contract-overlay,
   gen-stubs, gen-agentpolicy); its own Go module so the generators'
   dependencies stay out of the product module's go.mod.
 - `frontend/` — the Vite/React web UI: a standalone static build served
-  separately from the API binary (which serves `/v1` only — no embedded
-  SPA); `make frontend-check` / `make dev` exist at the repo root.
+  separately from the API binary, which embeds no SPA. The API's own surface is
+  `/v1` plus the operational probes (`/healthz`, `/readyz`, `/metrics`), the
+  public buyer edge, the webhook receivers and — when enabled — `/mcp` and
+  `/oauth/*`; a proxy configured for `/v1` alone strands the rest.
+  `make frontend-check` / `make dev` exist at the repo root.
   **Working in here? Read `frontend/AGENTS.md` first**, and
   then the file it opens with:
   **[frontend/src/design-system/README.md](../../frontend/src/design-system/README.md)
@@ -142,7 +147,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   inputs, fields, badges, tables, menus, dialogs, empty states. Open it BEFORE
   building anything visible. Every interactive control comes from
   `frontend/src/design-system/`; a native `<select>` fails
-  `frontend/scripts/check-native-controls.sh`, but nothing automated can tell
+  `make native-controls`, but nothing automated can tell
   that the component you just wrote already existed under another name, which is
   how this tree has twice grown a second spelling of a card.
 - `extensions/<name>/` — the stable extension tier (ADR-0120): each unit

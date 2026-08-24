@@ -57,7 +57,7 @@ type BackfillCost struct {
 }
 
 // Clock is injected so the 7-day window and the rate as-of day are testable
-// without a real clock (no time.Now() in the estimator; T11).
+// without a real clock (no time.Now() in the estimator; P3).
 type Clock interface{ Now() time.Time }
 
 // The narrow dependency ports. They are interfaces, not the concrete stores, so
