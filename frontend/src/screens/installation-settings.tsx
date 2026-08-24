@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../app/aicaches";
 import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 // Shared with every upload form, which reads the ceiling off this same record.
@@ -107,6 +108,20 @@ function useUpdateInstallationSettings(onSaved: () => void) {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(INSTALLATION_SETTINGS_KEY, data);
+      // The model-written surfaces are keyed on a record id and nothing else,
+      // and the server rewrites them in the new language the next time it is
+      // asked. Without this nobody asks: `refetchOnWindowFocus` is off, so a
+      // company page left open keeps rendering its old-language brief until
+      // some unrelated fact moves it. The setting would look like it did
+      // nothing, which is the complaint base language exists to answer.
+      //
+      // Invalidated unconditionally rather than only when base_language moved.
+      // Deciding that means diffing against the pre-patch value, and the cost
+      // of being wrong is asymmetric: an extra refetch of one open page is
+      // cheap, and a missed one is a reader quietly served the wrong language.
+      for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
+        void queryClient.invalidateQueries({ queryKey: prefix });
+      }
       onSaved();
     },
     // A refused patch can still have committed nothing OR something: the
