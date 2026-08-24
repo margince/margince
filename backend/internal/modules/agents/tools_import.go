@@ -114,7 +114,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `"]},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company each row IS — that row updates it instead of creating one."},
+			  "description":"Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
 			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent."}},
 			"additionalProperties":false}`),

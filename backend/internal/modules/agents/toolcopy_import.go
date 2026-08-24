@@ -14,7 +14,7 @@ var previewImportCopy = toolCopy{
 	Limits: "Writes nothing. People arrive as leads, so `object` is lead or organization. " +
 		"A row naming a company already here is counted in `duplicates`, and created unless " +
 		"on_duplicate is skip. To CORRECT companies rather than add them, map a column to " +
-		"`id` and give each row the id of the company it is — read them out first.",
+		"`id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add.",
 	Instead: "create_record for one record you already know.",
 	Retain:  "run_id, and `duplicates` — give the user both numbers before committing.",
 }
