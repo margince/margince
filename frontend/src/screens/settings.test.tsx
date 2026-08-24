@@ -10,6 +10,7 @@ import {
   auditEntry,
   IDLE_JOB_HEALTH,
   jsonResponse,
+  keyedEnvelope,
   readOn,
   render,
   renderSettings,
@@ -170,6 +171,10 @@ describe("SettingsScreen RBAC surfaces", () => {
             }),
           );
         }
+        const keyed = keyedEnvelope(url);
+        if (keyed) {
+          return keyed;
+        }
         return jsonResponse({
           data: [],
           page: { next_cursor: null, has_more: false },
@@ -260,6 +265,10 @@ function mergedEntryBackend(opts: {
     }
     if (url.includes("/embeddings/reindex/status")) {
       return jsonResponse(REINDEX_STATUS);
+    }
+    const keyed = keyedEnvelope(url);
+    if (keyed) {
+      return keyed;
     }
     return jsonResponse({
       data: [],

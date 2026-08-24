@@ -2,7 +2,11 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { formatDayMonth, formatMoneyCompact } from "../format/format";
+import {
+  formatDayMonth,
+  formatMoneyCompact,
+  relativeDays,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 
 // The relationship state strip (concept §5.3): six facts that change how a
@@ -76,26 +80,6 @@ export function PersonStrip({
       />
     </StatStrip>
   );
-}
-
-// relativeDays reads a timestamp the way a person says it. "Never" is reserved
-// for a read that HAPPENED and found nothing — the caller decides that by
-// passing null only when the section was readable.
-function relativeDays(
-  at: string | null | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  if (!at) {
-    return t("person.strip.never");
-  }
-  const days = Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
-  if (days <= 0) {
-    return t("person.strip.today");
-  }
-  if (days === 1) {
-    return t("person.strip.yesterday");
-  }
-  return t("person.strip.days", { count: days });
 }
 
 // Counts, not a score. A standalone number here would be the composite verdict

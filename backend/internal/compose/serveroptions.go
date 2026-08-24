@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
@@ -190,6 +191,12 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// have already run, and a reset that cannot reach the vault leaves the
 		// sealed credentials of the installation it just wiped resident.
 		s.dataResetHandlers.vault = vault
+		// The BYOK credential surface exists only where there is somewhere to
+		// seal a key. Wired here rather than in the AI block so a role that
+		// composes no vault serves 501 on those routes instead of recording a
+		// reference to a blob nothing wrote.
+		s.voiceHandlers = s.WithProviderKeys(
+			ai.NewProviderKeyStore(NewSettingsStore(pool), vault, s.log))
 		// Rebuild the capture registry with the vault so the connector-
 		// credential paths (Connect seals, Sync resolves) have their custodian.
 		// The standing IMAP connect rides this same registry and needs no

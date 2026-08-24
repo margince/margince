@@ -55,7 +55,7 @@ var ProviderKeys = settings.Define[map[string]string](
 	"update",
 	map[string]string{},
 	validateProviderKeyRefs,
-).AsInstallationIdentity()
+).AsInstallationIdentity().AsSecretReference()
 
 // validateProviderKeyRefs refuses a ref for a provider this build cannot serve.
 // A key sealed against a name nothing routes is a credential nobody can use and

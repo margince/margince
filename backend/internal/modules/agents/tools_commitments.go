@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -209,31 +210,23 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 	return item
 }
 
-// commitmentState judges one promise against the instant the set was swept
-// at. A due date exactly equal to that instant reads as overdue: the moment
-// it was promised for has arrived and it is not done.
+// commitmentState judges one promise against the instant the set was swept at.
+//
+// The boundary is deadline.Passed's, so this surface and every list, card and
+// figure the same person can open agree about the same promise.
 func commitmentState(dueAt *time.Time, asOf time.Time) string {
 	switch {
 	case dueAt == nil:
 		return commitmentUndated
-	case dueAt.After(asOf):
-		return commitmentUpcoming
-	default:
+	case deadline.Passed(dueAt, asOf):
 		return commitmentOverdue
+	default:
+		return commitmentUpcoming
 	}
 }
 
-// daysOverdue answers how many WHOLE days a promise has been past its date,
-// and whether it is past it at all.
-//
-// Whole days elapsed, not calendar days crossed — the second needs a timezone
-// this build does not store, and would report a promise made at 23:00 and
-// judged at 01:00 as a day late. Zero is a real answer here: a promise hours
-// past its date is overdue by no whole days, which is not the same as not
-// being overdue.
+// daysOverdue answers how many WHOLE days a promise has been past its date, and
+// whether it is past it at all.
 func daysOverdue(dueAt *time.Time, asOf time.Time) (int, bool) {
-	if dueAt == nil || dueAt.After(asOf) {
-		return 0, false
-	}
-	return int(asOf.Sub(*dueAt) / (24 * time.Hour)), true
+	return deadline.DaysPast(dueAt, asOf)
 }

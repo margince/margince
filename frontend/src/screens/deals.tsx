@@ -83,6 +83,10 @@ import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
+import { DealPulse } from "./deal360/dealpulse";
+import { DealSeats } from "./deal360/dealseats";
+import { DealStrip } from "./deal360/dealstrip";
+import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
@@ -95,7 +99,7 @@ import {
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealRoomAside } from "./dealroom";
-import { DealStatusCardPanel } from "./dealstatus";
+import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
@@ -107,7 +111,6 @@ import {
   ListTable,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
-import { DealCoverageCard } from "./network";
 import type { Project } from "./projects.form";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
@@ -126,6 +129,9 @@ type Organization = components["schemas"]["Organization"];
 type Stage = components["schemas"]["Stage"];
 type Pipeline = components["schemas"]["Pipeline"];
 type Offer = components["schemas"]["Offer"];
+type DealCoverage = components["schemas"]["DealCoverage"];
+type DealStatusCard = components["schemas"]["DealStatusCard"];
+type Activity = components["schemas"]["Activity"];
 
 /**
  * The pipeline a record belongs to, falling back to the default.
@@ -3225,15 +3231,14 @@ function DealOverviewPane({
           screen. */}
       <DealLead dealId={deal.id} overlay={overlay} />
       <DealApprovals approvals={dealApprovals} decide={onDecide} />
-      {/* Who is on the deal and what is wrong with that coverage, in ONE card.
-          There used to be a second "Stakeholders" card below this one; it read
-          the /stakeholders relationship rows, which carry a person_id and no
-          name, so a real stakeholder rendered as the bare word
-          "economic_buyer". The coverage seats carry the name and whether the
-          person is actually engaged, which is the same list with the two facts
-          a rep needs — and it keeps the findings beside the seats they are
-          about. Overlay is handled inside the card. */}
-      <DealCoverageCard id={deal.id} />
+      {/* The coverage card is NOT here any more, and its absence is the point.
+          Its two halves went to the two places that answer their questions: the
+          seats to the rail, where a reader asks who these people are, and the
+          findings to Deal360's chips, where they sit under the verdict they
+          explain. Left mounted as well, a reader met "Single-threaded" three
+          times on one screen — as a figure in the readings, as a chip, and as
+          a row here. The card itself still exists for any surface that wants
+          both halves in one place (network.tsx). */}
       <OffersPanel
         offers={offers}
         creating={creatingOffer}
@@ -3254,18 +3259,68 @@ function DealOverviewPane({
 // element that renders null, because RecordView reserves the band's space for
 // anything it is handed, and a page that always kept the gap would read as a
 // record with something to say about itself and nothing said.
-function archivedDealBand(
-  deal: Deal,
-  reasonId: string,
-  t: ReturnType<typeof useT>,
-): ReactNode | undefined {
-  if (deal.archived_at == null) {
+// The sentence above the readings: whose move it is.
+//
+// Absent in overlay mode for the reason the readings are: whose move it is, is
+// read from this installation's own timeline, and a mirrored deal's is the
+// incumbent's.
+function dealPulse({
+  card,
+  timeline,
+  overlay,
+}: Readonly<{
+  card?: DealStatusCard;
+  timeline: readonly Activity[];
+  overlay: boolean;
+}>): ReactNode | undefined {
+  if (overlay) {
     return undefined;
   }
-  return (
+  return <DealPulse card={card} timeline={timeline} />;
+}
+
+// The band under the header: the deal's four readings, and the archived notice
+// when there is one.
+//
+// RecordView reserves the band's space for anything it is handed, so this
+// answers `undefined` rather than a null-rendering element when there is
+// nothing to say — which is only ever the case in overlay mode, where the
+// readings are assembled from records this installation does not hold.
+function dealBand({
+  deal,
+  reasonId,
+  offers,
+  coverage,
+  coverageWithheld,
+  overlay,
+  t,
+}: Readonly<{
+  deal: Deal;
+  reasonId: string;
+  offers?: readonly Offer[];
+  coverage?: DealCoverage;
+  coverageWithheld: boolean;
+  overlay: boolean;
+  t: ReturnType<typeof useT>;
+}>): ReactNode | undefined {
+  const archived = deal.archived_at != null && (
     <p id={reasonId} className="t-caption">
       {t("deal.archivedReadOnly")}
     </p>
+  );
+  if (overlay) {
+    return archived || undefined;
+  }
+  return (
+    <>
+      {archived}
+      <DealStrip
+        deal={deal}
+        offers={offers}
+        coverage={coverage}
+        coverageWithheld={coverageWithheld}
+      />
+    </>
   );
 }
 
@@ -3325,6 +3380,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // kept expired rows — so a visit here could silently cap the badge at 50 and
   // count approvals nobody can act on.
   const approvalsQuery = usePendingApprovals();
+  // Both already fetched by children — the status card by Deal360, coverage by
+  // the signal chips and the coverage card. Read here so the header's sentence
+  // and the readings band share those cache entries rather than adding two
+  // requests for facts the page already holds.
+  const statusQuery = useDealStatusCard(id);
+  const coverageRead = useDealCoverage(id, !overlay);
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
   const timelineQuery = useRecordTimeline("deal", id, {
     filters: timelineFilters,
@@ -3411,7 +3472,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   archivedReasonId={archivedReasonId}
                 />
               }
-              band={archivedDealBand(deal, archivedReasonId, t)}
+              pulse={dealPulse({
+                card: statusQuery.data,
+                timeline: timelineQuery.activities,
+                overlay,
+              })}
+              band={dealBand({
+                deal,
+                reasonId: archivedReasonId,
+                offers: offersQuery.data?.data,
+                coverage: coverageRead.coverage,
+                coverageWithheld: coverageRead.withheld,
+                overlay,
+                t,
+              })}
               timeline={timelineEntries}
               timelineGroups={groupChronology(
                 timelineEntries,
@@ -3433,6 +3507,16 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               aside={
                 overlay ? undefined : (
                   <>
+                    {/* Context first: who these people are, before the verbs
+                        that act on them. The seats moved out of the main
+                        column when the readings band started counting them —
+                        the same two facts were reaching a reader three times
+                        on one screen. */}
+                    <DealSeats
+                      coverage={coverageRead.coverage}
+                      withheld={coverageRead.withheld}
+                      pending={coverageRead.pending}
+                    />
                     <DealRoomAside dealId={id} dealName={deal.name} />
                     <DealEmailAside dealId={id} />
                   </>

@@ -102,8 +102,20 @@ bootstrap_admin:
 # rather than surfacing at the first model call.
 #
 # Credentials are NOT here and never will be. A binding names providers; each
-# one's BYOK key is read from its conventional environment variable
-# (GEMINI_API_KEY, ANTHROPIC_API_KEY, …), so this section is safe to commit.
+# one's BYOK key lives in the key vault, put there by an admin under
+# Settings -> AI -> Model provider keys, so this section is safe to commit.
+#
+# The conventional environment variables (GEMINI_API_KEY, ANTHROPIC_API_KEY, …)
+# are still read, but only to SEED: a boot that finds one MAY seal it into the
+# vault and record where, after which the variable can be unset. It needs a
+# key-vault root key and a stored model binding to do that — the sealing runs on
+# the path that resolves a binding — so an unbound installation keeps the
+# environment as its only copy. Unset the variable once the boot log says the key
+# was sealed, not merely because it was set.
+#
+# A key in the environment is readable by every process in the container and
+# survives in shell history and process listings; one in the vault is encrypted
+# at rest and rotatable without a restart, which is why the vault is the home.
 #
 # seeds:
 #   ai_routing:

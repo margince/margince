@@ -83,14 +83,35 @@ func pruneUnreadable(rootID ids.UUID, nodes []orgTreeNode, readable func(ids.UUI
 	return included, restricted, true
 }
 
-// currentQuarterBounds returns the calendar quarter [start, end) that
-// now falls in, evaluated in loc — the workspace timezone, not UTC, so
-// a moment shortly after midnight UTC can still belong to the prior
-// quarter (and year) for a workspace west of Greenwich.
-func currentQuarterBounds(now time.Time, loc *time.Location) (start, end time.Time) {
+// currentQuarterBounds returns the quarter [start, end) that now falls in,
+// evaluated in loc — the workspace timezone, not UTC, so a moment shortly
+// after midnight UTC can still belong to the prior quarter (and year) for a
+// workspace west of Greenwich.
+//
+// fiscalStartMonth is the month the installation's business year begins, 1..12.
+// The quarters are cut FROM it rather than from January, so an installation
+// whose year starts in April reads April–June as its first quarter — the same
+// cut the period reports make, and the figure on the company page has to agree
+// with the report a reader checks it against.
+//
+// January (the default, and every installation that predates the setting)
+// leaves the offset at zero and reproduces the calendar quarters exactly.
+func currentQuarterBounds(now time.Time, loc *time.Location, fiscalStartMonth int) (start, end time.Time) {
 	local := now.In(loc)
-	quarterStartMonth := time.Month(((int(local.Month())-1)/3)*3 + 1)
-	start = time.Date(local.Year(), quarterStartMonth, 1, 0, 0, 0, 0, loc)
+	// Months since the fiscal year began, 0..11. The +12 keeps the modulo
+	// positive for a month earlier in the calendar than the fiscal start —
+	// February under an April start is 10 months in, not -2.
+	monthsIn := (int(local.Month()) - fiscalStartMonth + 12) % 12
+	quarterOffset := (monthsIn / 3) * 3
+	// Anchored on the fiscal start month IN local's own calendar year, then
+	// walked forward by whole quarters. That anchor can land in the future —
+	// February under an April start sits in the fiscal year that began the
+	// PREVIOUS April — so a start after `local` is pulled back a year.
+	start = time.Date(local.Year(), time.Month(fiscalStartMonth), 1, 0, 0, 0, 0, loc).
+		AddDate(0, quarterOffset, 0)
+	if start.After(local) {
+		start = start.AddDate(-1, 0, 0)
+	}
 	end = start.AddDate(0, 3, 0)
 	return start, end
 }

@@ -203,6 +203,29 @@ func TestTheCustomFieldNoteNamesTheTypesThatTakeNone(t *testing.T) {
 	}
 }
 
+// Both writes say what an organization's description is FOR.
+//
+// The field's shape says "string" and nothing else, so a caller holding a
+// meeting transcript writes a summary of the MEETING into the company header —
+// true about the wrong subject, and it shipped: a company created from a
+// discovery call described the call. The note belongs to BOTH halves because
+// the column is writable on create and on update alike, which is what keeps it
+// out of the create-only/update-only table above.
+func TestBothWritesSayWhatACompanyDescriptionIsFor(t *testing.T) {
+	doc := readRecordFields(t)
+	for name, section := range map[string]recordFieldsWrite{"create_record": doc.Create, "update_record": doc.Update} {
+		notes := noteText(section)
+		// Keyed on the two stable claims: what the sentence is about, and the
+		// instruction that follows from it.
+		for _, claim := range []string{"company SELLS", "Omit it rather than summarising a meeting"} {
+			if !strings.Contains(notes, claim) {
+				t.Errorf("%s's notes never say %q, so nothing tells a caller the header is not the meeting's "+
+					"summary:\n%s", name, claim, notes)
+			}
+		}
+	}
+}
+
 // The document is advertised with everything a client needs to decide whether
 // to fetch it, and behind the WRITE scope.
 //

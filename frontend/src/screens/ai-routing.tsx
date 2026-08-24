@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { useCan, useCanWrite } from "../app/capability";
+import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -41,8 +41,9 @@ const PROVIDERS = [
 
 const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
-function useRouting() {
+function useRouting(enabled: boolean) {
   return useQuery({
+    enabled,
     queryKey: ["ai-routing"],
     queryFn: async () => {
       const { data, error, response } = await api.GET("/ai/routing");
@@ -72,16 +73,29 @@ function useReplaceRouting() {
 
 export function AiRoutingCard() {
   const t = useT();
+  // The read grant gates the QUERY, not only the form. This tab opens on other
+  // grants, so a seat can reach the page without `ai_routing:read` — and asking
+  // anyway drew a 403 error box, which reads as a broken installation rather
+  // than as a permission. Withheld is the answer every card on this page gives.
+  const canSee = useCan("ai_routing", "read");
   const canManage = useCanWrite("ai_routing", "update");
-  const query = useRouting();
+  const query = useRouting(canSee);
 
   return (
     <Panel title={t("aiRouting.title")}>
       <PanelBody className="form-stack">
         <p className="t-caption">{t("aiRouting.sub")}</p>
-        <QueryGate query={query}>
-          {(routing) => <RoutingForm routing={routing} canManage={canManage} />}
-        </QueryGate>
+        {canSee ? (
+          <QueryGate query={query}>
+            {(routing) => (
+              <RoutingForm routing={routing} canManage={canManage} />
+            )}
+          </QueryGate>
+        ) : (
+          <EmptyState>
+            <p className="t-small">{t("aiRouting.withheld")}</p>
+          </EmptyState>
+        )}
       </PanelBody>
     </Panel>
   );

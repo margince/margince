@@ -154,12 +154,12 @@ func (s *Sink) stageParts(ctx context.Context, rec connector.NormalizedRecord) (
 			Body:         part.Body,
 		})
 	}
-	// Proven, never assumed. Every other write here names
-	// current_setting('app.workspace_id') in its own predicate, so an unbound
-	// GUC makes it write NULL and fail its NOT NULL. An object store has no
-	// such column to fail on: an unbound context would write real attachment
-	// bytes under the zero workspace, outside any tenant's reach and outside
-	// erasure's.
+	// Proven, never assumed. Nothing downstream will fail on an unbound
+	// context: ADR-0091 §8 phase D took the tenant column off every core table,
+	// so no write here can bounce off a NOT NULL, and an object store never had
+	// such a column to fail on. An unbound context would put real attachment
+	// bytes under the zero workspace — outside any reader's reach and outside
+	// erasure's — and nothing but this check would say so.
 	workspace, ok := principal.WorkspaceID(ctx)
 	if !ok || workspace == (ids.UUID{}) {
 		return nil, fmt.Errorf(

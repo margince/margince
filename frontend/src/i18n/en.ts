@@ -1756,6 +1756,39 @@ export const en = {
   "deal.companyWithheld": "Company withheld",
   "deal.partnerWithheld": "Partner withheld",
   "deal.forecastCategory": "Forecast category",
+  "deal.strip.title": "Where this deal stands",
+  "deal.seats.title": "Who is on this deal",
+  "deal.seats.empty": "No stakeholder is recorded on this deal",
+  "deal.seats.ours": "{count} of ours carry it",
+  "deal.strip.money": "The money",
+  "deal.strip.money.offer": "Offer {number} · {status}",
+  "deal.strip.money.noOffer": "No offer written yet",
+  "deal.strip.close": "The close",
+  "deal.strip.close.none": "No date",
+  "deal.strip.close.noneDetail": "Nobody has said when this closes",
+  "deal.strip.close.inDays": "in {days} days",
+  "deal.strip.close.overdue": "{days} days past the date",
+  "deal.strip.close.provisional": "provisional, not confirmed by a human",
+  "deal.strip.close.waiting": "they asked us to wait until {date}",
+  "deal.strip.people": "The people",
+  "deal.strip.people.count": "{engaged} of {total} engaged",
+  "deal.strip.people.champion": "a champion is named",
+  "deal.strip.people.noChampion": "no champion named",
+  "deal.strip.people.none": "Nobody",
+  "deal.strip.people.noneDetail": "No stakeholder is recorded on this deal",
+  "deal.strip.momentum": "The momentum",
+  "deal.strip.momentum.detail": "since the last contact",
+  "deal.strip.withheld": "Hidden",
+  "deal.strip.withheldDetail": "You may not read who is on this deal",
+  "deal.forecast.commit": "commit",
+  "deal.forecast.bestCase": "best case",
+  "deal.forecast.pipeline": "pipeline",
+  "deal.forecast.omitted": "left out of the forecast",
+  "deal.pulse.yourMove": "It's your move.",
+  "deal.pulse.theirMove": "Their move.",
+  "deal.pulse.theirMoveWhy": "Nobody here is owed an answer.",
+  "deal.pulse.wroteOn": "They wrote last on {date} — {days} days ago.",
+  "deal.pulse.wroteUnknown": "They wrote and nobody has answered.",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archive": "Archive deal",
@@ -4515,7 +4548,6 @@ export const en = {
   "coverage.title": "Coverage",
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
-  "coverage.seatsWithheld": "You cannot see who is on this deal.",
   "coverage.seatWithheld": "A contact you cannot read",
   "coverage.clear": "Nothing flagged — this deal passes every coverage check.",
   "coverage.withheld":
@@ -5326,6 +5358,9 @@ export const en = {
   "installationSettings.timezone": "Reporting timezone",
   "installationSettings.timezoneHint":
     "IANA zone name (for example Europe/Berlin). Your organization's own clock: report period boundaries are computed in it, and every record date — close dates, invoice days, timeline headings — is shown in it, so a date reads the same for the whole team. Separate from your own display timezone.",
+  "installationSettings.fiscalYearStart": "Financial year starts",
+  "installationSettings.fiscalYearStartHint":
+    "The month your business year begins. Reports group by this year and quarter — a year that does not start in January is labelled with both calendar years it spans, like FY2026/27. Changing it re-labels every report at once, and a saved report view filtered on a period will then ask for different months.",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
     "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",
@@ -5341,6 +5376,27 @@ export const en = {
   "installationSettings.save": "Save",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
+  "aiProviderKeys.title": "Model provider keys",
+  "aiProviderKeys.sub":
+    "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
+  "aiProviderKeys.configured": "Key stored",
+  "aiProviderKeys.absent": "No key",
+  "aiProviderKeys.configuredHint":
+    "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
+  "aiProviderKeys.absentHint":
+    "This vendor has no credential, so a model bound to it cannot be called. It may also arrive as {envVar}.",
+  "aiProviderKeys.addPlaceholder": "Paste the API key",
+  "aiProviderKeys.replacePlaceholder": "Paste a new key to replace",
+  "aiProviderKeys.add": "Add",
+  "aiProviderKeys.replace": "Replace",
+  "aiProviderKeys.removeConfirmTitle": "Remove the {provider} key?",
+  "aiProviderKeys.removeConfirmBody":
+    "The credential is deleted from the key vault and cannot be recovered — it is never readable, so there is no copy to restore. Every AI lane bound to this vendor stops until a new key is pasted in.",
+  "aiProviderKeys.withheld":
+    "Only an operator who may change the model binding can see which vendors hold a key.",
+  "aiProviderKeys.remove": "Remove",
+  "aiRouting.withheld":
+    "Only an operator who may change the model binding can see which models this installation uses.",
   "aiRouting.title": "Model routing",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",

@@ -61,7 +61,7 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 		var err error
 		if next, err = next.finalize(); err != nil {
 			return RoutingConfig{}, settings.InvalidValue{
-				Setting: RoutingKey, Code: "setting_invalid", Reason: err.Error(),
+				Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error(),
 			}
 		}
 	}

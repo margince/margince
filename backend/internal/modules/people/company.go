@@ -85,10 +85,13 @@ type companyField struct {
 var companyFields = []companyField{
 	{name: fieldDisplayName},
 	// offer_summary fills description (the header's one-line answer) only while
-	// the column is empty — the same semantics as the read-back's apply. The
+	// the column is empty. The read-back's apply now REPLACES a description no
+	// person authored, and this arm deliberately does not follow it there: the
 	// form re-sends an unchanged summary on every save, so an overwrite here
 	// would clobber a newer description typed into the header's inline edit
 	// (UpdateOrganization), which stays the one editor of a standing value.
+	// The read-back has no such re-send, which is why the same column takes
+	// different rules from the two paths.
 	// The length guard mirrors organization_description_length (0203) so an
 	// overlong summary keeps its profile-field row without aborting the save.
 	{name: fieldOfferSummary, update: `UPDATE organization SET description = $2 WHERE id = $1
