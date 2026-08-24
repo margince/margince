@@ -449,8 +449,23 @@ runs the background sync.
 ## Object storage (api, worker) — attachments and company logos
 
 Env-only, shared by both roles; secrets never appear on the command line
-(argv is world-readable). Leave `MARGINCE_BLOBSTORE_ENDPOINT` unset and the
-`/attachments` endpoints answer 501; set it to enable them.
+(argv is world-readable). Two providers: an S3-compatible service
+(`MARGINCE_BLOBSTORE_ENDPOINT`) or a local directory
+(`MARGINCE_BLOBSTORE_PATH`). Leave **both** unset and the `/attachments`
+endpoints answer 501; set either to enable them. With both set the endpoint
+wins — it is the one that may already hold objects this installation wrote, so
+preferring an empty local directory would present a working installation whose
+attachments had vanished.
+
+The path provider is for an installation that has local disk and no object
+storage service to point at — a single-machine deployment, and the desktop
+bundle, whose launcher defaults it to `data/blobs` inside the installation
+folder. Everything that rides the store rides both providers: attachments,
+company logos and CSV import bodies all go through the same `Store` seam, so
+none of them is endpoint-only. It is not a distributed store: no replication, no versioning, no signed
+URLs, and it holds bytes only for the machine it runs on. An installation with
+more than one api replica needs the endpoint provider, because two machines
+cannot share a directory they do not both mount.
 Company logos ride the same store. With none configured the resolve lane
 returns before fetching, so no logo object is ever written and
 `GET /organizations/{id}/logo` answers 404 — every company renders its
@@ -468,8 +483,9 @@ and the store tolerates a still-starting backend with a bounded retry.
 | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | access key |
 | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | secret key |
 | `MARGINCE_BLOBSTORE_BUCKET` | — | bucket name (created on first connect) |
-| `MARGINCE_BLOBSTORE_REGION` | — | region the bucket lives in; **required** when the blobstore is configured, and deliberately not defaulted — it decides where a bucket holding attachments is created (for MinIO any value works) |
+| `MARGINCE_BLOBSTORE_REGION` | — | region the bucket lives in; **required when an ENDPOINT is configured**, and deliberately not defaulted — it decides where a bucket holding attachments is created (for MinIO any value works). A path-only installation creates no bucket and never reads it |
 | `MARGINCE_BLOBSTORE_USE_SSL` | `false` | `true` for TLS to the store |
+| `MARGINCE_BLOBSTORE_PATH` | — | directory object bytes are written to, when no endpoint is set; created if absent, owner-only (`0700`). Bytes land under `<path>/blob/<key>` and their content type under `<path>/meta/<key>`, written through a temporary file and renamed, so a crash never leaves a truncated attachment a row still points at |
 
 ## Secret vault (api, worker) — connector credentials
 

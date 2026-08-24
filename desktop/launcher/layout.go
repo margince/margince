@@ -92,6 +92,12 @@ func (l layout) pgData() string            { return filepath.Join(l.data(), "pg"
 func (l layout) logs() string              { return filepath.Join(l.data(), "logs") }
 func (l layout) adminPasswordPath() string { return filepath.Join(l.data(), "admin-password") }
 
+// blobs is where attachment and logo bytes live. Inside data/ with the database,
+// because it is the same kind of thing: the user's records, not the program —
+// so an update replaces runtime/ and leaves both alone, and a backup that
+// copies data/ has the attachments a row points at rather than dangling keys.
+func (l layout) blobs() string { return filepath.Join(l.data(), "blobs") }
+
 // ensureConfig writes the deployment configuration on first run and leaves an
 // existing one alone, matching the create-if-missing / leave-if-exists rule
 // the api documents for margince.yaml (A107/ADR-0061). Overwriting it would

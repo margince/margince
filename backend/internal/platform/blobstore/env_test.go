@@ -69,3 +69,42 @@ func TestFromEnvRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
 		t.Errorf("a supplied region is still reported as missing: %v", err)
 	}
 }
+
+// The filesystem provider is chosen by MARGINCE_BLOBSTORE_PATH, which exists so
+// that an installation with local disk and no object storage service — the
+// desktop bundle — has attachments at all. Without it those endpoints answer
+// 501 and no configuration a user can supply changes that without running a
+// separate service.
+func TestFromEnvWithAPathReturnsAConfiguredStore(t *testing.T) {
+	root := t.TempDir()
+	env := map[string]string{blobstore.EnvPath: root}
+
+	store, configured, err := blobstore.FromEnv(t.Context(), config.Static(env))
+	if err != nil {
+		t.Fatalf("FromEnv with a path: %v", err)
+	}
+	if !configured || store == nil {
+		t.Fatalf("FromEnv with a path reported configured=%v store!=nil=%v", configured, store != nil)
+	}
+	if err := store.Health(t.Context()); err != nil {
+		t.Errorf("the store it built is not healthy: %v", err)
+	}
+}
+
+// Both set is an operator naming two different stores for the same bytes. The
+// endpoint wins because it is the one that can already hold objects an
+// installation has written; silently preferring the empty local directory would
+// present a working installation with no attachments.
+func TestFromEnvPrefersTheEndpointOverAPath(t *testing.T) {
+	env := map[string]string{
+		blobstore.EnvEndpoint: "not a valid host",
+		blobstore.EnvBucket:   "attachments",
+		blobstore.EnvRegion:   "eu-central-1",
+		blobstore.EnvPath:     t.TempDir(),
+	}
+
+	_, _, err := blobstore.FromEnv(t.Context(), config.Static(env))
+	if err == nil {
+		t.Fatal("the invalid endpoint was not used, so the path took precedence over it")
+	}
+}
