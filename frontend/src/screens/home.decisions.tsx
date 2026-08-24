@@ -172,18 +172,31 @@ async function sendVerdict(
 async function sendBundle(
   bundleId: string,
   verdict: "accept" | "reject",
-): Promise<void> {
+): Promise<{ alreadyDecided: boolean }> {
   const path =
     verdict === "accept"
       ? "/approval-bundles/{bundle_id}/approve"
       : "/approval-bundles/{bundle_id}/reject";
-  const { error } = await api.POST(path, {
+  const { data, error } = await api.POST(path, {
     params: { path: { bundle_id: bundleId } },
     ...(verdict === "reject" ? { body: { reason: "" } } : {}),
   });
   if (error) {
     throwProblem(error);
   }
+  // Deciding a bundle is not all-or-nothing: the response reports each member,
+  // and a member somebody else answered first comes back `already_decided`
+  // rather than as an error. Reading `false` here regardless — which this did —
+  // meant the deck reported a conflict for a single proposal and said nothing
+  // about the same conflict inside a bundle. The full per-outcome report is the
+  // Decisions screen's; what Home needs from it is whether anything was already
+  // settled.
+  const members = data?.data ?? [];
+  return {
+    alreadyDecided: members.some(
+      (member) => member.outcome === "already_decided",
+    ),
+  };
 }
 
 /** One staged verdict, sent the way its item is decided. */
@@ -192,8 +205,8 @@ async function sendStaged(
   verdict: "accept" | "reject",
 ): Promise<Pick<CommitResult, "token" | "alreadyDecided">> {
   if (item.kind === "bundle") {
-    await sendBundle(item.bundleId, verdict);
-    return { token: null, alreadyDecided: false };
+    const outcome = await sendBundle(item.bundleId, verdict);
+    return { token: null, alreadyDecided: outcome.alreadyDecided };
   }
   return sendVerdict(approvalsOf(item), verdict);
 }

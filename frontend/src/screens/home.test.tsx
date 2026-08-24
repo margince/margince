@@ -326,6 +326,44 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
     expect(screen.getByText("1 decision sent")).toBeTruthy();
   });
 
+  // A bundle whose members somebody else answered first. Deciding a bundle is
+  // not all-or-nothing — the response reports each member — and reading that
+  // report as "nothing was already decided" told this reader their commit had
+  // landed on work that had in fact been settled elsewhere.
+  it("says so when a bundle's members were already decided", async () => {
+    const bundleId = "bn-2";
+    const queue = [
+      proposal("apc-1", "Publish the nordwind.example facts", {
+        bundle_id: bundleId,
+      }),
+      proposal("apc-2", "Lead: Jonas Brandt", { bundle_id: bundleId }),
+    ];
+    const decided = new Set<string>();
+    stubApi({
+      "GET /approvals": () => pendingPage(queue, decided),
+      "POST /approval-bundles/bn-2/approve": () => {
+        for (const member of queue) {
+          decided.add(member.id);
+        }
+        return jsonResponse({
+          bundle_id: bundleId,
+          data: queue.map((approval) => ({
+            approval: { ...approval, status: "approved" },
+            outcome: "already_decided",
+          })),
+        });
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "Accept" }));
+    await user.click(
+      screen.getByRole("button", { name: "Send staged decisions" }),
+    );
+    expect(await screen.findByText(/already/i)).toBeTruthy();
+  });
+
   // An edit re-enters the admission gate with a new payload, which is a form
   // rather than a swipe — so the deck sends nothing and hands the reader over.
   it("sends nothing for a staged edit and lands the reader on the Decisions screen", async () => {
