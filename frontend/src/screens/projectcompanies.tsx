@@ -85,7 +85,7 @@ export function ProjectCompanies({
       project_id: company.organization_id,
       name: company.display_name,
       phase: <Badge>{company.role}</Badge>,
-      href: `#/organizations/${company.organization_id}`,
+      href: `#/companies/${company.organization_id}`,
     })),
     readOnly,
     allowsMany: true,
