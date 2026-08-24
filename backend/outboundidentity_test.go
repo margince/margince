@@ -75,7 +75,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 						return true
 					}
 					headerWrites++
-					if _, literal := stringValue(written.Args[1], nil); literal {
+					if _, literal := stringValue(written.Args[1], consts); literal {
 						findings = append(findings, filepath.ToSlash(path))
 					}
 				case *ast.CompositeLit:
@@ -91,7 +91,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 							continue
 						}
 						headerWrites++
-						if holdsALiteral(pair.Value) {
+						if holdsALiteral(pair.Value, consts) {
 							findings = append(findings, filepath.ToSlash(path))
 						}
 					}
@@ -108,7 +108,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 							continue
 						}
 						headerWrites++
-						if i < len(written.Rhs) && holdsALiteral(written.Rhs[i]) {
+						if i < len(written.Rhs) && holdsALiteral(written.Rhs[i], consts) {
 							findings = append(findings, filepath.ToSlash(path))
 						}
 					}
@@ -146,8 +146,8 @@ func writesAHeader(call *ast.CallExpr) bool {
 
 // holdsALiteral reports whether a value assigned to the header map is written
 // out at the call site, including inside the []string a direct assignment takes.
-func holdsALiteral(value ast.Expr) bool {
-	if _, literal := stringValue(value, nil); literal {
+func holdsALiteral(value ast.Expr, consts map[string]string) bool {
+	if _, literal := stringValue(value, consts); literal {
 		return true
 	}
 	composite, ok := value.(*ast.CompositeLit)
@@ -155,7 +155,7 @@ func holdsALiteral(value ast.Expr) bool {
 		return false
 	}
 	for _, element := range composite.Elts {
-		if _, literal := stringValue(element, nil); literal {
+		if _, literal := stringValue(element, consts); literal {
 			return true
 		}
 	}
