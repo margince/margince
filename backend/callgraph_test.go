@@ -41,8 +41,9 @@ type graphFunc struct {
 }
 
 // packageCallGraph reads one package's product files, keyed by RECEIVER TYPE
-// and name, and returns the graph alongside the statements held in
-// package-level `var`/`const` declarations.
+// and name. Statements held in package-level `var`/`const` declarations are
+// folded into whichever function NAMES them, so a caller sees one set of
+// statements rather than having to join two.
 //
 // Bare names are not enough. `apply` is a method on one service and also a
 // plausible name elsewhere; following calls by name alone once walked from the
@@ -54,7 +55,7 @@ type graphFunc struct {
 // closure is a real limit, and the honest thing to say about it is that it can
 // hide a statement from whichever caller takes that route — never that the
 // route carries nothing.
-func packageCallGraph(t *testing.T, dir string) (map[string]*graphFunc, map[string][]string) {
+func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 	t.Helper()
 	files := parsePackageFiles(t, dir)
 	held := packageLevelStatements(files)
@@ -107,7 +108,7 @@ func packageCallGraph(t *testing.T, dir string) (map[string]*graphFunc, map[stri
 			entry.statements = append(entry.statements, held[name]...)
 		}
 	}
-	return graph, held
+	return graph
 }
 
 // parsePackageFiles reads a package's product files once.
@@ -200,58 +201,66 @@ func receiverVarName(fn *ast.FuncDecl) string {
 	return fn.Recv.List[0].Names[0].Name
 }
 
-// reachesFromAnyCaller reports whether the function itself, or anything that can
-// call it, gets to target.
+// guardedBy reports whether EVERY route to this function passes through one
+// that calls target directly.
 //
-// The caller matters because the obligation often sits one level up: coldstart's
-// column writers move a name and the duplicate re-check runs in the function
-// that drove them, which is the right place for it — the re-check needs to know
-// whether a name moved at all, and only the caller collecting the applied
-// fields knows that.
+// Existential reachability was the first attempt and it was worthless: "some
+// ancestor of this writer can also reach the re-check" is true of nearly every
+// function in a package that calls the re-check from seven places, so the gate
+// passed with the re-check deleted from BOTH real call sites. Mutation testing
+// is the only reason that is known.
 //
-// This is coarse on purpose, and the coarseness is worth stating: an ancestor
-// that calls the re-check on a branch that never reaches this writer still
-// counts. It is the same grain the privacy census uses, and the alternative —
-// path-sensitivity — asks the graph for something these unresolvable edges
-// cannot support. What it still catches is the case worth catching: a writer
-// with NOTHING above it that has ever heard of the re-check.
-func reachesFromAnyCaller(graph map[string]*graphFunc, name, target string) bool {
-	if reaches(graph, name, target) {
-		return true
-	}
-	for caller := range graph {
-		if caller == name {
-			continue
+// So the rule is universal instead. A function is guarded when it calls target
+// itself, or when it has callers and all of them are guarded. A function with
+// NO callers is an entry point: if it has not called target by then, nothing
+// will, and the write escapes.
+//
+// A cycle is treated as guarded while it is on the stack, which is the only
+// terminating answer and leaves one hole worth naming: a writer that reaches
+// itself and is guarded nowhere else would pass. Nothing in this tree does that
+// today, and the alternative — reporting every recursive function — would be a
+// gate nobody reads.
+func guardedBy(graph map[string]*graphFunc, name, target string) bool {
+	callers := map[string][]string{}
+	for caller, entry := range graph {
+		for called := range entry.calls {
+			callers[called] = append(callers[called], caller)
 		}
-		if reaches(graph, caller, name) && reaches(graph, caller, target) {
+	}
+	verdict := map[string]bool{}
+	onStack := map[string]bool{}
+	var guarded func(string) bool
+	guarded = func(fn string) bool {
+		if known, seen := verdict[fn]; seen {
+			return known
+		}
+		if onStack[fn] {
 			return true
 		}
-	}
-	return false
-}
-
-// reaches reports whether root can get to target through resolvable edges.
-func reaches(graph map[string]*graphFunc, root, target string) bool {
-	seen := map[string]bool{}
-	var walk func(string) bool
-	walk = func(name string) bool {
-		if name == target {
-			return true
-		}
-		if seen[name] {
-			return false
-		}
-		seen[name] = true
-		entry, known := graph[name]
+		entry, known := graph[fn]
 		if !known {
 			return false
 		}
-		for called := range entry.calls {
-			if walk(called) {
-				return true
+		if entry.calls[target] {
+			verdict[fn] = true
+			return true
+		}
+		up := callers[fn]
+		if len(up) == 0 {
+			verdict[fn] = false
+			return false
+		}
+		onStack[fn] = true
+		all := true
+		for _, caller := range up {
+			if !guarded(caller) {
+				all = false
+				break
 			}
 		}
-		return false
+		delete(onStack, fn)
+		verdict[fn] = all
+		return all
 	}
-	return walk(root)
+	return guarded(name)
 }

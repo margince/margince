@@ -139,7 +139,7 @@ type privacyFunc struct {
 // statement MEANS stays here, because it is not the same question over there.
 func privacyCallGraph(t *testing.T) map[string]*privacyFunc {
 	t.Helper()
-	graph, _ := packageCallGraph(t, privacyPackage)
+	graph := packageCallGraph(t, privacyPackage)
 	out := map[string]*privacyFunc{}
 	for name, entry := range graph {
 		tables := map[string]bool{}

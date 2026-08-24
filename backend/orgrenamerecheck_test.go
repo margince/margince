@@ -58,7 +58,7 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
 	defer remembersTheRecheckItself.AssertAllMatched(t)
 
-	graph, _ := packageCallGraph(t, peoplePackage)
+	graph := packageCallGraph(t, peoplePackage)
 	if _, known := graph[renameRecheck]; !known {
 		t.Fatalf("%s is not in the graph, so every writer would trivially fail to reach it — "+
 			"the re-check has been renamed or moved out of %s", renameRecheck, peoplePackage)
@@ -75,7 +75,7 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 			continue
 		}
 		writers++
-		if reachesFromAnyCaller(graph, name, renameRecheck) || remembersTheRecheckItself.Waived(t, name) {
+		if guardedBy(graph, name, renameRecheck) || remembersTheRecheckItself.Waived(t, name) {
 			continue
 		}
 		findings = append(findings, fmt.Sprintf("%s\n      %s", name, statement))
@@ -88,12 +88,12 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 			writers, organizationName)
 	}
 	if len(findings) > 0 {
-		t.Errorf("these functions rename an organization without reaching %s:\n    %s\n\n"+
+		t.Errorf("these functions rename an organization, and no route to them calls %s:\n    %s\n\n"+
 			"A name is the axis on which two records of one company converge — PO-F-2 has nothing to "+
 			"compare until one is filled in. A rename that skips the re-check leaves the duplicate it "+
 			"just created with nothing to notice it. Call the re-check, or ratify the writer here with "+
 			"the reason it does not need to.",
-			strings.Join(findings, "\n    "), renameRecheck)
+			renameRecheck, strings.Join(findings, "\n    "))
 	}
 }
 
