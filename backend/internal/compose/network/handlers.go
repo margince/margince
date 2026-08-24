@@ -7,7 +7,7 @@ package network
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
 
@@ -16,10 +16,12 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/relstrength"
@@ -31,6 +33,11 @@ import (
 // briefs handlers, and two embedded types called Handlers collide.
 type Reads struct {
 	pool *pgxpool.Pool
+	// people names the stakeholders a coverage payload seats. Injected rather
+	// than re-implemented here: PersonNames carries the person object gate as
+	// well as the row scope, and a second copy of that read is a second place
+	// for one of the two halves to go missing.
+	people *people.Store
 	// now is injected so the decayed scores are testable against a fixed
 	// clock. A score that reads time.Now() inside the handler cannot be
 	// asserted on without sleeping.
@@ -38,8 +45,8 @@ type Reads struct {
 }
 
 // NewReads builds the network surface over the pool.
-func NewReads(pool *pgxpool.Pool) Reads {
-	return Reads{pool: pool, now: func() time.Time { return time.Now().UTC() }}
+func NewReads(pool *pgxpool.Pool, ppl *people.Store) Reads {
+	return Reads{pool: pool, people: ppl, now: func() time.Time { return time.Now().UTC() }}
 }
 
 // GetPersonNetwork implements GET /people/{id}/network.
@@ -123,11 +130,11 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if err != nil {
 			return err
 		}
-		people, err := coverageSeatNames(ctx, tx, coverage)
+		seated, err := h.seatNames(ctx, tx, coverage)
 		if err != nil {
 			return err
 		}
-		out = wireCoverage(coverage, names, people)
+		out = wireCoverage(coverage, names, seated)
 		return nil
 	})
 	if err != nil {
@@ -262,50 +269,39 @@ func coverageUsers(c DealCoverage) []ids.UUID {
 	return out
 }
 
-// coverageSeatNames resolves the stakeholders' display names in one read,
-// under the caller's row scope.
+// seatNames names the stakeholders on a coverage payload.
 //
-// Scoped, where UserNames below is not, because the two answer different
-// questions. The colleague roster is readable by any authenticated member; a
-// PERSON is a customer record, and who sits on a deal is exactly the thing row
-// scope decides. A seat whose person the caller may not read is absent from
-// this map and its name goes null on the wire — the seat itself still ships,
-// because how many people carry a deal is not the secret.
-func coverageSeatNames(ctx context.Context, tx pgx.Tx, c DealCoverage) (map[ids.UUID]string, error) {
-	out := map[ids.UUID]string{}
+// It delegates to people.PersonNames rather than reading `person` here, and
+// that is the whole point of the function: PersonNames carries BOTH halves of
+// the gate — the person object check and the row-scope clause — and a copy of
+// that read in this package would be a second place for one half to go
+// missing. It went missing here once already: this started life as a local
+// query with the row scope and no object gate, so a caller holding deal:read
+// without person:read was named the deal's contacts.
+//
+// A person the caller may not read is simply absent from the map, and their
+// seat ships unnamed: how many people carry a deal is not the secret, only who
+// they are.
+func (h Reads) seatNames(ctx context.Context, tx pgx.Tx, c DealCoverage) (map[ids.UUID]string, error) {
 	if len(c.Stakeholders) == 0 {
-		return out, nil
+		return map[ids.UUID]string{}, nil
 	}
-	people := make([]ids.UUID, 0, len(c.Stakeholders))
+	seated := make([]ids.PersonID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
-		people = append(people, s.PersonID)
+		seated = append(seated, ids.From[ids.PersonKind](s.PersonID))
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idsPos := arg(people)
-	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
+	names, err := h.people.PersonNamesTx(ctx, tx, seated)
 	if err != nil {
+		// A caller who may read the deal but not people still gets their
+		// coverage — the seats simply arrive unnamed, which is what the
+		// contract's person_name already describes. Refusing the whole payload
+		// would take the findings away too, and those are about the deal.
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return map[ids.UUID]string{}, nil
+		}
 		return nil, err
 	}
-	if scope == "" {
-		scope = narrowsNothing
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(
-		`SELECT p.id, p.full_name FROM person p
-		  WHERE p.id = ANY($%d) AND p.archived_at IS NULL AND %s`, idsPos, scope), args...)
-	if err != nil {
-		return nil, fmt.Errorf("read the deal's stakeholder names: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
-			return nil, fmt.Errorf("scan a stakeholder name: %w", err)
-		}
-		out[id] = name
-	}
-	return out, rows.Err()
+	return names, nil
 }
 
 // userNames resolves the colleagues' display names in one read. The roster is

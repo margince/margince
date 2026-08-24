@@ -131,7 +131,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers:          briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
-		Reads:             network.NewReads(pool),
+		Reads:             network.NewReads(pool, people.NewStore(InstallationDB(pool))),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},
 		// The schema-change pool is boot-optional; nil
