@@ -2,7 +2,11 @@
 
 .deal-facts {
   display: grid;
-  grid-template-columns: auto auto;
+  /* max-content, not auto: `auto` lets the columns absorb whatever width the
+     header gives them, which pushed the labels and values to opposite ends of
+     the page with a hand-span of nothing between. The pair reads as one fact
+     only while it sits together. */
+  grid-template-columns: max-content max-content;
   gap: var(--space-1) var(--space-4);
   margin: 0;
   align-content: start;
