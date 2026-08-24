@@ -314,6 +314,13 @@ func namesTheHelper(n ast.Node) bool {
 // bitten by before. A probe now exercises the code the tree is judged with, or
 // it exercises nothing.
 func liveMemberVerdict(sql string) string {
+	// A bare fragment IS the pair — onlyTheLivenessPair matches nothing else —
+	// so it is a copy without needing a table to attribute its columns to.
+	// Asking liveMemberHalves instead would refuse it, because that binds every
+	// column to app_user's alias and a fragment names no table to take one from.
+	if bareLivenessPredicate(sql) {
+		return "copy"
+	}
 	status, archived := liveMemberHalves(sql)
 	switch {
 	case status && archived:
@@ -382,8 +389,8 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 func liveMemberHalves(sql string) (status, archived bool) {
 	sql = stripAssignments(sql)
 	prefix := appUserPrefix(sql)
-	status = regexp.MustCompile(`(?i)` + regexp.QuoteMeta(prefix) + `status\s*=\s*'active'`).MatchString(sql)
-	archived = regexp.MustCompile(`(?i)` + regexp.QuoteMeta(prefix) + `archived_at\s+IS\s+NULL`).MatchString(sql)
+	status = appUserColumn(prefix, `status\s*=\s*'active'`).MatchString(sql)
+	archived = appUserColumn(prefix, `archived_at\s+IS\s+NULL`).MatchString(sql)
 	return status, archived
 }
 
@@ -459,7 +466,7 @@ func resolvesOneUserByID(sql string) bool {
 	// joined table's key excuse a liveness defect on app_user: `… JOIN app_user
 	// u … WHERE p.id = $1 AND u.archived_at IS NULL` names WHICH PROJECT, not
 	// which colleague, and the statement still chooses freely among seats.
-	return regexp.MustCompile(`(?i)` + regexp.QuoteMeta(appUserPrefix(sql)) +
+	return appUserColumn(appUserPrefix(sql),
 		`id\s*(?:=\s*\$\d+|=\s*ANY\s*\(\s*\$\d+)`).MatchString(sql)
 }
 
@@ -474,6 +481,24 @@ func resolvesOneUserByID(sql string) bool {
 // passed in silence. A statement that returns `status` has at least asked the
 // question; one that neither filters on it nor reads it has not.
 var readsTheStatusColumn = regexp.MustCompile(`(?is)SELECT\b[^;]*?\bstatus\b[^;]*?\bFROM\b|RETURNING\b[^;]*?\bstatus\b`)
+
+// appUserColumn matches one of APP_USER's columns and refuses somebody else's.
+//
+// The anchor is the whole point. `prefix` is empty whenever app_user is
+// unaliased, and an unanchored pattern then matched any relation's column: a
+// statement joining `project p` was read as constraining liveness because IT
+// carried `p.status` and `p.archived_at`, and `id = $N` matched
+// `external_id = $1`, handing a statement the id-lookup exemption on a column
+// that names nobody. Both readings said "this statement already names which
+// colleague" about one that does not.
+//
+// `[^.\w]` refuses a qualifier and refuses a longer identifier ending in the
+// column's name, which is the two ways a column can be somebody else's. RE2 has
+// no lookbehind, so the boundary is matched rather than asserted; it costs a
+// leading group and nothing else.
+func appUserColumn(prefix, column string) *regexp.Regexp {
+	return regexp.MustCompile(`(?i)(^|[^.\w])` + regexp.QuoteMeta(prefix) + column)
+}
 
 // appUserPrefix is what app_user's columns are written with in this statement:
 // its alias plus a dot, or "" when the statement reads app_user unaliased.
@@ -651,6 +676,14 @@ func read() string {
 	{"a fragment naming one half only, table unknowable", "", "", `
 func read() string {
 	return ` + "`" + `archived_at IS NULL` + "`" + `
+}`},
+	{"a joined table carrying both columns, app_user unaliased", "", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user JOIN project p ON p.owner_id = id WHERE p.status = 'active' AND p.archived_at IS NULL` + "`" + `
+}`},
+	{"a column merely ending in id, not the key", "half", "", `
+func read() string {
+	return ` + "`" + `SELECT status FROM app_user WHERE external_id = $1 AND archived_at IS NULL` + "`" + `
 }`},
 	{"another table carrying the same two columns", "", "", `
 func read() string {
