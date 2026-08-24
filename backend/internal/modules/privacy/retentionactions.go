@@ -209,9 +209,19 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	return err
 }
 
-// anonymizePersonRecord is the person/anonymize action: the same in-place
-// anonymization the eraser performs, minus the suppression list — the subject
-// may lawfully return.
+// anonymizePersonRecord is the person/anonymize action: it strips the subject's
+// own identifying fields and the rows that carry their addresses, so the record
+// stops naming them. The subject may lawfully return, so no suppression entry is
+// written.
+//
+// It is NOT what the eraser does minus that entry, and it once said it was.
+// Twenty-one tables the eraser clears are untouched here — the provenance of
+// their field values, the raw captures and attachments their messages came from,
+// their lead rows and scores, their preference tokens. What survives is written
+// down per table in TestErasingAndAnonymizingClearTheSameTables
+// (backend/personscrub_test.go), which fails when the gap widens.
+//
+// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go)
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The subject's addresses, read BEFORE person_email is deleted
 	// below. The graph structures name them by raw address as well as
