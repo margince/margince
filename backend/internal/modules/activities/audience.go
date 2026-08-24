@@ -139,12 +139,20 @@ func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion 
 // ensureAudienceSubjectsExist refuses a member that names no live user or
 // team of this workspace: the table carries no FK for its polymorphic subject,
 // so the check is here, and a guessed id answers like a malformed one.
+//
+// LIVE is both halves. Deactivating an account sets `status` and leaves
+// `archived_at` NULL, so the archived-only test admitted a colleague who has
+// left — this comment said "live" while the query asked something weaker, and
+// an audience is a list of people expected to read the thing. Spelled out
+// because a module never imports a sibling (ADR-0054 §3); identity owns
+// app_user and TestOnlyOneSpellingOfALiveMember holds the two together.
 func ensureAudienceSubjectsExist(ctx context.Context, tx pgx.Tx, members []AudienceMember) error {
 	for _, m := range members {
 		var exists bool
 		var q string
 		if m.SubjectType == "user" {
-			q = `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL)`
+			q = `SELECT EXISTS (SELECT 1 FROM app_user
+			                 WHERE id = $1 AND status = 'active' AND archived_at IS NULL)`
 		} else {
 			q = `SELECT EXISTS (SELECT 1 FROM team WHERE id = $1)`
 		}

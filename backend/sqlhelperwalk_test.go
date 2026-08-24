@@ -72,6 +72,20 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 			}
 		}
 		return " " + text + " ", true
+	case *ast.CompositeLit:
+		// A statement assembled as `strings.Join([]string{…}, " ")` kept its
+		// pieces in a slice literal, which rendered as a blank — so each piece
+		// was judged alone, and the piece naming the table carried no predicate
+		// while the piece carrying the predicate named no table. Neither half
+		// could ever be a finding.
+		seen[n] = true
+		text := ""
+		for _, elt := range v.Elts {
+			if part, ok := flattenSQL(elt, seen, owner); ok {
+				text += part
+			}
+		}
+		return text, true
 	case *ast.FuncLit:
 		// NOT claimed. A callback body is where most of this tree's SQL lives —
 		// `db.Tx(ctx, func(tx pgx.Tx) error { … })` is the shape every store
@@ -93,15 +107,7 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 // `qualifier == ""` was read as "this file IS the owning package", where a bare
 // call is the helper's own. But importAliasOf returns "" for every file that
 // does not import the owner at all — which is most of the tree — so in any of
-// them a bare `EmploymentIsCurrentSQL(…)` was accepted as canonical and its
-
-// helperScope says how the owning module's helper is reachable from one file, and it is
-// a struct rather than a string because the string had two meanings.
-//
-// `qualifier == ""` was read as "this file IS the owning package", where a bare
-// call is the helper's own. But importAliasOf returns "" for every file that
-// does not import the owner at all — which is most of the tree — so in any of
-// them a bare `EmploymentIsCurrentSQL(…)` was accepted as canonical and its
+// them a bare call to the helper's NAME was accepted as canonical and its
 // arguments hidden. `inside` says the one thing the empty string could not.
 type helperScope struct {
 	qualifier string          // the local name the owning module is bound to, "" if not imported
@@ -141,10 +147,6 @@ func (h helperScope) isOneDefinition(call *ast.CallExpr) bool {
 // importAliasOf returns the local name an import path is bound to in this file,
 // or "" if the file does not import it. A dot import returns "" too: a
 // dot-imported call is a bare identifier, and the gate would rather miss it
-
-// importAliasOf returns the local name an import path is bound to in this file,
-// or "" if the file does not import it. A dot import returns "" too: a
-// dot-imported call is a bare identifier, and the gate would rather miss it
 // than name the wrong function.
 func importAliasOf(file *ast.File, path string) string {
 	for _, spec := range file.Imports {
@@ -157,13 +159,16 @@ func importAliasOf(file *ast.File, path string) string {
 			}
 			return spec.Name.Name
 		}
-		return "people"
+		// No alias: the local name is the package's own, which for every path
+		// this repo binds is the last segment. Returning a FIXED name here (it
+		// said "people", a leftover from the single-port version) made every
+		// unaliased import of any other module read as a lookalike, so the
+		// owning module's helper was never recognised in the one place it is
+		// most used.
+		return path[strings.LastIndex(path, "/")+1:]
 	}
 	return ""
 }
-
-// calleeName is the function's own name, however it is qualified.
-// Prefixed because retentionscope_test.go already has a calleeName in this
 
 // markSeen claims a whole subtree, so nothing inside a helper call is judged as
 // though somebody had written it into the statement.

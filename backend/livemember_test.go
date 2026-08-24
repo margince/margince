@@ -60,10 +60,14 @@ const (
 // predicate would have to move tier before they could adopt it. That is an
 // architecture decision with an owner rather than something to smuggle in here.
 //
-// Each entry is a FILE, so a NEW hand-spelled copy in one of these packages is
-// still a finding: the ratification covers the statements that exist, not the
-// package.
+// Each entry is a FILE and not a package, which is narrower but NOT narrow
+// enough to say what an earlier version of this comment said: a new
+// hand-spelled copy added to one of these files is excused along with the ones
+// already there. The key ratifies the file. Splitting it finer would mean
+// keying on statement text, which changes with every whitespace edit and
+// ratifies nothing stable.
 var cannotReachIdentity = gatekit.Waive(map[string]string{
+	"internal/modules/activities/audience.go":     "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/activities/lifecycle.go":    "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/dealrooms/store_public.go":  "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/people/counterpartyname.go": "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
@@ -90,10 +94,35 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 // once, so it is issue margince/margince#2592 rather than a change made here on
 // a guess.
 var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
-	"internal/modules/overlay/usermapadmin.go": "overlay mapping eligibility is NOT is_agent AND archived_at IS NULL, a different set held as its own three-site invariant; see issue 2592",
-	"internal/modules/overlay/usermapseed.go":  "overlay mapping eligibility is NOT is_agent AND archived_at IS NULL, a different set held as its own three-site invariant; see issue 2592",
-	"internal/modules/identity/roster.go":      "listUsersAllQuery is the ADMIN roster and says so: every non-archived member REGARDLESS of status, because a deactivated member has to be visible to reactivate",
-	"internal/modules/identity/reset.go":       "OperatorResetPassword is the operator CLI's lockout path, never exposed over HTTP; it must reach an account whose status is not active, which is what administrator lockout means. Login itself calls the helper (lockout.go)",
+	"internal/modules/overlay/usermapadmin.go":                                 "overlay mapping eligibility is NOT is_agent AND archived_at IS NULL, a different set held as its own three-site invariant; see issue 2592",
+	"internal/modules/overlay/usermapseed.go":                                  "overlay mapping eligibility is NOT is_agent AND archived_at IS NULL, a different set held as its own three-site invariant; see issue 2592",
+	"internal/modules/identity/roster.go":                                      "listUsersAllQuery is the ADMIN roster and says so: every non-archived member REGARDLESS of status, because a deactivated member has to be visible to reactivate",
+	"internal/modules/identity/reset.go":                                       "OperatorResetPassword is the operator CLI's lockout path, never exposed over HTTP; it must reach an account whose status is not active, which is what administrator lockout means. Login itself calls the helper (lockout.go)",
+	"internal/compose/integration/agentaccess/oauth_grant_integration_test.go": "the fixture deactivates every seat that CAN still act, to prove revocation binds mid-session; the archived half would narrow nothing, because every seat in it was created by the harness moments earlier and none is archived",
+})
+
+// namesTheSeatRatherThanOffersIt ratifies the reads that resolve a seat by the
+// id their caller was handed and deliberately admit a deactivated one.
+//
+// These are NOT the offer defect. A departed colleague's name still has to
+// render on the work they did, their locale still decides how a stored string
+// is formatted, and an admin still has to be able to inspect and change a
+// deactivated seat — that is how somebody comes back. Requiring liveness here
+// would blank a name on last quarter's activity, which is a worse answer than
+// the one this gate exists to prevent.
+//
+// One entry is a defect rather than a decision, and it says so: dealrooms opens
+// a room with a steward who cannot act. That changes who may open a room and
+// with what, so it is issue margince/margince#2596 rather than a change made
+// here on a guess — and it stays listed so it reads as open rather than settled.
+var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
+	"internal/modules/dealrooms/preview.go":      "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
+	"internal/modules/dealrooms/room_write.go":   "DEFECT, not a decision: a deactivated seat can be a new room's steward. Product call on who may be one, so it is issue 2596",
+	"internal/modules/identity/access.go":        "UserAccess evaluates an EXISTING member's roles and teams as they stand, which an admin needs precisely when the seat is deactivated",
+	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
+	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
+	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
+	"internal/modules/identity/users.go":         "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
 })
 
 // appUserAlias finds what app_user is called in a statement, so a sibling
@@ -102,7 +131,7 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // `FROM project p JOIN app_user u` puts two archived_at columns in scope and
 // only one of them is a workforce question. An unaliased `FROM app_user` binds
 // the bare column names instead.
-var appUserAlias = regexp.MustCompile(`\bapp_user\b(?:\s+AS)?\s+([a-z]\w*)`)
+var appUserAlias = regexp.MustCompile(`(?i)\bapp_user\b(?:\s+AS)?\s+([a-z]\w*)`)
 
 // readsAppUser matches the table itself and not a column named after it: the
 // trailing `\b` already refuses `app_user_id`, since an underscore is a word
@@ -115,6 +144,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
 	defer cannotReachIdentity.AssertAllMatched(t)
 	defer deliberatelyNotLiveness.AssertAllMatched(t)
+	defer namesTheSeatRatherThanOffersIt.AssertAllMatched(t)
 
 	fset := token.NewFileSet()
 	var copies, halves []string
@@ -138,19 +168,23 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		for _, decl := range file.Decls {
 			for _, sql := range appUserStatements(decl, scope) {
 				judged++
-				status, archived := liveMemberHalves(sql)
-				if !status && !archived {
-					continue
+				if st, ar := liveMemberHalves(sql); st || ar {
+					constrained++
 				}
-				constrained++
-				switch {
-				case status && archived:
-					if strings.Contains(sql, liveMemberHelper) || cannotReachIdentity.Waived(t, slash) {
+				switch liveMemberVerdict(sql) {
+				case "copy":
+					// No exemption for "it also calls the helper". The helper
+					// renders as a marker and contributes NO literal halves, so
+					// a compliant statement never reaches here — and excusing
+					// one that does would make calling the definition a licence
+					// to write a second predicate beside it.
+					if cannotReachIdentity.Waived(t, slash) {
 						continue
 					}
 					copies = append(copies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
-				default:
-					if !offersAUser(sql) || deliberatelyNotLiveness.Waived(t, slash) {
+				case "half":
+					if deliberatelyNotLiveness.Waived(t, slash) ||
+						namesTheSeatRatherThanOffersIt.Waived(t, slash) {
 						continue
 					}
 					halves = append(halves, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
@@ -203,7 +237,32 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
+		// Callees, plus the declaration itself: `func LiveMemberSQL(...)` names
+		// the helper without using it, and reporting the definition as its own
+		// unsafe caller would be the gate refusing the thing it protects.
+		callees := map[ast.Node]bool{}
 		ast.Inspect(file, func(n ast.Node) bool {
+			switch v := n.(type) {
+			case *ast.CallExpr:
+				callees[v.Fun] = true
+				// A qualified callee is a SelectorExpr whose Sel is the
+				// helper's own name, and the walk reaches that Ident
+				// separately. Marking only the selector reported every
+				// ordinary `identity.LiveMemberSQL("u")` as a value reference.
+				if sel, ok := v.Fun.(*ast.SelectorExpr); ok {
+					callees[sel.Sel] = true
+				}
+			case *ast.FuncDecl:
+				callees[v.Name] = true
+			}
+			return true
+		})
+		ast.Inspect(file, func(n ast.Node) bool {
+			if namesTheHelper(n) && !callees[n] {
+				findings = append(findings, fmt.Sprintf("%s:%d (used as a value, so no argument is checkable)",
+					path, fset.Position(n.Pos()).Line))
+				return true
+			}
 			call, ok := n.(*ast.CallExpr)
 			if !ok || calleeName(call) != liveMemberHelper || len(call.Args) != 1 {
 				return true
@@ -228,6 +287,66 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 	}
 }
 
+// namesTheHelper reports whether this node IS a reference to the helper — bare
+// inside identity, qualified anywhere else.
+func namesTheHelper(n ast.Node) bool {
+	switch v := n.(type) {
+	case *ast.SelectorExpr:
+		return v.Sel != nil && v.Sel.Name == liveMemberHelper
+	case *ast.Ident:
+		return v.Name == liveMemberHelper
+	}
+	return false
+}
+
+// liveMemberVerdict is what this gate says about one statement: "copy", "half",
+// or "" for one it passes over.
+//
+// The census and the probe suite BOTH call it, and that is the point. They used
+// to spell the rule separately, so a probe could agree with a census that had
+// changed underneath it — the two readings of one value this repo has been
+// bitten by before. A probe now exercises the code the tree is judged with, or
+// it exercises nothing.
+func liveMemberVerdict(sql string) string {
+	status, archived := liveMemberHalves(sql)
+	switch {
+	case status && archived:
+		return "copy"
+	case (status || archived) && offersAUser(sql):
+		return "half"
+	}
+	return ""
+}
+
+// bareLivenessPredicate matches the shape that started all of this: the pair
+// spelled into a declaration of its own and consumed elsewhere by name.
+//
+// `const liveMemberWhere = "u.status = 'active' AND u.archived_at IS NULL"` is
+// invisible to a table-keyed walk from both ends — the declaration never
+// mentions app_user, and the statement that concatenates it renders the
+// identifier as a blank. That is precisely how org360's copy sat unheld while
+// its comment called it the one spelling.
+//
+// It deliberately does not catch a HALF spelled into a bare declaration: a lone
+// `archived_at IS NULL` fragment could belong to any of a dozen tables, and
+// reporting it would be a guess.
+func bareLivenessPredicate(sql string) bool {
+	return onlyTheLivenessPair.MatchString(strings.TrimSpace(sql))
+}
+
+// onlyTheLivenessPair matches a literal that is the predicate and NOTHING else,
+// in either order, with or without an alias.
+//
+// "Nothing else" is doing real work rather than being strict for its own sake.
+// A looser reading — "spells both halves and names no table" — reported a test
+// whose FAILURE MESSAGE quotes the predicate back to the reader. Prose that
+// mentions the pair is not a second implementation of it, and a gate that says
+// so teaches people to stop reading its output.
+var onlyTheLivenessPair = regexp.MustCompile(`(?is)^\(?\s*(?:` +
+	`(?:[a-z]\w*\.)?status\s*=\s*'active'\s+AND\s+(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL` + `|` +
+	`(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL\s+AND\s+(?:[a-z]\w*\.)?status\s*=\s*'active'` +
+	`)\s*\)?$`)
+
 // appUserStatements returns the SQL statements in a declaration that read
 // app_user, flattened so a statement assembled out of a literal and a helper
 // call is judged as the one statement it builds.
@@ -242,7 +361,7 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 			return false
 		}
 		text, ok := flattenSQL(n, seen, owner)
-		if !ok || !readsAppUser.MatchString(text) {
+		if !ok || !(readsAppUser.MatchString(text) || bareLivenessPredicate(text)) {
 			return true
 		}
 		out = append(out, text)
@@ -256,10 +375,7 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 // archived_at is somebody else's question.
 func liveMemberHalves(sql string) (status, archived bool) {
 	sql = stripAssignments(sql)
-	prefix := ""
-	if m := appUserAlias.FindStringSubmatch(sql); m != nil && !isSQLKeyword(m[1]) {
-		prefix = m[1] + "."
-	}
+	prefix := appUserPrefix(sql)
 	status = regexp.MustCompile(regexp.QuoteMeta(prefix) + `status\s*=\s*'active'`).MatchString(sql)
 	archived = regexp.MustCompile(regexp.QuoteMeta(prefix) + `archived_at\s+IS\s+NULL`).MatchString(sql)
 	return status, archived
@@ -303,15 +419,15 @@ var endsAssignments = regexp.MustCompile(`(?is)^\s(WHERE|RETURNING|FROM)\b`)
 // offersAUser reports whether the statement is one that could hand back the
 // wrong colleague — which is the only shape the half-spelling defect takes.
 //
-// A WRITE is excluded: an UPDATE choosing rows to deactivate offers nobody, and
-// the row set it touches is a question about that statement's own intent rather
-// than about who still works here.
+// A WRITE is judged like a read. Excluding one on the grounds that "an UPDATE
+// offers nobody" was wrong in the direction that matters: `UPDATE app_user SET
+// password_hash = $2 WHERE id = $1 AND archived_at IS NULL` sets a DEACTIVATED
+// account's password, and the row set a mutation chooses is exactly as much a
+// liveness question as the one a read returns. Only its SET clause is exempt,
+// because that assigns rather than asks (stripAssignments).
 func offersAUser(sql string) bool {
-	return !writesAppUser.MatchString(sql) && !resolvesOneUserByID(sql)
+	return !resolvesOneUserByID(sql)
 }
-
-// writesAppUser matches a statement that mutates rather than reads.
-var writesAppUser = regexp.MustCompile(`(?is)^\s*(UPDATE|DELETE|INSERT)\b`)
 
 // resolvesOneUserByID reports whether the statement already names WHICH user it
 // wants, by the primary key its caller was handed.
@@ -329,19 +445,49 @@ var writesAppUser = regexp.MustCompile(`(?is)^\s*(UPDATE|DELETE|INSERT)\b`)
 // than as a row identity somebody already read, and "may this address reset a
 // password" is a question about the account's state, not a lookup.
 func resolvesOneUserByID(sql string) bool {
-	return resolvesByID.MatchString(stripAssignments(sql))
+	sql = stripAssignments(sql)
+	if !readsTheStatusColumn.MatchString(sql) {
+		return false
+	}
+	// APP_USER's id, bound through its own alias. An unbound `id = $N` let a
+	// joined table's key excuse a liveness defect on app_user: `… JOIN app_user
+	// u … WHERE p.id = $1 AND u.archived_at IS NULL` names WHICH PROJECT, not
+	// which colleague, and the statement still chooses freely among seats.
+	return regexp.MustCompile(regexp.QuoteMeta(appUserPrefix(sql)) +
+		`id\s*(?:=\s*\$\d+|=\s*ANY\s*\(\s*\$\d+)`).MatchString(sql)
 }
 
-// resolvesByID matches primary-key equality, alias or not, single or set — the
-// three spellings this tree uses to say "this user, the one I was given".
-var resolvesByID = regexp.MustCompile(`(?i)\b(?:[a-z]\w*\.)?id\s*(?:=\s*\$\d+|=\s*ANY\s*\(\s*\$\d+)`)
+// readsTheStatusColumn matches a statement that hands `status` BACK rather than
+// filtering on it — the difference between deferring the liveness decision to
+// Go and never making it.
+//
+// Without this, resolving by id excused everything, and the escape hatch was
+// wider than the gate: `SELECT seat_type FROM app_user WHERE id = $1 AND
+// archived_at IS NULL` grants a DEACTIVATED seat live authority
+// (identity/authority.go's liveUserTx), reads as a plain lookup, and would have
+// passed in silence. A statement that returns `status` has at least asked the
+// question; one that neither filters on it nor reads it has not.
+var readsTheStatusColumn = regexp.MustCompile(`(?is)SELECT\b[^;]*?\bstatus\b[^;]*?\bFROM\b|RETURNING\b[^;]*?\bstatus\b`)
+
+// appUserPrefix is what app_user's columns are written with in this statement:
+// its alias plus a dot, or "" when the statement reads app_user unaliased.
+func appUserPrefix(sql string) string {
+	if m := appUserAlias.FindStringSubmatch(sql); m != nil && !isSQLKeyword(m[1]) {
+		return m[1] + "."
+	}
+	return ""
+}
 
 // isSQLKeyword keeps a clause word from being mistaken for an alias.
 // `FROM app_user WHERE …` would otherwise bind the alias "where", and every
 // bare column then reads as somebody else's — the whole statement goes quiet.
 func isSQLKeyword(word string) bool {
 	switch strings.ToLower(word) {
-	case "where", "set", "on", "join", "left", "right", "inner", "cross", "order",
+	// "as" is here because the pattern's own `AS` was case-sensitive: a
+	// lowercase `FROM app_user as u` captured "as" as the alias, every column
+	// then read as `as.status`, and the whole statement went silent. The word
+	// is refused as well as matched, so neither spelling can bind it.
+	case "as", "where", "set", "on", "join", "left", "right", "inner", "cross", "order",
 		"group", "having", "limit", "union", "using", "and", "or", "values", "returning":
 		return true
 	}
@@ -436,21 +582,61 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT id FROM app_user WHERE archived_at IS NULL AND ` + "`" + ` + LiveMemberSQL("")
 }`},
-	{"resolving the user the caller named", "", "", `
+	{"resolving by id and handing status back to Go", "", "", `
+func read() string {
+	return ` + "`" + `SELECT status, seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL` + "`" + `
+}`},
+	{"resolving a set of ids and handing status back", "", "", `
+func read() string {
+	return ` + "`" + `SELECT id, status FROM app_user WHERE id = ANY($1) AND archived_at IS NULL` + "`" + `
+}`},
+	{"resolving by id and never asking about status at all", "half", "", `
+func read() string {
+	return ` + "`" + `SELECT seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL` + "`" + `
+}`},
+	{"the same, for a column that only renders", "half", "", `
 func read() string {
 	return ` + "`" + `SELECT display_name FROM app_user WHERE id = $1 AND archived_at IS NULL` + "`" + `
 }`},
-	{"resolving a set of ids the caller named", "", "", `
+	{"a write choosing rows by half a predicate", "half", "", `
 func read() string {
-	return ` + "`" + `SELECT id, display_name FROM app_user WHERE id = ANY($1) AND archived_at IS NULL` + "`" + `
+	return ` + "`" + `UPDATE app_user SET password_hash = $2 WHERE display_name = $1 AND archived_at IS NULL` + "`" + `
 }`},
-	{"a write choosing rows to deactivate", "", "", `
+	{"a write naming the row it was handed, status read back", "", "", `
 func read() string {
-	return ` + "`" + `UPDATE app_user SET status = 'deactivated' WHERE status = 'active'` + "`" + `
+	return ` + "`" + `UPDATE app_user SET locale = $2 WHERE id = $1 AND archived_at IS NULL RETURNING status` + "`" + `
 }`},
 	{"a write whose SET makes someone live", "", "", `
 func read() string {
 	return ` + "`" + `UPDATE app_user SET status = 'active' WHERE id = $1` + "`" + `
+}`},
+	{"the helper called, and both halves hand-written beside it", "copy", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + identity.LiveMemberSQL("") +
+		` + "`" + ` AND status = 'active' AND archived_at IS NULL` + "`" + `
+}`},
+	{"a joined table's id, not app_user's", "half", "", `
+func read() string {
+	return ` + "`" + `SELECT u.id FROM app_user u JOIN project p ON p.owner_id = u.id WHERE p.id = $1 AND u.archived_at IS NULL AND u.status IS NOT NULL` + "`" + `
+}`},
+	{"the halves assembled through a slice literal", "copy", "", `
+func read() string {
+	return strings.Join([]string{
+		` + "`" + `SELECT id FROM app_user WHERE ` + "`" + `,
+		` + "`" + `status = 'active' AND archived_at IS NULL` + "`" + `,
+	}, " ")
+}`},
+	{"a lowercase alias keyword", "copy", "", `
+func read() string {
+	return ` + "`" + `SELECT u.id FROM app_user as u WHERE u.status = 'active' AND u.archived_at IS NULL` + "`" + `
+}`},
+	{"the pair spelled into a declaration of its own", "copy", "", `
+func read() string {
+	return ` + "`" + `u.status = 'active' AND u.archived_at IS NULL` + "`" + `
+}`},
+	{"a fragment naming one half only, table unknowable", "", "", `
+func read() string {
+	return ` + "`" + `archived_at IS NULL` + "`" + `
 }`},
 	{"another table carrying the same two columns", "", "", `
 func read() string {
@@ -492,12 +678,8 @@ func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 			got := ""
 			for _, decl := range file.Decls {
 				for _, sql := range appUserStatements(decl, scope) {
-					status, archived := liveMemberHalves(sql)
-					switch {
-					case status && archived && !strings.Contains(sql, liveMemberHelper):
-						got = "copy"
-					case (status != archived) && offersAUser(sql):
-						got = "half"
+					if verdict := liveMemberVerdict(sql); verdict != "" {
+						got = verdict
 					}
 				}
 			}

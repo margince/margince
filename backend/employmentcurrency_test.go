@@ -201,6 +201,8 @@ func employmentStatements(decl ast.Decl, people helperScope) []string {
 	return out
 }
 
+// firstEmploymentLine returns the line of the statement that names the
+// employment kind, so the report points at the statement rather than dumping
 // it.
 func firstEmploymentLine(sql string) string {
 	for _, line := range strings.Split(sql, "\n") {
@@ -211,6 +213,7 @@ func firstEmploymentLine(sql string) string {
 	return strings.TrimSpace(strings.Split(sql, "\n")[0])
 }
 
+// employmentProbe is one planted source file and the answer the gate must give
 // for it.
 type employmentProbe struct {
 	name  string
