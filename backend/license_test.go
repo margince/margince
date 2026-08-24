@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H3
+
 package backendarch
 
 // License-notice fitness function (business/12-license.md §5 "honest

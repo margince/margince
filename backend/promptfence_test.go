@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H1
+
 package backendarch
 
 // Prompt-boundary fitness functions: no prompt may declare a data boundary the

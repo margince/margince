@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind shape H2
+
 package backendarch
 
 // A positional row mapping may only target a struct its own package declares.

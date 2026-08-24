@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H1
+
 package backendarch
 
 // Every prompt either speaks in Margince's one voice or says why it does not.

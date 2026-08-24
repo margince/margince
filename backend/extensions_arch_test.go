@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H2
+
 package backendarch
 
 // Extension-tier fitness functions (ADR-0069 §3): the compiler already

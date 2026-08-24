@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind reachability H2
+
 package backendarch
 
 // A version pin is only real if the pinned table's version actually moves.

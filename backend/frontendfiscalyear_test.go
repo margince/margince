@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H1
+
 package backendarch
 
 // A fiscal year's label is spelled twice: the server builds it in SQL

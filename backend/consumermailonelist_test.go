@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind claim H2
+
 package backendarch
 
 // One consumer-mail list, held by a test rather than by a comment.

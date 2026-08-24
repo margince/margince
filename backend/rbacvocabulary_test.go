@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H3
+
 package backendarch
 
 // The RBAC vocabulary is DECLARED in the contract and restated in Go, and the

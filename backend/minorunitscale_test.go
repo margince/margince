@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H3
+
 package backendarch
 
 // A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one

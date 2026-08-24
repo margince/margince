@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H2
+
 package backendarch
 
 // Code that runs on a caller's `pgx.Tx` acquires no connection of its own.

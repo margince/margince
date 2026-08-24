@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind reachability H2
+
 package backendarch
 
 // The store-entry-point admission rule as a fitness function: every

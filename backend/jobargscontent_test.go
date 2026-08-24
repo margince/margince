@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H2
+
 package backendarch
 
 // Job args carry REFERENCES, never content. The erasure engine neutralizes an

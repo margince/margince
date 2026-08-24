@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind reachability H2
+
 package backendarch
 
 // Erasing a person and anonymizing one are the same act with one difference:

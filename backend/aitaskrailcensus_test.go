@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package backendarch
 
 // Every AI task this build can run reports into the AI-activity projection.

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind claim H1
+
 package backendarch
 
 // people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is

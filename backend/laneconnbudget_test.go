@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind budget H3
+
 package backendarch
 
 // The integration lane's connection demand is a PRODUCT — concurrent packages

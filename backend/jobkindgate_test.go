@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H2
+
 package backendarch
 
 // The registration gate's own falsification. Every shape the tree actually
