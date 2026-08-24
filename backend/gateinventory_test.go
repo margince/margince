@@ -236,9 +236,14 @@ func isMachineReadable(group *ast.CommentGroup) bool {
 }
 
 // sentenceEnd is a full stop that ends a sentence: one followed by a space and
-// a capital letter. `crm.yaml` and `§4.2` keep their dots because what follows
-// is not a space, and `Art. 7(1)` because what follows is a digit.
-var sentenceEnd = regexp.MustCompile(`\.\s+[A-Z]`)
+// either a capital letter or a backtick. `crm.yaml` and `§4.2` keep their dots
+// because what follows is not a space, and `Art. 7(1)` because what follows is
+// a digit.
+//
+// The backtick earns its place: these comments routinely open a sentence with a
+// quoted identifier, and without it a cell ran to three sentences before the
+// next capital arrived.
+var sentenceEnd = regexp.MustCompile("\\.\\s+[A-Z`]")
 
 // abbreviations are the short forms this tree's gate comments write before a
 // capitalised word, where the dot is part of the word rather than the end of a
@@ -385,6 +390,10 @@ func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
 		{
 			"file name", "crm.yaml is the contract. The rest follows.",
 			"crm.yaml is the contract.",
+		},
+		{
+			"next sentence opens with an identifier", "A rule holds. `writeOrgColumn` does not.",
+			"A rule holds.",
 		},
 		{"no terminator", "One clause with no full stop", "One clause with no full stop"},
 		{"wrapped across lines", "A rule\n  spelled once. Then another.", "A rule spelled once."},

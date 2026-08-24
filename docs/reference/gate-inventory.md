@@ -35,7 +35,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `idempotencymap_test.go` | H3 | The idempotency allowlist as a fitness function: the contract is the authority on which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must mirror it exactly. |
-| `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. `textlang.Shipped` is what the Go validators answer to: the installation's base language and a member's own display language both refuse a code that is not on it. |
+| `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. internal/platform/netguard owns the guard the core dials through; pkg/extension PUBLISHES the same ranges, because an extension unit is its own module and may import only the published pkg/** surface. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
@@ -51,15 +51,15 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
-| `aggregategatereach_test.go` | H3 | Every job the `ci` aggregate depends on can actually RUN on the merge queue. `ci` is the single required status check, and scripts/ci-verdict.sh refuses any result other than `success` on `merge_group` — because GitHub counts a skipped required check as a passing one, which is how a lane that ran nothing reported green. |
+| `aggregategatereach_test.go` | H3 | Every job the `ci` aggregate depends on can actually RUN on the merge queue. |
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
-| `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. `fx_rate_to_base` is a record's worth expressed against the base in force when it froze, so the base may only change while no such record exists. deals.frozenRateTables is the list the guard counts, and the list was wrong the first time it was written: it named `deal` and missed `offer`, which freezes the same column at send. |
+| `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. fieldcatalog.Column carries three things with two different disclosure rules (the port's own doc states them): Name and Type are schema, ambient to any caller who may read a record carrying the column, while Options is catalogue CONTENT — the values an admin authored — and a consumer handing them to a caller needs `custom_field:read`. |
 | `consumerlanes_test.go` | H3 | Every consumer group the catalog declares is subscribed by some process role — or is a reserved placeholder that says so. |
-| `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. `make drift` proves the generated Go matches api/crm.yaml. |
+| `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. docs/ is where the rulebook sends a reader for the reasoning behind a rule, so a link that does not resolve is not cosmetic — it is the reader arriving nowhere at the moment they were told to go and read. |
@@ -85,9 +85,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. piicoverage_test.go proves Art. 17 erasure and Art. 15 SAR reach every table its registry declares PII-bearing; it says nothing about the three OTHER lifecycle paths a person's child rows ride — the retention anonymizer, the merge relink, and the archive cascade. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
-| `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. `internal/platform/keyvault` is waived in moduleaudits_test.go from writing an audit row itself, and the reason is that keyvault is a SEAM: callers receive a Vault from compose and perform the domain act in their own module, which is where that act's history belongs. |
+| `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 
-## Reachability (13)
+## Reachability (14)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -97,6 +97,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `consentproof_test.go` | H2 | The Art. 7(1) demonstrability invariant as a fitness function: every write that sets a person_consent STATE appends a consent_event proof row in the same function (data-model §3.4 — the current state is always backed by an append-only event saying when, how, and by whom). |
 | `dedupespine_test.go` | H2 | The identity-spine fitness functions. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
+| `orgrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
 | `personscrub_test.go` | H2 | Erasing a person and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `rbacgate_test.go` | H2 | The store-entry-point admission rule as a fitness function: every exported method on a module's *Store or *Service — the seam both the HTTP handlers and the MCP tool surface call through — references the platform auth gate (object RBAC and/or the row-scope spellings), directly or through a same-package helper. |
 | `replayscope_test.go` | H2 | API-CC-8 as a fitness function: a replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
@@ -120,7 +121,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has ONE shape, and something depends on that. httperr.recordsIn counts what a REST response hands over by reading the envelope rather than a list of response type names: a struct carrying a `Data` slice is a page, and its length is the record count charged against the agent read bound (MCP-SESS-READS). |
 | `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0069 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
-| `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. `pgx.RowToStructByPos[T]` binds a SELECT's column ORDER to T's field order, so the query and the struct have to be edited together. |
+| `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body as a fitness function. |
 | `rowgatespelling_test.go` | H2 | A module's READ spelling of a row gate is not a licence to write through it. writeauthority_test.go asks the tier-wide question — is each probe on a mutating path the write-authority spelling — and ratifies the shared read helpers by NAME, because a helper like deals' visibleOffer really is a read probe wherever it is called from. |
@@ -137,7 +138,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. pg_stat_activity is not a live view. |
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE/constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text: an error-string substring match silently breaks on a locale change, a driver upgrade, or an unrelated error that happens to mention the same identifier — and it misclassifies infrastructure faults as client faults. |
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0069 §3): the compiler already walls extensions off from internal/** (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
-| `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. `flag` renders a non-empty default as `(default "…")`, so a value wired into a flag's default reaches the usage text — printed on `-h` and on ANY parse error, including a single mistyped argument. |
+| `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula_sql in its request body — ComputedField.formula_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |
 | `integrationmigrateonce_test.go` | H2 | Migrate-once discipline for everything the integration lane compiles, as a fitness function. |
 | `jobargscontent_test.go` | H2 | Job args carry REFERENCES, never content. |
@@ -160,7 +161,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
-| `consumermailonelist_test.go` | H2 | One consumer-mail list, held by a test rather than by a comment. `platform/freemail`'s own package doc says it exists because "two modules need the same answer from opposite ends of the capture path" and "a second spelling of the list would be a second answer". |
+| `consumermailonelist_test.go` | H2 | One consumer-mail list, held by a test rather than by a comment. |
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived_at IS NULL` on app_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. org360's said so; search's said so as well, and its own comment recorded that org360 had already spelled it that way — so the second author knew about the first copy and minted a third anyway. |
