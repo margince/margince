@@ -205,8 +205,10 @@ is safe to commit is a second gate, not the file itself. Editing that fixture is
 exactly how a backfill that does not work is made to look like one that does: move
 the object into the starting state and the convergence it never delivered is
 already there. So `TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded`
-(`backend/rbacbaselineerafixture_test.go`, unit lane) pins it byte-for-byte to
-`git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json`, and
+(`backend/rbacbaselineerafixture_test.go`, unit lane) pins it to
+`git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json` —
+compared as decoded JSON, so re-indentation is not a difference but any changed
+key or value is — and
 proves that commit really is the consolidation floor rather than a commit somebody
 named — otherwise the pin could be moved forward instead of the fixture being
 edited, with the same effect. Regenerate it with the command that gate's failure

@@ -93,7 +93,7 @@ func TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded(t *testing.T) {
 // composition arm reports PASS having compared a state with itself. The
 // integration arm refuses that too, but only later, in the database lane; here it
 // is cheap, and this is the lane that runs on every push.
-func TestBaselineEraFixtureIsStillBehindTheSeededMatrix(t *testing.T) {
+func TestBaselineEraFixtureStillDiffersFromTheSeededMatrix(t *testing.T) {
 	before := readJSONFixture(t, baselineEraFixture)
 	after := readJSONFixture(t, seededDefaultsPath)
 

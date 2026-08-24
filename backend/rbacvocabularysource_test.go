@@ -3,10 +3,17 @@
 
 package backendarch
 
-// The policy.go vocabulary parser, shared by two gates with different lanes:
-// rbacvocabulary_test.go (both lanes — it only reads the working tree) and the
-// baseline-era fixture gate (unit lane only — it reads git history). It lives here,
-// untagged, so the tagged half can be excluded without taking this with it.
+// The policy.go vocabulary parser, shared by rbacvocabulary_test.go (the
+// contract enum and coreObjects are the same set) and settingscatalog_test.go
+// (a settings entry may only govern a declared object). Both read the WORKING
+// TREE only.
+//
+// It used to carry a second rationale — that it lives untagged so a git-history
+// consumer in the unit lane could be excluded without taking this with it. That
+// consumer was the legacy-cohort gate, which is deleted, and the gate that
+// replaced it reads the seeded-matrix JSON out of history directly and never
+// calls this parser. Renaming the old claim to the new gate made it false; both
+// real consumers are named instead.
 //
 // It deliberately does NOT read identity/internal/policy as a package: that
 // package is import-fenced to internal/modules/identity/**, so this parses the

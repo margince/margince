@@ -314,21 +314,65 @@ func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]
 // Both directions: a role the database holds and the fixture does not is as much
 // a divergence as the reverse, and reporting only one of them is how half a
 // defect goes unnoticed.
-func assertSameMatrix(t *testing.T, want, got map[string]roleDocument, via string) {
+func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string]json.RawMessage, via string) {
 	t.Helper()
 	for _, role := range sortedKeys(want) {
-		live, ok := got[role]
+		raw, ok := got[role]
 		if !ok {
 			t.Errorf("%s: role %q is missing from the database; every route it grants answers 403", via, role)
 			continue
 		}
-		assertSameDocument(t, role, want[role], live, via)
+		// The WHOLE document first, so a key neither side models cannot slip
+		// through, and then the parts, because "these two documents differ" is
+		// not a message anybody can act on.
+		expected, err := json.Marshal(want[role])
+		if err != nil {
+			t.Fatalf("%s: encoding the expected document for %q: %v", via, role, err)
+		}
+		if !sameJSON(t, expected, raw) {
+			assertSameDocument(t, role, want[role], decodeRoleDocument(t, role, raw), via)
+			assertNoUnmodelledKeys(t, role, raw, via)
+		}
 	}
 	for _, role := range sortedKeys(got) {
 		if _, ok := want[role]; !ok {
 			t.Errorf("%s: the database holds system role %q, which the seeded matrix does not — "+
 				"either the fixture is stale or something granted a role nobody declared", via, role)
 		}
+	}
+}
+
+// decodeRoleDocument decodes one live document for the detailed comparison.
+func decodeRoleDocument(t *testing.T, role string, raw json.RawMessage) roleDocument {
+	t.Helper()
+	var document roleDocument
+	if err := json.Unmarshal(raw, &document); err != nil {
+		t.Fatalf("decoding the live document for %q: %v", role, err)
+	}
+	return document
+}
+
+// assertNoUnmodelledKeys names a document key roleDocument does not model, so a
+// whole-document difference that the per-part comparison cannot explain still
+// reports something actionable rather than reading as a spurious failure.
+//
+// field_masks is the live case: policy.Document declares it, this file does not
+// model it, and it is a privacy control — so a replay that introduced or dropped
+// one has to be visible even though no per-field check covers it.
+func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via string) {
+	t.Helper()
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		t.Fatalf("decoding the live document for %q: %v", role, err)
+	}
+	for key := range keys {
+		if key == "objects" || key == "row_scope" {
+			continue
+		}
+		t.Errorf("%s: role %q carries document key %q, which this comparison does not model: %s.\n"+
+			"policy.Document declares field_masks as well as objects and row_scope; a replay that "+
+			"writes one has to be judged rather than dropped, because field masking is a privacy "+
+			"control.", via, role, key, keys[key])
 	}
 }
 
@@ -396,7 +440,7 @@ func sameJSON(t *testing.T, want, got json.RawMessage) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-func liveRoleDocuments(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]roleDocument {
+func liveRoleDocuments(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]json.RawMessage {
 	t.Helper()
 	rows, err := conn.Query(ctx, `SELECT key, permissions FROM role WHERE is_system ORDER BY key`)
 	if err != nil {
@@ -404,10 +448,15 @@ func liveRoleDocuments(ctx context.Context, t *testing.T, conn *pgx.Conn) map[st
 	}
 	defer rows.Close()
 
-	live := map[string]roleDocument{}
+	// RAW, so the comparison sees the WHOLE document. roleDocument models two of
+	// its keys, and policy.Document already declares a third — field_masks, a
+	// privacy control — so decoding here made a replay that dropped or rewrote
+	// field masks invisible to every arm. Seeding was fixed to carry raw bytes;
+	// this is the reading half of the same defect.
+	live := map[string]json.RawMessage{}
 	for rows.Next() {
 		var key string
-		var document roleDocument
+		var document json.RawMessage
 		if err := rows.Scan(&key, &document); err != nil {
 			t.Fatalf("decoding a role document: %v", err)
 		}
@@ -513,13 +562,23 @@ var (
 	// this pattern deciding "not a write" is how a real grant leaves the gate.
 	rolePermissionWrite = regexp.MustCompile(
 		`(?is)\b(?:UPDATE|INSERT\s+INTO|MERGE\s+INTO)\s+(?:ONLY\s+)?(?:"?public"?\.)?"?role"?\b[\s\S]*?\bpermissions\b`)
-	// The object a write grants, as the jsonb path names it.
-	objectPath = regexp.MustCompile(`'\{objects,([a-z_0-9]+)\}'`)
+	// The object a write grants, in EITHER jsonb path spelling Postgres accepts:
+	// the brace text literal `'{objects,deal}'` and the array form
+	// `ARRAY['objects', 'deal']`. Only the first was recognised, which made a
+	// write using the second invisible to the rewind — no object removed, so the
+	// isolating arm replayed it against the already-seeded grant and passed
+	// without testing it. The array form is not exotic: it is what rewindTo uses
+	// one screen below.
+	objectPath      = regexp.MustCompile(`'\{objects,([a-z_0-9]+)\}'`)
+	objectArrayPath = regexp.MustCompile(`(?i)ARRAY\[\s*'objects'\s*,\s*'([a-z_0-9]+)'\s*\]`)
 	// Every objects-path literal, whatever the name inside. Its DISTINCT names are
 	// counted against objectPath's so a name that class misses is loud rather
 	// than dropped — distinct on both sides, because one object is normally
 	// granted by several statements in the same migration.
 	anyObjectPath = regexp.MustCompile(`'\{objects,([^}]*)\}'`)
+	// Every array-form objects path, whatever is inside, counted against the
+	// strict one for the same reason: a name that class cannot read must be loud.
+	anyObjectArrayPath = regexp.MustCompile(`(?i)ARRAY\[\s*'objects'\s*,\s*'([^']*)'`)
 )
 
 // rolePermissionMigrations reads the EMBEDDED core namespace — the same bytes
@@ -554,14 +613,19 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 				"write it cannot see is a grant nobody checks.", name)
 		}
 		body := strings.Join(statements, "\n")
-		objects := dedupe(objectPath.FindAllStringSubmatch(body, -1))
+		objects := dedupe(append(
+			objectPath.FindAllStringSubmatch(body, -1),
+			objectArrayPath.FindAllStringSubmatch(body, -1)...))
 		// Every objects-path literal, whatever its shape, must be accounted for.
 		// A path naming a VERB (`{objects,deal,delete}`) is a legitimate write
 		// this rewind cannot undo — removing the whole object would overshoot —
 		// so it is reported as out of scope rather than as a name the pattern
 		// failed to read. Fatalling on it refused the verb-widening backfill that
 		// assertPreStateIsNotAlreadyTheAnswer calls the likelier next one.
-		for _, m := range dedupe(anyObjectPath.FindAllStringSubmatch(body, -1)) {
+		declared := dedupe(append(
+			anyObjectPath.FindAllStringSubmatch(body, -1),
+			anyObjectArrayPath.FindAllStringSubmatch(body, -1)...))
+		for _, m := range declared {
 			if slices.Contains(objects, m) {
 				continue
 			}
