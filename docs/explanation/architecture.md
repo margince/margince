@@ -136,9 +136,11 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   dependencies stay out of the product module's go.mod.
 - `frontend/` — the Vite/React web UI: a standalone static build served
   separately from the API binary, which embeds no SPA. The API's own surface is
-  `/v1` plus the operational probes (`/healthz`, `/readyz`, `/metrics`), the
-  public buyer edge, the webhook receivers and — when enabled — `/mcp` and
-  `/oauth/*`; a proxy configured for `/v1` alone strands the rest.
+  more than `/v1`: the operational probes (`/healthz`, `/readyz`, `/metrics`),
+  first-boot claiming under `/setup/*`, the public buyer edge, the webhook
+  receivers, and — when enabled — `/mcp` with its OAuth authorization and
+  discovery routes. A proxy configured for `/v1` alone strands the rest, so build
+  one from the router rather than from this sentence.
   `make frontend-check` / `make dev` exist at the repo root.
   **Working in here? Read `frontend/AGENTS.md` first**, and
   then the file it opens with:

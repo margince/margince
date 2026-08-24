@@ -24,5 +24,9 @@
 // dimension every ai_call row points at; it carries no workspace_id —
 // a task contract, routing yaml, and prompt version are build facts,
 // not tenant data.
+// ai_model_rate is the effective-dated rate sheet the read-side pricer prices
+// calls against; it is workspace-independent for the same reason — a published
+// provider price is a build fact, and pricing on read is what lets a corrected
+// rate reprice history instead of contradicting it.
 // Imports shared + platform only; never a sibling module.
 package ai

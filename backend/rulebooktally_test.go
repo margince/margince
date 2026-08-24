@@ -86,10 +86,13 @@ var countable = regexp.MustCompile(`(?i)\b(?:bounded capabilit\w*|modules?|exten
 // open — does not have to run the scan again to get them. While this answered
 // true/false, the gate restated the same `numberWord && countable` scan inline,
 // and the two were free to drift.
-func tallyParagraphs(path string) []prosePara {
+func tallyParagraphs(path string) ([]prosePara, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		// Returned, never swallowed. Answering "no tallies" for a file nobody
+		// could read is the same PASS a clean file gets, which is the one way
+		// this gate must not break.
+		return nil, err
 	}
 	var hits []prosePara
 	for _, para := range prose(string(raw)) {
@@ -97,7 +100,7 @@ func tallyParagraphs(path string) []prosePara {
 			hits = append(hits, para)
 		}
 	}
-	return hits
+	return hits, nil
 }
 
 func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
@@ -106,10 +109,11 @@ func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
 		// sends a reader to, so all of them exist. An unreadable one is a
 		// broken gate, never a clean tree — skipping it would report the same
 		// word for a file nobody looked at.
-		if _, err := os.Stat(path); err != nil {
+		hits, err := tallyParagraphs(path)
+		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for _, para := range tallyParagraphs(path) {
+		for _, para := range hits {
 			t.Errorf("%s:%d spells out a tally of something the tree can be asked for:\n  %s\n"+
 				"Name the directory or the catalog instead of the number — a count in prose goes stale the "+
 				"first time somebody adds one, and the sentence looks no different when it has.",
@@ -268,7 +272,11 @@ func TestTheTallyGateReadsMarkdownCorrectly(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.md), 0o600); err != nil {
 				t.Fatalf("write fixture: %v", err)
 			}
-			if got := len(tallyParagraphs(path)) > 0; got != tc.wantHit {
+			hits, err := tallyParagraphs(path)
+			if err != nil {
+				t.Fatalf("reading %s: %v", path, err)
+			}
+			if got := len(hits) > 0; got != tc.wantHit {
 				t.Errorf("hit=%v want=%v — %s\n--- input ---\n%s", got, tc.wantHit, tc.why, tc.md)
 			}
 		})

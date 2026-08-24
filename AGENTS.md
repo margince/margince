@@ -107,8 +107,8 @@ stale binary keeps answering happily, so the app breaks in ways that look exactl
 like a bug in the code you just wrote.
 
 Before you trust any manual test, confirm both: `git branch --show-current` is
-the branch you think it is, and the api on `:8080` was started after your last
-backend change.
+the branch you think it is, and the **API** — the process on `:18080`, not Vite on
+`:8080` — was started after your last backend change.
 
 ## Shipping a change
 

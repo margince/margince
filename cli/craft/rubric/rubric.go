@@ -97,7 +97,19 @@ const CraftsmanshipHeading = "## Craftsmanship"
 func CraftsmanshipSection(content string) (string, bool) {
 	lines := strings.Split(content, "\n")
 	start := -1
+	inFence := false
 	for i, line := range lines {
+		// Fenced blocks are not headings. A rulebook that SHOWS a rulebook —
+		// this file's own docs do — would otherwise have its example selected
+		// ahead of the real section, and the gate would run against an
+		// illustration without anything looking wrong.
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
 		// The heading EXACTLY, not a prefix: `## Craftsmanship notes` is a
 		// different section, and taking it as this one hands the gate somebody's
 		// aside as its rubric layer.
@@ -110,8 +122,13 @@ func CraftsmanshipSection(content string) (string, bool) {
 		return "", false
 	}
 	end := len(lines)
+	inFence = false
 	for i := start + 1; i < len(lines); i++ {
-		if strings.HasPrefix(lines[i], "## ") {
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "```") {
+			inFence = !inFence
+			continue
+		}
+		if !inFence && strings.HasPrefix(lines[i], "## ") {
 			end = i
 			break
 		}

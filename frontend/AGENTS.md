@@ -50,9 +50,9 @@ existed**, wrote a reasonable-looking component, and passed review on it. So:
   README table in the same commit. The README is the seam: a primitive nobody
   can find gets rebuilt by the next person, and then there are two.
 
-Four script gates hold parts of this deterministically —
-`make native-controls` (a vitest suite, not a script), plus
-`check-ds-purity.sh`, `check-ds-spacing.sh` and `check-space-tokens.sh` — but none of them can tell that the perfectly good
+Some of this is held deterministically — `make native-controls` (a vitest suite),
+plus the `check-ds-purity.sh`, `check-ds-spacing.sh` and `check-space-tokens.sh`
+script gates — but none of them can tell that the perfectly good
 component you just wrote already existed under a different name. That part is
 yours.
 
