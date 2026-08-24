@@ -24,13 +24,8 @@ package backendarch
 // heard of.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
-	"path/filepath"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -133,185 +128,29 @@ func TestErasingAndAnonymizingClearTheSameTables(t *testing.T) {
 type privacyFunc struct {
 	tables map[string]bool
 	calls  map[string]bool
-	// reads are identifiers the body names without calling — how a statement
-	// held in a package-level var reaches the function that executes it.
-	reads map[string]bool
 }
 
-// privacyCallGraph reads the privacy package, keyed by RECEIVER TYPE and name.
+// privacyCallGraph is the shared package graph with this census's question
+// asked of it: which TABLES each function's reachable statements write.
 //
-// Bare names are not enough. `apply` is a method on the retention service and
-// also a plausible name elsewhere; following calls by name alone walked from the
-// eraser into the policy store and reported `retention_policy` as a table an
-// erase clears, which it does not.
-//
-// So an edge is followed only when it can be resolved: a plain function, or a
-// method called on the CALLER'S OWN receiver. A call on any other value is not
-// followed, because nothing here knows that value's type.
-//
-// AN UNFOLLOWED EDGE IS NOT SAFE, and saying it was is how this census first
-// reported a difference that did not exist. It hides a table from whichever act
-// takes that route — so if one act spells a statement somewhere the walk cannot
-// read and the other spells it inline, the two sets differ for no reason but
-// the reading. That happened here: the eraser reaches `activity_participant`
-// through package-level statements, the anonymize inline, and the gap was
-// ratified with an invented explanation before anyone checked.
-//
-// So the walk reads package-level `var` and `const` too, and attributes a
-// statement to whoever NAMES it. What remains unreadable — a call on a stored
-// field, an interface, a closure — is a real limit, and the honest thing to say
-// about it is that it can still hide a table from one act only.
+// The graph itself — receiver-type keying, package-level statements attributed
+// to whoever names them, the unresolvable edges it will not follow — is in
+// callgraph_test.go, shared with the organization rename census. What a
+// statement MEANS stays here, because it is not the same question over there.
 func privacyCallGraph(t *testing.T) map[string]*privacyFunc {
 	t.Helper()
-	graph := map[string]*privacyFunc{}
-	files := parsePrivacyPackage(t)
-	// Statements held at package level, keyed by the name that holds them. A
-	// function that NAMES one writes that table — the eraser reaches
-	// `activity_participant` this way and no other, so a census reading only
-	// function bodies called it a table the anonymize alone touched.
-	held := packageLevelStatements(files)
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
-			}
-			recvType, recvVar := receiverTypeName(fn), receiverVarName(fn)
-			entry := &privacyFunc{tables: map[string]bool{}, calls: map[string]bool{}, reads: map[string]bool{}}
-			ast.Inspect(fn.Body, func(node ast.Node) bool {
-				// Statements go through this package's shared value reader, so
-				// one written in double quotes with escapes decodes rather than
-				// being matched as source text, and one assembled with `+` is
-				// read whole.
-				if expr, isExpr := node.(ast.Expr); isExpr {
-					if statement, readable := stringValue(expr, nil); readable {
-						for _, table := range sqlWriteTargets(statement) {
-							entry.tables[table] = true
-						}
-					}
-				}
-				if ident, isIdent := node.(*ast.Ident); isIdent {
-					entry.reads[ident.Name] = true
-				}
-				call, isCall := node.(*ast.CallExpr)
-				if !isCall {
-					return true
-				}
-				switch fun := call.Fun.(type) {
-				case *ast.Ident:
-					entry.calls[fun.Name] = true
-				case *ast.SelectorExpr:
-					if base, isIdent := fun.X.(*ast.Ident); isIdent &&
-						recvVar != "" && base.Name == recvVar {
-						entry.calls[scrubKey(recvType, fun.Sel.Name)] = true
-					}
-				}
-				return true
-			})
-			graph[scrubKey(recvType, fn.Name.Name)] = entry
-		}
-	}
-	// A named statement counts for whoever names it, wherever it lives.
-	for _, entry := range graph {
-		for name := range entry.calls {
-			for _, table := range held[name] {
-				entry.tables[table] = true
+	graph, _ := packageCallGraph(t, privacyPackage)
+	out := map[string]*privacyFunc{}
+	for name, entry := range graph {
+		tables := map[string]bool{}
+		for _, statement := range entry.statements {
+			for _, table := range sqlWriteTargets(statement) {
+				tables[table] = true
 			}
 		}
-		for name := range entry.reads {
-			for _, table := range held[name] {
-				entry.tables[table] = true
-			}
-		}
+		out[name] = &privacyFunc{tables: tables, calls: entry.calls}
 	}
-	return graph
-}
-
-// parsePrivacyPackage reads the package's product files once.
-func parsePrivacyPackage(t *testing.T) []*ast.File {
-	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(privacyPackage, "*.go"))
-	if err != nil {
-		t.Fatalf("listing %s: %v", privacyPackage, err)
-	}
-	fset := token.NewFileSet()
-	var files []*ast.File
-	for _, path := range sources {
-		if strings.HasSuffix(path, "_test.go") {
-			continue
-		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
-		if parseErr != nil {
-			t.Fatalf("parsing %s: %v", path, parseErr)
-		}
-		files = append(files, file)
-	}
-	return files
-}
-
-// packageLevelStatements are the tables each package-level `var`/`const` writes.
-func packageLevelStatements(files []*ast.File) map[string][]string {
-	held := map[string][]string{}
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			gen, isGen := decl.(*ast.GenDecl)
-			if !isGen || (gen.Tok != token.VAR && gen.Tok != token.CONST) {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				value, isValue := spec.(*ast.ValueSpec)
-				if !isValue {
-					continue
-				}
-				// A spec whose names and values do not align one-to-one binds no
-				// statement this can read — `var a, b = twoResults()` keeps one
-				// expression for two names. Skipped whole rather than by index,
-				// so the second name is not silently dropped while the first is
-				// read against a value that is not its own.
-				if len(value.Names) != len(value.Values) {
-					continue
-				}
-				for i, name := range value.Names {
-					// Every string LITERAL in the value, not the folded whole.
-					// These statements are assembled — a raw string plus a
-					// helper's output — so folding them returns nothing, and a
-					// reader that gave up on the fold gave up on the table.
-					ast.Inspect(value.Values[i], func(node ast.Node) bool {
-						literal, isLiteral := node.(*ast.BasicLit)
-						if !isLiteral || literal.Kind != token.STRING {
-							return true
-						}
-						statement, readable := strconv.Unquote(literal.Value)
-						if readable != nil {
-							return true
-						}
-						held[name.Name] = append(held[name.Name], sqlWriteTargets(statement)...)
-						return true
-					})
-				}
-			}
-		}
-	}
-	return held
-}
-
-// scrubKey keys a method by its receiver type and a plain function by
-// itself.
-func scrubKey(receiver, name string) string {
-	if receiver == "" {
-		return name
-	}
-	return receiver + "." + name
-}
-
-// receiverVarName is what a method calls its own receiver, so a call on it can
-// be told from a call on anything else. This package's receiverTypeName already
-// gives the type; only the variable was missing.
-func receiverVarName(fn *ast.FuncDecl) string {
-	if fn.Recv == nil || len(fn.Recv.List) == 0 || len(fn.Recv.List[0].Names) == 0 {
-		return ""
-	}
-	return fn.Recv.List[0].Names[0].Name
+	return out
 }
 
 func tablesReachableFrom(graph map[string]*privacyFunc, root string) []string {
