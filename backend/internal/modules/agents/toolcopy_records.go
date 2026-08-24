@@ -87,8 +87,9 @@ var logActivityCopy = toolCopy{
 		"records it was about: name every one of them in this call. A meeting is with a person, " +
 		"and also concerns their company and the deal it is for.",
 	Limits: "It writes history and changes nothing else: no deal moves, no field updates, nobody " +
-		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is " +
-		"relink_activity, which a person has to approve.",
+		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
+		"second call — relink_activity — which a person has to approve when it files under a " +
+		"project.",
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed.",
 	Retain: "Keep the activity id — draft_email, send_email and send_message identify a " +

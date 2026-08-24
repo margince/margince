@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 156365,
+    "tool_catalog_bytes": 156416,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39868,
+    "approx_wire_tokens_total": 39881,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 35927,
+      "description_bytes": 35978,
       "input_schema_bytes": 34647,
       "output_schema_bytes": 73753,
-      "description_plus_input_schema_bytes": 70574
+      "description_plus_input_schema_bytes": 70625
     }
   },
   "tools": {
@@ -4148,7 +4148,7 @@
           "readOnlyHint": false,
           "title": "Log an activity"
         },
-        "description": "Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a person, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is relink_activity, which a person has to approve. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a person, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which a person has to approve when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

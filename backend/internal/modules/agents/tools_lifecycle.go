@@ -149,8 +149,15 @@ func (t relinkActivity) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 // deal cost a human decision the app itself does not ask for.
 //
 // The version comes from the same read the staging path already performs
-// (relinkActivityResolver.Subject), so a project relink still stages pinned to
-// the version its approval was given for.
+// (relinkActivityResolver.Subject).
+//
+// What it does NOT yet do is condition the write. The gate binds it
+// (auth/admit.go withAutoExecutePin) so a write can re-check it inside the
+// mutating transaction, but no relink consumes that pin: RelinkActivityInput
+// carries no version and relinkbatch.go compares none, on either door. So this
+// restores the tier the resolver always declared, and the version-skew fence
+// the gate's contract describes is still missing — issue #2614, which has to
+// reach the activities write contract rather than this tool.
 func (t relinkActivity) ResolverInput(ctx context.Context, in json.RawMessage) (mcp.TierResolverInput, error) {
 	var args relinkActivityArgs
 	if err := decodeArgs(in, &args); err != nil {
@@ -162,12 +169,17 @@ func (t relinkActivity) ResolverInput(ctx context.Context, in json.RawMessage) (
 	}))
 	if err != nil {
 		// The read failed, or the guards refused. Answering NO VERSION rather
-		// than the error is deliberate: the gate then raises to confirm-first,
-		// which is the honest answer to "this server could not establish the
-		// record's state", and it keeps the resolver's contract that it may
-		// only ever RAISE. Returning err here would turn an unreadable activity
-		// into a hard failure at the gate, where a human decision is the safer
-		// answer and the one the REST door gives for the same shape.
+		// than the error is deliberate: the gate then raises, which keeps the
+		// resolver's contract that it may only ever RAISE, and it fails CLOSED —
+		// an otherwise auto-executable destination costs a decision rather than
+		// running on a state this server could not establish.
+		//
+		// It does not follow that a human sees it. stageRefusedCall calls
+		// StageInfo straight after, which repeats this read: a failure that
+		// persists surfaces as that read's own error rather than as a staged
+		// approval. That is the right answer for a bad id or an out-of-scope
+		// target — the caller gets told what is wrong instead of a card nobody
+		// can act on.
 		return resolved, nil //nolint:nilerr // an unreadable record raises to a human, it does not fail the call
 	}
 	// A record with no version is left unreported rather than pinned at zero,
