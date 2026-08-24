@@ -13,7 +13,7 @@ package identity
 // This test is the bridge. It lives inside the fence, renders the seeded
 // documents, and pins them to the fixture that gate reads. The fixture cannot
 // drift away from the live values, because this comparison runs on every unit
-// pass — which is the same two-lane shape the legacy-install fixture uses, for
+// pass — which is the same two-lane shape the baseline-era fixture uses, for
 // the same reason.
 
 import (

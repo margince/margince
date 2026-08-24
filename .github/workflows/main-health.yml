@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The RBAC legacy-cohort gates read an early commit as a fixture and
+          # rbacbaselineerafixture_test.go reads the migration baseline commit and
           # fail rather than degrade on a shallow checkout.
           fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

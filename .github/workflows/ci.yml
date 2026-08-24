@@ -412,8 +412,9 @@ jobs:
         with:
           persist-credentials: false
           # Full history: this job runs the backend unit lane, which includes
-          # the RBAC legacy-cohort gates. Those derive the initial commit's
-          # object vocabulary and grants by reading 2cb50021 — a fixture the
+          # rbacbaselineerafixture_test.go. That gate derives the RBAC
+          # composition arm's pre-state by reading the migration baseline
+          # commit, and pins the committed fixture to it — a pre-state the
           # migration replay seeds from, so it must not be hand-editable. They
           # FAIL on a shallow checkout rather than degrading to an empty cohort,
           # because a gate that quietly checks nothing looks exactly like a

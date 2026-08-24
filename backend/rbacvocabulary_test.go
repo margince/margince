@@ -21,7 +21,7 @@ package backendarch
 // hand-written, and merging them out of agreement is impossible.
 //
 // Both sides are DERIVED, neither restated here — the object list is
-// AST-parsed from policy.go (coreObjectsFromSource, rbaccoverage_test.go) and
+// AST-parsed from policy.go (coreObjectsFromSource, rbacvocabularysource_test.go) and
 // the action list from principal.ObjectGrant's fields. A test that spelled the
 // vocabulary a third time would drift exactly like the two it is watching.
 
