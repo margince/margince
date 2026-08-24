@@ -217,6 +217,19 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
       return 1
     }
   fi
+  # Whether this slug ALREADY had a started stack recorded. `make dev` run again
+  # in a worktree whose stack is up reaches here, reclaims its own numbers, and
+  # then fails the port check further down — at which point the release must not
+  # delete the entry, because those pids are a live stack that dev-stop still has
+  # to find. Reclaiming must also not overwrite the record with a pid-less one.
+  # An entry that already describes a started stack is returned as-is: rewriting
+  # it would replace live pids with a pid-less reservation, and dev-stop would
+  # then have nothing to kill.
+  if grep -q '^BACKEND_PID=[0-9]' "${root}/${want}/env" 2>/dev/null; then
+    printf '%s %s' "$db" "$port"
+    return 0
+  fi
+
   mkdir -p "${root}/${want}"
   printf 'SLUG=%s\nFE_PORT=%s\nAPI_PORT=%s\nREDIS_DB=%s\n' \
     "$want" "$port" "$(( port + DEV_API_PORT_OFFSET ))" "$db" \
@@ -234,6 +247,15 @@ elif [[ "$cmd" == "up" ]]; then
   # Assign first, THEN read: `read … <<<"$(claim_stack)"` reports read's status,
   # not the claim's, so a refused claim printed its FAIL and the stack carried on
   # with an empty port and an api listening on :10000.
+  # Computed HERE, not inside claim_stack: that runs in a command substitution,
+  # which is a subshell, so a variable it sets never reaches this shell. The first
+  # version set it in there and the trap read the default — deleting the pids of a
+  # stack that was still running. Same subshell trap as the swallowed claim status
+  # above, one line apart.
+  STACK_CLAIM_PREEXISTING=0
+  if grep -q '^BACKEND_PID=[0-9]' "$(dev_state_dir "$slug")/env" 2>/dev/null; then
+    STACK_CLAIM_PREEXISTING=1
+  fi
   claimed="$(claim_stack "$slug")" || exit 1
   read -r redis_db fe_port <<<"$claimed"
   api_port=$(( fe_port + DEV_API_PORT_OFFSET ))
@@ -242,8 +264,12 @@ elif [[ "$cmd" == "up" ]]; then
   # — the next `make dev` in a fresh worktree just gets a higher number, and the
   # block runs out sixteen stacks early. Released on any exit before the final
   # state write, which is the point the stack is actually running.
+  # Released on any exit before the stack is CONFIRMED up, and the release kills
+  # whatever this run started. Deleting the claim alone would leave an api or a
+  # vite running that nothing records any more — an orphan holding the port the
+  # claim just gave back, which is worse than the leak it was fixing.
   stack_recorded=0
-  trap 'if [[ "$stack_recorded" == "0" ]]; then rm -rf "$(dev_state_dir "$slug")"; fi' EXIT
+  trap 'release_unconfirmed_stack' EXIT
 else
   # stop and sweep READ; only `up` claims. Claiming here would mint a reservation
   # for a stack nobody asked to start, and then the caller would tear it down
@@ -412,17 +438,24 @@ margince_server_pids() {
 # the worktree path — that is what distinguishes our dev server from any other
 # Vite project the developer happens to be running.
 vite_pids() {
-  local pid cmd common
-  # The git COMMON directory, not this worktree's root: every worktree of this
-  # repository resolves vite out of its own node_modules, so matching on
-  # $repo_root found only our own. `make dev-sweep` promises to clear the
-  # machine, and an orphaned vite from a sibling worktree — the exact process
-  # this whole change makes more likely — survived it.
-  common=$(cd "$(git rev-parse --git-common-dir)" && cd .. && pwd -P)
+  local pid cmd root roots=()
+  # EVERY worktree of this repository, enumerated. Each resolves vite out of its
+  # own node_modules, so its command line carries its own path — matching on this
+  # checkout's root found only our own, and `make dev-sweep` promises to clear the
+  # machine. Deriving a parent directory from the git common dir was no better: a
+  # linked worktree can live anywhere, not only beside its siblings.
+  while IFS= read -r root; do
+    [[ -n "$root" ]] && roots+=("$root")
+  done < <(git worktree list --porcelain | awk '/^worktree /{print substr($0, 10)}')
   for pid in $(pgrep -f 'vite' 2>/dev/null || true); do
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"$common"* ]] && echo "$pid"
+    for root in "${roots[@]}"; do
+      if [[ "$cmd" == *"$root"* ]]; then
+        echo "$pid"
+        break
+      fi
+    done
   done
 }
 
@@ -436,6 +469,25 @@ still_ours() { # pid
   cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
   [[ -n "$cmd" ]] || return 1
   [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
+}
+
+# release_unconfirmed_stack — give back this run's claim, and take down whatever
+# it started. Called from the EXIT trap while stack_recorded is 0, which is every
+# path that does not reach a stack answering its own readiness probe.
+release_unconfirmed_stack() {
+  [[ "${stack_recorded:-1}" == "0" ]] || return 0
+  # Never release a claim this run did not create: it belongs to a stack that was
+  # already up, and taking its record away would leave it running with nothing
+  # able to stop it.
+  [[ "${STACK_CLAIM_PREEXISTING:-0}" == "1" ]] && return 0
+  local p
+  for p in "${be_pid:-}" "${fe_pid:-}" "${worker_pid:-}"; do
+    [[ -n "$p" ]] && kill "$p" 2>/dev/null || true
+  done
+  # The CLAIM goes; the LOG stays. Removing the directory took the log with it,
+  # so a failed boot deleted the one file that said why it failed — which cost a
+  # debugging cycle here before it could cost anyone else one.
+  rm -f "$(dev_state_dir "$slug")/env"
 }
 
 sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
@@ -831,9 +883,12 @@ up)
   # index is spoken for.
   printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nREDIS_DB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
     "$slug" "$api_port" "$fe_port" "$db" "$redis_db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
-  stack_recorded=1
-
   if wait_ready "http://localhost:${fe_port}/" 90; then
+    # CONFIRMED up, and only here. This used to be set at the state write above,
+    # which is before this probe — so an FE that never came ready left a claim
+    # behind holding a port and a Redis database, while the script killed the
+    # processes and exited 1.
+    stack_recorded=1
     echo "$label ready"
     echo ""
     echo "  OPEN     http://localhost:${fe_port}"

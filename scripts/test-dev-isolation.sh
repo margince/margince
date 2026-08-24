@@ -116,11 +116,25 @@ echo "lib-devstate.sh: every half of a seed resolves the SAME stack"
 # violation on app_user.workspace_id, which reads as a broken fixture rather than
 # as two halves pointing at two databases.
 probe_state="$(mktemp -d)"
-MARGINCE_DEV_STATE_DIR="$probe_state" DEV_SLUG=alpha \
-    bash -c '. "'"$root"'/scripts/lib-devstate.sh"; printf "%s %s" "$(dev_app_base_url)" "$(dev_database_name)"' \
-    > "$probe_state/answer"
-check "http://localhost:8080 margince_dev_alpha" "$(cat "$probe_state/answer")" \
-      "with no recorded stack the URL falls back to :8080 but the database is still the slug's own"
+
+# No recorded stack, and a slug: there is no URL to fall back to. :8080 belongs to
+# a DIFFERENT stack, so answering it would send the API half of a seed there while
+# the database half goes to margince_dev_<slug> — the split this pair exists to
+# close. Refusing is the only honest answer.
+check "1" "$(MARGINCE_DEV_STATE_DIR="$probe_state" DEV_SLUG=alpha \
+    bash -c '. "'"$root"'/scripts/lib-devstate.sh"; dev_app_base_url' >/dev/null 2>&1; echo $?)" \
+      "with no recorded stack a linked worktree gets a refusal, not :8080"
+
+# The PRIMARY worktree is the exception, and not by special-casing: its stack is
+# the shared one and its port is fixed, so :8080 is the answer rather than a guess.
+# Checked from a real primary repository — DEV_SLUG='' cannot fake it, because an
+# empty value is exactly what makes dev_resolve_slug ask the worktree.
+primary_probe="$(mktemp -d)"
+git init -q "$primary_probe/repo"
+check "http://localhost:8080" "$(cd "$primary_probe/repo" && \
+    MARGINCE_DEV_STATE_DIR="$probe_state" bash -c '. "'"$root"'/scripts/lib-devstate.sh"; dev_app_base_url')" \
+      "the primary worktree still answers :8080 with nothing recorded"
+rm -rf "$primary_probe"
 
 mkdir -p "$probe_state/alpha"
 printf 'SLUG=alpha\nFE_PORT=8093\nAPI_PORT=18093\nREDIS_DB=70\n' >"$probe_state/alpha/env"
@@ -296,6 +310,25 @@ check "" "$(cd "$probe/primary" && _testdb_worktree_slug)" \
       "a primary worktree yields no slug, so CI and the main checkout keep margince_test"
 check "linked" "$(cd "$probe/linked" && _testdb_worktree_slug)" \
       "a linked worktree yields its own name, so a parallel branch cannot rebuild your template"
+
+# dev_derive_slug, in the same throwaway repositories. An empty answer means THE
+# PRIMARY worktree, so a linked worktree must never produce one: a name that
+# sanitises away to nothing would put it on the shared margince database and
+# :8080 — the collision this mechanism removes, arrived at from the other end.
+# `_` is such a name: the underscore folds to a hyphen and the hyphen is trimmed.
+git -C "$probe/primary" worktree add -q "$probe/_" --detach
+check "" "$(dev_sanitize_slug "_")" \
+      "the sanitiser really does reduce this name to nothing, which is what makes the next check the real case"
+check "1" "$([ -n "$(cd "$probe/_" && dev_derive_slug)" ] && echo 1 || echo 0)" \
+      "a name that sanitises to nothing still yields a slug, never the empty answer that means primary"
+
+# Two worktrees whose basenames are identical must not share one slug: that would
+# be one database, one Redis logical database and one bucket between two stacks.
+mkdir -p "$probe/a" "$probe/b"
+git -C "$probe/primary" worktree add -q "$probe/a/dup" --detach
+git -C "$probe/primary" worktree add -q "$probe/b/dup" --detach
+check "1" "$([ "$(cd "$probe/a/dup" && dev_derive_slug)" != "$(cd "$probe/b/dup" && dev_derive_slug)" ] && echo 1 || echo 0)" \
+      "two worktrees with the SAME basename get different slugs, so they cannot share a database"
 
 long_one="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && _testdb_worktree_slug)"
 long_two="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-two" && _testdb_worktree_slug)"

@@ -72,11 +72,39 @@ dev_bucket_for_slug() { # slug → an S3-legal bucket name
 # --git-common-dir. The latter can print a relative path, so it is resolved
 # before the comparison.
 dev_derive_slug() { # → "" in the primary worktree, this worktree's name in a linked one
-  local gitdir commondir
+  local gitdir commondir top name digest twin
   gitdir=$(git rev-parse --absolute-git-dir) || return 1
   commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || return 1
   [[ "$gitdir" == "$commondir" ]] && return 0
-  dev_sanitize_slug "$(basename "$(git rev-parse --show-toplevel)")"
+
+  top="$(git rev-parse --show-toplevel)"
+  name="$(dev_sanitize_slug "$(basename "$top")")"
+  # A digest of the FULL PATH, because the basename does not identify a worktree:
+  # two of them can both be called `feature`, and giving both the same slug hands
+  # them one database, one Redis logical database and one bucket — the collision
+  # this whole mechanism exists to remove, arrived at from the other end.
+  digest="$(printf '%s' "$top" | shasum -a 256 | cut -c1-8)"
+
+  # An empty answer means the PRIMARY worktree, so a name that sanitises away to
+  # nothing (a directory of pure punctuation) must not produce one: it would put a
+  # linked worktree on the shared `margince` database and :8080.
+  if [[ -z "$name" ]]; then
+    printf 'wt-%s' "$digest"
+    return 0
+  fi
+
+  # Disambiguate only when another worktree really shares this basename, so the
+  # common case stays a name a human recognises.
+  twin=0
+  while IFS= read -r other; do
+    [[ -z "$other" || "$other" == "$top" ]] && continue
+    [[ "$(dev_sanitize_slug "$(basename "$other")")" == "$name" ]] && twin=1
+  done < <(git worktree list --porcelain | awk '/^worktree /{print substr($0, 10)}')
+  if (( twin )); then
+    printf '%s-%s' "$name" "$digest"
+    return 0
+  fi
+  printf '%s' "$name"
 }
 
 # dev_resolve_slug [supplied] — the slug this invocation runs under.
@@ -117,18 +145,30 @@ dev_state_dir() { # slug
 # Falls back to :8080 when this worktree has no recorded stack, which keeps the
 # primary worktree and CI on the URL they already use.
 dev_app_base_url() {
-  local slug port FE_PORT
+  local slug env_file FE_PORT
   slug="$(dev_resolve_slug "${DEV_SLUG:-}")" || return 1
-  port=8080
-  local env_file
   env_file="$(dev_state_dir "$slug")/env"
   if [[ -f "$env_file" ]]; then
     FE_PORT=''
     # shellcheck disable=SC1090
     . "$env_file"
-    [[ -n "$FE_PORT" ]] && port="$FE_PORT"
+    if [[ -n "$FE_PORT" ]]; then
+      printf 'http://localhost:%s' "$FE_PORT"
+      return 0
+    fi
   fi
-  printf 'http://localhost:%s' "$port"
+  # No recorded stack. For the PRIMARY worktree :8080 is still the answer — that
+  # stack is the shared one and its port is fixed. For a LINKED worktree there is
+  # no answer to fall back to: :8080 belongs to a different stack, and returning
+  # it would send the API half of a seed there while dev_database_name sends the
+  # SQL half to margince_dev_<slug>. That split is the defect this pair exists to
+  # close, so refuse instead of half-answering.
+  if [[ -z "$slug" ]]; then
+    printf 'http://localhost:8080'
+    return 0
+  fi
+  echo "FAIL: no dev stack recorded for this worktree (slug '${slug}') — start it with 'make dev' first, or set API_BASE explicitly. Falling back to :8080 would seed a different worktree's stack." >&2
+  return 1
 }
 
 # dev_database_name — the Postgres database THIS worktree's stack runs against.

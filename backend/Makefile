@@ -3,13 +3,21 @@
 GO        ?= go
 PG_PORT   ?= 15432
 REDIS_PORT?= 16379
+DB_NAME   ?= margince
+
 # The database THIS worktree's stack runs against, resolved by the same code
-# scripts/dev.sh uses. It was the literal `margince`, which is still the answer in
-# the primary worktree and in CI; from a linked worktree it is margince_dev_<slug>,
-# and the SQL half of a seed used to land in a different database from the API
-# half. Lazy (`?=` makes a recursively expanded variable), so the git calls only
-# happen for a target that actually reads it.
-DB_NAME   ?= $(shell bash -c '. "$(CURDIR)/../scripts/lib-devstate.sh" && dev_database_name' 2>/dev/null || echo margince)
+# scripts/dev.sh uses. SEPARATE from DB_NAME on purpose: DB_NAME also feeds
+# db-init and db-wait, which run before dev.sh has created the per-stack database
+# and must target one that already exists — pointing them at margince_dev_<slug>
+# made `make dev` fail at db-init with "database does not exist".
+#
+# Lazy (`?=` makes a recursively expanded variable), so the git calls only happen
+# for a target that reads it. NO fallback to margince on failure: a failed
+# resolution means an invalid DEV_SLUG or a worktree identity git could not answer
+# for, and defaulting to the shared database there would point a linked worktree's
+# psql at the primary's data — silently, which is the failure this exists to
+# prevent. An empty name makes psql fail loudly instead.
+DEV_DB_NAME ?= $(shell bash -c '. "$(CURDIR)/../scripts/lib-devstate.sh" && dev_database_name')
 # An ambient MARGINCE_OWNER_DSN redirects every migrate target here, because it is
 # the same variable cmd/migrate reads when no --dsn is given — the two can never
 # name different databases. That also means a staging or production owner DSN
@@ -556,10 +564,10 @@ db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
 	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
 
 seed-reset: ## Wipe the demo workspace (scripts/seed-reset.sql); make seed-dev rebuilds it
-	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql
+	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql
 
 seed-dev-db: ## Apply the dev DB seed for API-less demo data (scripts/seed-dev.sql); run after seed-dev
-	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-dev.sql
+	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-dev.sql
 
 # MARGINCE_SEED_DSN is not optional in practice, and the root target always
 # supplies it: without a DSN the seeder silently skips teams, seats, finance
