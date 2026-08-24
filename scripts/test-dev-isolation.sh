@@ -105,6 +105,28 @@ port_listeners() { # port
 
 echo "dev.sh: the registry is machine-global, so a second worktree sees the first"
 
+# The DEFAULT location, checked before anything overrides it. Every assertion
+# below points the root at a temp directory, so without this one the whole file
+# would keep passing after somebody moved the default back under the worktree —
+# and a per-worktree default is the entire defect. What matters is not the exact
+# path but that it is not INSIDE this checkout, because a path inside it is
+# per-worktree by construction however it is spelled.
+default_root="$(dev_state_root)"
+default_verdict=shared
+case "$default_root" in
+    # Inside the checkout: per-worktree by construction.
+    "$root"/*) default_verdict="inside the checkout ($default_root)" ;;
+    # RELATIVE: dev.sh cds to the worktree top before using it, so a relative
+    # path is per-worktree too — and it is the spelling the old code used
+    # (`.tmp/dev`). Checking only for "not under $root" would call that clean,
+    # which is how this very assertion first passed over the defect it exists
+    # to catch.
+    /*) default_verdict=shared ;;
+    *) default_verdict="relative, so resolved per worktree ($default_root)" ;;
+esac
+check "shared" "$default_verdict" \
+      "the default registry is one absolute path per machine, not one per worktree"
+
 tmp_root="$(mktemp -d)"
 trap 'rm -rf "$tmp_root"' EXIT
 export MARGINCE_DEV_STATE_DIR="$tmp_root"
