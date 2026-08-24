@@ -39,7 +39,7 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 	// REPORT-PARAM-1: distinct_engaged_contacts < 2. One engaged contact is
 	// single-threaded however many seats the deal has — an unengaged seat is
 	// a name on a list, not a relationship.
-	one := DealCoverage{DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{
+	one := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(true, roleChampion), seat(false, "user"), seat(false, "legal"),
 	}}
 	if !kinds(foldRisks(one, testNow))[RiskSingleThreadedTheirs] {
@@ -103,7 +103,7 @@ func TestACoverageGapIsAboutTheChampionNotTheCount(t *testing.T) {
 	// Three engaged contacts and no champion among them: well covered by the
 	// threading rule, and still nobody inside is arguing for the deal. The two
 	// findings are different questions and must not collapse into one.
-	noChampion := DealCoverage{DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{
+	noChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(true, "user"), seat(true, "legal"), seat(true, "finance"),
 	}}
 	got := kinds(foldRisks(noChampion, testNow))
@@ -116,11 +116,46 @@ func TestACoverageGapIsAboutTheChampionNotTheCount(t *testing.T) {
 
 	// A champion who exists but has gone quiet does not count: the seat is not
 	// the relationship.
-	quietChampion := DealCoverage{DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{
+	quietChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(false, roleChampion), seat(true, "user"), seat(true, "legal"),
 	}}
 	if !kinds(foldRisks(quietChampion, testNow))[RiskCoverageGap] {
 		t.Error("an unengaged champion counted as an engaged one — a name on a seat is not advocacy")
+	}
+}
+
+// The same argument as TestADealWithNoSeatsAtAllRaisesNoCoverageGap, one step
+// further: a deal with seats but NO captured contact is early too.
+//
+// Engagement requires a two-way exchange, so before the first touch every seat
+// is unengaged by construction and both engagement rules fire on every deal
+// somebody just created. The rep then meets two warning chips on a deal five
+// minutes old, which is what trains them to stop reading chips.
+//
+// The pair matters: the second half proves the findings still ARRIVE once
+// there is something to find, so this is a hold rather than a removal.
+func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
+	seats := []deals.DealStakeholder{
+		seat(false, roleChampion), seat(false, "user"), seat(false, "legal"),
+	}
+	untouched := DealCoverage{DealID: ids.NewV7(), Stakeholders: seats}
+	got := kinds(foldRisks(untouched, testNow))
+	if got[RiskSingleThreadedTheirs] {
+		t.Error("a deal nobody has contacted yet is flagged single-threaded, which is true of every new deal")
+	}
+	if got[RiskCoverageGap] {
+		t.Error("a deal nobody has contacted yet is flagged for having no engaged champion")
+	}
+
+	// One captured touch and the same seats: both findings now mean what they
+	// say, and both are reported.
+	touched := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: seats}
+	got = kinds(foldRisks(touched, testNow))
+	if !got[RiskSingleThreadedTheirs] {
+		t.Error("a contacted deal with no engaged seat is not flagged single-threaded")
+	}
+	if !got[RiskCoverageGap] {
+		t.Error("a contacted deal with an unengaged champion is not flagged as a coverage gap")
 	}
 }
 

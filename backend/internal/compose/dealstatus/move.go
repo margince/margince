@@ -63,6 +63,9 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 			map[string]any{"activity_id": inbound.Id},
 			evidenceOf(inbound, "Unanswered: "+subjectOf(inbound)))
 	}
+	if opening, ok := firstOutreach(f); ok {
+		return opening
+	}
 	return move(ActionCreateTask, nextStepReason(f),
 		map[string]any{
 			"subject": "Agree the next step on " + f.deal.Name,
@@ -70,6 +73,92 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 			"source":  "ui",
 		},
 		lastContactEvidence(f)...)
+}
+
+// The stakeholder roles this file reasons about. They are the wire values
+// compose/network serves on a coverage seat, not this package's own
+// vocabulary — spelling one inline is how it ends up a typo that never
+// matches, which fails silently because a role that matches nothing simply
+// produces no advice.
+//
+// Held by: TestTheRoleVocabularyIsSpelledOnce (rolevocabulary_test.go)
+const (
+	roleChampion      = "champion"
+	roleEconomicBuyer = "economic_buyer"
+	roleDecisionMaker = "decision_maker"
+	roleInfluencer    = "influencer"
+)
+
+// openingRoles is who to write to first, best answer first. A champion will
+// carry the conversation internally; an economic buyer can decide; a
+// decision-maker or an influencer is a way in. A blocker is deliberately
+// absent — opening a deal by writing to the person most likely to refuse it is
+// not a first move, and suggesting it would be worse than saying nothing.
+var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, roleInfluencer}
+
+// firstOutreach is the move on a deal nobody has contacted yet.
+//
+// Without it such a deal was told "Nothing has been logged on this deal yet —
+// agree the next step", which restates the empty timeline the reader is
+// looking at and names no person, no role and no verb they could not have
+// worked out themselves. A deal with named seats and no contact has exactly
+// one obvious next move, and the records already say who it is with.
+//
+// It refuses to guess in three cases, and each one returns no move rather than
+// a vague one: a deal that has been contacted (the later rules own it), a deal
+// with no seats at all, and a deal whose only seats hold roles this cannot
+// order. The last is the one worth stating — an unrecognized role is not a
+// reason to write to somebody, and picking arbitrarily would put a stranger's
+// name in an instruction.
+func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
+	if _, contacted := lastContact(f); contacted {
+		return crmcontracts.DealStatusCardMove{}, false
+	}
+	for _, role := range openingRoles {
+		seat, ok := namedRole(f.seats, role)
+		if !ok {
+			continue
+		}
+		return move(ActionDraftEmail, openingReason(seat, len(f.seats)), nil), true
+	}
+	return crmcontracts.DealStatusCardMove{}, false
+}
+
+// openingReason says who to open with and why they are the one.
+//
+// It carries the seat COUNT because that is the fact a reader checks the
+// advice against: "four people are named and none has been contacted" is
+// checkable against the page, where "reach out" is not.
+func openingReason(seat Seat, seats int) string {
+	who := roleWord(seat.Role)
+	if seat.Name != "" {
+		who = seat.Name + ", the " + roleWord(seat.Role)
+	}
+	if seats == 1 {
+		return fmt.Sprintf("Nobody has been contacted yet. Open with %s.", who)
+	}
+	return fmt.Sprintf("%d people are named on this deal and none has been contacted. Open with %s.", seats, who)
+}
+
+// roleWords is the wire value on the left, the words a sentence uses on the
+// right. Two of them read the same and are still two different things: the key
+// is what compose/network stores, the value is English prose, and a rename on
+// either side must not silently move the other.
+var roleWords = map[string]string{
+	roleChampion:      "champion",
+	roleEconomicBuyer: "economic buyer",
+	roleDecisionMaker: "decision-maker",
+	roleInfluencer:    "influencer",
+}
+
+// roleWord is a stakeholder role as a sentence says it. An unknown role is
+// returned as it is stored rather than dropped: the card would otherwise write
+// "Open with Maria Schmidt, the ." for a role added after this build.
+func roleWord(role string) string {
+	if word, known := roleWords[role]; known {
+		return word
+	}
+	return role
 }
 
 func move(action, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {

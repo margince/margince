@@ -25,7 +25,10 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -42,15 +45,28 @@ func (l *refusingLane) Complete(context.Context, model.Request) (model.Response,
 // real one would make two runs of the same test stamp different cards.
 func cardClock() time.Time { return time.Date(2026, 8, 24, 9, 0, 0, 0, time.UTC) }
 
-// cardFacts is the minimum a card can be written from.
+// cardFacts is the minimum a card can be written from AND asked about.
+//
+// The timeline row is load-bearing: write() does not ask a lane about a deal
+// with nothing to cite, because every sentence the model could return would be
+// dropped for want of a citation. A fixture with no activity therefore tests
+// the refusal-to-ask, not the lane, and these tests are about the lane.
 func cardFacts(t *testing.T) facts {
 	t.Helper()
 	return facts{
 		deal: crmcontracts.Deal{Name: "Nordwind", Status: "open"},
+		timeline: []crmcontracts.Activity{{
+			Id:         openapi_types.UUID(ids.NewV7()),
+			Kind:       "email",
+			Subject:    ptr("Angebot"),
+			OccurredAt: cardClock().Add(-48 * time.Hour),
+		}},
 		now:  cardClock(),
 		lang: "de",
 	}
 }
+
+func ptr[T any](v T) *T { return &v }
 
 func TestAWiredLaneThatDidNotAnswerIsReportedSoItsFallbackIsNotCached(t *testing.T) {
 	lane := &refusingLane{}

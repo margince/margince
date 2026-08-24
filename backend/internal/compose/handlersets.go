@@ -114,7 +114,8 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// through the verb the move names, and the only row it writes is its own
 	// per-reader cache entry.
 	s.dealStatusSvc = dealstatus.NewService(
-		pool, s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now)
+		pool, s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now).
+		WithSeats(dealSeatReader(pool))
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
