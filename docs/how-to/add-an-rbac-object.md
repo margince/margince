@@ -193,16 +193,27 @@ objects and no grep for `'{objects,<name>}'` decides any of them:
   no rows shows up.
 - `TestTheBackfillsComposeFromTheOldestUpgradableInstallation` — every backfill
   replayed in version order over the documents an installation bootstrapped at
-  the migration baseline really held, read out of history. **This is the arm that
-  catches step 3 missing entirely.** The isolating arm cannot: it derives its
-  starting state from the migrations, so an object no migration mentions is never
-  absent from that state and its missing backfill is invisible.
+  the migration baseline really held. **This is the arm that catches step 3
+  missing entirely**, for any object added since that baseline. The isolating arm
+  cannot: it derives its starting state from the migrations, so an object no
+  migration mentions is never absent from that state and its missing backfill is
+  invisible.
 
-The starting state of the composed arm is read from a pinned commit rather than
-from a committed fixture, and that is deliberate: a fixture would be editable, and
-editing it is exactly how a backfill that does not work is made to look like one
-that does — move the object into the starting state and the convergence it never
-delivered is already there.
+The composed arm's starting state is a committed fixture,
+`backend/migrations/testdata/rbac_baseline_era_defaults.json` — and the reason it
+is safe to commit is a second gate, not the file itself. Editing that fixture is
+exactly how a backfill that does not work is made to look like one that does: move
+the object into the starting state and the convergence it never delivered is
+already there. So `TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded`
+(`backend/rbacbaselineerafixture_test.go`, unit lane) pins it byte-for-byte to
+`git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json`, and
+proves that commit really is the consolidation floor rather than a commit somebody
+named — otherwise the pin could be moved forward instead of the fixture being
+edited, with the same effect. Regenerate it with the command that gate's failure
+message prints; never by hand.
+
+It lives in the unit lane because reading history needs a full checkout, and the
+integration shards check out shallow.
 
 Commit the policy change, the contract, the migration pair, the regenerated
 matrix and the UI binding together — they are one change, and any one of them

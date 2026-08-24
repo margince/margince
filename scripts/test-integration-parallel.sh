@@ -253,7 +253,7 @@ while IFS='|' read -r d rel; do
       case "$expr" in
         integration) tagged=1 ;;
         # !integration is the mirror of `integration`: the unit-lane-only gates.
-        # The RBAC legacy-cohort gates read git history to derive the initial
+        # rbacbaselineerafixture_test.go reads git history to derive the baseline
         # commit's vocabulary, and the integration lanes clone shallow, so those
         # files are excluded from THIS build exactly as the compiler excludes
         # them. Statically decidable for the same reason `integration` is — this

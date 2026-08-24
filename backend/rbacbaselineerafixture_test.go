@@ -38,7 +38,9 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -55,11 +57,13 @@ const (
 
 	// baselineEraSource is where the seeded matrix lived at that commit, and
 	// baselineEraFixture is the committed copy this gate pins to it.
-	baselineEraSource  = "backend/migrations/testdata/rbac_seeded_defaults.json"
+	seededDefaultsPath = "migrations/testdata/rbac_seeded_defaults.json"
+	baselineEraSource  = "backend/" + seededDefaultsPath
 	baselineEraFixture = "migrations/testdata/rbac_baseline_era_defaults.json"
 )
 
 func TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded(t *testing.T) {
+	assertCommitIsTheUpgradeFloor(t)
 	derived := baselineEraFromHistory(t)
 	committed := readJSONFixture(t, baselineEraFixture)
 
@@ -87,11 +91,11 @@ func TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded(t *testing.T) {
 // Not defensive tidiness. The day the vocabulary stops growing, the baseline-era
 // documents catch up with head, every backfill replayed over them no-ops, and the
 // composition arm reports PASS having compared a state with itself. The
-// integration arm refuses that too, but it refuses it 40 seconds into a database
-// lane; here it is a second, and this is the lane that runs on every push.
+// integration arm refuses that too, but only later, in the database lane; here it
+// is cheap, and this is the lane that runs on every push.
 func TestBaselineEraFixtureIsStillBehindTheSeededMatrix(t *testing.T) {
 	before := readJSONFixture(t, baselineEraFixture)
-	after := readJSONFixture(t, "migrations/testdata/rbac_seeded_defaults.json")
+	after := readJSONFixture(t, seededDefaultsPath)
 
 	if reflect.DeepEqual(before, after) {
 		t.Fatalf("%s already equals the matrix it is supposed to predate, so the composition gate "+
@@ -100,6 +104,59 @@ func TestBaselineEraFixtureIsStillBehindTheSeededMatrix(t *testing.T) {
 			"landed (and regenerate with the command in the sibling test's message), or retire the "+
 			"arm — do NOT leave it green over a comparison with nothing in it.",
 			baselineEraFixture)
+	}
+}
+
+// assertCommitIsTheUpgradeFloor proves baselineEraCommit is the consolidation
+// floor, rather than merely a commit somebody named.
+//
+// WITHOUT THIS THE PIN IS REPOINTABLE, and the design it replaced was stronger on
+// exactly this point: the deleted cohort gate read a path
+// (crm-auth/internal/policy/policy.go) that no longer exists in a modern tree, so
+// moving the constant forward failed loudly. The path this gate reads exists at
+// every commit from the baseline onward, including commits on the author's own
+// branch, so repointing would otherwise succeed in silence — and that is a
+// working defeat, not a hypothetical one:
+//
+//	commit A adds an object to coreObjects and regenerates the seeded matrix,
+//	        with NO backfill migration;
+//	commit B repoints baselineEraCommit at A and regenerates this fixture from it.
+//
+// Both gates here pass (the fixture IS `git show A:…`), the distance check passes
+// on any unrelated difference, and the composed arm passes because the object is
+// already in the pre-state. The object then 403s forever on every upgraded
+// installation — the precise defect this family exists to catch.
+//
+// The floor is derivable because the consolidation is what made core's history one
+// file: at the floor, core holds exactly the 0001 baseline pair, and every later
+// commit carries additional migrations.
+func assertCommitIsTheUpgradeFloor(t *testing.T) {
+	t.Helper()
+	listing := gitAtBaselineEra(t, "ls-tree", "--name-only", baselineEraCommit, "backend/migrations/core/")
+	var names []string
+	for _, line := range strings.Split(strings.TrimSpace(listing), "\n") {
+		if name := strings.TrimSpace(line); name != "" {
+			names = append(names, filepath.Base(name))
+		}
+	}
+	slices.Sort(names)
+	want := []string{"0001_baseline.down.sql", "0001_baseline.up.sql"}
+	if !slices.Equal(names, want) {
+		// The COUNT and a sample, never the whole listing: at a later commit this
+		// is sixty filenames, and a failure nobody can read is a failure nobody
+		// acts on.
+		sample := names
+		if len(sample) > 4 {
+			sample = sample[:4]
+		}
+		t.Fatalf("%s is not the consolidation floor: its backend/migrations/core/ holds %d file(s) "+
+			"(%v…), want exactly %v.\n"+
+			"This constant must name the commit that replaced core's history with one baseline, because "+
+			"the pre-state it produces is only \"what the oldest reachable installation held\" at THAT "+
+			"commit. Any later commit already carries backfills, so pointing here instead would fold an "+
+			"object's grant into the starting state and hide the missing migration for it — which is the "+
+			"defect this whole family exists to catch.",
+			baselineEraCommit, len(names), sample, want)
 	}
 }
 
@@ -112,23 +169,38 @@ func TestBaselineEraFixtureIsStillBehindTheSeededMatrix(t *testing.T) {
 // it stops being able to see is a fixture edited to excuse a missing backfill.
 func baselineEraFromHistory(t *testing.T) map[string]any {
 	t.Helper()
+	raw := gitAtBaselineEra(t, "show", baselineEraCommit+":"+baselineEraSource)
+	return decodeMatrix(t, []byte(raw), baselineEraCommit+":"+baselineEraSource)
+}
+
+// gitAtBaselineEra runs one read-only git command against the repository root.
+//
+// It FAILS rather than skipping when history is unreachable. Both lanes that run
+// this gate check out at fetch-depth: 0 today; if that changes, the honest
+// outcome is a red gate naming the cause, because a gate that degraded to "no
+// history, nothing to compare" would look exactly like a passing one — and what
+// it stops being able to see is a pre-state edited or repointed to excuse a
+// missing backfill.
+//
+// Every argument is a compile-time constant: nothing from a fixture, an
+// environment variable or a test name reaches the argv.
+func gitAtBaselineEra(t *testing.T, args ...string) string {
+	t.Helper()
 	// -C .. : these tests run from backend/, and the paths recorded in history
 	// are relative to the repository root.
-	out, err := exec.Command("git", "-C", "..", "show",
-		baselineEraCommit+":"+baselineEraSource).Output()
+	out, err := exec.Command("git", append([]string{"-C", ".."}, args...)...).Output()
 	if err != nil {
 		detail := err.Error()
 		var exit *exec.ExitError
 		if errors.As(err, &exit) {
 			detail = strings.TrimSpace(string(exit.Stderr))
 		}
-		t.Fatalf("reading %s:%s: %s\nThis gate derives the composition arm's pre-state from history, "+
-			"so it needs FULL history. If this is CI, the job running the backend unit lane checks "+
-			"out shallow — give it `fetch-depth: 0`, as integration-unit-coverage already has. "+
-			"Deepen the checkout; do not weaken the gate.",
-			baselineEraCommit, baselineEraSource, detail)
+		t.Fatalf("git %s: %s\nThis gate derives the composition arm's pre-state from history, so it "+
+			"needs FULL history. If this is CI, the job running the backend unit lane checks out "+
+			"shallow — give it `fetch-depth: 0`, as integration-unit-coverage already has. Deepen "+
+			"the checkout; do not weaken the gate.", strings.Join(args, " "), detail)
 	}
-	return decodeMatrix(t, out, baselineEraCommit+":"+baselineEraSource)
+	return string(out)
 }
 
 func readJSONFixture(t *testing.T, path string) map[string]any {

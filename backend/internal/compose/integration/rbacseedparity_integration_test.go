@@ -32,10 +32,12 @@ package integration
 //     that a failure names the sequence rather than the migration.
 //
 // The composed arm is also the only one that can see an object added to the
-// policy with NO backfill at all — which is the defect this whole family exists
-// for, and the one the deleted replay was the only gate for. The per-write arm
-// cannot: it derives its pre-state FROM the writes, so an object that no
-// migration mentions is never removed from the pre-state and so never missed.
+// policy with NO backfill at all — for any object added SINCE the baseline. The
+// per-write arm cannot see it at any age: it derives its pre-state FROM the
+// writes, so an object that no migration mentions is never removed from the
+// pre-state and so never missed. An object that predates the baseline sits in
+// both sides here too, and is out of reach of both arms; nothing can recover a
+// pre-state older than the floor, because no such installation can migrate.
 
 import (
 	"context"
@@ -45,6 +47,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -84,14 +87,39 @@ const baselineEraDefaults = "../../../migrations/testdata/rbac_baseline_era_defa
 // controlRole is a role the seeded matrix does not name, carrying a document of
 // its own, present for every replay below.
 //
-// It is the missing-predicate detector. A backfill is meant to name the roles it
-// grants and to say `is_system`; one that says neither — the easiest hand-written
-// mistake there is — reaches every role row in the installation. Every role the
-// fixture names is a role that SHOULD receive the grant, so without a row that
-// should not, an unscoped UPDATE looks exactly like a correct one.
+// It is the missing-predicate detector. A backfill that names no roles at all —
+// the easiest hand-written mistake there is — reaches every role row in the
+// installation, and every role the fixture names SHOULD receive the grant, so
+// without a row that should not, an unscoped UPDATE looks exactly like a correct
+// one.
+//
+// It does NOT detect a write that lists keys and omits `is_system`, and that is
+// not a gap: `role_key_unique UNIQUE (key)` means no non-system row can hold a
+// key a seeded role already occupies, so a key-listed write cannot reach an
+// operator's own role whatever it says about is_system. What the row does catch
+// is a write predicated on the DOCUMENT rather than the key — see
+// controlDocument, which is shaped for exactly that.
 const controlRole = "custom_scoped_role"
 
-var controlDocument = []byte(`{"objects": {}, "row_scope": "own"}`)
+// controlDocument holds real object keys and a real row scope ON PURPOSE.
+//
+// An empty document at row_scope "own" — what this was — is only reachable by a
+// statement with no predicate at all, which made the detector's claim much
+// narrower than it read. Two shapes slipped past it, and both reach every
+// operator-defined role in the installation:
+//
+//	WHERE (permissions -> 'objects') ? 'deal'        -- empty objects never match
+//	WHERE permissions ->> 'row_scope' = 'team'       -- "own" never matches
+//
+// The second is the sharp one: a backfill widening team to all is a mass row
+// disclosure, and a control row at "own" cannot see it. So the row carries a
+// non-empty subset of the real vocabulary and sits at "team", which is the
+// scope a predicate-driven backfill is most likely to select on. It is still a
+// role the seeded matrix does not name, so no backfill should touch it.
+var controlDocument = []byte(
+	`{"objects": {"deal": {"create": false, "read": true, "update": false, "delete": false}, ` +
+		`"person": {"create": false, "read": true, "update": false, "delete": false}}, ` +
+		`"row_scope": "team"}`)
 
 // roleDocument is one role's permissions document. Grants stay RawMessage: this
 // file owns whether the two paths AGREE, never what a grant should be — the
@@ -205,8 +233,9 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 // the object is missing at the start and still missing at the end.
 //
 // Version order and not file order: dbmigrate sorts versions as STRINGS and
-// applies them in that order, and rolePermissionMigrations sorts by the same key,
-// so the sequence replayed here is the sequence a real upgrade runs.
+// applies them in that order, and rolePermissionMigrations INHERITS that order
+// from dbmigrate.Load rather than re-deriving it, so the sequence replayed here
+// is the sequence a real upgrade runs.
 func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
 	seeded := readSeededDefaults(t)
 	baselineEra := readBaselineEraDefaults(t)
@@ -219,7 +248,8 @@ func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
 		t.Fatal("no migration writes role.permissions, but core carries at least one — " +
 			"the detection in rolePermissionMigrations has gone blind")
 	}
-	assertPreStateIsNotAlreadyTheAnswer(t, baselineEra, seeded)
+	assertPreStateIsNotAlreadyTheAnswer(t,
+		readMatrixAsValues(t, baselineEraDefaults), readMatrixAsValues(t, seededDefaults))
 
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
@@ -248,39 +278,28 @@ func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
 // real reason rather than a hypothetical one — the day the vocabulary stops
 // growing, the baseline-era documents catch up with head — so the gate has to
 // say it has run out of distance instead of quietly passing.
-func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]roleDocument) {
+func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]any) {
 	t.Helper()
-	for role, want := range after {
-		got, ok := before[role]
-		if !ok {
+	for _, role := range sortedKeys(after) {
+		if _, ok := before[role]; !ok {
 			// A role the baseline era did not have. No permissions write can
 			// CREATE a role row, so this is a different obligation than the one
-			// under test, and it would surface here as a puzzling missing-role
-			// error rather than as what it is.
+			// under test, and it would otherwise surface downstream as a puzzling
+			// missing-role error rather than as what it is.
 			t.Fatalf("the seeded matrix names role %q and the baseline-era documents do not. "+
 				"A role.permissions backfill only ever UPDATEs, so no migration can bring this "+
 				"role to an installation that predates it — the seed and the upgrade path have "+
 				"diverged, and that is a gap in the migration rather than in this gate", role)
 		}
-		if got.RowScope != want.RowScope {
-			return
-		}
-		for object, grant := range want.Objects {
-			held, ok := got.Objects[object]
-			if !ok {
-				return
-			}
-			// The GRANT and not just the key. A backfill that widens an existing
-			// object's verbs — read to read+update, say — leaves the key set and
-			// the row_scope identical, so a presence-only check would call this
-			// pre-state "already the answer" and refuse to run the arm at all.
-			// That is a false refusal blocking a legitimate backfill, and it is
-			// the likelier shape of the next one: the vocabulary is 39 objects
-			// and mostly complete, while grants keep being adjusted.
-			if !sameJSON(t, grant, held) {
-				return
-			}
-		}
+	}
+	// BOTH directions, in one comparison. Walking only `after`'s keys meant a
+	// role or object the pre-state holds and today's matrix does not — an object
+	// retired from the policy — was never examined, no distance was found, and
+	// the fatal below fired telling the author to retire an arm that in fact had
+	// real distance to cross. DeepEqual over decoded values says "identical" only
+	// when they are, which is the claim this guard needs.
+	if !reflect.DeepEqual(before, after) {
+		return
 	}
 	t.Fatalf("%s already equals the matrix the replay must reach, so this arm proves nothing: "+
 		"every write below can no-op and the comparison still passes.\n"+
@@ -440,15 +459,12 @@ func seedControlRole(ctx context.Context, t *testing.T, e *apptest.AppEnv) {
 // Postgres, so a role the pre-state names and the database does not would leave
 // that role at its MODERN document while this function reported success — and
 // the replay would then be proving convergence from a state it never reached.
-func rewindToBaselineEra(ctx context.Context, t *testing.T, e *apptest.AppEnv, documents map[string]roleDocument) {
+func rewindToBaselineEra(ctx context.Context, t *testing.T, e *apptest.AppEnv, documents map[string]json.RawMessage) {
 	t.Helper()
 	for _, role := range sortedKeys(documents) {
-		document, err := json.Marshal(documents[role])
-		if err != nil {
-			t.Fatalf("encoding the baseline-era document for %q: %v", role, err)
-		}
 		tag, err := e.Owner.Exec(ctx,
-			`UPDATE role SET permissions = $2 WHERE key = $1 AND is_system`, role, document)
+			`UPDATE role SET permissions = $2 WHERE key = $1 AND is_system`,
+			role, []byte(documents[role]))
 		if err != nil {
 			t.Fatalf("seeding the baseline-era document for %q: %v", role, err)
 		}
@@ -475,15 +491,28 @@ type permissionWrite struct {
 }
 
 var (
-	// A candidate migration: one that mentions the table and the column at all.
+	// A candidate migration: one that mentions the column at all.
 	// DELIBERATELY WEAK — a filter, not the judgement. The strict pattern below
 	// decides, and a candidate the strict pattern cannot read is a hard failure
 	// rather than a skip, so a spelling nobody anticipated (`UPDATE role AS r`,
 	// `UPDATE ONLY role`, an upsert) stops the gate instead of vanishing from it.
-	mentionsRolePermissions = regexp.MustCompile(`(?is)\brole\b[\s\S]{0,400}?\bpermissions\b`)
-	// A statement that writes the column, however the write is spelled.
+	//
+	// UNBOUNDED, and the word `role` is deliberately not required. This filter
+	// used to demand the two words within 400 characters of each other, which
+	// broke the contract above in the one direction that cannot be noticed: a
+	// migration whose UPDATE carried a long comment before its SET fell out of
+	// the candidate set with no fatal, was never replayed, and the arm still
+	// converged — because the write it skipped was the write that would have
+	// diverged. Measured: a ~460-character gap gives candidate=false while the
+	// strict pattern matches. A distance window in front of a census is the
+	// shortcut CLAUDE.md rule 8 forbids by name, and nothing measured that this
+	// one bought anything.
+	mentionsRolePermissions = regexp.MustCompile(`(?i)\bpermissions\b`)
+	// A statement that writes the column, however the write is spelled. MERGE and
+	// a quoted schema qualifier are included because Postgres accepts them and
+	// this pattern deciding "not a write" is how a real grant leaves the gate.
 	rolePermissionWrite = regexp.MustCompile(
-		`(?is)\b(?:UPDATE|INSERT\s+INTO)\s+(?:ONLY\s+)?(?:public\.)?"?role"?\b[\s\S]*?\bpermissions\b`)
+		`(?is)\b(?:UPDATE|INSERT\s+INTO|MERGE\s+INTO)\s+(?:ONLY\s+)?(?:"?public"?\.)?"?role"?\b[\s\S]*?\bpermissions\b`)
 	// The object a write grants, as the jsonb path names it.
 	objectPath = regexp.MustCompile(`'\{objects,([a-z_0-9]+)\}'`)
 	// Every objects-path literal, whatever the name inside. Its DISTINCT names are
@@ -512,24 +541,66 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 		if len(statements) == 0 {
 			// The baseline declares the table and seeds nothing into it, which is
 			// the one candidate that legitimately carries no write.
-			if strings.Contains(migration.UpSQL, "CREATE TABLE role (") {
+			//
+			// Judged per STATEMENT. As a substring search over the whole file this
+			// hatch was satisfied by a comment, so any migration that merely
+			// mentioned the phrase could carry a write in a spelling the strict
+			// pattern missed and leave the gate silent instead of failing it.
+			if onlyDeclaresPermissions(migration.UpSQL) {
 				continue
 			}
-			t.Fatalf("%s mentions role permissions but no statement matched the write pattern.\n"+
+			t.Fatalf("%s mentions permissions but no statement matched the write pattern.\n"+
 				"Teach the pattern the spelling it uses — do NOT let the gate go quiet, because a "+
 				"write it cannot see is a grant nobody checks.", name)
 		}
 		body := strings.Join(statements, "\n")
 		objects := dedupe(objectPath.FindAllStringSubmatch(body, -1))
-		if declared := dedupe(anyObjectPath.FindAllStringSubmatch(body, -1)); len(declared) > len(objects) {
-			t.Fatalf("%s names objects %v but only %v could be read; an object whose name the "+
-				"pattern misses is left in place by the rewind, which makes the write a no-op and "+
-				"the comparison pass for the wrong reason", name, declared, objects)
+		// Every objects-path literal, whatever its shape, must be accounted for.
+		// A path naming a VERB (`{objects,deal,delete}`) is a legitimate write
+		// this rewind cannot undo — removing the whole object would overshoot —
+		// so it is reported as out of scope rather than as a name the pattern
+		// failed to read. Fatalling on it refused the verb-widening backfill that
+		// assertPreStateIsNotAlreadyTheAnswer calls the likelier next one.
+		for _, m := range dedupe(anyObjectPath.FindAllStringSubmatch(body, -1)) {
+			if slices.Contains(objects, m) {
+				continue
+			}
+			if strings.Contains(m, ",") {
+				t.Logf("%s writes the deeper path {objects,%s}: the composed arm replays it, and the "+
+					"per-write rewind leaves the object in place because removing it would undo more "+
+					"than the write does", name, m)
+				continue
+			}
+			t.Fatalf("%s names object %q, which the object pattern could not read; an object left in "+
+				"place by the rewind makes the write a no-op and the comparison pass for the wrong "+
+				"reason", name, m)
 		}
 		found = append(found, permissionWrite{name: name, statements: statements, objects: objects})
 	}
-	sort.Slice(found, func(i, j int) bool { return found[i].name < found[j].name })
+	// NOT re-sorted. migrations.Core() returns dbmigrate.Load's output, which is
+	// already ordered by VERSION — the order a real upgrade applies. Sorting here
+	// by `version + "_" + name` looked like the same key and is not: '_' (0x5F)
+	// outranks every digit, so whenever one version is a prefix of another
+	// (178744982 beside 1787449829) the two orders invert, and mixed version
+	// widths are exactly what this namespace ships. One invariant, one writer.
 	return found
+}
+
+// onlyDeclaresPermissions reports whether every statement in this migration that
+// mentions the column merely DECLARES it — the baseline creating the table.
+func onlyDeclaresPermissions(sql string) bool {
+	sawDeclaration := false
+	for _, statement := range splitStatements(sql) {
+		if !strings.Contains(strings.ToLower(statement), "permissions") {
+			continue
+		}
+		trimmed := strings.ToUpper(strings.TrimSpace(statement))
+		if !strings.HasPrefix(trimmed, "CREATE TABLE") && !strings.HasPrefix(trimmed, "ALTER TABLE") {
+			return false
+		}
+		sawDeclaration = true
+	}
+	return sawDeclaration
 }
 
 // rolePermissionStatements returns the statements in one migration that write
@@ -671,14 +742,21 @@ bootstrap_admin:
 // A plain file read: the pin that makes this file trustworthy is
 // rbacbaselineerafixture_test.go in the unit lane, which has the full history
 // this lane's shards do not.
-func readBaselineEraDefaults(t *testing.T) map[string]roleDocument {
+func readBaselineEraDefaults(t *testing.T) map[string]json.RawMessage {
 	t.Helper()
 	raw, err := os.ReadFile(baselineEraDefaults)
 	if err != nil {
 		t.Fatalf("reading %s: %v — backend/rbacbaselineerafixture_test.go names the command that "+
 			"regenerates it from history", baselineEraDefaults, err)
 	}
-	var documents map[string]roleDocument
+	// RawMessage, so the bytes that reach the database are the bytes the unit
+	// lane pinned to history. Decoding into roleDocument and re-marshalling
+	// dropped every key that struct does not model — policy.Document already
+	// declares a third, `field_masks`, a privacy control — so the row seeded here
+	// would have been narrower than the fixture while the comment claimed it was
+	// what an installation "really held". A smaller input reaching the same PASS
+	// is the one failure this family must not have.
+	var documents map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &documents); err != nil {
 		t.Fatalf("decoding %s: %v", baselineEraDefaults, err)
 	}
@@ -687,6 +765,30 @@ func readBaselineEraDefaults(t *testing.T) map[string]roleDocument {
 			"running against today's documents", baselineEraDefaults)
 	}
 	return documents
+}
+
+// readMatrixAsValues decodes a matrix file into plain values, which is what the
+// distance check below compares.
+//
+// A DECLARED MIRROR of decodeMatrix in backend/rbacbaselineerafixture_test.go:
+// the same question is asked in the unit lane, where it costs a second, and
+// again here, where the arm must not trust a file it merely reads. Both use
+// decoded values rather than the raw bytes so indentation is not distance, and
+// both compare in BOTH directions.
+func readMatrixAsValues(t *testing.T, path string) map[string]any {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var matrix map[string]any
+	if err := json.Unmarshal(raw, &matrix); err != nil {
+		t.Fatalf("decoding %s: %v", path, err)
+	}
+	if len(matrix) == 0 {
+		t.Fatalf("%s holds no roles; an empty matrix makes every comparison against it pass", path)
+	}
+	return matrix
 }
 
 func sortedKeys[V any](m map[string]V) []string {
