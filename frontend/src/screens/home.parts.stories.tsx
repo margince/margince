@@ -1,0 +1,272 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { deckItems } from "./home";
+import { DecisionsSection } from "./home.decisions";
+import {
+  bundle,
+  deals,
+  digest,
+  NOT_FOUND,
+  pipelineRows,
+  quietRun,
+  ranked,
+  report,
+  singles,
+} from "./home.fixtures";
+import { HomeGlance } from "./home.glance";
+import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
+import { HomeReadingsStrip } from "./home.readings";
+import { TodaySection } from "./home.today";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
+
+// Home, one part at a time.
+//
+// `home.stories.tsx` documents the whole morning; this file documents the pieces
+// it is assembled from, because each of them has states the assembled page can
+// only show one of at a time — a briefing whose readings have not all answered,
+// a rail panel whose connector is unhealthy, a ranked queue with no run behind
+// it. Same fixtures as the page (`home.fixtures.ts`), so a part cannot drift
+// from the page it is part of.
+//
+// Read every frame in BOTH themes with the toolbar's Theme control. Nothing here
+// is theme-aware in its own right, which is exactly why it needs looking at:
+// every colour is a `color-mix()` of a canonical token, so a surface can be
+// correct in light and wrong in dark.
+//
+// The clock is a fixed instant everywhere it is read. The greeting band would
+// otherwise say something different every time somebody opened the catalog.
+
+const NOW = Date.parse("2026-08-21T07:30:00Z");
+const NOW_DATE = new Date(NOW);
+
+/** The routes the rail's two reading panels fan out to. */
+const RAIL_ROUTES: RouteMap = {
+  "GET /me": meRoute({}),
+  "GET /digest": () => jsonResponse(digest),
+  "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
+    jsonResponse({
+      id: "01a00000-0000-7000-8000-000000000001",
+      name: "ERP replacement",
+    }),
+  "GET /projects/01a00000-0000-7000-8000-000000000002": () =>
+    jsonResponse({
+      id: "01a00000-0000-7000-8000-000000000002",
+      name: "Depot rollout",
+    }),
+  "POST /reports/deals-by-stage": () => report(pipelineRows),
+  "GET /organizations/org-nordwind": () =>
+    jsonResponse({ id: "org-nordwind", display_name: "Nordwind Logistik" }),
+  "GET /organizations/org-acme": () =>
+    jsonResponse({ id: "org-acme", display_name: "Acme Fördertechnik" }),
+};
+
+/** One part, with the reads it makes answered and nothing else reachable. */
+function part(node: React.ReactNode, routes: RouteMap = RAIL_ROUTES) {
+  return () => {
+    installFetchStub(routes);
+    return <StoryProviders>{node}</StoryProviders>;
+  };
+}
+
+const meta: Meta = {
+  title: "Shell/Home parts",
+};
+export default meta;
+type Story = StoryObj;
+
+// ── The briefing ────────────────────────────────────────────────────────────
+
+const GLANCE_GO = {
+  onGoToDecisions: () => undefined,
+  onGoToToday: () => undefined,
+  onGoToDuplicates: () => undefined,
+  onGoToWatch: () => undefined,
+};
+
+// The full briefing: six sentences, each led by the figure that is also the way
+// to what it counts. What to look at — the numerals share one column, so the
+// sentences start on a single x rather than wherever their own digits ended.
+export const Glance: Story = {
+  render: part(
+    <HomeGlance
+      firstName="Lena"
+      now={NOW_DATE}
+      decisions={{ pending: 6, expiringToday: 2 }}
+      brief={{
+        ranked: 3,
+        topDeal: "Fleet retrofit",
+        topAmount: "€48,000.00",
+      }}
+      overnight={{ captured: 42, duplicates: 3 }}
+      stalled={2}
+      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// Every reading answered, and every one of them zero or clear. The waiting line
+// becomes prose rather than a chip pointing at nothing.
+export const GlanceCalm: Story = {
+  render: part(
+    <HomeGlance
+      firstName="Lena"
+      now={NOW_DATE}
+      decisions={{ pending: 0, expiringToday: 0 }}
+      brief={{ ranked: 0, topDeal: null, topAmount: null }}
+      overnight={{ captured: 0, duplicates: 0 }}
+      stalled={0}
+      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// Two reads have not answered and the name has not arrived. A missing reading
+// contributes NO LINE — an invented zero cannot be told apart from a real one,
+// and the greeting is drawn anyway because the hour is known either way.
+export const GlanceUnread: Story = {
+  render: part(
+    <HomeGlance
+      firstName={null}
+      now={NOW_DATE}
+      decisions={{ pending: 4, expiringToday: 0 }}
+      brief={null}
+      overnight={null}
+      stalled={2}
+      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// ── The readings strip ──────────────────────────────────────────────────────
+
+// Four counts and deliberately no money: the pipeline is worth three currencies
+// at once, and no honest single figure for it exists. The per-currency figures
+// are the rail's Position panel, below.
+export const Readings: Story = {
+  render: part(
+    <HomeReadingsStrip
+      decisions={{ pending: 6, expiringToday: 2 }}
+      open={{ deals: 5, currencies: 2 }}
+      ranked={{ count: 3, topPct: 74 }}
+      quiet={2}
+    />,
+  ),
+};
+
+// Two readings could not be taken. The strip draws three slots rather than five
+// with two zeroes in them — a slot that is absent cannot be misread as a nought.
+export const ReadingsPartlyUnread: Story = {
+  render: part(
+    <HomeReadingsStrip
+      decisions={{ pending: 6, expiringToday: 0 }}
+      open={null}
+      ranked={{ count: 0, topPct: null }}
+      quiet={null}
+    />,
+  ),
+};
+
+// ── The work column ─────────────────────────────────────────────────────────
+
+// The deck with its own heading on the toggle's row, which is what the section
+// adds to `DecisionDeck`: the title, the four chips a card carries, and the one
+// act that sends the tray.
+export const Decisions: Story = {
+  render: part(
+    <DecisionsSection
+      items={deckItems([...singles, ...bundle])}
+      nowMs={NOW}
+      state="ready"
+      onApproved={() => undefined}
+      onAlreadyDecided={() => undefined}
+    />,
+    { ...RAIL_ROUTES, "GET /approvals": () => jsonResponse({ data: [] }) },
+  ),
+};
+
+// A failed read of the queue. The deck says so where the cards would be, rather
+// than the column going blank — the ranked queue beside it is healthy.
+export const DecisionsRefused: Story = {
+  render: part(
+    <DecisionsSection
+      items={[]}
+      nowMs={NOW}
+      state="failed"
+      onApproved={() => undefined}
+      onAlreadyDecided={() => undefined}
+    />,
+  ),
+};
+
+// The ranked queue: the composite as the first row of the same axis its five
+// factors are drawn on, and the factors in a softer fill so the row that leads
+// reads first.
+export const Today: Story = {
+  render: part(
+    <TodaySection brief={ranked} deals={deals} nowMs={NOW} ready />,
+    { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(ranked) },
+  ),
+};
+
+// A run that ranked nothing, with the candidate count under it. Honest quiet,
+// and no invented urgency.
+export const TodayQuietRun: Story = {
+  render: part(
+    <TodaySection brief={quietRun} deals={deals} nowMs={NOW} ready />,
+    { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(quietRun) },
+  ),
+};
+
+// No run has ever been made. The panel offers to make one instead of drawing an
+// empty queue that looks like a failure.
+export const TodayNoRun: Story = {
+  render: part(<TodaySection brief={null} deals={deals} nowMs={NOW} ready />, {
+    ...RAIL_ROUTES,
+    "POST /brief": () => jsonResponse(ranked),
+  }),
+};
+
+// ── The context rail ────────────────────────────────────────────────────────
+
+// What the night shift did: the capture counts, the duplicates that need a look,
+// and what moved on the projects.
+export const Overnight: Story = {
+  render: part(<OvernightPanel />),
+};
+
+// The installation's first morning: the digest 404s because no run has been made
+// yet, and the panel says that rather than drawing zeroes.
+export const OvernightAbsent: Story = {
+  render: part(<OvernightPanel />, {
+    ...RAIL_ROUTES,
+    "GET /digest": () => jsonResponse(NOT_FOUND, 404),
+  }),
+};
+
+// The open pipeline, one line per currency. Never summed: adding native minor
+// units across currencies produces a number that is not money.
+export const Position: Story = {
+  render: part(<PositionPanel />),
+};
+
+// Open deals that have gone quiet, named through the same company resolution the
+// pipeline board uses. Staleness is stated in WORDS — the badge — and the card
+// carries no edge stripe saying the same thing a second time.
+export const Watch: Story = {
+  render: part(
+    <WatchPanel deals={deals.filter((deal) => deal.stalled)} pending={false} />,
+  ),
+};
+
+// Nothing has gone quiet, which is news worth drawing rather than an empty rail.
+export const WatchClear: Story = {
+  render: part(<WatchPanel deals={[]} pending={false} />),
+};

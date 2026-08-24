@@ -70,8 +70,12 @@ function firstNameOf(displayName: string | undefined): string | null {
  *
  * Wire order is kept. The deck reorders nothing, and a queue whose order the
  * page invents is a queue nobody can predict.
+ *
+ * Exported for the parts catalog (`home.parts.stories.tsx`), which documents the
+ * decisions section on its own: a story that grouped the fixtures by hand would
+ * be a second answer to what a bundle is.
  */
-function deckItems(approvals: readonly Approval[]): DecisionDeckItem[] {
+export function deckItems(approvals: readonly Approval[]): DecisionDeckItem[] {
   const seen = new Set<string>();
   const out: DecisionDeckItem[] = [];
   for (const approval of approvals) {
