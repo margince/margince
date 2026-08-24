@@ -257,7 +257,7 @@ func resolveOrCreateColdStartOrg(ctx context.Context, tx pgx.Tx, host, by string
 	return orgID, true, nil
 }
 
-// coldStartColumns whitelists the identifier a fillEmptyOrgColumn UPDATE
+// coldStartColumns whitelists the identifier an applyUnclaimedOrgColumn UPDATE
 // may name — values are bind parameters, the column never is.
 var coldStartColumns = map[string]string{
 	columnLegalName: `UPDATE organization SET legal_name = $2 WHERE id = $1 AND legal_name IS NULL`,
@@ -270,8 +270,16 @@ var coldStartColumns = map[string]string{
 	// summary the CHECK would reject skips the fill instead of aborting the
 	// whole apply — the evidence row still lands, and the column stays
 	// fillable by a shorter later read.
+	//
+	// Unlike its siblings this arm also REPLACES a description no person
+	// authored. The header's summary is meant to say what the company sells,
+	// and the site is what knows that; an agent creating the record from a
+	// meeting transcript writes a summary of the MEETING there, which then
+	// blocked the read that could have corrected it. Whose sentence it is comes
+	// from field_provenance (descriptionHeldByHuman), the same layer the logo
+	// asks, so the product has one answer to "a human owns this field".
 	"description": `UPDATE organization SET description = $2
-	            WHERE id = $1 AND description IS NULL AND length($2) <= 500`,
+	            WHERE id = $1 AND description IS DISTINCT FROM $2 AND length($2) <= 500`,
 }
 
 // applyEvidenceFields fills the column-backed fields (only when empty) and
@@ -365,7 +373,7 @@ func applyEvidenceFieldsWithOverwrite(
 
 func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string, overwrite bool) (bool, error) {
 	if !overwrite {
-		return fillEmptyOrgColumn(ctx, tx, orgID, column, value)
+		return applyUnclaimedOrgColumn(ctx, tx, orgID, column, value)
 	}
 	queries := map[string]string{
 		columnLegalName: `UPDATE organization SET legal_name = $2, updated_at = now()
@@ -394,10 +402,25 @@ func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, co
 	return tag.RowsAffected() == 1, nil
 }
 
-func fillEmptyOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string) (bool, error) {
+// applyUnclaimedOrgColumn writes a read-back value onto a column nobody has
+// claimed. For legal_name, industry and address that means the column is still
+// empty, which each statement enforces with IS NULL. The description is the one
+// column an automated read may also REPLACE, because the site is the authority
+// on what a company sells — so for that one "unclaimed" means no person has
+// authored it, and the check is below rather than in the statement.
+func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string) (bool, error) {
 	query, ok := coldStartColumns[column]
 	if !ok {
 		return false, fmt.Errorf("people: %q is not a coldstart-fillable column", column)
+	}
+	if column == descriptionField {
+		held, err := descriptionHeldByHuman(ctx, tx, orgID)
+		if err != nil {
+			return false, err
+		}
+		if held {
+			return false, nil
+		}
 	}
 	// Nothing to fill. Writing "" here would satisfy this arm's own WHERE
 	// legal_name IS NULL once and never again: the column would read as

@@ -11,6 +11,7 @@ package people
 // paths, not only the create.
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -143,6 +144,117 @@ func TestOrganizationDescriptionFillsOnlyABlankMergeSurvivor(t *testing.T) {
 	}
 	if kept.Description == nil || *kept.Description != ownLine {
 		t.Fatalf("held survivor description = %v, want its own %q", kept.Description, ownLine)
+	}
+}
+
+// A site read REPLACES a description no person authored. An agent creating the
+// company from a meeting transcript writes a summary of the meeting into the
+// header, and the crawl that knows what the company actually sells has to be
+// able to correct it — under the old fill-where-blank rule the transcript's
+// sentence won permanently, because whoever wrote first won.
+func TestASiteReadReplacesAnAgentsDescription(t *testing.T) {
+	e := setupDedupe(t)
+	fromTranscript := "Discovery call: they run two shops and plan to internationalise."
+	org, err := e.store.CreateOrganization(e.asAgent(), CreateOrganizationInput{
+		DisplayName: "Transcript GmbH", Source: "manual", Description: &fromTranscript,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+
+	fromSite := "Sells bearings, rolling and linear motion technology online."
+	applySiteReadDescription(e.as(), t, e, orgID, fromSite)
+
+	reread, err := e.store.GetOrganization(e.as(), orgID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != fromSite {
+		t.Fatalf("description after the site read = %v, want the site's %q", reread.Description, fromSite)
+	}
+}
+
+// The same read leaves a person's sentence alone. This is the half that makes
+// the replacement above safe, and it is the case the fill-where-blank rule used
+// to cover for free.
+func TestASiteReadLeavesAHumansDescriptionAlone(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Typed GmbH", Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+
+	// Through the real editor, so the provenance the guard reads is the one
+	// production writes rather than a row this test invented.
+	typed := "Our own words about what we do, kept deliberately."
+	if _, err := e.store.UpdateOrganization(ctx, orgID, UpdateOrganizationInput{Description: &typed}); err != nil {
+		t.Fatal(err)
+	}
+
+	applySiteReadDescription(ctx, t, e, orgID, "Whatever the marketing page happens to claim.")
+
+	reread, err := e.store.GetOrganization(ctx, orgID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != typed {
+		t.Fatalf("description after the site read = %v, want the human's %q", reread.Description, typed)
+	}
+}
+
+// An AGENT editing the description through update_record does not claim the
+// column: the stamp records the authenticated principal, and only a human:<id>
+// holds it. Without this the governed write surface would be a way to freeze a
+// company header against the site read that could correct it.
+func TestAnAgentsEditDoesNotClaimTheDescription(t *testing.T) {
+	e := setupDedupe(t)
+	org, err := e.store.CreateOrganization(e.as(), CreateOrganizationInput{
+		DisplayName: "Agent Edited GmbH", Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+
+	fromAgent := "What the agent concluded from a call."
+	if _, err := e.store.UpdateOrganization(e.asAgent(), orgID,
+		UpdateOrganizationInput{Description: &fromAgent}); err != nil {
+		t.Fatal(err)
+	}
+
+	fromSite := "What the website says the company sells."
+	applySiteReadDescription(e.as(), t, e, orgID, fromSite)
+
+	reread, err := e.store.GetOrganization(e.as(), orgID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != fromSite {
+		t.Fatalf("description after the site read = %v, want the site's %q — an agent's edit must not "+
+			"hold the column", reread.Description, fromSite)
+	}
+}
+
+// applySiteReadDescription drives the real accept path, so what these cases
+// prove is what a scheduled re-read of the site does.
+func applySiteReadDescription(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID, summary string) {
+	t.Helper()
+	if err := e.store.ApplyDeepRead(ctx, DeepReadProposal{
+		OrganizationID: orgID,
+		SourceURL:      "https://example.test/",
+		SiteReadID:     ids.NewV7(),
+		Fields: []DeepReadField{{
+			Field: fieldOfferSummary, Value: summary,
+			EvidenceSnippet: summary, SourceURL: "https://example.test/",
+			Confidence: 0.9,
+		}},
+	}); err != nil {
+		t.Fatalf("ApplyDeepRead: %v", err)
 	}
 }
 

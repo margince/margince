@@ -295,6 +295,24 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 				return fmt.Errorf("stamp organization name provenance: %w", err)
 			}
 		}
+		// The description carries the same lattice on a different layer. A site
+		// read fills this column and may replace what an automated writer put
+		// there, so an edited description has to say in field_provenance that a
+		// person authored it — otherwise the next crawl reads "no row" as "no
+		// owner" and overwrites the sentence somebody typed. Only on a real
+		// change, for the reason the name stamp above gives.
+		if _, changed := after["description"]; changed {
+			// Not the `by` above: stageOrgReplaceSets answers "" unless the edit
+			// also carried a replace-set, and a description edit usually carries
+			// neither, which would stamp the field to nobody.
+			editor, err := storekit.CapturedBy(ctx)
+			if err != nil {
+				return err
+			}
+			if err := stampDescriptionAuthor(ctx, tx, id, editor); err != nil {
+				return err
+			}
+		}
 		if err := recheckRenamedOrganization(ctx, tx, id, after); err != nil {
 			return err
 		}
