@@ -216,13 +216,14 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 //
 // It is NOT what the eraser does minus that entry. Tables the eraser clears are
 // untouched here — the raw captures and attachments their messages came from,
-// their lead rows and scores, their preference tokens — and the person row's
-// CUSTOM columns are nulled by the eraser and not by this, so a custom field
-// holding a note about them survives at the same depth their name does not.
+// their lead rows and scores, their preference tokens, their deal-room seats.
 //
 // What survives is written down per table in
 // TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go),
-// which fails when the gap widens in either direction.
+// which fails when the gap widens in either direction. That test compares which
+// TABLES each act writes and cannot see two acts clearing one table to
+// different depths, which is why the custom columns above are nulled here
+// deliberately rather than left for it to notice.
 //
 // Held by: TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go)
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
@@ -244,13 +245,22 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		`SELECT coalesce(full_name, '') FROM person WHERE id = $1`, id).Scan(&subjectName); err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `
+	// The installation's own columns too. A custom field is where an operator
+	// puts what the fixed schema has no room for — a personal note, a private
+	// address, a handle — so leaving them would anonymize the name and keep
+	// whatever somebody wrote beside it. The eraser nulls them by the same
+	// means; a record that still carries them has not stopped naming anyone.
+	personCustom, err := subjectCustomColumns(ctx, tx, "person")
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
 		  title = NULL, raw = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  archived_at = coalesce(archived_at, now())
-		WHERE id = $1`, id, erasedName)
+		  archived_at = coalesce(archived_at, now())%s
+		WHERE id = $1`, nullColumnAssignments(personCustom)), id, erasedName)
 	if err == nil {
 		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
 	}
@@ -304,6 +314,16 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// about. The judgement is about them and cannot be held without them.
 		_, err = tx.Exec(ctx,
 			`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`, id)
+	}
+	if err == nil {
+		// Deleted BEFORE person_email goes, since it is keyed on those
+		// addresses. The ledger carries the address a message arrived at and
+		// the display name it arrived with, and it is the key a later capture
+		// would re-match on — so leaving it would keep answering with the
+		// person this act just stopped naming.
+		_, err = tx.Exec(ctx, `
+			DELETE FROM capture_pending_counterparty
+			 WHERE email IN (SELECT email FROM person_email WHERE person_id = $1)`, id)
 	}
 	if err == nil {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName)
