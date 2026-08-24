@@ -24,6 +24,7 @@ type demoConfig struct {
 	Leads            []demoLead          `json:"leads"`
 	Activities       []demoActivity      `json:"activities"`
 	Contracts        []demoContract      `json:"contracts"`
+	DealRooms        []demoDealRoom      `json:"deal_rooms"`
 	Projects         []demoProject       `json:"projects"`
 	Products         []demoProduct       `json:"products"`
 	Offers           []demoOffer         `json:"offers"`
