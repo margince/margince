@@ -18,7 +18,7 @@ import (
 )
 
 // resolveModelPath is the ONE place the api process decides what serves
-// its AI surfaces: a declared ai-routing.yaml, the offline fake behind
+// its AI surfaces: the stored routing binding, the offline fake behind
 // --ai-fake, or neither — a single three-way switch run() runs exactly
 // once. coldStartOptions, offerDraftOptions and /readyz's AI line all
 // consume the one *compose.ModelPath (and the state string) this
@@ -76,8 +76,7 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 // path for a bound installation, the offline fake behind an explicit dev flag,
 // or the honest-absent posture. Nothing is picked silently.
 func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, ai.PublicProfile, string, error) {
-	switch {
-	case !cfg.Unconfigured():
+	if !cfg.Unconfigured() {
 		// A task whose whole fallback ladder has no bound tier is not a
 		// boot error (a deployment may legitimately not run every
 		// workload), but it must be loud: log it now, not discover it
@@ -85,24 +84,53 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 		for _, w := range cfg.UnboundLadderWarnings() {
 			log.Warn(w)
 		}
-		modelPath, err := compose.NewModelPath(ctx, cfg, pool, spec.capturePayloads, log)
-		if err != nil {
-			return nil, "", ai.PublicProfile{}, "", err
-		}
-		return &modelPath, compose.AIStateConfigured,
-			ai.NewPublicProfile(compose.AIStateConfigured, cfg), routingVersionOf(cfg), nil
-	case spec.fakeBrain:
-		cfg = ai.FakeRoutingConfig()
-		modelPath, err := compose.NewModelPath(ctx, cfg, pool, spec.capturePayloads, log)
-		if err != nil {
-			return nil, "", ai.PublicProfile{}, "", err
-		}
-		return &modelPath, compose.AIStateFake,
-			ai.NewPublicProfile(compose.AIStateFake, cfg), routingVersionOf(cfg), nil
-	default:
-		return nil, compose.AIStateUnconfigured,
-			ai.NewPublicProfile(compose.AIStateUnconfigured, ai.RoutingConfig{}), "", nil
 	}
+	// The bindings this boot may run on, best first. A list rather than a switch
+	// because the second entry is a FALLBACK from the first — reached only when
+	// the stored binding cannot be built — and a role resolves its model path in
+	// exactly one place (backend/arch_test.go holds that), so trying two
+	// candidates cannot mean two construction sites.
+	//
+	// The fallback is not generosity. A dev stack's bootstrap seeds a cloud
+	// binding from `seeds.ai_routing`, and the engineer running it may hold no
+	// key for that vendor; refusing the boot there costs them the whole stack
+	// over an AI lane they were not using, while --ai-fake on their own command
+	// line says what they want instead. A deployment passes no such flag, so it
+	// still fails closed on a binding it cannot serve.
+	var candidates []struct {
+		cfg   ai.RoutingConfig
+		state string
+	}
+	if !cfg.Unconfigured() {
+		candidates = append(candidates, struct {
+			cfg   ai.RoutingConfig
+			state string
+		}{cfg, compose.AIStateConfigured})
+	}
+	if spec.fakeBrain {
+		candidates = append(candidates, struct {
+			cfg   ai.RoutingConfig
+			state string
+		}{ai.FakeRoutingConfig(), compose.AIStateFake})
+	}
+
+	for i, candidate := range candidates {
+		modelPath, err := compose.NewModelPath(ctx, candidate.cfg, pool, spec.capturePayloads, log)
+		if err != nil {
+			if i == len(candidates)-1 {
+				return nil, "", ai.PublicProfile{}, "", err
+			}
+			// Loud: a bound installation quietly serving canned text would be
+			// the worse of the two failures.
+			log.WarnContext(ctx, "the stored model binding cannot be served, and --ai-fake was requested: falling back to the offline fake for this boot. The AI surfaces answer with canned text until the binding resolves — bind a servable model under Settings -> AI, or supply the missing credential",
+				"error", err)
+			continue
+		}
+		return &modelPath, candidate.state,
+			ai.NewPublicProfile(candidate.state, candidate.cfg), routingVersionOf(candidate.cfg), nil
+	}
+	return nil, compose.AIStateUnconfigured,
+		ai.NewPublicProfile(compose.AIStateUnconfigured, ai.RoutingConfig{}), "", nil
 }
 
 // coldStartOptions wires the cold-start read-back's model surface over

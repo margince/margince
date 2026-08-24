@@ -71,7 +71,7 @@ env template is [`.env.example`](../.env.example). The essentials:
 | `MARGINCE_REDIS` | api, worker | Redis address (event bus / outbox relay) |
 | `MARGINCE_CONFIG` | api, worker | path to the mounted `margince.yaml` (bootstrap org + admin) |
 | `MARGINCE_ADMIN_PASSWORD` | api | first-boot admin password (entrypoint writes it to the file `margince.yaml` references) |
-| `MARGINCE_AI_ROUTING` | api, worker | path to a mounted `ai-routing.yaml` — enables the AI lanes (plus the bound provider's BYOK key, e.g. `GEMINI_API_KEY`) |
+| `MARGINCE_AI_ROUTING` | api, worker | **ignored, and warns.** The AI binding is a stored setting: declare it under `seeds.ai_routing` in `margince.yaml` before first boot, or set it under Settings → AI afterwards |
 | `MARGINCE_PUBLIC_BASE_URL` | api, worker | canonical external base URL (buyer-facing links / marketing mail) |
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides two
@@ -96,9 +96,18 @@ existing installation.
 keeps it that way.** Uncommenting `operations.allow_data_reset` arms
 `POST /v1/admin/reset-data`, which purges this installation's tenant data back
 to its first-boot state and renders the "Reset data" button to every admin seat.
-A deployed installation leaves it off. Likewise mount an `ai-routing.yaml`
-([`config/ai-routing.example.yaml`](../config/ai-routing.example.yaml)) and point
-`MARGINCE_AI_ROUTING` at it to enable AI.
+A deployed installation leaves it off.
+
+To enable AI, declare the binding in the `margince.yaml` you already mount, under
+`seeds.ai_routing` — it is consumed at first boot and the database is
+authoritative afterwards, so an installation already running is rebound under
+Settings → AI instead. Each bound cloud provider needs its BYOK key, put in
+under Settings → AI → Model provider keys; the conventional environment variable
+(`GEMINI_API_KEY`, …) is read once, to seal a key into the vault on first boot.
+There is no routing file to mount for the api and the worker's serving role. The
+DB-less lanes still read one explicitly — `worker siteread`, `worker aitask` and
+the certification runner — so a deployment that runs those mounts a file for them
+and for nothing else.
 
 The example config declares the MCP connector (`mcp.connector_enabled: true`)
 so a local stack works unedited. A deployment that mounts it as-is therefore

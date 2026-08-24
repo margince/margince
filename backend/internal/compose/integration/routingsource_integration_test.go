@@ -11,10 +11,11 @@ package integration
 // test because each is about what the INSTALLATION holds rather than what this
 // process was handed:
 //
-//   - an installation with no stored binding adopts the routing file, and what
-//     it runs on afterwards is the row rather than the file;
-//   - once stored, the file is not read again — which is what lets an operator
-//     delete it, and what stops a stale one quietly becoming the authority;
+//   - a routing PATH binds nothing, however valid the file behind it and
+//     however unconfigured the installation — the binding is a setting, and
+//     `seeds.ai_routing` is the one thing that seeds it;
+//   - a stored binding wins over any path, so an old --ai-routing left on a
+//     command line cannot quietly re-point which vendor sees the text;
 //   - a stored binding carries a routing VERSION, which is a cache key: read
 //     back without one, every brief in the installation would fingerprint
 //     against an empty string;
@@ -29,13 +30,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -62,69 +59,74 @@ func writeRouting(t *testing.T, body string) string {
 
 func discard() *slog.Logger { return slog.New(slog.DiscardHandler) }
 
-func TestAnInstallationWithNoStoredBindingAdoptsTheRoutingFile(t *testing.T) {
+// A routing PATH is ignored. It used to seed an installation that had none,
+// which made two files able to plant one binding — `seeds.ai_routing` in
+// margince.yaml is the survivor, because it reaches every path that creates an
+// installation instead of only a boot that finds the setting unset.
+//
+// The case is worth a database because "ignored" has to mean ignored even where
+// the old arm was most tempting: nothing stored AND a perfectly valid file.
+func TestAValidRoutingFileDoesNotBindAnInstallation(t *testing.T) {
 	e := SetupSearch(t)
-	ctx := context.Background()
 	path := writeRouting(t, offlineRouting)
 
-	adopted, err := compose.ResolveRouting(ctx, e.Pool, path, config.Static(nil), discard())
+	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, path, config.Static(nil), discard())
 	if err != nil {
 		t.Fatalf("ResolveRouting: %v", err)
 	}
-	if adopted.Unconfigured() {
-		t.Fatal("the routing file was not adopted — the installation still binds nothing")
-	}
-	// The version is a cache key (personbrief.Fingerprint). A binding read back
-	// without one would silently fingerprint every brief against "".
-	if adopted.RoutingVersion() == "" {
-		t.Error("the adopted binding carries no routing version")
-	}
-
-	// The FILE is now gone. A second resolve must still return the binding,
-	// which is the property that lets an operator delete it — and the one that
-	// proves the row, not the file, is what the Router runs on.
-	if err := os.Remove(path); err != nil {
-		t.Fatalf("removing the routing file: %v", err)
-	}
-	stored, err := compose.ResolveRouting(ctx, e.Pool, path, config.Static(nil), discard())
-	if err != nil {
-		t.Fatalf("ResolveRouting after removing the file: %v", err)
-	}
-	if stored.Unconfigured() {
-		t.Fatal("the stored binding vanished once the file was removed — the file is still the authority")
-	}
-	if stored.RoutingVersion() != adopted.RoutingVersion() {
-		t.Errorf("routing version changed across a re-read: %s then %s", adopted.RoutingVersion(), stored.RoutingVersion())
+	if !cfg.Unconfigured() {
+		t.Fatalf("a routing path bound the installation to %+v; the binding is a stored setting and a file may not plant one", cfg.Tiers)
 	}
 }
 
-// The seed is consumed exactly once. A file left behind after an admin has
-// changed the binding must not re-assert itself on the next restart — that is
-// the whole reason the file is read only when nothing is stored.
-func TestARestartDoesNotLetTheFileOverwriteAStoredBinding(t *testing.T) {
+// A path that cannot be read is ignored too, and that is the point rather than
+// an oversight: the file is never opened, so there is nothing for a typo, a
+// stale mount or a deleted file to break. Failing the boot would be the right
+// answer only while the file is load-bearing, and it no longer is.
+func TestAnUnreadableRoutingPathIsIgnored(t *testing.T) {
+	e := SetupSearch(t)
+
+	cfg, err := compose.ResolveRouting(context.Background(), e.Pool,
+		filepath.Join(t.TempDir(), "does-not-exist.yaml"), config.Static(nil), discard())
+	if err != nil {
+		t.Fatalf("a missing routing path failed the boot: %v", err)
+	}
+	if !cfg.Unconfigured() {
+		t.Error("a missing routing path produced a binding")
+	}
+}
+
+// A stored binding is returned whatever the path says, including a path naming a
+// DIFFERENT binding. This is the property an operator relies on when they leave
+// an old --ai-routing on the command line: the flag cannot quietly re-point
+// which vendor sees the installation's text.
+func TestAStoredBindingWinsOverAnyRoutingPath(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := context.Background()
 
-	first, err := compose.ResolveRouting(ctx, e.Pool, writeRouting(t, offlineRouting), config.Static(nil), discard())
-	if err != nil {
-		t.Fatalf("ResolveRouting: %v", err)
+	// Stored through the real writer — the one PUT /v1/ai/routing drives.
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
+		t.Fatalf("storing the binding: %v", err)
 	}
 
-	// A DIFFERENT file, as if the operator edited it after provisioning.
-	edited := writeRouting(t, `profile: eu_hosted
+	other := writeRouting(t, `profile: eu_hosted
 tiers:
-  local_small: {provider: fake, model: fake-small}
-  cheap_cloud: {provider: fake, model: fake-small}
-  premium: {provider: fake, model: fake-small}
-  frontier: {provider: fake, model: fake-small}
+  local_small: {provider: fake, model: fake-other}
+  cheap_cloud: {provider: fake, model: fake-other}
+  premium: {provider: fake, model: fake-other}
+  frontier: {provider: fake, model: fake-other}
 embeddings: {provider: fake, model: fake-embed, dimensions: 8}
 `)
-	again, err := compose.ResolveRouting(ctx, e.Pool, edited, config.Static(nil), discard())
+	cfg, err := compose.ResolveRouting(ctx, e.Pool, other, config.Static(nil), discard())
 	if err != nil {
 		t.Fatalf("ResolveRouting: %v", err)
 	}
-	if again.RoutingVersion() != first.RoutingVersion() {
-		t.Error("an edited routing file overwrote the stored binding on restart; the stored value is supposed to be authoritative once it exists")
+	if cfg.Unconfigured() {
+		t.Fatal("the stored binding was not returned")
+	}
+	if got := cfg.Tiers["premium"].Model; got != "fake-stored" {
+		t.Errorf("premium = %q, want the stored fake-stored: the routing path replaced the stored binding", got)
 	}
 }
 
@@ -139,18 +141,6 @@ func TestAnInstallationThatBindsNothingResolvesUnconfigured(t *testing.T) {
 	}
 	if !cfg.Unconfigured() {
 		t.Errorf("an installation that bound nothing resolved to %+v, want unconfigured", cfg.Tiers)
-	}
-}
-
-// A routing file that cannot be read fails the boot rather than falling back to
-// unconfigured — the boot-level half of the unit test in cmd/api.
-func TestAnUnreadableRoutingFileFailsTheBoot(t *testing.T) {
-	e := SetupSearch(t)
-
-	_, err := compose.ResolveRouting(context.Background(), e.Pool,
-		filepath.Join(t.TempDir(), "does-not-exist.yaml"), config.Static(nil), discard())
-	if err == nil {
-		t.Fatal("a missing routing file resolved without error; a typo'd path would silently disable the AI lanes")
 	}
 }
 
@@ -272,42 +262,81 @@ embeddings: {provider: fake, model: ` + model + `-embed, dimensions: 8}
 // An UNCONFIGURED stored row is not the same as no row, and the difference is
 // the whole reason the seed's answer is now read.
 //
-// `Unconfigured()` is `len(Tiers) == 0`, so a row can exist and still report
-// unconfigured — which sends the boot down the adopt branch, where the seed's
-// ON CONFLICT DO NOTHING then stores nothing because the row is already there.
-// Announcing an adoption at that point names a binding the database does not
-// hold. A concurrent second replica reaches the same state by racing; this
-// fixture reaches it without needing one.
-func TestAnUnconfiguredStoredRowIsNotAdoptedOverAndIsNotAnnouncedAsAdopted(t *testing.T) {
+// An UNPROVISIONED installation announces the ignored path too.
+//
+// This is the boot with no workspace at all, and it returned before the warning
+// — so the one operator most likely to be watching, having just started a fresh
+// installation with the flag they have always passed, was the one told nothing.
+// The wording has to name the actual situation as well: "no stored binding"
+// would be misleading when there is no installation to hold one.
+func TestAnUnprovisionedBootStillAnnouncesTheIgnoredRoutingPath(t *testing.T) {
 	e := SetupSearch(t)
-	ctx := context.Background()
-
-	// A stored row that binds nothing, written through the real seed path.
-	if err := database.WithWorkspaceTx(e.adminRoutingCtx(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(ctx, tx, ai.Routing, ai.RoutingConfig{})
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the unconfigured row: %v", err)
+	// Archiving every workspace is what "unprovisioned" IS to this code path:
+	// singletonWorkspace enumerates the LIVE ones, so none left means the claim
+	// flow has not run. Same mechanism the claim suite uses.
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
+		t.Fatalf("clearing the harness organization: %v", err)
 	}
 
 	var logged strings.Builder
-	log := slog.New(slog.NewTextHandler(&logged, nil))
-	got, err := compose.ResolveRouting(ctx, e.Pool, writeRouting(t, offlineRouting), config.Static(nil), log)
+	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, writeRouting(t, offlineRouting),
+		config.Static(nil), slog.New(slog.NewTextHandler(&logged, nil)))
 	if err != nil {
+		t.Fatalf("an unprovisioned boot failed: %v", err)
+	}
+	if !cfg.Unconfigured() {
+		t.Fatal("an unprovisioned installation produced a binding")
+	}
+	for _, want := range []string{"ignored", "not provisioned", "seeds.ai_routing"} {
+		if !strings.Contains(logged.String(), want) {
+			t.Errorf("the unprovisioned warning does not mention %q: %s", want, logged.String())
+		}
+	}
+	// And it must not claim the installation merely has no binding — that sends
+	// an operator to a settings screen no claim flow has opened yet.
+	if strings.Contains(logged.String(), "NO stored model binding") {
+		t.Errorf("the unprovisioned boot reported the wrong situation: %s", logged.String())
+	}
+}
+
+// An ignored routing path is announced, and the two situations say different
+// things. Asserting on the WORDS is the point: "ignored" alone, on a boot where
+// the flag used to be what supplied the binding, leaves the operator to discover
+// from a dead feature that their AI lanes are gone.
+func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	path := writeRouting(t, offlineRouting)
+
+	// Nothing stored: this boot is the one where the lanes go absent.
+	var unbound strings.Builder
+	if _, err := compose.ResolveRouting(ctx, e.Pool, path, config.Static(nil),
+		slog.New(slog.NewTextHandler(&unbound, nil))); err != nil {
 		t.Fatalf("ResolveRouting: %v", err)
 	}
+	for _, want := range []string{"ignored", "NO stored model binding", "seeds.ai_routing"} {
+		if !strings.Contains(unbound.String(), want) {
+			t.Errorf("the unbound warning does not mention %q: %s", want, unbound.String())
+		}
+	}
 
-	// The stored row wins, so what comes back still binds nothing.
-	if !got.Unconfigured() {
-		t.Error("the file overwrote a stored row; ON CONFLICT DO NOTHING is what stops a restart replacing a binding an admin set")
+	// Bound: the flag is merely redundant, and the warning must not claim the
+	// lanes are absent — an operator who reads that goes looking for a fault
+	// that is not there.
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
+		t.Fatalf("storing the binding: %v", err)
 	}
-	// And the log does not claim otherwise. Asserting on the announcement, not
-	// only on the value, is the point: a boot that stored nothing while saying
-	// "adopted" sends an operator looking for a binding that is not there.
-	if strings.Contains(logged.String(), "adopted the routing file") {
-		t.Error("the boot announced an adoption it did not perform")
+	var bound strings.Builder
+	if _, err := compose.ResolveRouting(ctx, e.Pool, path, config.Static(nil),
+		slog.New(slog.NewTextHandler(&bound, nil))); err != nil {
+		t.Fatalf("ResolveRouting: %v", err)
 	}
-	if !strings.Contains(logged.String(), "was not adopted") {
-		t.Error("the boot stored nothing and said nothing about it")
+	if !strings.Contains(bound.String(), "ignored") {
+		t.Errorf("a bound installation did not warn about the ignored flag: %s", bound.String())
+	}
+	if strings.Contains(bound.String(), "NO stored model binding") {
+		t.Errorf("a bound installation was told its AI lanes are absent: %s", bound.String())
 	}
 }

@@ -225,14 +225,19 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/ -run TestSiteReadE2E -v -count=1 -timeout 20m
 
 # TestE2ECertify has no MARGINCE_E2E_MODEL-style fallback of its own — it
-# hard-fails without a routing file — so, unlike e2e-siteread, e2e-ai
-# supplies one: the per-engineer config/ai-routing.yaml `make install`
-# already seeds, so `make e2e-ai` runs against your local binding out of
-# the box. $(CURDIR) makes it absolute: `go test` runs the binary with its
-# cwd set to the aicert package directory, not to backend/, so a relative
-# "../config/..." would resolve from the wrong place. Override with
-# MARGINCE_AI_ROUTING=<path> for a different one.
-MARGINCE_AI_ROUTING ?= $(CURDIR)/../config/ai-routing.yaml
+# hard-fails without a routing file — so, unlike e2e-siteread, e2e-ai supplies
+# one. It names the TRACKED example, not a per-engineer copy: the certification
+# lane asks whether a model clears a prompt's bar, which is a property of the
+# model and not of this installation, and an answer recorded against whatever
+# each engineer happened to bind is not comparable with anybody else's. The
+# installation's own binding is a stored setting and deliberately not a file
+# any more, so there is nothing local left to default to.
+#
+# $(CURDIR) makes it absolute: `go test` runs the binary with its cwd set to the
+# aicert package directory, not to backend/, so a relative "../config/..." would
+# resolve from the wrong place. Override with MARGINCE_AI_ROUTING=<path> to
+# certify a different binding.
+MARGINCE_AI_ROUTING ?= $(CURDIR)/../config/ai-routing.example.yaml
 
 # TRACE names a directory for the payload trace — every candidate and judge
 # call's post-stripper request+response (the ai_call_payload shape), dumped to
@@ -275,7 +280,7 @@ e2e-ai-report: ## Print the certification readiness report — every shipped sit
 # nothing; only `run` calls a model, and --ai-fake makes even that free.
 # Artifacts land in the gitignored .tmp/aitask — a fetched page carries whatever
 # the source carried.
-ai-probe: composition ## Probe one AI task site against real input (free except `run`, which calls a model). BYOK key auto-loaded from .env.local. ARGS='list' | ARGS='scaffold <task>/<variant>' | ARGS='fetch <url>' | ARGS='run --site <task>/<variant> --fixture f.json --ai-routing ../config/ai-routing.yaml'
+ai-probe: composition ## Probe one AI task site against real input (free except `run`, which calls a model). BYOK key auto-loaded from .env.local. ARGS='list' | ARGS='scaffold <task>/<variant>' | ARGS='fetch <url>' | ARGS='run --site <task>/<variant> --fixture f.json --ai-routing ../config/ai-routing.example.yaml'
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask $(ARGS) \
 	  --corpus $(CURDIR)/internal/compose/aicert/corpus --work-dir $(CURDIR)/../.tmp/aitask
 

@@ -1,11 +1,20 @@
 # yaml-language-server: $schema=./ai-routing.schema.json
-# ai-routing.example.yaml — the per-deployment tier→model binding
-# (ai-operational-spec §1.4) and the ONLY place vendor names appear. Point a
-# binary at it with `api --ai-routing <path>` / `worker --ai-routing <path>`
-# (env fallback MARGINCE_AI_ROUTING); unset, the AI lanes simply do not start
-# and core CRUD works normally. `make install` / `make dev` copy this template
-# to a gitignored config/ai-routing.yaml — edit that local copy; delete it and
-# re-run either target to reset. Field-level docs live in the sibling
+# ai-routing.example.yaml — the tier→model binding's SHAPE, and the reference
+# copy of it (ai-operational-spec §1.4).
+#
+# An installation's own binding is not a file: it is the `ai.routing` setting,
+# declared for a fresh install under `seeds.ai_routing` in margince.yaml and
+# changed on a running one under Settings -> AI. `api --ai-routing <path>` and
+# `worker --ai-routing <path>` are IGNORED and warn — the flags stay registered
+# only so an existing command line still parses.
+#
+# This file is still read, deliberately, by the lanes that probe a binding with
+# no database open: `worker siteread`, `worker aitask`, and `make e2e-ai`, which
+# defaults MARGINCE_AI_ROUTING here so a certification verdict is comparable
+# between engineers rather than being about whatever each had bound. Nothing
+# copies it to a per-engineer config/ai-routing.yaml any more.
+#
+# Field-level docs live in the sibling
 # ai-routing.schema.json; the parser rejects unknown keys and unknown tier
 # names at STARTUP, never on the first model call.
 #

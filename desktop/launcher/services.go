@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -142,23 +141,20 @@ func (b *backend) childEnv(launcherOwned ...string) []string {
 // license.
 const defaultRuntimeEnv = "dev"
 
-// aiFlags decides how the AI surfaces are driven.
+// aiFlags drives the AI surfaces with the offline fake, always — and that is
+// not the same as forcing the fake on.
 //
-// A routing file next to margince.yaml is the discoverable way to configure a
-// real model, so it wins. Failing that, MARGINCE_AI_ROUTING in margince.env
-// does the same job and must not be undercut by passing --ai-fake alongside
-// it. Only when neither is present does the offline fake apply — so the
-// surfaces answer instead of erroring on a fresh install.
+// The api prefers a STORED binding over this flag: a bound installation uses
+// its models and the flag is inert. So passing it unconditionally says only
+// "answer from the fake if nothing is bound", which is what a fresh install
+// wants — the surfaces respond with canned text instead of reading as broken.
+//
+// The launcher therefore no longer looks for a routing file, and no longer
+// needs to: the user binds real models in Settings -> AI, with the provider key
+// beside them, and that outranks this without a restart. Deciding it here from
+// a file's presence meant the answer was fixed at boot by something the person
+// changing it could not see.
 func (b *backend) aiFlags() []string {
-	if _, err := os.Stat(b.layout.aiRoutingPath()); err == nil {
-		return []string{"--ai-routing", b.layout.aiRoutingPath()}
-	}
-	for _, entry := range b.userEnv {
-		if strings.HasPrefix(entry, "MARGINCE_AI_ROUTING=") &&
-			strings.TrimPrefix(entry, "MARGINCE_AI_ROUTING=") != "" {
-			return nil
-		}
-	}
 	return []string{"--ai-fake"}
 }
 

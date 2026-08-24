@@ -209,8 +209,10 @@ and it caps how much of the site one certification run can cover:
 
 8. **Certify it** — the one step that costs money, once the gates are green.
    It needs two things this guide has not asked for until now: a provider key in
-   your environment (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, …) and a
-   `config/ai-routing.yaml` binding your task's tiers to a real model. Both are
+   your environment (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, …) and a routing
+   file binding your task's tiers to a real model — `make e2e-ai` defaults to the
+   tracked `config/ai-routing.example.yaml`, so usually there is nothing to
+   write. Both are
    set up in
    [certify-an-ai-model.md § Prerequisites](certify-an-ai-model.md#prerequisites)
    — read that first, or the run fails on a missing key.

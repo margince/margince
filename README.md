@@ -303,7 +303,7 @@ per-client throttling at the proxy.
   (the human's yes was about the world they saw).
 - **AI runtime + certification**: every model call rides one contract-first
   path — tasks and tier ladders compiled from `backend/api/ai-tasks.yaml`,
-  runtime provider bindings in `config/ai-routing.yaml` (BYOK:
+  runtime provider bindings in the `ai.routing` setting (BYOK:
   Anthropic/OpenAI/Gemini/OpenAI-compatible cloud, Ollama/vLLM local, an
   offline fake for dev/test), the one `ai.Router` gate (workspace budget with
   typed deferral, secret stripping, per-attempt `ai_call` tracing), and a
