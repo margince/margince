@@ -275,8 +275,12 @@ ones it is the customer of.
 - **Switching projects** swaps the tag.
 
 Nothing explains this on screen, and nothing needs to: the tag is right there
-in the Subject field. Edit it, delete it, type your own — it is ordinary text
-and Margince leaves your version alone.
+in the Subject field, so you can see exactly what will go out.
+
+Write the rest of the subject however you like — the tag stays at the front
+while a project is chosen. Deleting it out of the text does not unset the
+project, because the picker still names one and the picker is what the send
+follows. To send without a tag, choose **No project**.
 
 ### What it starts on
 

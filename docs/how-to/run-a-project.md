@@ -136,8 +136,13 @@ of.
 
 **Choosing a project puts `[KEY]` at the front of the Subject.** Choosing **No
 project** takes it out. Switching to another project swaps the tag. There is no
-explanation printed beside it, because the Subject field shows the tag: edit or
-delete it like any other text, and it stays as you left it.
+explanation printed beside it, because the Subject field shows the tag — you
+can see exactly what will go out.
+
+The rest of the subject is yours; the tag is the picker's. While a project is
+chosen the tag stays at the front, so deleting it out of the text does not
+unset the project — the picker still names one, and that is what the send
+honours. To send without a tag, choose **No project**.
 
 **What it starts on.** The picker suggests, in this order:
 
