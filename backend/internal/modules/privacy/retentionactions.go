@@ -316,14 +316,17 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 			`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`, id)
 	}
 	if err == nil {
-		// Deleted BEFORE person_email goes, since it is keyed on those
-		// addresses. The ledger carries the address a message arrived at and
-		// the display name it arrived with, and it is the key a later capture
-		// would re-match on — so leaving it would keep answering with the
-		// person this act just stopped naming.
+		// Against the addresses READ AT THE TOP, not a subquery over
+		// person_email: those rows are already gone by here, so a subquery
+		// would match nothing and this statement would delete nothing while
+		// looking like it did.
+		//
+		// The ledger carries the address a message arrived at and the display
+		// name it arrived with, and it is the key a later capture re-matches
+		// on — left behind it keeps answering with the person this act just
+		// stopped naming.
 		_, err = tx.Exec(ctx, `
-			DELETE FROM capture_pending_counterparty
-			 WHERE email IN (SELECT email FROM person_email WHERE person_id = $1)`, id)
+			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName)
