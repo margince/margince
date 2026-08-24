@@ -79,6 +79,19 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 	sourceKey := csvSourceKeyDefault[object]
 	if req.SourceKey != nil && strings.TrimSpace(*req.SourceKey) != "" {
 		sourceKey = strings.TrimSpace(*req.SourceKey)
+	} else if idColumn := columnFor(fields, csvTargetID); idColumn != "" &&
+		columnFor(fields, csvSourceKeyDefault[object]) == "" {
+		// A file that names its records and carries nothing else to identify a
+		// row by falls back to the id column. That is what lets a corrections
+		// export be "id,city" — a whole legitimate file, which defaulting to
+		// display_name would refuse for not carrying a name it was never going
+		// to change.
+		//
+		// It is a FALLBACK, not a preference: every row then needs an id, since
+		// a row with no source key cannot be identified for re-import or undo.
+		// A file mixing corrections with new companies therefore keeps its own
+		// key column, and the id column says which rows are corrections.
+		sourceKey = idColumn
 	} else {
 		// The default names a TARGET field; the source must name the column
 		// mapped onto it, or no row can be identified.
@@ -207,7 +220,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// attempt keeps what the earlier one already achieved.
 	committed := run.Status == migration.StatusComplete || run.Status == migration.StatusFailed ||
 		run.Status == migration.StatusUndoing || run.Status == migration.StatusUndone
-	seen := map[int]bool{}
+	seen := map[string]bool{}
 	duplicates := 0
 	for _, o := range run.Report.Objects {
 		out.RowsRead += o.MirrorCount
@@ -222,11 +235,18 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		for _, s := range o.Skipped {
 			// The same row skipped by the dry run and again by the commit is
 			// ONE row the human must go fix, named by its line.
-			line := lineOf(s.ExternalID)
-			if seen[line] {
+			// Keyed on the EXTERNAL ID, which is what identifies a row — not on
+			// the line lineOf derives from it, which answers 0 for every id not
+			// shaped `line N`. A file carrying its own key column has no such
+			// ids at all, so every skipped row in it collapsed onto the first:
+			// two refused rows reported as one skip and one phantom `unchanged`,
+			// and the four counts then summed to less than rows_read. That is
+			// the disposition "hiding something" its own contract warns about.
+			if seen[s.ExternalID] {
 				continue
 			}
-			seen[line] = true
+			seen[s.ExternalID] = true
+			line := lineOf(s.ExternalID)
 			out.Disposition.Skipped++
 			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
 				Line:   line,
@@ -238,11 +258,11 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		// row is counted in Created, and adding it here too would report two
 		// outcomes for one row and leave `unchanged` short by the difference.
 		for _, c := range o.Collisions {
-			line := lineOf(c.ExternalID)
-			if seen[line] {
+			if seen[c.ExternalID] {
 				continue
 			}
-			seen[line] = true
+			seen[c.ExternalID] = true
+			line := lineOf(c.ExternalID)
 			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
 				Line:   line,
 				Reason: c.Reason,
@@ -254,6 +274,32 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// person is asking before they approve, and an omitted field reads as "not
 	// checked" rather than "none found".
 	out.Disposition.Duplicates = &duplicates
+
+	// A finished run's stored report can carry more outcomes than the file has
+	// rows, and there are two causes with different right answers.
+	//
+	// A row the DRY RUN skipped whose collision then vanished commits as a
+	// CREATE, and the stale skip is stored beside the real create — the engine
+	// folds attempts by object class and concatenates their skipped lists. Here
+	// the skip is the entry to drop.
+	//
+	// A RESUMED run can also double-count: ObjectReport.record runs before
+	// advanceCheckpoint, so a checkpoint that fails to persist leaves a counted
+	// row the resume walks again, and attempt reports add their counts. Here the
+	// surplus is in `created`/`updated`, and taking it out of `skipped` would
+	// erase a genuine refusal.
+	//
+	// Nothing in the stored report distinguishes them: per-row entries exist for
+	// skips alone, and everything else is an aggregate. Only the SECOND cause
+	// needs a resume to happen at all, so the attempt count is what tells them
+	// apart — a single-attempt run can only have the first.
+	if committed {
+		surplus := out.Disposition.Created + out.Disposition.Updated +
+			out.Disposition.Skipped - out.RowsRead
+		if surplus > 0 && len(run.Report.Objects) == 1 {
+			out.Disposition.Skipped = max(out.Disposition.Skipped-surplus, 0)
+		}
+	}
 
 	// Unchanged is DERIVED, never carried: it is the rows that were read and
 	// then neither created, updated nor skipped. Carrying the stored figure
@@ -379,107 +425,3 @@ func readAllUpload(file multipart.File) ([]byte, error) {
 // which the commit will not rewrite. A dry run whose whole job is to say what
 // WILL happen may not overstate it by the size of the customer's re-upload, so
 // each row is compared here exactly as the commit will compare it.
-func refinePrediction(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string, report migration.Report) (migration.Report, error) {
-	p, err := predictPages(ctx, source, writers, object)
-	if err != nil {
-		return migration.Report{}, err
-	}
-	for i := range report.Objects {
-		if report.Objects[i].Object != object {
-			continue
-		}
-		report.Objects[i].WillCreate = p.created
-		report.Objects[i].WillUpdate = p.updated
-		report.Objects[i].Unchanged = p.unchanged
-		report.Objects[i].Skipped = append(report.Objects[i].Skipped, p.skipped...)
-		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
-		report.Objects[i].Duplicates += p.duplicates
-	}
-	return report, nil
-}
-
-// predictPages walks the source and tallies what the commit would do with each
-// row, page by page, the same way the engine will walk it.
-func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
-	for offset := 0; ; offset += importPredictPage {
-		rows, err := source.Rows(ctx, object, offset, importPredictPage)
-		if err != nil {
-			return prediction{}, err
-		}
-		for _, row := range rows {
-			outcome, err := writers.Predict(ctx, row)
-			if err != nil {
-				return prediction{}, err
-			}
-			switch outcome {
-			case predictCreate:
-				p.created++
-			case predictUpdate:
-				p.updated++
-			case predictUnchanged:
-				p.unchanged++
-			case predictUnwritable:
-				// Disclosed as a skip rather than counted as a create: the
-				// commit will refuse this row, and the report exists to say so
-				// before a human approves it.
-				p.skipped = append(p.skipped, migration.SkippedRow{
-					ExternalID: row.ExternalID,
-					Reason:     unwritableReason(object, textFields(row.Fields)),
-				})
-			case predictCollidesSkipped:
-				// The run asked to skip duplicates, so this row is a skip and
-				// the preview says so — the commit must not be the first place
-				// a person learns the row did not land.
-				p.duplicates++
-				p.skipped = append(p.skipped, migration.SkippedRow{
-					ExternalID: row.ExternalID,
-					Reason:     duplicateSkipReason,
-				})
-			case predictCollides:
-				p.duplicates++
-				// Still a create — the commit lands it and files a review pair
-				// — so it is counted as one. The warning rides separately:
-				// Skipped is load-bearing arithmetic (the contract's four
-				// counts sum to rows_read, and `unchanged` is derived by
-				// subtracting them), so a row counted as BOTH created and
-				// skipped would report two outcomes for one row.
-				p.created++
-				p.collisions = append(p.collisions, migration.SkippedRow{
-					ExternalID: row.ExternalID,
-					Reason:     collisionDisclosure,
-				})
-			}
-		}
-		if len(rows) < importPredictPage {
-			return p, nil
-		}
-	}
-}
-
-// collisionDisclosure is what the report says about a row naming a company the
-// CRM already holds. It is not a refusal: the commit creates the row and files
-// the pair on the dedupe review queue, exactly as a manual create would. The
-// disclosure exists so a person reading "create 3" before approving is not
-// surprised by a duplicate afterwards.
-const collisionDisclosure = "a company of this name is already in the CRM; " +
-	"importing this row creates a second one and files the pair for review"
-
-// duplicateSkipReason is what the report says about a row the run chose to
-// leave alone, under `on_duplicate: skip`.
-const duplicateSkipReason = "a company of this name is already in the CRM, and this run was asked to skip duplicates"
-
-// prediction is what one walk of the source concluded: the three outcomes a
-// commit can have, plus the rows it will refuse outright.
-type prediction struct {
-	created   int
-	updated   int
-	unchanged int
-	skipped   []migration.SkippedRow
-	// collisions are rows that WILL land and also name a company the CRM
-	// already holds. Kept apart from skipped because each is counted in
-	// created — see the disposition arithmetic above.
-	collisions []migration.SkippedRow
-	// duplicates counts the same rows. It is reported to the human as its own
-	// number ("100 companies, 94 duplicates") and never summed with the four.
-	duplicates int
-}

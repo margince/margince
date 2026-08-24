@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 17004,
+    "tokens": 17063,
     "median_tool_tokens": 281,
-    "mean_tool_tokens": 303
+    "mean_tool_tokens": 304
   },
   "agents": [
     {
@@ -121,6 +121,10 @@
       "tokens": 386
     },
     {
+      "name": "preview_import",
+      "tokens": 353
+    },
+    {
       "name": "search_context",
       "tokens": 352
     },
@@ -163,10 +167,6 @@
     {
       "name": "promote_lead",
       "tokens": 301
-    },
-    {
-      "name": "preview_import",
-      "tokens": 294
     },
     {
       "name": "archive_record",

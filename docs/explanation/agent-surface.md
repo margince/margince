@@ -18,6 +18,15 @@ Both call every action through `agents.Registry.Invoke`, which admits each call 
 (**scope ∧ seat ∧ tier**) before any handler runs. A 🟢 call executes and is audited; a 🟡 call stages a
 confirm-first approval. "Two surfaces, one gate" is a property of the construction, not a convention.
 
+Most consequential verbs are 🟢 (ADR-0055). A passport carries the granting human's own seat, grants and
+row scope, so a send or an archive it can spend is one that person could spend unaided in the app, and
+asking them to confirm it again made the agent surface weaker than the person behind it rather than
+safer. What still bounds a call is what bounds the human: RBAC, row scope, the seat ceiling, expiry, and
+the scope its holder chose to lend. 🟡 is kept for calls whose destination the credential-holder did not
+choose — `enrich` is the standing case, because the model names the URL the server fetches. An
+installation that wants a particular verb confirmed **floors** it back per record type, and every verb
+still carries the staging machinery that makes the floor land in a human's inbox.
+
 ## The reason-act-observe loop (Surface B)
 
 The runner (`internal/modules/agents/runner/`) is where **the model proposes and the governed tool
