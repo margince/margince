@@ -172,6 +172,26 @@ check "" "$(pick_free_db || true)" \
 check "1" "$(pick_free_db >/dev/null 2>&1; echo $?)" \
       "and it reports failure rather than returning success with an empty answer"
 
+echo "dev.sh: the state home is spelled once"
+
+# Every path under the state home must be composed from dev_state_root. This is
+# here because the lifted-function checks above structurally cannot see it: they
+# exercise pure functions, and the run directory is assigned at the top level.
+#
+# The defect it catches is not hypothetical — it is what shipped in the first
+# draft of this change. claim_stack wrote its reservation to the machine-global
+# registry while `rundir` still pointed at the worktree's own .tmp/dev/, so the
+# two were different files: the reservation carried ports and never the pids, and
+# the sweep read a directory only its own worktree could see. Both halves looked
+# right in isolation and the whole was worktree-blind, which is the defect this
+# change exists to remove.
+#
+# Comment lines are stripped first: the file explains the old location on
+# purpose, and that prose must stay.
+stray_state_paths=$(grep -vE '^[[:space:]]*#' "$dev" | grep -c '\.tmp/dev' || true)
+check "0" "$stray_state_paths" \
+      "no code line in dev.sh names .tmp/dev — the state home comes from dev_state_root"
+
 echo "lib-testdb.sh: the integration lane's template is per worktree"
 
 # Lifted from lib-testdb.sh for the same reason everything above is lifted from

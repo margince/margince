@@ -361,7 +361,12 @@ psql_owner() { # db [psql args…] — SQL via args or stdin
     psql -U margince_owner -d "$db" "$@"
 }
 
-rundir=".tmp/dev/${slug:-_base}"
+# Under the machine-global root, not the worktree's own .tmp/ — the same reason
+# the claim registry moved there. The pids land in the SAME file claim_stack
+# reserved, so a sweep from any worktree can see this stack; while these were two
+# different files the reservation carried ports and no pids, and the sweep read a
+# directory only this worktree could see.
+rundir="$(dev_state_root)/${slug:-_base}"
 log="${rundir}/dev.log"
 state="${rundir}/env"
 
@@ -483,7 +488,7 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
   # 1. Every stack this script ever recorded — its own pids and its own ports.
   #    The locals above shadow what the state file sets, so sourcing one cannot
   #    leak a stale pid into the rest of the run.
-  for state_file in .tmp/dev/*/env; do
+  for state_file in "$(dev_state_root)"/*/env; do
     [[ -f "$state_file" ]] || continue
     BACKEND_PID=''; FE_PID=''; WORKER_PID=''; API_PORT=''; FE_PORT=''
     # shellcheck disable=SC1090
@@ -511,7 +516,7 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
     kill_pids $pids
     echo "dev: swept $(printf '%s\n' $pids | wc -l | tr -d ' ') stray process(es) from earlier stacks"
   fi
-  rm -rf .tmp/dev/*
+  rm -rf "$(dev_state_root)"/*
 }
 
 drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left behind
