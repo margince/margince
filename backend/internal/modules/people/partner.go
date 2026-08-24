@@ -387,7 +387,7 @@ func partnerListWhere(ctx context.Context, in ListPartnersInput, arg func(any) i
 	if in.Cursor != "" {
 		after, err := ids.Parse(in.Cursor)
 		if err != nil {
-			return nil, &RequiredFieldError{Field: "cursor"}
+			return nil, &storekit.MalformedCursorError{}
 		}
 		where = append(where, storekit.SQLf("p.organization_id > $%d", arg(after)))
 	}

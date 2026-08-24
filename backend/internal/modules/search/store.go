@@ -350,22 +350,13 @@ func scanRankedPage(rows pgx.Rows, limit int) (Page, error) {
 	return page, nil
 }
 
-// cursorField names the page-token input, the third query field this error
-// answers for.
-const cursorField = "cursor"
-
 // BadQueryError maps to a 422 at the transport. Field names WHICH query input
-// was wrong: this error answers for q, types and cursor alike, and a per-field
-// taxonomy that named a constant would point two of the three at an input that
-// was fine.
+// was wrong — q or types. A malformed page token is not one of them: that answer
+// is the same on every paginated endpoint, so it is storekit's to give.
 type BadQueryError struct {
 	Field  string
 	Reason string
 }
-
-// reasonMalformedCursor is the BadQueryError reason for any un-decodable
-// keyset cursor — one spelling so the 422 body never drifts between paths.
-const reasonMalformedCursor = "malformed cursor"
 
 func (e *BadQueryError) Error() string { return "search: " + e.Reason }
 
@@ -391,19 +382,19 @@ func encodeCursor(c rankedCursor) string {
 func decodeCursor(s string) (rankedCursor, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(s)
 	if err != nil {
-		return rankedCursor{}, &BadQueryError{Field: cursorField, Reason: reasonMalformedCursor}
+		return rankedCursor{}, &storekit.MalformedCursorError{}
 	}
 	parts := strings.SplitN(string(raw), "|", 3)
 	if len(parts) != 3 {
-		return rankedCursor{}, &BadQueryError{Field: cursorField, Reason: reasonMalformedCursor}
+		return rankedCursor{}, &storekit.MalformedCursorError{}
 	}
 	score, err := strconv.ParseFloat(parts[0], 64)
 	if err != nil {
-		return rankedCursor{}, &BadQueryError{Field: cursorField, Reason: reasonMalformedCursor}
+		return rankedCursor{}, &storekit.MalformedCursorError{}
 	}
 	id, err := ids.Parse(parts[2])
 	if err != nil {
-		return rankedCursor{}, &BadQueryError{Field: cursorField, Reason: reasonMalformedCursor}
+		return rankedCursor{}, &storekit.MalformedCursorError{}
 	}
 	return rankedCursor{Score: score, Type: parts[1], ID: id}, nil
 }
