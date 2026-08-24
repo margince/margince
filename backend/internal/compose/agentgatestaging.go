@@ -229,7 +229,7 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 // Adopting the resolver's line on this door as well is blocked on the six types
 // the record seam does not serve: it can label those by id alone, so the change
 // would put "Archive tag 0195c3…" in front of an approver where the operation
-// and path stand today (gradionhq/margince-poc-v1#1021 is where those types get
+// and path stand today (margince/margince#1021 is where those types get
 // a name).
 //
 // It writes the refusal itself and reports ok=false, so a caller that cannot

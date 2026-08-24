@@ -215,7 +215,7 @@ way to refuse it at the pull. So the roles refuse it at the run:
   **The comparison runs at start only.** A worker that is already running when the
   api records a new release is not checked again, so restarting the api ALONE
   leaves the old worker in service until something else restarts it
-  ([#1734](https://github.com/gradionhq/margince-poc-v1/issues/1734)).
+  ([#1734](https://github.com/margince/margince/issues/1734)).
 - **web** — the SPA compares its own release against the one
   `GET /v1/auth/capabilities` reports and refuses to render the app, offering a
   reload. The probe is anonymous, so the check happens before anyone signs in —
@@ -233,7 +233,7 @@ installation is, including an older one — a `1970.42` pod that restarts after
 `1970.43` recorded will put the record back to `1970.42`, and every correctly
 deployed `1970.43` worker then refuses to start. Finish the api rollout rather
 than pausing it half-done, and the same for a rollback
-([#1735](https://github.com/gradionhq/margince-poc-v1/issues/1735)).
+([#1735](https://github.com/margince/margince/issues/1735)).
 
 **An unstamped image disables the guard entirely.** An absent or `dev` release is
 skipped by all three roles — the api records nothing, the worker compares nothing
@@ -246,7 +246,7 @@ That is what makes a locally built image (`docker build --target api .`, which
 passes no `MARGINCE_RELEASE_VERSION`) usable, and it is a fact worth knowing about
 your own pipeline: **a deploy recipe that builds these targets itself, rather than
 pulling released images, gets no guard**
-([#1728](https://github.com/gradionhq/margince-poc-v1/issues/1728)). Pass the
+([#1728](https://github.com/margince/margince/issues/1728)). Pass the
 argument if you want one.
 
 ## Order of operations

@@ -4,7 +4,7 @@
 package compose
 
 // The REST door's half of the six bespoke auto-execute commands
-// (gradionhq/margince-poc-v1#928 task 6): a list member, a tag apply, an
+// (margince/margince#928 task 6): a list member, a tag apply, an
 // offer line item add/update/remove, and an offer created under a parent
 // deal. Unlike agentcommandoperand.go's confirm-first
 // family, none of these carries body-derived VALUES into its command — the
@@ -95,7 +95,7 @@ func removeOfferLineItemCommand(_ agentPolicy, deps restCommandDeps, r *http.Req
 }
 
 // createOfferCommand decodes POST /v1/deals/{id}/offers. The route's own
-// {id} is the DEAL the offer nests under (gradionhq/margince-poc-v1#1046),
+// {id} is the DEAL the offer nests under (margince/margince#1046),
 // not an offer id — there is no offer id to decode, since the offer does
 // not exist yet. body is the same buffered copy every other create/patch
 // decoder reuses (createCommand's own comment says why).

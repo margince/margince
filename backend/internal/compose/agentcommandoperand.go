@@ -5,7 +5,7 @@ package compose
 
 // The REST door's half of the eight commands whose operand is a SECOND path
 // parameter or a second path segment, not the route's own {id}
-// (gradionhq/margince-poc-v1#928 task 5): an organization fact or profile
+// (margince/margince#928 task 5): an organization fact or profile
 // field, a custom field's retire/options actions, and a project stakeholder.
 // The decoding shape is the same one archiveCommand/patchCommand set in
 // agentcommand.go — parse {id} as the existence-hiding 404 (routedID, shared

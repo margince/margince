@@ -4,7 +4,7 @@
 package compose
 
 // The REST door's half of the four outbound commands
-// (gradionhq/margince-poc-v1#928 task 7): a mail reply, a channel reply, an
+// (margince/margince#928 task 7): a mail reply, a channel reply, an
 // account-started send and a booking. Unlike every family before them, each of
 // these has a real tool-door twin resolving the SAME command — so a refusal
 // the tool made and this door skipped (an empty `to`, an empty `links`, a link

@@ -36,7 +36,7 @@ const ifMatchHeader = "If-Match"
 // in a human's inbox for work that already happened, and an invalid or replayed
 // token is accepted by being ignored. The MCP door has always redeemed on this
 // arm (registry.go, runClaimed); this door redeemed for update_record alone
-// (gradionhq/margince-poc-v1#812).
+// (margince/margince#812).
 //
 // A REDEEMED call goes straight to the handler: it carries exactly the change a
 // human released, whose identity the diff_hash already bound, so re-running the
@@ -134,7 +134,7 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 // row that really moved fails validateRedemptionTarget inside the redemption
 // first. Whether refusing is even the right answer for a disagreement BOTH doors
 // could only discover after the approval is consumed is
-// gradionhq/margince-poc-v1#1069; until that is settled, neither door's
+// margince/margince#1069; until that is settled, neither door's
 // behaviour here is load-bearing.
 // redeemed is passed rather than read back off the redemption, so this function
 // and its caller cannot come to different answers about whether an approval was

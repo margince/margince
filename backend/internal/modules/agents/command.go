@@ -391,7 +391,7 @@ func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
 // see, and the human's yes is then spent on a call the handler answers 404.
 // Closing it needs a visibility question this seam cannot ask through the
 // record provider, which is why it is filed rather than patched here:
-// gradionhq/margince-poc-v1#1021.
+// margince/margince#1021.
 func servedByTheRecordSeam(recordType string) bool {
 	return slices.Contains(datasource.EntityTypes(), datasource.EntityType(recordType))
 }
@@ -421,7 +421,7 @@ type routedRecordTarget struct {
 // never heard of, reusing servedByTheRecordSeam rather than a resolver-local
 // opinion about which of this family's types are governed here, so the two
 // cannot drift the way a second, hand-restated list would
-// (gradionhq/margince-poc-v1#1021).
+// (margince/margince#1021).
 func (t routedRecordTarget) refuse(ctx context.Context, id ids.UUID) error {
 	if !servedByTheRecordSeam(t.recordType) {
 		return nil

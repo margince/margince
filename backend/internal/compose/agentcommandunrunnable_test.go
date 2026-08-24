@@ -274,7 +274,7 @@ func missingOperand(method, path, operand string) unrunnableCall {
 // shape: agents.createRecordShapes carries the types create_record itself
 // writes, and a create outside it is performed by its own module's handler,
 // which is where its body is validated. The seam has no shape to refuse against
-// (gradionhq/margince-poc-v1#1021 is where those types get one), so any body
+// (margince/margince#1021 is where those types get one), so any body
 // this test could send would stage — which is a gap to record, not a fixture to
 // fake.
 var noUnrunnableCall = gatekit.Waive(map[string]string{

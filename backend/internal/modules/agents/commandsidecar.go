@@ -10,7 +10,7 @@ package agents
 // system-of-record the human's decision actually depends on — but the
 // operand has to travel with the command, or two different facts on the same
 // organization become one indistinguishable call the moment either is
-// staged (gradionhq/margince-poc-v1#928 task 5: "their operand lives in the
+// staged (margince/margince#928 task 5: "their operand lives in the
 // URL path").
 
 import (

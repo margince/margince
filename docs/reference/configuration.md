@@ -527,7 +527,7 @@ relay, and it no longer does — the sealed copy keeps answering, because "decla
 nothing" and "declared nothing on purpose" are the same input to the resolver.
 Nothing in the product deletes either ref today. If you need a relay that takes
 no credential, say so on
-[issue #2162](https://github.com/gradionhq/margince-poc-v1/issues/2162), which
+[issue #2162](https://github.com/margince/margince/issues/2162), which
 tracks the supported way to do it. The license is unaffected in practice: an
 installation removing its license is one that has stopped paying, and a
 production boot refuses an absent license regardless.

@@ -245,7 +245,7 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 // cannot see, at execution, and closing that here would mean a second read
 // against a type this resolver is not built around; it is the same bound
 // readStageableLinks closes for the verbs that NAME their records, and this
-// one is filed rather than implied away: gradionhq/margince-poc-v1#1021 is
+// one is filed rather than implied away: margince/margince#1021 is
 // where a target's visibility question gets its home.
 func (r *relinkActivityResolver) Guards(ctx context.Context, cmd RelinkActivityCommand) error {
 	if err := requireLinkTarget(cmd.EntityType); err != nil {

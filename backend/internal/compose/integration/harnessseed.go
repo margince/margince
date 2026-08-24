@@ -6,7 +6,7 @@
 package integration
 
 // The row fixtures every suite seeds from, split out of harness.go when that
-// file crossed the file-length cap (gradionhq/margince-poc-v1#2163).
+// file crossed the file-length cap (margince/margince#2163).
 //
 // One concept: put a row in the database and answer its id. Env construction,
 // the principal builders and the workspace-bound exec helpers stay next door —

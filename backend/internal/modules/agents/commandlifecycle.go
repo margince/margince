@@ -3,7 +3,7 @@
 
 package agents
 
-// The four record-lifecycle commands (gradionhq/margince-poc-v1#928 task 7):
+// The four record-lifecycle commands (margince/margince#928 task 7):
 // graduating a lead, retiring one, stepping a project along its phase ladder,
 // and moving a deal between stages. Each names ONE routed record and each
 // question below rests on that one row — Guards on whether an approval for it

@@ -4,7 +4,7 @@
 package compose
 
 // The REST door's half of the four auto-execute commands
-// (gradionhq/margince-poc-v1#928 task 7): logging an activity, drafting a
+// (margince/margince#928 task 7): logging an activity, drafting a
 // reply, re-associating an activity, and running a report. All four are 🟢
 // today and none of them stages, so these decoders are reached only if a tier
 // floor (#982) tightens one — registered anyway, for the reason
