@@ -4,7 +4,7 @@
 package compose
 
 // The auto-executed arm's half of the approval loop
-// (gradionhq/margince/backend — gradionhq/margince-poc-v1#812).
+// (gradionhq/margince/backend — margince/margince#812).
 //
 // A staged 🟡 call can resolve 🟢 on its retry: the record moved, or the
 // per-field split staged an otherwise auto-execute patch. The token that retry
@@ -214,7 +214,7 @@ func TestAReleasedRetryTakesTheServersPinOverTheCallersIfMatch(t *testing.T) {
 // This reaches the branch only because countingRedeemer answers a pin without
 // the target re-check production performs. Whether refusing is even the right
 // answer for a disagreement both doors could only discover after the approval is
-// consumed is gradionhq/margince-poc-v1#1069; what this pins meanwhile is that
+// consumed is margince/margince#1069; what this pins meanwhile is that
 // the branch is live and fails closed rather than picking a version.
 func TestADisagreementBetweenTheTwoServerPinsFailsClosed(t *testing.T) {
 	// versionedDeal reports 12 to the tier gate; the approval was granted at 9.

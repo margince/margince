@@ -4,7 +4,7 @@
 package agents
 
 // The two commands one tool serves through TWO contract operations
-// (gradionhq/margince-poc-v1#928 task 7): merge_records is mergePerson and
+// (margince/margince#928 task 7): merge_records is mergePerson and
 // mergeOrganization, and enrich is scrapeCompany and deepReadCompany. Both are
 // where the seam has to carry meaning rather than shape.
 //
@@ -133,7 +133,7 @@ func (r *mergeResolver) halves(ctx context.Context, cmd MergeCommand) (survivor,
 // the source's name out of the summary above. Guards below proves the STAGER
 // can see both halves; nothing proves it of the approver, and closing that
 // needs a second, source-scoped probe the approvals surface has no shape for
-// (gradionhq/margince-poc-v1#1021 is where a target's visibility question
+// (margince/margince#1021 is where a target's visibility question
 // gets its home). Both alternatives are worse: binding to the source pins a
 // row the merge is about to archive, and binding to both is not something one
 // approval row can express.

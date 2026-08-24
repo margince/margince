@@ -4,7 +4,7 @@
 package agents
 
 // The two commands that NAME their records instead of anchoring on one
-// (gradionhq/margince-poc-v1#928 task 7): an account-started email, which
+// (margince/margince#928 task 7): an account-started email, which
 // files a brand-new conversation under the records it belongs to, and a
 // booking, which says who and what the meeting is about. Neither is handed a
 // row, so both have to answer the same three questions about the list they
@@ -306,7 +306,7 @@ func requireBookingWindow(start, end time.Time) error {
 // and an agent doing what the schema permits now meets it where it previously
 // staged and executed. That disagreement is filed rather than settled here,
 // because closing it the right way is a contract change:
-// gradionhq/margince-poc-v1#1065.
+// margince/margince#1065.
 //
 // requireAccountSendLinks' identical-looking claim IS backed —
 // SendAccountEmailRequest.links carries minItems: 1 — which is why that one

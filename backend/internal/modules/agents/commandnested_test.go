@@ -87,7 +87,7 @@ func TestOfferLineItemSummariesNameTheLineItem(t *testing.T) {
 	}
 }
 
-// gradionhq/margince-poc-v1#1046: createOffer's staged target must carry NO
+// margince/margince#1046: createOffer's staged target must carry NO
 // id. The routed {id} on POST /v1/deals/{id}/offers is the DEAL the offer
 // nests under, not an offer id — the offer does not exist yet — so pairing
 // target_entity_type=offer with that id would name a target that resolves to
@@ -107,7 +107,7 @@ func TestCreateOfferStagesNoID(t *testing.T) {
 	}
 	if !info.TargetID.IsZero() {
 		t.Errorf("staged target_id = %s, want zero — the offer does not exist yet, and the routed id names "+
-			"the DEAL, not an offer (gradionhq/margince-poc-v1#1046)", info.TargetID)
+			"the DEAL, not an offer (margince/margince#1046)", info.TargetID)
 	}
 	if !strings.Contains(info.Summary, dealID.String()) {
 		t.Errorf("summary %q does not name the parent deal", info.Summary)

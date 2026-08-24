@@ -115,7 +115,7 @@ func TestAMalformedLineItemIDAnswers422(t *testing.T) {
 // through stageRefusal end to end, the same shape
 // TestEachOperandCommandStagesTheRoutedRecord proves for task 5's eight.
 // createOffer is the one exception: it stages the record TYPE with no id
-// (gradionhq/margince-poc-v1#1046), asserted separately below.
+// (margince/margince#1046), asserted separately below.
 func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
 	listID, tagID, offerID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	lineItemID := ids.NewV7()
@@ -171,7 +171,7 @@ func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
 	}
 }
 
-// gradionhq/margince-poc-v1#1046: createOffer stages the record TYPE with
+// margince/margince#1046: createOffer stages the record TYPE with
 // NO id, end to end through stageRefusal — the routed {id} on
 // POST /v1/deals/{id}/offers is the DEAL, not an offer, so the only honest
 // staged target is the one every other create stages.

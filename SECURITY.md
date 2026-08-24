@@ -7,7 +7,7 @@ are welcome and taken seriously.
 ## Reporting a vulnerability
 
 Report vulnerabilities **privately** through GitHub Security Advisories:
-**[open a draft advisory](https://github.com/gradionhq/margince-poc-v1/security/advisories/new)**
+**[open a draft advisory](https://github.com/margince/margince/security/advisories/new)**
 (or: the repository's "Security" tab → "Report a vulnerability"). If you
 cannot use GitHub, mail **security@gradion.com** instead. Do not open a
 public issue or pull request for a security finding — a public report

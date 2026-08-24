@@ -174,7 +174,7 @@ func (m mixedHumanOwned) HumanOwnedConflicts(context.Context, string, ids.UUID, 
 }
 
 // A refusal describes a request that changed nothing
-// (gradionhq/margince-poc-v1#1073). The residue path's own refusals — the
+// (margince/margince#1073). The residue path's own refusals — the
 // resolver's Guards among them — are settled BEFORE the auto-execute half is
 // dispatched, so a target this door will not stage against costs the caller a
 // retry rather than leaving half a patch committed under a 4xx that says the

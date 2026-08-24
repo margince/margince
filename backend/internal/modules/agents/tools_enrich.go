@@ -39,7 +39,7 @@ import (
 // its arguments, and the REST door has no word at all — its two routes ARE the
 // two depths, so its decoders set the value structurally (commandrecord.go).
 // A string would let the second of those be spelled wrong in a way every
-// schema accepts (gradionhq/margince-poc-v1#928 task 7).
+// schema accepts (margince/margince#928 task 7).
 //
 // EXPORTED because the implementation of CompanyEnricher lives in the
 // composition layer and routes on it — a second spelling there would silently

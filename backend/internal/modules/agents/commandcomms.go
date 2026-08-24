@@ -4,7 +4,7 @@
 package agents
 
 // The two anchored sends: a mail reply and a channel reply
-// (gradionhq/margince-poc-v1#928 task 7). Both answer a conversation that
+// (margince/margince#928 task 7). Both answer a conversation that
 // already exists, so both name an ANCHOR activity — the row the effect hangs
 // off, whose version the approval pins and whose authority decides whether an
 // approval could ever be released at all.

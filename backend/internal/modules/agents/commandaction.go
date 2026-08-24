@@ -4,7 +4,7 @@
 package agents
 
 // The remaining four confirm-first commands the tool schema cannot express
-// (gradionhq/margince-poc-v1#928 task 5): retiring a custom field (no body
+// (margince/margince#928 task 5): retiring a custom field (no body
 // at all), replacing a picklist's option set, and attaching or detaching a
 // project stakeholder. None of them is a whole-record field patch, so none
 // of them belongs in command.go's patchResolver — but two of the four

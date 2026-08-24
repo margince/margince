@@ -3,7 +3,7 @@
 
 package agents
 
-// The six remaining bespoke commands (gradionhq/margince-poc-v1#928 task 6):
+// The six remaining bespoke commands (margince/margince#928 task 6):
 // a list member add, a tag apply, an offer line item add/update/remove, and an
 // offer created under a parent deal. All six are 🟢 auto_execute today, so none
 // reaches Subject/Guards on today's tiers. They are registered anyway, because
@@ -13,7 +13,7 @@ package agents
 // is created ON, not an offer id, so anything reading the target off the route
 // would pair target_entity_type=offer with a deal's id — a target that
 // resolves to no row, or to an unrelated offer that happens to share the id
-// space (gradionhq/margince-poc-v1#1046, closed by this file's
+// space (margince/margince#1046, closed by this file's
 // CreateOfferCommand).
 //
 // A seventh, upsertPartner, is gone: setting a partner's margin tier is
@@ -24,7 +24,7 @@ package agents
 // (servedByTheRecordSeam, command.go), the same bound six of the twelve
 // archivable types already stand on — so five of these six resolvers' Guards
 // stand down, reusing that check rather than a hand-restated opinion
-// (gradionhq/margince-poc-v1#1021). deal IS served, so createOffer's Guards
+// (margince/margince#1021). deal IS served, so createOffer's Guards
 // perform a real read.
 
 import (
@@ -246,7 +246,7 @@ func (r removeOfferLineItemResolver) Guards(ctx context.Context, cmd RemoveOffer
 // CreateOfferCommand is one offer creation under a parent deal, whichever
 // door asked for it. DealID is the ROUTED id — POST /v1/deals/{id}/offers
 // names the parent, not an offer, because the offer does not exist yet
-// (gradionhq/margince-poc-v1#1046). Fields is the create body, carried the
+// (margince/margince#1046). Fields is the create body, carried the
 // same way CreateCommand's own is, so Subject can name which fields it sets.
 type CreateOfferCommand struct {
 	DealID ids.UUID
@@ -273,7 +273,7 @@ type createOfferResolver struct {
 // Subject names the record TYPE the approval binds to, with NO id — exactly
 // the shape createResolver stages for every other create (command.go),
 // because an offer does not exist yet either. This is the fix for
-// gradionhq/margince-poc-v1#1046: the routed {id} is the deal, and pairing
+// margince/margince#1046: the routed {id} is the deal, and pairing
 // target_entity_type=offer with the deal's id names a target that resolves to
 // no row, or to an unrelated offer that happens to share the id space. Naming
 // no id at all is the only staged target this create could honestly carry.

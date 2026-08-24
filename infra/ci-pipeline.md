@@ -68,7 +68,7 @@ prefix of a failing group.**
 
 `max_entries_to_merge` starts at **2** rather than higher on purpose: a batched
 queue multiplies the cost of a flaky job by the group size, and
-[#1494](https://github.com/gradionhq/margince-poc-v1/issues/1494) is open against
+[#1494](https://github.com/margince/margince/issues/1494) is open against
 exactly that noise. It is a live ruleset knob — raise it once the queue has a
 measured baseline.
 
@@ -181,7 +181,7 @@ Consequences:
   who finds it is whoever tries to release next. Stated plainly because it is a
   real regression in coverage, not a trade that still balances — restoring a
   build-only, push-nothing image job scoped to those three paths is
-  https://github.com/gradionhq/margince-poc-v1/issues/1965.
+  https://github.com/margince/margince/issues/1965.
 - A **backend-only PR** skips the frontend + UAT lanes; a **frontend-only PR**
   skips the Go build/gate + the integration lane — except for
   `frontend/src/mcp-apps/forbidden.json`, which is authored under `frontend/`
@@ -639,7 +639,7 @@ beside the gate, deliberately outside it:
   A release is now a decision somebody makes. Two consequences are recorded
   where they bite rather than here — the role images lose their only build
   (the Dockerfile-only bullet above,
-  https://github.com/gradionhq/margince-poc-v1/issues/1965) and the patch range
+  https://github.com/margince/margince/issues/1965) and the patch range
   degenerates to one commit (below).
   The release-management CLI cuts the
   incremental patch and uploads it with `draft-release`
@@ -675,7 +675,7 @@ beside the gate, deliberately outside it:
   because nothing consumes the stream today. Deriving the base from the last
   **published** release is what fixes it, and is the prerequisite for any
   automatic trigger ever coming back
-  ([#1798](https://github.com/gradionhq/margince-poc-v1/issues/1798)).
+  ([#1798](https://github.com/margince/margince/issues/1798)).
   Concurrency still matters only for two deliberate dispatches: `draft` and
   `docker-image` each carry a cancelling group so a superseded bake stops, while
   `publish` carries a group that **serializes instead of cancelling** — a publish
@@ -683,7 +683,7 @@ beside the gate, deliberately outside it:
   arrives gives up its place. That is mutual exclusion, not ordering: nothing on
   this path rejects a stale version, so a re-run or a dispatch of an older commit
   can still publish after a newer one
-  ([#1810](https://github.com/gradionhq/margince-poc-v1/issues/1810)) — a
+  ([#1810](https://github.com/margince/margince/issues/1810)) — a
   sharper edge now that dispatching an arbitrary ref is the only way in.
   Not a gate — it never blocks a merge.
 

@@ -104,7 +104,7 @@ func mirrorStructuralBindings() []FieldBinding {
 		{
 			WireSlot: "owner_id", Disposition: DispositionDeferred,
 			Reason:   "The mirror holds the incumbent's own owner id, which row visibility is projected from; nothing joins it through mirror_user_map to the app_user the contract's uuid slot names.",
-			IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/994",
+			IssueURL: "https://github.com/margince/margince/issues/994",
 		},
 		{
 			WireSlot: "id", Disposition: DispositionNativeOnly,
@@ -164,8 +164,8 @@ var personBindings = EntityBinding{
 		{WireSlot: "created_at", CanonicalKey: "created_at", Incumbent: []string{"createdate"}, Disposition: DispositionMapped},
 		{WireSlot: "updated_at", CanonicalKey: "last_synced_at", Incumbent: []string{"lastmodifieddate"}, Disposition: DispositionMapped},
 
-		{WireSlot: "social", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/985"},
-		{WireSlot: "archived_at", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/986"},
+		{WireSlot: "social", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/985"},
+		{WireSlot: "archived_at", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/986"},
 
 		{
 			WireSlot: "consent", Disposition: DispositionUnmappable,
@@ -212,12 +212,12 @@ var organizationBindings = EntityBinding{
 
 		{WireSlot: "website_url", Disposition: DispositionDerived, DerivedFrom: []string{"domains"}},
 
-		{WireSlot: "parent_org_id", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/1023"},
-		{WireSlot: "archived_at", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/1024"},
-		{WireSlot: "description", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/1026"},
-		{WireSlot: "linkedin_url", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/1027"},
-		{WireSlot: "lifecycle", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/1028"},
-		{WireSlot: "relationship_types", Disposition: DispositionDeferred, IssueURL: "https://github.com/gradionhq/margince-poc-v1/issues/1031"},
+		{WireSlot: "parent_org_id", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1023"},
+		{WireSlot: "archived_at", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1024"},
+		{WireSlot: "description", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1026"},
+		{WireSlot: "linkedin_url", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1027"},
+		{WireSlot: "lifecycle", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1028"},
+		{WireSlot: "relationship_types", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/1031"},
 
 		{
 			WireSlot: "legal_name", Disposition: DispositionUnmappable,

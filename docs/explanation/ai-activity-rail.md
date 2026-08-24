@@ -275,8 +275,8 @@ reporting nothing at all.
   correlation id for all its candidates, so they share a single occurrence that
   no per-person subject could describe.
 
-[#2272]: https://github.com/gradionhq/margince-poc-v1/issues/2272
-[#2276]: https://github.com/gradionhq/margince-poc-v1/issues/2276
+[#2272]: https://github.com/margince/margince/issues/2272
+[#2276]: https://github.com/margince/margince/issues/2276
 
 ## Reference
 

@@ -151,7 +151,7 @@ type splitUpdateDeps struct {
 // sub-patch whose hash the approval was bound to and re-splitting it would stage
 // a second approval for the overwrite just approved. This function used to
 // redeem the token itself, which is how every OTHER tool's 🟢 arm came to ignore
-// one (gradionhq/margince-poc-v1#812).
+// one (margince/margince#812).
 func splitHumanOwnedUpdate(w http.ResponseWriter, r *http.Request, next http.Handler, deps splitUpdateDeps, pol agentPolicy, body []byte) {
 	ctx := r.Context()
 	targetID, param, err := patchTargetID(r, pol.Op)
@@ -219,7 +219,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 	// answered a refusal status for a request whose first half had already
 	// committed, and the buffered 2xx was dropped: the agent was told the change
 	// was refused and could retry the whole patch against a record that had
-	// already moved (gradionhq/margince-poc-v1#1073). Asked here, a refusal costs
+	// already moved (margince/margince#1073). Asked here, a refusal costs
 	// the caller only a retry, which is the rule pinAutoExecutedWrite already
 	// applies to the unconsumed case.
 	//

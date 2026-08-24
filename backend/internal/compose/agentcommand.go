@@ -60,7 +60,7 @@ type restCommandDeps struct {
 //
 // The table covers the WHOLE agent-reachable mutating surface — all sixty-nine
 // routes, one entry per operation, with nothing left to answer from the route's
-// own shape (gradionhq/margince-poc-v1#928).
+// own shape (margince/margince#928).
 // TestEveryAgentReachableMutatingRouteDecodesIntoACommand derives both
 // directions of that from the policy table, so a route the contract adds fails
 // there rather than reaching a door that has no answer for it.
@@ -134,7 +134,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// the routed record but carries a SECOND operand (a path segment or, for
 	// removeProjectStakeholder, a second path parameter) that a projection
 	// onto update_record's own {record_type, id, fields} arguments cannot
-	// express (gradionhq/margince-poc-v1#928 task 5).
+	// express (margince/margince#928 task 5).
 	"confirmOrganizationFact":         confirmFactCommand,
 	"updateOrganizationFact":          updateFactCommand,
 	"confirmOrganizationProfileField": confirmProfileFieldCommand,
@@ -151,7 +151,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// have NEVER staged: registered anyway, because a tier floor tightening
 	// one would otherwise leave this door with only the route's own shape to
 	// name a target from, and for createOffer that shape is provably wrong:
-	// the routed id is the parent deal (gradionhq/margince-poc-v1#1046).
+	// the routed id is the parent deal (margince/margince#1046).
 	//
 	// upsertPartner was a seventh and is gone: setting a partner's margin tier
 	// is human-only (crm.yaml), so no agent reaches that route and a decoder
