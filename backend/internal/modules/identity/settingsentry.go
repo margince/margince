@@ -133,9 +133,48 @@ var BaseLanguage = settings.Define[string](
 	},
 ).AsInstallationIdentity()
 
+// FiscalYearStartMonth is the month the installation's business year begins,
+// 1..12. January is the default, which is what every installation reported by
+// before this existed — so an installation that never touches it sees no
+// change, and no saved report view moves under it.
+//
+// It buckets reports on READ and stores nothing, so changing it re-labels every
+// period report immediately and re-means no stored row. That is the opposite of
+// BaseCurrency, which freezes: a fiscal year is a way of cutting time, not a
+// value anything has already converted against.
+//
+// The one thing it does re-mean is a SAVED report view. A period bucket's text
+// travels out in a derivation handle and binds back as an equality filter
+// (reportperiod.go), so "FY2026/27" in somebody's saved view is matched against
+// what this setting produces today. Move the fiscal start and that view asks
+// for a span of months nobody chose — the report still runs and still looks
+// right. Nothing here can prevent that; it is why the label spells BOTH years
+// rather than one, so at least the answer a reader gets is unambiguous about
+// which twelve months it covers.
+var FiscalYearStartMonth = settings.Define[int](
+	"installation.fiscal_year_start_month",
+	installationSettingsObject,
+	"update",
+	int(time.January),
+	func(month int) error {
+		if month < int(time.January) || month > int(time.December) {
+			return fmt.Errorf("a fiscal year starts in month 1..12, not %d", month)
+		}
+		return nil
+	},
+).AsInstallationIdentity()
+
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
-	return []settings.Definition{Name, Timezone, BaseCurrency, BaseLanguage, SMTPPasswordRef, LicenseTokenRef}
+	return []settings.Definition{
+		Name,
+		Timezone,
+		BaseCurrency,
+		BaseLanguage,
+		FiscalYearStartMonth,
+		SMTPPasswordRef,
+		LicenseTokenRef,
+	}
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a
@@ -189,6 +228,18 @@ func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // installations get today anyway.
 func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.GetTx(ctx, tx, BaseLanguage)
+}
+
+// FiscalYearStartMonthOf resolves the month the installation's business year
+// begins, inside a transaction the caller already holds.
+//
+// GetTx for the same reason BaseLanguageOf uses it: an installation
+// bootstrapped before this setting existed carries no row, and the default is
+// January — the calendar year those installations have always reported by. So
+// an absent row is not a broken installation, it is an older one that agrees
+// with the default.
+func FiscalYearStartMonthOf(ctx context.Context, tx pgx.Tx) (int, error) {
+	return settings.GetTx(ctx, tx, FiscalYearStartMonth)
 }
 
 // BaseLanguageForPrompt resolves the base language for a caller that holds a

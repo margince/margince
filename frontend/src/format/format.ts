@@ -106,6 +106,20 @@ export function formatMoneyCompact(
   }).format(major);
 }
 
+/**
+ * The month's own name in the reader's language, from Intl rather than a table
+ * of our own — a list of twelve month names per locale is a translation file
+ * that goes stale, and the platform already ships them.
+ *
+ * The day is fixed at the 1st and the year is arbitrary: only the month is
+ * rendered, and a month name does not depend on either.
+ */
+export function monthName(month: number, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: "long" }).format(
+    new Date(Date.UTC(2026, month - 1, 1)),
+  );
+}
+
 export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
 }

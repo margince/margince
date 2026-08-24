@@ -16832,6 +16832,21 @@ type InstallationSettings struct {
 	// for one reader keeps that reader's language.
 	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
+	// FiscalYearStartMonth The month the installation's business year begins, 1..12. January (1) is the
+	// default, which is the calendar year every installation reported by before this
+	// setting existed.
+	//
+	// It buckets period reports on READ and stores nothing, so changing it re-labels
+	// every report immediately and re-means no stored row. What it DOES re-mean is a
+	// saved report view: a period bucket's text travels out in a derivation handle and
+	// binds back as an equality filter, so a view saved under one fiscal start asks for
+	// a span of months nobody chose after it moves.
+	//
+	// The label spells both calendar years a non-January year spans — `FY2026/27` — so
+	// a reader can tell which twelve months a bucket covers without knowing the
+	// convention. A January year is not a span and keeps the plain `2026`.
+	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
+
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
 	// it is a deployment fact, so PATCH does not carry it.
@@ -23128,6 +23143,14 @@ type UpdateInstallationSettingsRequest struct {
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
+
+	// FiscalYearStartMonth The month the installation's business year begins, 1..12. Never frozen: it cuts
+	// reports on read and stores nothing.
+	//
+	// Moving it re-labels every period report at once, and re-points any saved report
+	// view whose filter names a period bucket — the report still runs and still looks
+	// right, over a different twelve months.
+	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`

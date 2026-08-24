@@ -77,6 +77,21 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		lang := string(*req.BaseLanguage)
 		patch.BaseLanguage = &lang
 	}
+	if req.FiscalYearStartMonth != nil {
+		// Checked here as well as on the entry, for the same reason the
+		// language is: the contract states the range and the setting states it
+		// too, and neither defers to the other. The generated decoder does NOT
+		// enforce `minimum`/`maximum` — those are documentation to it — so
+		// without this line a 0 or a 13 reaches the entry and comes back as a
+		// generic settings refusal that names no field.
+		if *req.FiscalYearStartMonth < 1 || *req.FiscalYearStartMonth > 12 {
+			httperr.Write(w, r, httperr.Validation(
+				"fiscal_year_start_month", "invalid",
+				"a fiscal year starts in month 1..12"))
+			return
+		}
+		patch.FiscalYearStartMonth = req.FiscalYearStartMonth
+	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -94,12 +109,13 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // changeable: an empty string would render as a reason that says nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
-		Name:               s.Name,
-		Timezone:           s.Timezone,
-		BaseCurrency:       s.BaseCurrency,
-		BaseLanguage:       crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
-		BaseCurrencyLocked: s.BaseCurrencyLocked,
-		MaxUploadBytes:     h.maxUploadBytes,
+		Name:                 s.Name,
+		Timezone:             s.Timezone,
+		BaseCurrency:         s.BaseCurrency,
+		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
+		FiscalYearStartMonth: s.FiscalYearStartMonth,
+		BaseCurrencyLocked:   s.BaseCurrencyLocked,
+		MaxUploadBytes:       h.maxUploadBytes,
 	}
 	if s.BaseCurrencyLockedReason != "" {
 		reason := s.BaseCurrencyLockedReason

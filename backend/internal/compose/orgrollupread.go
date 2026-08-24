@@ -382,9 +382,17 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 // closed deal that has an amount, and an amountless won deal's NULL
 // amount_minor_base is skipped by SUM — an honest 0, not an invented rate.
 func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location) (int64, error) {
-	start, end := currentQuarterBounds(asOf, loc)
+	// The quarter is the installation's FISCAL one. A reader who checks this
+	// figure against the win-loss report by quarter is comparing two answers to
+	// one question, and they have to be cut the same way or the company page
+	// and the report disagree in front of them.
+	fiscalStart, err := identity.FiscalYearStartMonthOf(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+	start, end := currentQuarterBounds(asOf, loc, fiscalStart)
 	var total int64
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT COALESCE(SUM(d.amount_minor_base), 0)::bigint
 		FROM deal d
 		WHERE d.organization_id = ANY($1) AND d.status = 'won' AND d.archived_at IS NULL

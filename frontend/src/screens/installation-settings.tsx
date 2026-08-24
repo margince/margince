@@ -25,7 +25,9 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { ToastRegion, useToast } from "../design-system/toast";
-import { LOCALES, localeNameKey, useT } from "../i18n";
+import { fiscalYearLabel } from "../format/fiscalyear";
+import { monthName } from "../format/format";
+import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import {
   problemFieldErrorsOf,
   problemMessageOf,
@@ -35,17 +37,18 @@ import {
 
 // The installation settings surface (ADR-0090/A135): the organization's name,
 // the IANA zone every reporting period is computed in, the ISO-4217 base
-// currency every roll-up converts to, and the language AI writes the shared
-// record in. Every role reads them — a rep reading amounts benefits from
+// currency every roll-up converts to, the language AI writes the shared record
+// in, and the month its business year begins. Every role reads them — a rep reading amounts benefits from
 // knowing which currency they are in — and only admin/ops may change them, so
 // the facts are READ on the card for everyone and the verb that changes them is
 // refused with a reason for everyone else. Refusing without a reason is the
 // failure mode this avoids: it is indistinguishable from a bug, and a reader
 // cannot act on it either way.
 //
-// FOUR ROWS AND ONE FORM. The card is a list of decisions — what the
+// FIVE ROWS AND ONE FORM. The card is a list of decisions — what the
 // organization is called, when its periods start, which currency every amount
-// is re-expressed in, which language AI writes for the whole team in — so each
+// is re-expressed in, which language AI writes for the whole team in, and when
+// its financial year turns over — so each
 // is a row that shows its own answer, which is what lets a reader audit the
 // installation by travelling one column. The EDITING is one act: the server
 // takes ONE sparse PATCH, so the fields are submitted together with one Save,
@@ -79,6 +82,7 @@ const EDITABLE_FACTS = [
   "timezone",
   "base_currency",
   "base_language",
+  "fiscal_year_start_month",
 ] as const;
 
 // Which fact the reader pressed Edit on. The dialog always edits all of them —
@@ -166,6 +170,35 @@ function languageName(code: string, t: ReturnType<typeof useT>): string {
   return known ? t(localeNameKey(known)) : code;
 }
 
+// The fiscal-year row's own answer: the month it starts, and what a report will
+// then be labelled. "April — FY2026/27" rather than "4", because the number
+// answers a question nobody asked; the admin is deciding what their reports
+// will SAY, and this is the only place they see it before saving.
+//
+// The example year is a PARAMETER rather than `new Date()` read in here. The
+// caller holds the clock, so a test can state which year it is asserting
+// against — and the daily fe-clock-drift lane, which runs this suite 200 days
+// ahead, does not turn a correct string into a failure every new year.
+//
+// A month outside 1..12 renders as itself. Reachable the same way a stray
+// language code is: the contract and the setting both refuse it, but a row
+// written straight into the settings table can hold anything, and a row showing
+// the raw value is honest where a blank one is not.
+// The twelve months a fiscal year may start in, as the picker offers them.
+// Derived rather than typed out, so the list cannot go short of twelve.
+const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
+
+export function fiscalYearStartSummary(
+  month: number,
+  locale: Locale,
+  exampleYear: number,
+): string {
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return String(month);
+  }
+  return `${monthName(month, locale)} — ${fiscalYearLabel(month, exampleYear)}`;
+}
+
 // A frozen currency is frozen for an admin too, so the lock reason replaces the
 // advice about what to type — that advice is about a value nobody can set. The
 // row and the field inside the dialog say the same thing, from one expression,
@@ -192,6 +225,7 @@ function InstallationSettingsForm({
   canManage: boolean;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
   const [editing, setEditing] = useState<EditedFact | null>(null);
   // The save's only visible answer was the button going disabled, because the
@@ -334,6 +368,23 @@ function InstallationSettingsForm({
               t("installationSettings.baseLanguage"),
             )}
           />
+          <SettingRow
+            label={t("installationSettings.fiscalYearStart")}
+            description={t("installationSettings.fiscalYearStartHint")}
+            // The month's name and the span it produces, because the number
+            // alone answers the wrong question: an admin is deciding what a
+            // report will SAY, and "April — FY2026/27" shows that where "4"
+            // makes them work it out.
+            value={fiscalYearStartSummary(
+              settings.fiscal_year_start_month,
+              locale,
+              new Date().getFullYear(),
+            )}
+            control={editVerb(
+              "fiscal_year_start_month",
+              t("installationSettings.fiscalYearStart"),
+            )}
+          />
         </SettingList>
         {editing !== null && (
           <InstallationProfileDialog
@@ -394,6 +445,7 @@ function InstallationProfileDialog({
   onSubmit: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
   // Focus lands on the field whose Edit was pressed — programmatic rather than
   // the `autoFocus` attribute, the same way the sign-in page does it, so the
@@ -519,6 +571,41 @@ function InstallationProfileDialog({
                 const picked = LOCALES.find((locale) => locale === next);
                 if (picked) {
                   onChange({ ...draft, base_language: picked });
+                }
+              }}
+            />
+          )}
+        </Field>
+
+        <Field
+          label={t("installationSettings.fiscalYearStart")}
+          hint={t("installationSettings.fiscalYearStartHint")}
+          error={refused.get("fiscal_year_start_month")}
+        >
+          {(control) => (
+            <Select
+              {...control}
+              aria-describedby={describe(control)}
+              value={String(draft.fiscal_year_start_month)}
+              disabled={!canManage}
+              // Twelve months, each labelled with what a report would then be
+              // called — "April — FY2026/27". A bare number would make the
+              // admin work out the consequence of every option; this states it.
+              options={MONTHS.map((month) => ({
+                value: String(month),
+                label: fiscalYearStartSummary(
+                  month,
+                  locale,
+                  new Date().getFullYear(),
+                ),
+              }))}
+              // `Select` reports a string. Narrowed back through MONTHS rather
+              // than parsed, so an answer the control never offered cannot
+              // reach the draft.
+              onChange={(next) => {
+                const picked = MONTHS.find((month) => String(month) === next);
+                if (picked) {
+                  onChange({ ...draft, fiscal_year_start_month: picked });
                 }
               }}
             />

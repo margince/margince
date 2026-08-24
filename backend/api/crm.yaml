@@ -15511,7 +15511,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, base_currency_locked, max_upload_bytes]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, base_currency_locked, max_upload_bytes]
       properties:
         name:
           type: string
@@ -15535,6 +15535,24 @@ components:
             It does not govern everything a model writes: correspondence keeps the language of
             the correspondence, so a German thread still gets a German reply, and a brief cached
             for one reader keeps that reader's language.
+        fiscal_year_start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: |
+            The month the installation's business year begins, 1..12. January (1) is the
+            default, which is the calendar year every installation reported by before this
+            setting existed.
+
+            It buckets period reports on READ and stores nothing, so changing it re-labels
+            every report immediately and re-means no stored row. What it DOES re-mean is a
+            saved report view: a period bucket's text travels out in a derivation handle and
+            binds back as an equality filter, so a view saved under one fiscal start asks for
+            a span of months nobody chose after it moves.
+
+            The label spells both calendar years a non-January year spans — `FY2026/27` — so
+            a reader can tell which twelve months a bucket covers without knowing the
+            convention. A January year is not a span and keeps the plain `2026`.
         base_currency_locked:
           type: boolean
           description: |
@@ -15575,6 +15593,17 @@ components:
           description: |
             The language shared AI writing is written in. Never frozen: changing it re-means
             nothing already written, so artifacts stay in the language they were written in.
+        fiscal_year_start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: |
+            The month the installation's business year begins, 1..12. Never frozen: it cuts
+            reports on read and stores nothing.
+
+            Moving it re-labels every period report at once, and re-points any saved report
+            view whose filter names a period bucket — the report still runs and still looks
+            right, over a different twelve months.
 
     CaptureActivityResponse:
       type: object
