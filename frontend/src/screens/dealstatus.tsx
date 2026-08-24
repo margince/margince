@@ -9,8 +9,15 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { useDealSignals } from "./dealsignals";
 import { PersonMeetingBrief } from "./persondrawers";
-import { SentenceList, WrittenBy } from "./record360";
+import {
+  SentenceList,
+  SignalStrip,
+  type StandingTone,
+  VerdictHead,
+  WrittenBy,
+} from "./record360";
 import "./dealstatus.css";
 
 // Deal360 — the deal page's written briefing, read before a call.
@@ -37,6 +44,16 @@ const VERDICT_LABELS: Record<string, MessageKey> = {
   drifting: "deal360.verdict.drifting",
   blocked: "deal360.verdict.blocked",
   cold: "deal360.verdict.cold",
+};
+
+// How loud each standing is. `live` is untoned deliberately: a card that
+// colours every state has no colour left for the one that needs it, and a
+// healthy deal shouting is how a reader learns to stop looking at the strip.
+const VERDICT_TONE: Record<string, StandingTone> = {
+  live: undefined,
+  drifting: "warn",
+  blocked: "danger",
+  cold: "danger",
 };
 
 // The card's read, shared. Deal360 draws the briefing from it and the email
@@ -121,22 +138,52 @@ function Briefing({
       navigate({ screen: "contacts", id: entityId });
     }
   };
+  // The findings ride the coverage card's own query, so this costs no second
+  // request and the two cannot disagree about what is wrong with the deal.
+  const coverage = useDealSignals(dealId, true);
   return (
     <>
-      <Section section={card.story} onOpenRecord={open} />
-      <Section
-        heading={t("deal360.blocker")}
-        section={card.blocker}
-        onOpenRecord={open}
-        tone="warn"
-      />
-      <Section
-        heading={t("deal360.buyer")}
-        section={card.buyer}
-        onOpenRecord={open}
-      />
-      {card.verdict ? <Verdict verdict={card.verdict} onOpen={open} /> : null}
+      {/* The call, first and alone. It used to sit fourth, under three
+          paragraphs — which meant the one word a reader scanning thirty deals
+          needs was the last thing they reached. */}
+      {card.verdict ? (
+        <VerdictHead
+          label={verdictLabel(card.verdict.standing, t)}
+          tone={VERDICT_TONE[card.verdict.standing]}
+          because={card.verdict.because.sentences[0]?.text}
+        />
+      ) : null}
+      <SignalStrip signals={coverage.signals} />
       {card.next ? <Move dealId={dealId} move={card.next} /> : null}
+      {/* The reading, behind a fold. Every word of it is still here and still
+          cited; what changed is that it no longer stands between the reader
+          and the call. A rep working THIS deal opens it; a rep scanning for
+          the deal that needs them does not have to. */}
+      <details className="deal360-fold">
+        <summary>{t("deal360.readFull")}</summary>
+        <Section section={card.story} onOpenRecord={open} />
+        <Section
+          heading={t("deal360.blocker")}
+          section={card.blocker}
+          onOpenRecord={open}
+          tone="warn"
+        />
+        <Section
+          heading={t("deal360.buyer")}
+          section={card.buyer}
+          onOpenRecord={open}
+        />
+        {/* The rest of the verdict's reasoning. Its first line is already in
+            the head above, so this renders only what the head did not. */}
+        {card.verdict && card.verdict.because.sentences.length > 1 ? (
+          <Section
+            section={{
+              sentences: card.verdict.because.sentences.slice(1),
+            }}
+            onOpenRecord={open}
+          />
+        ) : null}
+      </details>
       <PanelBody>
         <div className="deal360-foot">
           <WrittenBy by={card.generated_by} />
@@ -179,31 +226,17 @@ function Section({
   );
 }
 
-function Verdict({
-  verdict,
-  onOpen,
-}: Readonly<{
-  verdict: NonNullable<DealStatusCard["verdict"]>;
-  onOpen: (entityType: string, entityId: string) => void;
-}>) {
-  const t = useT();
-  const label = VERDICT_LABELS[verdict.standing];
-  return (
-    <PanelBody>
-      <div className="deal360-verdict-head">
-        <p className="t-caption">{t("deal360.verdict")}</p>
-        {label ? (
-          <span className={`deal360-standing deal360-${verdict.standing}`}>
-            {t(label)}
-          </span>
-        ) : null}
-      </div>
-      <SentenceList
-        sentences={verdict.because.sentences}
-        onOpenRecord={onOpen}
-      />
-    </PanelBody>
-  );
+// verdictLabel names a standing for a reader. A word this build does not know
+// renders as itself rather than vanishing: the reader has learned four, and a
+// fifth arriving from a newer server is still a call the card must show.
+function verdictLabel(
+  standing: string,
+  t: (key: MessageKey) => string,
+): string {
+  const key = Object.hasOwn(VERDICT_LABELS, standing)
+    ? VERDICT_LABELS[standing]
+    : undefined;
+  return key ? t(key) : standing;
 }
 
 // activityIdOf reads the one operand the meeting-brief verb takes. The

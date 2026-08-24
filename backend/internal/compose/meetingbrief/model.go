@@ -28,6 +28,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -50,7 +51,6 @@ Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attend
 Write every sentence from the summary and from nothing else. Never invent a fact, a name, a date or a number. If the summary does not say it, do not write it.
 Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a reading you draw from it — allowed only in risks and deal_state. A RECOMMENDATION is one concrete move — allowed only in goal and talking_points, at most three in the whole brief.
 Cite the ids the summary gave you, in evidence only. An id must never appear in the text a reader sees.
-Voice: write like a calm, capable colleague. Lead with the result. One idea per sentence. Short sentences. Use contractions. Address the reader as "you".
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
 `
@@ -61,7 +61,8 @@ Say plainly when something is uncertain or missing rather than filling the gap. 
 // instead — which json.Marshal emitted as "Language", so the field the prompt
 // named was never actually present.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("meeting summary")
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("meeting summary")
 }
 
 // maxRecommendations bounds the advice. Three moves are a plan a rep can hold

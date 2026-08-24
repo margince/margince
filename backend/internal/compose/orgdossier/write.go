@@ -24,6 +24,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -46,7 +47,8 @@ Write plainly, one claim per sentence, and never open two sentences with the com
 // shared language rather than the language the crawled site happened to be in,
 // which is what an unruled prompt would have followed.
 func dossierSystemFor(fence promptfence.Fence, lang string) string {
-	return dossierSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
+	return dossierSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("company summary")
 }
 
 // DossierRequest builds the one-shot call. Exported so the AI cert case

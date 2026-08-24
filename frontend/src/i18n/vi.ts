@@ -4287,7 +4287,6 @@ export const vi = {
     "Điều đã xảy ra, điều đang cản trở, và điều cần nói tiếp theo.",
   "deal360.blocker": "Điều đang cản trở",
   "deal360.buyer": "Điều người mua muốn",
-  "deal360.verdict": "Giao dịch đang ở đâu",
   "deal360.verdict.live": "Đang chạy",
   "deal360.verdict.drifting": "Đang nguội dần",
   "deal360.verdict.blocked": "Bị chặn",
@@ -4299,6 +4298,7 @@ export const vi = {
   "dealmail.reply": "Soạn thư trả lời",
   "dealmail.send": "Gửi email",
   "deal360.rewrite": "Viết lại",
+  "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
   "deal360.createTask": "Thêm việc này",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "deal360.unreadable":

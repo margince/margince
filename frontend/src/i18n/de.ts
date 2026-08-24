@@ -4325,7 +4325,6 @@ export const de = {
     "Was passiert ist, was den Deal aufhält, und was als Nächstes zu sagen ist.",
   "deal360.blocker": "Was den Deal aufhält",
   "deal360.buyer": "Was der Käufer will",
-  "deal360.verdict": "Wie es um den Deal steht",
   "deal360.verdict.live": "Aktiv",
   "deal360.verdict.drifting": "Schläft ein",
   "deal360.verdict.blocked": "Blockiert",
@@ -4338,6 +4337,7 @@ export const de = {
   "dealmail.reply": "Antwort entwerfen",
   "dealmail.send": "E-Mail senden",
   "deal360.rewrite": "Neu schreiben",
+  "deal360.readFull": "Vollständige Einschätzung lesen",
   "deal360.createTask": "Aufgabe anlegen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
   "deal360.unreadable":

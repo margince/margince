@@ -60,3 +60,16 @@
 .deal360-lead {
   margin-bottom: var(--space-4);
 }
+
+/* The full briefing, folded. Closed by default: the head and the strip above
+   answer the scanning read, and the prose is for the reader who wants it. */
+.deal360-fold > summary {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+  color: var(--textMuted);
+  font-size: var(--fs-meta);
+}
+
+.deal360-fold > summary:hover {
+  color: var(--textPrimary);
+}
