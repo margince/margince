@@ -169,6 +169,10 @@ declare_lane_budget() {
 # would. That is a different constraint from dev.sh's bucket_for_slug, which
 # folds the other way for S3 — so the two expressions stay separate rather than
 # being unified into one helper that would be wrong for both.
+# An answer of "" means the shared `margince_test`, which is also the right
+# answer when the question cannot be asked: a tree with no git (a source tarball,
+# a container that copied the files in) has no worktrees to collide over, so
+# falling back to the shared name is correct rather than merely quiet.
 _testdb_worktree_slug() {
   local gitdir commondir
   gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || return 0
