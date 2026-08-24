@@ -178,30 +178,56 @@
  * items are different lengths — a plate that resized on every verdict would
  * move the verbs out from under the pointer.
  */
+/*
+ * The deck card wears PANEL CHROME, in the AI hue.
+ *
+ * It is the same shape as the "Today with …" card on a person record (which is
+ * `Panel tone="accent"`, person360.css): a card on the page's own ground, a
+ * tinted header band carrying the chips, the headline at reading size under it,
+ * and a footer band the verbs stand in. Tinted end to end it read as a
+ * lavender slab — the tint was doing the work of a header band across 300px of
+ * card — and on a page of white panels that is the one card that looks like it
+ * came from another product.
+ *
+ * What does NOT change is the dashed edge. `.staging-card`'s dashes are the
+ * product's one signal that what is on a surface is PROPOSED rather than
+ * recorded (design-language §5c), and a solid border here would draw a draft
+ * with the same edge as a fact. So the hue and the dash stay; the tint moves
+ * into the band where a card's own chrome belongs.
+ */
 .dcard[data-layout="deck"] {
   padding: var(--space-5);
   min-height: 260px;
   display: flex;
   flex-direction: column;
-  /*
-   * The staged tint, composited over an OPAQUE surface.
-   *
-   * `.staging-card`'s ground is `--aiLight`, an 8% indigo — which is right, and
-   * is the §2 AI hue the whole product uses for agent-authored surfaces rather
-   * than the Ledger Green accent. What is not right is what shows THROUGH it: in
-   * the deck there are two peeked card edges behind the live one, and 8% indigo
-   * over `--bgCard` at 45–70% opacity turned the ground into a grey-lavender
-   * panel that belongs to no palette. Reported as an off-palette card in light
-   * theme, invisible in dark, which is the shape of a transparency bug rather
-   * than a colour one.
-   *
-   * The gradient is the tint as its own layer, over `--bgElevated` — so the card
-   * reads as the same indigo-tinted paper a row does, and nothing behind it
-   * contributes. Two colour stops of one value is a flat fill; there is no
-   * gradient here beyond the mechanism.
-   */
-  background:
-    linear-gradient(var(--aiLight), var(--aiLight)), var(--bgElevated);
+  background: var(--bgElevated);
+  /* The two bands are full-bleed by negative margin, so the card has to clip
+     them back to its own radius. */
+  overflow: hidden;
+}
+
+/* The header band: the chips line, edge to edge, on the staged tint. The
+   negative inline margins are how a band inside a padded card reaches the
+   card's edges — the same distinction `panel.css` draws, where a rule dividing
+   the CARD from its content runs edge to edge and a rule inside the content
+   stops at the padding. */
+.dcard[data-layout="deck"] > .dcard-meta {
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  min-height: 48px;
+  background: var(--aiLight);
+  border-bottom: 1px solid var(--aiMed);
+}
+
+/* The headline at the same size and weight the person record's moment card sets
+   it — 20px at 650, one notch above `.t-h2` — because both cards exist to be
+   landed on and read rather than scanned past. Stated here rather than shared:
+   the two live in different tiers (a design-system primitive and a screen), and
+   a token for "the moment headline" would be a third place to look. */
+.dcard[data-layout="deck"] .approval-headline {
+  font-size: var(--fs-h2);
+  font-weight: 650;
+  line-height: var(--lh-snug);
 }
 
 /*
@@ -217,14 +243,22 @@
   max-inline-size: 72ch;
 }
 
-/* The verbs go to the FOOT of the deck card, not under the last line of
-   content: one card at a time means the reader's hand returns to the same place
-   for every decision. The rule above them separates reading from answering —
-   in the AI edge colour, because it is a line inside a staged card rather than
-   a page-level divider. */
+/* The evidence keeps its distance from the footer rule: without it the last chip
+   sits on the band's hairline, which reads as the chip belonging to the verbs.
+   Empty it collapses (`.dcard-evidence:empty` above), so this adds no gap to a
+   card with nothing to show. */
+.dcard[data-layout="deck"] .dcard-evidence {
+  margin-bottom: var(--space-4);
+}
+
+/* The footer band: the verbs, at the FOOT of the card rather than under the last
+   line of content, because one card at a time means the reader's hand returns to
+   the same place for every decision. Full-bleed like the header, and its rule is
+   the AI edge colour — the same band the moment card's footer draws in the
+   accent. */
 .dcard[data-layout="deck"] .dcard-verbs {
-  margin-top: auto;
-  padding-top: var(--space-4);
+  margin: auto calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--aiMed);
 }
 
