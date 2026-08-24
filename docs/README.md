@@ -1,5 +1,9 @@
 # Margince documentation
 
+**Using the product rather than changing it?** The walkthroughs for a rep or a
+delivery lead live in [`user-guide/`](../user-guide/README.md). This tree is for
+the person changing the code.
+
 Documentation for building and operating **Margince** — a governed, multi-tenant CRM (a Go `/v1` API
 backend; the Vite/React web UI ships separately). The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
 **how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*, plus

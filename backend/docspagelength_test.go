@@ -60,6 +60,10 @@ func docsPageCeiling(rel string) int {
 		return 350
 	case strings.HasPrefix(rel, "docs/explanation/"):
 		return 450
+	// A user guide is a narrative followed once, so it runs longer than a how-to
+	// that is consulted a field at a time — the same reason an explanation does.
+	case strings.HasPrefix(rel, "user-guide/"):
+		return 450
 	case strings.HasPrefix(rel, "docs/principles/"):
 		return 250
 	default:
@@ -159,12 +163,30 @@ func readDocsWaivers(t *testing.T) map[string]bool {
 	return waived
 }
 
-// handWrittenDocsPages walks docs/ for markdown, derived from the tree so a new
-// page is covered the moment it lands.
+// documentedTrees are the prose trees this budget covers.
+//
+// user-guide/ is here and not only docs/ because otherwise "move it out of docs/"
+// is a way PAST the budget rather than a change of audience — and this repository
+// has just moved two pages that way for a good reason. A tree of prose is in scope
+// wherever it sits.
+var documentedTrees = []string{"docs", "user-guide"}
+
+// handWrittenDocsPages walks the documented trees for markdown, derived from the
+// tree so a new page is covered the moment it lands.
 func handWrittenDocsPages(t *testing.T) []string {
 	t.Helper()
 	var pages []string
-	root := filepath.Join(docsTreeRoot, "docs")
+	for _, tree := range documentedTrees {
+		pages = append(pages, handWrittenPagesUnder(t, tree)...)
+	}
+	sort.Strings(pages)
+	return pages
+}
+
+func handWrittenPagesUnder(t *testing.T, tree string) []string {
+	t.Helper()
+	var pages []string
+	root := filepath.Join(docsTreeRoot, tree)
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -196,7 +218,6 @@ func handWrittenDocsPages(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("walking %s: %v", root, err)
 	}
-	sort.Strings(pages)
 	return pages
 }
 
@@ -212,8 +233,8 @@ func docsPageLineCount(t *testing.T, rel string) int {
 func TestEveryHandWrittenDocsPageFitsItsBudget(t *testing.T) {
 	pages := handWrittenDocsPages(t)
 	if len(pages) == 0 {
-		t.Fatal("found no hand-written page under docs/ — this gate would pass by having " +
-			"nothing to check, which is the one way it must not break")
+		t.Fatal("found no hand-written page in any documented tree — this gate would pass by " +
+			"having nothing to check, which is the one way it must not break")
 	}
 	waived := readDocsWaivers(t)
 

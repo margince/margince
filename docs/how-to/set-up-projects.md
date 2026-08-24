@@ -5,8 +5,10 @@ code, no API. It says who can do what with a project, how to choose keys, when
 to create a project, how visibility and sharing work, and what the fixed
 vocabularies are. The things you *cannot* do from the UI are listed at the end.
 
-For the day-to-day page — the project page section by section, and how email
-finds its project — see [run-a-project.md](run-a-project.md).
+New to projects? [Walk one from the deal to close](../../user-guide/run-your-first-project.md)
+first; this page is the reference you come back to. For the day-to-day page — the
+project page section by section, and how email finds its project — see
+[run-a-project.md](run-a-project.md).
 
 ## What a project is in Margince
 
