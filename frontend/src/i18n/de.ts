@@ -4464,6 +4464,8 @@ export const de = {
   "coverage.title": "Abdeckung",
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
+  "coverage.seatsWithheld":
+    "Sie können nicht sehen, wer an diesem Deal beteiligt ist.",
   "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
   "coverage.clear":
     "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",

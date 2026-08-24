@@ -4422,6 +4422,7 @@ export const vi = {
   "coverage.title": "Độ phủ",
   "coverage.engaged": "Đang trao đổi",
   "coverage.quiet": "Chưa có trao đổi hai chiều",
+  "coverage.seatsWithheld": "Bạn không thể xem ai tham gia thương vụ này.",
   "coverage.seatWithheld": "Một liên hệ bạn không thể xem",
   "coverage.clear":
     "Không có gì đáng lưu ý — deal này qua mọi kiểm tra độ phủ.",

@@ -154,7 +154,16 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
   // testing the risk list first would render "this deal passes every coverage
   // check" over a check that never ran. The server says which of the two
   // happened; the card must not decide for itself.
-  const withheld = (query.data?.sections_omitted ?? []).includes("risks");
+  const omitted = query.data?.sections_omitted ?? [];
+  const withheld = omitted.includes("risks");
+  // Read from the payload, not inferred from the seat list being empty: an
+  // empty list would render "nobody is on this deal" over a list the server
+  // never sent, which is the mistake the risks comment above exists to
+  // prevent. The server withholds all three sections together today, so this
+  // tracks `withheld` in practice — it is asked separately because the
+  // contract lets them differ and this card must not be the thing that breaks
+  // if they ever do.
+  const seatsWithheld = omitted.includes("stakeholders");
 
   return (
     <Card className="net-card" title={t("coverage.title")}>
@@ -178,7 +187,10 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
           was. The seats live here because coverage already knows which of them
           is engaged, and a name beside a finding about single-threading is the
           thing that makes the finding actionable. */}
-      {!overlay && seats.length > 0 && (
+      {!overlay && query.isSuccess && seatsWithheld && (
+        <EmptyState>{t("coverage.seatsWithheld")}</EmptyState>
+      )}
+      {!overlay && !seatsWithheld && seats.length > 0 && (
         <ul className="net-seats">
           {seats.map((seat) => (
             <li key={seat.person_id}>

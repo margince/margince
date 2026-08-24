@@ -4516,6 +4516,7 @@ export const en = {
   "coverage.title": "Coverage",
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
+  "coverage.seatsWithheld": "You cannot see who is on this deal.",
   "coverage.seatWithheld": "A contact you cannot read",
   "coverage.clear": "Nothing flagged — this deal passes every coverage check.",
   "coverage.withheld":
