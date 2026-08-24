@@ -162,6 +162,13 @@ func roleWord(role string) string {
 }
 
 func move(action, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {
+	// An empty object for a verb that takes no operand, never a nil map. The
+	// contract types `arguments` as an object, and a nil map behind a non-nil
+	// pointer serializes as `"arguments": null` — off-contract, and a client
+	// reading it as an object gets null where it indexes.
+	if args == nil {
+		args = map[string]any{}
+	}
 	out := crmcontracts.DealStatusCardMove{Action: action, Reason: reason, Arguments: &args}
 	out.Evidence = append([]crmcontracts.DealNextBestActionEvidence{}, evidence...)
 	return out

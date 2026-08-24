@@ -159,6 +159,28 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 	}
 }
 
+// The hold is on "never touched", NOT on "not touched lately", and the two
+// come apart at exactly the deal these rules matter most for: one that went
+// quiet months ago. Engagement is a 90-day window, so a deal last touched 120
+// days ago has EverTouched true and no engaged seat — both findings are real
+// and both must still be reported.
+func TestALongSilentDealStillReportsItsEngagementFindings(t *testing.T) {
+	old := DealCoverage{
+		DealID: ids.NewV7(), EverTouched: true, LastTouchAt: daysAgo(120),
+		Status: dealStatusOpen,
+		Stakeholders: []deals.DealStakeholder{
+			seat(false, roleChampion), seat(false, "user"),
+		},
+	}
+	got := kinds(foldRisks(old, testNow))
+	if !got[RiskSingleThreadedTheirs] {
+		t.Error("a deal silent for 120 days is not flagged single-threaded")
+	}
+	if !got[RiskCoverageGap] {
+		t.Error("a deal silent for 120 days is not flagged for its quiet champion")
+	}
+}
+
 func TestADealWithNoSeatsAtAllRaisesNoCoverageGap(t *testing.T) {
 	// An empty deal is early, not uncovered. Flagging it would put a risk chip
 	// on every deal the moment it is created, and a warning that is always on

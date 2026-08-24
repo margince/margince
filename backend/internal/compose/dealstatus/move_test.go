@@ -4,6 +4,8 @@
 package dealstatus
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -335,5 +337,29 @@ func TestADealWithNoSeatsSaysNothingItCannotKnow(t *testing.T) {
 
 	if mv.Action == ActionDraftEmail {
 		t.Error("the card advised writing an email on a deal with nobody to write to")
+	}
+}
+
+// `arguments` is typed as an object in the contract, so a move that takes no
+// operand ships an empty one.
+//
+// Asserted through the WIRE, not the Go value: a nil map behind a non-nil
+// pointer is invisible in Go — `mv.Arguments != nil` passes — and only
+// becomes `"arguments": null` when it is marshalled. A client that reads the
+// field as an object gets null where it indexes.
+func TestAMoveWithNoOperandShipsAnEmptyObjectNotNull(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+		{Role: "champion", Name: "Roland Martinez"},
+	}}
+
+	encoded, err := json.Marshal(decideMove(f))
+	if err != nil {
+		t.Fatalf("marshalling the move: %v", err)
+	}
+	if bytes.Contains(encoded, []byte(`"arguments":null`)) {
+		t.Errorf("the move serialized arguments as null, which the contract types as an object: %s", encoded)
+	}
+	if !bytes.Contains(encoded, []byte(`"arguments":{}`)) {
+		t.Errorf("a move with no operand did not ship an empty object: %s", encoded)
 	}
 }
