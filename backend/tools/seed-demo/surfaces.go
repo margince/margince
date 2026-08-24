@@ -31,11 +31,14 @@ func seedSurfaces(c *client, seats *sessions, cfg demoConfig, refs pipelineRefs,
 	}{
 		{"tags", func() (int, error) { return seedTags(c, refs, plan, mode) }},
 		{"lists", func() (int, error) { return seedLists(c, refs, mode) }},
-		{"projects", func() (int, error) { return seedProjects(c, refs, plan, mode) }},
-		// After projects, and reading them back rather than taking their ids
-		// from the step above: a re-run creates no project, so a pass that
-		// staffed only what it had just created would leave every earlier
-		// project empty forever.
+		// Projects themselves are NOT here — they are created earlier, before
+		// seedActivities, because an activity links to the project it was
+		// about and cannot link to a row that does not exist yet.
+		//
+		// Staffing them stays here, and reads them back rather than taking
+		// ids from the pass that made them: a re-run creates no project, so a
+		// pass that staffed only what it had just created would leave every
+		// earlier project empty forever.
 		{"project stakeholders", func() (int, error) { return seedProjectStakeholders(c, mode) }},
 		{"quotas", func() (int, error) { return seedQuotas(c, cfg, refs, mode) }},
 	} {
@@ -211,149 +214,6 @@ func seedLists(c *client, refs pipelineRefs, mode runMode) (int, error) {
 // the product's own state rather than a hole in the seeder. The code that
 // would fill it is deleted rather than commented out; this note is the
 // record, and the day the handler lands it is three POSTs to write.
-
-// seedProjects files the delivery work a customer's won deal turned into.
-//
-// A project is born in its first phase and ADVANCED, like a deal: the phase a
-// project is in is the record of what happened to it, not a column you can be
-// created in.
-func seedProjects(c *client, refs pipelineRefs, plan map[string]profile, mode runMode) (int, error) {
-	created := 0
-	existing, err := projectIndex(c, mode)
-	if err != nil {
-		return 0, err
-	}
-	for _, domain := range sortedDomains(plan) {
-		p := plan[domain]
-		if p.Pinned || p.Project == "" {
-			continue
-		}
-		orgID, ok := refs.orgsByDom[domain]
-		if !ok {
-			continue
-		}
-		name := projectNameFor(localeFor(domain), refs.orgNameByID[orgID])
-		index := projectIndexKey(orgID, name)
-		if existing[index] {
-			continue
-		}
-		// Claimed in the SAME map the snapshot filled, because the index is no
-		// longer unique per plan entry: two domains that resolve to one
-		// organization derive one name, and a snapshot taken before the loop
-		// cannot see the project the loop itself just created. The old key was
-		// per-domain and could not collide, so this is the cost of indexing by
-		// what the server leaves us.
-		existing[index] = true
-		if mode == modeDryRun {
-			created++
-			continue
-		}
-		body := projectCreateBody(orgID, name, refs.date(-(30 + hashIndex("projstart:"+domain, 180))))
-		if owner, ok := refs.usersByRef[refs.ownerRefByDomain[domain]]; ok {
-			body["owner_id"] = owner
-		}
-		var out struct {
-			ID string `json:"id"`
-		}
-		if err := c.post("/v1/projects", body, &out); err != nil {
-			if _, conflict := conflictingID(err); conflict {
-				continue
-			}
-			return created, fmt.Errorf("project for %s: %w", domain, err)
-		}
-		created++
-		if err := advanceProject(c, out.ID, p.Project, domain); err != nil {
-			return created, err
-		}
-	}
-	return created, nil
-}
-
-// projectPhaseOrder is the sequence a project walks. A phase is reached by
-// stepping through the ones before it, so the history reads as work rather
-// than as an assertion.
-var projectPhaseOrder = []string{"initiative", "pursuing", "delivering", "closed"}
-
-func advanceProject(c *client, projectID, want, domain string) error {
-	for _, phase := range projectPhaseOrder {
-		body := jsonBody{"to_phase": phase}
-		if phase == "closed" {
-			// Closing needs a reason, the same way losing a deal does.
-			body["reason"] = "Abgeschlossen und uebergeben"
-		}
-		if err := c.post("/v1/projects/"+projectID+"/advance", body, nil); err != nil && !isConflict(err) {
-			return fmt.Errorf("advancing %s to %s: %w", domain, phase, err)
-		}
-		if phase == want {
-			return nil
-		}
-	}
-	return nil
-}
-
-func projectNameFor(locale docLocale, company string) string {
-	switch locale {
-	case localeVI:
-		return company + " — Trien khai"
-	case localeEN:
-		return company + " — Rollout"
-	default:
-		return company + " — Einführung"
-	}
-}
-
-// projectCreateBody is the create payload, in one place so what it does NOT
-// carry is visible: no "key". The server mints a project's key from its name and
-// refuses a caller who sends one (422 read_only, projects/keymint.go) — the key
-// is the token a person types in a subject line to file mail under a project, so
-// it is not a demo's to choose.
-//
-// Nothing else may be added loosely either: this contract takes extra body
-// properties as CUSTOM FIELD values, so a stray key is not ignored here, it is
-// data. Every field below is one the contract declares.
-func projectCreateBody(orgID, name, startedAt string) jsonBody {
-	return jsonBody{
-		"name":            name,
-		"organization_id": orgID,
-		"source":          seedSource,
-		"started_at":      startedAt,
-	}
-}
-
-// projectIndexKey identifies a seeded project by what the seeder still controls.
-//
-// Convergence used to ask "does a project with MY key exist", which is a
-// question a caller who no longer mints the key cannot ask. Organization plus
-// name is the pair the seeder derives deterministically (projectNameFor over the
-// company name), so a second run recognises its own work and creates nothing —
-// and two companies with the same project name stay two projects.
-func projectIndexKey(orgID, name string) string {
-	return orgID + "\x00" + name
-}
-
-func projectIndex(c *client, mode runMode) (map[string]bool, error) {
-	out := map[string]bool{}
-	if mode == modeDryRun {
-		return out, nil
-	}
-	err := c.getAll("/v1/projects", nil, func(raw json.RawMessage) error {
-		var rows []struct {
-			Name           string `json:"name"`
-			OrganizationID string `json:"organization_id"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			out[projectIndexKey(row.OrganizationID, row.Name)] = true
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("listing projects: %w", err)
-	}
-	return out, nil
-}
 
 // seedQuotas gives every seller a target for the current quarter, so the
 // attainment the product computes from closed-won deals has something to be a

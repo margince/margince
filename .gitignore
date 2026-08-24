@@ -176,3 +176,4 @@ workspace/
 /backend/tools/gen-perfdoc/gen-perfdoc.exe
 /backend/tools/contract-overlay/contract-overlay
 /backend/tools/contract-overlay/contract-overlay.exe
+/seed-demo

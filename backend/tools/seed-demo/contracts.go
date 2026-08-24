@@ -46,7 +46,7 @@ func seedContracts(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (
 		if successors[contract.Ref] {
 			continue
 		}
-		id, isNew, err := ensureContract(c, contract, refs, mode)
+		id, isNew, err := ensureContract(c, cfg, contract, refs, mode)
 		if err != nil {
 			return created, err
 		}
@@ -68,7 +68,7 @@ func seedContracts(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (
 	return created, nil
 }
 
-func ensureContract(c *client, contract demoContract, refs pipelineRefs, mode runMode) (id string, isNew bool, err error) {
+func ensureContract(c *client, cfg demoConfig, contract demoContract, refs pipelineRefs, mode runMode) (id string, isNew bool, err error) {
 	orgID, ok := refs.orgsByDom[strings.ToLower(contract.Company)]
 	if !ok {
 		return "", false, fmt.Errorf("contract %s names company %q, which is not seeded", contract.Ref, contract.Company)
@@ -77,11 +77,27 @@ func ensureContract(c *client, contract demoContract, refs pipelineRefs, mode ru
 		return "", true, nil
 	}
 
-	existing, err := findContract(c, orgID, contract.Title)
+	existing, hasDeal, err := findContract(c, orgID, contract.Title)
 	if err != nil {
 		return "", false, err
 	}
 	if existing != "" {
+		// Converging means repairing, not only skipping. A contract seeded
+		// before demoContract.Deal was read by anything carries no deal, and
+		// a run that just walked past it would leave every earlier
+		// installation detached forever — which is also what keeps its PDF
+		// out of a deal room.
+		if contract.Deal != "" && !hasDeal {
+			dealID, err := dealIDFor(c, cfg, refs, contract.Deal)
+			if err != nil {
+				return "", false, fmt.Errorf("contract %s: %w", contract.Ref, err)
+			}
+			if dealID != "" {
+				if err := c.patch("/v1/contracts/"+existing, jsonBody{"deal_id": dealID}, nil); err != nil {
+					return "", false, fmt.Errorf("attaching contract %s to its deal: %w", contract.Ref, err)
+				}
+			}
+		}
 		return existing, false, nil
 	}
 
@@ -89,6 +105,18 @@ func ensureContract(c *client, contract demoContract, refs pipelineRefs, mode ru
 		"organization_id": orgID,
 		"title":           contract.Title,
 		"auto_renew":      contract.AutoRenew,
+	}
+	// The deal this agreement came out of. demoContract.Deal has been declared
+	// since the type was written and read by nothing, so every contract sat
+	// unattached to the opportunity that won it — which also put the contract
+	// PDFs out of reach of a deal room, since a room's documents must be
+	// attachments filed on that room's deal.
+	if contract.Deal != "" {
+		dealID, err := dealIDFor(c, cfg, refs, contract.Deal)
+		if err != nil {
+			return "", false, fmt.Errorf("contract %s: %w", contract.Ref, err)
+		}
+		addIfSet(body, "deal_id", dealID)
 	}
 	addIfSet(body, "contract_number", contract.ContractNumber)
 	addIfSet(body, "value_basis", contract.ValueBasis)
@@ -240,20 +268,24 @@ func contractStatus(c *client, id string) (string, error) {
 	return out.Status, nil
 }
 
-func findContract(c *client, orgID, title string) (string, error) {
+// findContract answers with the contract's id and whether it already names a
+// deal. The second half is what lets a re-run repair a contract that was
+// seeded before demoContract.Deal was read by anything.
+func findContract(c *client, orgID, title string) (id string, hasDeal bool, err error) {
 	var page struct {
 		Data []struct {
-			ID    string `json:"id"`
-			Title string `json:"title"`
+			ID     string `json:"id"`
+			Title  string `json:"title"`
+			DealID string `json:"deal_id"`
 		} `json:"data"`
 	}
 	if err := c.get("/v1/organizations/"+orgID+"/contracts", url.Values{"limit": {"50"}}, &page); err != nil {
-		return "", fmt.Errorf("listing contracts for %s: %w", orgID, err)
+		return "", false, fmt.Errorf("listing contracts for %s: %w", orgID, err)
 	}
 	for _, row := range page.Data {
 		if strings.EqualFold(row.Title, title) {
-			return row.ID, nil
+			return row.ID, row.DealID != "", nil
 		}
 	}
-	return "", nil
+	return "", false, nil
 }
