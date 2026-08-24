@@ -66,8 +66,7 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 		rows, err := tx.Query(ctx, `
 			SELECT id, display_name, email, seat_type, is_agent
 			  FROM app_user
-			 WHERE archived_at IS NULL
-			   AND status = 'active'
+			 WHERE `+LiveMemberSQL("")+`
 			   AND locked_until IS NULL
 			   AND ($1 = '' OR display_name ILIKE $2 OR email ILIKE $2)
 			 ORDER BY display_name, id

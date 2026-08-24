@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -45,8 +46,8 @@ func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.Work
 		// single-organization installation has one workspace to charge.
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM app_user
-			WHERE seat_type = 'full' AND status = 'active'
-			  AND archived_at IS NULL AND NOT is_agent`).Scan(&fullSeats)
+			WHERE seat_type = 'full' AND `+identity.LiveMemberSQL("")+`
+			  AND NOT is_agent`).Scan(&fullSeats)
 	})
 	if err != nil {
 		return 0, err

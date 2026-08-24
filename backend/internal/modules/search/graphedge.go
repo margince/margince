@@ -277,12 +277,15 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
 const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 
-// liveMemberJoin is the ONE spelling of "someone who still works here" for
-// these reads, and both halves are load-bearing: deactivation sets status and
-// leaves archived_at NULL, so filtering on archived_at alone keeps offering a
-// departed colleague as a route in. (org360 already spelled it this way; this
-// read did not, and a test that ARCHIVED a user rather than deactivating one
-// passed while production would have shown them.)
+// liveMemberJoin carries a COPY of identity.LiveMemberSQL, not a second
+// opinion. A module never imports a sibling (ADR-0054 §3) and identity owns
+// app_user, so this read cannot ask the owner what "still works here" means; it
+// is ratified by name in TestOnlyOneSpellingOfALiveMember, which fails if the
+// two ever disagree.
+//
+// Both halves are load-bearing: deactivation sets status and leaves
+// archived_at NULL, so filtering on archived_at alone goes on offering a
+// departed colleague as a route in.
 const liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND u.status = 'active' AND u.archived_at IS NULL`
 
 // EdgesForPerson answers "who on our team knows this contact".

@@ -78,18 +78,18 @@ const userColumns = `id, email, display_name, status, is_agent, ` + roleKeys + `
 // flag bound false shows no SubPlan running), so a non-admin page pays no
 // per-row role lookup — it still carries the arm in its plan. NULL (not read)
 // is deliberately not '{}' (read, holds none) — see userRow.Roles.
-const listUsersQuery = `
+var listUsersQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
-	WHERE archived_at IS NULL AND status = 'active'
+	WHERE ` + LiveMemberSQL("") + `
 	  AND ($2::timestamptz IS NULL OR (created_at, id) > ($2, $3))
 	ORDER BY created_at, id
 	LIMIT $4`
 
-const listUsersFilteredQuery = `
+var listUsersFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
-	WHERE archived_at IS NULL AND status = 'active'
+	WHERE ` + LiveMemberSQL("") + `
 	  AND (display_name ILIKE $2 OR email ILIKE $2)
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
@@ -178,12 +178,12 @@ type teamRow struct {
 // inflates the count (mirrors the active-only gate on ListUsers).
 const teamColumns = `t.id, t.name, COUNT(u.id) AS member_count, t.created_at`
 
-const teamFromJoin = `
+var teamFromJoin = `
 	FROM team t
 	LEFT JOIN team_membership tm ON tm.team_id = t.id
-	LEFT JOIN app_user u ON u.id = tm.user_id AND u.status = 'active' AND u.archived_at IS NULL`
+	LEFT JOIN app_user u ON u.id = tm.user_id AND ` + LiveMemberSQL("u") + ``
 
-const listTeamsQuery = `
+var listTeamsQuery = `
 	SELECT ` + teamColumns + teamFromJoin + `
 	WHERE t.archived_at IS NULL
 	  AND ($1::timestamptz IS NULL OR (t.created_at, t.id) > ($1, $2))
@@ -191,7 +191,7 @@ const listTeamsQuery = `
 	ORDER BY t.created_at, t.id
 	LIMIT $3`
 
-const listTeamsFilteredQuery = `
+var listTeamsFilteredQuery = `
 	SELECT ` + teamColumns + teamFromJoin + `
 	WHERE t.archived_at IS NULL AND t.name ILIKE $1
 	  AND ($2::timestamptz IS NULL OR (t.created_at, t.id) > ($2, $3))

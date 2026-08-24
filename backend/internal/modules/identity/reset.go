@@ -205,7 +205,7 @@ func (s *Service) CreatePasswordReset(ctx context.Context, email string) (string
 		var userID ids.UserID
 		lookupErr := tx.QueryRow(ctx,
 			`SELECT id FROM app_user
-			 WHERE email = lower($1) AND status = 'active' AND archived_at IS NULL AND password_hash IS NOT NULL`,
+			 WHERE email = lower($1) AND `+LiveMemberSQL("")+` AND password_hash IS NOT NULL`,
 			email).Scan(&userID)
 		if errors.Is(lookupErr, pgx.ErrNoRows) {
 			return nil
@@ -285,7 +285,7 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		tag, err := tx.Exec(ctx,
 			`UPDATE app_user SET password_hash = $2, failed_login_count = 0, locked_until = NULL,
 			        must_change_password = false
-			 WHERE id = $1 AND status = 'active' AND archived_at IS NULL`, userID, hash)
+			 WHERE id = $1 AND `+LiveMemberSQL("")+``, userID, hash)
 		if err != nil {
 			return err
 		}

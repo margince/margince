@@ -372,7 +372,7 @@ func agentAuthQuery(predicate string) string {
 		WHERE ` + predicate + `
 		  AND p.revoked_at IS NULL
 		  AND now() < p.expires_at
-		  AND u.status = 'active' AND u.archived_at IS NULL
+		  AND ` + LiveMemberSQL("u") + `
 		  AND u.must_change_password = false` + agentLivenessPredicate
 }
 

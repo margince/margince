@@ -112,7 +112,7 @@ func (s *Service) liveUserTx(ctx context.Context, workspaceID, humanID ids.UUID,
 		var seatType string
 		err := tx.QueryRow(ctx,
 			`SELECT seat_type FROM app_user
-			 WHERE id = $1 AND status = 'active' AND archived_at IS NULL`,
+			 WHERE id = $1 AND `+LiveMemberSQL("")+``,
 			humanID).Scan(&seatType)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
