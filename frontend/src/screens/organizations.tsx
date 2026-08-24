@@ -2147,7 +2147,7 @@ function CompanyPage({
       band={<CompanyBand org={org} view={view} overlay={overlay} t={t} />}
       // The account's context, beside the work rather than under it (mockup
       // State A) — the LEFT rail, so the story keeps the wider share
-      // (record-zones-rail: 3fr/7fr) rather than splitting three ways. It
+      // (page-zones-rail: 3fr/7fr) rather than splitting three ways. It
       // carries the cards that describe the RELATIONSHIP — health, who is on
       // it, what is worth knowing, what happened lately — and the grid below
       // keeps the cards about the BUSINESS.

@@ -18,66 +18,16 @@ import {
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { Avatar, Badge, Button, Card } from "./atoms";
+import { Avatar, Badge, Button } from "./atoms";
+import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
 import { useTruncationTooltip } from "./tooltip";
-import {
-  AutonomyDot,
-  type ConfidenceLevel,
-  ConfidenceMeter,
-  type Evidence,
-  EvidenceChip,
-  type Proposal,
-  type Provenance,
-  ProvenanceTag,
-  type Resolution,
-  StagedProposal,
-} from "./trust";
+import { type Provenance, ProvenanceTag } from "./trust";
 import "./composed.css";
 
-// Composed surfaces (B-EP09.3b): the brief item, the pipeline board, and the
-// record view — each consumes the 3a trust primitives so staged / real /
-// human-typed stay three distinguishable styles through composition.
-
-// ----- MorningBrief item -----
-
-export type BriefItem = {
-  id: string;
-  rank: number;
-  title: string;
-  evidence?: Evidence;
-  confidence: ConfidenceLevel;
-  proposal?: Proposal;
-};
-
-export function MorningBriefItem({
-  item,
-  onResolve,
-}: Readonly<{
-  item: BriefItem;
-  onResolve?: (resolution: Resolution) => void;
-}>) {
-  const t = useT();
-  return (
-    <Card as="article" className="brief-item">
-      <div className="brief-head">
-        <span className="brief-rank">#{item.rank}</span>
-        <span className="brief-title">{item.title}</span>
-        <ConfidenceMeter level={item.confidence} />
-      </div>
-      {item.evidence && <EvidenceChip evidence={item.evidence} />}
-      {item.proposal && (
-        <>
-          <span className="brief-nothing-sent">
-            <AutonomyDot tier="confirm" />
-            {t("brief.nothingSent")}
-          </span>
-          <StagedProposal proposal={item.proposal} onResolve={onResolve} />
-        </>
-      )}
-    </Card>
-  );
-}
+// Composed surfaces (B-EP09.3b): the pipeline board and the record view — each
+// consumes the 3a trust primitives so staged / real / human-typed stay three
+// distinguishable styles through composition.
 
 // ----- Pipeline board -----
 
@@ -737,11 +687,10 @@ export function RecordView({
   children?: ReactNode;
 }>) {
   const t = useT();
-  // The grid follows which slots are actually filled. One class per shape,
-  // because a three-column template with an empty column does not collapse:
-  // it reserves the space and leaves the story narrower than the rail
-  // beside it.
-  const zones = zoneClass(Boolean(rail), Boolean(aside));
+  // The grid follows which slots are actually filled, because a three-column
+  // template with an empty column does not collapse: it reserves the space and
+  // leaves the story narrower than the rail beside it.
+  const shape = zonesShape(Boolean(rail), Boolean(aside));
   // Also when the verbs sit on the identity's own row: that record's block is
   // a name over a description, a chip row and a meta line, and centring the
   // mark against a stack that tall floats it to the middle of the chips
@@ -774,72 +723,78 @@ export function RecordView({
           the work column, where it would sit beside the rail as though it were
           one more thing to read rather than the frame around all of them. */}
       {band && <div className="record-band">{band}</div>}
-      <div className={zones}>
-        {rail && (
-          <aside
-            className="record-rail"
-            aria-label={railLabel ?? t("record.profile")}
-          >
-            {rail}
-          </aside>
-        )}
-        {/* An `.arrive-stack`: the work column's blocks arrive one after the
-            next, and — because a tab's panel is a fresh element while the strip
-            above it is not — switching tabs fades the new panel in without
-            touching the strip. That is the whole tab-panel transition; no
-            wrapper, no state, and nothing to keep in step with the strip. */}
-        <div className="record-main arrive-stack">
-          {children}
-          {timeline && (
-            <section aria-label={t("record.timeline")}>
-              <h2 className="t-sub">{t("record.timeline")}</h2>
-              {timelineHeader}
-              {timelineNotice ??
-                (timelineGroups ? (
-                  <GroupedTimelineList
-                    groups={timelineGroups}
-                    zone={zone}
-                    onOpenThread={onOpenThread}
-                  />
-                ) : (
-                  <TimelineList entries={timeline} zone={zone} />
-                ))}
-              {timelineFooter}
-            </section>
-          )}
-        </div>
-        {aside && (
-          <aside
-            className="record-aside"
-            aria-label={asideLabel ?? t("record.context")}
-          >
-            {aside}
-          </aside>
-        )}
-      </div>
+      <PageZones
+        shape={shape}
+        className={zonesClassName(shape)}
+        rail={rail}
+        railLabel={railLabel ?? t("record.profile")}
+        railClassName="record-rail"
+        /* An `.arrive-stack`: the work column's blocks arrive one after the
+           next, and — because a tab's panel is a fresh element while the strip
+           above it is not — switching tabs fades the new panel in without
+           touching the strip. That is the whole tab-panel transition; no
+           wrapper, no state, and nothing to keep in step with the strip. */
+        mainClassName="arrive-stack"
+        main={
+          <>
+            {children}
+            {timeline && (
+              <section aria-label={t("record.timeline")}>
+                <h2 className="t-sub">{t("record.timeline")}</h2>
+                {timelineHeader}
+                {timelineNotice ??
+                  (timelineGroups ? (
+                    <GroupedTimelineList
+                      groups={timelineGroups}
+                      zone={zone}
+                      onOpenThread={onOpenThread}
+                    />
+                  ) : (
+                    <TimelineList entries={timeline} zone={zone} />
+                  ))}
+                {timelineFooter}
+              </section>
+            )}
+          </>
+        }
+        aside={aside}
+        asideLabel={asideLabel ?? t("record.context")}
+        asideClassName="record-aside"
+      />
     </div>
   );
 }
 
-// zoneClass names the layout for the slots this record actually has.
-//
-// `arrive-stack` on every variant, including the one with no layout of its own:
-// a record's blocks arrive individually (design-system/enter.css), and a
-// container that is a stack does not itself arrive. Leaving one link of that
-// chain unmarked is what makes a block fade in BEHIND a parent that is still
-// fading in — two fades multiplied, which reads as the content being dim rather
-// than as it arriving.
-function zoneClass(hasRail: boolean, hasAside: boolean): string {
+// Which columns this record actually has. The grid itself is `PageZones` — a
+// record page is one page shape among others, and the ratios and the folds are
+// not the record's to own.
+function zonesShape(hasRail: boolean, hasAside: boolean): PageZonesShape {
   if (hasRail && hasAside) {
-    return "record-zones record-zones-both arrive-stack";
+    return "both";
   }
   if (hasRail) {
-    return "record-zones record-zones-rail arrive-stack";
+    return "rail";
   }
   if (hasAside) {
-    return "record-zones record-zones-aside arrive-stack";
+    return "aside";
   }
-  return "arrive-stack";
+  return "single";
+}
+
+// What the record adds to the grid container on top of the layout.
+//
+// `arrive-stack` on every shape, including the one with no columns: a record's
+// blocks arrive individually (design-system/enter.css), and a container that is
+// a stack does not itself arrive. Leaving one link of that chain unmarked is
+// what makes a block fade in BEHIND a parent that is still fading in — two
+// fades multiplied, which reads as the content being dim rather than as it
+// arriving.
+//
+// `record-zones` carries only the phone bottom clearance for the sticky action
+// bar (composed.css), which is why the single-column shape does not get it: a
+// record with no columns never had it either.
+function zonesClassName(shape: PageZonesShape): string {
+  return shape === "single" ? "arrive-stack" : "record-zones arrive-stack";
 }
 
 // A link inside a captured message, rendered as an element rather than as

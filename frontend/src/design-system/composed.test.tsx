@@ -9,7 +9,6 @@ import {
   type BoardColumn,
   type BoardMoneyColumn,
   DealCard,
-  MorningBriefItem,
   PipelineBoard,
   RecordView,
 } from "./composed";
@@ -24,43 +23,6 @@ afterEach(cleanup);
 
 const render = (ui: ReactNode) =>
   rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
-
-describe("MorningBriefItem", () => {
-  const item = {
-    id: "b1",
-    rank: 1,
-    title: "Brandt Automotive went quiet",
-    confidence: "med" as const,
-    evidence: { snippet: "…last reply 14 days ago…", source: "email 20 Jun" },
-    proposal: {
-      description: "Draft a follow-up to Anna Weber",
-      value: "Follow-up draft",
-      agent: "runner",
-      confidence: "med" as const,
-      evidence: {
-        snippet: "…shall we sync next week?…",
-        source: "email 20 Jun",
-      },
-    },
-  };
-
-  it("renders the staged action visibly not-real with the nothing-sent marker", () => {
-    render(<MorningBriefItem item={item} />);
-    expect(screen.getByText("Nothing sent yet")).toBeTruthy();
-    expect(
-      screen.getByRole("region", { name: "staged proposal" }),
-    ).toBeTruthy();
-    expect(screen.getByText("Automated by runner")).toBeTruthy();
-  });
-
-  it("carries the triad through composition: edit lands human-typed with evidence kept", async () => {
-    render(<MorningBriefItem item={item} />);
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByText("typed by you")).toBeTruthy();
-    expect(screen.getByText(/shall we sync next week/)).toBeTruthy();
-  });
-});
 
 describe("DealCard + PipelineBoard", () => {
   const deal = {
