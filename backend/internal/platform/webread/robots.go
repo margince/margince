@@ -189,7 +189,7 @@ func selectPolicy(groups []robotsGroup) robotsPolicy {
 	for i := range groups {
 		namesUs, isWildcard := false, false
 		for _, agent := range groups[i].agents {
-			namesUs = namesUs || strings.Contains(agent, robotsAgentProduct)
+			namesUs = namesUs || groupNamesUs(agent)
 			isWildcard = isWildcard || agent == "*"
 		}
 		// A group listing both our product and * addresses us by name — the
@@ -229,4 +229,20 @@ func parseCrawlDelay(value string) time.Duration {
 	}
 	delay := time.Duration(seconds * float64(time.Second))
 	return min(delay, maxHonoredCrawlDelay)
+}
+
+// groupNamesUs reports whether a robots.txt group header addresses this crawler.
+//
+// The product token, or the token with a version after it — an operator copies
+// what their log showed them, which is the full `margince-siteread/1.0`, and a
+// rule written that way is meant for us.
+//
+// NOT a substring. `strings.Contains` also matched a SUPERSTRING, so a group for
+// some other bot whose name merely began with ours — `margince-siteread-legacy`
+// — addressed this crawler; and because a named group outranks the wildcard,
+// that group's Allow would divert us off a `User-agent: * / Disallow: /`, and we
+// would crawl a site that had refused us. A rule written for a different bot is
+// not a rule for this one.
+func groupNamesUs(agent string) bool {
+	return agent == robotsAgentProduct || strings.HasPrefix(agent, robotsAgentProduct+"/")
 }

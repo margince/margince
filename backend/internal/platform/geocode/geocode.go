@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gradionhq/margince/backend/internal/platform/outbound"
 )
 
 // Point is a resolved location.
@@ -57,12 +59,10 @@ const (
 	// indefinitely — so 15s is the rate this package is entitled to, not a
 	// conservative reading of a faster one.
 	RecurringInterval = 15 * time.Second
-
-	// UserAgent names this software and follows the same convention as the
-	// site reader. The policy requires an identifiable agent; an anonymous or
-	// spoofed one is how an installation gets the whole service blocked.
-	UserAgent = "margince-geocode/1.0"
 )
+
+// UserAgent names this software to the geocoding service.
+const UserAgent = outbound.GeocodeHeader
 
 // ErrNotConfigured says this deployment has no geocoder. It is a REFUSAL, not
 // a failure: an offline or demo installation geocodes nothing on purpose, and
