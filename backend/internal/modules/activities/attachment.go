@@ -65,12 +65,20 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 // Out of scope still reads as ErrNotFound; a readable parent the caller may not
 // change answers ErrPermissionDenied.
 //
-// It does NOT require the parent to be live, and that is the point of it being
-// separate from the upload's gate below. Archiving a record must not strand the
-// files on it: removing a misfiled document, relabelling one, and finishing a
-// reading already in flight all run through here, and there is no unarchive
-// verb to recover from refusing them. Freezing a removal because its parent was
-// retired is the opposite of what retiring it meant.
+// It does not require a deal, person or organization parent to be LIVE, and
+// that is the point of it being separate from the upload's gate below.
+// Archiving a record must not strand the files on it: removing a misfiled
+// document, relabelling one, and finishing a reading already in flight all run
+// through here, and there is no unarchive verb to recover from refusing them.
+// Freezing a removal because its parent was retired is the opposite of what
+// retiring it meant.
+//
+// An ACTIVITY parent is the exception and always has been: EnsureActivityWritable
+// reaches EnsureActivityContentVisibleLive, so an archived activity refuses here
+// too. That asymmetry predates this split and is not part of it — an activity's
+// content gate is a different rule from a record's lifecycle — but it is stated
+// rather than left for a reader to discover, because the sentence above would
+// otherwise read as a promise this function does not keep for every parent.
 func ensureAttachmentParentWritable(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == "activity" {
 		return auth.EnsureActivityWritable(ctx, tx, id)
