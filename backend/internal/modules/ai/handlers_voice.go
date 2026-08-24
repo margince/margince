@@ -39,6 +39,9 @@ type Handlers struct {
 	// against at read time (price-on-read) — same pool, and the same
 	// workspace-bound path as every other tenant read.
 	rates *RateStore
+	// providerKeys is the sealed BYOK credentials. Nil on a role that composed
+	// no vault, which is why the routes answer 503 rather than panicking.
+	providerKeys *ProviderKeyStore
 	// publicProfile is the minimal anonymous login-presence view. NewHandlers
 	// starts honest-unconfigured; the API composition root replaces it from
 	// the same routing decision that builds the model path.

@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"maps"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
@@ -37,7 +38,8 @@ import (
 // vault that refuses one provider does not cost the installation the keys it
 // already sealed for the others.
 func SealProviderKeys(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, ws ids.WorkspaceID, env config.Lookup, log *slog.Logger) map[string]string {
-	stored, err := settings.Get(ctx, NewSettingsStore(pool), ai.ProviderKeys)
+	store := NewSettingsStore(pool)
+	stored, err := settings.Get(ctx, store, ai.ProviderKeys)
 	if err != nil {
 		log.WarnContext(ctx, "cannot read the sealed provider credentials; falling back to the environment for this boot", "error", err)
 		return nil
@@ -83,10 +85,48 @@ func SealProviderKeys(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Va
 	// nothing, the new ref would never be recorded, and its blob would be
 	// stranded in the vault while the environment silently kept answering.
 	//
-	// Overwriting is safe because this map is only ever GROWN: an existing
-	// provider's ref is carried forward untouched a few lines above, so a Set
-	// can add a key and can never drop or repoint one.
-	if err := settings.Set(ctx, NewSettingsStore(pool), ai.ProviderKeys, next); err != nil {
+	// The merge is re-done INSIDE a locked transaction rather than trusting the
+	// read above. "Overwriting is safe because this map is only ever grown" was
+	// true while this was the only writer; it stopped being true when an admin
+	// got a write path. Two ways it breaks, and the second is the worse one:
+	//
+	//   lost update       this reads {}, an admin's PUT commits, this writes
+	//                     {openai: ref} and the admin's provider is dropped —
+	//                     its blob stranded, and the admin was told 204
+	//   resurrected ref   this reads {gemini: refA}, an admin's DELETE commits
+	//                     and destroys refA's blob, this writes {gemini: refA}
+	//                     back — the setting now names a blob that is gone,
+	//                     which is the dangling ref the store's own error
+	//                     classification goes to some length to avoid
+	//
+	// And the window is not boot-only: RoutingWatcher.Recheck reaches here every
+	// interval in every role, so any installation still carrying an unsealed
+	// *_API_KEY re-runs this write on a timer.
+	//
+	// Not literally sharing ai.ProviderKeyStore's swapRef: that moves ONE
+	// provider and this merges many. What they must share is the lock, and they
+	// do — settings.LockForWrite, taken before the read on both sides.
+	merged := next
+	if err := store.WriteTx(ctx, func(tx pgx.Tx) error {
+		if err := settings.LockForWrite(ctx, tx, ai.ProviderKeysKey); err != nil {
+			return err
+		}
+		current, err := settings.GetTx(ctx, tx, ai.ProviderKeys)
+		if err != nil {
+			return err
+		}
+		// The freshly sealed refs go on top of what is stored NOW. A provider
+		// somebody else keyed while this was sealing keeps their ref: only the
+		// providers this call actually sealed are written.
+		merged = maps.Clone(current)
+		if merged == nil {
+			merged = map[string]string{}
+		}
+		for _, provider := range sealedNow {
+			merged[provider] = next[provider]
+		}
+		return settings.SetTx(ctx, store, tx, ai.ProviderKeys, merged)
+	}); err != nil {
 		// The blobs are sealed and nothing references them — inert, encrypted
 		// at rest, and collected by nobody. The installation keeps running on
 		// the environment and the next boot tries again, which will strand
@@ -95,6 +135,7 @@ func SealProviderKeys(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Va
 			"providers", sealedNow, "error", err)
 		return stored
 	}
+	next = merged
 	// The one sentence that tells an operator they may now drop the variables.
 	// Nothing here can remove them: the process cannot edit its orchestrator.
 	log.InfoContext(ctx, "sealed provider credentials into the key vault; the environment variables that carried them can be removed",

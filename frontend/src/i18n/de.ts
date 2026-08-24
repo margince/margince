@@ -5306,6 +5306,27 @@ export const de = {
   "installationSettings.edit": "Ändern",
   "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
+  "aiProviderKeys.title": "Anbieter-Schlüssel",
+  "aiProviderKeys.sub":
+    "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
+  "aiProviderKeys.configured": "Schlüssel gespeichert",
+  "aiProviderKeys.absent": "Kein Schlüssel",
+  "aiProviderKeys.configuredHint":
+    "Im Schlüsseltresor versiegelt. Er kann nicht ausgelesen werden — füge einen neuen ein, um ihn zu ersetzen. Er kann auch über {envVar} ankommen.",
+  "aiProviderKeys.absentHint":
+    "Für diesen Anbieter liegen keine Zugangsdaten vor, ein daran gebundenes Modell kann also nicht aufgerufen werden. Sie können auch über {envVar} ankommen.",
+  "aiProviderKeys.addPlaceholder": "API-Schlüssel einfügen",
+  "aiProviderKeys.replacePlaceholder": "Neuen Schlüssel zum Ersetzen einfügen",
+  "aiProviderKeys.add": "Hinzufügen",
+  "aiProviderKeys.replace": "Ersetzen",
+  "aiProviderKeys.removeConfirmTitle": "Den {provider}-Schlüssel entfernen?",
+  "aiProviderKeys.removeConfirmBody":
+    "Die Zugangsdaten werden aus dem Schlüsseltresor gelöscht und lassen sich nicht wiederherstellen — sie sind nie auslesbar, es gibt also keine Kopie. Jede an diesen Anbieter gebundene KI-Strecke steht, bis ein neuer Schlüssel eingefügt wird.",
+  "aiProviderKeys.withheld":
+    "Nur wer die Modellbindung ändern darf, sieht, für welche Anbieter ein Schlüssel vorliegt.",
+  "aiProviderKeys.remove": "Entfernen",
+  "aiRouting.withheld":
+    "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",

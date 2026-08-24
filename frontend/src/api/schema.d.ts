@@ -5662,6 +5662,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which model vendors hold a credential (admin/ops).
+         * @description Every cloud provider this build can serve, and whether a key is held for each. Governed
+         *     by the same `ai_routing` object the binding is: a seat that may not re-point a model may
+         *     not reach the credential that model would call with either.
+         *
+         *     The KEY is never returned, by any caller, at any time. A credential that can be read
+         *     back is one a support bundle, a browser cache and a screenshare can all carry. What this
+         *     answers is `configured` — which is what a screen needs to know whether to offer "add" or
+         *     "rotate".
+         *
+         *     `env_var` names the variable the same key may arrive in, so an operator can see which
+         *     export seeded a vendor rather than guessing. That path still works and is how an existing
+         *     installation's key reached the vault without anyone doing anything.
+         *
+         *     Human session only. An agent never reads the installation's credential inventory,
+         *     whatever its passport scopes admit.
+         */
+        get: operations["listAiProviderKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-keys/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Store or rotate one vendor's BYOK key (admin/ops).
+         * @description Seals the key in the installation's key vault and records only an opaque, workspace-bound
+         *     reference. `api_key` is WRITE-ONLY: no read path returns it, and the setting that points
+         *     at it holds the reference and never the bytes.
+         *
+         *     Sending a key for a vendor that already has one ROTATES it. The new credential is sealed
+         *     before the reference moves, and the superseded one is destroyed only after the move
+         *     commits — so no window exists in which the recorded reference names nothing, and a
+         *     half-completed rotation leaves the previous key still serving.
+         *
+         *     Takes effect without a restart: every role re-reads on an interval and rebinds its model
+         *     clients when the credential changes, which is tracked separately from the binding's own
+         *     version so a rotation does not invalidate content a model already wrote. Leading and trailing whitespace is trimmed, because a pasted credential carries
+         *     whatever the clipboard did and a key with a trailing newline authenticates nothing while
+         *     looking exactly like one that would.
+         *
+         *     422 for a vendor this build serves with no key at all (a local model needs none), and for
+         *     an empty key — removing a credential is DELETE, not an empty write.
+         *
+         *     Requires a key vault. Without one there is nowhere to put the bytes, and the refusal says
+         *     so rather than recording a reference to something that was never written.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setAiProviderKey"];
+        post?: never;
+        /**
+         * Remove one vendor's BYOK key (admin/ops).
+         * @description Drops the reference and destroys the sealed credential. A vendor that holds nothing
+         *     succeeds: the caller asked for a state and that state already holds, which is why this is
+         *     204 rather than 404 — and why it is safe to retry.
+         *
+         *     Removing a credential does not unbind a model; that is `PUT /ai/routing`. A NEW process
+         *     binding that vendor fails closed with the error that names what is missing, exactly as it
+         *     did before any key was ever stored.
+         *
+         *     A process already running is a different case, and worth knowing: a role re-reads the
+         *     binding on an interval and rebinds when the credential changes, but a binding it can no
+         *     longer build clients for leaves the running one in place rather than taking the AI lanes
+         *     down. So where the removed key was the only one for a bound vendor, that role keeps
+         *     serving on it until it restarts.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteAiProviderKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/calls": {
         parameters: {
             query?: never;
@@ -10359,6 +10455,22 @@ export interface components {
              *     excluded (cold start reads it). Default is ON (the testing posture).
              */
             auto_enrich: boolean;
+        };
+        AiProviderKeyList: {
+            providers: components["schemas"]["AiProviderKeyStatus"][];
+        };
+        /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
+        AiProviderKeyStatus: {
+            /** @description The routing name of the vendor, the same string a binding uses. */
+            provider: string;
+            /** @description Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer. */
+            configured: boolean;
+            /** @description The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix. */
+            env_var: string;
+        };
+        AiProviderKeyInput: {
+            /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
+            api_key: string;
         };
         /**
          * @description The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
@@ -31106,6 +31218,106 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listAiProviderKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per servable provider, in the routing table's order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderKeyList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no credential inventory to report. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProviderKeyInput"];
+            };
+        };
+        responses: {
+            /** @description Sealed. The key is not echoed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+            /** @description This installation has no key vault, so a provider key cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or there was nothing to remove. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no sealed credential to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listAiCalls: {
