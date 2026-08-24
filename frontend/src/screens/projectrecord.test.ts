@@ -78,6 +78,30 @@ describe("the project tag a subject carries", () => {
     );
   });
 
+  it("leaves the rest of the subject byte for byte", () => {
+    // The tag is re-applied on every edit while a project is chosen, so this
+    // runs over text the rep is actively typing. Anything it tidies beyond the
+    // tag is their writing being rewritten under the cursor.
+    expect(withSubjectTag("[N2P-1] Re:  Kurzer Austausch?", "[N2P-1]")).toBe(
+      "[N2P-1] Re:  Kurzer Austausch?",
+    );
+    // Including a trailing space, which is the one they just pressed before
+    // typing the next word.
+    expect(withSubjectTag("[N2P-1] Re: ", "[N2P-1]")).toBe("[N2P-1] Re: ");
+    // And runs of spaces nowhere near a tag.
+    expect(withSubjectTag("Re:   viel   Platz", "[N2P-1]")).toBe(
+      "[N2P-1] Re:   viel   Platz",
+    );
+  });
+
+  it("closes the gap a removed tag leaves behind", () => {
+    // One separator survives when the tag sat between two things, so a subject
+    // does not read "Re:  Hallo" with a hole where the tag was.
+    expect(withSubjectTag("Re: [OTHER-9] Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] Re: Hallo",
+    );
+  });
+
   it("takes its own tag back off, and nobody else's", () => {
     expect(stripSubjectTag("[N2P-1] Re: Hallo", "[N2P-1]")).toBe("Re: Hallo");
     // A different project's tag is the rep's text, not ours to remove.
