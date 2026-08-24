@@ -53,7 +53,10 @@ var connectorCursors = gatekit.Waive(map[string]string{
 })
 
 // refusalSurfaceRoots are the trees where a cursor may be refused.
-var refusalSurfaceRoots = []string{"internal/modules", "internal/compose", "../extensions"}
+// internal/platform is here so the census also judges the package that DECLARES
+// the refusal. Skipping the owner wholesale would let a second spelling live
+// beside the first, at the one address the census trusts.
+var refusalSurfaceRoots = []string{"internal/modules", "internal/compose", "internal/platform", "../extensions"}
 
 // cursorDecoders are the primitives a page token is read WITH. A function
 // calling one of these on a token is deciding whether it is well-formed, which
