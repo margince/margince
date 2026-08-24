@@ -5,9 +5,8 @@ It is the lookup page: where things are on the project page, how phases move,
 and the full set of rules by which an email finds (or fails to find) its
 project. The things you *cannot* do from the UI are at the end.
 
-New to this? Start with
-[tutorials/run-your-first-project.md](../tutorials/run-your-first-project.md).
-For who may do what, key conventions and the fixed vocabularies, see
+New to projects? [Walk one from the deal to close](../../user-guide/run-your-first-project.md)
+first. For who may do what, the key conventions and the fixed vocabularies, see
 [set-up-projects.md](set-up-projects.md).
 
 ## What a project is in Margince
