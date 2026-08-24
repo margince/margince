@@ -4,165 +4,123 @@
 the tree rather than listing it.** A rule maintained as a list is a rule that
 silently stops covering things.
 
-The binding form is
-*Rules learned from the review loop*.
-This page is the method for writing a gate that actually holds.
+The binding form is *Rules learned from the review loop* in the rulebook. This
+page is the method. The eight shapes a gate comes in, and how each one
+characteristically fails, are cataloged in
+[reference/gate-patterns.md](../reference/gate-patterns.md); the gates
+themselves are listed in
+[reference/gate-inventory.md](../reference/gate-inventory.md).
 
-## The eight rules, and what each one is defending against
+## What deriving buys
 
-1. **Fix the invariant, not the call site.** Grep every mutation and read site
-   of the same column, constraint or record, and fix them as one change. The
-   recurring reviewer catch here is "fixed the case under review, missed the
-   sibling copy".
-2. **Prefer fitness functions over point fixes.** Derive the obligation from the
-   system — every tenant statement carries its workspace predicate; every CHECK
-   violation maps to a 4xx; `backend/arch_test.go` derives its package lists
-   from the tree. Do not maintain it as a list.
-3. **Anything that returns a record is a read**, and carries the row-scope gate
-   — including replay, conflict and error paths.
-4. **No build-process residue in comments.** State the invariant so it stands
-   alone. See [the record is the code](the-record-is-the-code.md).
-5. **Never rationalize a known gap in a comment.** Restructure it away or gate
-   it.
-6. **A test that supplies its own version of production proves nothing about
-   production.** Hand-inserted rows the real writer never writes, or a
-   hand-copied adapter mirroring what compose wires. Seed through the real
-   writer; reach for the real wiring. An unexpectedly uncovered new file usually
-   means a test double stands where the real thing should.
-7. **One invariant broken in two languages is one item.** Fixing one side of a
-   wire alone can be a regression, not half a fix. See
-   [find the other side](#find-the-other-side-before-you-fix-this-one).
-8. **A census that can fail short has already failed.** Under-recognition is
-   silent: the gate reads less and still says PASS. Everything under *Writing a
-   gate that holds* below is about this one.
+- **A new subject is a finding on the day it is written**, without anybody
+  remembering the gate exists. A hardcoded list covers what somebody knew about
+  once.
+- **The failure is loud.** A rule held by a comment fails by being ignored,
+  which looks exactly like a rule being followed.
+- **The exception becomes visible.** A derived gate forces an unusual case to be
+  ratified in writing, where a reviewer reads it, instead of being absorbed
+  silently.
 
 ## Writing a gate that holds
 
 Every clause here exists because a gate in this tree failed it.
 
 **Derive the subject set from the tree.** A hardcoded coverage map is a list to
-maintain, and it will be short. `draftrulesparity_test.go` asserts four drafting
-surfaces carry the shared rules while more than four exist — the gate is green
-and the rule is not held.
+maintain, and it will be short. One parity gate asserts four drafting surfaces
+carry the shared rules while more than four exist: green, and the rule is not
+held.
 
-**Put the escape hatch at the subject.** A `doc.go` line, a contract field, a
-`//craft:ignore <check> <reason>` — where the author editing that code sees it.
-A map inside the test file is invisible to exactly the person who needs it.
-`agenttoolparity_test.go` is the closest thing to the house shape: it derives
-its expectation from the contract rather than restating it, and its escape hatch
-for ordinary tools lives in the contract. It is not a pure example, and the
-impurity is instructive — a hand-maintained `composedIntents` map still sits in
-the test file for the tools that compose several operations, which is precisely
-the kind of list that goes quietly short. If you cannot get the hatch to the
-subject, say in the test why not.
+**Put the escape hatch at the subject** — a `doc.go` line, a contract field, a
+`//craft:ignore <check> <reason>`. That is where the author editing the code
+sees it. A map inside the test file is invisible to exactly the person who needs
+it. If you cannot get the hatch to the subject, say in the test why not.
 
 **Ratify the instance, never the category.** A waiver keyed by column, package
 or rule name admits the second offender for free under the first one's reason.
 
-**Write the defect test first.** Mutate the code to reintroduce the bug and
-watch the gate go red. A gate that has never failed proves nothing — several
-fitness functions in this tree passed against the exact bug they described.
-
-**Prove the mutation was reached.** An inverse test can pass for the wrong
-reason: the mutation lands in a function the path never calls, or an earlier
-guard refuses the case before your assertion runs.
+**Write the defect test first, and prove the mutation was reached.** Mutate the
+code to reintroduce the bug and watch the gate go red. A gate that has never
+failed proves nothing — several fitness functions here passed against the exact
+bug they described. An inverse test can also pass for the wrong reason: the
+mutation lands in a function the path never calls, or an earlier guard refuses
+the case first. Check that each mutant compiles.
 
 **Measure the before, not only the after.** A grep returning 0 after the fix
 proves nothing unless you know what it returned before.
 
-**Watch for the vacuous filter.** A subject filter that looks derived can be
-inert — unbounded is not empty, and a predicate that drops nothing reads exactly
-like a predicate that drops the right things. Measure what your gate *excludes*.
+**Watch for the vacuous filter, and for the vacuous quantifier.** A subject
+filter that looks derived can be inert — a predicate that drops nothing reads
+exactly like one that drops the right things. The same trap in a reachability
+gate is asking whether *some* caller reaches the required call: where that call
+has several call sites, it is true of nearly everything, and the gate passes
+with the obligation deleted. Measure what your gate excludes.
 
 **Write the mirror gate.** A gate can read green over its own defect reversed.
 If you assert A implies B, ask what happens when B appears without A.
 
-**The gate is part of its own subject.** A gate that hard-codes any slice of
-what it guards has become a second copy of it — and the copy inside a test is
-the worst kind, because it is invisible to the author extending the owner. A
-consumer-mail census shipped with its own 25-domain sample inside the very test
-that forbids second consumer-mail lists; two reviewers named it independently,
-and it asks `freemail.Domains()` now. Before the first assertion, ask what this
-gate hard-codes: its file list, its element list, its claim patterns, its
-domains. Derive each from the owner, or write down in the test why you cannot.
+**The gate is part of its own subject.** A gate that hardcodes any slice of what
+it guards has become a second copy of it, and a copy inside a test is the worst
+kind — invisible to the author extending the owner. A consumer-mail census
+shipped with its own 25-domain sample inside the very test that forbids second
+consumer-mail lists. Before the first assertion, ask what this gate hardcodes:
+its file list, its element list, its claim patterns, its domains. Derive each
+from the owner, or write down why you cannot.
 
 **Plant the shape the detector cannot see.** One mutation proves the gate fires;
-it does not find the hole. Once the gate is green, ask what shape of the defect
-it is structurally blind to and plant that case. Every hole found in review
-during the duplication sweep was found this way, and none by re-reading the
-implementation — because the thing that hid a copy from a reader also hid it
-from the detector written to find copies. A `String(err)` hid behind being the
-fallback half of a ternary somebody had already fixed; a raw backtick string hid
-behind a prefilter that only knew double quotes.
+it does not find the hole. Once it is green, ask what version of the defect the
+gate is structurally blind to, and plant that case. Every hole found during the
+duplication sweep was found this way, and none by re-reading the implementation
+— because what hid a copy from a reader also hid it from the detector.
 
 **Measure a shortcut before you defend it, and prefer deleting a dimension to
-narrowing it.** A skip-list or prefilter in front of a scan is where the gate
-goes blind, and the miss is silent: the file is dropped before anything looks at
-it — no finding, no error, indistinguishable from a clean tree. One census in
-this tree carried a cheap file-skip that six review rounds found narrower than
-the census behind it in six separate dimensions, two of them introduced by the
-fix for the one before. It was deleted rather than narrowed a seventh time,
-because measuring ended the argument: parsing every file was FASTER than the
-shortcut, and the saving originally credited to it had come from an unrelated
-map lookup.
+narrowing it.** A skip-list in front of a scan is where a gate goes blind, and
+the miss is silent: the file is dropped before anything looks at it — no
+finding, indistinguishable from a clean tree. One census carried a file-skip
+that six review rounds found too narrow in six separate dimensions. It was
+deleted rather than narrowed a seventh time, and parsing every file turned out
+to be faster than the shortcut.
 
-**Statements, not lines, and bound the join.** A per-line matcher misses a rule
-a formatter wrapped across three lines — the money gate missed an entire write
-direction that way. Joining lines into statements fixes it and introduces the
-opposite failure: unbounded, one join swallowed a thirty-line `const (` block
-and reported an unrelated pairing inside it.
+**Match statements, not lines, and bound the join.** A per-line matcher misses a
+rule a formatter wrapped across three lines. Joining lines fixes that and
+introduces the opposite failure: unbounded, one join swallowed a thirty-line
+`const (` block and reported an unrelated pairing inside it.
 
-**A self-test that reads only an exit status proves nothing about a waiver.** A
-scanner that reports both the waived and the unwaived finding exits non-zero
-too. Assert on what the gate SAID, not just that it failed.
+**Assert on what the gate said, not on its exit status.** A scanner that reports
+both the waived and the unwaived finding exits non-zero too.
 
 **Let a parser own the grammar.** One text-matching gate produced six defect
-classes in a single PR, every one of them a defect in the matcher rather than in
-the rule: no `\b` in POSIX ERE so a guard shipped inert, a built-in name
-coerced to `-inf`, an undeclared local colliding as a global, a flat flag unable
-to express a nested template literal, a backslash meaning different things in a
-Go raw string and a TS template. A parser that already knows the language
-answers all six for nothing — `go/ast` in Go, `ts.createSourceFile` in
-TypeScript, both already used by censuses in this tree. And a parse error is not
-silence, which is the failure mode a text gate has to invent an assertion to
-catch.
+classes in a single PR, every one a defect in the matcher rather than in the
+rule — a missing word boundary, a built-in name coerced to `-inf`, a backslash
+meaning different things in a Go raw string and a TS template. A parser that
+already knows the language answers all six for free: `go/ast` in Go,
+`ts.createSourceFile` in TypeScript. A parse error is also not silence, which is
+the failure mode a text gate must invent an assertion to catch.
 
 ## Find the other side before you fix this one
 
-Most topics in this tree are implemented once and merely rendered by the other
-language, and this section is not about those. It is about the ones where Go and
-TypeScript each carry a spelling of the same rule: those are one item until
-proven otherwise, and a per-language PR is what hides that.
+Most topics here are implemented once and merely rendered by the other language.
+This is about the ones where Go and TypeScript each carry a spelling of the same
+rule: those are **one item** until proven otherwise, and a per-language PR hides
+that.
 
 The case that taught it: the frontend wrote `Math.round(amount * 100)` for every
 currency and the backend divided by 100 for every currency, so the two errors
-CANCELLED — a zero-decimal price was stored a hundredfold and displayed
-correctly, the screen agreed with itself, and only the record was wrong. The
-sweep catalogued the two halves as two findings on two tiers. Shipping the
-backend half alone would have uncancelled them and printed a hundred times the
-price on an outbound offer.
+**cancelled**. A zero-decimal price was stored a hundredfold and displayed
+correctly — the screen agreed with itself, and only the record was wrong.
+Shipping the backend half alone would have uncancelled them and printed a
+hundred times the price on an outbound offer.
 
-So: when a sweep finds one invariant broken on both sides of a wire, land both
-sides in one change. Then declare which side is the MIRROR and gate it in both
-directions. `backend/frontendminorunits_test.go` is the worked example: it reads
-`values.MinorUnitExceptions()` and the `MINOR_UNIT_EXCEPTIONS` literal in
-`frontend/src/format/minorunits.ts` and fails on a code present in one and not
-the other, and on a digit count that differs. What stays singular there is the
-TABLE, which is what the two sides exchange; the two suites keep their own
-cases, and a shared case corpus would be a further step nothing in this tree
-takes yet. Do not read more protection into it than that.
+So: land both sides in one change, then declare which side is the **mirror** and
+gate it in both directions. `backend/frontendminorunits_test.go` is the worked
+example — it fails on a currency present in one side and not the other, and on a
+digit count that differs. What stays singular there is the table the two sides
+exchange; the suites keep their own cases.
 
-That gate also shows the cost of the shape it is in. It reads TypeScript with
-hand-written regexes, and its own comments enumerate the holes that forced each
-one: a quoted `"MGA": 0` parsing as nothing, a comment mentioning a code keeping
-the gate green after the real entry was deleted. Every one of those is a hole
-`ts.createSourceFile` does not have — see *let a parser own the grammar* above.
-It is cited here for the direction it gates, not as the parser to copy.
-
-The opposite move is the one to refuse: splitting a rule into "a Go test for Go
-and a text scan for TypeScript" leaves one rule with two implementations that
-nothing forces to be edited together. What may differ between the two sides is
-the parser; never the rule.
+The move to refuse is splitting one rule into "a Go test for Go and a text scan
+for TypeScript". That leaves one rule with two implementations that nothing
+forces to be edited together. What may differ between the two sides is the
+parser; never the rule.
 
 ## What this does not ask for
 
