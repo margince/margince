@@ -24,7 +24,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 	// One read for the phase: which source ids already exist. Counting what
 	// this run genuinely created needs the before-state, and asking per
 	// activity was the seeder's worst quadratic.
-	seenSourceIDs := map[string]bool{}
+	seenSourceIDs := map[string]seededActivity{}
 	if mode != modeDryRun {
 		loaded, err := loadActivitySourceIDs(c)
 		if err != nil {
@@ -66,7 +66,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 			"kind":          act.Kind,
 			"occurred_at":   refs.timestamp(occurred),
 			"source":        seedSource,
-			"source_system": "seed",
+			"source_system": seedSourceSystem,
 			"source_id":     fmt.Sprintf("act-%d", i),
 			"links":         links,
 		}
@@ -93,7 +93,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 		// Idempotent on source_system+source_id, so a re-run replays the same
 		// row and the reply cannot tell a create from a convergence. The
 		// source ids present before this phase say what was genuinely absent.
-		before := seenSourceIDs[fmt.Sprintf("act-%d", i)]
+		_, before := seenSourceIDs[fmt.Sprintf("act-%d", i)]
 		if err := author.post("/v1/activities", body, nil); err != nil {
 			if _, ok := conflictingID(err); ok {
 				continue
@@ -113,6 +113,9 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 		if !before {
 			created++
 		}
+	}
+	if err := relinkActivitiesToProjects(c, cfg, refs, seenSourceIDs, mode); err != nil {
+		return created, err
 	}
 	return created, nil
 }
@@ -170,70 +173,83 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 	return links, nil
 }
 
-// projectForActivity picks which of a company's projects a mail, call or
-// meeting belongs to: the LATEST one that had already started when it
-// happened.
-//
-// The company's projects arrive oldest first, so this walks forward and keeps
-// the last one still in the past. Simply taking the first project a company
-// had put all nine of valantic's mails about the Shopsystem migration onto
-// "Zweiter Mandant im Shopsystem", which starts nine months after the last of
-// them — a timeline that could not have happened.
-//
-// An activity older than every project links to none. That is the honest
-// answer: correspondence from before any delivery work began was not about
-// delivery work.
-func projectForActivity(refs pipelineRefs, act demoActivity) string {
-	projects := refs.projectsByCompany[strings.ToLower(act.Company)]
-	if len(projects) == 0 {
-		return ""
-	}
-	// The same offset seedActivities computes, as a date, so it compares
-	// against started_at on its own terms.
-	occurred := -act.DaysAgo
-	if act.DaysIn > 0 {
-		occurred = act.DaysIn
-	}
-	when := refs.date(occurred)
-
-	chosen := ""
-	for _, proj := range projects {
-		// A project with no start date cannot be dated against, and sorts
-		// last; it is only reached when nothing better has been found.
-		if proj.StartedAt == "" || proj.StartedAt > when {
-			continue
-		}
-		chosen = proj.ID
-	}
-	return chosen
-}
-
 // loadActivitySourceIDs reads the source_id of every activity ONCE.
 //
 // It replaces a per-activity search that listed activities on every call and
 // stopped at 200 rows. Both halves were bugs waiting for scale: the search was
 // O(activities²) over a run, and the cap meant activity 201 was never found,
 // so a converging re-run filed a duplicate of it instead of recognising it.
-func loadActivitySourceIDs(c *client) (map[string]bool, error) {
-	seen := map[string]bool{}
+func loadActivitySourceIDs(c *client) (map[string]seededActivity, error) {
+	seen := map[string]seededActivity{}
 	err := c.getAll("/v1/activities", nil, func(raw json.RawMessage) error {
-		var rows []struct {
-			SourceID string `json:"source_id"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			if row.SourceID != "" {
-				seen[row.SourceID] = true
-			}
-		}
-		return nil
+		return indexSeededActivities(raw, seen)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing activities: %w", err)
 	}
 	return seen, nil
+}
+
+// indexSeededActivities adds one page of activities to the index, keeping only
+// the rows this tool captured.
+func indexSeededActivities(raw json.RawMessage, seen map[string]seededActivity) error {
+	var rows []struct {
+		ID           string `json:"id"`
+		SourceSystem string `json:"source_system"`
+		SourceID     string `json:"source_id"`
+		OccurredAt   string `json:"occurred_at"`
+		Links        []struct {
+			EntityType string `json:"entity_type"`
+			EntityID   string `json:"entity_id"`
+		} `json:"links"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		// BOTH halves of the key, because source_id alone is not one.
+		// The database is unique on (source_system, source_id), and the
+		// seeder's own ids are "act-0", "act-1" — spellings a connector
+		// is free to use too. Keying on the id alone once only miscounted
+		// how many rows a run created; now that this map decides which
+		// activity gets relinked, the same collision would file somebody
+		// else's mail under a demo project and stamp it with six-year
+		// retention that cannot be lifted.
+		if row.SourceSystem != seedSourceSystem || row.SourceID == "" {
+			continue
+		}
+		found := seededActivity{ID: row.ID, OccurredAt: row.OccurredAt}
+		for _, link := range row.Links {
+			switch link.EntityType {
+			case "project":
+				found.ProjectID = link.EntityID
+			case "organization":
+				found.OrganizationID = link.EntityID
+			}
+		}
+		seen[row.SourceID] = found
+	}
+	return nil
+}
+
+// seededActivity is one activity already on file, as the reconciliation pass
+// needs to see it: its id, so it can be relinked, and the project it is filed
+// under, so a pass that has nothing to do does nothing.
+type seededActivity struct {
+	ID        string
+	ProjectID string
+	// OccurredAt is when the activity says it happened, as the server stored
+	// it. The reconciliation dates against THIS rather than against the
+	// dataset's days_ago offset: the offset is relative to the day the seeder
+	// runs, and occurred_at was frozen on the first run and never moves after
+	// it, so on any later day the two disagree.
+	OccurredAt string
+	// OrganizationID is the account this activity is filed on. The
+	// reconciliation checks it against the dataset entry before touching
+	// anything: source ids here are positional ("act-0", "act-1"), so
+	// reordering the activities array silently remaps which stored row an
+	// index names, and relinking the wrong one cannot be undone.
+	OrganizationID string
 }
 
 // seedLifecycle says where each account stands with us.

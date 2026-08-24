@@ -23,6 +23,11 @@ import (
 // is never ours to set.
 const seedSource = "seed:demo"
 
+// seedSourceSystem is the system half of the idempotency key on every row this
+// tool captures. Paired with a source_id it is what the database is unique on,
+// so anything that looks a seeded row up by id alone has only half a key.
+const seedSourceSystem = "seed"
+
 type counts struct {
 	orgsCreated, orgsExisting     int
 	peopleCreated, peopleExisting int
