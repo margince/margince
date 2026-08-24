@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 56,
-    "tokens": 17063,
+    "tokens": 17106,
     "median_tool_tokens": 281,
-    "mean_tool_tokens": 304
+    "mean_tool_tokens": 305
   },
   "agents": [
     {
@@ -109,6 +109,10 @@
       "tokens": 402
     },
     {
+      "name": "preview_import",
+      "tokens": 396
+    },
+    {
       "name": "search_records",
       "tokens": 392
     },
@@ -119,10 +123,6 @@
     {
       "name": "enrich",
       "tokens": 386
-    },
-    {
-      "name": "preview_import",
-      "tokens": 353
     },
     {
       "name": "search_context",
