@@ -85,10 +85,6 @@ var ratifiedFleetScans = map[string]ratifiedFleetScan{
 		1,
 		"boot path: resolves the singleton organization and refuses to serve when a second exists (ADR-0061 §3) — it IS the workspace authority, not a consumer of it",
 	},
-	"internal/compose/export.go": {
-		1,
-		"reads THE singleton organization's row, not a fleet: it asks the workspace table for the incumbent this installation is bound to. It named that row by the workspace GUC until §5 stopped core reading the GUC, and `archived_at IS NULL` is the same row by ADR-0061 §3 — one live organization — rather than a scan of several",
-	},
 	"internal/compose/archivedpredecessor.go": {
 		1,
 		"boot path, and it counts ARCHIVED workspaces rather than enumerating live ones: an archived organization's rows merged into this installation when ADR-0091 §8 phase D took the tenant column, and that row is the only surviving evidence a merge happened. It reads the count to say so once and does no tenant work at all",

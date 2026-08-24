@@ -13,6 +13,7 @@ package overlay
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // activateConnection finishes Connect's write-shape transaction for
@@ -46,10 +48,14 @@ func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectI
 		incumbentConnectedPayload(in.Incumbent, in.Region, leastPrivilegeHubSpotScopes, statusActive)); emitErr != nil {
 		return Connection{}, fmt.Errorf("overlay: emitting incumbent.connected: %w", emitErr)
 	}
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return Connection{}, errors.New("overlay: activation called outside a workspace context")
+	}
 	if _, updErr := tx.Exec(ctx, `
 		UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = $1
-		WHERE archived_at IS NULL`,
-		in.Incumbent); updErr != nil {
+		WHERE id = $2`,
+		in.Incumbent, ws); updErr != nil {
 		return Connection{}, fmt.Errorf("overlay: flipping the workspace to overlay mode: %w", updErr)
 	}
 	return Connection{

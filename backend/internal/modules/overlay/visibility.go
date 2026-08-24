@@ -233,6 +233,11 @@ func lockWorkspaceVisibility(ctx context.Context, tx pgx.Tx) error {
 		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility')::bigint)`); err != nil {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock: %w", err)
 	}
+	// Plus the legacy workspace-qualified key (storekit.LockWriteIdentity).
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`); err != nil {
+		return fmt.Errorf("overlay: acquiring the workspace visibility lock (legacy key): %w", err)
+	}
 	return nil
 }
 

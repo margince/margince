@@ -214,18 +214,24 @@ func assertParkedBeforeTheOrganizationRow(ctx context.Context, t *testing.T, hol
 	// would find nothing and the assertion would pass having examined the wrong
 	// backend. A false green on the exact ordering this exists to catch.
 	// The join below matches a waiter through any advisory lock this holder has
-	// been granted, so it is unambiguous only while the holder holds exactly one.
-	// It does today — holdOrgNameLock takes the name lock and nothing else — and
-	// asserting it is what keeps that true: a second advisory lock added to that
-	// transaction would silently let a waiter on the OTHER key answer here.
+	// been granted, so it is unambiguous only while every lock the holder holds
+	// is the SAME logical one. It holds two: ADR-0091 §5 dropped the workspace
+	// from the name lock's key, and the transition takes the new key and the
+	// legacy workspace-qualified one together for one release
+	// (storekit.LockWriteIdentity). Both are the name lock, so a waiter parked
+	// on either is parked on the thing this test is about.
+	//
+	// The count is still asserted, and that is the point: a THIRD lock would be
+	// a genuinely different one, and would silently let a waiter on an unrelated
+	// key answer here. When the legacy half comes out, this goes back to 1.
 	var advisoryHeld int
 	if err := holder.QueryRow(ctx, `
 		SELECT count(*) FROM pg_locks
 		 WHERE pid = $1 AND locktype = 'advisory' AND granted`, holderPID).Scan(&advisoryHeld); err != nil {
 		t.Fatalf("counting the holder's advisory locks: %v", err)
 	}
-	if advisoryHeld != 1 {
-		t.Fatalf("the lock holder holds %d advisory locks, want exactly 1 — with more than one, "+
+	if advisoryHeld != 2 {
+		t.Fatalf("the lock holder holds %d advisory locks, want exactly 2 (the name lock's new key and its legacy twin) — with any other, "+
 			"the waiter lookup below cannot tell which key a backend is queued on, and could report "+
 			"a waiter on the wrong lock as parked on the name lock", advisoryHeld)
 	}

@@ -150,10 +150,14 @@ func (s *Service) Disconnect(ctx context.Context) error {
 // transaction would report success having reverted nothing. The error is the
 // honest answer to a question this function cannot answer.
 func RevertToNative(ctx context.Context, tx pgx.Tx) (bool, error) {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return false, errors.New("overlay: revert to native called outside a workspace context")
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-		WHERE archived_at IS NULL
-		  AND x_sor_mode <> 'native'`)
+		WHERE id = $1
+		  AND x_sor_mode <> 'native'`, ws)
 	if err != nil {
 		return false, fmt.Errorf("overlay: flipping the workspace back to native mode: %w", err)
 	}

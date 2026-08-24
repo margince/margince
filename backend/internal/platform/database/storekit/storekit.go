@@ -340,6 +340,23 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 	return wsID
 }
 
+// LegacyWorkspaceLockWindow: why every advisory lock here takes TWO keys.
+//
+// ADR-0091 §5 removed the workspace from these advisory-lock identities: with
+// one organization per installation (ADR-0061) it distinguished nothing. But a
+// lock identity is not a private detail — it is a rendezvous between PROCESSES,
+// and a rolling deploy runs two builds at once. A process on the old build takes
+// the workspace-qualified key while one on the new build takes the bare key, and
+// the two do not contend: for the last-admin guard that means two concurrent
+// removals can leave an installation with no active human administrator.
+//
+// So each site takes the new key AND the legacy one for one release. Both are
+// transaction-scoped, so the cost is one extra lock per critical section and no
+// new deadlock order — every site takes them in the same order.
+//
+// The legacy half comes out one release after this ships, when no old build can
+// still be running. Tracked as #2528 rather than left to be noticed.
+
 // LockWriteIdentity serializes every writer of one logical record identity
 // for the transaction (workspace-scoped pg advisory xact lock). A
 // precondition read and its dependent write must both run under it — READ
@@ -355,6 +372,13 @@ func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity stri
 		$1 || ':' || $2, 0))`,
 		entityType+"_write", identity); err != nil {
 		return fmt.Errorf("lock %s write identity: %w", entityType, err)
+	}
+	// The legacy workspace-qualified key, for the rolling-deploy window. See
+	// LegacyWorkspaceLockWindow.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
+		$1 || ':' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $2, 0))`,
+		entityType+"_write", identity); err != nil {
+		return fmt.Errorf("lock %s write identity (legacy key): %w", entityType, err)
 	}
 	return nil
 }

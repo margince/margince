@@ -107,7 +107,7 @@ type ChannelIdentityKey struct {
 // without closing it, because the erasure's own purge has already run by the
 // time it commits. Serializing the two is the only answer that holds.
 //
-// The key is per workspace and per account, so two humans' deliveries never
+// The key is per account since ADR-0091 §5 dropped its workspace half, so two humans' deliveries never
 // wait on each other and an erasure only ever stalls the subject it is erasing.
 // hashtextextended is Postgres' own hash of the workspace-qualified identity
 // hash, so the key is derived in ONE place for both callers rather than in Go
@@ -154,6 +154,13 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 			hash); err != nil {
 			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+		}
+		// Plus the legacy workspace-qualified key (LockWriteIdentity explains).
+		if _, err := tx.Exec(ctx, `
+			SELECT pg_advisory_xact_lock(hashtextextended(
+				coalesce(current_setting('app.workspace_id', true), '') || ':' || $1, 0))`,
+			hash); err != nil {
+			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure (legacy key): %w", err)
 		}
 	}
 	return nil

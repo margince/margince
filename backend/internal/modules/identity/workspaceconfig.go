@@ -18,6 +18,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // preservedWorkspaceColumns are the workspace columns the restore does not
@@ -138,8 +141,12 @@ func ResetWorkspaceConfig(ctx context.Context, tx pgx.Tx) error {
 	// One statement, never one per column: the row carries CHECK constraints
 	// spanning two columns at once (overlay's x_overlay_iff_incumbent), and a
 	// column-at-a-time restore would have to pass through the state they forbid.
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return apperrors.ErrNotFound
+	}
 	tag, err := tx.Exec(ctx, `UPDATE workspace SET `+strings.Join(assignments, ", ")+
-		` WHERE archived_at IS NULL`)
+		` WHERE id = $1`, ws)
 	if err != nil {
 		return fmt.Errorf("identity: restoring the workspace's configuration columns: %w", err)
 	}

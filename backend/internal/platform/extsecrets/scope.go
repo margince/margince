@@ -117,9 +117,16 @@ func (s *store) lockKey(ctx context.Context, tx pgx.Tx, user *ids.UserID, key st
 		scope = scopeUser
 		holder = user.String()
 	}
+	if _, err := tx.Exec(ctx, `
+		SELECT pg_advisory_xact_lock(hashtext(
+			'margince:extsecrets:' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
+		s.unit, scope, holder, key); err != nil {
+		return err
+	}
+	// Plus the legacy workspace-qualified key (storekit.LockWriteIdentity).
 	_, err := tx.Exec(ctx, `
 		SELECT pg_advisory_xact_lock(hashtext(
-			'margince:extsecrets:' ||
+			'margince:extsecrets:' || coalesce(current_setting('app.workspace_id', true), '') ||
 			':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
 		s.unit, scope, holder, key)
 	return err
