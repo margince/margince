@@ -24,7 +24,11 @@ DB_NAME   ?= margince
 # variable, and the $(shell …) here would answer for the worktree instead — seeding
 # a different stack's database than the one just named on the command line.
 # Empty expands to no argument, which leaves the script to derive it.
-DEV_DB_NAME ?= $(shell bash ../scripts/dev-database-name.sh $(DEV_SLUG))
+# QUOTED. Unquoted, make's shell parses whatever DEV_SLUG contains before the
+# resolver validates it — a metacharacter would run, and a value with whitespace
+# would split into arguments and select a different database. Quoted, the worst a
+# hostile value does is break the shell parse loudly.
+DEV_DB_NAME ?= $(shell bash ../scripts/dev-database-name.sh '$(DEV_SLUG)')
 # An ambient MARGINCE_OWNER_DSN redirects every migrate target here, because it is
 # the same variable cmd/migrate reads when no --dsn is given — the two can never
 # name different databases. That also means a staging or production owner DSN

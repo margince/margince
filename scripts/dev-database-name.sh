@@ -13,4 +13,13 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 # An explicit slug wins, whether it arrives as an argument (a make-level
 # `DEV_SLUG=x` override, which does not reach this script's environment) or in the
 # environment. Empty means: derive it from the worktree.
-DEV_SLUG="${1:-${DEV_SLUG:-}}" dev_database_name
+# $# rather than ${1:-…}: make passes `$(DEV_SLUG)`, which expands to NO argument
+# when unset and to an empty one when set to empty. Those mean different things —
+# "derive it" versus "the caller said nothing" — and collapsing them lets an
+# exported DEV_SLUG from some parent shell decide a database the command did not
+# name.
+if [[ $# -gt 0 ]]; then
+  DEV_SLUG="$1" dev_database_name
+else
+  dev_database_name
+fi

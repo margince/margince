@@ -116,6 +116,16 @@ still_ours() { # pid
   [[ -n "$cmd" ]] || return 1
   [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
 }
+# is_dev_launcher reports whether a pid is a live run of THIS script. The starter
+# recorded in a reservation is a shell running dev.sh, so that is what to look for
+# — checking liveness alone confuses a recycled pid for a peer.
+is_dev_launcher() { # pid
+  local cmd
+  cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
+  [[ -n "$cmd" ]] || return 1
+  [[ "$cmd" == *dev.sh* ]]
+}
+
 # release_unconfirmed_stack — give back this run's claim, and take down whatever
 # it started. Called from the EXIT trap while stack_recorded is 0, which is every
 # path that does not reach a stack answering its own readiness probe.
@@ -305,10 +315,13 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
       printf '%s' "${STARTER_PID:-}"
     )
   fi
-  # still_ours, not `kill -0`: a pid is recycled, and a bare liveness check reads
-  # an unrelated process as another starter — which would refuse every later
-  # `make dev` for this slug, permanently, with no way to tell why.
-  if [[ -n "$holder" && "$holder" != "$STACK_STARTER_PID" ]] && still_ours "$holder"; then
+  # A live process that is actually one of THESE. still_ours identifies a running
+  # SERVER, by the margince connection string on its command line, and a starter
+  # is a shell running this script — it carries neither, so still_ours rejected
+  # the very launcher this guard exists to notice. A bare `kill -0` is the other
+  # wrong answer: pids are recycled, and it would refuse every later `make dev`
+  # for this slug once an unrelated process inherited the number.
+  if [[ -n "$holder" && "$holder" != "$STACK_STARTER_PID" ]] && is_dev_launcher "$holder"; then
     echo "FAIL: another 'make dev' (pid ${holder}) is already starting the '${want}' stack. Wait for it, or stop it with 'make dev-stop'." >&2
     return 1
   fi
