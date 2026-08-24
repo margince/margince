@@ -152,7 +152,12 @@ describe("HomeScreen — the context rail", () => {
     const card = await screen.findByText("Ostwind refit");
     const panel = card.closest("button");
     expect(panel).toBeTruthy();
-    expect(within(panel ?? card).getByText("Nordwind Logistik")).toBeTruthy();
+    // Awaited, not read: the company name comes from a second read that the
+    // card does not wait for, so it can still be in flight when the deal's own
+    // title is already on screen.
+    expect(
+      await within(panel ?? card).findByText("Nordwind Logistik"),
+    ).toBeTruthy();
     // And the count reaches the strip, where 1 is a fact rather than a default.
     const strip = screen.getByTestId("home-readings");
     expect(within(strip).getByText("Gone quiet")).toBeTruthy();

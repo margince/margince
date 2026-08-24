@@ -128,14 +128,14 @@ function CountMark({
       <span className="glance-count glance-count-flat t-mono">{count}</span>
     );
   }
+  // The destination goes in a spoken span rather than an `aria-label`: a label
+  // REPLACES the content, so the figure — the one thing the reader pressed —
+  // would be the part assistive technology never says, and two counts pointing
+  // at two places would announce the same name.
   return (
-    <button
-      type="button"
-      className="glance-count t-mono"
-      onClick={onClick}
-      aria-label={label}
-    >
+    <button type="button" className="glance-count t-mono" onClick={onClick}>
       {count}
+      {label ? <span className="sr-only"> {label}</span> : null}
       <ArrowRight size={13} aria-hidden="true" />
     </button>
   );

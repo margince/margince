@@ -98,13 +98,25 @@ export function deckItems(approvals: readonly Approval[]): DecisionDeckItem[] {
   return out;
 }
 
-/** How many pending decisions stop waiting today, in the reader's own day. */
+/**
+ * How many pending decisions STOP WAITING today, in the reader's own day.
+ *
+ * Still ahead of the clock, and that is the whole reading: a lapsed proposal
+ * stays in the pending queue (the Decisions screen draws it as expired), so a
+ * plain same-day test counted deadlines that had already passed. The briefing
+ * then said "two stop waiting today" about work nobody could still answer, and
+ * the readings strip raised its warn tone off the same number.
+ */
 function expiringToday(approvals: readonly Approval[], nowMs: number): number {
   const zone = viewerZone();
   const today = calendarDay(new Date(nowMs), zone);
   return approvals.filter((approval) => {
     const expires = approval.expires_at;
-    return expires != null && calendarDay(new Date(expires), zone) === today;
+    if (expires == null) {
+      return false;
+    }
+    const at = new Date(expires);
+    return at.getTime() > nowMs && calendarDay(at, zone) === today;
   }).length;
 }
 
@@ -226,10 +238,17 @@ function briefGlance(
   if (!answered || !brief) {
     return null;
   }
+  // Both halves or neither, and `formatMoneyOrAbsent` cannot express the
+  // "neither" half: it answers with a placeholder string rather than with
+  // nothing, so passing it through left the glance's own guard unable to fire
+  // and printed an unpriced deal beside a dash. The figure is only a figure
+  // when there is money to state.
+  const priced =
+    leader != null && leader.amount_minor != null && leader.currency != null;
   return {
     ranked: brief.items.length,
     topDeal: leader?.name ?? null,
-    topAmount: leader
+    topAmount: priced
       ? formatMoneyOrAbsent(leader.amount_minor, leader.currency, locale)
       : null,
   };

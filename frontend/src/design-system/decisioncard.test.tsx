@@ -115,14 +115,16 @@ describe("DecisionCard — what the reader is being asked", () => {
   // A `proposed_` key with no sibling is a value the proposal ADDS. Drawing it
   // against a struck-through blank would claim we know the old one was empty.
   it("does not invent an old side for a value the proposal only adds", () => {
-    render(
+    const { container } = render(
       card({
         approval: approval({
           proposed_change: { proposed_lifecycle: "customer" },
         }),
       }),
     );
-    expect(screen.queryByText("Created")).not.toBeInTheDocument();
+    // No diff row at all: the old-to-new pair is the markup that would claim we
+    // know what the value used to be.
+    expect(container.querySelector(".dcard-diff")).toBeNull();
     // It is still shown — as a payload field, in the deck's full reading.
     expect(screen.getByText("proposed_lifecycle")).toBeInTheDocument();
   });

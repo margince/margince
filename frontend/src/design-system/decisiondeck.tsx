@@ -251,6 +251,20 @@ type Leaving = Readonly<{
 /** The release point, handed to the exit animation as custom properties. */
 type GhostVars = CSSProperties & Record<`--${string}`, string>;
 
+/**
+ * The release point as the style the exit opens on. Declared as `GhostVars`
+ * rather than asserted at the call site: the type is what makes the custom
+ * properties checkable, and an assertion would say the same thing while
+ * switching the checking off.
+ */
+function ghostVars(leaving: Leaving): GhostVars {
+  return {
+    "--ddeck-from-x": `${leaving.dx}px`,
+    "--ddeck-from-y": `${leaving.dy}px`,
+    "--ddeck-from-rot": `${leaving.dx / DRAG_ROTATION_DIVISOR}deg`,
+  };
+}
+
 export type DecisionDeckProps = Readonly<{
   /** Everything still waiting. The deck reorders nothing. */
   items: readonly DecisionDeckItem[];
@@ -720,13 +734,7 @@ function DeckStack({
             // second keyframe set per verdict — the offset is data, and eight
             // hand-written keyframes to say four directions from an arbitrary
             // point is not.
-            style={
-              {
-                "--ddeck-from-x": `${leaving.dx}px`,
-                "--ddeck-from-y": `${leaving.dy}px`,
-                "--ddeck-from-rot": `${leaving.dx / DRAG_ROTATION_DIVISOR}deg`,
-              } as GhostVars
-            }
+            style={ghostVars(leaving)}
             onAnimationEnd={onLeaveEnd}
           />
         )}

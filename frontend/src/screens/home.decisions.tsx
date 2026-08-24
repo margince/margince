@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
@@ -110,6 +111,17 @@ type CommitResult = Readonly<{
   alreadyDecided: boolean;
   /** Items the reader staged for editing: the deck cannot edit, the queue can. */
   edits: number;
+  /**
+   * The first item that could not be sent, if any.
+   *
+   * Carried in the RESULT rather than thrown, and that is the whole point of it
+   * being here: a throw from the third item took the first item's approval token
+   * with it. The token is minted once, it is the only copy the reader gets, and
+   * the effect it belongs to had already executed — so the commit reports what
+   * landed AND what did not, instead of reporting the failure and losing the
+   * rest.
+   */
+  failure: unknown | null;
 }>;
 
 /**
@@ -177,9 +189,10 @@ async function sendBundle(
     verdict === "accept"
       ? "/approval-bundles/{bundle_id}/approve"
       : "/approval-bundles/{bundle_id}/reject";
+  // No body at all on a rejection: the deck takes no reason, and an empty
+  // string would be recorded as one the reader gave.
   const { data, error } = await api.POST(path, {
     params: { path: { bundle_id: bundleId } },
-    ...(verdict === "reject" ? { body: { reason: "" } } : {}),
   });
   if (error) {
     throwProblem(error);
@@ -227,6 +240,7 @@ async function commitTray(input: {
   let token: CommitResult["token"] = null;
   let alreadyDecided = false;
   let edits = 0;
+  let failure: unknown | null = null;
   for (const decision of input.staged) {
     const item = byId.get(decision.id);
     if (!item || decision.verdict === "skip") {
@@ -236,11 +250,20 @@ async function commitTray(input: {
       edits += 1;
       continue;
     }
-    const outcome = await sendStaged(item, decision.verdict);
-    token = token ?? outcome.token;
-    alreadyDecided = alreadyDecided || outcome.alreadyDecided;
+    try {
+      const outcome = await sendStaged(item, decision.verdict);
+      token = token ?? outcome.token;
+      alreadyDecided = alreadyDecided || outcome.alreadyDecided;
+    } catch (error) {
+      // The FIRST failure is kept and the loop stops: these are outbound
+      // effects, and carrying on after one refusal sends the rest against
+      // whatever made this one fail. What already went, went — and its token
+      // travels back with the failure rather than being thrown away with it.
+      failure = error;
+      break;
+    }
   }
-  return { token, alreadyDecided, edits };
+  return { token, alreadyDecided, edits, failure };
 }
 
 /** The deck and its tray: the staged verdicts, and the one act that sends them. */
@@ -264,6 +287,10 @@ export function DecisionsSection({
   const queryClient = useQueryClient();
   const viewerId = useViewerId();
   const tierMap = useAgentTierMap();
+  // What stopped a commit that had already sent something. Screen state rather
+  // than the mutation's error, because the mutation SUCCEEDED — it carried the
+  // outcomes of the items that went, and one of them may be a token.
+  const [failure, setFailure] = useState<string | null>(null);
 
   const commit = useMutation({
     // The staged verdicts and the items they answer for BOTH arrive as
@@ -282,6 +309,13 @@ export function DecisionsSection({
         onAlreadyDecided();
       }
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      if (result.failure) {
+        // Reported after the outcomes that DID land, and as a failure: the tray
+        // keeps what it still holds and the notice under it says what stopped.
+        setFailure(problemMessageOf(result.failure, t));
+        return;
+      }
+      setFailure(null);
       // The full queue is where an edit's form lives, so the reader is taken
       // there rather than told the deck cannot do it — but NOT over the top of a
       // token. A commit carrying both an approval and an edit mints a one-time
@@ -296,11 +330,17 @@ export function DecisionsSection({
     },
   });
 
+  // A partial failure is a failed commit as far as the tray is concerned: the
+  // verdicts it still holds have not gone anywhere, so the tray keeps them and
+  // the control stays pressable. `commit.isError` covers a request that never
+  // returned; `failure` covers one that returned for an earlier item and then
+  // refused a later one.
   const commitState = commit.isPending
     ? "sending"
-    : commit.isError
+    : commit.isError || failure !== null
       ? "failed"
       : "idle";
+  const notice = commit.isError ? problemMessageOf(commit.error, t) : failure;
 
   return (
     <section id="home-decisions" aria-label={t("home.panel.decisions")}>
@@ -316,11 +356,7 @@ export function DecisionsSection({
         loadingLabel={t("home.panel.decisions")}
         commitState={commitState}
         notice={
-          commit.isError ? (
-            <p className="home-error t-caption">
-              {problemMessageOf(commit.error, t)}
-            </p>
-          ) : undefined
+          notice ? <p className="home-error t-caption">{notice}</p> : undefined
         }
         onCommit={(staged) => commit.mutate({ staged, items })}
         // The three facts a reader needs BEFORE they say yes, and none of them

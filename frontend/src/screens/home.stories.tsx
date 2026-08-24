@@ -91,8 +91,12 @@ function home({
           data: approvals.filter((approval) => !decided.has(approval.id)),
           page: { next_cursor: null, has_more: false },
         }),
-      "POST /approvals/ap-1/approve": () => {
-        decided.add("ap-1");
+      // Keyed on the fixture's own id: spelling it out here would let a renamed
+      // or reordered fixture fall through to the stub's empty page, which reads
+      // as a successful send and leaves the frame waiting on a card that was
+      // never cleared.
+      [`POST /approvals/${singles[0].id}/approve`]: () => {
+        decided.add(singles[0].id);
         return jsonResponse({ ...singles[0], status: "approved" });
       },
       "GET /brief": () =>

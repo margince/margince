@@ -333,7 +333,10 @@ function DecisionEvidence({
   // order.
   const seen = new Map<string, number>();
   const keyOf = (item: { source_id?: string | null; snippet: string }) => {
-    const base = `${item.source_id ?? ""}-${item.snippet.slice(0, 12)}`;
+    // The FULL snippet, not a prefix: two quotes from one source that open the
+    // same way are different evidence, and a key that could not tell them apart
+    // handed one chip the other's expansion state whenever the list reordered.
+    const base = JSON.stringify([item.source_id ?? "", item.snippet]);
     const before = seen.get(base) ?? 0;
     seen.set(base, before + 1);
     return before === 0 ? base : `${base}#${before}`;

@@ -136,6 +136,25 @@ function writes(calls: readonly Call[]): Call[] {
   );
 }
 
+/**
+ * The `snoozed_until` a write carried, narrowed rather than asserted: a body is
+ * `unknown` here because it came off the wire, and casting one into shape hides
+ * the case where the field never went at all.
+ */
+function readSnoozedUntil(body: unknown): string {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("snoozed_until" in body) ||
+    typeof body.snoozed_until !== "string"
+  ) {
+    throw new Error(
+      `the snooze write carried no instant: ${JSON.stringify(body)}`,
+    );
+  }
+  return body.snoozed_until;
+}
+
 /** The routes those writes named, which is what a commit is judged on. */
 function writeRoutes(calls: readonly Call[]): string[] {
   return writes(calls).map((call) => `${call.method} ${call.path}`);
@@ -755,6 +774,11 @@ describe("HomeScreen — the ranked queue", () => {
   // The contract requires a FUTURE instant, and the product has no picker yet:
   // Home's promise is "back tomorrow morning", in the reader's own zone.
   it("snoozes an item until tomorrow morning in the reader's own zone", async () => {
+    // "Tomorrow" is a claim about the reader's calendar, so the clock is pinned:
+    // a case that derives its own expectation from the live clock agrees with the
+    // component even when both are wrong, and it changes verdict overnight.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 6, 5, 12, 0, 0));
     const calls = stubApi({
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
@@ -776,14 +800,9 @@ describe("HomeScreen — the ranked queue", () => {
     );
 
     const sent = writes(calls)[0].body;
-    const until = new Date(
-      String((sent as { snoozed_until: string }).snoozed_until),
-    );
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const until = new Date(readSnoozedUntil(sent));
     expect(until.getTime()).toBeGreaterThan(Date.now());
-    expect(until.getHours()).toBe(8);
-    expect(until.toDateString()).toBe(tomorrow.toDateString());
+    expect(until).toEqual(new Date(2026, 6, 6, 8, 0, 0));
     expect(await screen.findByText("snoozed")).toBeTruthy();
   });
 });
