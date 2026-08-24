@@ -176,22 +176,19 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // purge shares the person-erase durability guarantee).
 //
 // `raw` goes with `body`. It is the re-parseable original the schema names, so
-// clearing the parsed copy while leaving the source is not an erasure at all —
-// it is the same content one parse away. Nothing populates the column in this
-// tree today, which is exactly why the omission was survivable and exactly why
-// it had to be fixed before something does: the first connector to store an
-// original would have made this sweep keep whole messages past their window,
-// silently. Both sibling erasers already clear it (Art. 17's redaction and the
-// restriction lift), and migration 0291 exists because a guard written from
-// the smaller of two content lists is how the paths come to destroy different
-// things.
+// clearing the parsed copy and leaving the source erases nothing — the content
+// is one parse away. Nothing in this tree populates the column, which is why
+// only a gate will ever notice if this stops: piicoverage_test.go declares the
+// assignments this statement IS.
 //
-// `counterparty_email` deliberately does NOT go, and that is the one place
-// this statement differs from its siblings on purpose: the retention action's
-// contract is that the RECORD of the meeting survives and its content goes,
-// and who the meeting was with is the record rather than the content. The
-// difference is declared in piicoverage_test.go's retentionErasures for
-// `activity` so it stays a decision rather than an oversight.
+// `counterparty_email` and the channel identity (`source_id`, `thread_key`)
+// deliberately stay, and that is where this statement parts company with its
+// two siblings. The retention action's contract is that the RECORD of the
+// meeting survives and its content goes, and who it was with is the record.
+// The difference is declared in piicoverage_test.go's retentionKeeps for
+// `activity`, so reversing it fails the gate rather than passing silently — the
+// data-layer guard `activity_restriction_lift_erases` exists because the same
+// kind of difference was once carried in prose and went short.
 func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,

@@ -50,7 +50,8 @@ type piiHandling struct {
 	// a declared assignment went missing; it says nothing about one that
 	// APPEARS, so a decision to keep a column lives in a comment and reverses
 	// silently the first time somebody "completes" the statement from the
-	// fuller list beside it. That is how migration 0291 came to exist. Naming
+	// fuller list beside it. That is why the data-layer guard
+	// activity_restriction_lift_erases exists at all. Naming
 	// the column here makes reversing the decision fail rather than pass, so it
 	// has to be an edit to this line and not a quiet widening.
 	retentionKeeps []string
@@ -130,7 +131,12 @@ var piiTables = map[string]piiHandling{
 			// leave the old subject line standing.
 			"subject = $2",
 		},
-		retentionKeeps: []string{"counterparty_email"},
+		// Columns a sibling eraser clears and the sweep deliberately does not.
+		// counterparty_email and the channel identity are the same ruling: the
+		// retention action keeps the RECORD of the event, and who it was with
+		// is the record rather than its content. field_provenance is not here
+		// because it is a different table — see its own entry.
+		retentionKeeps: []string{"counterparty_email", "source_id", "thread_key"},
 	},
 	"attachment":  {erasureWrite: true, sarRead: true},
 	"raw_capture": {erasureWrite: true, sarRead: true},
@@ -323,8 +329,8 @@ var erasureCascadeFiles = []string{
 //
 // It is still a list and not a glob over retention*.go, and that is the part
 // worth reading before "fixing" it. retentionrestricted.go is the RESTRICTION
-// LIFT — a different trigger — and it clears `raw` and `counterparty_email`
-// that the sweep does not. Folding it in would let the lift's assignments
+// LIFT — a different trigger — and it clears `counterparty_email`, which the
+// sweep deliberately keeps. Folding it in would let the lift's assignments
 // satisfy the sweep's declarations below, so a retentionErasures entry would
 // pass whether or not the sweep still made it: the gate would go quietly green
 // over exactly the divergence it exists to catch. Over-recognition is the
@@ -337,37 +343,105 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retentionactions.go",
 }
 
-// setClause is the assignment list of an UPDATE: everything between SET and the
-// WHERE that ends it. Matched so a retained column can be looked for where it
-// would be WRITTEN rather than anywhere in the statement — `WHERE
-// counterparty_email IS NOT NULL` selects rows, it does not destroy them.
-var setClause = regexp.MustCompile(`(?is)\bSET\b(.*?)(?:\bWHERE\b|$)`)
+// sqlStatements splits one Go string literal into the statements it holds. A
+// literal is not a statement: several in this tree carry two, and a check that
+// read the literal whole would let a second statement's SET clause hide behind
+// the first one's.
+func sqlStatements(literal string) []string {
+	var out []string
+	for _, stmt := range strings.Split(literal, ";") {
+		if strings.TrimSpace(stmt) != "" {
+			out = append(out, collapsedSQL(stmt))
+		}
+	}
+	return out
+}
 
-// deleteFrom matches a statement that removes the row outright, which takes
-// every column with it including the retained one.
-var deleteFrom = regexp.MustCompile(`(?is)^\s*DELETE\s+FROM\s+([a-z_]+)`)
+// setAssignments returns the assignment list of one UPDATE — what sits between
+// SET and the clause that ends it — or "" when the statement has none.
+//
+// Scanned at PAREN DEPTH ZERO rather than matched with a lazy regex, and that
+// is the whole point of it being a scan. `SET redacted_fields = ARRAY(SELECT c
+// FROM unnest(…) WHERE c IS NOT NULL), counterparty_email = NULL` is a shape
+// this tree already writes (retentionrestricted.go), and a regex ending at the
+// first WHERE stops inside that subquery — so every assignment after it becomes
+// invisible and reordering the list, which nobody reviews as a compliance
+// change, turns the check off.
+func setAssignments(statement string) string {
+	low := strings.ToLower(statement)
+	i := strings.Index(low, " set ")
+	if i < 0 {
+		return ""
+	}
+	rest := statement[i+len(" set "):]
+	depth := 0
+	for pos := range rest {
+		switch rest[pos] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		}
+		if depth != 0 {
+			continue
+		}
+		for _, end := range []string{" where ", " from ", " returning "} {
+			if strings.HasPrefix(strings.ToLower(rest[pos:]), end) {
+				return rest[:pos]
+			}
+		}
+	}
+	return rest
+}
+
+// oneStatementCarries reports whether any single statement makes every declared
+// assignment. Declared assignments describe ONE erasure, so they are proven
+// against one statement — see the call site for why the union is not enough.
+func oneStatementCarries(statements []string, assignments []string) bool {
+	for _, stmt := range statements {
+		all := true
+		for _, assignment := range assignments {
+			all = all && strings.Contains(stmt, strings.ToLower(assignment))
+		}
+		if all {
+			return true
+		}
+	}
+	return false
+}
 
 // statementDestroying returns the sweep statement that would destroy column on
 // table, or "" if none does.
 //
 // It asks whether the column is ASSIGNED AT ALL rather than whether it is
-// assigned NULL, and that is deliberate: `col = NULL`, `col=NULL`,
-// `col = CAST(NULL AS text)` and `col = ”` are the same act wearing four
-// spellings, and a check that recognised one of them would go quietly green on
-// the other three. A retained column is one the sweep does not write, so any
-// write to it is the finding. A DELETE of the whole row counts too — it takes
-// the retained column with it.
+// assigned NULL: `col = NULL`, `col=NULL`, `col = CAST(NULL AS text)` and
+// `col = ”` are one act in four spellings, and a check that recognised one
+// would go quietly green on the other three. A retained column is one the sweep
+// does not write, so any write to it is the finding, and a DELETE of the row
+// counts because it takes the column with it.
+//
+// Held by TestTheRetainedColumnCheckSeesEveryDestructiveShape, which plants the
+// shapes an earlier version of this missed rather than trusting that the one
+// statement in the tree passes.
 func statementDestroying(statements []string, table, column string) string {
-	needle := regexp.MustCompile(`(?is)\b` + regexp.QuoteMeta(strings.ToLower(column)) + `\s*=`)
+	needle := regexp.MustCompile(`(?is)(?:\bSET\b|,)\s*` + regexp.QuoteMeta(strings.ToLower(column)) + `\s*=`)
 	for _, stmt := range statements {
-		if m := deleteFrom.FindStringSubmatch(stmt); m != nil && m[1] == table {
-			return stmt
+		// The statement has to write THIS table. The caller already groups
+		// statements by write target, but a helper that only answered
+		// correctly because its caller filtered first is one the next caller
+		// gets wrong — and `activity` and `activity_participant` both carry a
+		// counterparty column, so the confusion is available here today.
+		writesTable := false
+		for _, target := range sqlWriteTargets(stmt) {
+			writesTable = writesTable || target == table
 		}
-		sets := setClause.FindStringSubmatch(stmt)
-		if sets == nil {
+		if !writesTable {
 			continue
 		}
-		if needle.MatchString(sets[1]) {
+		if deleteRe.MatchString(stmt) {
+			return stmt
+		}
+		if sets := setAssignments(stmt); sets != "" && needle.MatchString("SET "+strings.ToLower(sets)) {
 			return stmt
 		}
 	}
@@ -433,11 +507,32 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			missing = append(missing, "PII table "+table+
 				" names the retention sweep as its eraser but declares no erasure assignments — list the SET clauses that ARE the wipe, so a metadata-only write cannot satisfy this gate")
 		}
-		for _, assignment := range h.retentionErasures {
-			if !strings.Contains(sweeps[table], strings.ToLower(assignment)) {
-				missing = append(missing, "the retention sweep no longer assigns `"+assignment+"` on PII table "+table+
-					" — the content it was written to erase now outlives its window; restore the assignment or amend the declared erasure")
-			}
+		// Checked against ONE statement rather than the union of every sweep
+		// statement that writes this table, because a declaration describes one
+		// act: the union would let two statements each making half of it pass,
+		// which is how an erasure gets split and stops being one.
+		//
+		// What this still cannot see, stated rather than implied: a statement
+		// satisfies a declaration by EXISTING. A second statement carrying the
+		// whole erasure — a helper nobody calls — would answer for an action
+		// that had stopped making it. Closing that needs call-graph
+		// reachability, which no SQL gate in this tree has and which the
+		// sweep's two kinds of entry point (the retentionActions executors and
+		// the evaluate*Retention passes) make more than a one-line derivation.
+		// The realistic drift — somebody deletes the assignment — is caught,
+		// because nothing else in the swept files carries these together.
+		if len(h.retentionErasures) > 0 && !oneStatementCarries(sweepStatements[table], h.retentionErasures) {
+			missing = append(missing, "no single retention-sweep statement on PII table "+table+
+				" carries all of "+strings.Join(h.retentionErasures, ", ")+
+				" — the content they were written to erase now outlives its window, or the erasure has been split across statements and the declaration no longer describes one act; restore the assignments or amend the declared erasure")
+		}
+		// A table that declares only retentionKeeps has no other tripwire: with
+		// no statements to read, statementDestroying answers "nothing destroys
+		// it" and the check turns itself off. That is the same regression the
+		// file list above has now had twice, arriving where nothing fails loud.
+		if len(h.retentionKeeps) > 0 && len(sweepStatements[table]) == 0 {
+			missing = append(missing, "PII table "+table+
+				" registers a column the sweep deliberately keeps, but the sweep no longer writes this table at all — the check has nothing to read and is passing vacuously; add the file that holds the sweep's statements to retentionSweepFiles, or drop the registration")
 		}
 		for _, column := range h.retentionKeeps {
 			if destroyer := statementDestroying(sweepStatements[table], table, column); destroyer != "" {
