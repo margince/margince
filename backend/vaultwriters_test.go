@@ -14,10 +14,10 @@ package backendarch
 //
 // THAT WAIVER IS MODULE-WIDE, WHICH IS WHY THIS CENSUS EXISTS. A waiver on the
 // package covers every write that reaches it — including one added tomorrow that
-// records nothing at all. The waiver text used to enumerate the callers instead,
-// and was wrong twice: once naming one, once naming two and calling them the
-// only ones. There are eight. So the enumeration lives here, where a NEW writer
-// fails until somebody gives it a verdict, rather than in a comment that rots.
+// records nothing at all. An enumeration in that comment could not bound it: no
+// gate holds a comment true, so it goes stale the first time a caller is added.
+// The enumeration lives here instead, where a NEW writer fails until somebody
+// gives it a verdict.
 //
 // It does not judge WHERE a caller records — audit_log, system_log, or a settings
 // write that carries the audit row are all legitimate for different shapes. It

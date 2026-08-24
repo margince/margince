@@ -36,7 +36,20 @@ fixture() {
   # route a caller finds to inject config, an injected core.hooksPath shows up
   # here. Placed after `commit` it fired but too late — the hook had already
   # executed, which is the whole thing it exists to prevent.
-  [ -z "$(git -C "$dir" config core.hooksPath 2>/dev/null)" ] || return 1
+  #
+  # The STATUS is judged, not just the output. `git config <key>` prints nothing
+  # both when the key is unset (exit 1, the clean case) and when it cannot read
+  # the config at all (a fatal, some other status) — so testing emptiness alone
+  # read a broken git as a clean configuration, which is this check failing short
+  # in the one direction a check must not.
+  local hooks_path hooks_status
+  hooks_path="$(git -C "$dir" config core.hooksPath 2>/dev/null)"
+  hooks_status=$?
+  case "$hooks_status" in
+    0) [ -z "$hooks_path" ] || return 1 ;;
+    1) : ;;
+    *) return 1 ;;
+  esac
   git -C "$dir" config user.email probe@example.com
   git -C "$dir" config user.name probe
   for v in 0001_alpha 0002_beta 0003_gamma; do

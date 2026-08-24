@@ -79,10 +79,9 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// one change twice, the second time under an entity type that is a secret's
 	// reference.
 	//
-	// Stated as an invariant BECAUSE an enumeration here was wrong twice. The
-	// first form named one act; the second named two and called them the only
-	// ones. There are eight writers, and no test holds a count, so any number in
-	// this comment is a claim that rots — which is CLAUDE.md rule 4 exactly.
+	// An invariant rather than a list: no test holds a count, so a number here is
+	// a claim that rots. The count itself lives in vaultwriters_test.go, where a
+	// gate keeps it true.
 	//
 	// ONE writer records nothing, and it is named rather than covered:
 	// capture/credentialbackfill.go relocates a legacy credential into the vault
