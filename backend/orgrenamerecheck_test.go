@@ -59,62 +59,131 @@ var setsAnOrganizationName = regexp.MustCompile(`(?is)UPDATE\s+organization\b[^;
 // which column arrives, so it asks the same question it asks of one it can read.
 var assemblesAnOrganizationUpdate = regexp.MustCompile(`(?is)UPDATE\s+organization\b[^;]*?\bSET\s*$`)
 
-// withoutSQLNoise removes what a reader can see is not the statement: line
-// comments and single-quoted literals.
+// withoutSQLNoise blanks every region of a statement the database does not
+// execute: quoted literals, dollar-quoted bodies, line comments and block
+// comments.
 //
-// Both directions were wrong without it. `SET description = $1 -- display_name =`
-// counted as a rename, and `SET description = 'legal_name = x'` did too; the
-// other way, a `;` INSIDE a comment ended the `[^;]*?` scan early and hid a real
-// `legal_name = $2` on the next line. A `--` inside a quoted literal is handled
-// by stripping quotes first; an escaped quote (`”`) closes and reopens, which
-// is the same result for this purpose.
+// ONE left-to-right scanner, because each of those regions hides the others'
+// delimiters, and a pass cannot see past what a later pass has not removed yet.
+// Every arrangement of separate passes is wrong in some direction:
+//
+//	UPDATE organization -- /*
+//	SET legal_name = $1                        a `/*` inside a line comment opens nothing
+//	UPDATE organization SET description = 'x' -- don't
+//	SET legal_name = $1                        an apostrophe inside a comment closes nothing
+//	UPDATE organization /* ; */ SET legal_name = $1
+//	                                           a `;` inside any of them ends nothing
+//
+// Each region knows only its own terminator, so the scanner tracks which one it
+// is in rather than asking four patterns what they can each see on their own.
 func withoutSQLNoise(statement string) string {
-	statement = sqlDollarQuoted.ReplaceAllString(statement, "$$$$")
-	statement = sqlQuoted.ReplaceAllString(statement, "''")
-	statement = withoutBlockComments(statement)
-	return sqlLineComment.ReplaceAllString(statement, "")
-}
-
-// The non-code regions of a statement, stripped widest-first: a `--` inside a
-// block comment is not a line comment, and a `;` inside any of them does not end
-// the statement. `UPDATE organization /* ; */ SET legal_name = $1` was read as
-// ending at that semicolon and so was not a rename at all.
-//
-// The line-comment half is versionguard_test.go's sqlLineComment, which already
-// strips `-- …` for the same reason and is in this package — a second spelling
-// of it here would be two answers to one question.
-// withoutBlockComments removes `/* … */`, counting NESTING.
-//
-// Postgres nests them, unlike C, and a regex cannot: a non-greedy `.*?` stops at
-// the FIRST `*/`, so `/* outer /* inner */ still comment */` leaves
-// `still comment */` in the stream to be read as SQL. A depth counter is the
-// whole fix, and it is the same lesson as the semicolon — a splitter that trusts
-// punctuation is trusting a lexer it did not write.
-func withoutBlockComments(statement string) string {
 	var out strings.Builder
-	depth := 0
-	for i := 0; i < len(statement); i++ {
+	for i := 0; i < len(statement); {
+		tag := dollarTagAt(statement, i)
 		switch {
-		case strings.HasPrefix(statement[i:], "/*"):
-			depth++
-			i++
-		case depth > 0 && strings.HasPrefix(statement[i:], "*/"):
-			depth--
-			i++
-			// A comment is whitespace to the parser, so what surrounded it must
-			// not fuse: `SET/* x */legal_name` is two tokens, not one.
+		case statement[i] == '\'':
+			out.WriteString("''")
+			i = endOfQuoted(statement, i)
+		case tag != "":
+			out.WriteString("$$")
+			i = endOfDollarQuoted(statement, i, tag)
+		// Either comment leaves a space behind it: a comment is whitespace to
+		// the parser, and what surrounded it must not fuse. `SET/* x */legal_name`
+		// is two tokens, not one.
+		case strings.HasPrefix(statement[i:], "--"):
 			out.WriteByte(' ')
-		case depth == 0:
+			i = endOfLineComment(statement, i)
+		case strings.HasPrefix(statement[i:], "/*"):
+			out.WriteByte(' ')
+			i = endOfBlockComment(statement, i)
+		default:
 			out.WriteByte(statement[i])
+			i++
 		}
 	}
 	return out.String()
 }
 
-var (
-	sqlQuoted       = regexp.MustCompile(`'[^']*'`)
-	sqlDollarQuoted = regexp.MustCompile(`(?s)\$([A-Za-z_]\w*)?\$.*?\$([A-Za-z_]\w*)?\$`)
-)
+// endOfQuoted returns the index just past a `'…'` literal beginning at i.
+//
+// `”` — an escaped quote — needs no case of its own, which is worth saying
+// because its absence reads like the bug it usually is. Every quote is a
+// boundary either way, so the two readings of `'it”s'` (one literal, or two
+// abutting ones) blank exactly the same bytes, and this scanner only ever asks
+// which bytes are literal. A case for it here would be code no probe can fail.
+func endOfQuoted(statement string, i int) int {
+	for j := i + 1; j < len(statement); j++ {
+		if statement[j] == '\'' {
+			return j + 1
+		}
+	}
+	return len(statement)
+}
+
+// dollarTagAt returns the `$tag$` opening at i, or "" if there is none. A body
+// closes only on its OWN tag, so `$$…$$` and `$q$…$q$` do not close each other.
+func dollarTagAt(statement string, i int) string {
+	if statement[i] != '$' {
+		return ""
+	}
+	for j := i + 1; j < len(statement); j++ {
+		if statement[j] == '$' {
+			return statement[i : j+1]
+		}
+		// A tag is an identifier. A leading DIGIT means this is a placeholder
+		// instead, and `$1 … $2` is two parameters and not a body between them.
+		digitInside := j > i+1 && '0' <= statement[j] && statement[j] <= '9'
+		if !isTagLetter(statement[j]) && !digitInside {
+			return ""
+		}
+	}
+	return ""
+}
+
+func isTagLetter(c byte) bool {
+	return c == '_' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+}
+
+func endOfDollarQuoted(statement string, i int, tag string) int {
+	body := i + len(tag)
+	closes := strings.Index(statement[body:], tag)
+	if closes < 0 {
+		return len(statement)
+	}
+	return body + closes + len(tag)
+}
+
+// endOfLineComment stops AT the newline rather than past it, so the line break
+// stays in the stream. It is whitespace, and removing it fuses the comment's
+// line to the next one.
+func endOfLineComment(statement string, i int) int {
+	ends := strings.IndexByte(statement[i:], '\n')
+	if ends < 0 {
+		return len(statement)
+	}
+	return i + ends
+}
+
+// endOfBlockComment counts NESTING, because Postgres nests `/* … */` where C
+// does not: a non-greedy match stops at the first `*/`, leaving the tail of
+// `/* outer /* inner */ still comment */` in the stream to be read as SQL.
+func endOfBlockComment(statement string, i int) int {
+	depth := 0
+	for j := i; j < len(statement); j++ {
+		switch {
+		case strings.HasPrefix(statement[j:], "/*"):
+			depth++
+			j++
+		case strings.HasPrefix(statement[j:], "*/"):
+			depth--
+			if depth == 0 {
+				return j + 2
+			}
+			j++
+		}
+	}
+	return len(statement)
+}
 
 // remembersTheRecheckItself ratifies a writer that cannot reach the re-check
 // through an edge this graph can follow.
@@ -248,6 +317,26 @@ func TestTheRenameDetectorReadsSQLAndNotProse(t *testing.T) {
 		{
 			"the column assembled by the caller", "UPDATE organization SET ", true,
 			"the fragment names no column because the caller supplies it; the gate asks anyway",
+		},
+		{
+			"a block comment opened inside a line comment", "UPDATE organization -- /*\n SET legal_name = $1", true,
+			"a `/*` the database reads as prose opened a comment that ran on and swallowed the rename after it",
+		},
+		{
+			"an apostrophe inside a line comment", "UPDATE organization -- don't\n SET legal_name = $1", true,
+			"an apostrophe in prose pairs with the next real quote and takes the SQL between them with it",
+		},
+		{
+			"an apostrophe inside a block comment", "UPDATE organization /* don't */ SET legal_name = $1", true,
+			"same, spelled the other way",
+		},
+		{
+			"placeholders are not a dollar-quoted body", "UPDATE organization SET description = $1, legal_name = $2", true,
+			"a tag is an identifier, so `$1 … $2` is two parameters and not a body hiding what is between them",
+		},
+		{
+			"a body that does not close on a different tag", "UPDATE organization SET description = $q$ $$ legal_name = $q$", false,
+			"`$$` does not close `$q$`, so the column named inside the body is still inside it",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
