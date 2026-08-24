@@ -161,6 +161,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/signals:flagAmbiguous":                    "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/ai:SetBuildStage":                         "stage is display-only forward progress; the status=running predicate makes a raced write a harmless no-op",
 	"internal/modules/ai:DeferBuild":                            "the status=running predicate is the CAS: a build already finished or re-claimed matches zero rows and the deferral is dropped",
+	"internal/modules/ai:ClaimBuild":                            "the claim's own status predicate IS the CAS — queued, or deferred past its window, or running past reclaimAfter — so a build another worker already claimed matches zero rows and this claim is correctly dropped. It DOES hold a row lock, on voice_profile, and that lock is the documented profile-then-build ordering CompleteBuild takes rather than a guard on voice_build; the narrowed witness stopped crediting it for the wrong table, which is the narrowing working",
 	"internal/modules/privacy:liftAndEraseHeldRecord":           "the `restricted_at IS NOT NULL` predicate plus the caller's own due-clause, with RETURNING, is the CAS: the expiry sweep and the controller's release both match nothing when the other got there first, so one erasure is audited once. A version guard would be wrong here — a held record has no optimistic-concurrency editor, and the deciding administrator is acting on a list, not on a version they read",
 	"internal/modules/activities:StampCorrespondenceForProject": "the `retention_class IS NULL` predicate IS the CAS, and losing the race is the correct outcome rather than a conflict to report: a deal that qualified the same activity first has already written the same class, and the second writer's evidence row still lands beside it. A version guard would be actively wrong — this runs inside the transaction that files the link, so refusing it on a stale version would abort the filing and leave the correspondence unclassified, which is the one failure mode the stamp exists to prevent",
 	"internal/modules/ai:finishBuildTx":                         "runs only under its callers' row lock — ClaimBuild's claim UPDATE or the FOR UPDATE pre-read in FailBuild/CompleteBuild, same transaction",
@@ -178,21 +179,92 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 })
 
 // guardMarkers are the identifiers whose presence in the same function
-// witnesses a concurrency guard: the storekit guarded-apply family, the
-// lock mints, and the RowsAffected conditional-write (CAS) check.
+// witnesses a concurrency guard: the storekit guarded-apply family and the
+// RowsAffected conditional-write (CAS) check.
+//
+// LockRow and LockPair are NOT here, and that is the point: a lock witnesses a
+// guard only when it names the table the UPDATE writes, which a bare identifier
+// match cannot tell. They are matched by lockedTables below instead.
+//
+// RowsAffected stays function-scoped, and the reason is measured rather than
+// assumed. 28 by-id updates in this tree are credited by it alone, and
+// associating a command tag with the statement that produced it needs dataflow
+// this AST walk does not do — a tag is assigned in one statement and tested in
+// another, often through a named variable, sometimes inside a helper. Narrowing
+// it would therefore mean 28 ratified waivers, which is a bigger change than
+// this witness is worth on its own; it is recorded here so the next reader knows
+// the looseness is a decision with a number behind it.
 var guardMarkers = map[string]bool{
 	"ApplyWithVersion": true,
 	"ApplyGuarded":     true,
 	"ApplyLocked":      true,
-	"LockRow":          true,
-	"LockPair":         true,
 	"RowsAffected":     true,
+}
+
+// lockMarkers are the row-lock mints, whose first string argument names the
+// table they lock.
+var lockMarkers = map[string]bool{"LockRow": true, "LockPair": true}
+
+// forUpdateFrom pulls the table out of a locking read, so `SELECT … FROM stage
+// … FOR UPDATE` witnesses a guard on `stage` and on nothing else.
+var forUpdateFrom = regexp.MustCompile(`(?is)\bFROM\s+([a-z_]+)`)
+
+// lockTableConsts is stringConsts (versionguard_test.go) memoised per package
+// directory, so resolving a lock's table constant costs one parse of the
+// package rather than one per function inspected.
+//
+// Both spellings are live in this tree — storekit.LockRow(ctx, tx, "stage", …)
+// and storekit.LockRow(ctx, tx, entityPerson, …) — and a witness that only
+// understood the literal form would credit every constant-form lock for free.
+// That is the same over-recognition this narrowing exists to remove, arriving
+// through the back door.
+//
+// PACKAGE-scoped, where writeauthority_test.go's packageStringConsts is
+// deliberately FILE-scoped. The difference is not an oversight: that gate reads
+// a const and the probes using it as one unit that sits together, and widening
+// it would let an unrelated same-named const answer. Here the lock and the
+// entity const are routinely in different files of one module — finance mints
+// entityInvoice once and locks with it from both mirror.go and sync.go — so
+// file scope would resolve nothing and hand back the free credit this narrowing
+// exists to remove.
+func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[string]string, dir string) map[string]string {
+	t.Helper()
+	if consts, ok := cache[dir]; ok {
+		return consts
+	}
+	consts := stringConsts(t, fset, parsePackageDir(t, fset, dir))
+	cache[dir] = consts
+	return consts
+}
+
+// lockedTable resolves the table a LockRow/LockPair call names: a string
+// literal, or an identifier declared as a package-level string constant. An
+// argument it cannot resolve returns "", which the caller treats as an
+// unattributable lock rather than as a guard for every table.
+func lockedTable(call *ast.CallExpr, consts map[string]string) string {
+	for _, a := range call.Args {
+		switch arg := a.(type) {
+		case *ast.BasicLit:
+			if arg.Kind != token.STRING {
+				continue
+			}
+			if v, err := strconv.Unquote(arg.Value); err == nil && v != "" && !strings.ContainsAny(v, " \t\n") {
+				return v
+			}
+		case *ast.Ident:
+			if v, ok := consts[arg.Name]; ok && v != "" && !strings.ContainsAny(v, " \t\n") {
+				return v
+			}
+		}
+	}
+	return ""
 }
 
 func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	defer unguardedByIDUpdates.AssertAllMatched(t)
 	versioned := versionedTables(t)
 	fset := token.NewFileSet()
+	constCache := map[string]map[string]string{}
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -209,7 +281,9 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 				if !ok || fn.Body == nil {
 					continue
 				}
-				var updatesByID, guarded bool
+				var guarded bool
+				updated := map[string]bool{}
+				locked := map[string]bool{}
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					switch node := n.(type) {
 					case *ast.BasicLit:
@@ -221,7 +295,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 							return true
 						}
 						if m := byIDUpdate.FindStringSubmatch(lit); m != nil && versioned[m[1]] {
-							updatesByID = true
+							updated[m[1]] = true
 							// A version predicate in the statement's own WHERE
 							// IS the compare-and-set this gate asks for, and the
 							// most direct form of it — the UPDATE matches no row
@@ -233,8 +307,24 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 								guarded = true
 							}
 						}
-						if strings.Contains(lit, "FOR UPDATE") || strings.Contains(lit, "pg_advisory_xact_lock") {
+						// A locking read guards the table it READS. An advisory
+						// lock names no table at all and is a workspace-wide
+						// mutex, so it keeps its unattributed credit.
+						if strings.Contains(lit, "FOR UPDATE") {
+							if m := forUpdateFrom.FindStringSubmatch(lit); m != nil {
+								locked[m[1]] = true
+							}
+						}
+						if strings.Contains(lit, "pg_advisory_xact_lock") {
 							guarded = true
+						}
+					case *ast.CallExpr:
+						sel, ok := node.Fun.(*ast.SelectorExpr)
+						if !ok || !lockMarkers[sel.Sel.Name] {
+							return true
+						}
+						if tbl := lockedTable(node, lockTableConsts(t, fset, constCache, filepath.Dir(path))); tbl != "" {
+							locked[tbl] = true
 						}
 					case *ast.SelectorExpr:
 						if guardMarkers[node.Sel.Name] {
@@ -243,7 +333,15 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 					}
 					return true
 				})
-				if updatesByID && !guarded {
+				// The lock has to name the table being written. A function that
+				// locks one row and updates another is the shape this witness
+				// used to credit for free.
+				for tbl := range updated {
+					if locked[tbl] {
+						guarded = true
+					}
+				}
+				if len(updated) > 0 && !guarded {
 					key := filepath.ToSlash(filepath.Dir(path)) + ":" + fn.Name.Name
 					if unguardedByIDUpdates.Waived(t, key) {
 						continue
