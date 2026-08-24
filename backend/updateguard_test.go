@@ -205,9 +205,51 @@ var guardMarkers = map[string]bool{
 // table they lock.
 var lockMarkers = map[string]bool{"LockRow": true, "LockPair": true}
 
-// forUpdateFrom pulls the table out of a locking read, so `SELECT … FROM stage
-// … FOR UPDATE` witnesses a guard on `stage` and on nothing else.
-var forUpdateFrom = regexp.MustCompile(`(?is)\bFROM\s+([a-z_]+)`)
+// lockingRead matches a statement that takes row locks, case-insensitively
+// because Postgres accepts lowercase keywords and a witness that missed `for
+// update` would report a guarded function as unguarded.
+var lockingRead = regexp.MustCompile(`(?i)\bFOR\s+UPDATE\b`)
+
+// advisoryLock names no table — it is a workspace-wide mutex — so it keeps an
+// unattributed credit rather than being resolved to one.
+var advisoryLock = regexp.MustCompile(`(?i)pg_advisory_xact_lock`)
+
+// lockedReadTables pulls the tables a locking read could be locking: every FROM
+// and JOIN target in the statement.
+var lockedReadTables = regexp.MustCompile(`(?is)\b(?:FROM|JOIN)\s+([a-z_]+)`)
+
+// forUpdateOf marks `FOR UPDATE OF a, b`, which locks only the aliases it
+// names. Resolving an alias back to its table needs a parser, so a statement
+// carrying one is credited with NOTHING and its call site takes a waiver — the
+// safe direction, because the alternative is crediting a table the statement
+// does not lock.
+var forUpdateOf = regexp.MustCompile(`(?i)\bFOR\s+UPDATE\s+OF\b`)
+
+// lockedByRead returns the tables a locking read witnesses a guard on.
+//
+// A statement that reads from exactly one table locks that table and nothing
+// else. One that JOINs is ambiguous — `FOR UPDATE` locks every table in the
+// join, but a test that credited them all would hand a free pass to whichever
+// of them the caller then UPDATEs — so it credits nothing and the call site
+// says why in a waiver. Under-crediting fails loudly; over-crediting is the
+// failure this whole narrowing exists to remove, and it fails silently.
+func lockedByRead(lit string) []string {
+	if !lockingRead.MatchString(lit) || forUpdateOf.MatchString(lit) {
+		return nil
+	}
+	seen := map[string]bool{}
+	var tables []string
+	for _, m := range lockedReadTables.FindAllStringSubmatch(lit, -1) {
+		if table := strings.ToLower(m[1]); !seen[table] {
+			seen[table] = true
+			tables = append(tables, table)
+		}
+	}
+	if len(tables) != 1 {
+		return nil
+	}
+	return tables
+}
 
 // lockTableConsts is stringConsts (versionguard_test.go) memoised per package
 // directory, so resolving a lock's table constant costs one parse of the
@@ -310,12 +352,10 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 						// A locking read guards the table it READS. An advisory
 						// lock names no table at all and is a workspace-wide
 						// mutex, so it keeps its unattributed credit.
-						if strings.Contains(lit, "FOR UPDATE") {
-							if m := forUpdateFrom.FindStringSubmatch(lit); m != nil {
-								locked[m[1]] = true
-							}
+						for _, table := range lockedByRead(lit) {
+							locked[table] = true
 						}
-						if strings.Contains(lit, "pg_advisory_xact_lock") {
+						if advisoryLock.MatchString(lit) {
 							guarded = true
 						}
 					case *ast.CallExpr:
