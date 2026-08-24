@@ -182,6 +182,8 @@ default.
 - Staged / real / human-typed are three distinguishable styles, always.
   Confidence is never hidden. Absent data is omitted, never guessed.
 - Packaging: the app is a standalone static `dist/` build (`pnpm build`),
-  served separately from the API binary (which serves `/v1` only). How
+  served separately from the API binary, which embeds no SPA (and serves more
+  than `/v1` — probes, `/setup/*`, the public edge, webhooks, and `/mcp` with its
+  OAuth routes when enabled). How
   `dist/` is hosted — a static server, a CDN, or a reverse proxy in front
   of the API — is a deployment choice, not baked into the build.

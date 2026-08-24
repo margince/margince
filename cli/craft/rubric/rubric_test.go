@@ -118,3 +118,39 @@ func TestTheProseFormNamesTheSameRules(t *testing.T) {
 			"what blocks a push.", rulebook)
 	}
 }
+
+// TestTheSectionScanSurvivesAFencedExample plants the two fence shapes that broke
+// it: an inner ```go, which cannot close a block, and an opener behind a list
+// marker, which a backtick-anchored scan walks past.
+func TestTheSectionScanSurvivesAFencedExample(t *testing.T) {
+	const doc = "# Doc\n\n" +
+		"Here is what a rulebook looks like:\n\n" +
+		"````markdown\n" +
+		"## Craftsmanship\n" +
+		"THIS IS THE EXAMPLE, NOT THE SECTION\n" +
+		"```go\n" +
+		"x := 1\n" +
+		"```\n" +
+		"````\n\n" +
+		"- an opener behind a list marker:\n" +
+		"- ```text\n" +
+		"  ## Craftsmanship also not it\n" +
+		"  ```\n\n" +
+		"## Craftsmanship\n" +
+		"THE REAL SECTION\n\n" +
+		"## Next\n"
+
+	section, found := CraftsmanshipSection(doc)
+	if !found {
+		t.Fatal("no ## Craftsmanship section found at all — the fenced examples swallowed the real one")
+	}
+	if !strings.Contains(section, "THE REAL SECTION") {
+		t.Errorf("selected a fenced example instead of the real section:\n%s", section)
+	}
+	if strings.Contains(section, "NOT THE SECTION") || strings.Contains(section, "also not it") {
+		t.Errorf("the section ran into a fenced example:\n%s", section)
+	}
+	if strings.Contains(section, "## Next") {
+		t.Errorf("the section did not stop at the next H2:\n%s", section)
+	}
+}

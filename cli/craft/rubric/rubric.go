@@ -25,6 +25,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -103,7 +104,7 @@ func CraftsmanshipSection(content string) (string, bool) {
 		// this file's own docs do — would otherwise have its example selected
 		// ahead of the real section, and the gate would run against an
 		// illustration without anything looking wrong.
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+		if fenceToggles(line, inFence) {
 			inFence = !inFence
 			continue
 		}
@@ -124,7 +125,7 @@ func CraftsmanshipSection(content string) (string, bool) {
 	end := len(lines)
 	inFence = false
 	for i := start + 1; i < len(lines); i++ {
-		if strings.HasPrefix(strings.TrimSpace(lines[i]), "```") {
+		if fenceToggles(lines[i], inFence) {
 			inFence = !inFence
 			continue
 		}
@@ -134,4 +135,25 @@ func CraftsmanshipSection(content string) (string, bool) {
 		}
 	}
 	return strings.TrimSpace(strings.Join(lines[start:end], "\n")), true
+}
+
+// fenceOpener matches a fence that opens a block, including one that follows a
+// list marker — `- ```text` is an opener, and a scan anchored on the backticks
+// alone walks straight past it.
+var fenceOpener = regexp.MustCompile("^(?:[-*+]\\s+|\\d+[.)]\\s+)?```")
+
+// fenceToggles reports whether a line changes fenced state.
+//
+// The two directions are NOT symmetric, which is the part worth stating. Any
+// ```-prefixed line opens a block, info string and all. Only a bare run of
+// backticks CLOSES one: a ```go sitting inside a fenced example — exactly what a
+// document about markdown contains — is content, and treating it as a toggle
+// desynchronises the state so the next real closer reopens it and the rest of the
+// file reads as fenced.
+func fenceToggles(line string, inFence bool) bool {
+	trimmed := strings.TrimSpace(line)
+	if inFence {
+		return trimmed != "" && strings.Trim(trimmed, "`") == ""
+	}
+	return fenceOpener.MatchString(trimmed)
 }

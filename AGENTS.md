@@ -95,20 +95,20 @@ CI: [infra/ci-pipeline.md](infra/ci-pipeline.md).
 ## Exactly one dev stack at a time
 
 `make dev` sweeps first: it kills every margince api, worker and Vite on the
-machine, evicts whatever holds `:8080`, drops stray `margince_dev_*` databases,
-and then boots one stack. So it is always safe to run, and you never stop the old
-one by hand. Bare `make dev-stop` is the mirror and stops every stack;
-`DEV_SLUG=x` gives an isolated stack that the sweep spares — until the next bare
-`make dev` takes it down.
+machine, evicts `:8080`, and force-drops stray `margince_dev_*` databases before
+booting one stack. So you never stop the old one by hand — but it is **not**
+harmless: it reaches other worktrees and other sessions, and drops a `DEV_SLUG`
+stack's data with it. `make dev-stop` is the mirror; `DEV_SLUG=x` gives an
+isolated stack, spared until the next bare `make dev`.
 
 **The API does not hot-reload.** Vite does, so the frontend is live as you type;
-the API is a compiled binary, and every backend change needs `make dev` again. A
-stale binary keeps answering happily, so the app breaks in ways that look exactly
-like a bug in the code you just wrote.
+the API is a compiled binary and every backend change needs `make dev` again. A
+stale one keeps answering happily, so the app breaks exactly like your own bug.
 
 Before you trust any manual test, confirm both: `git branch --show-current` is
-the branch you think it is, and the **API** — the process on `:18080`, not Vite on
-`:8080` — was started after your last backend change.
+the branch you think it is, and the **API process** was started after your last
+backend change — not the app port, which is Vite and hot-reloads. The API is
+behind it on the port the startup banner prints.
 
 ## Shipping a change
 
