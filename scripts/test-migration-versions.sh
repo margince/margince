@@ -41,6 +41,21 @@ fixture() {
   git -C "$dir" branch -q base
 }
 
+# HERMETIC BY CONSTRUCTION: nothing the caller exported decides a verdict here.
+#
+# This line is not defensive tidiness — the harness shipped without it and went
+# green having proved nothing. CI declares MIGRATION_VERSIONS_BASELINE_RESET=1
+# for the whole deterministic-gates job (ci.yml sets it at job level so the
+# consolidation could land), so every case below that expects the gate to ENFORCE
+# inherited the declaration, ran in REPORTING mode, and saw exit 0 where it
+# wanted exit 1. It failed in CI and passed on a developer's machine, which is
+# the wrong way round for a gate.
+#
+# The deterministic-gates job is therefore this line's standing regression test:
+# it is the one environment that has the variable set, so if the unset is ever
+# removed, CI says so on the next push.
+unset MIGRATION_VERSIONS_BASELINE_RESET
+
 # expect <name> <want-exit> <declared-reset> <mutation-fn>
 expect() {
   local name="$1" want="$2" declared="$3" mutate="$4"
