@@ -42,7 +42,8 @@ func (e *dedupeEnv) asArchiver() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true, Update: true, Delete: true},
+				"person":       {Read: true, Update: true, Delete: true},
+				"organization": {Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
