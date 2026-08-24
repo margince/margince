@@ -683,6 +683,14 @@ function RoomView({
 }>) {
   const t = useT();
   const steward = view.steward_name ?? t("buyer.stewardUnknown");
+  // Whether this reader may write is the ANSWER to `conversationRefusal`, not
+  // a second opinion sitting beside it: a reader who was given a reason may
+  // not write, and one who may write has no reason to show. Spelled apart the
+  // two drifted — the refusal named a preview and the write test never
+  // mentioned one, so a preview whose seat carried `comment` would have been
+  // handed a live composer. That combination does not arise today only
+  // because the server mints every preview seat read-only.
+  const writeRefusal = conversationRefusal(view, t);
   if (view.access === "paused" || view.access === "expired") {
     return (
       <>
@@ -738,10 +746,8 @@ function RoomView({
       <BuyerBoard
         token={token}
         onSessionLost={onSessionLost}
-        mayWrite={
-          view.access === "live" && view.participant.capability !== "view"
-        }
-        refusal={conversationRefusal(view, t)}
+        mayWrite={writeRefusal === undefined}
+        refusal={writeRefusal}
       />
     </>
   );
