@@ -6,7 +6,7 @@ and how to work the pipeline afterwards. The one thing you *cannot* do from the 
 the value lists themselves — is covered at the end.
 
 New to this? Start with
-[tutorials/run-a-partner-program.md](../tutorials/run-a-partner-program.md) — what partner
+this page — what partner
 programs are, what you can do with them, and one deal followed from the introduction to the
 money it earns. This guide is the reference you come back to for what a particular field means.
 

@@ -6,7 +6,7 @@ to create a project, how visibility and sharing work, and what the fixed
 vocabularies are. The things you *cannot* do from the UI are listed at the end.
 
 New to this? Start with
-[tutorials/run-your-first-project.md](../tutorials/run-your-first-project.md) —
+this page —
 one ERP rollout followed from the first conversation to close. For the
 day-to-day page (the project page section by section, and how email finds its
 project) see [run-a-project.md](run-a-project.md).
