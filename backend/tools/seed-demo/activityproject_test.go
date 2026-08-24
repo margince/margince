@@ -93,3 +93,77 @@ func TestAProjectWithNoStartDateIsTheLastResort(t *testing.T) {
 		t.Errorf("linked to %q, want the project that has a start date", got)
 	}
 }
+
+// TestProjectRelinkFor covers every state an activity already on file can be
+// in when the reconciliation pass reaches it.
+//
+// Each relink is a write on a surface that stamps a six-year retention class
+// the database will not let anyone lift, so "do nothing" is the answer that
+// has to be right most often.
+func TestProjectRelinkFor(t *testing.T) {
+	refs := refsWithProjects(
+		seededProject{ID: "migration", StartedAt: "2025-10-28"},
+		seededProject{ID: "second-tenant", StartedAt: "2026-08-06"},
+	)
+	// A mail from during the migration, which is what the fixtures are about.
+	act := demoActivity{Company: "acme.test", DaysAgo: 214}
+
+	for _, tc := range []struct {
+		name     string
+		existing seededActivity
+		act      demoActivity
+		wantID   string
+		wantMove bool
+	}{
+		{
+			// The shape a pre-projects installation is in: the activity
+			// exists, carries no project link, and reseeding never gave it
+			// one because the create path replays instead of re-linking.
+			name:     "unfiled activity is filed",
+			existing: seededActivity{ID: "a1"},
+			act:      act,
+			wantID:   "migration",
+			wantMove: true,
+		},
+		{
+			// What the old list-order linker left behind: filed under a
+			// project that had not started when the mail was sent.
+			name:     "wrongly filed activity is moved",
+			existing: seededActivity{ID: "a1", ProjectID: "second-tenant"},
+			act:      act,
+			wantID:   "migration",
+			wantMove: true,
+		},
+		{
+			// A converged installation. The pass must be silent.
+			name:     "correctly filed activity is left alone",
+			existing: seededActivity{ID: "a1", ProjectID: "migration"},
+			act:      act,
+			wantMove: false,
+		},
+		{
+			// Older than every project on the account, so it is about none of
+			// them. Filing it anyway stamps a record that had no reason to be.
+			name:     "activity predating every project is left alone",
+			existing: seededActivity{ID: "a1"},
+			act:      demoActivity{Company: "acme.test", DaysAgo: 900},
+			wantMove: false,
+		},
+		{
+			name:     "activity on a company with no project is left alone",
+			existing: seededActivity{ID: "a1"},
+			act:      demoActivity{Company: "nobody.test", DaysAgo: 30},
+			wantMove: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			gotID, gotMove := projectRelinkFor(refs, tc.act, tc.existing)
+			if gotMove != tc.wantMove {
+				t.Fatalf("move = %v, want %v", gotMove, tc.wantMove)
+			}
+			if gotMove && gotID != tc.wantID {
+				t.Errorf("project = %q, want %q", gotID, tc.wantID)
+			}
+		})
+	}
+}
