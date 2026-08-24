@@ -186,7 +186,10 @@ test("AC-shell-1: the rail renders the canonical 12 items in order", async ({
     "Pipeline",
     "Projekte",
     "Aufgaben",
-    "Freigaben",
+    // Was "Freigaben". The surface is called Decisions now — it covers both
+    // halves of that screen, the pending work and the log of what was decided,
+    // and it names what the human does rather than how the system stages it.
+    "Entscheidungen",
     "Berichte",
     "Margince fragen",
   ]);

@@ -200,8 +200,16 @@
    `:has` guards the one case where this would hide something. An advisory strip
    between the bar and the scroller — the economy notice, the reindex notice — is
    opaque and belongs to the chrome, so while one is up the scroller starts below
-   it and nothing passes under the bar. */
-.main:not(:has(> .appbanner)) > .scroll {
+   it and nothing passes under the bar.
+
+   And NOT on the rail-less surfaces. They draw no top bar at all, so there is
+   nothing there to pass under — while this rule reached them it reserved the
+   strip's height on a full-height card measured against the viewport, which at
+   200% zoom pushed the sign-in button off the bottom edge. It is the same
+   exception `.app.railless .scroll` makes above, for the same reason, and it has
+   to be spelled here too: the two selectors tie on specificity, and a tie is
+   settled by which one comes later in the file. */
+.app:not(.railless) .main:not(:has(> .appbanner)) > .scroll {
   margin-top: calc(-1 * var(--topbarH));
   padding-top: calc(var(--topbarH) + var(--pageGapTop));
 }
