@@ -44,6 +44,21 @@ const (
 // Declared rather than derived: the two vocabularies were named independently
 // and neither is a renaming of the other. A pair left out of this map is not
 // compared, so the map is also the statement of what this gate does NOT cover.
+// exists is why neither surface's `exists` difference is a defect. It is one
+// fact about one operator, so it has one home: seven copies would be seven
+// things to keep in step, and whichever drifted would misstate why its
+// difference is ratified while still reading like a reason.
+const exists = "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about."
+
+// unpairedKinds are types one surface declares that the other has no counterpart
+// for, so `correspondingTypes` cannot name them. Ratified rather than skipped:
+// an unpaired type is uncompared, and the gate must say which ones those are or
+// a new type on either surface joins them silently.
+var unpairedKinds = gatekit.Waive(map[string]string{
+	"KindTimestamp": "search separates a timestamp from a date; storekit's FieldDate covers both, so there is no distinct storekit type to compare this against. The operators it carries are identical to KindDate's, which FieldDate is already compared with.",
+	"KindGeo":       "a geo field admits only within_radius, an operator storekit has no compiler for at all. There is nothing to compare: the difference is the whole type, not an operator within it.",
+})
+
 // gatekit:fixture the declared pairing between the two vocabularies' type names
 var correspondingTypes = map[string]string{
 	"FieldText":     "KindText",
@@ -60,13 +75,13 @@ var correspondingTypes = map[string]string{
 // matching is one for a difference that has been resolved, and leaving it
 // re-exempts whatever takes its place.
 var declaredDifferences = gatekit.Waive(map[string]string{
-	"FieldText/exists":     "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
-	"FieldID/exists":       "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
-	"FieldNumber/exists":   "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
-	"FieldDate/exists":     "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
-	"FieldBoolean/exists":  "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
-	"FieldPicklist/exists": "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
-	"FieldCurrency/exists": "search declares no `exists` operator at all — its vocabulary is eq, neq, in, lt, lte, gt, gte, within_radius and nothing else. It compiles against the record's OWN TABLE (querysql builds `FROM <table> t`, columns derived from information_schema), so an unset field is a NULL column exactly as it is for storekit and `IS NULL` would answer it. There is no capability reason; this is a vocabulary gap nobody has decided about.",
+	"FieldText/exists":     exists,
+	"FieldID/exists":       exists,
+	"FieldNumber/exists":   exists,
+	"FieldDate/exists":     exists,
+	"FieldBoolean/exists":  exists,
+	"FieldPicklist/exists": exists,
+	"FieldCurrency/exists": exists,
 	"FieldText/contains":   "search declares no `contains` operator. Its structured `where` answers exact and ordering comparisons; approximate text is the free-text half of the same request, not a structured operator. storekit has no free-text half, so `contains` is the only way to ask there. The split is real, but nothing states it as a decision — it is how the two surfaces were built.",
 	"FieldBoolean/neq":     "search offers `eq` alone on a boolean, its vocabulary saying `neq true` is `eq false`. THAT REASONING NO LONGER HOLDS: with neq NULL-safe, `neq true` selects false AND unset, which `eq false` does not. storekit's boolean neq now answers a question search cannot express. Waived because closing it is a product decision about search's vocabulary, not a repair.",
 	"FieldDate/in":         "search admits `in` on a date and storekit does not. A gap rather than a decision — but not a one-bit fix: flipping the matrix routes dates through the string `in` branch, which binds a text array against a date column and fails at query time. It needs a date branch.",
@@ -170,6 +185,25 @@ func TestBothFilterSurfacesOfferTheSameOperators(t *testing.T) {
 				continue
 			}
 			findings = append(findings, fieldType+"/"+op+" — offered by one surface, refused by the other")
+		}
+	}
+	// Nothing either surface declares may go uncompared without being named. A
+	// type added to one matrix and not to correspondingTypes would otherwise
+	// escape the parity check entirely — the census would keep passing while
+	// covering less of the tree than it did yesterday.
+	defer unpairedKinds.AssertAllMatched(t)
+	paired := map[string]bool{}
+	for fieldType, kind := range correspondingTypes {
+		paired[fieldType], paired[kind] = true, true
+	}
+	for declared := range storekitOps {
+		if !paired[declared] && !unpairedKinds.Waived(t, declared) {
+			findings = append(findings, declared+" is declared by storekit and compared with nothing")
+		}
+	}
+	for declared := range searchOps {
+		if !paired[declared] && !unpairedKinds.Waived(t, declared) {
+			findings = append(findings, declared+" is declared by search and compared with nothing")
 		}
 	}
 	if compared < 5 {
