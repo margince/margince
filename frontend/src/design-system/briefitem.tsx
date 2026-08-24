@@ -41,13 +41,13 @@ export type BriefItemAction = "act" | "dismiss" | "snooze";
 // is `briefitem.test.tsx`'s bar census: its fixture is typed as the wire vector,
 // so a sixth factor forces the fixture to grow and the count assertion to fail
 // until this list grows with it.
-const FACTOR_KEYS = [
+const FACTOR_KEYS: readonly BriefFactorKey[] = [
   "winnability",
   "revenue",
   "timing",
   "momentum",
   "warmth",
-] as const satisfies readonly BriefFactorKey[];
+];
 
 /**
  * Every word this card says, in the reader's language.
