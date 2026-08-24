@@ -1228,9 +1228,9 @@
    button with a pressed state, not a surface, which is why it is not `Card` —
    `Card` is a section of a page.
 
-   One class, because the fact picker and the legal picker are the same card
-   asking about different things. Two of them drift: the text rules disagree
-   before anybody notices the chrome is identical. */
+   One class, because the fact picker and the legal picker are the SAME control:
+   a check, a name, a detail line, a line of fine print. What they do not share
+   is what those lines mean, and that is what the two modifiers below carry. */
 .choice-card {
   display: flex;
   align-items: flex-start;
@@ -1261,14 +1261,24 @@
 }
 .choice-card span span {
   margin-top: var(--space-1);
-  color: var(--textSecondary);
   font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
 }
 .choice-card small {
-  margin-top: var(--space-2);
   color: var(--textTertiary);
   font-size: var(--fs-meta);
+}
+/* The detail line is the fact's VALUE — the thing the reader is choosing — so it
+   keeps the card's own colour. Under a legal entity the same line is the
+   registered address, which is detail beneath the name, and reads as such. */
+.legal-card span span {
+  color: var(--textSecondary);
+  line-height: var(--lh-normal);
+}
+.legal-card small {
+  margin-top: var(--space-1);
+}
+.fact-card small {
+  margin-top: var(--space-2);
   line-height: var(--lh-normal);
 }
 @media (max-width: 720px) {

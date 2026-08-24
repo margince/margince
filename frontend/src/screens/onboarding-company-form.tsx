@@ -187,7 +187,7 @@ export function CompanyStep({
                 <button
                   key={`${fact.field}:${fact.value_key}`}
                   type="button"
-                  className={`choice-card ${selected ? "selected" : ""}`}
+                  className={`choice-card fact-card ${selected ? "selected" : ""}`}
                   aria-pressed={selected}
                   disabled={saveDisabled(factSelection, selected)}
                   onClick={() => factSelection.toggle(fact)}
@@ -284,7 +284,7 @@ function LegalEntityChoice({
             <button
               key={`${entity.name}-${entity.source_url}`}
               type="button"
-              className={`choice-card ${selected ? "selected" : ""}`}
+              className={`choice-card legal-card ${selected ? "selected" : ""}`}
               aria-pressed={selected}
               onClick={() => onPick(entity)}
             >

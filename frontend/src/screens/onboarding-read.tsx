@@ -862,6 +862,11 @@ function CoreJourney({ active }: Readonly<{ active: number }>) {
   );
 }
 
+// The evidence panel PREVIEWS facts rather than listing them: past a dozen it
+// stops being something a reader takes in at a glance, and the confirm step is
+// where the whole set is chosen from anyway.
+export const FACT_PREVIEW_LIMIT = 12;
+
 function readablePage(rawURL: string) {
   const pageURL = new URL(rawURL);
   const path = pageURL.pathname.replace(/\/$/, "");
@@ -936,7 +941,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
         <section className="live-fact-preview">
           <h2>{t("ob.factsTitle")}</h2>
           <div className="finding-grid">
-            {read.facts.slice(0, 12).map((fact) => (
+            {read.facts.slice(0, FACT_PREVIEW_LIMIT).map((fact) => (
               <Card
                 as="article"
                 key={`${fact.category}:${fact.field}:${fact.value_key}`}

@@ -8,7 +8,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { ReadEvidence } from "./onboarding-read";
+import { FACT_PREVIEW_LIMIT, ReadEvidence } from "./onboarding-read";
 
 // The evidence panel shows three kinds of finding — a legal entity, a profile
 // field and a live fact — and each one is a card. They are cards through the
@@ -40,6 +40,20 @@ function grounded(
   };
 }
 
+function surplusFacts(
+  count: number,
+): components["schemas"]["CompanySiteReadFact"][] {
+  return Array.from({ length: count }, (_unused, index) => ({
+    category: "offering" as const,
+    field: "service",
+    value_key: `offering:service:${index}`,
+    value: `Service ${index}`,
+    evidence_snippet: `We run service ${index}.`,
+    evidence_url: "https://gradion.com/services",
+    confidence: 0.8,
+  }));
+}
+
 const READ = {
   id: "11111111-1111-4111-8111-111111111111",
   target_kind: "onboarding",
@@ -66,6 +80,10 @@ const READ = {
       evidence_url: "https://gradion.com/about",
       confidence: 0.95,
     },
+    // Past the preview limit on purpose. A fixture that stays under it cannot
+    // tell "one card per finding" from "one card per finding the panel shows",
+    // and those stop agreeing at exactly the point the cap bites.
+    ...surplusFacts(FACT_PREVIEW_LIMIT + 1),
   ],
   comparisons: [],
   people: [],
@@ -75,7 +93,7 @@ const READ = {
   proposal_hash: "proposal-2",
   created_at: "2026-07-22T08:00:00Z",
   updated_at: "2026-07-22T08:00:01Z",
-} as const satisfies CompanySiteRead;
+} satisfies CompanySiteRead;
 
 function render(read: CompanySiteRead) {
   return rtlRender(
@@ -123,14 +141,17 @@ describe("the evidence panel", () => {
   // from the left side, and a card this panel did not put there is extra on the
   // right. A screen that grows its own card again fails here rather than in
   // somebody's eye, months later, over a shadow that is one pixel out.
-  it("draws one card per finding and nothing else", () => {
+  it("draws one card per finding it shows, and nothing else", () => {
     const { container } = render(READ);
 
-    const findings =
+    // Facts are capped, and the cap is part of the claim rather than an
+    // exception to it: the panel draws a card for each finding it SHOWS.
+    expect(READ.facts.length).toBeGreaterThan(FACT_PREVIEW_LIMIT);
+    const shown =
       (READ.legal_entities?.length ?? 0) +
       READ.profile_fields.length +
-      READ.facts.length;
-    expect(container.querySelectorAll(".card")).toHaveLength(findings);
+      Math.min(READ.facts.length, FACT_PREVIEW_LIMIT);
+    expect(container.querySelectorAll(".card")).toHaveLength(shown);
     expect(
       container.querySelectorAll(
         ".legal-preview-card:not(.card), .finding-card:not(.card)",

@@ -11,9 +11,11 @@ import { describe, expect, it } from "vitest";
 // `.fact-card` / `.legal-card` were the same card twice — identical chrome with
 // text rules that had already drifted apart.
 //
-// So the rule is derived rather than remembered: a rule outside the design
-// system that declares `.card`'s OWN chrome — the same four token values, plus
-// the card shadow — is a second card, whatever it is called.
+// So the rule is derived rather than remembered: any rule that declares
+// `.card`'s OWN chrome — the same four token values, plus the card shadow — is
+// a second card, whatever it is called and wherever it sits. The design system
+// is judged too, minus the one rule this reads its subject from: a second card
+// beside the real one is the same defect and harder to notice.
 //
 // WHAT IT DELIBERATELY DOES NOT CATCH, because a gate that fires on correct code
 // teaches people to skip its output. "A border, a radius and a padded
@@ -26,6 +28,11 @@ import { describe, expect, it } from "vitest";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const designSystem = join(frontendRoot, "src", "design-system");
+// The one rule this gate reads its subject FROM, and so the one rule it must
+// not report as a copy of itself. Everything else in the design system is
+// judged like any screen: a second card here is the same defect and harder to
+// see, because it sits beside the real one.
+const cardSource = join(designSystem, "atoms.css");
 
 function stylesheets(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -65,7 +72,7 @@ function rules(css: string): Rule[] {
  * and would stop matching the day somebody restyles the real card.
  */
 function cardChrome(): readonly string[] {
-  const atoms = readFileSync(join(designSystem, "atoms.css"), "utf8");
+  const atoms = readFileSync(cardSource, "utf8");
   const declared = rules(withoutComments(atoms)).filter(
     (r) => r.selector === ".card",
   );
@@ -83,7 +90,7 @@ function cardChrome(): readonly string[] {
   return declarations(declared[0].body);
 }
 
-/** The `property: value` pairs in a rule body, normalised for whitespace. */
+/** The `property: value` pairs in a rule body, in one spelling. */
 function declarations(body: string): readonly string[] {
   return body
     .split(";")
@@ -96,15 +103,52 @@ function declarations(body: string): readonly string[] {
         // the same card written without a space escaped entirely — not a
         // variant, the identical card, defeated by a spelling a formatter would
         // erase. This gate exists for the hand that does not run the formatter.
-        .replace(/\s*:\s*/g, ": "),
+        .replace(/\s*:\s*/g, ": ")
+        // And inside the parentheses, for the same reason: `var(--bgElevated )`
+        // computes identically and compares unequal.
+        .replace(/\(\s+/g, "(")
+        .replace(/\s+\)/g, ")"),
     )
-    .filter((part) => part.length > 0);
+    .filter((part) => part.length > 0)
+    .flatMap(longhand);
+}
+
+/**
+ * The same chrome, written the other way. A clone is usually a paste, but the
+ * hand that retypes it writes `background-color` where the source says
+ * `background`, and a gate comparing declaration TEXT reads that as a different
+ * card — green over the identical surface.
+ *
+ * Only the two shorthands `.card` actually uses, expanded in the ONE form each
+ * takes there. A general CSS shorthand expander is a different program, and one
+ * that guessed wrong would make this gate fire on rules that are not cards —
+ * which costs more than what the narrow version misses, because a gate that
+ * fires on correct code teaches readers to skip it. Both sides run through
+ * here, so a shorthand this does not know still compares against itself.
+ */
+function longhand(declaration: string): readonly string[] {
+  const colon = declaration.indexOf(": ");
+  if (colon < 0) {
+    return [declaration];
+  }
+  const property = declaration.slice(0, colon);
+  const value = declaration.slice(colon + 2);
+  if (property === "background" && !value.includes(" ")) {
+    return [`background-color: ${value}`];
+  }
+  const border = /^(\S+) (\S+) (\S+)$/.exec(value);
+  if (property === "border" && border !== null) {
+    return [
+      `border-width: ${border[1]}`,
+      `border-style: ${border[2]}`,
+      `border-color: ${border[3]}`,
+    ];
+  }
+  return [declaration];
 }
 
 describe("one card surface", () => {
-  const outside = stylesheets(join(frontendRoot, "src")).filter(
-    (path) => !path.startsWith(designSystem),
-  );
+  const sheets = stylesheets(join(frontendRoot, "src"));
 
   it("finds stylesheets to judge", () => {
     // A census that read nothing certifies nothing, and this one is a census of
@@ -112,18 +156,27 @@ describe("one card surface", () => {
     // broken walk. The floor was 5 against a real 80, which a walk reaching only
     // the top level and `src/app/` clears with every screen unvisited, so it
     // also names a file it must have reached.
-    expect(outside.length).toBeGreaterThan(40);
+    expect(sheets.length).toBeGreaterThan(40);
     expect(
-      outside.some((path) => path.endsWith("screens/onboarding.css")),
+      sheets.some((path) => path.endsWith("screens/onboarding.css")),
       "the walk did not reach src/screens/, where every card this gate was written for lived",
+    ).toBe(true);
+    expect(
+      sheets.some(
+        (path) => path.startsWith(designSystem) && path !== cardSource,
+      ),
+      "the walk did not reach the design system's other stylesheets, where a second card sits beside the real one",
     ).toBe(true);
   });
 
   it("is drawn only by the design system", () => {
     const chrome = cardChrome();
     const second: string[] = [];
-    for (const path of outside) {
+    for (const path of sheets) {
       for (const rule of rules(withoutComments(readFileSync(path, "utf8")))) {
+        if (path === cardSource && rule.selector === ".card") {
+          continue;
+        }
         const declared = new Set(declarations(rule.body));
         if (chrome.every((property) => declared.has(property))) {
           second.push(`${relative(frontendRoot, path)}: ${rule.selector}`);
@@ -132,7 +185,7 @@ describe("one card surface", () => {
     }
     expect(
       second,
-      "these rules draw a card surface outside the design system. `Card` is the " +
+      "these rules draw a second card surface. `Card` is the " +
         "one card — `as` picks the element, `className` still carries whatever " +
         "content styling the screen owns. A copy drifts silently: the two cards " +
         "this replaced had identical chrome and text rules that had already " +
