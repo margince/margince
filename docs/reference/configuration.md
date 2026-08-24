@@ -483,7 +483,7 @@ and the store tolerates a still-starting backend with a bounded retry.
 | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | access key |
 | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | secret key |
 | `MARGINCE_BLOBSTORE_BUCKET` | — | bucket name (created on first connect) |
-| `MARGINCE_BLOBSTORE_REGION` | — | region the bucket lives in; **required** when the blobstore is configured, and deliberately not defaulted — it decides where a bucket holding attachments is created (for MinIO any value works) |
+| `MARGINCE_BLOBSTORE_REGION` | — | region the bucket lives in; **required when an ENDPOINT is configured**, and deliberately not defaulted — it decides where a bucket holding attachments is created (for MinIO any value works). A path-only installation creates no bucket and never reads it |
 | `MARGINCE_BLOBSTORE_USE_SSL` | `false` | `true` for TLS to the store |
 | `MARGINCE_BLOBSTORE_PATH` | — | directory object bytes are written to, when no endpoint is set; created if absent, owner-only (`0700`). Bytes land under `<path>/blob/<key>` and their content type under `<path>/meta/<key>`, written through a temporary file and renamed, so a crash never leaves a truncated attachment a row still points at |
 

@@ -171,14 +171,18 @@ func TestFilesystemStoreRefusesAKeyThatEscapesTheRoot(t *testing.T) {
 	root := t.TempDir()
 	store := newFilesystemAt(t, root)
 	ctx := t.Context()
-	outside := filepath.Join(filepath.Dir(root), "escaped")
+	// Where the write would ACTUALLY land if the refusal regressed:
+	// filepath.Join(root, "blob", "../escaped") collapses to <root>/escaped,
+	// because the tree name is itself a component. Asserting on the parent of
+	// root instead looked defensive and checked nothing.
+	outside := filepath.Join(root, "escaped")
 
 	err := store.Put(ctx, "../escaped", bytes.NewReader([]byte("x")), 1, "")
 	if err == nil {
 		t.Fatal("Put with a traversing key: err = nil, want a refusal")
 	}
 	if _, statErr := os.Stat(outside); statErr == nil {
-		t.Errorf("Put wrote outside the root, at %s", outside)
+		t.Errorf("Put escaped its tree, writing %s", outside)
 	}
 	if _, _, err := store.Get(ctx, "../escaped"); err == nil {
 		t.Error("Get with a traversing key: err = nil, want a refusal")
@@ -287,4 +291,51 @@ func newFilesystemAt(t *testing.T, root string) blobstore.Store {
 		t.Fatalf("NewFilesystem(%q): %v", root, err)
 	}
 	return store
+}
+
+// countFiles skips dotfiles so this store's own scratch — a `.tmp-*` staging
+// file from a Put that died mid-write, a `.health-*` probe — is never reported as
+// an object deleted. That is only sound while no OBJECT can be named like one, so
+// the key refusal and the count are one rule in two places.
+func TestFilesystemStoreRefusesADotLedKeyElement(t *testing.T) {
+	store := newFilesystem(t)
+	ctx := t.Context()
+
+	for _, key := range []string{".tmp-x", "ws/.health-x", "ws/./attachment/x", "ws/.hidden/x"} {
+		if err := store.Put(ctx, key, bytes.NewReader([]byte("x")), 1, ""); !errors.Is(err, blobstore.ErrInvalidKey) {
+			t.Errorf("Put(%q): err = %v, want ErrInvalidKey", key, err)
+		}
+	}
+}
+
+// A staging file left behind by a Put that died mid-write sits in the same
+// directory as the objects, under the prefix being swept. It is litter, not an
+// object, and reporting it as one deleted makes the count a number nobody can
+// reconcile with what the caller had.
+func TestFilesystemStoreDeletePrefixCountsObjectsNotScratch(t *testing.T) {
+	root := t.TempDir()
+	store := newFilesystemAt(t, root)
+	ctx := t.Context()
+	put(ctx, t, store, "ws-a/attachment/a1", "an object")
+
+	// Exactly what a crashed Put leaves: os.CreateTemp's own naming, beside the
+	// object, inside the swept prefix.
+	staging, err := os.CreateTemp(filepath.Join(root, "blob", "ws-a", "attachment"), ".tmp-*")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	if err := staging.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	deleted, err := store.DeletePrefix(ctx, "ws-a/")
+	if err != nil {
+		t.Fatalf("DeletePrefix: %v", err)
+	}
+	if deleted != 1 {
+		t.Errorf("deleted = %d, want 1 — the staging file was counted as an object", deleted)
+	}
+	if _, statErr := os.Stat(staging.Name()); statErr == nil {
+		t.Error("the staging file survived the prefix sweep")
+	}
 }

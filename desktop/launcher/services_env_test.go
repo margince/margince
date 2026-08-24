@@ -10,9 +10,12 @@ import (
 )
 
 // A desktop installation has local disk and no object storage service, so the
-// launcher points the blobstore at one inside the folder. Without it attachments
-// and company logos answer 501 — the api wires no store — and there is nothing a
-// user can put in margince.env to fix that without running a separate service.
+// launcher points the blobstore at one inside the folder. Without the default the
+// api wires no store and attachments and company logos answer 501 until somebody
+// edits margince.env — which they CAN do, since childEnv passes the user's own
+// values through; what the default buys is that nobody has to. A feature that
+// needs a settings file opened before it works is a feature most of this
+// bundle's users never find.
 func TestChildEnvDefaultsTheBlobstorePathIntoTheInstallation(t *testing.T) {
 	l := layout{root: t.TempDir()}
 	b := &backend{layout: l}

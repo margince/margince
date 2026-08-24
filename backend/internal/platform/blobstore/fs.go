@@ -105,7 +105,12 @@ func (f *fsStore) path(tree, key string) (string, error) {
 		return "", fmt.Errorf("%w: %q", ErrInvalidKey, key)
 	}
 	for _, element := range strings.Split(key, "/") {
-		if element == ".." {
+		// A leading dot covers "." and ".." and one more thing: it is what makes
+		// this store's own scratch distinguishable from an object. countFiles
+		// skips dotfiles so a `.tmp-*` staging file is never counted as an
+		// object deleted, and that reasoning is only sound while no object can
+		// be named like one.
+		if strings.HasPrefix(element, ".") {
 			return "", fmt.Errorf("%w: %q", ErrInvalidKey, key)
 		}
 	}
@@ -306,15 +311,25 @@ func probeWritable(dir string) error {
 	return nil
 }
 
-// countFiles counts the regular files under dir, treating an absent dir as
-// empty — DeletePrefix on a prefix with no objects reports zero, not an error.
+// errorsJoin is errors.Join, re-exported for the per-platform syncDir files so
+// each one imports only what it uses.
+func errorsJoin(errs ...error) error { return errors.Join(errs...) }
+
+// countFiles counts the OBJECTS under dir, treating an absent dir as empty —
+// DeletePrefix on a prefix with no objects reports zero, not an error.
+//
+// Objects only: this store's own scratch — a `.tmp-*` staging file from a Put
+// that is in flight or died mid-write, a `.health-*` probe — is not an object and
+// must not be reported as one deleted. Telling them apart is not a guess, because
+// no object can look like them: fsStore.path refuses a key whose element starts
+// with a dot, so every dotfile in these trees is this package's own.
 func countFiles(dir string) (int, error) {
 	count := 0
 	err := filepath.WalkDir(dir, func(_ string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !entry.IsDir() {
+		if entry.Type().IsRegular() && !strings.HasPrefix(entry.Name(), ".") {
 			count++
 		}
 		return nil
@@ -352,7 +367,11 @@ func writeFileAtomic(path string, r io.Reader) error {
 	if err := os.Rename(name, path); err != nil {
 		return errors.Join(fmt.Errorf("blobstore: rename into %s: %w", path, err), removeStaging(name))
 	}
-	return nil
+	// The rename is a directory-entry change, and fillStaging's fsync covered
+	// only the staging file's bytes. Without this a power loss can lose the
+	// rename while the contents survive, leaving no object under a key a row
+	// already points at. See syncDir, which differs by platform.
+	return syncDir(dir)
 }
 
 // fillStaging writes r into the staging file, then makes it durable and closes
