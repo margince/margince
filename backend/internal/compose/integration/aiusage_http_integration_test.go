@@ -34,7 +34,7 @@ func seedAiUsage(t *testing.T, e *apptest.AppEnv) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 	var wsID string
-	if err := tx.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
@@ -173,7 +173,7 @@ func TestAiUsageCostOverHTTP(t *testing.T) {
 	seedAiUsage(t, e)
 	ctx := context.Background()
 	var wsID string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 

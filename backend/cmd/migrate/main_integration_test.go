@@ -387,14 +387,14 @@ func TestOrgExistsAnswersTheEntrypointsQuestion(t *testing.T) {
 		}
 	}()
 
-	if _, err := conn.Exec(ctx, `INSERT INTO workspace (slug) VALUES ('org-probe')`); err != nil {
+	if _, err := conn.Exec(ctx, `INSERT INTO workspace DEFAULT VALUES`); err != nil {
 		t.Fatalf("seeding a workspace: %v", err)
 	}
 	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "true\n" {
 		t.Fatalf("org-exists against a bootstrapped installation printed %q, want %q", out, "true\n")
 	}
 
-	if _, err := conn.Exec(ctx, `UPDATE workspace SET archived_at = now() WHERE slug = 'org-probe'`); err != nil {
+	if _, err := conn.Exec(ctx, `UPDATE workspace SET archived_at = now()`); err != nil {
 		t.Fatalf("archiving the workspace: %v", err)
 	}
 	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "false\n" {

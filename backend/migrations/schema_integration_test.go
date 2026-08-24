@@ -144,17 +144,19 @@ func TestMigrations_applyReverseReapply(t *testing.T) {
 
 // seedWorkspace inserts a workspace.
 //
-// It used to probe the catalog for `workspace.name` first, because the replay
-// suites applied core only as far as a past release where that column was still
-// NOT NULL. Those suites are gone with the history they replayed, and no
-// reachable schema has the column, so the probe was a branch that could never be
-// taken.
-func seedWorkspace(t *testing.T, conn *pgx.Conn, slug string) string {
+// It writes no column at all: the row is identity and lifecycle now, every
+// value on it defaulted. It used to probe the catalog for `workspace.name`,
+// then wrote `slug` once that column was the last writable one — ADR-0091
+// retired that too, and the whole INSERT went with it.
+//
+// label names the caller in the failure message, which is the only thing left
+// distinguishing these seeds from one another.
+func seedWorkspace(t *testing.T, conn *pgx.Conn, label string) string {
 	t.Helper()
 	var id string
 	if err := conn.QueryRow(context.Background(),
-		`INSERT INTO workspace (slug) VALUES ($1) RETURNING id`, slug).Scan(&id); err != nil {
-		t.Fatalf("seeding workspace %s: %v", slug, err)
+		`INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&id); err != nil {
+		t.Fatalf("seeding workspace %s: %v", label, err)
 	}
 	return id
 }

@@ -190,7 +190,7 @@ func seedRequiredProfileFields(t *testing.T, e *apptest.AppEnv, orgID string) {
 	t.Helper()
 	var workspaceID ids.UUID
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspaceID); err != nil {
+		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspaceID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	// updated_at is written explicitly because the row's own trigger stamps
@@ -245,7 +245,7 @@ func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID stri
 	t.Helper()
 	var workspaceID ids.UUID
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspaceID); err != nil {
+		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspaceID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	other := ids.NewV7()

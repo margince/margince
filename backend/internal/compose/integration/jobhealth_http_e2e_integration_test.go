@@ -140,7 +140,7 @@ func callerWorkspace(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	var id string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&id); err != nil {
+		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&id); err != nil {
 		t.Fatalf("resolving the caller's workspace: %v", err)
 	}
 	return id

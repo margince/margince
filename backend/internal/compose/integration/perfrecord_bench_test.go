@@ -175,7 +175,7 @@ func seedRecordBenchVolume(t *testing.T, e *apptest.AppEnv) {
 	ctx := context.Background()
 
 	var workspace string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspace); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspace); err != nil {
 		t.Fatalf("resolving the bootstrapped workspace: %v", err)
 	}
 	tx, err := e.Owner.Begin(ctx)

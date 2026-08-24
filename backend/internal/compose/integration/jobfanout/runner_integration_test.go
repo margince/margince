@@ -115,7 +115,7 @@ func setupRunner(t *testing.T) *runnerEnv {
 	t.Cleanup(pool.Close)
 
 	var wsRaw string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = 'runner-e2e'`).Scan(&wsRaw); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsRaw); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	wsID, err := ids.Parse(wsRaw)

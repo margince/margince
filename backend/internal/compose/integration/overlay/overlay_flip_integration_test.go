@@ -163,7 +163,7 @@ func setupFlipEstate(t *testing.T) flipEstate {
 		t.Fatalf("parsing admin id: %v", err)
 	}
 	var wsIDStr string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsIDStr); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsIDStr); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	wsID, err := ids.Parse(wsIDStr)

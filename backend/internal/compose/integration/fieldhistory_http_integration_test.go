@@ -94,7 +94,7 @@ func fieldHistoryHTTPEnv(t *testing.T, e *apptest.AppEnv) *Env {
 	t.Helper()
 	ctx := context.Background()
 	var ws ids.UUID
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&ws); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&ws); err != nil {
 		t.Fatalf("resolving workspace id for %q: %v", e.Slug, err)
 	}
 	pool, err := database.NewPool(ctx, apptest.AppDSN(t))

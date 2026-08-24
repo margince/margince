@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -129,11 +128,10 @@ func seedWorkspaces(t *testing.T, e *integration.Env, n int) []ids.UUID {
 	owner := integration.OwnerConn(t)
 	seedAgentSeat(t, e.WS)
 	live := []ids.UUID{e.WS}
-	for i := range n {
+	for range n {
 		ws := ids.NewV7()
 		if _, err := owner.Exec(ctx,
-			`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-			ws, fmt.Sprintf("fan-%d", i)); err != nil {
+			`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 			t.Fatalf("seeding workspace: %v", err)
 		}
 		seedAgentSeat(t, ws)

@@ -205,7 +205,7 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 		t.Fatalf("%d engagement.reply events, want exactly 1 — the formula emits once per inbound message", n)
 	}
 	var channel, contactID string
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT envelope->'payload'->>'channel',
 			       coalesce(envelope->'payload'->>'contact_id', '')
@@ -265,7 +265,7 @@ func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
 
 	// The rep takes their message back off the timeline, leaving the thread with
 	// no LIVE outbound in it.
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() WHERE id = $1`, sent.ID)
 		return err
@@ -337,7 +337,7 @@ func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T)
 	// The thread key that outbound is filed under is what an attacker would
 	// forge, so the test reads the real one rather than reconstructing it.
 	var forged string
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT thread_key FROM activity WHERE id = $1`, activityID).Scan(&forged)
 	}); err != nil {
@@ -447,7 +447,7 @@ func (c *telegramEnv) assertDeliveryRecorded(t *testing.T, sentActivityID string
 	var recipient, status, deliveryActivity string
 	var providerMessageID *string
 	var subject, messageID *string
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT channel_user_id, status, activity_id::text, provider_message_id, subject, message_id
 			  FROM comms_outbound WHERE channel_user_id IS NOT NULL`).
@@ -477,7 +477,7 @@ func (c *telegramEnv) assertDeliveryRecorded(t *testing.T, sentActivityID string
 	// Capture joins inbound messages against outbound activities on thread_key,
 	// so a reply filed anywhere else reads as a message out of nowhere.
 	var threadKey, linkedPerson string
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, sentActivityID).Scan(&threadKey); err != nil {

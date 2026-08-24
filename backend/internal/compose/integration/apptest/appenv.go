@@ -181,7 +181,7 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, slug, seat string) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 	var wsID string
-	if err := tx.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, slug).Scan(&wsID); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
@@ -370,7 +370,7 @@ func (e *AppEnv) DealWriterContext(t *testing.T) context.Context {
 	t.Helper()
 	var wsID ids.UUID
 	if err := e.Pool.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup for %q: %v", e.Slug, err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)

@@ -38,10 +38,8 @@ func bootstrapInternalMailWorkspace(t *testing.T, ownDomains ...string) (context
 	ctx := context.Background()
 
 	wsUUID := ids.NewV7()
-	slug := "internal-mail-" + wsUUID.String()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		wsUUID, slug); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, wsUUID); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	// Every tenant write from here on goes through the workspace transaction,

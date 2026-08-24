@@ -177,11 +177,10 @@ func newCaptureRegistryFixture(t *testing.T) (context.Context, *capture.Registry
 	// The full UUID, not a truncated prefix: a v7 id's leading hex digits are
 	// the millisecond timestamp, so two workspaces minted in the same test
 	// binary run within the same millisecond would truncate to the same
-	// slug and collide on workspace_slug_unique.
+	// admin email and collide on its unique index.
 	slug := "capture-disconnect-" + wsUUID.String()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		wsUUID, slug); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, wsUUID); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	if _, err := owner.Exec(ctx,

@@ -197,8 +197,7 @@ func newChannelFixture(t *testing.T, api *fakeTelegram) *channelFixture {
 	// slug's unique index.
 	slug := "capture-channel-" + wsUUID.String()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		wsUUID, slug); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, wsUUID); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	if _, err := owner.Exec(ctx,

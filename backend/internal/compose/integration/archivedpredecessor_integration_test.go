@@ -42,8 +42,8 @@ func TestBootNamesWhatAnArchivedOrganizationLeftBehind(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := OwnerConn(t).Exec(ctx,
-		`INSERT INTO workspace (id, slug, archived_at) VALUES ($1, $2, now())`,
-		ids.NewV7(), "predecessor"); err != nil {
+		`INSERT INTO workspace (id, archived_at) VALUES ($1, now())`,
+		ids.NewV7()); err != nil {
 		t.Fatalf("seeding the archived predecessor: %v", err)
 	}
 

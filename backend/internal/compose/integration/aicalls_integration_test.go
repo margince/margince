@@ -27,7 +27,7 @@ func seedAiCallTrace(t *testing.T, e *apptest.AppEnv) seededAiCalls {
 	t.Helper()
 	var workspaceID ids.UUID
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspaceID); err != nil {
+		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspaceID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	newest, retry, older := ids.NewV7(), ids.NewV7(), ids.NewV7()

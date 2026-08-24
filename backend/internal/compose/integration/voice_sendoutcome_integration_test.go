@@ -65,7 +65,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	}
 	var workspaceID ids.UUID
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspaceID); err != nil {
+		`SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&workspaceID); err != nil {
 		t.Fatalf("resolving the installation's workspace: %v", err)
 	}
 
@@ -189,7 +189,7 @@ func (e *voiceSendEnv) send(t *testing.T, ref, body string) ids.UUID {
 func (e *voiceSendEnv) transmittedBody(t *testing.T, activityID ids.UUID) string {
 	t.Helper()
 	var body string
-	if err := apptest.InWorkspace(e.AppEnv, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body FROM comms_outbound WHERE activity_id = $1`, activityID).Scan(&body)
 	}); err != nil {

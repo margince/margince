@@ -189,7 +189,7 @@ func TestBootstrapSeedsTheAiModelRatePriceSheet(t *testing.T) {
 	ctx := context.Background()
 
 	var wsID string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 
@@ -275,7 +275,7 @@ func TestSecondActiveWorkspaceTurnsTheSurfaceUnavailable(t *testing.T) {
 	// cached singleton) must answer 503 on every request — an operator
 	// condition, never an auth failure.
 	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO workspace (id, slug) VALUES ($1, 'rogue-second')`,
+		`INSERT INTO workspace (id) VALUES ($1)`,
 		ids.NewV7()); err != nil {
 		t.Fatal(err)
 	}

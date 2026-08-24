@@ -54,7 +54,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 		"display_name": "Capture-Private Inc", "owner_id": adminID,
 	})
 
-	wsA := wsID(t, e, e.Slug)
+	wsA := wsID(t, e)
 	rep := ids.NewV7()
 	seedInWorkspace(t, e, wsA,
 		stmt(`UPDATE organization SET visibility = 'owner' WHERE id = $1`, orgID),

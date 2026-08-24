@@ -143,7 +143,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}
 
 	var ws, user string
-	if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT (SELECT id FROM workspace ORDER BY created_at LIMIT 1), id FROM app_user WHERE email = $1`, "sender@fable.test").Scan(&ws, &user)
 	}); err != nil {
@@ -188,7 +188,7 @@ func (p *preflightEnv) send(t *testing.T) (status int, code, message string) {
 func (p *preflightEnv) stagedDeliveries(t *testing.T) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM comms_outbound`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting staged deliveries: %v", err)
@@ -201,7 +201,7 @@ func (p *preflightEnv) stagedDeliveries(t *testing.T) int {
 // reads out of the row, not how the OAuth callback puts it there.
 func (p *preflightEnv) connect(t *testing.T, providerScopes ...string) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
 			VALUES ('gmail', $1, '{}', 'connected', $2, $3)

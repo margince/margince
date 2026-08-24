@@ -145,7 +145,7 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 func embedReindexWorkspaceID(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	var wsID string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	return wsID

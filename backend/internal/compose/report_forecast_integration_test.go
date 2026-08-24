@@ -93,7 +93,7 @@ func setupForecast(t *testing.T) *forecastEnv {
 		 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
 		t.Fatalf("seeding the installation settings: %v", err)
 	}
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id, slug) VALUES ($1, 'forecast')`, e.WS); err != nil {
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
 		t.Fatal(err)
 	}
 	for email, u := range map[string]ids.UUID{"rep1@forecast.test": e.Rep1, "rep3@forecast.test": e.Rep3} {

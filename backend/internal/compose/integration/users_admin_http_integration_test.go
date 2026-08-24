@@ -162,7 +162,7 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 	// A SUSPENDED member is not merely deactivated — the hold was placed for a
 	// different reason (e.g. lockout), so reactivating would quietly clear it.
 	// The refusal has to explain that, or an admin reads it as a broken button.
-	seedInWorkspace(t, e, wsID(t, e, e.Slug),
+	seedInWorkspace(t, e, wsID(t, e),
 		stmt(`UPDATE app_user SET status = 'suspended' WHERE id = $1::uuid`, invited.ID))
 	var suspended refusalWire
 	if status := e.Call(t, "POST", base+"/reactivate", nil, nil, &suspended); status != http.StatusConflict {
@@ -173,7 +173,7 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 	// An INVITED member reaches the same refusal, and it must not describe them
 	// as suspended — they are simply waiting to set a password, which is a
 	// different problem with a different fix.
-	seedInWorkspace(t, e, wsID(t, e, e.Slug),
+	seedInWorkspace(t, e, wsID(t, e),
 		stmt(`UPDATE app_user SET status = 'invited' WHERE id = $1::uuid`, invited.ID))
 	var stillInvited refusalWire
 	if status := e.Call(t, "POST", base+"/reactivate", nil, nil, &stillInvited); status != http.StatusConflict {

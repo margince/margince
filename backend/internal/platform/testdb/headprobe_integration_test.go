@@ -266,7 +266,7 @@ func TestAPopulatedCloneIsNeverReused(t *testing.T) {
 	ctx := context.Background()
 	owner := ownerConn(t)
 
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id, slug) VALUES (gen_random_uuid(), 'headprobe-populated')`); err != nil {
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES (gen_random_uuid())`); err != nil {
 		t.Fatalf("seeding a row: %v", err)
 	}
 	t.Cleanup(func() {

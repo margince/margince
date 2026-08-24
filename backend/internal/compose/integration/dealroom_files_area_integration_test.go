@@ -71,7 +71,7 @@ func captureFileOnEmail(t *testing.T, e *apptest.AppEnv, blob blobstore.Store, d
 func captureContext(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	var wsID ids.UUID
-	if err := e.Pool.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := e.Pool.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), wsID), ids.NewV7())

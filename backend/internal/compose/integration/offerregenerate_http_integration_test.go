@@ -81,14 +81,13 @@ func seedDealContextActivity(t *testing.T, e *apptest.AppEnv, wsID, dealID, subj
 	return "activity:" + activityID.String()
 }
 
-// wsIDBySlug resolves the workspace's own id — the raw-SQL activity seed
-// above needs it, and the HTTP surface never exposes a workspace's id by
-// its slug.
-func wsIDBySlug(t *testing.T, e *apptest.AppEnv, slug string) string {
+// installationWsID resolves the workspace's own id — the raw-SQL activity seed
+// above needs it, and the HTTP surface never exposes it.
+func installationWsID(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	var wsID string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = $1`, slug).Scan(&wsID); err != nil {
-		t.Fatalf("resolve workspace id for slug %q: %v", slug, err)
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
+		t.Fatalf("resolving the installation's workspace: %v", err)
 	}
 	return wsID
 }
@@ -149,7 +148,7 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 	e, fake := setupWithOfferDraft(t)
 	e.Slug = "offer-regen-ai"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen AI", "offerai@fable.test", "Admin")
-	wsID := wsIDBySlug(t, e, e.Slug)
+	wsID := installationWsID(t, e)
 	dealID := offerFixture(t, e)
 	source := seedDealContextActivity(t, e, wsID, dealID,
 		`Client said: "we'd want a kickoff workshop" and agreed to 20000 cents for it.`)
@@ -202,7 +201,7 @@ func TestOfferRegenerateHTTP_UngroundedCandidateFallsBackToMechanicalCloneOnly(t
 	e, fake := setupWithOfferDraft(t)
 	e.Slug = "offer-regen-ungrounded"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Ungrounded", "ungrounded@fable.test", "Admin")
-	wsID := wsIDBySlug(t, e, e.Slug)
+	wsID := installationWsID(t, e)
 	dealID := offerFixture(t, e)
 	seedDealContextActivity(t, e, wsID, dealID, "Client mentioned they liked our website.")
 	fake.Script(`{"lines":[
@@ -275,7 +274,7 @@ func TestOfferRegenerateHTTP_MalformedModelResponseFallsBackToMechanicalClone(t 
 	e, fake := setupWithOfferDraft(t)
 	e.Slug = "offer-regen-malformed"
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Malformed", "malformed@fable.test", "Admin")
-	wsID := wsIDBySlug(t, e, e.Slug)
+	wsID := installationWsID(t, e)
 	dealID := offerFixture(t, e)
 	seedDealContextActivity(t, e, wsID, dealID, "Client asked about a custom rollout plan.")
 	fake.Script(`this is not json at all`)

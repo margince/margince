@@ -69,7 +69,7 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, orgID string, kinds ...str
 	ctx := context.Background()
 	bundle, readID := ids.NewV7(), ids.NewV7()
 	var wsID, adminID string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("workspace lookup: %v", err)
 	}
 	if err := e.Owner.QueryRow(ctx,

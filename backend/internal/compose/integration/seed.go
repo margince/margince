@@ -117,8 +117,8 @@ func SeedExtraWorkspace(t *testing.T, owner *pgx.Conn, name string, archived boo
 		archivedAt = "now()"
 	}
 	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO workspace (id, slug, archived_at)
-		VALUES ($1, $2, `+archivedAt+`)`, ws, name+"-"+ws.String()); err != nil {
+		INSERT INTO workspace (id, archived_at)
+		VALUES ($1, `+archivedAt+`)`, ws); err != nil {
 		t.Fatalf("seeding the %s workspace: %v", name, err)
 	}
 	return ws

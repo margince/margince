@@ -65,8 +65,7 @@ func setupStaging(t *testing.T) *stagingEnv {
 
 	e := &stagingEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		e.ws, "st-"+e.ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,

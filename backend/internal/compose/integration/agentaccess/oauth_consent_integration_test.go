@@ -205,7 +205,7 @@ func registerClientDirectly(t *testing.T, e *apptest.AppEnv, clientID string) {
 	t.Helper()
 	ctx := context.Background()
 	var wsID string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
+	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace ORDER BY created_at LIMIT 1`).Scan(&wsID); err != nil {
 		t.Fatalf("looking up the workspace: %v", err)
 	}
 	if _, err := e.Owner.Exec(ctx,
