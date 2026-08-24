@@ -325,7 +325,7 @@ func liveMemberVerdict(sql string) string {
 // invisible to a table-keyed walk from both ends — the declaration never
 // mentions app_user, and the statement that concatenates it renders the
 // identifier as a blank. That is precisely how org360's copy sat unheld while
-// its comment called it the one spelling.
+// its comment told the next reader the question was already settled.
 //
 // It deliberately does not catch a HALF spelled into a bare declaration: a lone
 // `archived_at IS NULL` fragment could belong to any of a dozen tables, and
@@ -361,7 +361,7 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 			return false
 		}
 		text, ok := flattenSQL(n, seen, owner)
-		if !ok || !(readsAppUser.MatchString(text) || bareLivenessPredicate(text)) {
+		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text)) {
 			return true
 		}
 		out = append(out, text)
