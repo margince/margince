@@ -63,19 +63,25 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // own comment says about why the live filter is load-bearing applies here
 // unchanged; this adds only the grant-access arm.
 //
-// THIS IS THE SPELLING A WRITE OWES, and the rule is stated here once rather
-// than re-argued at each gate: archived means frozen. A row that carries no
-// authority of its own — an attachment, a deal room, a contract, a commission
-// entry — is gated by its anchor being LIVE and not merely visible, because
-// "may I still change this" is a question about what the record means, not
-// about who is asking.
+// THIS IS THE SPELLING A WRITE THAT ADDS OWES, and the rule is stated here once
+// rather than re-argued at each gate: archived means frozen, so a write that
+// puts something NEW on a record needs the record to still be live and not
+// merely visible.
 //
-// A path that STAGES a proposal and applies it later needs this most: the
-// archive lands inside that window, and the window is the ordinary case rather
-// than a race. Art. 17 erasure is the sharpest form of it — erasure stamps
-// archived_at and leaves the row standing, so a probe without the live filter
-// still answers "yours" for a subject every live read path now refuses, and an
-// apply arriving afterwards refills a declared-PII table the erasure cleared.
+// A path that STAGES a proposal and applies it later needs it most: the archive
+// lands inside that window, and the window is the ordinary case rather than a
+// race. Art. 17 erasure is the sharpest form — erasure stamps archived_at and
+// leaves the row standing, so a probe without the live filter still answers
+// "yours" for a subject every live read path now refuses, and an apply arriving
+// afterwards refills a declared-PII table the erasure had cleared.
+//
+// It is deliberately NOT stated as "any child of an archived anchor is frozen",
+// which is the wider rule it looks like. A gate shared by writes that GRANT and
+// writes that REVOKE cannot take this probe wholesale: freezing a revocation
+// because its anchor was retired is the opposite of what retiring it meant, and
+// where to draw that line is a product ruling rather than a call-site judgement.
+// consent.Record shows the shape the answer takes — the probe is chosen by what
+// is being written, not by the table alone.
 //
 // Where a caller must reach an archived row ON PURPOSE — Art. 17 erasure, the
 // retention sweep, the archive transition itself, a merge retiring its source,
