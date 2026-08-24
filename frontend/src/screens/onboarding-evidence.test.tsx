@@ -43,15 +43,21 @@ function grounded(
 function surplusFacts(
   count: number,
 ): components["schemas"]["CompanySiteReadFact"][] {
-  return Array.from({ length: count }, (_unused, index) => ({
-    category: "offering" as const,
-    field: "service",
-    value_key: `offering:service:${index}`,
-    value: `Service ${index}`,
-    evidence_snippet: `We run service ${index}.`,
-    evidence_url: "https://gradion.com/services",
-    confidence: 0.8,
-  }));
+  // The callback's return is annotated rather than asserted: `Array.from`
+  // infers its element type FROM the callback, so nothing flows in to narrow
+  // `category` to its union member and the object needs to say what it is.
+  return Array.from(
+    { length: count },
+    (_unused, index): components["schemas"]["CompanySiteReadFact"] => ({
+      category: "offering",
+      field: "service",
+      value_key: `offering:service:${index}`,
+      value: `Service ${index}`,
+      evidence_snippet: `We run service ${index}.`,
+      evidence_url: "https://gradion.com/services",
+      confidence: 0.8,
+    }),
+  );
 }
 
 const READ = {
