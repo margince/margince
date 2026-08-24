@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
+
 //gate:kind census H3
 
 package backendarch
@@ -43,13 +44,22 @@ var gateKinds = []string{
 // rendered page reads down from what cannot miss to what can.
 var gateHardness = []string{"H3", "H2", "H1"}
 
-// gateTag matches the declaration line. Anchored to the line start so a tag
-// quoted inside a doc comment's prose — as gate-patterns.md's own examples
-// are — cannot register as a second declaration.
+// gateTag matches the declaration line, anchored to the line start.
+//
+// The file is searched for ALL of them rather than the first: a second tag —
+// a copy-paste, or one left in an example — would otherwise classify the file
+// silently under whichever came first, which is a census reading less than it
+// reports.
 var gateTag = regexp.MustCompile(`(?m)^//gate:kind ([a-z]+) (H[123])\s*$`)
+
+// packageClause bounds the search for a declaration to the file header. A
+// directive below it is documentation of the syntax — this file's own error
+// message spells one — rather than a claim about the file it sits in.
+var packageClause = regexp.MustCompile(`(?m)^package `)
 
 const (
 	gateInventoryPage = "../docs/reference/gate-inventory.md"
+	gatePatternsPage  = "../docs/reference/gate-patterns.md"
 	// gateFloor sits below the real count so it catches a broken walk rather
 	// than a shrinking tree. A census that discovered nothing would otherwise
 	// render an empty page and call it current.
@@ -131,12 +141,21 @@ func readGateDeclarations(t *testing.T) (gates []gate, untagged []string) {
 		if !declaresATest(parsed) {
 			continue
 		}
-		match := gateTag.FindSubmatch(source)
-		if match == nil {
+		header := source
+		if at := packageClause.FindIndex(source); at != nil {
+			header = source[:at[0]]
+		}
+		matches := gateTag.FindAllSubmatch(header, -1)
+		if len(matches) == 0 {
 			untagged = append(untagged, path)
 			continue
 		}
-		kind, hardness := string(match[1]), string(match[2])
+		if len(matches) > 1 {
+			t.Errorf("%s carries %d //gate:kind declarations above its package clause, and a "+
+				"file has one shape. Delete all but the one that names it.", path, len(matches))
+			continue
+		}
+		kind, hardness := string(matches[0][1]), string(matches[0][2])
 		requireDeclaredValue(t, path, "kind", kind, gateKinds)
 		requireDeclaredValue(t, path, "hardness", hardness, gateHardness)
 		gates = append(gates, gate{path, kind, hardness, firstSentenceOf(parsed)})
@@ -216,17 +235,50 @@ func isMachineReadable(group *ast.CommentGroup) bool {
 	return true
 }
 
-// sentenceEnd is a full stop that ends a sentence rather than one inside a
-// file name or an abbreviation: `crm.yaml` and `§4.2` keep their dots because
-// what follows is not a space.
-var sentenceEnd = regexp.MustCompile(`\.\s`)
+// sentenceEnd is a full stop that ends a sentence: one followed by a space and
+// a capital letter. `crm.yaml` and `§4.2` keep their dots because what follows
+// is not a space, and `Art. 7(1)` because what follows is a digit.
+var sentenceEnd = regexp.MustCompile(`\.\s+[A-Z]`)
+
+// abbreviations are the short forms this tree's gate comments write before a
+// capitalised word, where the dot is part of the word rather than the end of a
+// sentence. Without them `every Art. Fifteen request` would cut at "Art.".
+//
+// A list, and it will be incomplete — the cost of a missing entry is one
+// truncated sentence on a generated page, which is visible on the page itself
+// rather than silent. A parser that knew English would be the derived answer
+// and is not worth its weight for a doc cell.
+var abbreviations = []string{"Art", "No", "Nos", "cf", "e.g", "i.e", "vs", "approx", "Fig", "§"}
 
 func firstSentence(prose string) string {
 	prose = strings.Join(strings.Fields(prose), " ")
-	if at := sentenceEnd.FindStringIndex(prose); at != nil {
-		return prose[:at[0]+1]
+	for offset := 0; offset < len(prose); {
+		at := sentenceEnd.FindStringIndex(prose[offset:])
+		if at == nil {
+			return prose
+		}
+		end := offset + at[0] + 1
+		if !endsInAbbreviation(prose[:end]) {
+			return prose[:end]
+		}
+		offset = end
 	}
 	return prose
+}
+
+// endsInAbbreviation reports whether the full stop closing prose belongs to a
+// short form rather than to a sentence.
+func endsInAbbreviation(prose string) bool {
+	word := prose[:len(prose)-1]
+	if cut := strings.LastIndexAny(word, " ("); cut >= 0 {
+		word = word[cut+1:]
+	}
+	for _, abbreviation := range abbreviations {
+		if strings.EqualFold(word, abbreviation) {
+			return true
+		}
+	}
+	return false
 }
 
 func renderGateInventory(gates []gate) string {
@@ -279,3 +331,62 @@ edit its ` + "`//gate:kind`" + ` line, then regenerate from the backend director
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 `
+
+// TestGatePatternsCitesGatesThatExist holds the hand-written page to the tree
+// it teaches.
+//
+// The page names gates as worked examples, and a reader follows those names.
+// Two of them named files that were not in this tree — they belonged to an
+// unmerged branch — and nothing said so: a citation is prose, and prose is
+// where a doc rots. Review caught it, which is the thing a gate is for.
+func TestGatePatternsCitesGatesThatExist(t *testing.T) {
+	page, err := os.ReadFile(gatePatternsPage)
+	if err != nil {
+		t.Fatalf("reading %s: %v", gatePatternsPage, err)
+	}
+	cited := citedTestFiles.FindAllStringSubmatch(string(page), -1)
+	if len(cited) < gateCitationFloor {
+		t.Fatalf("this census found %d cited gate(s) in %s and expects at least %d, so the "+
+			"pattern has stopped matching citations rather than the page having stopped making them",
+			len(cited), gatePatternsPage, gateCitationFloor)
+	}
+	var missing []string
+	for _, citation := range cited {
+		if _, statErr := os.Stat(citation[1]); statErr != nil {
+			missing = append(missing, citation[1])
+		}
+	}
+	if len(missing) > 0 {
+		t.Errorf("%s cites %d gate file(s) that do not exist in this tree:\n\t%s\n\n"+
+			"A reader follows the name. Cite a gate that is here, or describe the shape without "+
+			"naming a file.", gatePatternsPage, len(missing), strings.Join(missing, "\n\t"))
+	}
+}
+
+// citedTestFiles matches a gate named in backticks, which is how the page
+// cites one. Bare prose is not matched on purpose: `updateguard_test.go` is a
+// citation and "the update guard" is not.
+var citedTestFiles = regexp.MustCompile("`([a-z_0-9]+_test\\.go)`")
+
+// gateCitationFloor sits below the real count so a pattern that stopped
+// matching fails rather than certifying an empty scan.
+const gateCitationFloor = 20
+
+func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
+	for _, tc := range []struct{ name, prose, want string }{
+		{"legal citation", "The Art. 7(1) invariant holds. The rest does not.",
+			"The Art. 7(1) invariant holds."},
+		{"abbreviation before a capital", "Every Art. Fifteen request. And then more.",
+			"Every Art. Fifteen request."},
+		{"file name", "crm.yaml is the contract. The rest follows.",
+			"crm.yaml is the contract."},
+		{"no terminator", "One clause with no full stop", "One clause with no full stop"},
+		{"wrapped across lines", "A rule\n  spelled once. Then another.", "A rule spelled once."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := firstSentence(tc.prose); got != tc.want {
+				t.Errorf("firstSentence(%q) = %q, want %q", tc.prose, got, tc.want)
+			}
+		})
+	}
+}

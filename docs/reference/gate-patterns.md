@@ -147,8 +147,9 @@ invisible to the walk. Say that in the test. Never claim those paths carry nothi
 an outbox event; a rename owes a duplicate check; a write owes a permission probe.
 
 **Examples:** `writeshape_test.go` (audit row ⇒ outbox event on the same path) ·
-`writeauthorityreach_test.go` · `rbacgate_test.go` · `personscrub_test.go` ·
-`orgrenamerecheck_test.go`.
+`writeauthorityreach_test.go` · `rbacgate_test.go` · `personscrub_test.go`
+(deleting and anonymising a person clear the same tables) · `moduleaudits_test.go`
+· `dedupespine_test.go`.
 
 **⚠ How it silently passes:** the weak quantifier above. It looks exactly like a
 gate that works.
@@ -312,7 +313,8 @@ exceptions must meet the same standard the gate applies to its subjects.
 | `gatekit.Scope` | Proves your walk root is the right one, by also checking the code outside it. |
 | `gatekit.LiteralText` | One way to decode a Go string literal into the SQL it sends — quoted, escaped, or built with `+`. |
 | `sqlstatements_test.go` | The shared "what SQL does this file send" reader. |
-| `callgraph_test.go` | The shared call graph, keyed by receiver type. Returns **statements**, so each gate decides what a statement means. |
+| `sqlhelperwalk_test.go` | The shared walk over a package's SQL helpers, so two censuses read the same set. |
+| the receiver-keyed call graph in `personscrub_test.go` | Reachability without following a bare name into the wrong package. Reuse it before writing a second walk — that is the copy that goes short. |
 
 Copying one of these for a second caller is how two gates drift apart. The copy
 walks a smaller tree and reports PASS.
