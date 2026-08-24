@@ -92,14 +92,14 @@ Commands and flags: [docs/reference/make-targets.md](docs/reference/make-targets
 Config and endpoints: [docs/reference/configuration.md](docs/reference/configuration.md).
 CI: [infra/ci-pipeline.md](infra/ci-pipeline.md).
 
-## Exactly one dev stack at a time
+## One dev stack per worktree
 
-`make dev` sweeps first: it kills every margince api, worker and Vite on the
-machine, evicts `:8080`, and force-drops stray `margince_dev_*` databases before
-booting one stack. So you never stop the old one by hand — but it is **not**
-harmless: it reaches other worktrees and other sessions, and drops a `DEV_SLUG`
-stack's data with it. `make dev-stop` is the mirror; `DEV_SLUG=x` gives an
-isolated stack, spared until the next bare `make dev`.
+`make dev` starts a stack for THIS worktree and touches nobody else's: a linked
+worktree claims its own database, Redis logical database, port pair and object
+bucket, with no flag to remember. The primary worktree keeps `:8080` and the
+shared `margince` database, which is what `make migrate` and `make seed-dev`
+target. `make dev-stop` stops this worktree's; `make dev-sweep` clears every
+stack on the machine and is the only thing that does.
 
 **The API does not hot-reload.** Vite does, so the frontend is live as you type;
 the API is a compiled binary and every backend change needs `make dev` again. A

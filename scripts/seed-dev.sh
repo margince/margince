@@ -19,7 +19,12 @@
 
 set -euo pipefail
 
-API_BASE="${API_BASE:-http://localhost:8080}"
+# The stack THIS worktree runs, not whatever holds :8080 — from a linked
+# worktree those are different, and seeding the wrong one puts the records in a
+# database nobody is looking at. An explicit API_BASE still wins.
+# shellcheck source=scripts/lib-devstate.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 # What the operator put in margince.yaml. Only ever used for the one login that
