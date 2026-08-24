@@ -107,11 +107,11 @@ type ChannelIdentityKey struct {
 // without closing it, because the erasure's own purge has already run by the
 // time it commits. Serializing the two is the only answer that holds.
 //
-// The key is per workspace and per account, so two humans' deliveries never
-// wait on each other and an erasure only ever stalls the subject it is erasing.
-// hashtextextended is Postgres' own hash of the workspace-qualified identity
-// hash, so the key is derived in ONE place for both callers rather than in Go
-// on one side and SQL on the other.
+// The key is per account since ADR-0091 §5 dropped its workspace half, so two
+// humans' deliveries never wait on each other and an erasure only ever stalls
+// the subject it is erasing. hashtextextended is Postgres' own hash of that
+// identity hash, so the key is derived in ONE place for both callers rather
+// than in Go on one side and SQL on the other.
 //
 // The accounts are locked in a FIXED order, deduplicated: two transactions
 // taking the same pair in opposite orders would deadlock, and Postgres would
@@ -151,10 +151,19 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 	slices.Sort(hashes)
 	for _, hash := range slices.Compact(hashes) {
 		if _, err := tx.Exec(ctx, `
+			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+			hash); err != nil {
+			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+		}
+		// Plus the legacy workspace-qualified key, for the rolling-deploy
+		// window LockWriteIdentity explains. This is the site where that
+		// window costs the most: a lock PER IDENTIFIER, so an erasure over a
+		// subject with many accounts and addresses holds twice the slots.
+		if _, err := tx.Exec(ctx, `
 			SELECT pg_advisory_xact_lock(hashtextextended(
 				coalesce(current_setting('app.workspace_id', true), '') || ':' || $1, 0))`,
 			hash); err != nil {
-			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure (legacy key): %w", err)
 		}
 	}
 	return nil

@@ -85,7 +85,11 @@ func setupForecast(t *testing.T) *forecastEnv {
 	if _, err := owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Forecast"'::jsonb),
 			('installation.base_currency', '"EUR"'::jsonb),
-			('installation.timezone', '"UTC"'::jsonb)
+			('installation.timezone', '"UTC"'::jsonb),
+			-- January, seeded explicitly rather than left absent: the period
+			-- buckets read it, and a fixture that relied on the registered
+			-- default would assert against a row nothing wrote.
+			('installation.fiscal_year_start_month', '1'::jsonb)
 		 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
 		t.Fatalf("seeding the installation settings: %v", err)
 	}

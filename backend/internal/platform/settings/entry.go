@@ -183,7 +183,7 @@ func (e *Entry[T]) ValidateJSON(raw json.RawMessage) error {
 		return nil
 	}
 	if err := e.validate(v); err != nil {
-		return InvalidValue{Setting: e.key, Code: "setting_invalid", Reason: err.Error()}
+		return InvalidValue{Setting: e.key, Code: CodeInvalidValue, Reason: err.Error()}
 	}
 	return nil
 }
@@ -204,6 +204,11 @@ func (e *Entry[T]) CanonicalJSON(raw json.RawMessage) (json.RawMessage, error) {
 	}
 	return out, nil
 }
+
+// CodeInvalidValue is the machine code every rejected setting carries, named
+// once here because a caller that spells it itself can spell it differently —
+// and a client branches on this string.
+const CodeInvalidValue = "setting_invalid"
 
 // InvalidValue refuses a setting write whose value the owning module rejects.
 // It implements apperrors.FieldFault so the refusal classifies as a 422

@@ -16,6 +16,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 )
@@ -260,7 +261,7 @@ func isOverdueOurs(claim crmcontracts.ConversationClaim, now time.Time) bool {
 	if claim.Status != crmcontracts.ConversationClaimStatusOpen {
 		return false
 	}
-	return claim.DueAt != nil && claim.DueAt.Before(now)
+	return deadline.Passed(claim.DueAt, now)
 }
 
 // hoistOverdueOurs moves our overdue promises to the front, keeping every other

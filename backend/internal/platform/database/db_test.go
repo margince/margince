@@ -50,6 +50,15 @@ func TestAnUninjectedHandleAnswersTheNoWorkspaceSentinel(t *testing.T) {
 	if !strings.Contains(err.Error(), "compose") {
 		t.Errorf("the refusal must name where the handle comes from, got %q", err)
 	}
+
+	// Workspace answers the same, because a store that resolves the workspace
+	// BEFORE opening a transaction — to name the row that transaction will
+	// write — must not be more fragile than one that just opens it. A panic
+	// here would turn an un-injected handle from a refusal into a crash on
+	// whichever call site happened to ask first.
+	if _, err := db.Workspace(context.Background()); !errors.Is(err, ErrNoWorkspace) {
+		t.Fatalf("Workspace on a nil handle = %v, want ErrNoWorkspace", err)
+	}
 }
 
 // BindTo pins the workspace it is given — the shape bootstrap and every

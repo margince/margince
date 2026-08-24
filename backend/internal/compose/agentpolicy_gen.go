@@ -101,6 +101,7 @@ type agentPolicy struct {
 // router registers it (BaseURL /v1 included).
 var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/activities/{id}":                                         {Op: "archiveActivity", Access: "tool", Tool: "archive_record", RecordType: "activity", Tier: "auto_execute", Scope: "write"},
+	"DELETE /v1/ai/provider-keys/{provider}":                             {Op: "deleteAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/attachments/{id}":                                        {Op: "deleteAttachment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/automations/{id}":                                        {Op: "deleteAutomation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/capture/consumer-mail-domains/{id}":                      {Op: "removeConsumerMailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -155,6 +156,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/ai/calls":                                                   {Op: "listAiCalls", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/calls/{id}":                                              {Op: "getAiCall", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/profile":                                                 {Op: "getAiProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/ai/provider-keys":                                           {Op: "listAiProviderKeys", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/routing":                                                 {Op: "getAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/usage":                                                   {Op: "getAiUsage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/approvals":                                                  {Op: "listApprovals", Access: "tool", Tool: "list_approvals", RecordType: "", Tier: "auto_execute", Scope: "read"},
@@ -495,6 +497,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/webhook-subscriptions":                                     {Op: "createWebhookSubscription", Access: "tool", Tool: "create_record", RecordType: "webhook_subscription", Tier: "confirmation_required", Scope: "write"},
 	"POST /v1/webhook-subscriptions/{id}/deliveries/{deliveryId}/replay": {Op: "replayWebhookDelivery", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/webhook-subscriptions/{id}/rotate-secret":                  {Op: "rotateWebhookSecret", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/ai/provider-keys/{provider}":                                {Op: "setAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/routing":                                                 {Op: "replaceAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/capture/blocked-domains":                                    {Op: "setBlockedDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/company":                                                    {Op: "putCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

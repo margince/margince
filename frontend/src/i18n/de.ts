@@ -1727,6 +1727,42 @@ export const de = {
   "deal.companyWithheld": "Firma nicht sichtbar",
   "deal.partnerWithheld": "Partner nicht sichtbar",
   "deal.forecastCategory": "Forecast-Kategorie",
+  "deal.strip.title": "Wie es um den Deal steht",
+  "deal.seats.title": "Wer an diesem Deal beteiligt ist",
+  "deal.seats.empty": "Für diesen Deal ist niemand erfasst",
+  "deal.seats.ours": "{count} von uns tragen ihn",
+  "deal.strip.money": "Das Geld",
+  "deal.strip.money.offer": "Angebot {number} · {status}",
+  "deal.strip.money.noOffer": "Noch kein Angebot geschrieben",
+  "deal.strip.close": "Der Abschluss",
+  "deal.strip.close.none": "Kein Datum",
+  "deal.strip.close.noneDetail":
+    "Niemand hat gesagt, wann das abgeschlossen wird",
+  "deal.strip.close.inDays": "in {days} Tagen",
+  "deal.strip.close.overdue": "{days} Tage über dem Datum",
+  "deal.strip.close.provisional": "vorläufig, von niemandem bestätigt",
+  "deal.strip.close.waiting": "wir sollen bis {date} warten",
+  "deal.strip.people": "Die Menschen",
+  "deal.strip.people.count": "{engaged} von {total} im Austausch",
+  "deal.strip.people.champion": "ein Fürsprecher ist benannt",
+  "deal.strip.people.noChampion": "kein Fürsprecher benannt",
+  "deal.strip.people.none": "Niemand",
+  "deal.strip.people.noneDetail": "Für diesen Deal ist niemand erfasst",
+  "deal.strip.momentum": "Die Bewegung",
+  "deal.strip.momentum.detail": "seit dem letzten Kontakt",
+  "deal.strip.withheld": "Verborgen",
+  "deal.strip.withheldDetail":
+    "Sie dürfen nicht sehen, wer an diesem Deal beteiligt ist",
+  "deal.forecast.commit": "zugesagt",
+  "deal.forecast.bestCase": "bester Fall",
+  "deal.forecast.pipeline": "Pipeline",
+  "deal.forecast.omitted": "nicht in der Prognose",
+  "deal.pulse.yourMove": "Sie sind am Zug.",
+  "deal.pulse.theirMove": "Die andere Seite ist am Zug.",
+  "deal.pulse.theirMoveWhy": "Hier wartet niemand auf eine Antwort.",
+  "deal.pulse.wroteOn": "Zuletzt geschrieben am {date} — vor {days} Tagen.",
+  "deal.pulse.wroteUnknown":
+    "Sie haben geschrieben und niemand hat geantwortet.",
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
@@ -4464,8 +4500,6 @@ export const de = {
   "coverage.title": "Abdeckung",
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
-  "coverage.seatsWithheld":
-    "Sie können nicht sehen, wer an diesem Deal beteiligt ist.",
   "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
   "coverage.clear":
     "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",
@@ -5293,6 +5327,9 @@ export const de = {
   "installationSettings.timezone": "Zeitzone für Auswertungen",
   "installationSettings.timezoneHint":
     "IANA-Zonenname (zum Beispiel Europe/Berlin). Die Uhr Ihrer Organisation: Periodengrenzen aller Auswertungen werden darin berechnet, und jedes Datum eines Datensatzes — Abschlusstermine, Rechnungstage, Verlaufsüberschriften — wird darin angezeigt, damit ein Datum für das ganze Team gleich lautet. Unabhängig von Ihrer eigenen Anzeigezeitzone.",
+  "installationSettings.fiscalYearStart": "Geschäftsjahr beginnt",
+  "installationSettings.fiscalYearStartHint":
+    "Der Monat, in dem Ihr Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal — ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
   "installationSettings.baseCurrency": "Basiswährung",
   "installationSettings.baseCurrencyHint":
     "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Betrag dagegen umgerechnet wurde.",
@@ -5306,6 +5343,27 @@ export const de = {
   "installationSettings.edit": "Ändern",
   "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
+  "aiProviderKeys.title": "Anbieter-Schlüssel",
+  "aiProviderKeys.sub":
+    "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
+  "aiProviderKeys.configured": "Schlüssel gespeichert",
+  "aiProviderKeys.absent": "Kein Schlüssel",
+  "aiProviderKeys.configuredHint":
+    "Im Schlüsseltresor versiegelt. Er kann nicht ausgelesen werden — füge einen neuen ein, um ihn zu ersetzen. Er kann auch über {envVar} ankommen.",
+  "aiProviderKeys.absentHint":
+    "Für diesen Anbieter liegen keine Zugangsdaten vor, ein daran gebundenes Modell kann also nicht aufgerufen werden. Sie können auch über {envVar} ankommen.",
+  "aiProviderKeys.addPlaceholder": "API-Schlüssel einfügen",
+  "aiProviderKeys.replacePlaceholder": "Neuen Schlüssel zum Ersetzen einfügen",
+  "aiProviderKeys.add": "Hinzufügen",
+  "aiProviderKeys.replace": "Ersetzen",
+  "aiProviderKeys.removeConfirmTitle": "Den {provider}-Schlüssel entfernen?",
+  "aiProviderKeys.removeConfirmBody":
+    "Die Zugangsdaten werden aus dem Schlüsseltresor gelöscht und lassen sich nicht wiederherstellen — sie sind nie auslesbar, es gibt also keine Kopie. Jede an diesen Anbieter gebundene KI-Strecke steht, bis ein neuer Schlüssel eingefügt wird.",
+  "aiProviderKeys.withheld":
+    "Nur wer die Modellbindung ändern darf, sieht, für welche Anbieter ein Schlüssel vorliegt.",
+  "aiProviderKeys.remove": "Entfernen",
+  "aiRouting.withheld":
+    "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",

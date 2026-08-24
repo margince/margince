@@ -249,13 +249,20 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 }
 
 // lockFreemailDomain serializes decisions about ONE domain for the life of the
-// caller's transaction. Keyed on the workspace and the domain, so two admins
-// editing different domains never wait on each other.
+// caller's transaction. Keyed on the domain alone since ADR-0091 §5 — one
+// installation, one organization (ADR-0061) — so two admins editing different
+// domains never wait on each other.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || $1)::bigint)`, domain); err != nil {
+		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
+	}
+	// Plus the legacy workspace-qualified key, for the rolling-deploy window
+	// storekit.LockWriteIdentity explains.
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' ||
 			current_setting('app.workspace_id', true) || ':' || $1)::bigint)`, domain); err != nil {
-		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
+		return fmt.Errorf("capture: serializing the decision about %s (legacy key): %w", domain, err)
 	}
 	return nil
 }

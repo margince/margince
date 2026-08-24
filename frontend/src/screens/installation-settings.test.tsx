@@ -192,6 +192,43 @@ describe("InstallationSettingsCard", () => {
     );
   });
 
+  // The two Select rows, which the text-field case above cannot stand in for.
+  // A `Select` is a button and a portalled listbox rather than an input, so it
+  // is reached by a different path — and that path used to query
+  // `[role="combobox"]`, which returns whichever combobox the form renders
+  // FIRST. With one Select that was right by luck; with two it sent every
+  // fiscal-year Edit to the language picker instead, and a third would have
+  // moved it again with nothing failing.
+  it("focuses the right picker when two rows are both Selects", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit financial year starts/i);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByLabelText(/financial year starts/i),
+      ),
+    );
+  });
+
+  it("still focuses the language picker, which is the earlier of the two", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit base language/i);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByLabelText(/base language/i),
+      ),
+    );
+  });
+
   it("renders the base currency read-only with the server's reason once it is locked", async () => {
     const user = userEvent.setup();
     const reason =

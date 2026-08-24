@@ -98,7 +98,7 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	}
 	meta := embedInclusiveMeta(cfg)
 	router := assembleRouter(clients, embedder, cfg.Profile, meter, budget, calls, meta, capturePayloads, log)
-	stamped := router.binding().withConfigSnapshot(cfg.sourceHash, cfg.Embeddings.Dimensions)
+	stamped := router.binding().withConfigSnapshot(cfg)
 	router.bound.Store(&stamped)
 	return router, nil
 }

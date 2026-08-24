@@ -58,17 +58,30 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 // without it each transaction reads the same previous observation and every one
 // of them writes the change.
 //
-// ONE statement for both facts, parameterized by the fact's name — which is the
-// half worth spelling once, because COALESCE is load-bearing in a way that fails
-// silently. pg_advisory_xact_lock is strict: a NULL argument takes NO LOCK and
-// returns NULL rather than raising. An unset app.workspace_id GUC makes
-// current_setting(…, true) empty, `||` against NULL would be NULL, and the
-// serialization this exists for would simply be absent — a guard that reports
-// success while holding nothing. WithWorkspaceTx refuses an unbound transaction
-// before any closure runs, so it is not reachable today; it is spelled this way
-// because nothing downstream would say so if it became reachable, and because
-// storekit already spells it this way.
+// ONE statement for both facts, parameterized by the fact's name. The workspace
+// this key used to carry went with ADR-0091 §5: an installation serves one
+// organization (ADR-0061), so it distinguished nothing.
+//
+// It keeps a NAMESPACE prefix rather than hashing the bare fact name, because
+// the workspace suffix was doing that job too. hashtext over an unqualified
+// caller-chosen string shares one key space with every other such lock in this
+// tree, and a collision there serializes two unrelated boot paths for the
+// length of a transaction.
+//
+// The COALESCE that used to guard it moved to bootLedgerLockLegacy below, where
+// it is still load-bearing: pg_advisory_xact_lock is STRICT, so a NULL argument
+// takes NO LOCK and returns NULL rather than raising, and an unset GUC would
+// leave the serialization silently absent — a guard reporting success while
+// holding nothing.
 const bootLedgerLock = `
+	SELECT pg_advisory_xact_lock(hashtext('margince:boot-ledger:' || $1)::bigint)`
+
+// bootLedgerLockLegacy is the workspace-qualified key the previous release took,
+// held alongside the one above for the rolling-deploy window that
+// storekit.LockWriteIdentity explains. coalesce because pg_advisory_xact_lock is
+// STRICT: an unset GUC would make the argument NULL, take NO lock, and leave the
+// serialization silently absent.
+const bootLedgerLockLegacy = `
 	SELECT pg_advisory_xact_lock(
 		hashtext($1 || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`
 

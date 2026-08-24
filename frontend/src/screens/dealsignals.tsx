@@ -15,15 +15,12 @@
 // server sends `days_since_touch` for the rules that have one, so the figure
 // is read rather than recomputed.
 
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { useDealCoverage } from "./deal360/usedealcoverage";
 import type { Signal, SignalTone } from "./record360";
 
-type DealCoverage = components["schemas"]["DealCoverage"];
 type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];
 
 // Every risk is a warning; only the two that mean somebody is GONE are danger.
@@ -61,24 +58,13 @@ const RISK_LABELS: Record<DealCoverageRisk["kind"], MessageKey> = {
  */
 export function useDealSignals(dealId: string, enabled: boolean) {
   const t = useT();
-  const query = useQuery({
-    queryKey: ["deal-coverage", dealId],
-    queryFn: async (): Promise<DealCoverage> => {
-      const { data, error } = await api.GET("/deals/{id}/coverage", {
-        params: { path: { id: dealId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    enabled,
-  });
-  const omitted = query.data?.sections_omitted ?? [];
-  const withheld = omitted.includes("risks");
+  // The shared read, not a second useQuery over the same key. Three surfaces
+  // ask this question and they agreed by luck while each spelled its own; see
+  // deal360/usedealcoverage.tsx.
+  const { coverage, withheld, ready } = useDealCoverage(dealId, enabled);
   const signals: Signal[] = withheld
     ? []
-    : (query.data?.risks ?? []).map((risk) => ({
+    : (coverage?.risks ?? []).map((risk) => ({
         key: risk.kind,
         label: t(RISK_LABELS[risk.kind]),
         // The trigger number, when the rule has one. A rule with no figure
@@ -89,5 +75,5 @@ export function useDealSignals(dealId: string, enabled: boolean) {
             : undefined,
         tone: RISK_TONE[risk.kind],
       }));
-  return { signals, withheld, ready: query.isSuccess };
+  return { signals, withheld, ready };
 }

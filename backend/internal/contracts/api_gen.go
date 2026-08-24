@@ -12362,6 +12362,29 @@ type AiProfileProviders string
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
 
+// AiProviderKeyInput defines model for AiProviderKeyInput.
+type AiProviderKeyInput struct {
+	// ApiKey The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
+	ApiKey *string `json:"api_key,omitempty"`
+}
+
+// AiProviderKeyList defines model for AiProviderKeyList.
+type AiProviderKeyList struct {
+	Providers []AiProviderKeyStatus `json:"providers"`
+}
+
+// AiProviderKeyStatus What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless.
+type AiProviderKeyStatus struct {
+	// Configured Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer.
+	Configured bool `json:"configured"`
+
+	// EnvVar The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix.
+	EnvVar string `json:"env_var"`
+
+	// Provider The routing name of the vendor, the same string a binding uses.
+	Provider string `json:"provider"`
+}
+
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
 // of names is the one the task contract declares (api/ai-tasks.yaml), and the server
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
@@ -16831,6 +16854,18 @@ type InstallationSettings struct {
 	// the correspondence, so a German thread still gets a German reply, and a brief cached
 	// for one reader keeps that reader's language.
 	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
+
+	// FiscalYearStartMonth The month the installation's business year begins, 1..12. January (1) is the
+	// default, which is the calendar year every installation reported by before this
+	// setting existed.
+	//
+	// It buckets period reports on READ and stores nothing, so changing it re-labels
+	// every report immediately and re-means no stored row.
+	//
+	// The label spells both calendar years a non-January year spans — `FY2026/27` — so
+	// a reader can tell which twelve months a bucket covers without knowing the
+	// convention. A January year is not a span and keeps the plain `2026`.
+	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
@@ -23129,6 +23164,11 @@ type UpdateInstallationSettingsRequest struct {
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
+	// FiscalYearStartMonth The month the installation's business year begins, 1..12. Never frozen: it cuts
+	// reports on read and stores nothing, so moving it re-labels every period report at
+	// once and re-means no stored row.
+	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
+
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
 
@@ -28054,6 +28094,9 @@ type SetAiModelRateJSONRequestBody = SetAiModelRateRequest
 
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
+
+// SetAiProviderKeyJSONRequestBody defines body for SetAiProviderKey for application/json ContentType.
+type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
@@ -36328,6 +36371,15 @@ type ServerInterface interface {
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
+	// Which model vendors hold a credential (admin/ops).
+	// (GET /ai/provider-keys)
+	ListAiProviderKeys(w http.ResponseWriter, r *http.Request)
+	// Remove one vendor's BYOK key (admin/ops).
+	// (DELETE /ai/provider-keys/{provider})
+	DeleteAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Store or rotate one vendor's BYOK key (admin/ops).
+	// (PUT /ai/provider-keys/{provider})
+	SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -37825,6 +37877,24 @@ func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) 
 // Authenticated AI configuration posture for transparent human-facing workspaces.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which model vendors hold a credential (admin/ops).
+// (GET /ai/provider-keys)
+func (_ Unimplemented) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove one vendor's BYOK key (admin/ops).
+// (DELETE /ai/provider-keys/{provider})
+func (_ Unimplemented) DeleteAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store or rotate one vendor's BYOK key (admin/ops).
+// (PUT /ai/provider-keys/{provider})
+func (_ Unimplemented) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -41802,6 +41872,90 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAiProviderKeys operation middleware
+func (siw *ServerInterfaceWrapper) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAiProviderKeys(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAiProviderKey operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAiProviderKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAiProviderKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetAiProviderKey operation middleware
+func (siw *ServerInterfaceWrapper) SetAiProviderKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetAiProviderKey(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -61997,6 +62151,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-keys", wrapper.ListAiProviderKeys)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/ai/provider-keys/{provider}", wrapper.DeleteAiProviderKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/provider-keys/{provider}", wrapper.SetAiProviderKey)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)
