@@ -359,6 +359,20 @@ export function DecisionDeck({
     if (!live || event.button !== 0) {
       return;
     }
+    // A press that STARTS on a control belongs to that control, and this guard
+    // is what makes the four buttons on a deck card work at all. Pointer capture
+    // retargets every later event for that pointer — including the compatibility
+    // `click` — at the capturing element, so capturing here sent the click to
+    // this fieldset and the button under the finger never heard about it. Accept
+    // did nothing in the deck and worked in the list, which is exactly the shape
+    // of the bug that was reported. `closest` rather than a tag test: the press
+    // lands on the label or the icon inside the button.
+    if (
+      event.target instanceof Element &&
+      event.target.closest("button, a, input, textarea, select, summary")
+    ) {
+      return;
+    }
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setDrag({
       pointerId: event.pointerId,

@@ -388,6 +388,32 @@ describe("DecisionDeck — the states it can honestly be in", () => {
   });
 });
 
+describe("DecisionDeck — a press on a control belongs to the control", () => {
+  // The deck's verbs stopped working while the swipe surface captured the
+  // pointer: capture retargets every later event for that pointer at the
+  // capturing element, the compatibility `click` included, so the click went to
+  // the fieldset and the button under the finger never heard about it. jsdom
+  // implements neither capture nor that retargeting, so the observable half is
+  // what is asserted here — a press that starts on a control starts no drag.
+  it("starts no drag from a press on one of the card's verbs", () => {
+    render(deck());
+    const accept = screen.getByRole("button", { name: "Accept" });
+    fireEvent.pointerDown(accept, { button: 0, pointerId: 1 });
+    expect(liveSurface()).not.toHaveAttribute("data-dragging");
+  });
+
+  it("still starts a drag from the card itself", () => {
+    render(deck());
+    fireEvent.pointerDown(liveSurface(), {
+      button: 0,
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    expect(liveSurface()).toHaveAttribute("data-dragging");
+  });
+});
+
 describe("DecisionDeck — the head", () => {
   it("puts the title and the view toggle on one row", () => {
     render(deck({ title: "Waiting on you" }));
