@@ -3027,8 +3027,6 @@ export function OffersPanel({
 const DEAL_TABS = ["overview", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
-type Relationship = components["schemas"]["Relationship"];
-
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
@@ -3142,7 +3140,6 @@ function DealOverviewPane({
   stages,
   dealApprovals,
   onDecide,
-  stakeholders,
   offers,
   creatingOffer,
   locale,
@@ -3160,7 +3157,6 @@ function DealOverviewPane({
     approvalId: string;
     verdict: "approve" | "reject";
   }) => void;
-  stakeholders: Relationship[] | undefined;
   offers: Offer[] | undefined;
   creatingOffer: boolean;
   locale: Locale;
@@ -3219,40 +3215,21 @@ function DealOverviewPane({
           )}
         </fieldset>
       )}
+      {/* Below the stage bar on purpose: a reader takes in WHERE the deal is
+          before they read the account of how it got there, and the briefing is
+          long enough that putting it first pushed the stages off the first
+          screen. */}
+      <DealLead dealId={deal.id} overlay={overlay} />
       <DealApprovals approvals={dealApprovals} decide={onDecide} />
-      {/* Above the stakeholder list on purpose: the findings are ABOUT those
-          seats, and a rep who read the list first has already formed the
-          impression the flags exist to correct. */}
+      {/* Who is on the deal and what is wrong with that coverage, in ONE card.
+          There used to be a second "Stakeholders" card below this one; it read
+          the /stakeholders relationship rows, which carry a person_id and no
+          name, so a real stakeholder rendered as the bare word
+          "economic_buyer". The coverage seats carry the name and whether the
+          person is actually engaged, which is the same list with the two facts
+          a rep needs — and it keeps the findings beside the seats they are
+          about. Overlay is handled inside the card. */}
       <DealCoverageCard id={deal.id} />
-      {/* Stakeholders are a relationship read the mirror does not serve. In
-          overlay show the honest unavailable state (never any cached native
-          rows), matching the timeline and offers panels. */}
-      {overlay ? (
-        <Card
-          title={t("deal.stakeholders")}
-          style={{ marginBottom: "var(--space-4)" }}
-        >
-          <OverlayUnavailable />
-        </Card>
-      ) : (
-        stakeholders &&
-        stakeholders.length > 0 && (
-          <Card
-            title={t("deal.stakeholders")}
-            style={{ marginBottom: "var(--space-4)" }}
-          >
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {stakeholders.map((stakeholder) => (
-                <Badge key={stakeholder.id}>
-                  {stakeholder.role ??
-                    stakeholder.person_id ??
-                    stakeholder.kind}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-        )
-      )}
       <OffersPanel
         offers={offers}
         creating={creatingOffer}
@@ -3330,19 +3307,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     queryFn: async () => {
       const { data, error } = await api.GET("/organizations", {
         params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-  const stakeholdersQuery = useQuery({
-    queryKey: ["deal-stakeholders", id],
-    enabled: !overlay,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/stakeholders", {
-        params: { path: { id } },
       });
       if (error) {
         throwProblem(error);
@@ -3470,7 +3434,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 )
               }
             >
-              <DealLead dealId={id} overlay={overlay} />
               <div style={{ marginBottom: 16 }}>
                 <SegmentedControl
                   options={DEAL_TABS}
@@ -3489,7 +3452,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   stages={stages}
                   dealApprovals={dealApprovals}
                   onDecide={(input) => decide.mutate(input)}
-                  stakeholders={stakeholdersQuery.data?.data}
                   offers={offersQuery.data?.data}
                   creatingOffer={createOffer.isPending}
                   locale={locale}

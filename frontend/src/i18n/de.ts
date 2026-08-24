@@ -1719,7 +1719,6 @@ export const de = {
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
-  "deal.stakeholders": "Beteiligte",
   "deal.edit": "Deal bearbeiten",
   "deal.ownerKeep": "Aktuellen Inhaber behalten",
   "deal.ownerMe": "Mir zuweisen",
@@ -4463,6 +4462,11 @@ export const de = {
   "network.bucket.moderate": "Mittel",
   "network.bucket.strong": "Stark",
   "coverage.title": "Abdeckung",
+  "coverage.engaged": "Im Austausch",
+  "coverage.quiet": "Kein beidseitiger Kontakt",
+  "coverage.seatsWithheld":
+    "Sie können nicht sehen, wer an diesem Deal beteiligt ist.",
+  "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
   "coverage.clear":
     "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",
   "coverage.withheld":

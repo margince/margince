@@ -37,12 +37,17 @@ const (
 
 // CommentPosted is one comment as its consumers need it.
 type CommentPosted struct {
-	DealID      ids.UUID
-	ThreadID    ids.UUID
-	CommentID   ids.UUID
-	DocumentID  *ids.UUID
-	Side        string
-	OpensThread bool
+	DealID     ids.UUID
+	ThreadID   ids.UUID
+	CommentID  ids.UUID
+	DocumentID *ids.UUID
+	Side       string
+	// AuthorName and DocumentTitle are what the timeline note is written from.
+	// Both are optional on the wire: an event minted before those fields
+	// existed carries neither, and the note falls back to naming the side.
+	AuthorName    *string
+	DocumentTitle *string
+	OpensThread   bool
 }
 
 // DecodeCommentPosted reads one comment payload off the bus.
@@ -52,11 +57,13 @@ func DecodeCommentPosted(payload json.RawMessage) (CommentPosted, error) {
 		return CommentPosted{}, fmt.Errorf("decode %s: %w", EventCommentPosted, err)
 	}
 	out := CommentPosted{
-		DealID:      ids.UUID(wire.DealId),
-		ThreadID:    ids.UUID(wire.ThreadId),
-		CommentID:   ids.UUID(wire.CommentId),
-		Side:        wire.Side,
-		OpensThread: wire.OpensThread,
+		DealID:        ids.UUID(wire.DealId),
+		ThreadID:      ids.UUID(wire.ThreadId),
+		CommentID:     ids.UUID(wire.CommentId),
+		Side:          wire.Side,
+		OpensThread:   wire.OpensThread,
+		AuthorName:    wire.AuthorName,
+		DocumentTitle: wire.DocumentTitle,
 	}
 	if wire.DocumentId != nil {
 		doc := ids.UUID(*wire.DocumentId)

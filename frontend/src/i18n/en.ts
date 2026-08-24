@@ -1744,7 +1744,6 @@ export const en = {
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
-  "deal.stakeholders": "Stakeholders",
   "deal.edit": "Edit deal",
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
@@ -4515,6 +4514,10 @@ export const en = {
   "network.bucket.moderate": "Moderate",
   "network.bucket.strong": "Strong",
   "coverage.title": "Coverage",
+  "coverage.engaged": "Engaged",
+  "coverage.quiet": "No two-way contact",
+  "coverage.seatsWithheld": "You cannot see who is on this deal.",
+  "coverage.seatWithheld": "A contact you cannot read",
   "coverage.clear": "Nothing flagged — this deal passes every coverage check.",
   "coverage.withheld":
     "Coverage was withheld — you cannot read this deal’s relationships, so no check was run.",

@@ -226,6 +226,16 @@ export interface components {
             opens_thread: boolean;
             /** @description True when the thread, as opened, blocks confirming the document until resolved. */
             required_change?: boolean;
+            /**
+             * @description Who spoke, by name, as the room recorded them at that moment. Additive and optional: an event minted before this field existed carries none.
+             *     The comment's TEXT stays off the bus for the reason above, and a name is a different thing from the text — it is who acted, which is what any record of an act has to say. A timeline entry reading "the buyer said something" names no buyer and is not worth the row it occupies.
+             */
+            author_name?: string;
+            /**
+             * @description The document the thread is about, titled as it stood at that moment. Absent for a room-level exchange, and absent on an event minted before this field existed.
+             *     Carried rather than resolved later, for the reason every other field here is: a document can be retitled or removed afterwards, and a timeline entry means what was true when it happened.
+             */
+            document_title?: string;
         };
         /** @description Payload for deal_room.thread_resolved — a thread was closed by the seller's side. */
         PublicEventDealRoomThreadResolved: {

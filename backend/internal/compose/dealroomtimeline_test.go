@@ -43,17 +43,28 @@ func roomEnvelope[P roomPayload](t *testing.T, eventType string, payload P) even
 	}
 }
 
+// The note has to name the PERSON and the DOCUMENT, not their categories.
+//
+// The earlier version of this test asserted the words "buyer" and "document"
+// appeared somewhere, which "The buyer replied in the Deal Room / About a
+// document in the room" satisfies while telling a reader nothing. Asserting
+// the actual name and the actual title is the difference between a test that
+// describes the feature and one that would have caught its absence.
 func TestABuyerCommentBecomesANoteThatNamesTheBuyerAndTheDocument(t *testing.T) {
 	deal := ids.NewV7()
 	doc := openapi_types.UUID(ids.NewV7())
+	name := "Thorsten Sifferlien"
+	title := "Rahmenvertrag v3"
 	note, carried, err := roomNote(roomEnvelope(t, dealrooms.EventCommentPosted,
 		crmcontracts.PublicEventDealRoomCommentPosted{
-			DealId:      openapi_types.UUID(deal),
-			ThreadId:    openapi_types.UUID(ids.NewV7()),
-			CommentId:   openapi_types.UUID(ids.NewV7()),
-			DocumentId:  &doc,
-			Side:        "buyer",
-			OpensThread: true,
+			DealId:        openapi_types.UUID(deal),
+			ThreadId:      openapi_types.UUID(ids.NewV7()),
+			CommentId:     openapi_types.UUID(ids.NewV7()),
+			DocumentId:    &doc,
+			Side:          "buyer",
+			OpensThread:   true,
+			AuthorName:    &name,
+			DocumentTitle: &title,
 		}))
 	if err != nil {
 		t.Fatalf("routing a buyer comment: %v", err)
@@ -64,14 +75,41 @@ func TestABuyerCommentBecomesANoteThatNamesTheBuyerAndTheDocument(t *testing.T) 
 	if note.deal != deal {
 		t.Errorf("note is filed against %s, want the deal %s the room belongs to", note.deal, deal)
 	}
-	if !strings.Contains(note.subject, "buyer") {
-		t.Errorf("subject %q does not say who spoke", note.subject)
+	if !strings.Contains(note.subject, name) {
+		t.Errorf("subject %q does not NAME who spoke", note.subject)
 	}
-	if !strings.Contains(note.subject, "started") {
+	if !strings.Contains(note.subject, "asked a question") {
 		t.Errorf("subject %q does not say a thread was opened", note.subject)
 	}
-	if !strings.Contains(note.body, "document") {
-		t.Errorf("body %q does not say the comment was about a document", note.body)
+	if !strings.Contains(note.body, title) {
+		t.Errorf("body %q does not NAME the document the comment was about", note.body)
+	}
+}
+
+// An event minted before the payload carried a name still has to produce a
+// true note. It falls back to the side — vaguer, never wrong, and never a
+// placeholder name that would read as a real person.
+func TestACommentWithoutANameFallsBackToTheSide(t *testing.T) {
+	doc := openapi_types.UUID(ids.NewV7())
+	note, carried, err := roomNote(roomEnvelope(t, dealrooms.EventCommentPosted,
+		crmcontracts.PublicEventDealRoomCommentPosted{
+			DealId:      openapi_types.UUID(ids.NewV7()),
+			ThreadId:    openapi_types.UUID(ids.NewV7()),
+			CommentId:   openapi_types.UUID(ids.NewV7()),
+			DocumentId:  &doc,
+			Side:        "buyer",
+			OpensThread: false,
+		}))
+	if err != nil || !carried {
+		t.Fatalf("routing an old-shape comment: carried=%v err=%v", carried, err)
+	}
+	if !strings.Contains(note.subject, "buyer") {
+		t.Errorf("subject %q names neither a person nor a side", note.subject)
+	}
+	for _, bogus := range []string{"Unknown", "<nil>", "null"} {
+		if strings.Contains(note.subject, bogus) || strings.Contains(note.body, bogus) {
+			t.Errorf("note invents %q where the event carried nothing: %q / %q", bogus, note.subject, note.body)
+		}
 	}
 }
 

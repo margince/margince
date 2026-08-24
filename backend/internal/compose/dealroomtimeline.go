@@ -119,21 +119,46 @@ func roomNote(env events.Envelope) (roomNoteText, bool, error) {
 	return roomNoteText{}, false, nil
 }
 
-// commentNote says who spoke and whether they started something. The body is
-// deliberately not the comment text: a Deal Room comment is written to the
-// buyer, and copying it onto the deal would duplicate a record that already
-// lives in the room and can be edited there afterwards.
+// commentNote says WHO spoke and WHAT ABOUT.
+//
+// The comment's text stays out, and that part was always right: a Deal Room
+// comment is written to the buyer, it can be edited in the room afterwards,
+// and copying it here would make a second record of it. But the earlier note
+// left out the name and the document too, and what it produced —
+// "The buyer replied in the Deal Room" over "About a document in the room" —
+// names nobody and nothing. A reader could not tell which buyer, which
+// document, or whether it mattered, so the row was pure noise on a timeline
+// that has to stay worth reading.
+//
+// A name and a title are not the comment's content; they are who acted and
+// what they acted on, which is the minimum any record of an act has to carry.
+// Both ride the event (see the payload), so the note keeps saying what was
+// true at the time even after a rename.
 func commentNote(posted dealrooms.CommentPosted) roomNoteText {
-	side := "The seller"
+	who := "The seller"
 	if posted.Side == roomSideBuyer {
-		side = "The buyer"
+		who = "The buyer"
 	}
-	subject := side + " replied in the Deal Room"
+	// The name when the event carries one. An event minted before the payload
+	// grew those fields carries none, and the note falls back to the side —
+	// vaguer than we want, but true, which the alternative of inventing a name
+	// would not be.
+	if posted.AuthorName != nil {
+		who = *posted.AuthorName
+	}
+	verb := "replied in the Deal Room"
 	if posted.OpensThread {
-		subject = side + " started a thread in the Deal Room"
+		verb = "asked a question in the Deal Room"
 	}
+	subject := who + " " + verb
 	body := "About the room as a whole."
-	if posted.DocumentID != nil {
+	switch {
+	case posted.DocumentTitle != nil:
+		body = "About " + *posted.DocumentTitle + "."
+	case posted.DocumentID != nil:
+		// The thread is about a document whose title the event does not carry.
+		// Saying so beats naming the id, which tells a reader nothing they can
+		// act on.
 		body = "About a document in the room."
 	}
 	return roomNoteText{deal: posted.DealID, subject: subject, body: body}

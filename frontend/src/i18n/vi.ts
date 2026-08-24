@@ -1707,7 +1707,6 @@ export const vi = {
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
-  "deal.stakeholders": "Bên liên quan",
   "deal.edit": "Sửa deal",
   "deal.ownerKeep": "Giữ người phụ trách hiện tại",
   "deal.ownerMe": "Giao cho tôi",
@@ -4421,6 +4420,10 @@ export const vi = {
   "network.bucket.moderate": "Vừa",
   "network.bucket.strong": "Mạnh",
   "coverage.title": "Độ phủ",
+  "coverage.engaged": "Đang trao đổi",
+  "coverage.quiet": "Chưa có trao đổi hai chiều",
+  "coverage.seatsWithheld": "Bạn không thể xem ai tham gia thương vụ này.",
+  "coverage.seatWithheld": "Một liên hệ bạn không thể xem",
   "coverage.clear":
     "Không có gì đáng lưu ý — deal này qua mọi kiểm tra độ phủ.",
   "coverage.withheld":
