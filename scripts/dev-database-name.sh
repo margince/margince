@@ -10,4 +10,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck source=scripts/lib-devstate.sh
 . ./lib-devstate.sh
-dev_database_name
+# An explicit slug wins, whether it arrives as an argument (a make-level
+# `DEV_SLUG=x` override, which does not reach this script's environment) or in the
+# environment. Empty means: derive it from the worktree.
+DEV_SLUG="${1:-${DEV_SLUG:-}}" dev_database_name

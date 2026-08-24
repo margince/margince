@@ -305,7 +305,10 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
       printf '%s' "${STARTER_PID:-}"
     )
   fi
-  if [[ -n "$holder" && "$holder" != "$STACK_STARTER_PID" ]] && kill -0 "$holder" 2>/dev/null; then
+  # still_ours, not `kill -0`: a pid is recycled, and a bare liveness check reads
+  # an unrelated process as another starter — which would refuse every later
+  # `make dev` for this slug, permanently, with no way to tell why.
+  if [[ -n "$holder" && "$holder" != "$STACK_STARTER_PID" ]] && still_ours "$holder"; then
     echo "FAIL: another 'make dev' (pid ${holder}) is already starting the '${want}' stack. Wait for it, or stop it with 'make dev-stop'." >&2
     return 1
   fi

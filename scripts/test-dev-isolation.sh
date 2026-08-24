@@ -337,6 +337,20 @@ git -C "$probe/primary" worktree add -q "$probe/b/dup" --detach
 check "1" "$([ "$(cd "$probe/a/dup" || exit 1; dev_derive_slug)" != "$(cd "$probe/b/dup" || exit 1; dev_derive_slug)" ] && echo 1 || echo 0)" \
       "two worktrees with the SAME basename get different slugs, so they cannot share a database"
 
+# And two whose names share only their FIRST 24 CHARACTERS. The readable half of a
+# slug is truncated to fit the database and bucket names built from it, so
+# uniqueness cannot depend on it — it has to come from the digest. Hashing the
+# clone alone was a regression exactly here: every worktree of one clone shares
+# that, so two long siblings folded onto one slug.
+git -C "$probe/primary" worktree add -q "$probe/$(printf 'p%.0s' $(seq 1 30))-alpha" --detach
+git -C "$probe/primary" worktree add -q "$probe/$(printf 'p%.0s' $(seq 1 30))-beta" --detach
+long_a="$(cd "$probe/$(printf 'p%.0s' $(seq 1 30))-alpha" || exit 1; dev_derive_slug)"
+long_b="$(cd "$probe/$(printf 'p%.0s' $(seq 1 30))-beta" || exit 1; dev_derive_slug)"
+check "1" "$([ "${long_a:0:24}" = "${long_b:0:24}" ] && echo 1 || echo 0)" \
+      "the two names really do share their first 24 characters, which is what makes the next check the real case"
+check "1" "$([ "$long_a" != "$long_b" ] && echo 1 || echo 0)" \
+      "and they still get different slugs — uniqueness lives in the digest, not the truncated name"
+
 # A slug must be STABLE for as long as a stack runs. An earlier version appended
 # the digest only when a twin existed, so creating a second worktree of the same
 # name RENAMED a running stack — and dev-stop then resolved a slug with no record

@@ -19,7 +19,12 @@ DB_NAME   ?= margince
 # for, and defaulting to the shared database there would point a linked worktree's
 # psql at the primary's data — silently, which is the failure this exists to
 # prevent. An empty name makes psql fail loudly instead.
-DEV_DB_NAME ?= $(shell bash ../scripts/dev-database-name.sh)
+# $(DEV_SLUG) is passed as an ARGUMENT, because a make-level override does not
+# otherwise reach the resolver: `make seed-dev DEV_SLUG=alpha` sets a make
+# variable, and the $(shell …) here would answer for the worktree instead — seeding
+# a different stack's database than the one just named on the command line.
+# Empty expands to no argument, which leaves the script to derive it.
+DEV_DB_NAME ?= $(shell bash ../scripts/dev-database-name.sh $(DEV_SLUG))
 # An ambient MARGINCE_OWNER_DSN redirects every migrate target here, because it is
 # the same variable cmd/migrate reads when no --dsn is given — the two can never
 # name different databases. That also means a staging or production owner DSN

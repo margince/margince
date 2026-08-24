@@ -87,11 +87,17 @@ dev_derive_slug() { # → "" in the primary worktree, this worktree's name in a 
   # they are named on disk.
   name="$(dev_sanitize_slug "$(basename "$gitdir")")"
 
-  # The digest identifies the REPOSITORY, so two clones on one machine — the
-  # registry is machine-global — cannot collide on a shared admin name like
-  # `feature`. It is of the common dir, which is stable for as long as the clone
-  # stays put.
-  digest="$(printf '%s' "$commondir" | shasum -a 256 | cut -c1-8)"
+  # The digest identifies this WORKTREE OF THIS CLONE: the common dir separates
+  # two clones on one machine (the registry is machine-global), and the admin name
+  # separates two worktrees of one clone. Both are needed.
+  #
+  # Hashing the common dir alone was a regression: every worktree of a clone
+  # shares it, so once the display name is truncated to 24 characters two long
+  # siblings folded onto one slug — one database, one Redis logical database and
+  # one bucket between two stacks, which is the collision this file exists to
+  # remove. The digest is over the FULL admin name, so truncating the readable
+  # half cannot cost uniqueness.
+  digest="$(printf '%s\0%s' "$commondir" "$(basename "$gitdir")" | shasum -a 256 | cut -c1-8)"
 
   # Bounded so the names built from it fit their own limits: `margince_dev_<slug>`
   # (Postgres caps an identifier at 63 bytes) and `margince-dev-<slug>` (S3 caps a
