@@ -114,7 +114,7 @@ func TestResetWorkspaceConfigRestoresSettingsAndKeepsIdentity(t *testing.T) {
 
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
 	if err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
-		return ResetWorkspaceConfig(wsCtx, tx)
+		return ResetWorkspaceConfig(wsCtx, tx, ws)
 	}); err != nil {
 		t.Fatalf("ResetWorkspaceConfig: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestAResetWorkspaceMatchesAFreshlyBootstrappedOne(t *testing.T) {
 
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
 	if err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
-		return ResetWorkspaceConfig(wsCtx, tx)
+		return ResetWorkspaceConfig(wsCtx, tx, ws)
 	}); err != nil {
 		t.Fatalf("ResetWorkspaceConfig: %v", err)
 	}
@@ -376,9 +376,10 @@ func TestResetWorkspaceConfigOnARowThatIsIdentityAndNothingElse(t *testing.T) {
 
 	// On the OWNER connection, not the app pool WithWorkspaceTx uses: ALTER
 	// TABLE needs table ownership, and the app role deliberately does not have
-	// it. The GUC is set by hand for the same reason — ResetWorkspaceConfig
-	// scopes its UPDATE with current_setting('app.workspace_id'), which the
-	// helper would normally have bound.
+	// it. The GUC is still set by hand, because this transaction stands in for
+	// one WithWorkspaceTx would have bound and the extension tables' RLS
+	// policies read it — ResetWorkspaceConfig itself no longer does, and takes
+	// the workspace it writes as an argument (ADR-0091 §5).
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the probe transaction: %v", err)
@@ -401,7 +402,7 @@ func TestResetWorkspaceConfigOnARowThatIsIdentityAndNothingElse(t *testing.T) {
 	}
 
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
-	if err := ResetWorkspaceConfig(wsCtx, tx); err != nil {
+	if err := ResetWorkspaceConfig(wsCtx, tx, ws); err != nil {
 		t.Fatalf("ResetWorkspaceConfig on an identity-only row: %v — want it to do nothing and succeed", err)
 	}
 

@@ -10,6 +10,7 @@ package identity
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,11 +25,19 @@ func lastActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 	// this, two transactions each deactivating a DIFFERENT admin would both see
 	// the other still active (their target-row FOR UPDATE lock doesn't cover the
 	// other admin's row) and both commit, leaving zero admins. A transaction
-	// advisory lock keyed on the workspace makes admin-management serial, so the
-	// second transaction re-reads the first's committed change and refuses.
+	// advisory lock on a constant key makes admin-management serial across the
+	// installation, so the second transaction re-reads the first's committed
+	// change and refuses.
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard')::bigint)`); err != nil {
+		return false, fmt.Errorf("identity: serializing the last-admin guard: %w", err)
+	}
+	// Plus the legacy workspace-qualified key, for the rolling-deploy window
+	// storekit.LockWriteIdentity explains. Two concurrent removals that did not
+	// contend could leave this installation with no active human administrator.
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard:' || current_setting('app.workspace_id', true))::bigint)`); err != nil {
-		return false, err
+		return false, fmt.Errorf("identity: serializing the last-admin guard (legacy key): %w", err)
 	}
 	var targetIsAdmin bool
 	if err := tx.QueryRow(ctx, `

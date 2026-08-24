@@ -96,7 +96,9 @@ func (s *store) refFor(ctx context.Context, tx pgx.Tx, user *ids.UserID, key str
 // this store exists to prevent, so it is closed rather than documented.
 //
 // An advisory lock covers the absent row because it is keyed on the NAME,
-// not on a tuple. Under READ COMMITTED the loser takes a fresh snapshot for
+// not on a tuple. (Two keys, for now: the second is the workspace-qualified
+// one the previous release took, held through the rolling-deploy window
+// storekit.LockWriteIdentity explains.) Under READ COMMITTED the loser takes a fresh snapshot for
 // its next statement, so once it acquires the lock its own lookup sees the
 // winner's committed row and supersedes it correctly. Same idiom, same
 // reason, as the boot inventory's check-and-insert guard
@@ -117,12 +119,25 @@ func (s *store) lockKey(ctx context.Context, tx pgx.Tx, user *ids.UserID, key st
 		scope = scopeUser
 		holder = user.String()
 	}
-	_, err := tx.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
+		SELECT pg_advisory_xact_lock(hashtext(
+			'margince:extsecrets:' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
+		s.unit, scope, holder, key); err != nil {
+		return fmt.Errorf("extsecrets: serializing the store of %q: %w", key, err)
+	}
+	// The legacy workspace-qualified key, byte-identical to the previous
+	// release's, missing_ok and all: on an unset GUC it resolves to NULL and
+	// pg_advisory_xact_lock, being STRICT, takes no lock. That is what the old
+	// build does too, so the two still agree — and the key above, which needs
+	// no GUC, is what actually serializes THIS build.
+	if _, err := tx.Exec(ctx, `
 		SELECT pg_advisory_xact_lock(hashtext(
 			'margince:extsecrets:' || current_setting('app.workspace_id', true) ||
 			':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
-		s.unit, scope, holder, key)
-	return err
+		s.unit, scope, holder, key); err != nil {
+		return fmt.Errorf("extsecrets: serializing the store of %q (legacy key): %w", key, err)
+	}
+	return nil
 }
 
 // upsert re-points (or creates) the mapping row. ON CONFLICT rather than the

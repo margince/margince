@@ -63,13 +63,13 @@ func (s *Service) Disconnect(ctx context.Context) error {
 	if err := auth.Require(ctx, overlayConnectionObject, principal.ActionDelete); err != nil {
 		return err
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("overlay: disconnect called outside a workspace context")
+	ws, err := s.boundWorkspace(ctx)
+	if err != nil {
+		return err
 	}
 
 	var ref string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A flip RUN in flight is the one thing disconnect must not race:
 		// tearing the mirror down mid-import would migrate a vanishing
 		// estate. A merely SEALED snapshot is NOT enough to refuse on —
@@ -98,7 +98,7 @@ func (s *Service) Disconnect(ctx context.Context) error {
 		if err := purgeMirror(ctx, tx); err != nil {
 			return err
 		}
-		if _, err := RevertToNative(ctx, tx); err != nil {
+		if _, err := RevertToNative(ctx, tx, ws); err != nil {
 			return err
 		}
 		return nil
@@ -144,16 +144,18 @@ func (s *Service) Disconnect(ctx context.Context) error {
 // Idempotent by predicate: a workspace already native reports false and is not
 // written, so a caller need not ask the mode first.
 //
-// The GUC is read WITHOUT missing_ok. An unset app.workspace_id would otherwise
-// resolve to NULL, match no row, and return (false, nil) — indistinguishable
-// from a workspace that was already native, so a reset running outside a bound
-// transaction would report success having reverted nothing. The error is the
-// honest answer to a question this function cannot answer.
-func RevertToNative(ctx context.Context, tx pgx.Tx) (bool, error) {
+// ws is the workspace the caller's transaction is bound to, and it is a
+// PARAMETER because this function cannot discover it: it runs inside a
+// transaction somebody else opened, and only that caller knows what bound it.
+// Reading the request context here instead would answer for a handle pinned
+// elsewhere, and a wrong id is worse than no id — the statement is idempotent
+// by predicate, so it would match no row and report (false, nil), which reads
+// exactly like a workspace that was already native.
+func RevertToNative(ctx context.Context, tx pgx.Tx, ws ids.UUID) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-		WHERE id = current_setting('app.workspace_id')::uuid
-		  AND x_sor_mode <> 'native'`)
+		WHERE id = $1
+		  AND x_sor_mode <> 'native'`, ws)
 	if err != nil {
 		return false, fmt.Errorf("overlay: flipping the workspace back to native mode: %w", err)
 	}

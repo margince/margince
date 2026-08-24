@@ -249,9 +249,13 @@ func (s *Service) Connect(ctx context.Context, in ConnectInput) (Connection, err
 	if err := in.validate(); err != nil {
 		return Connection{}, err
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return Connection{}, errors.New("overlay: connect called outside a workspace context")
+	// From the handle, not the request context: this id keys the vault write
+	// below AND the workspace row activateConnection flips, and the transaction
+	// those run in binds from the handle. One resolution, passed down, so no
+	// step of a connect can name a different workspace than the others.
+	ws, err := s.boundWorkspace(ctx)
+	if err != nil {
+		return Connection{}, err
 	}
 
 	status, found, err := s.existingConnectionStatus(ctx)
@@ -280,9 +284,9 @@ func (s *Service) Connect(ctx context.Context, in ConnectInput) (Connection, err
 
 	var out Connection
 	if reconnect {
-		out, err = s.reconnectConnection(ctx, in, ref, accountID)
+		out, err = s.reconnectConnection(ctx, in, ref, accountID, ws)
 	} else {
-		out, err = s.insertConnection(ctx, in, ref, accountID)
+		out, err = s.insertConnection(ctx, in, ref, accountID, ws)
 	}
 	if err != nil {
 		// Clean up the just-sealed ref ONLY on the unique-violation path: a lost
@@ -394,7 +398,7 @@ func incumbentConnectedPayload(incumbent, region string, scopes []string, status
 // shape both branches share (Audit + Emit + the workspace mode flip), all
 // in one database.WithWorkspaceTx. There is no prior state to record, so
 // the audit action is "create" and before is nil.
-func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string) (Connection, error) {
+func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string, ws ids.UUID) (Connection, error) {
 	var out Connection
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var id ids.UUID
@@ -413,7 +417,7 @@ func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref key
 			return scanErr
 		}
 
-		activated, actErr := activateConnection(ctx, tx, id, in, connectedAt, "create", nil)
+		activated, actErr := activateConnection(ctx, tx, id, in, ws, connectedAt, "create", nil)
 		if actErr != nil {
 			return actErr
 		}
