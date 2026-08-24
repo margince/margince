@@ -25,8 +25,8 @@ feature is expected to argue with.
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2264 | 9% | 14736 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 17180 | 71% | — | — | — |
+| `overnight_at_risk_sweep` | 7 | 2272 | 9% | 14728 | 15 | 8 |
+| _whole served catalog, for scale_ | 56 | 17188 | 71% | — | — | — |
 
 ### `morning_brief`
 
@@ -51,7 +51,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2264 tokens, leaving 14736 of its budget and 21736 tokens of the
+Attaches 7 tools for 2272 tokens, leaving 14728 of its budget and 21728 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -62,7 +62,7 @@ window for the goal, the grounding and everything it reads.
 - `review_commitments`
 - `whats_slipping_this_week`
 
-**14 dangling cross-references** — this agent's own tool copy points at tools it
+**15 dangling cross-references** — this agent's own tool copy points at tools it
 cannot call, so a run may spend a step discovering the refusal:
 
 - at_risk_relationships → account_coverage
@@ -75,6 +75,7 @@ cannot call, so a run may spend a step discovering the refusal:
 - log_activity → create_task
 - log_activity → draft_email
 - log_activity → progress_deal
+- log_activity → relink_activity
 - log_activity → send_email
 - log_activity → send_message
 - whats_slipping_this_week → draft_follow_ups_for
@@ -130,7 +131,7 @@ a term in an addition.
 | `run_report` | 1213 | 3 scenarios |
 | `update_record` | 565 | 4 scenarios |
 | `send_account_email` | 545 | — |
-| `log_activity` | 522 | 1 scenario |
+| `log_activity` | 530 | 1 scenario |
 | `resolve_entities` | 513 | — |
 | `list_records` | 475 | — |
 | `advance_deal` | 474 | 1 scenario |
