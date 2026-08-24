@@ -263,10 +263,15 @@ func packageLevelStatements(files []*ast.File) map[string][]string {
 				if !isValue {
 					continue
 				}
+				// A spec whose names and values do not align one-to-one binds no
+				// statement this can read — `var a, b = twoResults()` keeps one
+				// expression for two names. Skipped whole rather than by index,
+				// so the second name is not silently dropped while the first is
+				// read against a value that is not its own.
+				if len(value.Names) != len(value.Values) {
+					continue
+				}
 				for i, name := range value.Names {
-					if i >= len(value.Values) {
-						continue
-					}
 					// Every string LITERAL in the value, not the folded whole.
 					// These statements are assembled — a raw string plus a
 					// helper's output — so folding them returns nothing, and a

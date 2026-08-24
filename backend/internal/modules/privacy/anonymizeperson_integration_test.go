@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/gradionhq/margince/backend/internal/platform/testdb"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -53,27 +54,41 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tx, err := owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// EVERYTHING below is inside this transaction, the DDL included: Postgres
+	// rolls back an ALTER TABLE with everything else, and the lane database is
+	// shared. A fixture that seeded outside it would leave a `cf_` column on
+	// `person` for every test that ran afterwards.
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
 	ws, user := ids.NewV7(), ids.NewV7()
 	person := ids.New[ids.PersonKind]()
 	const subjectEmail = "hedda@anon.test"
-	mustExec(ctx, t, owner, `INSERT INTO workspace (id, slug) VALUES ($1, $2)`, ws, "anon-"+ws.String())
-	mustExec(ctx, t, owner,
+	mustExec(ctx, t, tx, `INSERT INTO workspace (id, slug) VALUES ($1, $2)`, ws, "anon-"+ws.String())
+	mustExec(ctx, t, tx,
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 		user, "admin-"+user.String()+"@anon.test")
-	mustExec(ctx, t, owner,
+	mustExec(ctx, t, tx,
 		`INSERT INTO person (id, full_name, source, captured_by)
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, person, user)
-	mustExec(ctx, t, owner,
+	mustExec(ctx, t, tx,
 		`INSERT INTO person_email (person_id, email, source, captured_by)
 		 VALUES ($1, $2, 'manual', 'user:'||$3::text)`, person, subjectEmail, user)
 
 	// The ledger row a later capture would re-match the subject on. It carries
 	// the address AND the display name the message arrived with.
 	activity := ids.NewV7()
-	mustExec(ctx, t, owner,
+	mustExec(ctx, t, tx,
 		`INSERT INTO activity (id, kind, occurred_at, source, captured_by)
 		 VALUES ($1, 'email', now(), 'manual', 'user:'||$2::text)`, activity, user)
-	mustExec(ctx, t, owner,
+	mustExec(ctx, t, tx,
 		`INSERT INTO capture_pending_counterparty (email, display_name, activity_id, owner_id)
 		 VALUES ($1, 'Hedda Subject', $2, $3)`, subjectEmail, activity, user)
 
@@ -82,25 +97,12 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 	// catalog is what the scrub reads. A bare column with no catalog row is
 	// invisible to it, and a fixture built that way would fail whether the code
 	// was right or wrong.
-	mustExec(ctx, t, owner, `ALTER TABLE person ADD COLUMN IF NOT EXISTS cf_private_note text`)
-	mustExec(ctx, t, owner,
+	mustExec(ctx, t, tx, `ALTER TABLE person ADD COLUMN IF NOT EXISTS cf_private_note text`)
+	mustExec(ctx, t, tx,
 		`INSERT INTO custom_field (object, slug, label, type, column_name, created_by)
 		 VALUES ('person', 'private_note', 'Private note', 'text', 'cf_private_note', $1)`, user)
-	mustExec(ctx, t, owner, `UPDATE person SET cf_private_note = 'lives on Hauptstrasse' WHERE id = $1`, person)
+	mustExec(ctx, t, tx, `UPDATE person SET cf_private_note = 'lives on Hauptstrasse' WHERE id = $1`, person)
 
-	tx, err := owner.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Rolled back on purpose: the assertions read inside the transaction, and
-	// nothing here should reach the shared lane database. A rollback that fails
-	// is reported rather than dropped — it would mean the assertions ran against
-	// state the next test inherits.
-	defer func() {
-		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			t.Errorf("rolling back: %v", err)
-		}
-	}()
 	if err := anonymizePersonRecord(ctx, tx, person.UUID); err != nil {
 		t.Fatalf("anonymizing: %v", err)
 	}
@@ -126,7 +128,13 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 	}
 }
 
-func mustExec(ctx context.Context, t *testing.T, conn *pgx.Conn, sql string, args ...any) {
+// execer is what both a connection and a transaction answer, so a fixture can
+// be moved inside a rollback without rewriting every call.
+type execer interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+func mustExec(ctx context.Context, t *testing.T, conn execer, sql string, args ...any) {
 	t.Helper()
 	if _, err := conn.Exec(ctx, sql, args...); err != nil {
 		t.Fatalf("seeding (%s): %v", sql, err)
