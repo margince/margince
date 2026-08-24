@@ -59,9 +59,18 @@ var schedulerClaims = gatekit.Waive(map[string]string{
 	"internal/modules/agents/runner/store.go": "claims the next runner job whose scheduled moment has arrived. This is the scheduler's question, and a job due exactly now must run rather than wait a tick; nothing here is shown to a reader as late.",
 })
 
-// asksIfLateInSQL matches a statement comparing a due column to the database's
-// own clock. `<=` there is the inclusive reading, which no display wants.
-var asksIfLateInSQL = regexp.MustCompile(`(?i)\bdue_at\s*<=\s*now\(\)`)
+// asksIfLateInSQL matches a statement asking whether a due column has been
+// reached INCLUSIVELY — the reading no display wants.
+//
+// Both directions, and any right-hand side. This tree does not write the clock
+// literally: `deals/health.go` binds it as `a.due_at < $2`, so a census keyed on
+// `now()` could not have seen an inclusive version of the very statement it was
+// written to guard. `now() >= due_at` is the same question with the operands
+// swapped, which is how the Go arm was blind until this round too.
+var asksIfLateInSQL = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)\bdue_at\s*<=`),
+	regexp.MustCompile(`(?i)(now\(\)|\$\d+|current_timestamp)\s*>=\s*[a-z_.]*\bdue_at\b`),
+}
 
 func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 	// A ratification that stops matching is one for a statement that has moved
@@ -96,8 +105,11 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 			}
 			judged++
 			for _, statement := range sqlStatementsIn(t, path, string(source)) {
-				if asksIfLateInSQL.MatchString(statement) && !schedulerClaims.Waived(t, rel) {
-					inSQL = append(inSQL, rel+": "+firstSQLStatementLine(statement))
+				for _, inclusive := range asksIfLateInSQL {
+					if inclusive.MatchString(statement) && !schedulerClaims.Waived(t, rel) {
+						inSQL = append(inSQL, rel+": "+firstSQLStatementLine(statement))
+						break
+					}
 				}
 			}
 			file, parseErr := parser.ParseFile(fset, path, nil, 0)
@@ -132,7 +144,7 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 			"same reader. Call deadline.Passed.\n\n\t%s", len(inGo), strings.Join(inGo, "\n\t"))
 	}
 	if len(inSQL) > 0 {
-		t.Errorf("%d statement(s) ask `due_at <= now()`, the INCLUSIVE reading.\n\n"+
+		t.Errorf("%d statement(s) ask whether a due moment has been reached INCLUSIVELY.\n\n"+
 			"A row counted late in SQL and upcoming in Go is the same record answering two ways "+
 			"depending on which surface assembled it. Use `<`.\n\n\t%s",
 			len(inSQL), strings.Join(inSQL, "\n\t"))
