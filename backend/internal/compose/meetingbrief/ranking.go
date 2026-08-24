@@ -19,6 +19,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 )
 
@@ -100,7 +101,7 @@ func score(claim ClaimIn, now time.Time) int {
 		// A promise of ours still inside its date ranks below a question we
 		// owe an answer to; once overdue it leads everything.
 		s += 400
-		if claim.DueAt != nil && claim.DueAt.Before(now) {
+		if deadline.Passed(claim.DueAt, now) {
 			s += 500
 		}
 	case kindOpenQuestion:
