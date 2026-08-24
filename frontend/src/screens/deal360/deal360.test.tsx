@@ -260,6 +260,7 @@ describe("the rail says who is on the deal", () => {
       <DealSeats
         pending={false}
         withheld={false}
+        overlay={false}
         coverage={{
           deal_id: DEAL_ID,
           stakeholders: [
@@ -280,6 +281,17 @@ describe("the rail says who is on the deal", () => {
     expect(screen.getByText("Engaged")).toBeInTheDocument();
   });
 
+  it("states the overlay refusal instead of disappearing with the rail", () => {
+    // The coverage read is disabled against a mirrored deal, so no seats will
+    // ever arrive. Dropping the card — which is what happened before, because
+    // the whole rail was omitted in overlay mode — draws a deal with nobody on
+    // it: an absence the server never claimed.
+    show(<DealSeats pending={false} withheld={false} overlay={true} />);
+    expect(
+      screen.getByText(/Not available while reading from HubSpot/i),
+    ).toBeInTheDocument();
+  });
+
   it("shows a seat whose identity is withheld without dropping the row", () => {
     // The seat still counts toward coverage, so it is shown; only the name is
     // withheld. Dropping the row would undercount the deal's own coverage.
@@ -287,6 +299,7 @@ describe("the rail says who is on the deal", () => {
       <DealSeats
         pending={false}
         withheld={false}
+        overlay={false}
         coverage={{
           deal_id: DEAL_ID,
           stakeholders: [{ person_id: "p1", role: "user", engaged: false }],

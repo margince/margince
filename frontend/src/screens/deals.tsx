@@ -3505,22 +3505,30 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 t,
               )}
               aside={
-                overlay ? undefined : (
-                  <>
-                    {/* Context first: who these people are, before the verbs
-                        that act on them. The seats moved out of the main
-                        column when the readings band started counting them —
-                        the same two facts were reaching a reader three times
-                        on one screen. */}
-                    <DealSeats
-                      coverage={coverageRead.coverage}
-                      withheld={coverageRead.withheld}
-                      pending={coverageRead.pending}
-                    />
-                    <DealRoomAside dealId={id} dealName={deal.name} />
-                    <DealEmailAside dealId={id} />
-                  </>
-                )
+                <>
+                  {/* Context first: who these people are, before the verbs
+                      that act on them. The seats moved out of the main
+                      column when the readings band started counting them —
+                      the same two facts were reaching a reader three times
+                      on one screen. */}
+                  {/* Present in overlay mode too, stating the refusal. Dropping
+                      the whole rail there took the seats away silently, which
+                      reads as "nobody is on this deal" — the deal rooms and the
+                      mail aside stay out because they are actions rather than a
+                      withheld fact. */}
+                  <DealSeats
+                    coverage={coverageRead.coverage}
+                    withheld={coverageRead.withheld}
+                    pending={coverageRead.pending}
+                    overlay={overlay}
+                  />
+                  {!overlay && (
+                    <>
+                      <DealRoomAside dealId={id} dealName={deal.name} />
+                      <DealEmailAside dealId={id} />
+                    </>
+                  )}
+                </>
               }
             >
               <div style={{ marginBottom: 16 }}>

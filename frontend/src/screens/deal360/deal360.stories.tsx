@@ -147,7 +147,7 @@ export const CoverageWithheld: Story = {
   render: () => (
     <StoryProviders>
       <DealStrip deal={deal()} coverageWithheld={true} />
-      <DealSeats pending={false} withheld={true} />
+      <DealSeats pending={false} withheld={true} overlay={false} />
     </StoryProviders>
   ),
 };
@@ -156,7 +156,12 @@ export const CoverageWithheld: Story = {
 export const Seats: Story = {
   render: () => (
     <StoryProviders>
-      <DealSeats pending={false} withheld={false} coverage={coverage} />
+      <DealSeats
+        pending={false}
+        withheld={false}
+        coverage={coverage}
+        overlay={false}
+      />
     </StoryProviders>
   ),
 };
@@ -166,7 +171,21 @@ export const Loading: Story = {
   render: () => (
     <StoryProviders>
       <DealPulse card={undefined} timeline={[]} />
-      <DealSeats pending={true} withheld={false} />
+      <DealSeats pending={true} withheld={false} overlay={false} />
+    </StoryProviders>
+  ),
+};
+
+/**
+ * Overlay mode. The coverage read is disabled against a mirrored deal, so no
+ * seats will ever arrive — and the card SAYS that rather than disappearing with
+ * the rail, which is what it used to do: a reader was shown a deal with nobody
+ * on it, an absence the server never claimed.
+ */
+export const SeatsUnsupportedInOverlay: Story = {
+  render: () => (
+    <StoryProviders>
+      <DealSeats pending={false} withheld={false} overlay={true} />
     </StoryProviders>
   ),
 };
