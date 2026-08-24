@@ -6,6 +6,7 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,12 +80,29 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			created, patched := build(fields)
 			for _, target := range targets {
+				if target == csvTargetID {
+					// A SELECTOR, not a field: it names the record the row is, and
+					// writes nothing. Exempt here and asserted the other way round
+					// below — advertised, and reaching neither input on purpose.
+					continue
+				}
 				if !created[target] {
 					t.Errorf("%s: target %q is advertised but never reaches the create input", object, target)
 				}
 				if !patched[target] {
 					t.Errorf("%s: target %q is advertised but never reaches the update input", object, target)
 				}
+			}
+			if !selectsByID(object) {
+				return
+			}
+			if created[csvTargetID] || patched[csvTargetID] {
+				t.Errorf("%s: %q reached a write input — it names the record a row IS, and writing "+
+					"it would let a file move a company onto another company's id", object, csvTargetID)
+			}
+			if !slices.Contains(targets, csvTargetID) {
+				t.Errorf("%s: %q is not an accepted column, so a corrections file naming its records "+
+					"would be refused", object, csvTargetID)
 			}
 		})
 	}

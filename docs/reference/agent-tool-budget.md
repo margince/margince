@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2190 | 9% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 17004 | 70% | — | — | — |
+| _whole served catalog, for scale_ | 56 | 17063 | 71% | — | — | — |
 
 ### `morning_brief`
 
@@ -118,7 +118,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 281 tokens, mean 303, across 56 served tools.
+Median 281 tokens, mean 304, across 56 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -141,6 +141,7 @@ a term in an addition.
 | `search_records` | 392 | 6 scenarios |
 | `create_record` | 391 | 1 scenario |
 | `enrich` | 386 | — |
+| `preview_import` | 353 | — |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |
@@ -152,7 +153,6 @@ a term in an addition.
 | `draft_follow_ups_for` | 304 | — |
 | `decide_approval` | 303 | — |
 | `promote_lead` | 301 | — |
-| `preview_import` | 294 | — |
 | `archive_record` | 292 | — |
 | `catch_me_up_on` | 287 | 3 scenarios |
 | `prepare_handoff` | 275 | 1 scenario |

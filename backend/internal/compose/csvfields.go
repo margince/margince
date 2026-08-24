@@ -46,6 +46,22 @@ var csvTargets = map[string][]string{
 	migration.ObjectOrganization: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description"}, orgAddressTargets...),
 }
 
+// csvTargetID is the column that names the record this row IS, by the id the CRM
+// gave it — the workflow behind a corrected export: read the companies out with
+// their ids, edit the file, import it back.
+//
+// It is not a field. Nothing is written to it, and a row carrying one is an
+// UPDATE of that record rather than a candidate for one. That is the whole
+// reason it exists: matching a company by NAME cannot be made safe for
+// overwriting, because the dedupe ladder is built to answer "should a human look
+// at these two" and blurs exactly the distinctions an overwrite must keep — it
+// strips legal forms, scores a trading name against a registered one, and breaks
+// ties on uuid order. Every one of those is fine for proposing a review and is a
+// way to destroy the wrong company's data when it decides a write.
+//
+// An id has none of that. It names one record or no record.
+const csvTargetID = "id"
+
 // orgAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested
 // shape (`address: {city, country, …}`). The mapping itself stays flat — one
@@ -87,7 +103,28 @@ func importTargets(object string) ([]string, error) {
 	if !ok {
 		return nil, fmt.Errorf("import: %q has no mappable fields", object)
 	}
-	return append([]string(nil), core...), nil
+	targets := append([]string(nil), core...)
+	if selectsByID(object) {
+		// Accepted as a column and absent from csvTargets, because those two
+		// lists answer different questions. csvTargets is what a row WRITES, and
+		// TestEveryImportTargetRoundTripsThroughCreateAndUpdate holds it to that:
+		// a target advertised there and reaching neither input would be accepted,
+		// reported as written, and dropped.
+		//
+		// `id` writes nothing. It names the record the row IS.
+		targets = append(targets, csvTargetID)
+	}
+	return targets, nil
+}
+
+// selectsByID reports whether an object's rows may name the record they are.
+//
+// Organizations only, for now. A lead is identified by its email and the store's
+// own unique key refuses a second one, so a lead row has no ambiguity for an id
+// to resolve — and advertising a column that changes nothing would be worse than
+// not offering it.
+func selectsByID(object string) bool {
+	return object == migration.ObjectOrganization
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -105,6 +142,13 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
+		// `id` NAMES the record; it is not a value the record holds. Comparing it
+		// would find no stored `id` field, report it as changed, and hand the
+		// update path a field the contract has no setter for. Excluded here
+		// rather than at each caller so no path can forget.
+		if field == csvTargetID {
+			continue
+		}
 		if textOf(storedValue(current, field)) != canonicalFor(field, incoming) {
 			changed[field] = incoming
 		}

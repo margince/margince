@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,7 +15,6 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/migration"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -161,12 +159,35 @@ const (
 // discovering that only on the create branch would let the same bad value pass
 // silently on a re-import.
 func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedOutcome, error) {
+	outcome, _, err := w.predictRow(ctx, row)
+	return outcome, err
+}
+
+// predict answers what the commit will do AND, when it will refuse, the sentence
+// the report shows for it.
+//
+// The reason travels with the outcome rather than being recomputed by the
+// caller. It used to be recomputed — from unwritableReason, which knows about
+// the size_band vocabulary and nothing else — so a refusal from any other source
+// reached the report as a skip with an EMPTY reason, and the person reading it
+// was told a row would not land without being told why.
+func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
 	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
-		return predictUnwritable, nil
+		return predictUnwritable, reason, nil
+	}
+	// Mirrors Ensure, in the same order: a named record first, then the identity
+	// map. The two must answer alike or an approval decides one thing and the
+	// commit does another.
+	target := w.targetIDOf(ctx, row)
+	if target.named {
+		if target.reason != "" {
+			return predictUnwritable, target.reason, nil
+		}
+		return w.reconcilePrediction(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
 	if err != nil {
-		return predictCreate, err
+		return predictCreate, "", err
 	}
 	if !found {
 		// Not a row a previous run of THIS importer landed — but the CRM may
@@ -174,94 +195,51 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 		// seeded. The identity map cannot see any of those, so the create the
 		// engine is about to report gets the same dedupe read the create path
 		// itself performs.
-		collides, err := w.collidesWithExisting(ctx, row, w.onDuplicate != string(crmcontracts.Skip))
+		// Always disclosure-filtered: a PREVIEW reports what it found, whichever
+		// mode asked. Passing the mode through here reported invisible companies
+		// as duplicates on a `skip` run — an existence oracle over a colleague's
+		// owner-private capture, one CSV row at a time.
+		collides, err := w.collidesWithExisting(ctx, row)
 		if err != nil {
-			return predictCreate, err
+			return predictCreate, "", err
 		}
 		if collides {
 			if w.onDuplicate == string(crmcontracts.Skip) {
-				return predictCollidesSkipped, nil
+				return predictCollidesSkipped, "", nil
 			}
-			return predictCollides, nil
+			return predictCollides, "", nil
 		}
-		return predictCreate, nil
+		return predictCreate, "", nil
 	}
+	return w.reconcilePrediction(ctx, id, row)
+}
+
+// predictReconcile is what reconcile would do to this record, without writing.
+//
+// Shared by both ways a row reaches an existing record — the identity map, and
+// an `id` column naming it — so the preview cannot answer one thing for a row
+// the file identified and another for a row the importer remembered.
+func (w *csvWriters) reconcilePrediction(
+	ctx context.Context, id ids.UUID, row migration.Row,
+) (predictedOutcome, string, error) {
 	current, err := w.read(ctx, id)
 	if err != nil {
-		return predictCreate, err
+		return predictCreate, "", err
 	}
 	changed, err := changedFields(current, textFields(row.Fields))
 	if err != nil {
-		return predictCreate, err
+		return predictCreate, "", err
 	}
 	if len(changed) == 0 {
-		return predictUnchanged, nil
+		return predictUnchanged, "", nil
 	}
-	return predictUpdate, nil
+	return predictUpdate, "", nil
 }
 
 // collidesWithExisting asks whether the CRM already holds the company this row
 // names, through the SAME ladder the create path runs (PO-F-2). It reads and
 // writes nothing.
 //
-// discloseOnly separates the two questions this answers. The PREVIEW asks it to
-// tell a person something, so a match they cannot see must not be mentioned.
-// The `on_duplicate: skip` path asks it to DECIDE, and there visibility is
-// irrelevant — see the branch below.
-//
-// Only organizations: a lead's identity is its email, which the store's own
-// unique key already refuses, so there is no silent twin to warn about.
-//
-// A read-only transaction, and NOT DedupeOrganizationForCreate — that one takes
-// a write lock to serialize concurrent creates, which a preview has no business
-// holding. The answer can therefore go stale between the preview and the
-// commit; that is correct, because the commit runs the locking version and its
-// answer is the one that decides.
-func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row, discloseOnly bool) (bool, error) {
-	if w.object != migration.ObjectOrganization {
-		return false, nil
-	}
-	fields := textFields(row.Fields)
-	candidate := people.OrganizationCandidate{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		LegalName:   strings.TrimSpace(fields["legal_name"]),
-	}
-	if candidate.DisplayName == "" && candidate.LegalName == "" {
-		return false, nil
-	}
-	var visible bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		match, err := people.DedupeOrganization(ctx, tx, candidate)
-		if err != nil || match.Decision == people.DecisionNoMatch {
-			return err
-		}
-		// The ladder reads every organization, by design — it is the write
-		// path's collision check, and a create must not mint a twin of a row
-		// the caller happens not to be allowed to see. A DISCLOSURE is the
-		// opposite: telling this caller "that company is already here" about a
-		// row they cannot read turns the preview into an oracle for a
-		// colleague's owner-private capture, which even an admin may not read
-		// (rowscope.go). So a match the caller cannot see discloses nothing.
-		//
-		// The COMMIT is unaffected: it still refuses or files the review pair
-		// on the ladder's own answer, visible or not.
-		if !discloseOnly {
-			// Deciding whether to SKIP the row, not whether to mention it. The
-			// incumbent's visibility is beside the point: creating a twin of a
-			// row this caller cannot see is exactly the duplicate the run asked
-			// to avoid, and skipping it reveals nothing the caller did not
-			// already put in their own file.
-			visible = true
-			return nil
-		}
-		visible, err = auth.VisibleTo(ctx, tx, "organization", match.OrganizationID.UUID)
-		return err
-	}); err != nil {
-		return false, fmt.Errorf("import: checking %q against the companies already held: %w", candidate.DisplayName, err)
-	}
-	return visible, nil
-}
-
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
@@ -271,6 +249,16 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// answer to the question a human already approved.
 	if reason := unwritableReason(object, textFields(row.Fields)); reason != "" {
 		return migration.EnsureResult{Skipped: true, SkipReason: reason}, nil
+	}
+	// A row that NAMES its record wins over every other way of finding one. The
+	// file said which company this is; nothing the importer could infer beats
+	// that, and inferring anyway is what made name-based updating unsafe.
+	target := w.targetIDOf(ctx, row)
+	if target.named {
+		if target.reason != "" {
+			return migration.EnsureResult{Skipped: true, SkipReason: target.reason}, nil
+		}
+		return w.reconcile(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
 	if err != nil {
@@ -283,7 +271,22 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// record anyway, and the run says what to do about that. The check runs on
 	// the commit as well as the dry run so the two cannot disagree.
 	if w.onDuplicate == string(crmcontracts.Skip) {
-		collides, err := w.collidesWithExisting(ctx, row, false)
+		// discloseOnly, so a collision this caller may not see is answered as no
+		// collision — and the row CREATES.
+		//
+		// Skipping it instead is the intuitive choice and it leaks. An opaque
+		// reason hides WHICH company was hit; the outcome still says one was.
+		// "Your row was not created" is an answer to "is this company in your
+		// CRM", and a finished run's report is readable on the import_run grant,
+		// so a caller could probe a colleague's owner-private estate one CSV row
+		// at a time. Wording cannot fix that — only the outcome can.
+		//
+		// What creating costs is a twin of a record the caller cannot see, which
+		// the dedupe review queue picks up like any other and a merge resolves.
+		// What skipping costs is a disclosure that no merge undoes. It also keeps
+		// the preview and the commit answering alike, since the preview is
+		// disclosure-filtered for the same reason.
+		collides, err := w.collidesWithExisting(ctx, row)
 		if err != nil {
 			return migration.EnsureResult{}, err
 		}

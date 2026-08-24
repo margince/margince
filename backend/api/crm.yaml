@@ -16789,15 +16789,47 @@ components:
         mapping:
           type: object
           additionalProperties: { type: string }
-          description: '`{source column → target field}`, as the human settled it. Validated against the object''s live field catalog before the run is created.'
+          description: |
+            `{source column → target field}`, as the human settled it. Validated against
+            the object's live field catalog before the run is created.
+
+            One target is not a field: a column mapped to **`id`** names the record the
+            row IS, by the id this CRM gave it, and the row UPDATES that record. Nothing
+            is written to `id` itself. This is the correction workflow — read the
+            companies out with their ids, edit the file, import it back.
+
+            A row whose `id` is empty names no record and is an ordinary create, so one
+            file can carry corrections and new companies together — as long as some other
+            mapped column identifies every row (see `source_key`).
+
+            An id is the only safe way to say which record a row means. Matching by NAME
+            cannot be: the dedupe ladder exists to answer "should a human look at these
+            two?" and blurs to do it — it strips legal forms, so `Acme Inc` and
+            `Acme GmbH` are one string; it scores a trading name against a registered
+            one; and where several records tie it picks the lowest uuid. Every blur is
+            free when the answer is "show a human" and is a way to overwrite the wrong
+            company when the answer decides a write, which no `undo` reverses.
+
+            A row naming an id nothing answers to is reported as a skipped row saying so,
+            never created quietly under a new id.
         source_key:
           type: string
           description: |
-            The source column holding the row's stable id, written to the row's
-            provenance so a re-uploaded file updates rather than duplicates
-            (IEM-AC-9) and an undo can find what one run created (S-E15.4c).
-            Absent means the mapped natural key is used instead; the report
-            says which was chosen rather than leaving it to be inferred.
+            The source column holding the row's stable id. For a row this run
+            CREATES it is written to the row's provenance, so a re-uploaded file
+            updates rather than duplicates (IEM-AC-9) and an undo can find what
+            the run created (S-E15.4c). A row that names an existing record by
+            `id` records nothing: the run did not create that company, and undo
+            must not archive it.
+
+            Absent means the mapped natural key is used instead; the report says
+            which was chosen rather than leaving it to be inferred. A file whose
+            only identifying column is `id` falls back to it — a corrections
+            export can be `id,city` and nothing else — and then EVERY row needs
+            an id, because a row with no source key cannot be identified at all
+            and is reported as an unusable line. A file mixing corrections with
+            new companies therefore maps a column every row carries, and the
+            `id` column says which rows are corrections.
         on_duplicate:
           $ref: '#/components/schemas/ImportOnDuplicate'
 
@@ -16809,6 +16841,20 @@ components:
         What to do with a row naming a record the estate ALREADY holds — found
         by the same dedupe ladder every create path runs, not by this
         importer's own memory of what it once wrote.
+
+        A collision with a record the CALLER MAY NOT SEE is answered as no
+        collision: the row is not counted as a duplicate, not named in the
+        report, and CREATES. The question is asked of EVERY candidate the dedupe
+        ladder matched rather than of its winner — the winner is the highest
+        score with the lowest uuid breaking ties, so an invisible record ranking
+        first would otherwise mask a visible one behind it and decide the outcome
+        without being disclosed. Skipping it would be the intuitive choice and it
+        leaks — hiding which company was hit still says one was, and "your row
+        was not created" answers "is this company in your CRM" about a
+        colleague's owner-private capture, probed one row at a time against a
+        report readable on the `import_run` grant. The cost is a twin the dedupe
+        review queue picks up and a merge resolves; the cost of the alternative
+        is a disclosure no merge undoes.
 
         `create` is the historical behaviour and stays the default: the row
         lands and the pair goes on the dedupe review queue, exactly as a manual
