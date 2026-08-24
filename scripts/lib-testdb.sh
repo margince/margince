@@ -39,7 +39,6 @@ parse_test_dsn() {
   local o_tail="${o_body#*/}"                 # db?query  (or db)
   local o_db="${o_tail%%\?*}"
   O_QUERY=""; [[ "$o_tail" != "$o_db" ]] && O_QUERY="${o_tail#*\?}"
-  TEMPLATE_DB="$o_db"
 
   # App: same peel; the app credentials/host are preserved, only the db swaps.
   local a_body="${app#*://}"
@@ -47,7 +46,7 @@ parse_test_dsn() {
   local a_tail="${a_body#*/}"
   A_QUERY=""; local a_db="${a_tail%%\?*}"; [[ "$a_tail" != "$a_db" ]] && A_QUERY="${a_tail#*\?}"
 
-  export O_PREFIX O_QUERY A_PREFIX A_QUERY TEMPLATE_DB
+  export O_PREFIX O_QUERY A_PREFIX A_QUERY
 }
 
 # db_admin verb [flags…] — create/drop/probe databases through cmd/migrate's
