@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 8 |
 | Tool catalog | 152.7 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39867 |
+| Approx. wire tokens | 39872 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -4687,7 +4687,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "EVERY record this was about, named in this one call — a meeting is with a person and also concerns their company and the deal it is for, so name all of them here. Attaching one afterwards is relink_activity, which changes what a recorded event is about and may need a person to approve it. Unlinked, it appears on no timeline.",
+      "description": "EVERY record this was about, named in this one call — a meeting is with a person and also concerns their company and the deal it is for, so name all of them here. This call writes them all and needs no approval; attaching one afterwards is relink_activity, which a person has to approve before it takes effect. Unlinked, it appears on no timeline.",
       "items": {
         "additionalProperties": false,
         "properties": {
