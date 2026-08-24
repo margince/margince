@@ -25,11 +25,17 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import {
+  DecisionCard,
+  type DecisionCardLabels,
+  decisionExpiryMs,
+  decisionLapsed,
+  decisionUrgency,
+} from "../design-system/decisioncard";
 import { Select } from "../design-system/select";
 import {
   AutonomyDot,
   type ConfidenceLevel,
-  ConfidenceMeter,
   EvidenceChip,
   ProvenanceTag,
 } from "../design-system/trust";
@@ -254,40 +260,35 @@ function ApprovalDetailModal({
   );
 }
 
-// When a staged proposal lapses, in wall-clock ms — null for one that never
-// does. Read by a row and by the bundle card above it, which needs the same
-// answer for every member it holds.
-function expiryMsOf(approval: Approval): number | null {
-  return approval.expires_at ? new Date(approval.expires_at).getTime() : null;
-}
+// TTL as a chip that escalates as expiry nears (mockup's amber→red): warn
+// under 6h, danger under 1h, neutral beyond — never inert gray text.
+//
+// The HOURS are not spelled here: `decisionUrgency` owns them, and the card the
+// chip sits on paints its own edge from the same reading. Two copies of the
+// thresholds is how one deadline comes to read as urgent on the card and calm in
+// the badge beside it — which is worse than either reading alone.
+const URGENCY_TONE: Readonly<
+  Record<ReturnType<typeof decisionUrgency>, "danger" | "warn" | undefined>
+> = {
+  lapsed: "danger",
+  urgent: "danger",
+  soon: "warn",
+  calm: undefined,
+};
 
-// Lapsed either because the wire already stamped it (the server expires lazily
-// at read time) or because the live clock crossed expires_at since the list was
-// fetched. Both mean the same thing to a reader: it is no longer approvable.
-function hasLapsed(approval: Approval, now: number): boolean {
-  const expiresAtMs = expiryMsOf(approval);
-  return (
-    approval.status === "expired" || (expiresAtMs != null && now >= expiresAtMs)
-  );
-}
-
-// TTL as a chip that escalates as expiry nears (mockup's amber→red): warn under
-// 6h, danger under 1h, neutral beyond — never inert gray text. Shared by a
-// row's countdown and a bundle's, so one deadline cannot read as urgent in the
-// group header and calm in the member row under it.
 function expiryTone(msRemaining: number): "danger" | "warn" | undefined {
-  if (msRemaining < 60 * 60 * 1000) {
-    return "danger";
-  }
-  if (msRemaining < 6 * 60 * 60 * 1000) {
-    return "warn";
-  }
-  return undefined;
+  return URGENCY_TONE[decisionUrgency(msRemaining)];
 }
 
 // The header chip: a status badge in the read-only Decided view, else the
 // live countdown that flips to the Expired badge at/after expires_at.
-function RowStatusChip({
+// Exported because Home's deck draws the same chip on the same approvals: one
+// countdown, one set of expiry bands, one word for "expired". A second copy over
+// there would be a second answer to the same deadline — and the deck and this
+// row would drift the first time either moved. Its proper home is the design
+// system beside `decisionUrgency`, with the copy arriving as labels; that move
+// is tracked with the other stranded decision helpers.
+export function RowStatusChip({
   decided,
   status,
   expiresAtMs,
@@ -311,8 +312,12 @@ function RowStatusChip({
   if (expiresAtMs == null) {
     return null;
   }
+  // A lapsed pending row carries NO chip: the card it sits on says it expired
+  // where its verbs would have been, and a badge saying the same word one line
+  // above reads as two separate facts about the same deadline. Returning null
+  // here also keeps the countdown below from rendering a negative one.
   if (isExpired) {
-    return <Badge tone="danger">{t("inbox.expired")}</Badge>;
+    return null;
   }
   const remaining = expiresAtMs - now;
   return (
@@ -496,33 +501,110 @@ export function useApprovalTokenSink(): {
   return { onApproved, onAlreadyDecided, tokenModal, decidedNote };
 }
 
-// Narrowed, never asserted: proposed_change is an open map in the contract, so
-// a kind that puts something other than a string under `subject` reads as no
-// subject at all rather than rendering whatever it found there.
-function draftSubjectOf(change: Record<string, unknown>): string | null {
-  const subject = change.subject;
-  return typeof subject === "string" && subject.trim() !== "" ? subject : null;
+// The words the decision card needs, in this surface's own vocabulary.
+//
+// Assembled once per render rather than inline, because the card takes them as
+// one object and a caller that builds it in the JSX rebuilds it on every keystroke
+// in the editor beside it.
+//
+// `skip` is deliberately absent: the inbox is a queue somebody works to the end,
+// and "later" on a surface whose whole purpose is to be emptied is a verb that
+// only moves work sideways. The deck on Home is where later belongs.
+//
+// `showMore` / `showLess` are absent for a different reason and it is worth
+// stating: the row clamps a long draft, and the way through to the whole of it on
+// THIS surface is the detail dialog already on the row's own meta line. A second
+// affordance for the same text, one line apart, is two answers to one question.
+function rowLabels(t: Translator): DecisionCardLabels {
+  return {
+    accept: t("trust.accept"),
+    edit: t("trust.edit"),
+    reject: t("inbox.reject"),
+    expired: t("inbox.expired"),
+    draftSubject: t("inbox.draftSubject"),
+    draftBody: t("inbox.draftBody"),
+    noContent: t("common.empty"),
+  };
 }
 
-// What tells this row apart from the one under it. The server's summary names
-// only the addressee ("an automation drafted a reply to <them>"), so a queue of
-// drafts to the same handful of counterparties reads as the same sentence over
-// and over. The drafted SUBJECT is the line that differs, and it is already on
-// the wire in the staged payload — so it leads, and the summary explains it
-// underneath. A kind that stages no subject is unchanged: the summary leads.
-function ApprovalHeadline({
-  subject,
-  summary,
-}: Readonly<{ subject: string | null; summary?: string | null }>) {
-  const headline = subject ?? summary;
-  if (!headline) {
-    return null;
-  }
+// The inline staged-draft editor: the string fields of the proposed_change, in
+// the shape the kind declared for them, going up as `edited_payload`.
+//
+// It is handed to the card as its `editor` slot rather than living inside the
+// primitive, and that boundary is the point: an edit re-enters the admission gate
+// from scratch on the server (re-tiered, re-RBAC'd, new diff_hash — ADR-0036), so
+// what it may offer is a question about THIS kind and this contract, which is
+// screen knowledge. The card knows how to draw a decision; it does not know what
+// this installation lets a person change.
+function StagedEditor({
+  fields,
+  draft,
+  onChange,
+  pending,
+  onApprove,
+  onCancel,
+}: Readonly<{
+  fields: readonly EditableField[];
+  draft: Record<string, string>;
+  onChange: (field: string, value: string) => void;
+  pending: boolean;
+  onApprove: () => void;
+  onCancel: () => void;
+}>) {
+  const t = useT();
   return (
-    <>
-      <p className="t-h2 approval-headline">{headline}</p>
-      {subject && summary && <p className="t-small approval-why">{summary}</p>}
-    </>
+    <div className="approval-editor">
+      {fields.map((entry) => (
+        <Field
+          key={entry.field}
+          label={entry.label ? t(entry.label) : entry.field}
+        >
+          {(control) =>
+            entry.as === "choice" ? (
+              <Select
+                {...control}
+                options={entry.options.map((option) => {
+                  // The VALUE stays the wire enum — it is what gets submitted.
+                  // Only what the reader sees is translated, and an option the
+                  // kind declared no label for degrades to its own words rather
+                  // than to an identifier.
+                  const label = entry.optionLabels?.[option];
+                  return {
+                    value: option,
+                    label: label ? t(label) : humanizeKind(option),
+                  };
+                })}
+                value={draft[entry.field] ?? ""}
+                onChange={(value) => onChange(entry.field, value)}
+              />
+            ) : entry.as === "textarea" ? (
+              <Textarea
+                {...control}
+                rows={12}
+                value={draft[entry.field] ?? ""}
+                onChange={(event) => onChange(entry.field, event.target.value)}
+              />
+            ) : (
+              <TextInput
+                {...control}
+                value={draft[entry.field] ?? ""}
+                onChange={(event) => onChange(entry.field, event.target.value)}
+              />
+            )
+          }
+        </Field>
+      ))}
+      <div className="approval-gate">
+        {/* The edited approve is the same write as the plain one and was the one
+            path with no gate at all, so a second press sent a second verdict. */}
+        <Button variant="primary" small pending={pending} onClick={onApprove}>
+          {t("inbox.approveEdited")}
+        </Button>
+        <Button small disabled={pending} onClick={onCancel}>
+          {t("deals.cancel")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -605,10 +687,9 @@ export function ApprovalRow({
     },
   });
 
-  const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
+  const change = approval.proposed_change ?? {};
   const strings = editableStrings(approval.kind, change);
   const level = confidenceLevel(approval.confidence);
-  const draftSubject = draftSubjectOf(change);
 
   const problem =
     decide.error instanceof ProblemError ? decide.error.problem : null;
@@ -647,181 +728,75 @@ export function ApprovalRow({
     decide.reset();
   };
 
-  const expiresAtMs = expiryMsOf(approval);
-  const isExpired = hasLapsed(approval, now);
-
   return (
-    <article
-      className="staging-card"
-      style={{ marginBottom: 10 }}
-      data-approval={approval.id}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          flexWrap: "wrap",
-        }}
-      >
-        {!decided && (
-          <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
-        )}
-        {/* kind is meta, not the headline — the human reads the summary first */}
-        <span className="t-small">{approvalKindLabel(approval.kind, t)}</span>
-        <OriginatingToolChip kind={approval.kind} />
-        <ProvenanceTag
-          provenance={provenanceOf(approval.proposed_by, viewerId)}
-        />
-        {level && <ConfidenceMeter level={level} />}
-        <RowStatusChip
-          decided={!!decided}
-          status={approval.status}
-          expiresAtMs={expiresAtMs}
-          isExpired={isExpired}
-          now={now}
-        />
-        {/* lighter, secondary affordance — must not compete with Accept/Reject */}
+    <DecisionCard
+      approval={approval}
+      layout="row"
+      className="approval-row"
+      now={now}
+      labels={rowLabels(t)}
+      decided={decided}
+      pending={decide.isPending}
+      provenance={provenanceOf(approval.proposed_by, viewerId)}
+      confidence={level ?? undefined}
+      meta={
+        <>
+          {!decided && (
+            <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
+          )}
+          {/* kind is meta, not the headline — the human reads the summary first */}
+          <span className="t-small">{approvalKindLabel(approval.kind, t)}</span>
+          <OriginatingToolChip kind={approval.kind} />
+          <RowStatusChip
+            decided={!!decided}
+            status={approval.status}
+            expiresAtMs={decisionExpiryMs(approval)}
+            isExpired={decisionLapsed(approval, now)}
+            now={now}
+          />
+        </>
+      }
+      aside={
+        /* lighter, secondary affordance — must not compete with Accept/Reject */
         <button
           type="button"
           className="link-button"
-          style={{ marginInlineStart: "auto" }}
           onClick={() => setDetailOpen(true)}
         >
           {t("inbox.detail")}
         </button>
-      </div>
-      <ApprovalHeadline subject={draftSubject} summary={approval.summary} />
-      <EvidenceList evidence={approval.evidence} />
-      {!decided &&
-        !isExpired &&
-        (editing ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              marginTop: 10,
-            }}
-          >
-            {strings.map((entry) => (
-              <Field
-                key={entry.field}
-                label={entry.label ? t(entry.label) : entry.field}
-              >
-                {(control) =>
-                  entry.as === "choice" ? (
-                    <Select
-                      {...control}
-                      options={entry.options.map((option) => {
-                        // The VALUE stays the wire enum — it is what gets
-                        // submitted. Only what the reader sees is translated,
-                        // and an option the kind declared no label for degrades
-                        // to its own words rather than to an identifier.
-                        const label = entry.optionLabels?.[option];
-                        return {
-                          value: option,
-                          label: label ? t(label) : humanizeKind(option),
-                        };
-                      })}
-                      value={draft[entry.field] ?? ""}
-                      onChange={(value) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [entry.field]: value,
-                        }))
-                      }
-                    />
-                  ) : entry.as === "textarea" ? (
-                    <Textarea
-                      {...control}
-                      rows={12}
-                      value={draft[entry.field] ?? ""}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [entry.field]: event.target.value,
-                        }))
-                      }
-                    />
-                  ) : (
-                    <TextInput
-                      {...control}
-                      value={draft[entry.field] ?? ""}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [entry.field]: event.target.value,
-                        }))
-                      }
-                    />
-                  )
-                }
-              </Field>
-            ))}
-            <div className="approval-gate">
-              {/* The edited approve is the same write as the plain one and was
-                  the one path with no gate at all, so a second press sent a
-                  second verdict. */}
-              <Button
-                variant="primary"
-                small
-                pending={decide.isPending}
-                onClick={approveEdited}
-              >
-                {t("inbox.approveEdited")}
-              </Button>
-              <Button
-                small
-                disabled={decide.isPending}
-                onClick={() => setEditing(false)}
-              >
-                {t("deals.cancel")}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="approval-gate">
-            {/* Accept is the control that STARTED the write, so it is the one
-                that goes busy: it keeps the reader's focus and says a verdict
-                is on its way. */}
-            <Button
-              variant="primary"
-              small
-              pending={decide.isPending}
-              onClick={() => decide.mutate({ verdict: "approve" })}
-            >
-              {t("trust.accept")}
-            </Button>
-            {strings.length > 0 && (
-              // Disabled with Reject, and for a sharper reason than symmetry:
-              // this opens an editor whose own Cancel is disabled while the
-              // verdict is out, so a press here during the write left the
-              // reader inside a form they could not leave until the request
-              // came back.
-              <Button small disabled={decide.isPending} onClick={startEdit}>
-                {t("trust.edit")}
-              </Button>
-            )}
-            {/* Reject stays `disabled`, and the difference is the whole point of
-                having two props: it did not start anything, it is simply not
-                available while a verdict is in flight. Drawing it busy would
-                claim a rejection nobody sent. */}
-            <Button
-              small
-              disabled={decide.isPending}
-              onClick={() => setRejecting(true)}
-            >
-              {t("inbox.reject")}
-            </Button>
-          </div>
-        ))}
-      <DecideOutcome
-        decide={decide}
-        skew={skew}
-        alreadyDecided={alreadyDecided}
-        onReRead={reRead}
-      />
+      }
+      editor={
+        editing ? (
+          <StagedEditor
+            fields={strings}
+            draft={draft}
+            onChange={(field, value) =>
+              setDraft((current) => ({ ...current, [field]: value }))
+            }
+            pending={decide.isPending}
+            onApprove={approveEdited}
+            onCancel={() => setEditing(false)}
+          />
+        ) : undefined
+      }
+      onAccept={() => decide.mutate({ verdict: "approve" })}
+      // Offered only where the kind has something a reader may change. Disabled
+      // with Reject while a verdict is out, and for a sharper reason than
+      // symmetry: it opens an editor whose own Cancel is disabled while the
+      // write is in flight, so a press here during it left the reader inside a
+      // form they could not leave until the request came back.
+      onEdit={strings.length > 0 ? startEdit : undefined}
+      onReject={() => setRejecting(true)}
+      notice={
+        <DecideOutcome
+          decide={decide}
+          skew={skew}
+          alreadyDecided={alreadyDecided}
+          onReRead={reRead}
+        />
+      }
+    >
       <ConfirmModal
         open={rejecting}
         onClose={() => setRejecting(false)}
@@ -849,7 +824,7 @@ export function ApprovalRow({
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
       />
-    </article>
+    </DecisionCard>
   );
 }
 
@@ -941,7 +916,7 @@ function BundleExpiryChip({
     return <Badge tone="danger">{t("inbox.expired")}</Badge>;
   }
   const expiries = live
-    .map(expiryMsOf)
+    .map(decisionExpiryMs)
     .filter((expiresAtMs): expiresAtMs is number => expiresAtMs != null);
   if (expiries.length === 0) {
     return null;
@@ -1032,7 +1007,7 @@ function BundleCard({
   });
 
   const subject = bundleSubject(members, t);
-  const live = members.filter((member) => !hasLapsed(member, now));
+  const live = members.filter((member) => !decisionLapsed(member, now));
   const proposedBy = sharedProposer(members);
   // The autonomy dot every row carries, raised to the group only where the
   // members agree on it: one dot over a mix would claim a tier half of them do

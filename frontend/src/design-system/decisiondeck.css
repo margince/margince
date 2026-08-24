@@ -1,0 +1,318 @@
+/*
+ * DecisionDeck — the queue as a stack of cards, and the tray that holds what has
+ * been staged but not yet sent.
+ *
+ * Every duration and curve here is one of the six in tokens.css. There is no
+ * motion library in this repo (check `frontend/package.json` — react, react-dom,
+ * lucide, openapi-fetch and react-query, and that is the list), so the motion is
+ * CSS transforms driven by pointer events, which is also the honest choice: a
+ * transform and an opacity are the two things a browser animates on the
+ * compositor, and a card that dropped frames while somebody dragged it would
+ * feel broken rather than animated.
+ *
+ * The reduced-motion answer is at the FOOT of this file, after every rule it has
+ * to beat. A media query adds no specificity, so document order settles the tie
+ * — and a reduce block written above the rule it removes is a promise that reads
+ * as kept and is not (design-system/conformance.test.ts holds this).
+ */
+
+.ddeck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ddeck-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/*
+ * The stack: the plate, then the count of what is behind and the keyboard
+ * legend. Deliberately NOT a positioning context — the peeked layers belong to
+ * the plate below, and while they were positioned against this box they were
+ * sized to the whole stack and painted straight over those two lines. The legend
+ * is the only thing that tells a reader the arrow keys exist, so it cannot be
+ * the thing the drawing covers.
+ */
+.ddeck-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * The plate. The live card is in flow and sets the height; the peeked edges are
+ * absolute against THIS box, so the depth behind the card cannot reach the text
+ * under it. The bottom padding is the room the deepest peek needs to lean into —
+ * without it the offset layers spill past the plate and the clipping comes back
+ * one element lower down.
+ */
+.ddeck-plate {
+  position: relative;
+  padding-bottom: var(--space-6);
+}
+
+/*
+ * The edges of the cards behind the live one — depth, not content. Each step
+ * back is smaller, dimmer and lower, which is the only way a flat plate reads as
+ * a stack: an offset alone reads as three cards side by side.
+ */
+.ddeck-peek {
+  position: absolute;
+  inset-inline: 0;
+  /* The live card's own box, not the plate's: the bottom inset is exactly the
+     padding the offsets lean into, so a peek is the same size as the card it
+     sits behind rather than the same size as the plate plus its breathing room. */
+  inset-block: 0 var(--space-6);
+  border: 1.5px dashed var(--aiMed);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
+  transform-origin: top center;
+  pointer-events: none;
+}
+
+/* The offsets are what a reader actually SEES of the queue's depth — the rest of
+   each layer is behind an opaque card — so they are wide enough to read as two
+   edges rather than as one thick border. */
+.ddeck-peek[data-depth="1"] {
+  transform: translateY(11px) scale(0.985);
+  opacity: 0.75;
+}
+
+.ddeck-peek[data-depth="2"] {
+  transform: translateY(22px) scale(0.97);
+  opacity: 0.5;
+}
+
+/*
+ * The live card's own box. It carries the transform while a finger is on it and
+ * the spring back when the finger leaves without travelling far enough — the
+ * ONE place `--ease-spring` is honest, per its own token note: the finger left,
+ * the control springs back.
+ */
+.ddeck-live {
+  /* A `fieldset`, so the four verbs inside it are grouped by the browser rather
+     than by an ARIA role — which means undoing the element's own chrome first.
+     `min-inline-size: 0` is the one that is easy to miss: a fieldset's default
+     is `min-content`, so without it the plate refuses to narrow below its
+     widest word and a long subject pushes the deck past the page. */
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+  position: relative;
+  z-index: 1;
+  touch-action: none;
+  transition: transform var(--dur-move) var(--ease-spring);
+  /* The next card RISES into the live position. Keyed on the card's identity, so
+     React's remount is what plays it — there is no state to hold and nothing to
+     reset. */
+  animation: ddeck-rise var(--dur-state) var(--ease-out);
+}
+
+/* While a finger is down the card follows it with no transition at all: a
+   transition here would make the card lag the pointer, which reads as the app
+   being slow rather than the card being heavy. */
+.ddeck-live[data-dragging] {
+  transition: none;
+  cursor: grabbing;
+}
+
+.ddeck-live:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--r-md);
+}
+
+@keyframes ddeck-rise {
+  from {
+    transform: scale(0.97);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/*
+ * The card leaving. A blank silhouette rather than a copy of the card: the
+ * decision is already in the tray, and a second rendering of the same headline
+ * and the same four buttons would be one more thing on screen claiming to be
+ * live. It carries no text and no control, and it is removed the moment its
+ * animation ends.
+ */
+.ddeck-ghost {
+  position: absolute;
+  inset-inline: 0;
+  inset-block: 0 var(--space-6);
+  z-index: 2;
+  border: 1.5px dashed var(--aiMed);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+  pointer-events: none;
+}
+
+.ddeck-ghost[data-verdict="accept"] {
+  animation: ddeck-fly-right var(--dur-move) var(--ease-out) forwards;
+}
+
+.ddeck-ghost[data-verdict="reject"] {
+  animation: ddeck-fly-left var(--dur-move) var(--ease-out) forwards;
+}
+
+.ddeck-ghost[data-verdict="edit"] {
+  animation: ddeck-fly-up var(--dur-move) var(--ease-out) forwards;
+}
+
+.ddeck-ghost[data-verdict="skip"] {
+  animation: ddeck-fly-down var(--dur-move) var(--ease-out) forwards;
+}
+
+/* The lean is small on purpose. A card that spins reads as a game; a card that
+   tips a few degrees reads as a hand putting it down. */
+@keyframes ddeck-fly-right {
+  to {
+    transform: translateX(120%) rotate(9deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ddeck-fly-left {
+  to {
+    transform: translateX(-120%) rotate(-9deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ddeck-fly-up {
+  to {
+    transform: translateY(-110%) scale(0.96);
+    opacity: 0;
+  }
+}
+
+@keyframes ddeck-fly-down {
+  to {
+    transform: translateY(110%) scale(0.96);
+    opacity: 0;
+  }
+}
+
+/* How many are still behind, and how to answer without a pointer. Both are
+   drawn rather than hidden: a count nobody can see turns a finite queue into an
+   endless one, and a shortcut nobody is told about belongs to whoever wrote it. */
+.ddeck-behind {
+  color: var(--textMeta);
+}
+
+.ddeck-keys {
+  color: var(--textTertiary);
+}
+
+/*
+ * The tray: what has been staged and not yet sent. Sticky at the foot of the
+ * deck, because it is the only undo there is and a reader who has scrolled a
+ * long card must not lose sight of it — and clear of the phone's fixed
+ * navigation, which is what `--phoneNavClearance` is named for.
+ */
+.ddeck-tray {
+  position: sticky;
+  bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--accentMed);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-pop);
+}
+
+.ddeck-tray-count {
+  flex: 1;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
+}
+
+@media (max-width: 640px) {
+  .ddeck-tray {
+    bottom: var(--phoneNavClearance);
+  }
+}
+
+/* The list view: the same cards, in their row layout, as a plain list. A list
+   rather than a run of sections so the size of the queue reaches a reader who is
+   hearing the page; the markers are what would be noise, not the semantics. */
+.ddeck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ddeck-cleared-time {
+  color: var(--textMeta);
+}
+
+/* A bundle's own two marks: what saying yes would decide, and the way into the
+   members. The count reads as a fact about the card rather than as a status, so
+   it takes the chip ground and not a tone. */
+.ddeck-bundle-count {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  background: var(--bgCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+}
+
+.ddeck-bundle-open {
+  margin-top: var(--space-3);
+  margin-bottom: 0;
+}
+
+.ddeck-bundle-members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--textContent);
+}
+
+/*
+ * Reduced motion. The end state, never nothing (the tree's one motion rule):
+ * a card that is staged is GONE — instantly, with no flight and no rise — and a
+ * dragged card still follows the finger, because that is direct manipulation
+ * rather than animation. What goes away is the travel, the lean and the spring.
+ *
+ * The deck also opens in LIST view for this reader, decided in the component
+ * rather than here: a deck IS its motion, and one without it is a list drawn the
+ * expensive way.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .ddeck-live {
+    transition: none;
+    animation: none;
+  }
+
+  .ddeck-ghost[data-verdict="accept"],
+  .ddeck-ghost[data-verdict="reject"],
+  .ddeck-ghost[data-verdict="edit"],
+  .ddeck-ghost[data-verdict="skip"] {
+    animation: none;
+    display: none;
+  }
+}
+
+/* The peeked edges keep their offsets, and that is deliberate rather than an
+   omission: a static transform is LAYOUT, not motion. Flattening them would
+   leave this reader with three cards drawn exactly on top of each other and no
+   way to see that anything is behind the live one — which is removing
+   information in the name of removing movement. */
