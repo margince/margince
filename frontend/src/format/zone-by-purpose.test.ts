@@ -6,7 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { RECORD_ZONE } from "./timezone";
+import { FALLBACK_RECORD_ZONE } from "./timezone";
 
 // A screen that names a zone has decided something, and the decision is the
 // part that has to be reviewable: whose calendar does this date belong to, the
@@ -18,11 +18,19 @@ import { RECORD_ZONE } from "./timezone";
 // (right for nobody, since two colleagues then quote different days for the
 // same fact).
 //
-// So the rule is that a zone is NAMED in one file. `RECORD_ZONE` and
+// So the rule is that a zone is NAMED in one file. `useRecordZone()` and
 // `viewerZone()` carry the purposes; a call site picks one and reads as the
 // judgement it is. This gate holds the negative half: nothing outside that
 // module spells ANY zone out again — not the record zone, and not a second one
 // chosen because it looked harmless.
+//
+// Since the record zone became the INSTALLATION's answer rather than a
+// constant, there is a second way to pin it silently, and this gate holds that
+// half too: importing `FALLBACK_RECORD_ZONE`. It is a real zone name that a
+// screen could use and that would look right on the machine of whoever wrote
+// it, while every installation that configured something else got Berlin — the
+// exact defect the hook exists to end. Only the record-zone module itself may
+// name it.
 //
 // Every half is derived from the tree — each `.ts`/`.tsx` under `src/`, read
 // through the parser, matched against the IANA zone shape and the two spellings
@@ -139,6 +147,18 @@ function code(path: string, source: string): string {
 // the one thing `viewerZone()` cannot stand in for: a suite whose expected
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
+  {
+    file: "app/recordzone.test.tsx",
+    why: "Proves what the record zone does with what the server sends it, which needs a configured zone to hand it and an unrenderable one to refuse — neither is a zone this code picks, both are the input under test.",
+  },
+  {
+    file: "design-system/recordtimeline.test.tsx",
+    why: "The timeline's from/to filter cuts a picked day at the INSTALLATION's boundaries; asserting that against the fallback would agree with itself whichever zone the code read, so the suite names a zone that is not the fallback.",
+  },
+  {
+    file: "screens/recordlist.test.tsx",
+    why: "createdColumn now takes the zone it renders dates in; this suite asserts what the column SORTS on, so it hands over a named zone to satisfy the signature and the zone itself carries none of the claim.",
+  },
   {
     file: "app/mefixture.ts",
     why: "The offline `me` fixture stands in for a real installation's stored settings, and its organization timezone is one of those settings — a value on the wire, not a zone this code picks.",
@@ -339,17 +359,47 @@ describe("a zone is named in one module", () => {
 
   it("sees the record zone it exists to protect", () => {
     // The pattern is derived from the IANA shape, not copied from the value of
-    // RECORD_ZONE — and the two must not drift, because the way that drift ends
-    // is silent. Retune the record zone to something the pattern cannot see and
-    // every arm below still passes, over a tree the sweep no longer reads.
-    expect(`"${RECORD_ZONE}"`.match(ZONE_LITERAL)).toEqual([
-      `"${RECORD_ZONE}"`,
+    // the fallback — and the two must not drift, because the way that drift
+    // ends is silent. Retune the fallback to something the pattern cannot see
+    // and every arm below still passes, over a tree the sweep no longer reads.
+    expect(`"${FALLBACK_RECORD_ZONE}"`.match(ZONE_LITERAL)).toEqual([
+      `"${FALLBACK_RECORD_ZONE}"`,
     ]);
     // And it has to be a zone Intl accepts, or the shape matched a name that
-    // formats nothing.
+    // formats nothing. This is load-bearing for the fallback specifically: it
+    // is what a screen renders against when the installation's own zone cannot
+    // be rendered, so a fallback that itself threw would turn a recoverable
+    // disagreement between two zone databases into a blank application.
     expect(
-      () => new Intl.DateTimeFormat("en", { timeZone: RECORD_ZONE }),
+      () => new Intl.DateTimeFormat("en", { timeZone: FALLBACK_RECORD_ZONE }),
     ).not.toThrow();
+  });
+
+  it("leaves the fallback zone importable by nothing but its own reader", () => {
+    // The record zone is the installation's, served by a hook. The fallback is
+    // what stands in when that answer cannot be rendered, and it is a REAL zone
+    // name — so a screen that imported it would look correct to whoever wrote
+    // it and would quietly show Berlin to every installation that configured
+    // something else. That is the defect the hook exists to end, reintroduced
+    // through the back door, and no zone LITERAL appears in such a file for the
+    // sweep above to catch.
+    //
+    // Three permitted files, all of them ABOUT the fallback rather than users
+    // of it: `app/recordzone.tsx` decides when it applies, its own suite proves
+    // that decision, and `format/timezone.test.ts` asserts the one property the
+    // fallback must never lose — that the formatters accept it, since it is
+    // what renders when the installation's own zone cannot. A test forbidden
+    // from naming the value it asserts on could only check it against itself.
+    const allowed = new Set([
+      "app/recordzone.tsx",
+      "app/recordzone.test.tsx",
+      "format/timezone.test.ts",
+    ]);
+    const importers = sourceFiles(srcRoot)
+      .filter((path) => /FALLBACK_RECORD_ZONE/.test(readFileSync(path, "utf8")))
+      .map((path) => relative(srcRoot, path).split("\\").join("/"))
+      .filter((file) => !allowed.has(file));
+    expect(importers.sort()).toEqual([]);
   });
 
   it("sees a zone that is not the record zone", () => {

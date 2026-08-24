@@ -1,8 +1,8 @@
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { formatDayMonth, formatMoneyCompact } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 
 // The relationship state strip (concept §5.3): six facts that change how a
@@ -28,6 +28,7 @@ export function PersonStrip({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const omitted = new Set(view.sections_omitted ?? []);
   // A withheld slot says so. Rendering it empty would read as "there is none",
   // which is a claim about the record rather than about the reader's grants —
@@ -63,7 +64,7 @@ export function PersonStrip({
       <StatCard
         label={t("person.strip.nextMeeting")}
         value={reading(
-          nextMeeting(view, t, locale),
+          nextMeeting(view, t, locale, recordZone),
           omitted.has("next_meeting"),
         )}
       />
@@ -137,6 +138,7 @@ function nextMeeting(
   view: Person360,
   t: ReturnType<typeof useT>,
   locale: Locale,
+  recordZone: string,
 ): string {
   const meeting = view.next_meeting;
   if (!meeting) {
@@ -145,7 +147,7 @@ function nextMeeting(
   // The record's zone, which is what persontabs.tsx renders the same field in.
   // Rendered in the reader's own instead, the strip and the tab beside it name
   // different days for one meeting whenever the reader is not in that zone.
-  return formatDayMonth(meeting.starts_at, locale, RECORD_ZONE);
+  return formatDayMonth(meeting.starts_at, locale, recordZone);
 }
 
 // The verdict word and its tone are read from the SERVER's verdict key, never

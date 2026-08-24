@@ -5240,7 +5240,7 @@ export const vi = {
     "Hiển thị ở mọi nơi sản phẩm gọi tên tổ chức của bạn.",
   "installationSettings.timezone": "Múi giờ báo cáo",
   "installationSettings.timezoneHint":
-    "Tên múi giờ IANA (ví dụ Europe/Berlin). Ranh giới kỳ của mọi báo cáo được tính theo múi giờ này, tách biệt với múi giờ hiển thị của riêng bạn.",
+    "Tên múi giờ IANA (ví dụ Europe/Berlin). Đồng hồ riêng của tổ chức bạn: ranh giới kỳ của mọi báo cáo được tính theo múi giờ này, và mọi ngày tháng của bản ghi — ngày chốt, ngày hoá đơn, tiêu đề dòng thời gian — đều hiển thị theo nó, để một ngày đọc giống nhau với cả nhóm. Tách biệt với múi giờ hiển thị của riêng bạn.",
   "installationSettings.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
     "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi số tiền đầu tiên được quy đổi theo nó.",

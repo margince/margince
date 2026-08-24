@@ -5,13 +5,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ScopeChips } from "../design-system/passportselect";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -301,14 +302,15 @@ function ConnectionFacts({
 }: Readonly<{ passport: Connection; state: ConnectionState }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // A credential's lifetime is a personal deadline, so it reads on the
   // viewer's own calendar (format.ts zone-by-purpose, the same split
-  // oauthconsent.tsx makes). connected_at is a record date and keeps the fixed
-  // zone: it says when a consent was given, not when the reader must act.
+  // oauthconsent.tsx makes). connected_at is a record date and keeps the
+  // record zone: it says when a consent was given, not when the reader must act.
   const connected = formatDate(
     passport.connection.connected_at,
     locale,
-    RECORD_ZONE,
+    recordZone,
   );
   // Two of the three states say something about this date; the third must not.
   // A LIVE row shows when the agent must next hold a fresh credential, and a

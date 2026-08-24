@@ -19,6 +19,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { activityTimeline } from "../design-system/activitytimeline";
@@ -57,7 +58,6 @@ import {
   formatMoneyOrAbsent,
 } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "./activitykeys";
@@ -1197,6 +1197,7 @@ function AmountCell({
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
+  recordZone: string,
   stageName: Map<string, string>,
 ): ListColumn<Deal>[] {
   return [
@@ -1255,7 +1256,7 @@ function dealColumns(
       sort: "expected_close_date",
       cell: (deal) =>
         deal.expected_close_date
-          ? formatDate(deal.expected_close_date, locale, RECORD_ZONE)
+          ? formatDate(deal.expected_close_date, locale, recordZone)
           : null,
     },
     {
@@ -1625,6 +1626,7 @@ export function DealsScreen({
 }: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const cf = useObjectCustomFields("deal");
   const overlay = useSorMode() === "overlay";
   const pipelinesQuery = usePipelines(!overlay);
@@ -2052,7 +2054,7 @@ export function DealsScreen({
         <ListTable
           state={dealsListState}
           unit="deals.unit"
-          columns={dealColumns(t, locale, stageName)}
+          columns={dealColumns(t, locale, recordZone, stageName)}
           rowKey={(deal) => deal.id}
           rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
           searchable={false}
@@ -2390,6 +2392,7 @@ function DealTable({
 }: Readonly<{ deals: Deal[]; stages: Stage[]; sortable?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [sortKey, setSortKey] = useState<"name" | "amount" | "close">("name");
   const [descending, setDescending] = useState(false);
   const stageName = useMemo(
@@ -2486,7 +2489,7 @@ function DealTable({
             header: t("deals.close"),
             render: (deal: Deal) =>
               deal.expected_close_date
-                ? formatDate(deal.expected_close_date, locale, RECORD_ZONE)
+                ? formatDate(deal.expected_close_date, locale, recordZone)
                 : null,
           },
           {
@@ -2528,6 +2531,7 @@ export function FxLine({
   locale: Locale;
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   // A deal carrying a rate but no amount converts to nothing, not to zero.
   const baseMinor =
     amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
@@ -2536,7 +2540,7 @@ export function FxLine({
       {t("deal.fxBase", {
         value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
         rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, RECORD_ZONE) : "—",
+        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
       })}
     </p>
   );
@@ -3268,6 +3272,7 @@ function archivedDealBand(
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const queryClient = useQueryClient();
   // Minted here because the band that carries the sentence and the verbs that
   // point at it are two different slots of the same header.
@@ -3396,7 +3401,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             <RecordView
               name={deal.name}
               subtitle={<DealSubtitle deal={deal} locale={locale} />}
-              zone={RECORD_ZONE}
+              zone={recordZone}
               badges={
                 <DealBadges
                   deal={deal}

@@ -42,6 +42,7 @@ import {
 import { isEntityKind } from "../app/entity";
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
+import { useRecordZone } from "../app/recordzone";
 import { ResumeConnectBanner } from "../app/resumeconnectbanner";
 import { navigateReplacing, type Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
@@ -74,7 +75,7 @@ import {
   toEvidence,
 } from "../design-system/trust";
 import { formatDate, formatDateTime } from "../format/format";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AiRoutingCard } from "./ai-routing";
@@ -1589,6 +1590,7 @@ function PassportRow({
   onRevoke: (row: HTMLElement | null) => void;
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const revoked = passport.revoked_at != null;
   return (
     <div data-passport={passport.id} tabIndex={-1}>
@@ -1606,7 +1608,7 @@ function PassportRow({
           <span className="settings-run">
             <span>
               {t("settings.created", {
-                date: formatDate(passport.created_at, locale, RECORD_ZONE),
+                date: formatDate(passport.created_at, locale, recordZone),
               })}
             </span>
             {/* A credential's lifetime is a personal deadline, so it reads on
@@ -2685,6 +2687,7 @@ function AuditLogRow({
 }: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [expanded, setExpanded] = useState(false);
   const keys = diffKeys(entry.before, entry.after);
   const evidence = toEvidence(entry.evidence);
@@ -2701,7 +2704,7 @@ function AuditLogRow({
             and 22 August to one in Ho Chi Minh City — two operators quoting the
             same line quote different days. */}
         <span className="t-small">
-          {formatDateTime(entry.occurred_at, locale, RECORD_ZONE)}
+          {formatDateTime(entry.occurred_at, locale, recordZone)}
         </span>
         <ActorTag entry={entry} meUserId={meUserId} />
         <Badge tone="accent">{entry.action}</Badge>

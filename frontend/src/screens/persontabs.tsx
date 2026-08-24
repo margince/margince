@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Avatar, Button } from "../design-system/atoms";
@@ -18,7 +19,6 @@ import {
 } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
 import { TimelineActions } from "./compose";
@@ -73,6 +73,7 @@ export function PersonTimelineTab({
   onBriefMeeting?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const [filter, setFilter] = useChronologyFilter(personId);
   const [filters, setFilters] = useTimelineFilters(personId);
   // The 360's own page seeds the list; older pages and every narrowed read
@@ -136,7 +137,7 @@ export function PersonTimelineTab({
         >
           <GroupedTimelineList
             groups={groupChronology(chronology.entries, timeline.hasNextPage)}
-            zone={RECORD_ZONE}
+            zone={recordZone}
           />
         </SurfaceState>
       </PanelBody>
@@ -305,6 +306,7 @@ export function PersonMeetingsTab({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const viewerId = useViewerId();
   // The booked meeting is drawn above, from the server's own next-meeting
   // read. It is also an activity, so an unfiltered list draws it a second time
@@ -345,7 +347,7 @@ export function PersonMeetingsTab({
                   {next.subject ?? t("person.meetings.untitled")}
                 </p>
                 <p className="pe-brief-line">
-                  {formatDateTime(next.starts_at, locale, RECORD_ZONE)}
+                  {formatDateTime(next.starts_at, locale, recordZone)}
                 </p>
                 {/* next_meeting carries no content_state because the 360
                     withholds the whole section rather than a redacted row, so
@@ -396,7 +398,7 @@ export function PersonMeetingsTab({
                 )),
                 hasMore,
               )}
-              zone={RECORD_ZONE}
+              zone={recordZone}
             />
           </SurfaceState>
         </PanelBody>

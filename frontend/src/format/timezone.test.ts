@@ -3,7 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDate } from "./format";
-import { RECORD_ZONE, startOfDayInZone, viewerZone } from "./timezone";
+import { FALLBACK_RECORD_ZONE, startOfDayInZone, viewerZone } from "./timezone";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -45,21 +45,33 @@ describe("viewerZone", () => {
   });
 });
 
-describe("RECORD_ZONE", () => {
+describe("FALLBACK_RECORD_ZONE", () => {
   it("is a zone the formatters accept", () => {
     // format.ts refuses a fixed offset ("+01:00", "Etc/GMT-1") because those
-    // freeze the DST rules. The record zone has to pass that door.
+    // freeze the DST rules. The fallback has to pass that door — it is what
+    // renders when the installation's own zone cannot, so a fallback that
+    // itself threw would turn a recoverable disagreement between two zone
+    // databases into a blank page.
     expect(() =>
-      formatDate("2026-07-02T00:30:00Z", "en", RECORD_ZONE),
+      formatDate("2026-07-02T00:30:00Z", "en", FALLBACK_RECORD_ZONE),
     ).not.toThrow();
   });
+});
 
-  it("reads an instant on its own calendar, not the reader's", () => {
-    // 00:30 UTC is already 2 July in the record zone and still 1 July on the
-    // US west coast — the boundary the two purposes disagree across.
+describe("a record's clock against the reader's", () => {
+  it("reads an instant on the record's calendar, not the reader's", () => {
+    // The distinction the whole module exists for, asserted against a zone
+    // this test NAMES rather than against whatever the installation or the
+    // fallback happens to hold. Berlin is a stand-in for any configured
+    // record zone here; the claim is about the two purposes disagreeing, and
+    // pinning it to a constant would make the test restate that constant
+    // instead of the rule.
+    //
+    // 00:30 UTC is already 2 July in a zone east of UTC and still 1 July on
+    // the US west coast — the boundary the two purposes disagree across.
     pretendReportedZone("America/Los_Angeles");
     const instant = "2026-07-02T00:30:00Z";
-    expect(formatDate(instant, "en", RECORD_ZONE)).toBe("02/07/2026");
+    expect(formatDate(instant, "en", "Europe/Berlin")).toBe("02/07/2026");
     expect(formatDate(instant, "en", viewerZone())).toBe("01/07/2026");
   });
 });

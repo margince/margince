@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Badge, SegmentedControl } from "../design-system/atoms";
@@ -13,7 +14,6 @@ import {
 } from "../design-system/recordtimeline";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { ProvenanceTag } from "../design-system/trust";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
@@ -325,6 +325,7 @@ function PersonAside({
 export function ContactsScreen() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Offered only once /me has answered: a chip whose value is still "" reads
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
@@ -384,8 +385,8 @@ export function ContactsScreen() {
             ),
           },
           ownerColumn<Person>(t),
-          lastActivityColumn<Person>(t, locale),
-          createdColumn<Person>(t, locale),
+          lastActivityColumn<Person>(t, locale, recordZone),
+          createdColumn<Person>(t, locale, recordZone),
         ]}
         tools={<SaveViewAction resource="people" query={state.query} />}
         rowKey={(person) => person.id}
@@ -406,6 +407,7 @@ type PersonTab = (typeof PERSON_TABS)[number];
 
 export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const cf = useObjectCustomFields("person");
   // ONE sentence about this contact being archived, minted here and pointed at
   // by every verb the archive refuses. Said once for the page rather than
@@ -456,7 +458,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
           <RecordView
             name={person.full_name}
             subtitle={person.title ?? undefined}
-            zone={RECORD_ZONE}
+            zone={recordZone}
             badges={
               <>
                 <ProvenanceTag

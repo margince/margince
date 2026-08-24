@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -68,6 +68,7 @@ export function GrowthFitPanel({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const recordZone = useRecordZone();
   const fit = useQuery({
     queryKey: ["org-growth-fit", orgId],
     enabled,
@@ -132,7 +133,7 @@ export function GrowthFitPanel({
         readable && (
           <span className="t-small">
             {t("co.brief.generatedAt", {
-              when: formatDateTime(readable.generated_at, locale, RECORD_ZONE),
+              when: formatDateTime(readable.generated_at, locale, recordZone),
             })}
           </span>
         )

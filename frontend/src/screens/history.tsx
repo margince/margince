@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
+import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Card,
@@ -23,7 +24,6 @@ import {
   toEvidence,
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import {
   LoadMoreButton,
@@ -148,6 +148,7 @@ function HistoryEntryRow({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const viewerId = useViewerId();
+  const recordZone = useRecordZone();
   return (
     <li>
       <span className="tl-body">
@@ -157,7 +158,7 @@ function HistoryEntryRow({
             sentence would now say the same person twice. */}
         <span className="tl-title">{entry.summary}</span>
         <span className="tl-meta">
-          <span>{formatDateTime(entry.occurred_at, locale, RECORD_ZONE)}</span>
+          <span>{formatDateTime(entry.occurred_at, locale, recordZone)}</span>
           <ProvenanceTag
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name
@@ -291,6 +292,7 @@ function ChangeGrounding({ change }: Readonly<{ change: FieldHistoryEntry }>) {
 
 function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <div className="fgroup">
       <div className="fgroup-head">{group.field}</div>
@@ -302,7 +304,7 @@ function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
               newValue={change.new_value ?? null}
             />
             <span className="tl-meta">
-              {formatDateTime(change.changed_at, locale, RECORD_ZONE)}
+              {formatDateTime(change.changed_at, locale, recordZone)}
             </span>
             <ChangeWho change={change} />
           </li>

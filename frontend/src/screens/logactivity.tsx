@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { EntityKind } from "../app/entity";
+import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Card,
@@ -13,7 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
@@ -62,35 +63,38 @@ const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 //
 // Which zone that is follows what the day MEANS, the same split the draft's
 // `day` field carries. A note or meeting files under a heading on the record's
-// timeline, grouped in RECORD_ZONE, so the day it can be offered is the record's
+// timeline, grouped in the record zone, so the day it can be offered is the record's
 // today; a task's day is a personal due date, minted by `dueInstant` in the
 // browser's zone and rendered there, so its today is the writer's own. Offer a
 // day from the other zone and the composer names a day the entry does not land
 // on: an afternoon in Los Angeles is already tomorrow on a Berlin clock, so a
 // writer offered their own today, accepting it, watched the entry file under the
 // day after.
-function todayDay(kind: ActivityDraft["kind"]): string {
-  return calendarDay(new Date(), kind === "task" ? viewerZone() : RECORD_ZONE);
+function todayDay(kind: ActivityDraft["kind"], recordZone: string): string {
+  return calendarDay(new Date(), kind === "task" ? viewerZone() : recordZone);
 }
 
-function freshDraft(kind: ActivityDraft["kind"] = "note"): ActivityDraft {
-  return { ...EMPTY_DRAFT, kind, day: todayDay(kind) };
+function freshDraft(
+  recordZone: string,
+  kind: ActivityDraft["kind"] = "note",
+): ActivityDraft {
+  return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
 // The instant a logged activity carries. The picked day left on today — or, for
 // a note, pushed into the future, which nothing can have occurred in — means the
 // actual moment of logging, so entries logged in sequence keep their timeline
-// order. A backdated day becomes that day's noon in RECORD_ZONE. Either way the
+// order. A backdated day becomes that day's noon in the record zone. Either way the
 // entry files under the day the writer picked, because both branches and the
 // timeline's day headings read the same clock. A task's picked day is its DUE
 // date instead — the task itself occurred now.
-function occurredInstant(input: ActivityDraft): string {
+function occurredInstant(input: ActivityDraft, recordZone: string): string {
   const now = new Date();
-  const today = calendarDay(now, RECORD_ZONE);
+  const today = calendarDay(now, recordZone);
   if (input.kind === "task" || input.day === "" || input.day >= today) {
     return now.toISOString();
   }
-  return middayInstant(input.day, RECORD_ZONE);
+  return middayInstant(input.day, recordZone);
 }
 
 // The wire body one drafted entry becomes.
@@ -98,6 +102,7 @@ function activityRequestBody(
   input: ActivityDraft,
   entityType: EntityKind,
   entityId: string,
+  recordZone: string,
 ) {
   // source_system: transcript is what routes the body through the
   // server's ADR-0058 normalizer and what the activity/transcript
@@ -119,7 +124,7 @@ function activityRequestBody(
     kind: input.kind,
     subject: input.subject.trim(),
     body: outgoingBody || null,
-    occurred_at: occurredInstant(input),
+    occurred_at: occurredInstant(input, recordZone),
     // A due date becomes the instant that day ENDS in the writer's
     // own zone (format/calendarday). Handing the bare `yyyy-mm-dd` to
     // `new Date` reads it as UTC midnight instead, which is neither the
@@ -158,8 +163,9 @@ export function LogActivityForm({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const recordZone = useRecordZone();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
-    freshDraft(initialKind),
+    freshDraft(recordZone, initialKind),
   );
   const [fileError, setFileError] = useState<string | null>(null);
 
@@ -168,9 +174,19 @@ export function LogActivityForm({
     // activity's own id: the reader wants the name of what the activity is
     // ABOUT, and the record on screen is always already named in the cache.
     mutationKey: ["activity-log", entityId],
-    mutationFn: async (input: ActivityDraft) => {
+    // The zone travels as a VARIABLE rather than being read from the closure.
+    // A mutationFn closing over render state runs against whatever the last
+    // committed render held, and what this one decides with the zone is the
+    // instant the entry is STORED at — so a stale read would not misdraw a
+    // page, it would file the activity on the wrong day, permanently.
+    mutationFn: async (input: { draft: ActivityDraft; zone: string }) => {
       const { data, error } = await api.POST("/activities", {
-        body: activityRequestBody(input, entityType, entityId),
+        body: activityRequestBody(
+          input.draft,
+          entityType,
+          entityId,
+          input.zone,
+        ),
       });
       if (error) {
         throwProblem(error, t);
@@ -179,13 +195,13 @@ export function LogActivityForm({
     },
     onSuccess: (_data, input) => {
       const keys =
-        input.kind === "task"
+        input.draft.kind === "task"
           ? taskWriteKeys(entityType, entityId)
           : entityTimelineKeys(entityType, entityId);
       for (const queryKey of keys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      setDraft(freshDraft());
+      setDraft(freshDraft(input.zone));
       onLogged?.();
     },
   });
@@ -198,7 +214,7 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={(event) => {
         event.preventDefault();
-        log.mutate(draft);
+        log.mutate({ draft, zone: recordZone });
       }}
     >
       <div className="form-row">
@@ -236,7 +252,11 @@ export function LogActivityForm({
               // occurredInstant clamps a typed-in future day the same way, and
               // against the same clock, so the box refuses exactly the days the
               // submit would have moved.
-              max={draft.kind === "task" ? undefined : todayDay(draft.kind)}
+              max={
+                draft.kind === "task"
+                  ? undefined
+                  : todayDay(draft.kind, recordZone)
+              }
               onChange={(event) => setField({ day: event.target.value })}
               // A native date input opens its calendar only from the tiny
               // icon; a click on the value just places a caret. Opening on

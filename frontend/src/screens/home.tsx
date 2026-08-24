@@ -7,6 +7,7 @@ import {
 import { ArrowRight, Check, RefreshCw, X } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Badge,
@@ -21,7 +22,7 @@ import {
   formatDateTime,
   formatMoneyOrAbsent,
 } from "../format/format";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -204,6 +205,7 @@ function DigestProjectsSection({
 function DigestSection() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const digestQuery = useMorningDigest();
   return (
     <QueryGate query={digestQuery}>
@@ -222,7 +224,7 @@ function DigestSection() {
                 <span className="digest-title">{t("home.digest")}</span>
                 <span className="t-caption">
                   {t("home.digestFor", {
-                    date: formatDate(digest.date, locale, RECORD_ZONE),
+                    date: formatDate(digest.date, locale, recordZone),
                   })}
                 </span>
               </div>

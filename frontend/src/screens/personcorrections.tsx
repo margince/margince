@@ -4,9 +4,9 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 
@@ -84,6 +84,7 @@ function EnrichedField({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
   const queryClient = useQueryClient();
@@ -157,7 +158,7 @@ function EnrichedField({
           source: field.source,
           // The record's zone: when the machine read this is a fact about the
           // record, and the correction beside it is judged against that day.
-          when: formatDate(field.captured_at, locale, RECORD_ZONE),
+          when: formatDate(field.captured_at, locale, recordZone),
         })}{" "}
         — “{field.evidence_snippet}”
       </p>

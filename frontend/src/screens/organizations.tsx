@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWriteRecord } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Avatar,
@@ -40,7 +41,7 @@ import {
   EvidenceChip,
 } from "../design-system/trust";
 import { formatDateTime, formatMoney } from "../format/format";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
@@ -553,6 +554,7 @@ async function createCompany(
 export function CompaniesScreen() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const cf = useObjectCustomFields("organization");
   const state = useListQuery<Organization>({
     key: "organizations",
@@ -701,8 +703,8 @@ export function CompaniesScreen() {
               ) : null,
           },
           ownerColumn<Organization>(t),
-          lastActivityColumn<Organization>(t, locale),
-          createdColumn<Organization>(t, locale),
+          lastActivityColumn<Organization>(t, locale, recordZone),
+          createdColumn<Organization>(t, locale, recordZone),
         ]}
         tools={<SaveViewAction resource="organizations" query={state.query} />}
         rowKey={(org) => org.id}
@@ -1190,6 +1192,7 @@ async function fetchHierarchyRollup(
 function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const rollupQuery = useQuery({
     queryKey: ["rollup", orgId],
     queryFn: () => fetchHierarchyRollup(orgId),
@@ -1244,7 +1247,7 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
       )}
       <p className="t-caption" style={{ marginTop: 10 }}>
         {t("rollup.computedAt", {
-          when: formatDateTime(rollup.computed_at, locale, RECORD_ZONE),
+          when: formatDateTime(rollup.computed_at, locale, recordZone),
         })}
       </p>
     </Card>
@@ -1272,6 +1275,7 @@ function derivedSource(
     updated_at?: string;
   }>,
   locale: Locale,
+  recordZone: string,
 ): EvidenceMarkSource | undefined {
   const provenance = provenanceOf(row.captured_by);
   if (provenance.kind === "human") {
@@ -1283,7 +1287,7 @@ function derivedSource(
     snippet: row.evidence_snippet,
     sourceUrl: row.source_url,
     at: row.updated_at
-      ? formatDateTime(row.updated_at, locale, RECORD_ZONE)
+      ? formatDateTime(row.updated_at, locale, recordZone)
       : undefined,
   };
 }
@@ -1331,6 +1335,7 @@ function ProfileFieldRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const canEdit = useCan("organization", "update");
   return (
     <div className="co-field">
@@ -1338,7 +1343,7 @@ function ProfileFieldRow({
       <div>
         <EvidenceMark
           value={field.value}
-          source={derivedSource(field, locale)}
+          source={derivedSource(field, locale, recordZone)}
           onOpenHistory={onOpenHistory}
         />
         {/* The verdict beside the value, not inside the mark: the mark says
@@ -1449,6 +1454,7 @@ function FactRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const canEdit = useCan("organization", "update");
   return (
     <div className="co-field">
@@ -1456,7 +1462,7 @@ function FactRow({
       <div>
         <EvidenceMark
           value={fact.value}
-          source={derivedSource(fact, locale)}
+          source={derivedSource(fact, locale, recordZone)}
           onOpenHistory={onOpenHistory}
         />
         {/* The value contradicts its own field — a phone number filed as a
@@ -2019,6 +2025,7 @@ function CompanyPage({
   onTab: (next: CompanyTab) => void;
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const archivedReasonId = useId();
   // ONE composer, opened two ways. Anchored on a timeline message it answers
   // that message; anchored on a person it starts a new one and grounds on the
@@ -2095,7 +2102,7 @@ function CompanyPage({
       // facts (mockup's target header), alongside the ones that already had
       // no chip (owner).
       subtitle={<CompanyDescription org={org} />}
-      zone={RECORD_ZONE}
+      zone={recordZone}
       pulse={<CompanyIdentityLine org={org} view={view} loading={loading} />}
       // The composer opens from a button rather than standing open above the
       // page: a whole form in the header's action strip pushed the account's

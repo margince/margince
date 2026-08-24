@@ -3,9 +3,9 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card } from "../design-system/atoms";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
@@ -361,6 +361,7 @@ function VersionRow({
     onError: (e: Error) => setError(problemMessageOf(e, t)),
   });
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <li className="vdna-row">
       <span>
@@ -374,7 +375,7 @@ function VersionRow({
             product prints 21/08/2026. The regioned tag comes from format/, and
             the record's zone with it: a profile version is stamped by the
             record, not by where its reader sits. */}
-        {formatDate(version.created_at, locale, RECORD_ZONE)}
+        {formatDate(version.created_at, locale, recordZone)}
       </span>
       {canEdit && version.status === "superseded" && (
         <button

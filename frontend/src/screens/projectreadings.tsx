@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useRecordZone } from "../app/recordzone";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { type Project360, stateOf } from "./projectsections";
 
@@ -23,6 +23,7 @@ import { type Project360, stateOf } from "./projectsections";
 export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const rollups = view.rollups;
   const state = stateOf(view, "rollups", Boolean(rollups), rollups ? 1 : 0);
   if (state !== "ready" || !rollups) {
@@ -61,7 +62,7 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
         label={t("project.rollups.lastActivity")}
         value={
           rollups.last_activity_at
-            ? formatDateAbbrev(rollups.last_activity_at, locale, RECORD_ZONE)
+            ? formatDateAbbrev(rollups.last_activity_at, locale, recordZone)
             : t("project.rollups.never")
         }
       />

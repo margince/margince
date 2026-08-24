@@ -10,14 +10,20 @@
 // The two purposes are NOT interchangeable, and each has its own way of being
 // wrong:
 //
-//   RECORD_ZONE — the organization's own clock. Its dates belong to the
-//   record, not to whoever is looking at it. Following the reader here
-//   MISSTATES the record: a close date, a renewal, an invoice's issue day and
-//   a timeline's day headings have to read the same for every colleague, or two
-//   people quoting the same page quote different days. It is also the only
-//   correct answer for a date-only wire value (OpenAPI `format: date`): there
-//   is no instant in `2026-08-21` to localize, and reading it in a zone behind
-//   UTC prints the day before.
+//   useRecordZone() — the organization's own clock, as the installation
+//   configured it (`installation.timezone`, served by app/recordzone.tsx). Its
+//   dates belong to the record, not to whoever is looking at it. Following the
+//   reader here MISSTATES the record: a close date, a renewal, an invoice's
+//   issue day and a timeline's day headings have to read the same for every
+//   colleague, or two people quoting the same page quote different days. It is
+//   also the only correct answer for a date-only wire value (OpenAPI
+//   `format: date`): there is no instant in `2026-08-21` to localize, and
+//   reading it in a zone behind UTC prints the day before.
+//
+//   It is a HOOK rather than a constant because the answer belongs to the
+//   installation and arrives over the wire. A plain helper that needs it takes
+//   it as a parameter from the component that read it — never by importing the
+//   fallback below, which is a different value that only happens to agree.
 //
 //   viewerZone() — the reader's own clock, for a moment they relate to
 //   themselves: when a credential they are lending expires, when a paused job
@@ -33,19 +39,28 @@
 // "Genuinely both" means both readings are defensible, and that is a claim about
 // the STORED value, not about the screen. An activity's `due_at` is minted by
 // `dueInstant` as the end of the picked day in the BROWSER's zone, so the wire
-// value already carries the picker's clock; RECORD_ZONE does not read the
+// value already carries the picker's clock; the record zone does not read the
 // organization's day out of it, it reads a day the picker never chose, off by
 // one for every reader outside that zone. A value with no record reading has
 // nothing for the page to win against, so `due_at` takes viewerZone() wherever
 // it is shown — the tasks queue, the record's next steps, the task detail —
-// while the activity's `occurred_at` beside it stays on RECORD_ZONE, because
-// when something happened IS a fact about the record.
+// while the activity's `occurred_at` beside it stays on the record zone,
+// because when something happened IS a fact about the record.
 
-// The organization's zone. A constant, and deliberately not read from the
-// installation's configured timezone yet: every screen that renders a record
-// date has to agree, and a per-request value that arrives late would render the
-// first paint in one zone and the second in another.
-export const RECORD_ZONE = "Europe/Berlin";
+// The zone a record's dates are read in when the installation's own answer is
+// not on hand. It is the LAST resort, not the value: `useRecordZone` in
+// app/recordzone.tsx serves `installation.timezone`, and the authenticated
+// shell holds its first paint until that read lands, so no signed-in surface
+// renders a record date against this constant.
+//
+// It stays a real zone rather than UTC because the surfaces that can still
+// reach it are the ones outside the settings read — a story, a test that mounts
+// a screen bare — and those are easier to read against a zone with an offset
+// and a DST rule than against one with neither.
+//
+// Do not import it into a screen. The gate in zone-by-purpose.test.ts refuses
+// that, and names this comment when it does.
+export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
 
 /**
  * The zone the reader's own browser is in, or `UTC` when it will not say.

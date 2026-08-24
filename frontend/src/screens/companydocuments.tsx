@@ -3,11 +3,11 @@ import { Fragment, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
@@ -306,6 +306,7 @@ function DocumentRow({
 }: Readonly<{ doc: Attachment; canWriteDeals: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The staged reading is OPENED, never mounted by the list. Each panel asks
   // the server for its own document's reading on mount, so a list that opened
   // them all fired one request per deal file and stacked a wall of panels over
@@ -352,7 +353,7 @@ function DocumentRow({
               <span>{doc.filename}</span>
             )}
             <span>{doc.source}</span>
-            <span>{formatDateTime(doc.created_at, locale, RECORD_ZONE)}</span>
+            <span>{formatDateTime(doc.created_at, locale, recordZone)}</span>
           </span>
         </div>
         <div className="rec-end">

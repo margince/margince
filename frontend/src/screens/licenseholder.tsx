@@ -1,10 +1,10 @@
 import { CalendarClock, TriangleAlert } from "lucide-react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateAbbrev } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import "./licenseholder.css";
 
@@ -28,9 +28,10 @@ export function LicenseHolderCard({
 }: Readonly<{ holder: LicenseHolder }>) {
   const t = useT();
   const { locale } = useLocale();
-  // RECORD_ZONE is the one zone this product renders dates in, so an expiry and
-  // an activity beside it can never be read in two different zones.
-  const expiry = formatDateAbbrev(holder.expiry, locale, RECORD_ZONE);
+  const recordZone = useRecordZone();
+  // The record zone is the one zone this product renders dates in, so an
+  // expiry and an activity beside it can never be read in two different zones.
+  const expiry = formatDateAbbrev(holder.expiry, locale, recordZone);
 
   return (
     <Panel title={t("license.holder.title")}>

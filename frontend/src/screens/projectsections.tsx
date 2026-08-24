@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -18,7 +19,7 @@ import {
   formatDuration,
   formatMoneyOrAbsent,
 } from "../format/format";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRoleLabel } from "./company360";
@@ -167,6 +168,7 @@ function TransitionRow({
 }: Readonly<{ transition: PhaseTransition }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <PanelRow className="project-row">
       <span>
@@ -180,9 +182,7 @@ function TransitionRow({
             })}
       </span>
       <span className="project-row-meta">
-        <span>
-          {formatDateTime(transition.changed_at, locale, RECORD_ZONE)}
-        </span>
+        <span>{formatDateTime(transition.changed_at, locale, recordZone)}</span>
         <span>
           {transition.changed_by.display_name ?? t("project.history.bySystem")}
         </span>
@@ -317,6 +317,7 @@ function ContractRow({
   contract: Contract;
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
+  const recordZone = useRecordZone();
   return (
     <PanelRow className="project-row">
       <span>{contract.title}</span>
@@ -326,7 +327,7 @@ function ContractRow({
           {formatMoneyOrAbsent(contract.value_minor, contract.currency, locale)}
         </span>
         {contract.ends_on && (
-          <span>{formatDateAbbrev(contract.ends_on, locale, RECORD_ZONE)}</span>
+          <span>{formatDateAbbrev(contract.ends_on, locale, recordZone)}</span>
         )}
       </span>
     </PanelRow>
@@ -366,6 +367,7 @@ function DocumentRow({
   doc: Attachment;
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
+  const recordZone = useRecordZone();
   return (
     <PanelRow className="project-row">
       {/* The name is the download, as on the company page: one thing to find
@@ -381,7 +383,7 @@ function DocumentRow({
         {doc.byte_size != null && (
           <span className="t-mono">{formatBytes(doc.byte_size, locale)}</span>
         )}
-        <span>{formatDateAbbrev(doc.created_at, locale, RECORD_ZONE)}</span>
+        <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
       </span>
     </PanelRow>
   );
