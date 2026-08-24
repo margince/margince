@@ -177,6 +177,19 @@ func fillOrgSurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.O
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
+	// An inherited description arrives with its author still attached. Without
+	// this the survivor holds a person's sentence that field_provenance says
+	// nobody wrote, and the next site read of the survivor replaces it — the
+	// merge would quietly strip a human's claim on words it did not change.
+	// The RETIRED record's author is carried across, not the person running the
+	// merge: a merge moves a value, it does not author one.
+	if _, inherited := p.After()["description"]; inherited {
+		if err := carryDescriptionAuthor(ctx, tx,
+			ids.OrganizationID{UUID: ids.UUID(src.Id)},
+			ids.OrganizationID{UUID: ids.UUID(tgt.Id)}); err != nil {
+			return nil, err
+		}
+	}
 	return p.After(), nil
 }
 
