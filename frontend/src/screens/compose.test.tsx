@@ -2083,7 +2083,7 @@ describe("ComposeModal started from an account", () => {
     expect(subject().value).toBe("");
   });
 
-  it("leaves a tag the rep deleted by hand deleted", async () => {
+  it("keeps the tag when the rep types a subject over it", async () => {
     const user = userEvent.setup();
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
@@ -2092,11 +2092,37 @@ describe("ComposeModal started from an account", () => {
     const subject = await openReply();
     await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
 
+    // The ordinary thing a rep does next: type the subject. The field is
+    // replaced wholesale, and the tag has to survive that — writing it once
+    // when the picker moved is what lost it.
+    await user.clear(subject());
+    await user.type(subject(), "Re: Kurzer Austausch?");
+
+    await waitFor(() =>
+      expect(subject().value).toBe("[N2P-1] Re: Kurzer Austausch?"),
+    );
+  });
+
+  it("puts the tag back when the subject loses it, while a project is chosen", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+    );
+    const subject = await openReply();
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    // Deleting the tag out of the text is not how a project is unset — the
+    // picker is, and it still names one. Leaving the text without it would put
+    // the field and the picker in two different states, and the send would
+    // honour the picker.
     await user.clear(subject());
     await user.type(subject(), "Re: ohne Tag");
 
+    await waitFor(() => expect(subject().value).toBe("[N2P-1] Re: ohne Tag"));
+
+    // The way to have no tag is to choose No project.
+    await pickOption(user, screen.getByLabelText("Project"), "No project");
     await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    expect(subject().value).toBe("Re: ohne Tag");
   });
 });
