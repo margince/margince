@@ -207,9 +207,16 @@ copy.
 Everything optional is off by default. Turn features on in `margince.env`
 next to the launcher — generated on first run with every supported setting
 documented and commented out, so it doubles as the reference for what exists:
-S3-compatible storage for attachments, Gmail/Outlook capture, outbound
-webhooks, log level, the port, and the credentials that drive the AI
-surfaces.
+Gmail/Outlook capture, outbound webhooks, log level, the port, and the
+credentials that drive the AI surfaces.
+
+Attachments and company logos are **not** in that list: they already work.
+The launcher keeps their bytes in `data/blobs` inside the folder, with the
+database and the rest of the user's records, so an update leaves them alone and
+a copy of `data/` is a complete backup. Set `MARGINCE_BLOBSTORE_PATH` to move
+them elsewhere, or `MARGINCE_BLOBSTORE_ENDPOINT` to keep them in an
+S3-compatible service instead — the endpoint takes precedence when both are
+set. No S3 server is bundled and none is needed.
 
 ```
 # margince.env

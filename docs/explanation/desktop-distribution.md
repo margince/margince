@@ -376,12 +376,19 @@ this properly and is not something the stdlib does; see the known limits.
   mapping to the IANA name `margince.yaml` takes lives in CLDR data no stdlib
   call exposes. The first run is created as `UTC` and the user corrects it in
   one line, rather than the bundle carrying a copy of that table to guess with.
-- **No object storage by default**, so attachment and logo paths degrade
-  until `MARGINCE_BLOBSTORE_*` is set. MinIO relicensed to AGPLv3, which is
-  awkward to redistribute inside a BUSL-1.1 product, so nothing is bundled.
-- **The api starts quietly about everything it cannot do.** Object storage,
-  connectors and webhooks being unconfigured produce no startup warning, so a
-  user who never opens `margince.env` gets no signal.
+- **No object storage SERVICE is bundled.** MinIO relicensed to AGPLv3, which
+  is awkward to redistribute inside a BUSL-1.1 product, so no S3 server ships
+  in the folder. Attachments and logos work anyway: the launcher points the
+  blobstore's filesystem provider at `data/blobs`, which is what a
+  single-machine installation actually wants — speaking S3 to a server on
+  localhost so that server can write to local disk is a hop the seam does not
+  need. What the folder therefore does not have is what a distributed store
+  gives: no replication, no versioning, no signed URLs, and no way for a
+  second api replica to see the same bytes. `MARGINCE_BLOBSTORE_ENDPOINT`
+  still takes precedence for an installation that has a real store.
+- **The api starts quietly about everything it cannot do.** Connectors and
+  webhooks being unconfigured produce no startup warning, so a user who never
+  opens `margince.env` gets no signal.
 - **A launcher killed outright leaves orphans**, on both platforms: the fixed
   UI port is then held and the next start is refused, naming the port. Only the
   Windows database recovers itself.

@@ -27,7 +27,7 @@ type memoryObject struct {
 
 // NewMemory returns an in-memory Store. It is safe for concurrent use.
 //
-//nolint:ireturn // the seam has two providers (memory + s3) behind one Store; returning the interface is the design.
+//nolint:ireturn // the seam has three providers (memory + filesystem + s3) behind one Store; returning the interface is the design.
 func NewMemory() Store {
 	return &memoryStore{objects: make(map[string]memoryObject)}
 }
