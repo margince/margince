@@ -192,8 +192,12 @@ _testdb_worktree_slug() {
   # a directory of pure punctuation does — the answer carries a digest of the full
   # PATH instead of the name alone. Truncating without one would map every name
   # sharing its first 49 characters onto a single template.
+  # sha256, not shasum's default sha1. This digest only disambiguates two
+  # directory names, so the strength is irrelevant to what it does — but a weak
+  # hash in the tree is a security finding whatever it is used for, and arguing
+  # the exception costs more than the flag.
   local digest
-  digest="$(printf '%s' "$raw" | shasum | cut -c1-8)"
+  digest="$(printf '%s' "$raw" | shasum -a 256 | cut -c1-8)"
   if (( ${#name} == 0 )); then
     printf 'wt_%s' "$digest"
     return 0
