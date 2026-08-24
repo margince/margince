@@ -226,12 +226,24 @@
 /*
  * The tray: what has been staged and not yet sent. Sticky at the foot of the
  * deck, because it is the only undo there is and a reader who has scrolled a
- * long card must not lose sight of it — and clear of the phone's fixed
- * navigation, which is what `--phoneNavClearance` is named for.
+ * long card must not lose sight of it.
+ *
+ * The offset is the shell's to state rather than this file's:
+ * `--stickyBottomInset` is the plain ledge wherever nothing floats over the
+ * foot of the page, and the phone-nav clearance at exactly the widths where the
+ * shell draws its fixed bar. A breakpoint of our own here is a second opinion
+ * about where that bar is, and this one was 60px of viewport width out of step
+ * with it — the tray hid behind the nav from 641px to 700px.
+ *
+ * The z-index puts the tray above the live card (1) and above the card flying
+ * off it (2): the tray is the only undo there is, so nothing the deck draws may
+ * cover it. It stays below the phone nav (30) and the modal overlay (50), which
+ * it may not cover either.
  */
 .ddeck-tray {
   position: sticky;
-  bottom: var(--space-2);
+  bottom: var(--stickyBottomInset);
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -248,12 +260,6 @@
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--textPrimary);
-}
-
-@media (max-width: 640px) {
-  .ddeck-tray {
-    bottom: var(--phoneNavClearance);
-  }
 }
 
 /* The list view: the same cards, in their row layout, as a plain list. A list

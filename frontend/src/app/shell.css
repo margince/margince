@@ -1096,6 +1096,20 @@
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
   }
+  /* The bar is fixed over the foot of the content, so every sticky element
+     inside the content column has to stand clear of it. The shell publishes
+     that offset because the shell is what knows the bar is there — a deck tray
+     or a record action bar guessing at its own breakpoint is how the tray came
+     to hide behind the nav between 641px and 700px. */
+  .app {
+    --stickyBottomInset: var(--phoneNavClearance);
+  }
+  /* Rail-less surfaces draw no bar (login, onboarding, booking, the client
+     frame), so a sticky element there stands on the plain ledge. The same
+     exception the .scroll padding below makes, for the same reason. */
+  .app.railless {
+    --stickyBottomInset: var(--space-2);
+  }
   .rail,
   .rail.expanded,
   .rail.collapsed {

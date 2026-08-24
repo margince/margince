@@ -288,7 +288,11 @@
   }
   .record-actions {
     position: sticky;
-    bottom: var(--phoneNavClearance);
+    /* The shell publishes this: the phone-nav clearance at the widths where it
+       draws the fixed bottom bar, the plain ledge everywhere else. This sheet
+       used to name the clearance itself behind its own 720px query, and so
+       stood off a nav that is gone above 700px. */
+    bottom: var(--stickyBottomInset);
     /* Above the page's own content and below the app nav, so neither covers
        the other. The modal overlay (50) still wins over both: an action bar
        across an open dialog would trap a rep behind a button they cannot
@@ -320,7 +324,7 @@
      reserves room for it AND for the nav below it — without this the last row
      of the timeline sits permanently underneath and cannot be scrolled to. */
   .record-zones {
-    padding-bottom: calc(var(--phoneNavClearance) + var(--space-6));
+    padding-bottom: calc(var(--stickyBottomInset) + var(--space-6));
   }
 }
 
