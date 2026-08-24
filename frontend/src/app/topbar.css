@@ -138,7 +138,7 @@
 /* What is waiting on this person. A bare glyph, like `.iconbtn` a row's verb:
    the strip is chrome, and a filled control here would out-shout the trail that
    says where the reader is. */
-.topbar-bell {
+.topbar-decisions {
   position: relative;
   display: grid;
   place-items: center;
@@ -149,17 +149,17 @@
   color: var(--textMeta);
   text-decoration: none;
 }
-.topbar-bell:hover {
+.topbar-decisions:hover {
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-.topbar-bell:focus-visible {
+.topbar-decisions:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
 /* On the glyph rather than beside it, so the count cannot widen the strip and
    push the search off centre as it grows. */
-.topbar-bellcount {
+.topbar-decisioncount {
   position: absolute;
   top: 0;
   right: 0;
@@ -249,7 +249,7 @@
   /* The bottom bar carries Approvals at this width — same queue, same bell, in
      the reach the thumb already covers. A second one up here would be the same
      count twice on a 390px row that has three things on it. */
-  .topbar-bell {
+  .topbar-decisions {
     display: none;
   }
 }
