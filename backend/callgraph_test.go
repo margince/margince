@@ -38,6 +38,75 @@ type graphFunc struct {
 	statements []string
 	calls      map[string]bool
 	reads      map[string]bool
+	// shadowed are names this function DECLARES, so a read of one is a read of
+	// its own binding and not of the package value that happens to share the
+	// spelling.
+	shadowed map[string]bool
+}
+
+// declaredNames collects every identifier a function binds: its parameters and
+// named results, and everything a `:=`, a `var`, a `range` or a type switch
+// introduces in its body.
+//
+// It does not model SCOPE — a name declared inside one block shadows the
+// package value for the whole function as far as this is concerned. That is the
+// conservative direction for the privacy census, which compares two sides and
+// would rather miss a statement on both than add one to the side that does not
+// write it, and it costs the rename census a writer only if somebody names a
+// local after a package-level SQL variable.
+func declaredNames(fn *ast.FuncDecl) map[string]bool {
+	names := map[string]bool{}
+	add := func(expr ast.Expr) {
+		if ident, ok := expr.(*ast.Ident); ok && ident.Name != "_" {
+			names[ident.Name] = true
+		}
+	}
+	for _, list := range []*ast.FieldList{fn.Type.Params, fn.Type.Results} {
+		if list == nil {
+			continue
+		}
+		for _, field := range list.List {
+			for _, name := range field.Names {
+				add(name)
+			}
+		}
+	}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		switch v := node.(type) {
+		case *ast.AssignStmt:
+			if v.Tok == token.DEFINE {
+				for _, lhs := range v.Lhs {
+					add(lhs)
+				}
+			}
+		case *ast.ValueSpec:
+			for _, name := range v.Names {
+				add(name)
+			}
+		case *ast.RangeStmt:
+			add(v.Key)
+			add(v.Value)
+		case *ast.TypeSwitchStmt:
+			if assign, ok := v.Assign.(*ast.AssignStmt); ok {
+				for _, lhs := range assign.Lhs {
+					add(lhs)
+				}
+			}
+		case *ast.FuncLit:
+			for _, list := range []*ast.FieldList{v.Type.Params, v.Type.Results} {
+				if list == nil {
+					continue
+				}
+				for _, field := range list.List {
+					for _, name := range field.Names {
+						add(name)
+					}
+				}
+			}
+		}
+		return true
+	})
+	return names
 }
 
 // packageCallGraph reads one package's product files, keyed by RECEIVER TYPE
@@ -68,6 +137,13 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 			}
 			recvType, recvVar := receiverTypeName(fn), receiverVarName(fn)
 			entry := &graphFunc{calls: map[string]bool{}, reads: map[string]bool{}}
+			// What this function DECLARES is its own, whatever the package
+			// calls something of the same name. Attributing by spelling alone
+			// handed a package-level statement to any function with a local of
+			// that name — a false writer here, and worse in the privacy census,
+			// where an unrelated shadow adds a table to the side that does NOT
+			// clear it and so hides a real divergence.
+			shadowed := declaredNames(fn)
 			ast.Inspect(fn.Body, func(node ast.Node) bool {
 				// Through the package's shared value reader, so a statement
 				// written in double quotes with escapes decodes rather than
@@ -96,15 +172,21 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 				}
 				return true
 			})
+			entry.shadowed = shadowed
 			graph[scrubKey(recvType, fn.Name.Name)] = entry
 		}
 	}
-	// A named statement counts for whoever names it, wherever it lives.
+	// A named statement counts for whoever names it, wherever it lives —
+	// unless that function declared the name itself, in which case it is not
+	// the package's value being named.
 	for _, entry := range graph {
 		for name := range entry.calls {
 			entry.statements = append(entry.statements, held[name]...)
 		}
 		for name := range entry.reads {
+			if entry.shadowed[name] {
+				continue
+			}
 			entry.statements = append(entry.statements, held[name]...)
 		}
 	}
@@ -204,22 +286,28 @@ func receiverVarName(fn *ast.FuncDecl) string {
 // guardedBy reports whether EVERY route to this function passes through one
 // that calls target directly.
 //
-// Existential reachability was the first attempt and it was worthless: "some
-// ancestor of this writer can also reach the re-check" is true of nearly every
-// function in a package that calls the re-check from seven places, so the gate
-// passed with the re-check deleted from BOTH real call sites. Mutation testing
-// is the only reason that is known.
+// The rule is UNIVERSAL, and existential reachability is the trap it avoids:
+// "some ancestor of this writer can also reach target" is true of nearly every
+// function in a package that calls target from several places, so a gate built
+// that way passes with target deleted from every real call site.
 //
-// So the rule is universal instead. A function is guarded when it calls target
+// A function is guarded when it calls target
 // itself, or when it has callers and all of them are guarded. A function with
 // NO callers is an entry point: if it has not called target by then, nothing
 // will, and the write escapes.
 //
-// A cycle is treated as guarded while it is on the stack, which is the only
-// terminating answer and leaves one hole worth naming: a writer that reaches
-// itself and is guarded nowhere else would pass. Nothing in this tree does that
-// today, and the alternative — reporting every recursive function — would be a
-// gate nobody reads.
+// TWO HOLES, both real and neither reported by this function:
+//
+//   - A cycle is treated as guarded while it is on the stack, which is the only
+//     terminating answer. A writer that reaches itself and is guarded nowhere
+//     else therefore passes — a retry loop is the shape that does it.
+//   - "Calls target" is per FUNCTION, not per path. A caller whose two arms are
+//     mutually exclusive — re-check on one, the write on the other — ratifies
+//     the write, and an INCOMING edge this graph cannot follow (a call through
+//     a stored func value) bypasses every guard it did verify.
+//
+// Neither is fixable at this grain; both are named here rather than in a pull
+// request, because this is where the next reader is.
 func guardedBy(graph map[string]*graphFunc, name, target string) bool {
 	callers := map[string][]string{}
 	for caller, entry := range graph {

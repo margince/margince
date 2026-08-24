@@ -6,13 +6,11 @@ package backendarch
 // A company's NAME is the axis on which two records of one company converge, so
 // every rename has to ask whether it just created a duplicate.
 //
-// `companyform.go` said it was "the only writer of that column a human drives".
-// Its two callers are the ones it names — the company form and a site-read
-// confirmation — but it is not the only writer, and the claim invited the next
-// author to stop looking. `recheckOrgNameForDuplicates` has SEVEN independent
-// call sites, each of which had to remember the rule on its own; a rename that
-// forgot would leave two records of one company sitting beside each other with
-// nothing to notice.
+// `recheckOrgNameForDuplicates` is called from a handful of places that each had
+// to remember the rule on their own, and a comment on one of them said it was
+// "the only writer of that column a human drives" — which told the next author
+// the question was settled. A rename that forgot would leave two records of one
+// company sitting beside each other with nothing to notice.
 //
 // This holds the invariant instead of the claim: a function that can reach a
 // statement setting `organization.display_name` or `organization.legal_name`
@@ -38,11 +36,48 @@ const (
 // setsAnOrganizationName matches a statement that moves a name column.
 //
 // An UPDATE only. A CREATE is a different question and is answered elsewhere:
-// `resolveOrCreateOrganization` runs the dedupe match BEFORE it inserts and
-// refuses on a collision, so a row that reaches the INSERT has already been
-// compared against every existing name. Asking it to re-check afterwards would
-// be asking it to compare a row with itself.
+// every path to the one `INSERT INTO organization` (in `createOrganization`)
+// runs the PO-F-2 match first and refuses on a collision —
+// `DedupeOrganizationForCreate`, `resolveOrCreateAnchor` and
+// `manualDedupeOrganization` are the three that feed it. A row that reaches the
+// INSERT has therefore already been compared against every existing name, and
+// asking it to re-check afterwards would be asking it to compare a row with
+// itself.
 var setsAnOrganizationName = regexp.MustCompile(`(?is)UPDATE\s+organization\b[^;]*?\b(display_name|legal_name)\s*=`)
+
+// assemblesAnOrganizationUpdate matches an UPDATE whose COLUMN is a variable,
+// so the statement names no column for the pattern above to find.
+//
+// This is not hypothetical: organization_profile_field_write.go writes
+// `UPDATE organization SET ` + column + ` = $2`, and drives it with
+// "display_name" and "legal_name". The census could not see it as a writer at
+// all — so the promise that a new writer is a finding on the day it is written
+// was false for a shape the tree already contained, and the next author copies
+// what is there.
+//
+// A fragment ending at SET is judged like a named write: the gate cannot know
+// which column arrives, so it asks the same question it asks of one it can read.
+var assemblesAnOrganizationUpdate = regexp.MustCompile(`(?is)UPDATE\s+organization\b[^;]*?\bSET\s*$`)
+
+// withoutSQLNoise removes what a reader can see is not the statement: line
+// comments and single-quoted literals.
+//
+// Both directions were wrong without it. `SET description = $1 -- display_name =`
+// counted as a rename, and `SET description = 'legal_name = x'` did too; the
+// other way, a `;` INSIDE a comment ended the `[^;]*?` scan early and hid a real
+// `legal_name = $2` on the next line. A `--` inside a quoted literal is handled
+// by stripping quotes first; an escaped quote (`”`) closes and reopens, which
+// is the same result for this purpose.
+func withoutSQLNoise(statement string) string {
+	statement = sqlQuoted.ReplaceAllString(statement, "''")
+	return sqlLineComment.ReplaceAllString(statement, "")
+}
+
+// sqlQuoted is a single-quoted literal's body. The comment half of the job is
+// versionguard_test.go's sqlLineComment, which already strips `-- …` for the
+// same reason and is in this package — a second spelling of it here would be
+// two answers to one question.
+var sqlQuoted = regexp.MustCompile(`'[^']*'`)
 
 // remembersTheRecheckItself ratifies a writer that cannot reach the re-check
 // through an edge this graph can follow.
@@ -65,7 +100,7 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 	}
 
 	var findings []string
-	writers := 0
+	writers, named, assembled := 0, 0, 0
 	for name, entry := range graph {
 		if name == renameRecheck {
 			continue
@@ -75,6 +110,11 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 			continue
 		}
 		writers++
+		if assemblesAnOrganizationUpdate.MatchString(withoutSQLNoise(statement)) {
+			assembled++
+		} else {
+			named++
+		}
 		if guardedBy(graph, name, renameRecheck) || remembersTheRecheckItself.Waived(t, name) {
 			continue
 		}
@@ -83,9 +123,15 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 
 	// A census that judged nothing certifies nothing. The floor sits below the
 	// real count so it catches a broken walk rather than a changing tree.
-	if writers < 3 {
-		t.Fatalf("only %d function(s) were seen to write %s, so this census covered almost nothing",
-			writers, organizationName)
+	// Two floors, not one, because a single count hides which half of the walk
+	// broke. Deleting the package-level statement folding leaves three direct
+	// writers standing — enough to clear any one floor while an entire route to
+	// a statement has gone silent.
+	if named < 4 || assembled < 1 {
+		t.Fatalf("this census saw %d named-column writer(s) and %d assembled-column writer(s) "+
+			"(%d in total); it expects at least 4 and 1, so one of the two ways a statement "+
+			"reaches a function has stopped working rather than the tree having changed",
+			named, assembled, writers)
 	}
 	if len(findings) > 0 {
 		t.Errorf("these functions rename an organization, and no route to them calls %s:\n    %s\n\n"+
@@ -102,7 +148,9 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 // can reach.
 func firstRenameStatement(statements []string) (string, bool) {
 	for _, statement := range statements {
-		if setsAnOrganizationName.MatchString(statement) {
+		readable := withoutSQLNoise(statement)
+		if setsAnOrganizationName.MatchString(readable) ||
+			assemblesAnOrganizationUpdate.MatchString(readable) {
 			return strings.Join(strings.Fields(statement), " "), true
 		}
 	}
