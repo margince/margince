@@ -192,6 +192,19 @@
      under the content. */
   position: relative;
 }
+/* The page scrolls UNDER the top strip: the scroller reaches up behind the bar
+   by exactly the bar's height and pads its content back down, so a page's
+   resting position is unchanged and what scrolls past the strip is visible
+   through it (app/topbar.css draws the translucency and the blur).
+
+   `:has` guards the one case where this would hide something. An advisory strip
+   between the bar and the scroller — the economy notice, the reindex notice — is
+   opaque and belongs to the chrome, so while one is up the scroller starts below
+   it and nothing passes under the bar. */
+.main:not(:has(> .appbanner)) > .scroll {
+  margin-top: calc(-1 * var(--topbarH));
+  padding-top: calc(var(--topbarH) + var(--pageGapTop));
+}
 /* The page gutter. Its left inset matches the page head's, so the heading and
    the content beneath it start on the same line — the shell no longer insets
    this column, the column does. */
@@ -251,7 +264,9 @@
  * reader walked into), More at phone width, then the installation's entitlement
  * pinned to the foot. */
 .rail {
-  background: var(--bgElevated);
+  /* Its own ground, a shade off the white page: the application's left edge is
+     visible as a surface rather than only as a hairline. */
+  background: var(--bgSidebar);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
