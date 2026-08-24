@@ -148,7 +148,39 @@ declare_lane_budget() {
 
 # The migrated template every per-package clone is copied from. Exported so the
 # xargs -P worker subshells (fresh bash processes) see it — make_clone reads it.
-export TEMPLATE_NAME="${TEMPLATE_NAME:-margince_test}"
+#
+# ONE template per machine was a cross-session collision, not a saving. This
+# tree is worked in several git worktrees at once by design, and build_template
+# recreates the template from scratch: a parallel session on another branch
+# rebuilds it underneath you, and your lane then fails wholesale with
+# schema-shaped errors that read as your own migration being broken. A linked
+# worktree therefore gets its own template, named after itself.
+#
+# The PRIMARY worktree — and CI, which has no linked worktree — keeps
+# `margince_test` unchanged, so nothing about the existing lane moves.
+#
+# Per WORKTREE rather than per migration-set hash on purpose: migrate_template
+# migrates an EXISTING template up incrementally, which is what keeps the
+# migration-authoring inner loop fast. A content-addressed name would throw that
+# away, since every migration edit would name a database that does not exist yet
+# and rebuild the whole schema from scratch.
+#
+# Underscores, not hyphens: this name is only ever a Postgres identifier, and
+# `margince_test_cfg_retire` needs no quoting where `margince_test_cfg-retire`
+# would. That is a different constraint from dev.sh's bucket_for_slug, which
+# folds the other way for S3 — so the two expressions stay separate rather than
+# being unified into one helper that would be wrong for both.
+_testdb_worktree_slug() {
+  local gitdir commondir
+  gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || return 0
+  commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || return 0
+  [[ "$gitdir" == "$commondir" ]] && return 0
+  basename "$(git rev-parse --show-toplevel)" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9_]/_/g; s/__*/_/g; s/^_//; s/_*$//'
+}
+_testdb_slug="$(_testdb_worktree_slug)"
+export TEMPLATE_NAME="${TEMPLATE_NAME:-margince_test${_testdb_slug:+_${_testdb_slug}}}"
 
 owner_clone_dsn() { local db="$1"; echo "${O_PREFIX}/${db}${O_QUERY:+?$O_QUERY}"; }
 app_clone_dsn()   { local db="$1"; echo "${A_PREFIX}/${db}${A_QUERY:+?$A_QUERY}"; }

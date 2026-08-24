@@ -12,10 +12,11 @@ enforces — so a command copied out of here works from either directory.
 |---|---|
 | `help` | List targets (the default goal) |
 | `install` | One-shot fresh-worktree setup (frontend deps + Go gate binaries + git hooks). The factory's `worktree-init` runs this by name |
-| `dev` | Full local stack: db-up + migrate + `cmd/api` + `cmd/worker` (always on: the outbox relay + Surface-B runner) + the app on `http://localhost:8080` (the api behind it on `:18080`, proxied through). **Sweeps first** (bare invocation): kills every margince api/worker/vite on the machine — recorded, orphaned, or from another checkout — evicts anything holding `:8080`, and drops stray `margince_dev_*` databases, so one stack runs and the app is always on `:8080`. Boots **cold** — the organization + admin bootstrapped from `config/margince.yaml` and nothing else, so onboarding and empty states are the default; `make seed-dev` adds the demo records on top. Returns when ready; the servers run in the background. `DEV_SLUG=<slug>` gives an isolated `margince_dev_<slug>` on slug-derived ports (two worktrees at once). Activates real AI routing only when every cloud provider bound in `config/ai-routing.yaml` has its BYOK key in the environment / `.env.local` (else the offline fake) |
+| `dev` | Full local stack: db-up + migrate + `cmd/api` + `cmd/worker` (always on: the outbox relay + Surface-B runner) + the app on `http://localhost:8080` (the api behind it on `:18080`, proxied through). Starts **this worktree's** stack only and touches no other (`make dev-sweep` is the machine-wide clear). A linked worktree claims its own database, Redis logical database, port pair and object bucket automatically; the primary worktree keeps the shared `margince` on `:8080`. Boots **cold** — the organization + admin bootstrapped from `config/margince.yaml` and nothing else, so onboarding and empty states are the default; `make seed-dev` adds the demo records on top. Returns when ready; the servers run in the background. `DEV_SLUG=<slug>` overrides the derived slug when you want a second stack inside one worktree. Activates real AI routing only when every cloud provider bound in `config/ai-routing.yaml` has its BYOK key in the environment / `.env.local` (else the offline fake) |
 | `dev-fresh` | `make dev-fresh [DEV_SLUG=<slug>]` — `dev` onto a **rebuilt** database: drops it, re-migrates, and boots the installation a first customer gets. Plain `dev` keeps whatever data is there, so a restart for a backend change never costs you a half-finished record |
-| `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]` — bare, it stops **every** dev stack on the machine and frees the ports (the mirror of what `dev` sweeps); with `DEV_SLUG` just that one. `DROP=1` also drops the per-slug `margince_dev_*` databases — never the shared `margince` |
-| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow `.tmp/dev/<slug>/dev.log` coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
+| `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]` — stops **this worktree's** stack and frees its ports. `DROP=1` also drops its per-slug `margince_dev_*` database — never the shared `margince` |
+| `dev-sweep` | `make dev-sweep [DROP=1]` — clears **every** margince dev stack on the machine: every api/worker/vite, recorded, orphaned, or from another worktree, and their claims. `DROP=1` also drops every per-slug `margince_dev_*` database. This is the old bare-`make dev` behaviour, now explicit |
+| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow the stack's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`) coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
 | `db-up` / `infra-up` | Start the dev Postgres 16 (pgvector, port 15432) and Redis 7 (port 16379) containers, create the app role (`infra-up` is an alias) |
 | `db-init` | (Re)apply `scripts/db-init.sql` to the running Postgres |
 | `migrate` | Apply core + custom migrations with the owner DSN |
@@ -177,22 +178,55 @@ in `lastactivity_integration_test.go`.
 | `storybook` | The component workbench on `:6006` — the design-system catalog and the story surface `fe-uat` renders. Stories live beside their component as `<name>.stories.tsx` |
 | `fe-uat` | Change-scoped Storybook render+capture UAT for frontend-only diffs: renders THIS branch's changed component's stories in headless Chromium and screenshots them (no live stack, no DB). Fails on an unclean render, an unregistered story, or a changed component with no story. Artifact: `.tmp/fe-uat/manifest.json`. Deliberately **not** in `make check` — the fe-only UAT lane a coordinator runs instead of the full stack. `ARGS="--allow-missing"` |
 
-A `DEV_SLUG` stack is spared while it starts — a slugged `make dev` sweeps
-nothing, so it can come up beside the base stack. It is NOT spared afterwards:
-the next **bare** `make dev` stops it like any other and drops its per-slug
-database, because exclusivity is what that sweep is for. Tear yours down
-explicitly when you are done with it:
+## One stack per worktree
 
-```sh
-DEV_SLUG=x make dev-stop DROP=1
-```
+`make dev` runs a full stack that will not collide with another worktree's: the
+ONE shared infra (Postgres/Redis/MinIO on `15432`/`16379`/`29000`), but a private
+database, a private **Redis logical database**, a private object bucket, and its
+own api/FE port pair.
 
-Re-running `make dev DEV_SLUG=x` while that stack is already up does not restart
-it: slugged startup sweeps nothing, so it stops at the port guard with `port
-:… already in use`. Stop it first.
+Nothing has to be passed for that. A **linked worktree** derives its slug from
+its own directory name, so `.claude/worktrees/cfg-retire` gets
+`margince_dev_cfg-retire`. The **primary worktree** keeps the shared `margince`
+database, Redis db 0 and the app on the base `:8080`, because `make migrate`,
+`make seed-dev` and `make verify-boot` all target that database by name.
+`DEV_SLUG=<slug>` overrides the derived name when you want a second stack inside
+one worktree.
 
-`DROP=1` removes the per-slug databases; without it the stack stops and its data
-stays.
+Logs, pids and claims live under `$XDG_STATE_HOME/margince/dev/<slug>/`
+(`~/.local/state/...` by default) — **one directory per machine, not per
+worktree**. That is load-bearing rather than tidy: the registry below is only a
+registry if every worktree reads the same one.
+
+**The Redis index is isolation, not tidiness.** The stream names and consumer
+groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
+share one consumer group: whichever worker reads an entry first consumes it,
+resolves it against its OWN Postgres, finds nothing, and acks. The other
+stack's event is gone, and a projection or accrual that never runs looks
+exactly like a broken feature — it cost a day and a wrongly-filed critical bug
+once.
+
+The instance serves 80 databases in three blocks: **0** is the primary
+worktree's stack, **1–63** the parallel integration lane (one per package, which
+`FLUSHDB`s), and **64–79** per-worktree stacks. A stack takes the lowest free
+index in its block, claimed under a lock and recorded in the machine-global
+registry, so restarting reclaims its own index and two stacks never share one. A
+17th concurrent stack is refused rather than doubled up.
+
+**Ports are claimed the same way, from 8081–8179 (api at +10000).** They used to
+be derived from `8080 + cksum(slug) % 1000`, and two hashes differing by a
+multiple of the block size took different ports and the SAME Redis database — a
+collision the port check could not see. A claim also skips a port some unrelated
+process is listening on, which a hash cannot.
+
+`make dev-stop [DEV_SLUG=<slug>] [DROP=1]` stops **this worktree's** stack;
+`DROP=1` also drops its per-slug database, never the shared `margince`.
+
+`make dev-sweep [DROP=1]` clears **every** stack on the machine — every
+api/worker/vite, recorded, orphaned, or belonging to another worktree — and is
+the only thing that does. It used to be what a bare `make dev` did on the way up,
+which made the routine command the destructive one: it killed every parallel
+session's stack and dropped databases another agent was mid-test against.
 
 ## The API is a compiled binary, and Vite is not
 
@@ -207,51 +241,17 @@ answering perfectly happily, so the SPA calls endpoints it has never heard of an
 the app breaks in ways that look exactly like a bug in the code you just wrote. An
 old server is indistinguishable from a broken feature.
 
-The same shape catches you across branches, and this working tree is often shared
-with parallel agent sessions that switch branches underneath you. So before you
-trust **any** manual test, confirm both:
+The same shape catches you across branches, and this tree is often worked in
+several worktrees at once. So before you trust **any** manual test, confirm both:
 
 - `git branch --show-current` is the branch you think it is, and
 - the **API** process was started *after* your last backend change. That is the
-  one on `:18080` (or the slug's API port) — `:8080` is Vite, which hot-reloads,
-  so its start time tells you nothing about the binary that does not.
+  one behind the app port — `:18080` for the primary worktree, a claimed port for
+  a linked one, both printed by the startup banner. The app port itself is Vite,
+  which hot-reloads, so its start time tells you nothing about the binary that
+  does not.
 
 Neither costs anything to check, and skipping them costs a debugging session.
-
-## Isolated stack per worktree
-
-`make dev DEV_SLUG=<slug>` runs a full stack that won't collide with another
-worktree's: the ONE shared infra (Postgres/Redis on `15432`/`16379`), but a
-private database `margince_dev_<slug>`, a private **Redis logical database**,
-and api/FE ports derived deterministically from the slug (the FE's `/v1` proxy
-follows the api via `BACKEND_PORT`). Logs + stop handle live under
-`.tmp/dev/<slug>/`. Bare `make dev` uses the shared `margince` database, Redis
-db 0, and the app on the base `:8080`. Stop either with
-`make dev-stop [DEV_SLUG=<slug>] [DROP=1]`.
-
-**The Redis index is isolation, not tidiness.** The stream names and consumer
-groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
-share one consumer group: whichever worker reads an entry first consumes it,
-resolves it against its OWN Postgres, finds nothing, and acks. The other
-stack's event is gone, and a projection or accrual that never runs looks
-exactly like a broken feature — it cost a day and a wrongly-filed critical bug
-once.
-
-The instance serves 80 databases in three blocks: **0** is bare `make dev`,
-**1–63** the parallel integration lane (one per package, which `FLUSHDB`s), and
-**64–79** slugged stacks. A slug takes the lowest free index in its block,
-claimed under a lock and recorded in `.tmp/dev/<slug>/env`, so restarting a
-slug reclaims its own and two slugs never share one. Deliberately not the port
-hash: two hashes differing by a multiple of the block size would take different
-ports and the SAME database, a collision the port check cannot see. The startup
-banner prints the index. A 17th concurrent slugged stack is refused rather than
-doubled up.
-
-A slugged stack is the one thing `make dev`'s sweep does not perform — it
-sweeps nothing itself, so it can start alongside the base stack. But the next
-**bare** `make dev` takes it down and drops its database: exclusivity is the
-whole point of the sweep, and an isolated env is a deliberate, temporary
-exception to it.
 
 ## Root-only (craftsmanship gate)
 
@@ -263,6 +263,7 @@ exception to it.
 | `secret-scan` | No hardcoded credential reaches `main`: gitleaks over a clean `git archive HEAD` export, policy in `.gitleaks.toml`. Scans the committed tree, not the working tree — gitleaks ignores `.gitignore`, so an in-place scan would read a sibling worktree or your real `.env.local` and differ per machine. Installs nothing on your machine and needs no account: `scripts/gitleaks-pin.sh` fetches the version- and checksum-pinned scanner into `.tmp/` on first use, so the binary — and therefore the verdict — is the one CI's `secret-scan` job runs on every non-draft change |
 | `test-api-entrypoint` | Prove `scripts/deploy/api-entrypoint.sh` writes the bootstrap admin credential **only** onto an unprovisioned installation, retires one a previous boot left, and refuses to start when its probe cannot answer. Stubs `margince-migrate`/`margince-api` on `PATH`, so it needs no container and no database. Every failure on that path is silent — a credential written to a live installation looks exactly like one that was not — and the entrypoint runs where nobody is watching. CI runs it beside the secret gate |
 | `test-dev-dsn` | Prove `scripts/dev.sh` resolves its DSNs through the same names the binaries read (`MARGINCE_OWNER_DSN` / `MARGINCE_DSN`) after an explicit `OWNER_DSN`/`APP_DSN` argument, still names the database itself so a `DEV_SLUG` stack cannot land on the base one, carries a query string like `?sslmode=require` across the swap, and never echoes a DSN. Pure shell — no Docker, no database |
+| `test-dev-isolation` | Prove two worktrees get two stacks: the slug is derived from the worktree, the Redis logical database and the port pair are CLAIMED from one machine-global registry rather than hashed, a port with a foreign listener is skipped, an exhausted block is refused rather than doubled up, and the integration lane's template is per worktree. Pure shell — no Docker, no database |
 | `test-secret-scan` | Prove `secret-scan` still catches: plant a credential-shaped token in each file `.gitleaks.toml` exempts, and require the scan to fail anyway. An over-broad allowlist reports "no leaks found" exactly like a clean tree — this is the only thing that tells them apart. CI runs it right after the scan |
 | `check-craft-doc` | Assert AGENTS.md still carries its `## Craftsmanship` section — a cheap doc floor so the gate's rules cannot be silently unpinned from the rulebook. A `check-backend` prerequisite |
 
@@ -335,7 +336,7 @@ outranks the environment, so a value set in `.env.local` was inert for the whole
 dev stack before this.
 
 Two things the stack keeps for itself whatever DSN it is handed. It **names the
-database**, so `DEV_SLUG=x` reaches `margince_dev_x` on slug-derived ports and
+database**, so `DEV_SLUG=x` reaches `margince_dev_x` on its claimed ports and
 never the base database a supplied DSN happened to name. And `--fresh` still
 refuses when the effective owner DSN is not the compose Postgres, because it
 drops through the compose container while migrations follow the DSN. A query

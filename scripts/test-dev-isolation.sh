@@ -172,6 +172,33 @@ check "" "$(pick_free_db || true)" \
 check "1" "$(pick_free_db >/dev/null 2>&1; echo $?)" \
       "and it reports failure rather than returning success with an empty answer"
 
+echo "lib-testdb.sh: the integration lane's template is per worktree"
+
+# Lifted from lib-testdb.sh for the same reason everything above is lifted from
+# dev.sh. Exercised inside a THROWAWAY repository rather than this one, because
+# the answer depends on whether the caller sits in a primary worktree or a
+# linked one, and this checkout can only ever be one of the two.
+testdb="$root/scripts/lib-testdb.sh"
+eval "$(awk '
+    index($0, "_testdb_worktree_slug() ") == 1 { inside = 1 }
+    inside                                     { print }
+    inside && $0 == "}"                        { exit }
+' "$testdb")"
+
+probe="$(mktemp -d)"
+git init -q "$probe/primary"
+(
+    cd "$probe/primary"
+    git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+    git worktree add -q "$probe/linked" --detach
+)
+
+check "" "$(cd "$probe/primary" && _testdb_worktree_slug)" \
+      "a primary worktree yields no slug, so CI and the main checkout keep margince_test"
+check "linked" "$(cd "$probe/linked" && _testdb_worktree_slug)" \
+      "a linked worktree yields its own name, so a parallel branch cannot rebuild your template"
+rm -rf "$probe"
+
 if [ "$failures" -gt 0 ]; then
     printf 'FAIL: %d check(s) failed\n' "$failures" >&2
     exit 1

@@ -2,10 +2,12 @@
 # One-command local dev stack on the ONE shared infra: Postgres + Redis, the api
 # (cmd/api), the background worker (cmd/worker — outbox relay + Surface-B runner),
 # and the Vite dev server — so the SPA runs in a real browser against a live api.
-# Bare `make dev` serves the app on :8080 (the api behind it on :18080);
-# `make dev DEV_SLUG=<slug>` gives an isolated `margince_dev_<slug>` database on
-# slug-derived ports, so two worktrees can run concurrently without colliding on
-# the database or the host ports.
+# One stack per WORKTREE, so several agent sessions can run at once. The primary
+# worktree serves the app on :8080 (the api behind it on :18080) against the
+# shared `margince` database; every linked worktree derives its own slug from
+# its directory name and claims its own database, Redis logical database, port
+# pair and object bucket — no flag to remember. `DEV_SLUG=<slug>` overrides the
+# derived name.
 #
 # MARGINCE_ENV=dev relaxes the production-only postures (an unlicensed install
 # warns rather than refuses, the data reset is reachable). It does NOT switch on
@@ -26,10 +28,12 @@
 # no secret literal beyond the shared dev defaults, and there is one set of names
 # rather than two.
 #
-#   scripts/dev.sh up   [slug] [--fresh]  # spin infra + db + api + FE
-#   scripts/dev.sh stop [slug] [--drop]   # stop servers; --drop also drops the db
+#   scripts/dev.sh up    [slug] [--fresh]  # spin infra + db + api + FE
+#   scripts/dev.sh stop  [slug] [--drop]   # stop THIS stack; --drop also drops its db
+#   scripts/dev.sh sweep       [--drop]    # stop EVERY stack on the machine
 set -euo pipefail
-# Runtime state under .tmp/dev/ (logs, pids) — keep everything this script
+# Runtime state (logs, pids, claims) lives under dev_state_root below, one
+# directory per machine rather than per worktree — keep everything this script
 # writes owner-only.
 umask 077
 
@@ -530,19 +534,20 @@ drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left
 
 case "$cmd" in
 up)
-  if [[ -z "$slug" ]]; then
-    # Bare `make dev` is the exclusive stack: clear the machine first, so the
-    # ports below are free by construction and the browser can only be talking
-    # to the api this command starts.
-    sweep_stacks
-  fi
-  # Belt and braces after the sweep, and the only guard a slugged env gets: a
-  # bound port must stop the boot, because binding would fail silently and
+  # `make dev` starts THIS worktree's stack and touches nobody else's. It used
+  # to sweep the machine first — every margince process, every recorded stack,
+  # every per-slug database — which made one engineer's routine command destroy
+  # every parallel session's stack, including the one another agent was
+  # mid-test against. The sweep is now `dev-sweep`, asked for by name.
+  #
+  # A bound port must still stop the boot: binding would fail silently and
   # wait_ready would then read "ready" off the OLD server. (Vite without
   # --strictPort would not even fail — it would walk to a port we never poll.)
   for _p in "$api_port" "$fe_port"; do
     if [[ -n "$(port_listeners "$_p")" ]]; then
-      echo "FAIL: port :${_p} already in use — is $label already running? (make dev-stop${slug:+ DEV_SLUG=$slug})" >&2
+      echo "FAIL: port :${_p} already in use — is $label already running?" >&2
+      echo "  Stop it:                      make dev-stop${slug:+ DEV_SLUG=$slug}" >&2
+      echo "  Or clear every stack here:    make dev-sweep" >&2
       exit 1
     fi
   done
@@ -557,13 +562,6 @@ up)
   {
     echo "=== infra + db ==="
     make db-up
-    # The stray-database sweep runs HERE, not with the process sweep above:
-    # every statement it issues goes through the compose Postgres, so running
-    # it before db-up on a stopped stack would connect to nothing, fail
-    # silently, and leave the databases to reappear the moment infra starts.
-    if [[ -z "$slug" ]]; then
-      drop_stray_dev_dbs
-    fi
     # --fresh means "the install a first customer gets": drop the database
     # and let the migrations and the bootstrap rebuild it. Deliberately not
     # the default — a restart to pick up a backend change must not cost the
@@ -905,18 +903,7 @@ up)
   ;;
 
 stop)
-  if [[ -z "$slug" ]]; then
-    # The mirror of `up`: bare dev-stop clears the machine, so `make dev-stop`
-    # is a promise you can trust before starting anything else. Stray databases
-    # are left alone unless DROP=1 asks for them — stopping is not deleting.
-    sweep_stacks
-    echo "stopped every dev stack (freed :$api_port :$fe_port)"
-    if [[ "$drop" == "1" ]]; then
-      drop_stray_dev_dbs
-      echo "note: the shared 'margince' database is kept — DROP=1 only removes the per-slug ones" >&2
-    fi
-    exit 0
-  fi
+  # This worktree's stack, and only it. `dev-sweep` is what clears the machine.
   if [[ -f "$state" ]]; then
     # shellcheck disable=SC1090
     . "$state"
@@ -948,8 +935,24 @@ stop)
   fi
   ;;
 
+sweep)
+  # The machine-wide clear, now something you ask for by name. This used to be
+  # what a bare `make dev` did on the way up, so the routine command was also
+  # the destructive one.
+  sweep_stacks
+  echo "swept every dev stack on this machine"
+  if [[ "$drop" == "1" ]]; then
+    # db-up first: drop_stray_dev_dbs issues every statement through the compose
+    # Postgres, so on a stopped stack it would connect to nothing, fail
+    # silently, and leave the databases to reappear the moment infra started.
+    make db-up >/dev/null
+    drop_stray_dev_dbs
+    echo "note: the shared 'margince' database is kept — DROP=1 removes only the per-slug ones" >&2
+  fi
+  ;;
+
 *)
-  echo "usage: dev.sh {up|stop} [slug] [--drop]" >&2
+  echo "usage: dev.sh {up|stop|sweep} [slug] [--drop]" >&2
   exit 2
   ;;
 esac
