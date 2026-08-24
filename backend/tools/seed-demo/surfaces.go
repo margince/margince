@@ -233,9 +233,17 @@ func seedProjects(c *client, refs pipelineRefs, plan map[string]profile, mode ru
 			continue
 		}
 		name := projectNameFor(localeFor(domain), refs.orgNameByID[orgID])
-		if existing[projectIndexKey(orgID, name)] {
+		index := projectIndexKey(orgID, name)
+		if existing[index] {
 			continue
 		}
+		// Claimed in the SAME map the snapshot filled, because the index is no
+		// longer unique per plan entry: two domains that resolve to one
+		// organization derive one name, and a snapshot taken before the loop
+		// cannot see the project the loop itself just created. The old key was
+		// per-domain and could not collide, so this is the cost of indexing by
+		// what the server leaves us.
+		existing[index] = true
 		if mode == modeDryRun {
 			created++
 			continue

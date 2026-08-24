@@ -47,3 +47,21 @@ func TestProjectIndexKeyDistinguishesNameAndOrganization(t *testing.T) {
 		t.Error("two differently named projects in one organization share an index entry")
 	}
 }
+
+// Two domains can resolve to ONE organization — an alias, or two dataset entries
+// merged into the same company — and one organization gives one derived name. The
+// old per-domain key could not collide, so a snapshot taken before the loop was
+// enough; this index can, and a snapshot cannot see what the loop itself created.
+func TestProjectIndexClaimsANameWithinTheSameRun(t *testing.T) {
+	index := map[string]bool{}
+	first := projectIndexKey("org-1", "Acme — Rollout")
+
+	if index[first] {
+		t.Fatal("an empty index reports a project as present")
+	}
+	index[first] = true
+
+	if !index[projectIndexKey("org-1", "Acme — Rollout")] {
+		t.Error("the second plan entry for one organization does not see the first entry's claim, so the project is created twice")
+	}
+}
