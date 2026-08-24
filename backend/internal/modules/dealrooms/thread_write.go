@@ -185,11 +185,11 @@ func postCommentTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, a
 	// Who spoke and what about, read HERE and carried on the event: a name can
 	// change and a document can be retitled or removed, and the timeline entry
 	// this event writes has to keep saying what was true when it happened.
-	authorName, err := commentAuthorName(ctx, tx, by)
+	authorName, named, err := commentAuthorName(ctx, tx, by)
 	if err != nil {
 		return err
 	}
-	docTitle, err := commentDocumentTitle(ctx, tx, at.documentID)
+	docTitle, titled, err := commentDocumentTitle(ctx, tx, at.documentID)
 	if err != nil {
 		return err
 	}
@@ -201,8 +201,12 @@ func postCommentTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, a
 		Side:           by.side(),
 		OpensThread:    at.opensThread,
 		RequiredChange: &at.requiredChange,
-		AuthorName:     authorName,
-		DocumentTitle:  docTitle,
+	}
+	if named {
+		posted.AuthorName = &authorName
+	}
+	if titled {
+		posted.DocumentTitle = &docTitle
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, ids.UUID(room.Id), posted); err != nil {
 		return fmt.Errorf("emit deal_room.comment_posted: %w", err)
@@ -214,7 +218,9 @@ func postCommentTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, a
 // name, and the seller's is their user record. Nil rather than a placeholder
 // when the row has gone — a note that named "Unknown" would be asserting
 // something about the person instead of admitting the record is thin.
-func commentAuthorName(ctx context.Context, tx pgx.Tx, by threadAuthor) (*string, error) {
+// The bool is "there is a name", which is a real answer and not a failure —
+// hence (string, bool, error) rather than a nil pointer standing for both.
+func commentAuthorName(ctx context.Context, tx pgx.Tx, by threadAuthor) (string, bool, error) {
 	var name string
 	var err error
 	switch {
@@ -225,40 +231,34 @@ func commentAuthorName(ctx context.Context, tx pgx.Tx, by threadAuthor) (*string
 		err = tx.QueryRow(ctx,
 			`SELECT display_name FROM app_user WHERE id = $1`, *by.userID).Scan(&name)
 	default:
-		return nil, nil
+		return "", false, nil
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return "", false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the comment author's name: %w", err)
+		return "", false, fmt.Errorf("read the comment author's name: %w", err)
 	}
-	if name == "" {
-		return nil, nil
-	}
-	return &name, nil
+	return name, name != "", nil
 }
 
 // commentDocumentTitle titles the document a thread is about. Nil for a
 // room-level exchange, which is not a missing title but a different kind of
 // thread, and the note says so in its own words.
-func commentDocumentTitle(ctx context.Context, tx pgx.Tx, documentID *ids.UUID) (*string, error) {
+func commentDocumentTitle(ctx context.Context, tx pgx.Tx, documentID *ids.UUID) (string, bool, error) {
 	if documentID == nil {
-		return nil, nil
+		return "", false, nil
 	}
 	var title string
 	err := tx.QueryRow(ctx,
 		`SELECT title FROM deal_room_document WHERE id = $1`, *documentID).Scan(&title)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return "", false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the thread's document title: %w", err)
+		return "", false, fmt.Errorf("read the thread's document title: %w", err)
 	}
-	if title == "" {
-		return nil, nil
-	}
-	return &title, nil
+	return title, title != "", nil
 }
 
 // errThreadResolved refuses a reply to a settled thread: reopening is a new
