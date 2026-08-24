@@ -83,6 +83,7 @@ import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
+import { DealFacts } from "./deal360/dealfacts";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
 import { DealStrip } from "./deal360/dealstrip";
@@ -3054,10 +3055,7 @@ type DealTab = (typeof DEAL_TABS)[number];
  * the record — and withholds both when the reader may not open it, which is
  * why the ids are not printed as a fallback.
  */
-function DealSubtitle({
-  deal,
-  locale,
-}: Readonly<{ deal: Deal; locale: Locale }>) {
+function DealSubtitle({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   // Joined with a visible separator rather than left as bare adjacent spans:
   // record-sub is a plain text line with no gap of its own, so three spans
@@ -3070,15 +3068,9 @@ function DealSubtitle({
   // and the partner are three different things to be refused.
   const masked = deal.masked_fields ?? [];
   const facts: ReactNode[] = [];
-  if (masked.includes("amount_minor")) {
-    facts.push(
-      <>
-        {t("deals.amount")} <FieldGuard mode="masked" />
-      </>,
-    );
-  } else if (deal.amount_minor != null && deal.currency) {
-    facts.push(formatMoney(deal.amount_minor, deal.currency, locale));
-  }
+  // The amount is NOT here. It has a labelled row in DealFacts beside the
+  // name, and it was previously rendered twice in one header — unlabelled
+  // here and again as THE MONEY reading.
   if (masked.includes("organization_id")) {
     facts.push(
       <>
@@ -3461,8 +3453,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           return (
             <RecordView
               name={deal.name}
-              subtitle={<DealSubtitle deal={deal} locale={locale} />}
+              subtitle={<DealSubtitle deal={deal} />}
               zone={recordZone}
+              controls={
+                <DealFacts deal={deal} stages={stages} locale={locale} />
+              }
+              actionsInline
               badges={
                 <DealBadges
                   deal={deal}

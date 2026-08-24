@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { StoryProviders } from "../story-utils";
+import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
+import { DealFacts } from "./dealfacts";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
 import { DealStrip } from "./dealstrip";
@@ -186,6 +187,79 @@ export const SeatsUnsupportedInOverlay: Story = {
   render: () => (
     <StoryProviders>
       <DealSeats pending={false} withheld={false} overlay={true} />
+    </StoryProviders>
+  ),
+};
+
+const STAGES = [
+  { id: "st-1", name: "Qualified" },
+  { id: "st-2", name: "Proposal" },
+];
+
+/**
+ * The three facts beside the deal's name: what it is worth, where it sits on
+ * the board, and whose deal it is.
+ *
+ * The owner is the one that did not exist anywhere on this page before — not
+ * the header, not the rail, not the readings — so "whose deal is this" could
+ * only be answered by opening Edit.
+ */
+export const Facts: Story = {
+  render: () => {
+    // The roster the owner name resolves through — the same read every
+    // EntityRef in the app uses. Without it this story would document the
+    // unresolved-owner fallback as the normal state.
+    installFetchStub({
+      "GET /users": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "u-1",
+              display_name: "Sofia Meier",
+              email: "sofia@example.com",
+            },
+          ],
+          page: { next_cursor: null },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <DealFacts
+          deal={{
+            amount_minor: 6_400_000,
+            currency: "EUR",
+            stage_id: "st-1",
+            owner_id: "u-1",
+          }}
+          stages={STAGES}
+          locale="en"
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * Unassigned, and the amount withheld from this reader.
+ *
+ * Both are stated rather than blank. An empty owner reads as a rendering
+ * fault where "Unassigned" is a fact somebody can act on, and a bare dash for
+ * the value would say "this deal is worth nothing" — a different claim from
+ * "you may not see it".
+ */
+export const FactsWithheldAndUnassigned: Story = {
+  render: () => (
+    <StoryProviders>
+      <DealFacts
+        deal={{
+          amount_minor: null,
+          currency: "EUR",
+          stage_id: "st-2",
+          masked_fields: ["amount_minor"],
+        }}
+        stages={STAGES}
+        locale="en"
+      />
     </StoryProviders>
   ),
 };

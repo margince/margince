@@ -3,10 +3,12 @@
 
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { DealFacts } from "./dealfacts";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
 import { DealStrip } from "./dealstrip";
@@ -311,5 +313,90 @@ describe("the rail says who is on the deal", () => {
     );
     expect(screen.getByText("A contact you cannot read")).toBeInTheDocument();
     expect(screen.getByText("No two-way contact")).toBeInTheDocument();
+  });
+});
+
+// The three facts a rep checks first: value, stage, owner.
+//
+// Before this box the owner was on no part of the page — not the header, not
+// the rail, not the readings — so "whose deal is this" could only be answered
+// by opening Edit. The amount was rendered twice in one header instead.
+describe("the header says what it is worth, where it is, and whose it is", () => {
+  const stages = [
+    { id: "st-1", name: "Qualified" },
+    { id: "st-2", name: "Proposal" },
+  ];
+
+  function showFacts(node: React.ReactNode) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{node}</LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("names the stage rather than showing its id", () => {
+    showFacts(
+      <DealFacts
+        deal={{ amount_minor: 6_400_000, currency: "EUR", stage_id: "st-1" }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.getByText("Qualified")).toBeInTheDocument();
+    expect(screen.queryByText("st-1")).not.toBeInTheDocument();
+  });
+
+  it("says a deal is unassigned rather than leaving the owner blank", () => {
+    showFacts(
+      <DealFacts
+        deal={{ amount_minor: 1000, currency: "EUR", stage_id: "st-1" }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    // An empty value here reads as a rendering fault. "Unassigned" is a fact
+    // about the deal, and it is the one a rep acts on.
+    expect(screen.getByText("Unassigned")).toBeInTheDocument();
+  });
+
+  it("names the field it may not show rather than printing a dash", () => {
+    // A rep who may read the deal but not its amount. A bare "—" would read
+    // as "this deal has no value", which is a different and wrong statement.
+    showFacts(
+      <DealFacts
+        deal={{
+          amount_minor: null,
+          currency: "EUR",
+          stage_id: "st-1",
+          masked_fields: ["amount_minor"],
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.getByText("Value")).toBeInTheDocument();
+    expect(screen.queryByText("—")).not.toBeInTheDocument();
+  });
+
+  it("never prints a stage id the pipeline cannot name", () => {
+    // The case a null stage_id CANNOT test: an id that is present and does not
+    // resolve. An overlay-mirror deal carries the incumbent's own pipeline id,
+    // and a deal read before its pipeline finishes loading has stages empty —
+    // both reach the fallback with a real uuid in hand, and printing it puts a
+    // machine identifier where a reader expects "Qualified".
+    const foreign = "01a02be8-c8d5-7d9b-bb60-a5e1ad68533c";
+    showFacts(
+      <DealFacts
+        deal={{ amount_minor: 1000, currency: "EUR", stage_id: foreign }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.getByText("Stage")).toBeInTheDocument();
+    expect(screen.queryByText(foreign)).not.toBeInTheDocument();
   });
 });

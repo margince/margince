@@ -43,6 +43,11 @@ type dealFacts struct {
 	status         string
 	organizationID ids.UUID
 	lastTouchAt    time.Time
+	// everTouched says an activity has actually been captured against the
+	// deal, which lastTouchAt cannot answer: it coalesces to the creation
+	// date, so a deal nobody has contacted and one contacted the day it was
+	// written down carry the same instant.
+	everTouched bool
 }
 
 // readDealFacts loads the deal row the rules decide on.
@@ -56,8 +61,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 	var out dealFacts
 	var org *ids.UUID
 	err := tx.QueryRow(ctx, `
-		SELECT status, organization_id, coalesce(last_activity_at, created_at)
-		  FROM deal WHERE id = $1`, dealID).Scan(&out.status, &org, &out.lastTouchAt)
+		SELECT status, organization_id, coalesce(last_activity_at, created_at),
+		       last_activity_at IS NOT NULL
+		  FROM deal WHERE id = $1`, dealID).Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}

@@ -53,6 +53,7 @@ type Service struct {
 	deals          *deals.Store
 	activities     *activities.Store
 	rooms          *dealrooms.Store
+	seatsOf        SeatReader
 	lane           Completer
 	routingVersion string
 	now            func() time.Time
@@ -61,6 +62,15 @@ type Service struct {
 // NewService binds the reads. Each store carries its own gates.
 func NewService(pool *pgxpool.Pool, d *deals.Store, a *activities.Store, r *dealrooms.Store, now func() time.Time) *Service {
 	return &Service{pool: pool, deals: d, activities: a, rooms: r, now: now}
+}
+
+// WithSeats binds the read that says who is on the deal. Without it the card
+// is written from the deal and its timeline alone, which is what it did before
+// the seats were reachable — a working card that cannot name a first move on a
+// deal nobody has contacted yet.
+func (s *Service) WithSeats(read SeatReader) *Service {
+	s.seatsOf = read
+	return s
 }
 
 // WithLane binds the deal_health lane that writes the card's words. Without
@@ -82,7 +92,12 @@ type facts struct {
 	moreTasks bool
 	room      *crmcontracts.DealRoom
 	threads   []crmcontracts.DealRoomThread
-	now       time.Time
+	// seats are the people on the deal with their roles. Empty when nobody is
+	// named AND when the reader may not read the stakeholder edge — the card
+	// cannot tell those apart and says nothing about seats in either case,
+	// which is the honest answer for both.
+	seats []Seat
+	now   time.Time
 	// lang is the installation's base language, which the card is written in.
 	// A status card is filed on the deal and read by anyone who opens it, so it
 	// takes the shared language rather than the reader's — the same rule that
@@ -201,6 +216,20 @@ func (s *Service) write(
 	if s.lane == nil || !askModel {
 		return floor, false
 	}
+	// A deal with nothing to cite cannot be written by the model, so it is not
+	// asked. Every story sentence must carry a citation that resolves against
+	// the timeline or the open tasks (keepGrounded), and ParseStatus refuses a
+	// reply whose story is then empty — so with neither, the lane's answer is
+	// discarded whatever it says. Asking anyway spent a model call and up to
+	// laneDeadline of the reader's wait to arrive at the floor that was
+	// already in hand.
+	//
+	// This is a REFUSAL TO ASK, not a new degrade: the card served here is the
+	// same floor the same deal got before, and generated_by already says
+	// deterministic. What changes is that the reader gets it at once.
+	if len(citableIDs(in)) == 0 {
+		return floor, false
+	}
 	laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)
 	defer cancel()
 	written, err := s.ask(laneCtx, in, f.lang)
@@ -254,6 +283,13 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	f.openTasks, f.moreTasks = open, more
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
+	}
+	if s.seatsOf != nil {
+		seats, err := s.seatsOf(ctx, dealID, f.now)
+		if err != nil {
+			return facts{}, fmt.Errorf("deal status: reading who is on the deal: %w", err)
+		}
+		f.seats = seats
 	}
 	f.lang = identity.BaseLanguageForPrompt(ctx, s.pool)
 	return f, nil
