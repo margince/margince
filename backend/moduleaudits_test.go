@@ -70,21 +70,27 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// row carrying NO workspace_id — it is installation configuration, not a
 	// tenant record, so there is no record history for it to join.
 	//
-	// TWO domain acts reach it, and both carry their own audit row, which is why
-	// the vault row is that act's storage rather than a second fact:
+	// The waiver rests on WHERE the row is written from, not on a list of
+	// writers. keyvault is a platform seam: every caller receives its Vault from
+	// compose and performs the domain act in its own module, which is where that
+	// act's history belongs — capture connecting a channel, integrations
+	// connecting an API key, overlay sealing a token, compose sealing a
+	// deployment or provider secret. Filing the vault row as well would record
+	// one change twice, the second time under an entity type that is a secret's
+	// reference.
 	//
-	//   - capture's connect/disconnect on a channel connection, audited under
-	//     those verbs.
-	//   - the deployment-secret seal at boot (compose/deploymentsecretseal.go
-	//     puts the SMTP password and the license token), whose SETTINGS write
-	//     carries the audit row and stamps secretSealActor so it is
-	//     distinguishable from the routing seed.
+	// Stated as an invariant BECAUSE an enumeration here was wrong twice. The
+	// first form named one act; the second named two and called them the only
+	// ones. There are eight writers, and no test holds a count, so any number in
+	// this comment is a claim that rots — which is CLAUDE.md rule 4 exactly.
 	//
-	// Naming only the first was the original form of this waiver, and an
-	// incomplete rationale is the failure mode here rather than a wrong one: the
-	// next reader checks the act that is named, finds it audited, and never
-	// learns there was a second path to check at all.
-	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; both acts that reach it — capture's connect/disconnect and the boot-time deployment-secret seal — carry their own audit row, and the vault row is that act's storage rather than a second fact",
+	// ONE writer records nothing, and it is named rather than covered:
+	// capture/credentialbackfill.go relocates a legacy credential into the vault
+	// on every worker boot with no audit row, no system log and no event. That is
+	// https://github.com/margince/margince/issues/2552, filed rather than waived
+	// here, because whether a raw relocation should log at all is capture's
+	// posture to decide and not something this waiver gets to assume.
+	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; keyvault is a seam whose callers each audit their own act in their own module, and the vault row is that act's storage rather than a second fact — except capture's boot-time credential relocation, which records nothing (#2552)",
 
 	// Operational state whose DOMAIN writes are audited elsewhere.
 	"internal/modules/agents": "agent_run and runner_job are runner lifecycle bookkeeping. The domain writes a run performs happen inside the TOOLS it calls, and those carry the full audit and outbox shape — auditing the run row as well would file the same change twice under two entity types",

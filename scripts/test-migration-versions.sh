@@ -19,6 +19,7 @@ cd "$(dirname "$0")/.."
 
 GATE_SRC="$(pwd)/scripts/check-migration-versions.sh"
 fails=0
+case_fails=0
 ran=0
 
 # fixture <dir> — a git repo whose base commit carries three core migrations.
@@ -29,7 +30,7 @@ fixture() {
   # fixture; pointing the real one at a fixture directory just makes it examine
   # the real tree and report a skip, which every case would then "pass".
   cp "$GATE_SRC" "$dir/scripts/check-migration-versions.sh"
-  git -C "$dir" init -q
+  git -C "$dir" init -q --template=
   git -C "$dir" config user.email probe@example.com
   git -C "$dir" config user.name probe
   for v in 0001_alpha 0002_beta 0003_gamma; do
@@ -39,22 +40,44 @@ fixture() {
   git -C "$dir" add -A
   git -C "$dir" commit -qm base
   git -C "$dir" branch -q base
+  # Assert the repository is the one we meant to build. Without this, a git that
+  # resolved somewhere else leaves an empty $dir and a green case: the gate finds
+  # no namespace, skips, and exits 0, which is what four of the ten cases want.
+  [ -d "$dir/.git" ] || return 1
+  [ -f "$dir/backend/migrations/core/0001_alpha.up.sql" ] || return 1
 }
 
-# HERMETIC BY CONSTRUCTION: nothing the caller exported decides a verdict here.
+# HERMETIC: nothing the caller exported decides a verdict here, and nothing this
+# script does reaches outside its own temp directory.
 #
-# This line is not defensive tidiness — the harness shipped without it and went
-# green having proved nothing. CI declares MIGRATION_VERSIONS_BASELINE_RESET=1
-# for the whole deterministic-gates job (ci.yml sets it at job level so the
-# consolidation could land), so every case below that expects the gate to ENFORCE
-# inherited the declaration, ran in REPORTING mode, and saw exit 0 where it
-# wanted exit 1. It failed in CI and passed on a developer's machine, which is
-# the wrong way round for a gate.
-#
-# The deterministic-gates job is therefore this line's standing regression test:
-# it is the one environment that has the variable set, so if the unset is ever
-# removed, CI says so on the next push.
+# The gate's own switch, first. ci.yml sets MIGRATION_VERSIONS_BASELINE_RESET=1
+# on the `make check-backend` STEP, which is where this target runs, so every
+# case below that expects the gate to ENFORCE inherited the declaration, ran in
+# REPORTING mode, and saw exit 0 where it wanted exit 1. It failed in CI and
+# passed on a developer's machine, which is the wrong way round. That step is now
+# this line's standing regression test: it is the one environment that sets the
+# variable, so removing the unset goes red on the next push.
 unset MIGRATION_VERSIONS_BASELINE_RESET
+unset MIGRATION_VERSIONS_REQUIRE_BASE
+
+# git's environment, second, and this half is about damage rather than a wrong
+# verdict. `git -C "$dir"` changes the WORKING DIRECTORY only — it does not
+# override GIT_DIR. With GIT_DIR exported, `git init` never creates $dir/.git and
+# every command below lands in the surrounding repository instead: the identity
+# writes overwrite its local user.name/user.email, and `commit` puts a real
+# commit on its current branch deleting the tracked tree. `rm -rf "$dir"` then
+# takes away the temp dir and leaves that behind, and `fixture` returns 0, so
+# nothing reports it.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+      GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_CEILING_DIRECTORIES
+
+# The caller's git CONFIG, third. `git init` honours a global init.templateDir,
+# which copies hooks into the fixture that `git commit` then EXECUTES, and a
+# global absolute core.hooksPath runs the developer's real hooks against a temp
+# directory. /dev/null for both scopes is the only way to be sure which config a
+# verdict was reached under. (The repo-local core.hooksPath the Makefile sets is
+# relative, so it cannot reach out of the fixture.)
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_TERMINAL_PROMPT=0
 
 # expect <name> <want-exit> <declared-reset> <mutation-fn> <want-diagnostic>
 #
@@ -78,6 +101,7 @@ expect() {
     printf 'FAIL  %s\n      building the fixture failed, so nothing was tested\n' "$name" >&2
     rm -rf "$dir"
     fails=$((fails + 1))
+    case_fails=$((case_fails + 1))
     return
   fi
   if ! "$mutate" "$dir" >/dev/null 2>&1; then
@@ -85,6 +109,7 @@ expect() {
       "$name" "$mutate" >&2
     rm -rf "$dir"
     fails=$((fails + 1))
+    case_fails=$((case_fails + 1))
     return
   fi
 
@@ -100,6 +125,7 @@ expect() {
     printf 'FAIL  %s\n      exit %s, want %s\n' "$name" "$rc" "$want" >&2
     printf '%s\n' "$out" | sed 's/^/      | /' >&2
     fails=$((fails + 1))
+    case_fails=$((case_fails + 1))
     return
   fi
   if ! printf '%s' "$out" | grep -qF -- "$diagnostic"; then
@@ -108,6 +134,7 @@ expect() {
     printf '      so this case was satisfied by some OTHER outcome than the one it planted\n' >&2
     printf '%s\n' "$out" | sed 's/^/      | /' >&2
     fails=$((fails + 1))
+    case_fails=$((case_fails + 1))
     return
   fi
   printf 'ok    %s\n' "$name"
@@ -165,12 +192,10 @@ partial_rewrite() {
 # Renaming a namespace's files one-for-one: shares no version, but does not
 # collapse, so it is a rebase accident rather than a consolidation.
 renames_without_collapsing() {
-  local core="$1/backend/migrations/core"
   for pair in 0001_alpha:0001_one 0002_beta:0002_two 0003_gamma:0003_three; do
     git -C "$1" mv "backend/migrations/core/${pair%%:*}.up.sql" "backend/migrations/core/${pair##*:}.up.sql"
     git -C "$1" mv "backend/migrations/core/${pair%%:*}.down.sql" "backend/migrations/core/${pair##*:}.down.sql"
   done
-  : "$core"
 }
 
 # One version claimed twice in the working tree: the namespace will not load.
@@ -237,8 +262,16 @@ if [ "$declared_cases" -ne "$expected_cases" ]; then
   fails=$((fails + 1))
 fi
 
+# case_fails and fails are counted apart, because a census failure is not a case
+# failure: reporting "1 of 10 case(s) failed" when all ten passed sends the
+# reader looking through the cases for a defect that is in the accounting.
 if [ "$fails" -ne 0 ]; then
-  printf 'FAIL: test-migration-versions — %s of %s case(s) failed\n' "$fails" "$ran" >&2
+  if [ "$case_fails" -ne 0 ]; then
+    printf 'FAIL: test-migration-versions — %s of %s case(s) failed\n' "$case_fails" "$ran" >&2
+  fi
+  if [ "$fails" -ne "$case_fails" ]; then
+    printf 'FAIL: test-migration-versions — the case census above did not add up\n' >&2
+  fi
   exit 1
 fi
 printf 'OK: test-migration-versions — %s case(s), including every branch of the baseline-reset declaration\n' "$ran"
