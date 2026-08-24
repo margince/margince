@@ -41,7 +41,7 @@ import (
 	"testing"
 )
 
-// ceilingFor returns the budget for a page, by the directory that owns it.
+// docsPageCeiling returns the budget for a page, by the directory that owns it.
 //
 // These numbers are MEASURED, not chosen. Each is roughly 1.5x its section's
 // 75th percentile today, which makes the gate an outlier detector rather than a
@@ -54,7 +54,7 @@ import (
 // through, which is a waiver that has rotted on arrival and reads to the next
 // author as a list of pages allowed to be long. At these numbers it is 10, and
 // six of those are within a quarter of their budget.
-func ceilingFor(rel string) int {
+func docsPageCeiling(rel string) int {
 	switch {
 	case strings.HasPrefix(rel, "docs/how-to/"), strings.HasPrefix(rel, "docs/tutorials/"):
 		return 350
@@ -63,7 +63,10 @@ func ceilingFor(rel string) int {
 	case strings.HasPrefix(rel, "docs/principles/"):
 		return 250
 	default:
-		// reference/, evidence/, and the two pages at the docs/ root.
+		// Anything not named above — today reference/, evidence/ and the docs/
+		// root, but written as "the rest" so a new section gets a budget the day
+		// it appears instead of falling through a list that stopped describing
+		// the tree.
 		return 400
 	}
 }
@@ -82,8 +85,14 @@ const (
 )
 
 // generatedDocMarker is what a generated page says about itself in its opening
-// lines. Every generator in this tree writes one, and the check reads it rather
-// than keeping its own list of which pages are generated.
+// lines. The check reads that rather than keeping its own list of which pages are
+// generated, because a list would go quietly short the day another generator
+// landed.
+//
+// Deliberately NOT claiming every generator writes it: nothing here holds that,
+// and it does not need to. A generator using a different marker would have its
+// page budgeted and would fail this gate loudly — the safe direction — rather
+// than slipping past it.
 const generatedDocMarker = "do not edit by hand"
 
 func isGeneratedDoc(t *testing.T, path string) bool {
@@ -148,6 +157,17 @@ func handWrittenDocsPages(t *testing.T) []string {
 		if err != nil {
 			return err
 		}
+		// filepath.WalkDir does not follow symlinks, so a symlinked directory
+		// under docs/ would be skipped and its pages never counted — the gate
+		// would read a smaller tree and report the same word for it, PASS. That is
+		// the one way a census must not break, so refuse rather than walk past it.
+		// Nothing under docs/ is a link today; this exists so that staying true is
+		// checked rather than assumed.
+		if d.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s is a symlink: this walk does not follow them, so its target "+
+				"would go uncounted and the budget would silently cover a smaller tree. "+
+				"Replace it with the real file or directory", path)
+		}
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
 			return nil
 		}
@@ -168,7 +188,7 @@ func handWrittenDocsPages(t *testing.T) []string {
 	return pages
 }
 
-func lineCount(t *testing.T, rel string) int {
+func docsPageLineCount(t *testing.T, rel string) int {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join(docsTreeRoot, rel))
 	if err != nil {
@@ -186,7 +206,7 @@ func TestEveryHandWrittenDocsPageFitsItsBudget(t *testing.T) {
 	waived := readDocsWaivers(t)
 
 	for _, rel := range pages {
-		ceiling, got := ceilingFor(rel), lineCount(t, rel)
+		ceiling, got := docsPageCeiling(rel), docsPageLineCount(t, rel)
 		switch {
 		case got <= ceiling && waived[rel]:
 			// The ratchet's teeth. A page that came under budget must leave the
