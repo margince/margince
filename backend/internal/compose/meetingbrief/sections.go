@@ -26,6 +26,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 )
 
@@ -231,7 +232,7 @@ func goalLine(ask ClaimIn, now time.Time) string {
 	case kindDecision:
 		return fmt.Sprintf("Get the decision %s is holding: %s", ask.PersonName, ask.Body)
 	default:
-		if ask.DueAt != nil && ask.DueAt.Before(now) {
+		if deadline.Passed(ask.DueAt, now) {
 			return fmt.Sprintf("Close out what we owe %s, overdue since %s: %s", ask.PersonName, ask.DueAt.UTC().Format("2 Jan"), ask.Body)
 		}
 		return fmt.Sprintf("Close out what we promised %s: %s", ask.PersonName, ask.Body)
@@ -411,7 +412,7 @@ func riskLine(claim ClaimIn, now time.Time) (string, bool) {
 	}
 	overdue := claim.Kind == kindCommitmentOurs &&
 		claim.Status == statusOpen &&
-		claim.DueAt != nil && claim.DueAt.Before(now)
+		deadline.Passed(claim.DueAt, now)
 	if overdue {
 		return fmt.Sprintf("We are past due to %s on: %s", claim.PersonName, claim.Body), true
 	}

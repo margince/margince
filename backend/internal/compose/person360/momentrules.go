@@ -21,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -229,7 +230,7 @@ func oldestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmco
 		if claim.Kind != crmcontracts.CommitmentOurs || claim.Status != crmcontracts.ConversationClaimStatusOpen {
 			continue
 		}
-		if claim.DueAt == nil || !claim.DueAt.Before(now) {
+		if !deadline.Passed(claim.DueAt, now) {
 			continue
 		}
 		if oldest == nil || claim.DueAt.Before(*oldest.DueAt) {

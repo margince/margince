@@ -174,8 +174,8 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 		// snapshot and documents where canonical data lives (AC-OV-9) —
 		// P7 stays honestly partial until the flip.
 		if err := tx.QueryRow(ctx, `
-			SELECT coalesce(x_incumbent, '') FROM workspace
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`,
+			SELECT coalesce(x_incumbent, '') FROM workspace WHERE id = $1`,
+			storekit.MustWorkspace(ctx),
 		).Scan(&incumbent); err != nil {
 			return fmt.Errorf("export: resolving the workspace's SoR mode: %w", err)
 		}

@@ -271,3 +271,49 @@ func TestTheRequestFencesTheSummaryItCarries(t *testing.T) {
 		t.Fatal("the fence marker carries no nonce")
 	}
 }
+
+// The verdict survives a model that answers the older shape.
+//
+// This is not a hypothetical tolerance. The prompt described `verdict.because`
+// twice — as a list in the shape line, as "one or two sentences" in prose —
+// and the model followed the prose. The decoder refused the string, the whole
+// reply failed to parse, and the card fell back to the deterministic writer on
+// EVERY call, logging a warning nobody read. Deal360 shipped a verdict head
+// that no reader ever saw.
+func TestTheVerdictSurvivesABareStringReason(t *testing.T) {
+	var got replyShape
+	raw := []byte(`{"story":[{"text":"They wrote.","evidence":[]}],` +
+		`"verdict":{"standing":"blocked","because":"Nobody sent the times."},` +
+		`"move_reason":"Answer them."}`)
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("a bare-string reason must parse, not sink the whole reply: %v", err)
+	}
+	if len(got.Verdict.Because) != 1 {
+		t.Fatalf("a bare string is one line, got %d", len(got.Verdict.Because))
+	}
+	if got.Verdict.Because[0].Text != "Nobody sent the times." {
+		t.Errorf("the sentence is kept verbatim, got %q", got.Verdict.Because[0].Text)
+	}
+	if got.Verdict.Standing != "blocked" {
+		t.Errorf("the standing rides along, got %q", got.Verdict.Standing)
+	}
+}
+
+// And the shape the prompt actually asks for still parses, with its citations.
+// Without this the tolerance above could be satisfied by a decoder that threw
+// the list form away.
+func TestTheVerdictKeepsCitationsWhenTheModelSendsTheList(t *testing.T) {
+	var got replyShape
+	raw := []byte(`{"story":[],"verdict":{"standing":"cold","because":` +
+		`[{"text":"Silence since May.","evidence":["a1"]},{"text":"No reply.","evidence":[]}]},` +
+		`"move_reason":"Close it."}`)
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("the list shape must still parse: %v", err)
+	}
+	if len(got.Verdict.Because) != 2 {
+		t.Fatalf("both sentences are kept, got %d", len(got.Verdict.Because))
+	}
+	if len(got.Verdict.Because[0].Evidence) != 1 || got.Verdict.Because[0].Evidence[0] != "a1" {
+		t.Errorf("the citations ride along, got %v", got.Verdict.Because[0].Evidence)
+	}
+}

@@ -140,7 +140,7 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// WithCallStore opts a caller into tracing.
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
-	stamped := router.binding().withConfigSnapshot(cfg.sourceHash, cfg.Embeddings.Dimensions)
+	stamped := router.binding().withConfigSnapshot(cfg)
 	router.bound.Store(&stamped)
 	return router, nil
 }

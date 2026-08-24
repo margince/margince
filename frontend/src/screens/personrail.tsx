@@ -31,7 +31,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../design-system/surfacestate";
-import { formatDayMonth } from "../format/format";
+import { formatDayMonth, relativeDays } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import {
@@ -1372,19 +1372,11 @@ function daysSince(at: string | null | undefined): number | null {
   return Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
 }
 
+// sinceWords is the shared spelling, kept as a local name because two dozen
+// call sites in this file read better with it.
 function sinceWords(
   at: string | null | undefined,
   t: ReturnType<typeof useT>,
 ): string {
-  const days = daysSince(at);
-  if (days == null) {
-    return t("person.strip.never");
-  }
-  if (days <= 0) {
-    return t("person.strip.today");
-  }
-  if (days === 1) {
-    return t("person.strip.yesterday");
-  }
-  return t("person.strip.days", { count: days });
+  return relativeDays(at, t);
 }

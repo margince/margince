@@ -81,8 +81,20 @@ func BindTo(pool *pgxpool.Pool, ws ids.WorkspaceID) *DB {
 
 // Workspace reports which workspace this handle binds, for the callers that
 // need to name it rather than run in it — a job asserting it was wired to the
-// tenant its args declare, above all.
+// tenant its args declare, or a store naming the row its own transaction will
+// write.
+//
+// Nil-safe for the reason Tx, Pool and Bounded are, and with Tx's exact answer:
+// a store built from an un-injected handle is a real thing in this tree, and a
+// caller that asks this before opening a transaction must fail the way it would
+// have failed opening one. Returning the sentinel rather than panicking is what
+// keeps "resolve the workspace, then run" from being more fragile than "run".
 func (d *DB) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
+	if d == nil {
+		return ids.WorkspaceID{}, fmt.Errorf("%w: no database handle was injected; "+
+			"construct this store through compose, which binds the installation's pool",
+			ErrNoWorkspace)
+	}
 	return d.workspace(ctx)
 }
 

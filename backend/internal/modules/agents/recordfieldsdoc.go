@@ -138,6 +138,7 @@ func fieldNotes(shapes map[datasource.EntityType]reflect.Type, patch bool) []str
 	notes = append(notes, activityReachNotes(shapes)...)
 	notes = append(notes, assigneeNote(shapes)...)
 	notes = append(notes, transcriptNote(shapes)...)
+	notes = append(notes, descriptionNote(shapes)...)
 	return append(notes, customFieldNotes(shapes)...)
 }
 
@@ -337,4 +338,22 @@ func transcriptNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	return []string{"A recording of a conversation is logged with " +
 		"`source_system: \"transcript\"` — that value is what has it read for next steps and " +
 		"commitments; any other value stores the text and reads nothing."}
+}
+
+// descriptionNote says what an organization's `description` is FOR, which no
+// shape can show: it is the header's standing answer to what the company sells,
+// and the site read fills it from the company's own website.
+//
+// A caller creating a company while holding a meeting transcript otherwise
+// writes a summary of the MEETING there — true, and about the wrong subject:
+// the header then tells every later reader what one call covered rather than
+// what the company does.
+func descriptionNote(shapes map[datasource.EntityType]reflect.Type) []string {
+	if !describesField(shapes, "description") {
+		return nil
+	}
+	return []string{"An organization's `description` is the header's standing answer to what the " +
+		"company SELLS, and a site read fills it from the company's own website. Omit it rather " +
+		"than summarising a meeting or a document into it; what one conversation covered belongs " +
+		"on that activity."}
 }

@@ -11,6 +11,7 @@ import (
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
@@ -61,7 +62,7 @@ func (a *assembly) readCommitments() error {
 			Subject:    t.Subject,
 			DueAt:      t.DueAt,
 			AssigneeId: uuidPtr(t.AssigneeID),
-			Overdue:    t.DueAt != nil && t.DueAt.Before(a.now),
+			Overdue:    deadline.Passed(t.DueAt, a.now),
 		}
 		if t.AssigneeID != nil {
 			name := t.AssigneeName

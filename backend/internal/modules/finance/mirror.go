@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -463,7 +464,7 @@ func deriveStatus(inv SourceInvoice, open int64, now time.Time) string {
 }
 
 func overdue(inv SourceInvoice, now time.Time) bool {
-	return inv.DueOn != nil && now.After(*inv.DueOn)
+	return deadline.Passed(inv.DueOn, now)
 }
 
 func nullable(value string) *string {

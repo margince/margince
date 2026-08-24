@@ -255,7 +255,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// with the sweep, the reset carries its own audit row, and
 		// incumbent.disconnected would be staged into an outbox this reset just
 		// drained.
-		reverted, err := overlay.RevertToNative(ctx, tx)
+		reverted, err := overlay.RevertToNative(ctx, tx, wsID)
 		if err != nil {
 			return err
 		}
@@ -275,7 +275,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// because whether the installation WAS in overlay mode is only knowable
 		// before something writes the column — a blanket restore cannot report
 		// what it changed, and that fact belongs in the audit row.
-		if err := identity.ResetWorkspaceConfig(ctx, tx); err != nil {
+		if err := identity.ResetWorkspaceConfig(ctx, tx, wsID); err != nil {
 			return err
 		}
 

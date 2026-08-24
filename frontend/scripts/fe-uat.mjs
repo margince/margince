@@ -166,7 +166,13 @@ for (const f of changed) {
   } else if (
     /\.[tj]sx$/.test(f) &&
     !/\.d\.ts$/.test(f) &&
-    !/\.(test|stories)\./.test(f)
+    // `.testkit.` alongside `.test.`: a testkit holds the fixtures and fetch
+    // fakes a suite shares, and nothing ships it. Keyed on the NAME rather
+    // than on "imported only by tests", which would also excuse a real
+    // component whose only importer so far is its own test — the exact case
+    // this gate exists to catch. Naming a shipped component `x.testkit.tsx`
+    // to dodge the gate would have to be deliberate.
+    !/\.(test|testkit|stories)\./.test(f)
   ) {
     const covering = new Set(coveringStories.get(f) ?? []);
     // The co-located story counts on its path alone: it may reach the component

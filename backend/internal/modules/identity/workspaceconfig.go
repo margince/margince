@@ -18,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 // preservedWorkspaceColumns are the workspace columns the restore does not
@@ -101,13 +103,14 @@ func workspaceConfigColumns(ctx context.Context, tx pgx.Tx) ([]string, error) {
 // that endpoint's non-production + human + admin + typed-confirmation chain,
 // exactly as RevertToNative sits behind Disconnect's.
 //
-// The GUC is read WITHOUT missing_ok, for the reason RevertToNative gives:
-// with it, an unset app.workspace_id would resolve to NULL, match no row, and
-// let this report success having restored nothing. Zero rows updated is
-// refused for the other half of that: unlike RevertToNative, this statement
-// has no predicate beyond the id, so there is no reading under which it
-// legitimately matches nothing.
-func ResetWorkspaceConfig(ctx context.Context, tx pgx.Tx) error {
+// ws is the workspace the caller's transaction is bound to, for the reason
+// RevertToNative gives: this function runs inside a transaction somebody else
+// opened, so only that caller knows what bound it. Zero rows updated is then
+// refused rather than reported as success — unlike RevertToNative, this
+// statement has no predicate beyond the id, so there is no reading under which
+// it legitimately matches nothing, and a silent no-op would leave an operator
+// believing a reset restored settings it never touched.
+func ResetWorkspaceConfig(ctx context.Context, tx pgx.Tx, ws ids.UUID) error {
 	cols, err := workspaceConfigColumns(ctx, tx)
 	if err != nil {
 		return err
@@ -139,13 +142,13 @@ func ResetWorkspaceConfig(ctx context.Context, tx pgx.Tx) error {
 	// spanning two columns at once (overlay's x_overlay_iff_incumbent), and a
 	// column-at-a-time restore would have to pass through the state they forbid.
 	tag, err := tx.Exec(ctx, `UPDATE workspace SET `+strings.Join(assignments, ", ")+
-		` WHERE id = current_setting('app.workspace_id')::uuid`)
+		` WHERE id = $1`, ws)
 	if err != nil {
 		return fmt.Errorf("identity: restoring the workspace's configuration columns: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return errors.New("identity: restoring the workspace's configuration columns: " +
-			"the bound app.workspace_id names no workspace row, so nothing was restored")
+			"the workspace this transaction is bound to has no row, so nothing was restored")
 	}
 	return nil
 }

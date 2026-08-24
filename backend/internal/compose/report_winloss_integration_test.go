@@ -62,6 +62,27 @@ func (e *forecastEnv) setInstallationZone(t *testing.T, zone string) {
 	}
 }
 
+// setFiscalYearStart moves the month the installation's business year begins.
+//
+// Seeded as January by setupForecast, the same way the zone is seeded as UTC —
+// so this is a plain UPDATE like its sibling, and a statement that matched
+// nothing would be a fixture that had stopped seeding the row.
+func (e *forecastEnv) setFiscalYearStart(t *testing.T, month int) {
+	t.Helper()
+	tag, err := e.owner.Exec(t.Context(),
+		`UPDATE setting SET value = to_jsonb($1::int)
+		 WHERE key = 'installation.fiscal_year_start_month'`, month)
+	if err != nil {
+		t.Fatalf("setting the fiscal year start: %v", err)
+	}
+	// An UPDATE that matches nothing SUCCEEDS, and the test would then assert
+	// against the January default while believing it had set something —
+	// passing for the wrong reason, in the direction that hides a defect.
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("the fiscal-year-start row is not seeded: UPDATE touched %d rows", tag.RowsAffected())
+	}
+}
+
 // bucketRow finds the one aggregate row whose group keys all match, so a test
 // naming two dimensions cannot silently assert against the wrong group.
 func bucketRow(t *testing.T, result reportResultWire, keys map[string]string) map[string]any {
@@ -168,6 +189,103 @@ func TestWinLossPeriodBucketsFollowTheInstallationZone(t *testing.T) {
 		`{"group_by":["period_year"],"aggregates":[{"fn":"count","as":"deals"}]}`)
 	if got := local.Rows[0]["period_year"]; got != "2025" {
 		t.Errorf("under America/New_York the bucket is %v, want 2025 — the bucket ignored the installation zone", got)
+	}
+}
+
+// A bucket's YEAR is the installation's business year, not the calendar's.
+//
+// This test is the one that holds the fiscal arithmetic, and it is here rather
+// than in the deterministic lane because no deterministic test can do it. The
+// mirror gate in backend/frontendfiscalyear_test.go reads both spellings of the
+// label out of source and checks their SHAPE; it cannot execute SQL assembled
+// from bound tokens, so deleting the `- 1` from the month shift leaves every
+// assertion there green while an April-start installation labels its year one
+// year early.
+//
+// The instant is chosen so all three starts below disagree about it. 15 March
+// 2026 is:
+//
+//	January start  → 2026        (the calendar year, unchanged)
+//	April start    → FY2025/26   (the last month of the year that began in April 2025)
+//	February start → FY2026/27   (the first quarter of the year that began weeks ago)
+//
+// A February start is deliberate. April, July and October are the fiscal starts
+// one reaches for first, and every one of them is ALSO a calendar-quarter
+// boundary — so a cut that ignored the setting entirely returns the same
+// quarter and the case passes. The sibling unit test's first four cases were
+// written that way and all four passed with the fiscal arithmetic deleted.
+func TestWinLossPeriodBucketsFollowTheInstallationFiscalYear(t *testing.T) {
+	e := setupForecast(t)
+	e.seedClosedDeal(t, "Mid-March", "won", "2026-03-15T12:00:00Z", 10000)
+
+	bucket := func(t *testing.T, dimension string) any {
+		t.Helper()
+		result := e.runReport(e.Admin(), t, "win-loss",
+			`{"group_by":["`+dimension+`"],"aggregates":[{"fn":"count","as":"deals"}]}`)
+		if len(result.Rows) != 1 {
+			t.Fatalf("%s: %d rows, want the 1 seeded deal: %+v", dimension, len(result.Rows), result.Rows)
+		}
+		return result.Rows[0][dimension]
+	}
+
+	// The default first, and the fixture's own discriminator: if January did
+	// not produce the plain calendar year, the cases below would prove nothing
+	// about the fiscal branch.
+	if got := bucket(t, "period_year"); got != "2026" {
+		t.Fatalf("on the January default the year is %v, want the plain 2026", got)
+	}
+	if got := bucket(t, "period_quarter"); got != "2026-Q1" {
+		t.Fatalf("on the January default the quarter is %v, want the plain 2026-Q1", got)
+	}
+
+	e.setFiscalYearStart(t, 4)
+	if got := bucket(t, "period_year"); got != "FY2025/26" {
+		t.Errorf("under an April start the year is %v, want FY2025/26 — March belongs to the year that began the previous April", got)
+	}
+	if got := bucket(t, "period_quarter"); got != "FY2025/26-Q4" {
+		t.Errorf("under an April start the quarter is %v, want FY2025/26-Q4", got)
+	}
+
+	e.setFiscalYearStart(t, 2)
+	if got := bucket(t, "period_year"); got != "FY2026/27" {
+		t.Errorf("under a February start the year is %v, want FY2026/27", got)
+	}
+	if got := bucket(t, "period_quarter"); got != "FY2026/27-Q1" {
+		t.Errorf("under a February start the quarter is %v, want FY2026/27-Q1 — February to April is its FIRST quarter", got)
+	}
+
+	// The month grain is not fiscal: a month is the same month under every
+	// start, so the setting that just moved the other two must leave it alone.
+	if got := bucket(t, "period_month"); got != "2026-03" {
+		t.Errorf("the month grain is %v, want 2026-03 — it moved with the fiscal start", got)
+	}
+}
+
+// The month SHIFT itself, on the one instant that can see it.
+//
+// Separate from the test above because the instants differ and the difference
+// is the whole point. 15 March sits four months from an April boundary, so a
+// shift that is off by one month still lands in the same fiscal year and the
+// assertion passes over a broken expression — which it did: the reviewer's
+// counter-example (dropping the `- 1`) survived the test above untouched.
+//
+// 1 April is the FIRST day of an April-start year, so being one month out puts
+// it in the previous year's last quarter instead of this year's first. Correct
+// gives FY2026/27-Q1; a shift of `months => 4` rather than `4 - 1` gives
+// FY2025/26-Q4. Nothing else in the tree distinguishes those.
+func TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay(t *testing.T) {
+	e := setupForecast(t)
+	e.seedClosedDeal(t, "First day of the fiscal year", "won", "2026-04-01T12:00:00Z", 10000)
+	e.setFiscalYearStart(t, 4)
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["period_quarter"],"aggregates":[{"fn":"count","as":"deals"}]}`)
+	if len(result.Rows) != 1 {
+		t.Fatalf("%d rows, want the 1 seeded deal: %+v", len(result.Rows), result.Rows)
+	}
+	if got := result.Rows[0]["period_quarter"]; got != "FY2026/27-Q1" {
+		t.Errorf("the quarter is %v, want FY2026/27-Q1 — 1 April OPENS an April-start year, "+
+			"and FY2025/26-Q4 means the month shift is one out", got)
 	}
 }
 

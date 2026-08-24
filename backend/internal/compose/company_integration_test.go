@@ -305,7 +305,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	}
 }
 
-func TestAcceptedOfferSummaryFillsTheDescriptionColumn(t *testing.T) {
+func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	e := integration.Setup(t)
 	store := people.NewStore(e.DB())
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -315,7 +315,7 @@ func TestAcceptedOfferSummaryFillsTheDescriptionColumn(t *testing.T) {
 	})
 
 	// The header renders organization.description; an accepted offer_summary is
-	// the one-sentence answer, so the apply fills the column (only while empty).
+	// the one-sentence answer, so the apply writes the column.
 	orgID, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
 		Fields: []people.ColdStartFieldInput{{
@@ -342,8 +342,12 @@ func TestAcceptedOfferSummaryFillsTheDescriptionColumn(t *testing.T) {
 		t.Fatalf("description after accept = %v, want the accepted offer_summary", got)
 	}
 
-	// A later accept refreshes the evidence row but leaves the standing column
-	// alone — acceptance covers the staged diff, not an overwrite.
+	// A later accept carries the site's newer copy onto the column as well as
+	// onto the evidence row. Nobody typed the standing value — one automated
+	// read replaces another, which is what lets a re-crawl correct a summary
+	// that has gone stale, or one an agent wrote from a meeting transcript.
+	// A value a PERSON authored is held instead, and the form-resave case
+	// above is the assertion that keeps that half honest.
 	if _, err := store.ApplyColdStartProfile(agent, people.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
 		Fields: []people.ColdStartFieldInput{{
@@ -353,8 +357,8 @@ func TestAcceptedOfferSummaryFillsTheDescriptionColumn(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("second ApplyColdStartProfile: %v", err)
 	}
-	if got := readDescription(); got == nil || *got != "Revenue operations software for mid-market manufacturers" {
-		t.Fatalf("description after re-accept = %v, want the first fill kept", got)
+	if got := readDescription(); got == nil || *got != "A different sentence entirely" {
+		t.Fatalf("description after re-accept = %v, want the site's newer sentence", got)
 	}
 	var evidenceValue string
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
