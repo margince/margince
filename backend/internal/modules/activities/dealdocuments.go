@@ -196,9 +196,7 @@ func (s *Store) setDealDocumentHidden(ctx context.Context, dealID, attachmentID 
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		// Live: the hide row is the deal's child, so an archived deal freezes
-		// which of its documents are listed, exactly as it freezes the deal.
-		if err := auth.EnsureWritableLive(ctx, tx, linkEntityDeal, dealID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, linkEntityDeal, dealID); err != nil {
 			return err
 		}
 		if err := ensureInDealDocuments(ctx, tx, dealID, attachmentID); err != nil {

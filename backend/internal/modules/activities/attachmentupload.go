@@ -122,11 +122,16 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 
 	var out crmcontracts.Attachment
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// Re-checked HERE, in the transaction that writes the column. The
-		// pre-flight check above runs before the bytes are stored, so an
-		// agreement archived or re-anchored during the upload would otherwise
-		// still receive the document — the row commits against a contract the
-		// caller can no longer see.
+		// Re-checked HERE, in the transaction that writes the column, and BOTH
+		// gates are re-run rather than only the contract one. The pre-flight
+		// check above runs before the bytes are stored, so a parent or an
+		// agreement archived during the upload would otherwise still receive the
+		// document — the row commits against a record the caller can no longer
+		// see, and the reason has always been written here; it just used to
+		// cover one of the two.
+		if err := ensureAttachmentParentWritable(ctx, tx, in.EntityType, in.EntityID); err != nil {
+			return err
+		}
 		if err := ensureContractFileable(ctx, tx, in.ContractID); err != nil {
 			return err
 		}

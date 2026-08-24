@@ -66,11 +66,10 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 // readable parent the caller may not change answers ErrPermissionDenied.
 //
 // BOTH branches require a LIVE parent, which is the whole point of them being
-// one function. The activity arm always did (EnsureActivityWritable reaches
-// EnsureActivityContentVisibleLive); the other arm did not, so a file could be
-// uploaded onto an archived deal, person or organization and then never fetched
-// — resolveVisibleAttachmentParent requires a live parent on the way back out,
-// so the bytes and the row existed with nothing able to read them.
+// one function rather than two gates that happen to sit together. The activity
+// arm always did — EnsureActivityWritable reaches
+// EnsureActivityContentVisibleLive — and the other arm did not, so a file could
+// be hung on a deal, person or organization the product had already retired.
 func ensureAttachmentParentWritable(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == "activity" {
 		return auth.EnsureActivityWritable(ctx, tx, id)

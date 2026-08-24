@@ -68,14 +68,14 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // authority of its own — an attachment, a deal room, a contract, a commission
 // entry — is gated by its anchor being LIVE and not merely visible, because
 // "may I still change this" is a question about what the record means, not
-// about who is asking (#1405).
+// about who is asking.
 //
-// A path that STAGES a proposal and applies it later needs this most, because
-// the archive lands inside that window and the window is the ordinary case
-// rather than a race. Three such applies wrote records the ordinary PATCH
-// refuses, and one of them wrote a declared-PII row back onto a person
-// anonymized under Art. 17 — erasure stamps archived_at and leaves the row
-// standing, so a probe without the live filter still answers "yours".
+// A path that STAGES a proposal and applies it later needs this most: the
+// archive lands inside that window, and the window is the ordinary case rather
+// than a race. Art. 17 erasure is the sharpest form of it — erasure stamps
+// archived_at and leaves the row standing, so a probe without the live filter
+// still answers "yours" for a subject every live read path now refuses, and an
+// apply arriving afterwards refills a declared-PII table the erasure cleared.
 //
 // Where a caller must reach an archived row ON PURPOSE — Art. 17 erasure, the
 // retention sweep, the archive transition itself, a merge retiring its source,

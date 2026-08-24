@@ -52,17 +52,9 @@ func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf ti
 
 // ensureAnchorWritable applies the write-authority probe to whichever record
 // the contract inherits from.
-//
-// The anchor must be LIVE. A contract carries no authority of its own, so
-// "archived means frozen" reaches it through the record it hangs off — and this
-// is also what settles the disagreement the filing gate had with the read:
-// activities' ensureContractFileable always required a live anchor, while a
-// change to the agreement itself did not, so an unbounded caller could rewrite
-// a contract whose deal was archived but got a 404 filing a document against
-// it. One probe answers both now, rather than a second hand-composed clause.
 func ensureAnchorWritable(ctx context.Context, tx pgx.Tx, contract crmcontracts.Contract) error {
 	if contract.DealId != nil {
-		return auth.EnsureWritableLive(ctx, tx, "deal", ids.UUID(*contract.DealId))
+		return auth.EnsureWritable(ctx, tx, "deal", ids.UUID(*contract.DealId))
 	}
-	return auth.EnsureWritableLive(ctx, tx, "organization", ids.UUID(contract.OrganizationId))
+	return auth.EnsureWritable(ctx, tx, "organization", ids.UUID(contract.OrganizationId))
 }

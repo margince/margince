@@ -75,16 +75,11 @@ func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string
 // Separate from VisibleClause because a manual share widens VISIBILITY at
 // either access level: a caller holding only a `read` share of the deal passes
 // the read clause, and voiding their partner's money is not something a read
-// share should buy. The write path asks EnsureWritableLive instead, which is
-// the probe that distinguishes the two.
-//
-// Live, because VisibleClause above already requires d.archived_at IS NULL and
-// says why in its own words — "the archived anchor rule is about what the row
-// means, not about who is asking". A write arm that admitted an archived deal
-// its own read arm refuses would be the same file disagreeing with itself.
+// share should buy. The write path asks EnsureWritable instead, which is the
+// probe that distinguishes the two.
 func WritableEntriesForDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID) error {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return err
 	}
-	return auth.EnsureWritableLive(ctx, tx, "deal", deal.UUID)
+	return auth.EnsureWritable(ctx, tx, "deal", deal.UUID)
 }
