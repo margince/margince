@@ -39,6 +39,12 @@ var identitySurfaceRoots = []string{
 func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 	var findings []string
 	headerWrites := 0
+	// Gathered per PACKAGE, not per file. A constant is package-scoped, so
+	// `const ua = "…"` in one file and the write in another is the same alias
+	// the single-file map could not see — and splitting the two across files is
+	// no harder than putting them side by side.
+	byDir := map[string][]*ast.File{}
+	paths := map[*ast.File]string{}
 	fset := token.NewFileSet()
 	for _, root := range identitySurfaceRoots {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -59,10 +65,21 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 			if parseErr != nil {
 				return parseErr
 			}
-			// The header NAME can be a constant too — `const header =
-			// "User-Agent"` one line up launders the write past a census reading
-			// only literals.
-			consts := stringConstants([]*ast.File{file})
+			dir := filepath.ToSlash(filepath.Dir(path))
+			byDir[dir] = append(byDir[dir], file)
+			paths[file] = filepath.ToSlash(path)
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+	}
+	for _, files := range byDir {
+		// The header NAME and its VALUE can both be constants — one line up, or
+		// one file over.
+		consts := stringConstants(files)
+		for _, file := range files {
+			path := paths[file]
 			ast.Inspect(file, func(node ast.Node) bool {
 				switch written := node.(type) {
 				case *ast.CallExpr:
@@ -76,7 +93,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 					}
 					headerWrites++
 					if _, literal := stringValue(written.Args[1], consts); literal {
-						findings = append(findings, filepath.ToSlash(path))
+						findings = append(findings, path)
 					}
 				case *ast.CompositeLit:
 					// http.Header{"User-Agent": {"x"}} — the whole map written
@@ -92,7 +109,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 						}
 						headerWrites++
 						if holdsALiteral(pair.Value, consts) {
-							findings = append(findings, filepath.ToSlash(path))
+							findings = append(findings, path)
 						}
 					}
 				case *ast.AssignStmt:
@@ -109,16 +126,12 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 						}
 						headerWrites++
 						if i < len(written.Rhs) && holdsALiteral(written.Rhs[i], consts) {
-							findings = append(findings, filepath.ToSlash(path))
+							findings = append(findings, path)
 						}
 					}
 				}
 				return true
 			})
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
 		}
 	}
 	// A census that finds no outbound identity at all is judging nothing.
