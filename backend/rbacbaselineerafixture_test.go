@@ -76,7 +76,13 @@ func TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded(t *testing.T) {
 	}
 }
 
-// The pre-state must still be a pre-state: strictly smaller than today's matrix.
+// The pre-state must still DIFFER from today's matrix.
+//
+// Differs, and deliberately not "is strictly smaller": a backfill that widens an
+// existing object's verbs changes no key and no count, and that is real distance
+// for the replay to cross. Demanding a smaller document would refuse a legitimate
+// grant-value backfill, so inequality is both the weakest honest bar and the
+// right one.
 //
 // Not defensive tidiness. The day the vocabulary stops growing, the baseline-era
 // documents catch up with head, every backfill replayed over them no-ops, and the
@@ -91,7 +97,8 @@ func TestBaselineEraFixtureIsStillBehindTheSeededMatrix(t *testing.T) {
 		t.Fatalf("%s already equals the matrix it is supposed to predate, so the composition gate "+
 			"has no distance to prove anything over: every backfill can no-op and the comparison "+
 			"still passes.\nRepoint baselineEraCommit at a later consolidation floor if one has "+
-			"landed, or retire the arm — do NOT leave it green over a comparison with nothing in it.",
+			"landed (and regenerate with the command in the sibling test's message), or retire the "+
+			"arm — do NOT leave it green over a comparison with nothing in it.",
 			baselineEraFixture)
 	}
 }

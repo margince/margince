@@ -265,16 +265,28 @@ func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]
 		if got.RowScope != want.RowScope {
 			return
 		}
-		for object := range want.Objects {
-			if _, held := got.Objects[object]; !held {
+		for object, grant := range want.Objects {
+			held, ok := got.Objects[object]
+			if !ok {
+				return
+			}
+			// The GRANT and not just the key. A backfill that widens an existing
+			// object's verbs — read to read+update, say — leaves the key set and
+			// the row_scope identical, so a presence-only check would call this
+			// pre-state "already the answer" and refuse to run the arm at all.
+			// That is a false refusal blocking a legitimate backfill, and it is
+			// the likelier shape of the next one: the vocabulary is 39 objects
+			// and mostly complete, while grants keep being adjusted.
+			if !sameJSON(t, grant, held) {
 				return
 			}
 		}
 	}
 	t.Fatalf("%s already equals the matrix the replay must reach, so this arm proves nothing: "+
 		"every write below can no-op and the comparison still passes.\n"+
-		"The baseline-era pre-state has caught up with head. Repoint baselineEraCommit at a later "+
-		"consolidation floor if one has landed, or delete this arm — do NOT leave it green over "+
+		"The baseline-era pre-state has caught up with head. Repoint baselineEraCommit — it lives "+
+		"in backend/rbacbaselineerafixture_test.go, which also regenerates this file — at a later "+
+		"consolidation floor if one has landed, or delete this arm; do NOT leave it green over "+
 		"a comparison with no distance in it.", baselineEraDefaults)
 }
 
