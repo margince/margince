@@ -308,7 +308,29 @@ func (s *Store) Record(ctx context.Context, in RecordInput) (State, error) {
 
 	var out State
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, sub.entityType, sub.id); err != nil {
+		// Which probe depends on WHAT is being recorded, and the split is the
+		// ruling on #2145 rather than a convenience.
+		//
+		// A WITHDRAWAL stays recordable against an archived — including an
+		// Art. 17 anonymized — subject. Erasure stamps archived_at and leaves
+		// the row standing, and a suppression is exactly the thing you most
+		// want still working once somebody has asked to be forgotten.
+		//
+		// A GRANT does not. It is a lawful-basis claim about a person the
+		// installation was told to forget, and person_consent is a declared PII
+		// table (piicoverage_test.go), so a grant against an erased subject puts
+		// back a row the erasure had just deleted. IssueDoubleOptIn already
+		// refuses one, and a grant flow that agreed with itself only when it
+		// happened to go through double opt-in would be no rule at all.
+		//
+		// admitRecord has already run ParseRecordableState, so NewState is one
+		// of exactly these two; a third recordable state has to come here and
+		// say whether it is a claim or a suppression.
+		probe := auth.EnsureWritable
+		if ConsentState(in.NewState) == StateGranted {
+			probe = auth.EnsureWritableLive
+		}
+		if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err
 		}
 		purposeKey, requiresDOI, err := loadConsentPurpose(ctx, tx, in.PurposeID)
