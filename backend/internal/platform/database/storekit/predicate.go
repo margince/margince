@@ -406,6 +406,18 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		if err != nil {
 			return "", err
 		}
+		if p.Op == OpNeq {
+			// IS DISTINCT FROM rather than <>: a column that is UNSET is
+			// distinct from every value, and three-valued logic would otherwise
+			// drop those rows from an answer the caller reads as "everything
+			// that is not X".
+			//
+			// It is also what the rest of this package answers. A `neq` on a
+			// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
+			// record with no linked row at all; `<>` here would make one operator
+			// mean two things depending on where the field lives.
+			return fmt.Sprintf("%s IS DISTINCT FROM $%d", field.Expr, arg(value)), nil
+		}
 		return fmt.Sprintf("%s %s $%d", field.Expr, comparisonSQL[p.Op], arg(value)), nil
 	}
 }

@@ -141,3 +141,76 @@ func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
 		t.Errorf("team-scoped count on a foreign owner = %d, want 0 — a count must not confirm rows the caller cannot read", n)
 	}
 }
+
+// `neq` answers "everything that is not X", and a record whose column was never
+// set is not X. The engine compiles IS DISTINCT FROM so those rows are in the
+// answer; `<>` would have dropped every one of them under three-valued logic,
+// silently, on a filter a reader wrote to be exhaustive.
+//
+// The same reading already governed a linked field, where `neq` compiles to
+// NOT EXISTS and is true for a record with no linked row at all. This proves
+// the scalar column agrees with it against real rows rather than against a
+// golden string.
+func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
+	e := Setup(t)
+	// Seeded through the real writer, then the column is nulled: CreatePerson
+	// stamps the calling seat as owner when the body names none, so "seed with
+	// no owner" does NOT produce an unset column. A fixture that models the
+	// state by its name rather than its value proves nothing about it.
+	unowned := e.SeedPerson(t, "Nadia Nobody", nil)
+	mine := e.SeedPerson(t, "Owen Owner", &e.Rep1)
+	theirs := e.SeedPerson(t, "Tessa Theirs", &e.Rep3)
+
+	engine := storekit.Query{
+		Table:     "person",
+		Fields:    personFilterFields,
+		BaseWhere: "t.archived_at IS NULL",
+	}
+	admin := e.As(e.Rep3, []ids.UUID{e.Team1, e.Team2}, AdminPerms)
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, execErr := tx.Exec(admin, `UPDATE person SET owner_id = NULL WHERE id = $1`, unowned)
+		return execErr
+	}); err != nil {
+		t.Fatalf("nulling the owner: %v", err)
+	}
+	// The column really is unset. Without this the test would go on passing if
+	// the writer ever started filling it again, and would be asserting nothing.
+	var stillSet bool
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin, `SELECT owner_id IS NOT NULL FROM person WHERE id = $1`, unowned).Scan(&stillSet)
+	}); err != nil {
+		t.Fatalf("reading back the owner: %v", err)
+	}
+	if stillSet {
+		t.Fatal("the fixture row still carries an owner, so this test cannot see what neq does to an unset column")
+	}
+	selectIDs := func(p storekit.Predicate) map[ids.UUID]bool {
+		t.Helper()
+		got := map[ids.UUID]bool{}
+		err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+			matched, err := engine.SelectIDs(admin, tx, p, 100)
+			for _, id := range matched {
+				got[id] = true
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatalf("predicate select: %v", err)
+		}
+		return got
+	}
+
+	// The control: this seat sees all three rows and the field narrows on them.
+	// Without it, an empty `neq` answer would read as "unset rows excluded" when
+	// the real cause was a scope clause hiding everything.
+	if got := selectIDs(storekit.Predicate{Field: "owner_id", Op: storekit.OpEq, Value: e.Rep1.String()}); !got[mine] || got[unowned] || got[theirs] {
+		t.Fatalf("control eq(rep1) = %v, want exactly the row owned by rep1", got)
+	}
+
+	got := selectIDs(storekit.Predicate{Field: "owner_id", Op: storekit.OpNeq, Value: e.Rep3.String()})
+	for id, want := range map[ids.UUID]bool{unowned: true, mine: true, theirs: false} {
+		if got[id] != want {
+			t.Errorf("neq(rep3) selected %s = %v, want %v", id, got[id], want)
+		}
+	}
+}

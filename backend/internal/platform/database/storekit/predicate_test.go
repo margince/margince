@@ -82,7 +82,9 @@ func TestCompileGoldenSQLPerOperator(t *testing.T) {
 		wantArgs []any
 	}{
 		{"eq id", leaf("owner_id", OpEq, ownerUUID), "t.owner_id = $1", []any{ownerUUID}},
-		{"neq picklist", leaf("status", OpNeq, "lost"), "t.status <> $1", []any{"lost"}},
+		// IS DISTINCT FROM, not <>: a record whose status is unset is not "lost",
+		// and a caller reading "everything that is not lost" gets it.
+		{"neq picklist", leaf("status", OpNeq, "lost"), "t.status IS DISTINCT FROM $1", []any{"lost"}},
 		{"gt currency", leaf("amount_minor", OpGt, 5000.0), "t.amount_minor > $1", []any{int64(5000)}},
 		{"gte number int accepted", leaf("probability", OpGte, 40), "t.probability >= $1", []any{40.0}},
 		{"lt date", leaf("expected_close_date", OpLt, "2026-09-01"), "t.expected_close_date < $1", []any{"2026-09-01"}},
