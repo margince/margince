@@ -1,18 +1,22 @@
 # AGENTS.md — the rulebook
 
-**This is the only copy of the rules.** Every harness reads it: `AGENTS.md` is
-the convention Codex and the others look for, and Claude Code reaches it through
-a one-line `CLAUDE.md` that imports it. Do not add a second copy —
-`backend/rulebookdelegation_test.go` fails one.
+**This is the only copy of the repository-wide rules.** Every harness reads it:
+`AGENTS.md` is the convention Codex and the others look for, and Claude Code
+reaches it through a one-line `CLAUDE.md` that imports it. Do not add a second
+copy — `backend/rulebookdelegation_test.go` fails one.
+
+A directory may carry its own `AGENTS.md` for rules binding only inside it
+(`frontend/AGENTS.md` does). Those ADD — a delta, never an override or a
+restatement — and a rule binding the whole tree belongs here instead.
 
 **Rules live here; everything else lives in [docs/](docs/README.md).** Every line
-here is paid for by every session, which is the right price for a rule that binds
-a change and the wrong one for a procedure, a catalog, or an explanation. `cli/craft`
-feeds this file's `## Craftsmanship` section into its gate prompt, so that section
-in particular must stay. Links point one way: down into `docs/`, never back up.
+here is paid for by every session — the right price for a rule that binds a change,
+the wrong one for a procedure, a catalog or an explanation. `cli/craft` feeds this
+file's `## Craftsmanship` section into its gate prompt, so that section must stay.
+Links point one way: down into `docs/`, never back up.
 
-Margince CRM. The running Go software, its contract, its tests and its docs are
-the product — there is no separate specification that outranks them.
+Margince CRM: the running Go software, its contract, its tests and its docs are
+the product, and no separate specification outranks them.
 
 ## What decides a question
 

@@ -96,7 +96,7 @@ Cheap first, and each probe finds a class the previous one cannot.
 ### 1. Grep the topic's nouns tree-wide, never your directory
 
 ```shell
-git grep -n "<noun>" origin/main -- backend/internal frontend/src extensions
+git grep -n "<noun>" origin/main -- backend frontend/src extensions
 ```
 
 Two rules that decide whether this probe works at all:

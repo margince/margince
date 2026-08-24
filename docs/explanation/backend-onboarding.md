@@ -13,7 +13,7 @@ re-explain what they already own.
 5. **This page** — the system in one screen, the find-it map, generated-vs-written, the code you call, the gates, the change-recipes.
 6. **[CONTRIBUTING.md](../../CONTRIBUTING.md)** + **`AGENTS.md`** — the PR loop and the binding engineering rules.
 
-**[principles/](../principles/README.md)** — the handful of statements about this codebase's shape
+7. **[principles/](../principles/README.md)** — the handful of statements about this codebase's shape
 that settle a class of arguments before they start: one source of truth, the record is the code, every
 mutation leaves a trace, legibility is the product, derive the obligation, nothing here is private.
 Read one when you need the *why* behind a rule in `AGENTS.md`, or when auditing a

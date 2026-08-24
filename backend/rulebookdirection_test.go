@@ -63,8 +63,22 @@ func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
 			return readErr
 		}
 		scanned++
+		// Fenced blocks and inline code are stripped first, using the same
+		// codeSpan/fence patterns docslinktargets_test.go already owns rather
+		// than a second spelling of them. A page teaching this very rule wants to
+		// SHOW the forbidden link — `[rules](../AGENTS.md)` — and a matcher that
+		// reads raw markdown fails it for the example, which is a gate that makes
+		// its own subject undocumentable.
+		inFence := false
 		for i, line := range strings.Split(string(raw), "\n") {
-			for _, hit := range upwardLink.FindAllString(line, -1) {
+			if fence.MatchString(line) {
+				inFence = !inFence
+				continue
+			}
+			if inFence {
+				continue
+			}
+			for _, hit := range upwardLink.FindAllString(codeSpan.ReplaceAllString(line, ""), -1) {
 				t.Errorf("%s:%d links up to a rulebook: %s\n"+
 					"The reference direction is one-way — AGENTS.md links down into docs/, never the reverse. "+
 					"An upward link points at a heading, and a reworded heading breaks it without breaking any "+

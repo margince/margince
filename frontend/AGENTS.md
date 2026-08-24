@@ -6,11 +6,11 @@ Three things are frontend-only and none has a gate that will catch it for
 you, so they are written down here.
 
 `craft static` sweeps the Go trees only. No `*.test.tsx` in this repo is in
-scope for the craftsmanship catalog today, T11 (*tests prove behaviour or they
+scope for the craftsmanship catalog today, P3 (*tests prove behaviour or they
 are noise*, no real-clock flakiness) included. In this directory the rule holds
 because the author holds it — with one exception, and it is worth knowing which:
 **`make fe-clock-drift` runs the whole suite at +200 days and requires the same
-verdict**, so the half of T11 about the real CLOCK is now mechanical. It runs
+verdict**, so the half of P3 about the real CLOCK is now mechanical. It runs
 daily on `main` (`scheduled.yml`), not on your PR, because what breaks those
 tests is the calendar rather than a diff — so a fixture you add today can red
 that lane weeks from now. Run it locally when a test you touch reads a date.
