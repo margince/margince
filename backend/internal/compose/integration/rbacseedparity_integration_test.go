@@ -27,8 +27,7 @@ package integration
 //     composed, and the state is modern apart from the objects removed, which is
 //     a state no installation was ever actually in.
 //   - COMPOSED — the documents an installation bootstrapped AT THE BASELINE
-//     really held, read out of git, with every write replayed over them in
-//     version order. That state is real, and it is the OLDEST one that can reach
+//     really held, with every write replayed over them in version order. That state is real, and it is the OLDEST one that can reach
 //     head at all, so this is the arm that models the obligation. The cost is
 //     that a failure names the sequence rather than the migration.
 //
@@ -41,10 +40,8 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -63,29 +60,26 @@ import (
 // seededDefaults is the matrix identity seeds, as identity itself renders it.
 const seededDefaults = "../../../migrations/testdata/rbac_seeded_defaults.json"
 
-// baselineCommit is the commit that replaced core's 318 migrations with one
-// baseline (#2189), and it is the FLOOR of the upgrade path rather than merely
-// an old commit: dbmigrate.assertLedgerMatches refuses any database whose ledger
+// baselineEraDefaults is the matrix a fresh installation was seeded with at the
+// migration baseline — the OLDEST pre-state it is meaningful to prove anything
+// about, because dbmigrate.assertLedgerMatches refuses any database whose ledger
 // records core 0001 under a different name, and every pre-baseline database
-// records it as "foundation". Such a database cannot be repaired forward — the
-// migrator says so and tells the operator to rebuild — so an installation
-// bootstrapped at this commit is the OLDEST one that can reach head, and its
-// role documents are the oldest pre-state it is meaningful to prove anything
-// about.
+// records it as "foundation". Such a database cannot be repaired forward; the
+// migrator says so and tells the operator to rebuild.
 //
-// A commit and not a fixture ON PURPOSE. A committed copy of these documents
-// would be hand-editable, and editing it is exactly how a developer whose
-// backfill does not work makes this gate pass: move the object into the
-// starting state and the convergence it never delivered is already there. Git
-// history is not editable in a pull request, so the pre-state cannot be
-// negotiated with.
-const baselineCommit = "0e4806a38"
-
-// baselineEraDefaults is where the seeded-matrix fixture lived at that commit.
-// It was pinned to policy by identity's bridge test on that day exactly as it is
-// today, so reading it back needs no evaluator — it already IS what the server
-// seeded then.
-const baselineEraDefaults = "backend/migrations/testdata/rbac_seeded_defaults.json"
+// DERIVED, not hand-written, and checked elsewhere: backend's
+// rbacbaselineerafixture_test.go pins this file to `git show <baseline>:<the
+// seeded-matrix fixture>` on every unit pass. That matters because the pre-state
+// is exactly what an unwilling author would edit — move the object into the
+// starting state and the convergence a broken backfill never delivered is
+// already there, with nothing else changed to give it away.
+//
+// The derivation is checked THERE and not here because it needs full history and
+// this lane does not have it: _lane-integration.yml gives
+// integration-unit-coverage `fetch-depth: 0` while the integration SHARDS check
+// out shallow. Same split as rbac_seeded_defaults.json — identity renders it,
+// this package reads it.
+const baselineEraDefaults = "../../../migrations/testdata/rbac_baseline_era_defaults.json"
 
 // controlRole is a role the seeded matrix does not name, carrying a document of
 // its own, present for every replay below.
@@ -207,8 +201,8 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 // policy with no backfill written for it. The per-write arm derives its pre-state
 // from the writes themselves, so an object no migration mentions is never absent
 // from the pre-state and its missing backfill is invisible. Here the pre-state
-// comes from history, independently of what the migrations happen to say, so the
-// object is missing at the start and still missing at the end.
+// is derived from history, independently of what the migrations happen to say, so
+// the object is missing at the start and still missing at the end.
 //
 // Version order and not file order: dbmigrate sorts versions as STRINGS and
 // applies them in that order, and rolePermissionMigrations sorts by the same key,
@@ -277,11 +271,11 @@ func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]
 			}
 		}
 	}
-	t.Fatalf("the documents at %s:%s already equal the matrix the replay must reach, so this arm "+
-		"proves nothing: every write below can no-op and the comparison still passes.\n"+
-		"The baseline-era pre-state has caught up with head. Repoint baselineCommit at a later "+
+	t.Fatalf("%s already equals the matrix the replay must reach, so this arm proves nothing: "+
+		"every write below can no-op and the comparison still passes.\n"+
+		"The baseline-era pre-state has caught up with head. Repoint baselineEraCommit at a later "+
 		"consolidation floor if one has landed, or delete this arm — do NOT leave it green over "+
-		"a comparison with no distance in it.", baselineCommit, baselineEraDefaults)
+		"a comparison with no distance in it.", baselineEraDefaults)
 }
 
 // assertSameMatrix compares two role matrices and names every disagreement.
@@ -660,39 +654,25 @@ bootstrap_admin:
 	}
 }
 
-// readBaselineEraDefaults reads the seeded matrix as it stood at baselineCommit.
+// readBaselineEraDefaults reads the committed baseline-era matrix.
 //
-// It FAILS rather than skipping when history is unreachable. The integration lane
-// checks out with fetch-depth: 0 today, and if that ever changes the honest
-// outcome is a red gate that names the cause — a gate that degraded to "no
-// history, nothing to compose" would look exactly like a passing one, and this
-// is the only arm that can see a missing backfill at all.
+// A plain file read: the pin that makes this file trustworthy is
+// rbacbaselineerafixture_test.go in the unit lane, which has the full history
+// this lane's shards do not.
 func readBaselineEraDefaults(t *testing.T) map[string]roleDocument {
 	t.Helper()
-	// -C ../../../.. : this package sits at backend/internal/compose/integration,
-	// and the paths recorded in history are relative to the repository root.
-	out, err := exec.Command("git", "-C", "../../../..",
-		"show", baselineCommit+":"+baselineEraDefaults).Output()
+	raw, err := os.ReadFile(baselineEraDefaults)
 	if err != nil {
-		detail := err.Error()
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
-			detail = strings.TrimSpace(string(exit.Stderr))
-		}
-		t.Fatalf("reading %s:%s: %s\nThe pre-state this arm replays over is the seeded matrix as it "+
-			"stood at the migration baseline, so this gate needs FULL history. If this is CI, give "+
-			"the integration lane `fetch-depth: 0` — it has it today. Deepen the checkout; do not "+
-			"weaken the gate, because a pre-state that silently becomes today's makes every object "+
-			"look as though its backfill already ran.",
-			baselineCommit, baselineEraDefaults, detail)
+		t.Fatalf("reading %s: %v — backend/rbacbaselineerafixture_test.go names the command that "+
+			"regenerates it from history", baselineEraDefaults, err)
 	}
 	var documents map[string]roleDocument
-	if err := json.Unmarshal(out, &documents); err != nil {
-		t.Fatalf("decoding %s:%s: %v", baselineCommit, baselineEraDefaults, err)
+	if err := json.Unmarshal(raw, &documents); err != nil {
+		t.Fatalf("decoding %s: %v", baselineEraDefaults, err)
 	}
 	if len(documents) == 0 {
-		t.Fatalf("%s:%s holds no roles; an empty pre-state would seed nothing and leave the replay "+
-			"running against today's documents", baselineCommit, baselineEraDefaults)
+		t.Fatalf("%s holds no roles; an empty pre-state would seed nothing and leave the replay "+
+			"running against today's documents", baselineEraDefaults)
 	}
 	return documents
 }
