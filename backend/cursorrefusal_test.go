@@ -285,7 +285,7 @@ func TestEveryCursorDecoderCanAnswerMalformed(t *testing.T) {
 			if !ok || fn.Body == nil {
 				continue
 			}
-			refusals := cursorRefusals(fn)
+			refusals := cursorRefusals(fn, strings.Contains(source.path, "database/storekit"))
 			if len(refusals) == 0 {
 				continue
 			}
@@ -326,7 +326,7 @@ func TestEveryCursorDecoderCanAnswerMalformed(t *testing.T) {
 //
 // A decode with no failure branch refuses nothing, so there is nothing here to
 // misclassify and it yields no entry.
-func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
+func cursorRefusals(fn *ast.FuncDecl, inStorekit bool) []cursorRefusal {
 	carries := tokenCarriers(fn)
 	// A function whose own name says it decodes a cursor is one, whatever it
 	// calls its argument. `decodeDedupeCursor(token string)` spells its
@@ -355,7 +355,7 @@ func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 				continue
 			}
 			if returns := returnedErrors(guard.Body); refuses(returns) {
-				found = append(found, cursorRefusal{returns: returns, guarded: guardedName(guard.Cond), delegated: delegated})
+				found = append(found, cursorRefusal{returns: returns, guarded: guardedName(guard.Cond), inStorekit: inStorekit, delegated: delegated})
 			}
 		}
 		return true
@@ -375,7 +375,7 @@ func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 		readsAToken := decodes || (named && callsAnyDecoder(assign.Rhs))
 		if readsAToken {
 			if returns := returnedErrors(guard.Body); refuses(returns) {
-				found = append(found, cursorRefusal{returns: returns, guarded: guardedName(guard.Cond), delegated: delegated})
+				found = append(found, cursorRefusal{returns: returns, guarded: guardedName(guard.Cond), inStorekit: inStorekit, delegated: delegated})
 			}
 		}
 		return true
@@ -391,8 +391,11 @@ type cursorRefusal struct {
 	returns [][]ast.Expr
 	// guarded is the error variable the branch's condition tested, so a
 	// delegating branch can be checked for handing THAT error on.
-	guarded   string
-	delegated bool
+	guarded string
+	// inStorekit is whether this branch lives in the package that DECLARES the
+	// error, where naming it unqualified is the same type.
+	inStorekit bool
+	delegated  bool
 }
 
 // answersTheContract reports whether this branch gives the caller the contract's
@@ -418,7 +421,7 @@ func (r cursorRefusal) answersTheContract() bool {
 	for _, statement := range r.returns {
 		answered := false
 		for _, returned := range statement {
-			if buildsMalformedCursor(returned) || (r.delegated && handsOn(returned, r.guarded)) {
+			if buildsMalformedCursor(returned, r.inStorekit) || (r.delegated && handsOn(returned, r.guarded)) {
 				answered = true
 			}
 		}
@@ -471,7 +474,14 @@ func wrapsGuarded(call *ast.CallExpr, guarded string) bool {
 }
 
 // wrappedVerbIndex is which operand the %w consumes, counting the verbs before
-// it, or -1 when the format wraps nothing.
+// it, or -1 when the format wraps nothing OR when this cannot say.
+//
+// An explicit argument index (`%[2]v`) or a `*` width reassigns which operand a
+// later verb takes, and a parser that counted verbs would name the wrong one —
+// `fmt.Errorf("%[2]v: %w", ignored, err, otherErr)` wraps otherErr while a
+// naive count says err. Rather than reimplement fmt's argument selection, a
+// format carrying either is REFUSED: a format this cannot read is not one it
+// has cleared, and the branch has to say so a way this can check.
 func wrappedVerbIndex(format string) int {
 	operand := 0
 	for i := 0; i < len(format)-1; i++ {
@@ -481,6 +491,8 @@ func wrappedVerbIndex(format string) int {
 		switch next := format[i+1]; next {
 		case '%':
 			i++
+		case '[', '*':
+			return -1
 		case 'w':
 			return operand
 		default:
@@ -665,7 +677,7 @@ func returnedErrors(body *ast.BlockStmt) [][]ast.Expr {
 // throws it away: the text carries the words while errors.As finds nothing, so
 // httperr falls through to a 500. Only the construction itself, or a pointer to
 // it, is the answer.
-func buildsMalformedCursor(expr ast.Expr) bool {
+func buildsMalformedCursor(expr ast.Expr, inStorekit bool) bool {
 	if unary, ok := expr.(*ast.UnaryExpr); ok && unary.Op == token.AND {
 		expr = unary.X
 	}
@@ -673,13 +685,17 @@ func buildsMalformedCursor(expr ast.Expr) bool {
 	if !ok {
 		return false
 	}
-	switch typ := lit.Type.(type) {
-	case *ast.Ident:
-		return typ.Name == "MalformedCursorError"
-	case *ast.SelectorExpr:
-		return typ.Sel.Name == "MalformedCursorError"
+	// Qualified by storekit, or unqualified inside storekit itself. Matching the
+	// final name alone would accept `&other.MalformedCursorError{}` or a local
+	// type of the same name — neither is the type httperr matches on, so the
+	// caller would get a 500 while the census reported the contract answered.
+	selector, ok := lit.Type.(*ast.SelectorExpr)
+	if !ok {
+		ident, isIdent := lit.Type.(*ast.Ident)
+		return isIdent && ident.Name == "MalformedCursorError" && inStorekit
 	}
-	return false
+	pkg, ok := selector.X.(*ast.Ident)
+	return ok && pkg.Name == "storekit" && selector.Sel.Name == "MalformedCursorError"
 }
 
 func callsADecoder(call *ast.CallExpr) bool {
