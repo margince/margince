@@ -327,6 +327,11 @@ func TestEveryCursorDecoderCanAnswerMalformed(t *testing.T) {
 // misclassify and it yields no entry.
 func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 	carries := tokenCarriers(fn)
+	// A function whose own name says it decodes a cursor is one, whatever it
+	// calls its argument. `decodeDedupeCursor(token string)` spells its
+	// parameter `token` and its bytes `raw`, so a census reading only argument
+	// names could not see the decoder this arm exists to guard.
+	named := namesAToken(fn.Name.Name)
 	var found []cursorRefusal
 	ast.Inspect(fn.Body, func(node ast.Node) bool {
 		block, ok := node.(*ast.BlockStmt)
@@ -340,7 +345,8 @@ func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 				continue
 			}
 			delegated, decodes := decodesAToken(assign.Rhs, carries)
-			if !decodes {
+			readsAToken := decodes || (named && callsAnyDecoder(assign.Rhs))
+			if !readsAToken {
 				continue
 			}
 			guard, isGuard := block.List[i+1].(*ast.IfStmt)
@@ -348,7 +354,7 @@ func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 				continue
 			}
 			if returns := returnedErrors(guard.Body); refuses(returns) {
-				found = append(found, cursorRefusal{returns: returns, delegated: delegated})
+				found = append(found, cursorRefusal{returns: returns, guarded: guardedName(guard.Cond), delegated: delegated})
 			}
 		}
 		return true
@@ -364,9 +370,11 @@ func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 		if !isAssign {
 			return true
 		}
-		if delegated, decodes := decodesAToken(assign.Rhs, carries); decodes {
+		delegated, decodes := decodesAToken(assign.Rhs, carries)
+		readsAToken := decodes || (named && callsAnyDecoder(assign.Rhs))
+		if readsAToken {
 			if returns := returnedErrors(guard.Body); refuses(returns) {
-				found = append(found, cursorRefusal{returns: returns, delegated: delegated})
+				found = append(found, cursorRefusal{returns: returns, guarded: guardedName(guard.Cond), delegated: delegated})
 			}
 		}
 		return true
@@ -377,23 +385,75 @@ func cursorRefusals(fn *ast.FuncDecl) []cursorRefusal {
 // cursorRefusal is one failure branch: what it returns, and whether the decode
 // it guards came from storekit.
 type cursorRefusal struct {
-	returns   []ast.Expr
+	// returns is one entry per return statement in the branch, each holding
+	// that statement's result expressions.
+	returns [][]ast.Expr
+	// guarded is the error variable the branch's condition tested, so a
+	// delegating branch can be checked for handing THAT error on.
+	guarded   string
 	delegated bool
 }
 
 // answersTheContract reports whether this branch gives the caller the contract's
-// refusal.
+// refusal on EVERY path out of it.
 //
-// A branch guarding storekit.DecodeCursor may simply hand the error on: that
-// error already IS the contract's, and re-wrapping it would be the second
-// spelling this file exists to prevent. Every other branch has to say so itself.
+// Every path, not any: a branch that answers the contract for one nested
+// condition and a module error for another still sends the wrong code to
+// whichever caller lands in the second, and a check satisfied by the first would
+// clear it.
+//
+// A branch guarding storekit.DecodeCursor may hand the error on rather than
+// rebuild it — that error already IS the contract's. But it must be THAT error:
+// `fmt.Errorf` without %w, or a different sentinel, loses the type httperr
+// matches on and falls through to a 500, which is the wrong-code outcome this
+// census exists to block. So the delegated case accepts the guarded variable
+// itself, not any identifier that happens to contain "err".
 func (r cursorRefusal) answersTheContract() bool {
-	for _, returned := range r.returns {
-		if r.delegated && mentionsAnError(returned) {
-			return true
+	if len(r.returns) == 0 {
+		return false
+	}
+	// Judged per RETURN STATEMENT. Within one statement only the error position
+	// carries the answer — `return nil, err` says nothing wrong with its `nil`.
+	for _, statement := range r.returns {
+		answered := false
+		for _, returned := range statement {
+			if buildsMalformedCursor(returned) || (r.delegated && handsOn(returned, r.guarded)) {
+				answered = true
+			}
 		}
-		if buildsMalformedCursor(returned) {
-			return true
+		if !answered {
+			return false
+		}
+	}
+	return true
+}
+
+// handsOn reports whether a return passes the guarded error along — the
+// variable itself, or a wrap that keeps it reachable through errors.As.
+func handsOn(returned ast.Expr, guarded string) bool {
+	if guarded == "" {
+		return false
+	}
+	switch node := returned.(type) {
+	case *ast.Ident:
+		return node.Name == guarded
+	case *ast.CallExpr:
+		if decoderName(node) != "Errorf" {
+			return false
+		}
+		wrapped := false
+		for _, arg := range node.Args {
+			if lit, ok := arg.(*ast.BasicLit); ok && strings.Contains(lit.Value, "%w") {
+				wrapped = true
+			}
+		}
+		if !wrapped {
+			return false
+		}
+		for _, arg := range node.Args {
+			if ident, ok := arg.(*ast.Ident); ok && ident.Name == guarded {
+				return true
+			}
 		}
 	}
 	return false
@@ -468,12 +528,38 @@ func carriesAToken(expr ast.Expr, carries map[string]bool) bool {
 	return found
 }
 
+// callsAnyDecoder reports whether a right-hand side reads a token at all,
+// without asking what the argument is called.
+func callsAnyDecoder(rhs []ast.Expr) bool {
+	for _, expr := range rhs {
+		if call, ok := expr.(*ast.CallExpr); ok && callsADecoder(call) {
+			return true
+		}
+	}
+	return false
+}
+
 func decoderName(call *ast.CallExpr) string {
 	switch fun := call.Fun.(type) {
 	case *ast.Ident:
 		return fun.Name
 	case *ast.SelectorExpr:
 		return fun.Sel.Name
+	}
+	return ""
+}
+
+// guardedName is the error variable a guard tested.
+func guardedName(cond ast.Expr) string {
+	binary, ok := cond.(*ast.BinaryExpr)
+	if !ok {
+		return ""
+	}
+	for _, side := range []ast.Expr{binary.X, binary.Y} {
+		if ident, isIdent := side.(*ast.Ident); isIdent &&
+			strings.Contains(strings.ToLower(ident.Name), "err") {
+			return ident.Name
+		}
 	}
 	return ""
 }
@@ -501,10 +587,12 @@ func mentionsAnError(expr ast.Expr) bool {
 // instead — returning a zero value, or the token unchanged — declines nothing,
 // so there is no code for it to get wrong. `splitCappedCursor` reads that way on
 // purpose: a cursor without the count prefix is the start of paging.
-func refuses(returns []ast.Expr) bool {
-	for _, returned := range returns {
-		if looksLikeAnError(returned) {
-			return true
+func refuses(returns [][]ast.Expr) bool {
+	for _, statement := range returns {
+		for _, returned := range statement {
+			if looksLikeAnError(returned) {
+				return true
+			}
 		}
 	}
 	return false
@@ -527,11 +615,11 @@ func looksLikeAnError(expr ast.Expr) bool {
 	return false
 }
 
-func returnedErrors(body *ast.BlockStmt) []ast.Expr {
-	var out []ast.Expr
+func returnedErrors(body *ast.BlockStmt) [][]ast.Expr {
+	var out [][]ast.Expr
 	ast.Inspect(body, func(node ast.Node) bool {
-		if ret, ok := node.(*ast.ReturnStmt); ok {
-			out = append(out, ret.Results...)
+		if ret, ok := node.(*ast.ReturnStmt); ok && len(ret.Results) > 0 {
+			out = append(out, ret.Results)
 		}
 		return true
 	})

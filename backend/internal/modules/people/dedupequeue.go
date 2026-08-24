@@ -103,6 +103,13 @@ func decodeDedupeCursor(token string) (dedupeCursor, error) {
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return c, &storekit.MalformedCursorError{}
 	}
+	// Valid JSON is not yet a cursor. `null` and `{}` both unmarshal without
+	// error and leave the keyset at its zero value, which reads as a real
+	// position and pages from the top of the queue instead of refusing. Every
+	// token this encodes names a row, so an absent id is the tell.
+	if c.ID == (ids.UUID{}) {
+		return dedupeCursor{}, &storekit.MalformedCursorError{}
+	}
 	return c, nil
 }
 

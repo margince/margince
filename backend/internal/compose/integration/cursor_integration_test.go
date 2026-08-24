@@ -63,6 +63,12 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 		"/v1/data-subject-requests?" + garbage,
 		"/v1/approvals?" + garbage,
 	}
+	// A token that is valid base64 of valid JSON but is not a cursor. It decodes
+	// where garbage does not, so it reaches the layer that has to decide whether
+	// the SHAPE is a cursor — a different refusal from "this is not a token".
+	const notACursor = "cursor=bnVsbA"
+	endpoints = append(endpoints, "/v1/dedupe/candidates?"+notACursor)
+
 	for _, path := range endpoints {
 		var problem cursorProblem
 		status := e.Call(t, "GET", path, nil, nil, &problem)

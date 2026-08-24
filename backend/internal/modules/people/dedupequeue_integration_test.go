@@ -111,8 +111,19 @@ func TestDedupeQueueRefusesBadInput(t *testing.T) {
 	// so the queue answers the contract's malformed_cursor rather than its own
 	// module-shaped "invalid".
 	var badCursor *storekit.MalformedCursorError
-	if _, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Cursor: "not-base64!"}); !errors.As(err, &badCursor) {
-		t.Fatalf("malformed cursor = %v, want MalformedCursorError", err)
+	for _, token := range []string{
+		"not-base64!",
+		// Valid base64 of valid JSON that is not a cursor. `null` and `{}`
+		// unmarshal without error and leave the keyset at its zero value, which
+		// would read as a real position and page from the top of the queue
+		// instead of refusing.
+		"bnVsbA",  // null
+		"e30",     // {}
+		"WzEsMl0", // [1,2]
+	} {
+		if _, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Cursor: token}); !errors.As(err, &badCursor) {
+			t.Errorf("cursor %q = %v, want MalformedCursorError", token, err)
+		}
 	}
 }
 
