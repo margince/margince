@@ -253,8 +253,7 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 // editing different domains never wait on each other.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' ||
-			current_setting('app.workspace_id', true) || ':' || $1)::bigint)`, domain); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || $1)::bigint)`, domain); err != nil {
 		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
 	}
 	return nil

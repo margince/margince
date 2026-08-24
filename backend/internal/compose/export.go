@@ -175,7 +175,7 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 		// P7 stays honestly partial until the flip.
 		if err := tx.QueryRow(ctx, `
 			SELECT coalesce(x_incumbent, '') FROM workspace
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`,
+			WHERE archived_at IS NULL`,
 		).Scan(&incumbent); err != nil {
 			return fmt.Errorf("export: resolving the workspace's SoR mode: %w", err)
 		}

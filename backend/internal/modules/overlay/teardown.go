@@ -152,7 +152,7 @@ func (s *Service) Disconnect(ctx context.Context) error {
 func RevertToNative(ctx context.Context, tx pgx.Tx) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-		WHERE id = current_setting('app.workspace_id')::uuid
+		WHERE archived_at IS NULL
 		  AND x_sor_mode <> 'native'`)
 	if err != nil {
 		return false, fmt.Errorf("overlay: flipping the workspace back to native mode: %w", err)

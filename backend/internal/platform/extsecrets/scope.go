@@ -119,7 +119,7 @@ func (s *store) lockKey(ctx context.Context, tx pgx.Tx, user *ids.UserID, key st
 	}
 	_, err := tx.Exec(ctx, `
 		SELECT pg_advisory_xact_lock(hashtext(
-			'margince:extsecrets:' || current_setting('app.workspace_id', true) ||
+			'margince:extsecrets:' ||
 			':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
 		s.unit, scope, holder, key)
 	return err

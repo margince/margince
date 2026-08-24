@@ -352,7 +352,7 @@ func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity stri
 	// taken: a key built from a ctx that disagreed with the binding would put
 	// two writers of one record on different locks and serialize neither.
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
-		$1 || ':' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $2, 0))`,
+		$1 || ':' || $2, 0))`,
 		entityType+"_write", identity); err != nil {
 		return fmt.Errorf("lock %s write identity: %w", entityType, err)
 	}

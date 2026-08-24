@@ -339,7 +339,7 @@ func (s *Service) CompleteFlip(ctx context.Context, runID ids.UUID, mode string)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+			WHERE archived_at IS NULL
 			  AND x_sor_mode = 'overlay'`)
 		if err != nil {
 			return fmt.Errorf("overlay: flipping the workspace to native mode: %w", err)

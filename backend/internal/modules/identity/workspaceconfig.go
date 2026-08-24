@@ -139,7 +139,7 @@ func ResetWorkspaceConfig(ctx context.Context, tx pgx.Tx) error {
 	// spanning two columns at once (overlay's x_overlay_iff_incumbent), and a
 	// column-at-a-time restore would have to pass through the state they forbid.
 	tag, err := tx.Exec(ctx, `UPDATE workspace SET `+strings.Join(assignments, ", ")+
-		` WHERE id = current_setting('app.workspace_id')::uuid`)
+		` WHERE archived_at IS NULL`)
 	if err != nil {
 		return fmt.Errorf("identity: restoring the workspace's configuration columns: %w", err)
 	}

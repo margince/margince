@@ -230,7 +230,7 @@ func lockWorkspaceVisibility(ctx context.Context, tx pgx.Tx) error {
 	// called inside the store's bound transaction, which sets it) matches how the
 	// RLS policies fail closed on the same condition.
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || current_setting('app.workspace_id'))::bigint)`); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility')::bigint)`); err != nil {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock: %w", err)
 	}
 	return nil

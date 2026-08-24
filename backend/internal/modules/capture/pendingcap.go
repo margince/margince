@@ -78,7 +78,7 @@ func capRefusesNewQuestion(ctx context.Context, tx pgx.Tx, email, domain string)
 // inserted yet, which no row lock can express.
 func lockWorkspaceDeferrals(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || current_setting('app.workspace_id', true))::bigint)`); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:capture-deferrals')::bigint)`); err != nil {
 		return fmt.Errorf("capture: serializing the deferral ceiling: %w", err)
 	}
 	return nil

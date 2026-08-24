@@ -151,8 +151,7 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 	slices.Sort(hashes)
 	for _, hash := range slices.Compact(hashes) {
 		if _, err := tx.Exec(ctx, `
-			SELECT pg_advisory_xact_lock(hashtextextended(
-				coalesce(current_setting('app.workspace_id', true), '') || ':' || $1, 0))`,
+			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 			hash); err != nil {
 			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
 		}

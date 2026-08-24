@@ -27,7 +27,7 @@ func lastActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 	// advisory lock keyed on the workspace makes admin-management serial, so the
 	// second transaction re-reads the first's committed change and refuses.
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard:' || current_setting('app.workspace_id', true))::bigint)`); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard')::bigint)`); err != nil {
 		return false, err
 	}
 	var targetIsAdmin bool

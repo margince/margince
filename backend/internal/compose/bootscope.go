@@ -70,7 +70,7 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 // storekit already spells it this way.
 const bootLedgerLock = `
 	SELECT pg_advisory_xact_lock(
-		hashtext($1 || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`
+		hashtext($1)::bigint)`
 
 // installationMarker identifies THIS installation inside a boot observation's
 // detail payload.

@@ -48,7 +48,7 @@ func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectI
 	}
 	if _, updErr := tx.Exec(ctx, `
 		UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = $1
-		WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`,
+		WHERE archived_at IS NULL`,
 		in.Incumbent); updErr != nil {
 		return Connection{}, fmt.Errorf("overlay: flipping the workspace to overlay mode: %w", updErr)
 	}
