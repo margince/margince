@@ -72,17 +72,43 @@ build_frontend() {
   fi
 
   # Install at the REPO ROOT, build in frontend/. The lockfile is a root pnpm
-  # workspace — a unit's frontend layer is a member of it — so there is no
-  # frontend/pnpm-lock.yaml to install against, and --frozen-lockfile run from
-  # frontend/ would either resolve the root lockfile from a subdirectory or
-  # rewrite it. The Dockerfile's web stage splits the two steps for the same
-  # reason and is the reference for this lane.
+  # workspace, so there is no frontend/pnpm-lock.yaml to install against, and
+  # --frozen-lockfile run from frontend/ would either resolve the root lockfile
+  # from a subdirectory or rewrite it. The Dockerfile's web stage splits the two
+  # steps for the same reason and is the reference for this lane.
   #
   # --ignore-scripts matches every other frontend install in this repo (the
   # Dockerfile, scripts/verify-boot.sh, the CI lane): a lockfile pins WHAT is
   # installed, and this stops a dependency's lifecycle script from running
   # arbitrary code on the build machine on the way in.
   (cd "$ROOT" && pnpm install --frozen-lockfile --ignore-scripts)
+  # THEN the composed workspace, and the order is load-bearing — the same order
+  # `make fe-typecheck-composed` documents.
+  #
+  # A unit's frontend layer is NOT a member of the root workspace
+  # (pnpm-workspace.yaml says why: membership would make an installation that
+  # enables its own frontend-bearing unit unable to run --frozen-lockfile
+  # against an upstream-owned lockfile). Its react, @tanstack/react-query and
+  # @types/react are linked out of frontend/node_modules by the GENERATED
+  # workspace instead, so the root install alone leaves a unit screen resolving
+  # neither its peers nor its dev deps — and the composed build below
+  # typechecks those screens.
+  #
+  # This lane got away without it while the root lockfile still carried stale
+  # `extensions/*/frontend` entries from the era when they WERE members: they
+  # supplied the peers by accident. A lockfile regeneration correctly dropped
+  # them, and this build broke on the next change to touch desktop/ — the
+  # failure being TS2307 "cannot find module 'react'" in a unit's screen, which
+  # names neither this script nor the missing step.
+  #
+  # --no-frozen-lockfile because that lockfile is generated build output, which
+  # is what the Makefile's own invocation says at greater length.
+  local composed_ws="$ROOT/build/composition-frontend/workspace"
+  if [ ! -f "$composed_ws/pnpm-workspace.yaml" ]; then
+    echo "FAIL: gen-composition did not produce $composed_ws/pnpm-workspace.yaml, so a unit's frontend dependencies cannot be resolved" >&2
+    exit 1
+  fi
+  (cd "$composed_ws" && pnpm install --no-frozen-lockfile --ignore-scripts)
   (cd "$ROOT/frontend" &&
     MARGINCE_COMPOSITION_FRONTEND="$registry" pnpm gen:composed-types &&
     MARGINCE_COMPOSITION_FRONTEND="$registry" pnpm build:composed)
