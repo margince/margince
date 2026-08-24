@@ -1,0 +1,35 @@
+/* The deal record's own surfaces. Tokens only, like every other screen sheet. */
+
+/* The sentence at the top: whose move, and since when.
+ *
+ * It sits in RecordView's `pulse` slot, which is styled as a meta line —
+ * right for the company page's identity facts, wrong for a headline. The
+ * override is scoped to this class, so the slot keeps its own size everywhere
+ * else. The lead half carries the weight and the rest stays quiet, because the
+ * two answer different questions: "whose move" is the verdict a scanner needs,
+ * "when they wrote" is the evidence under it. */
+.d360-pulse {
+  margin: var(--space-2) 0 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+  text-wrap: balance;
+}
+
+.d360-pulse-lead {
+  font-weight: var(--fw-semibold);
+}
+
+.d360-pulse-rest {
+  font-weight: var(--fw-regular);
+  color: var(--textSecondary);
+}
+
+/* The readings band. The section owns its own interval; StatStrip owns the
+ * plate, and a screen that reached into it would be a second author of that
+ * geometry. */
+.d360-readings {
+  margin-top: var(--space-3);
+}
