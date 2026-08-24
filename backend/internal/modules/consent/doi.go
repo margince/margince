@@ -99,11 +99,24 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// consent_doi_token rows are a security artifact, not a kernel
 		// entity, so the row id stays untyped.
 		var tokenRowID ids.UUID
-		if err := tx.QueryRow(ctx, `
+		// The subject's liveness rides the INSERT as well as the probe above.
+		// The probe and this statement are two statements, and an erasure
+		// committing between them would otherwise mint a live invitation to
+		// grant consent for somebody the installation has just been told to
+		// forget — a working token, in the post, for an erased person.
+		//
+		// No row means the subject went while we were deciding, which is the
+		// same answer the probe would have given a moment earlier.
+		err = tx.QueryRow(ctx, `
 			INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
-			VALUES ($1, $2, $3, $4, $5)
+			SELECT $1, $2, $3, $4, $5
+			 WHERE EXISTS (SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)
 			RETURNING id`,
-			personID, purposeID, hashDOIToken(token), issued, issued.Add(doiTokenTTL)).Scan(&tokenRowID); err != nil {
+			personID, purposeID, hashDOIToken(token), issued, issued.Add(doiTokenTTL)).Scan(&tokenRowID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "consent_doi_token", tokenRowID, nil, map[string]any{
