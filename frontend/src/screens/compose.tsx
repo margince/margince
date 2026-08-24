@@ -1375,8 +1375,12 @@ function useAnchorProject(
  * a deal's project. It is adopted once, when it first arrives, so a rep who
  * then picks None is not overruled on the next render.
  *
- * The tag is written only when the CHOICE changes, never on a keystroke, so a
- * tag the rep deletes by hand stays deleted.
+ * The tag is KEPT in the subject for as long as a project is chosen, put back
+ * whenever the field stops carrying it — a subject is replaced wholesale by a
+ * draft arriving or by a rep retyping it, and a tag written once at the moment
+ * of choosing does not survive either. Removing it is done through the picker,
+ * which is what the send honours; there is no state where the text and the
+ * picker disagree.
  */
 function useProjectFiling(input: {
   activityId?: string;

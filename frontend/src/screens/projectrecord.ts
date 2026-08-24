@@ -72,11 +72,12 @@ export function subjectTag(project: Project | null): string {
 /**
  * `subject` carrying `tag` exactly once, at the front.
  *
- * Idempotent on purpose: the composer re-derives the subject whenever the
- * filing changes, and a rep may also have typed the tag themselves. Re-applying
- * must not produce `[N2P-1] [N2P-1] Re: …`. A tag the rep DELETED stays
- * deleted — that is the opt-out, and this function is only called when the
- * filing itself changes, never on every keystroke.
+ * Idempotent on purpose, and called on EVERY edit while a project is chosen:
+ * the tag is kept at the front of the subject rather than written once, so
+ * re-applying must neither stack (`[N2P-1] [N2P-1] Re: …`) nor disturb the
+ * text around it. The rest of the subject comes back byte for byte — it is
+ * what the rep is typing, and tidying it would rewrite their words under the
+ * cursor.
  */
 export function withSubjectTag(subject: string, tag: string): string {
   if (!tag) {
@@ -97,18 +98,20 @@ export function withSubjectTag(subject: string, tag: string): string {
  * Only key-SHAPED groups go. `[FYI]` is prose to the matcher and prose here.
  */
 export function stripEveryKeyTag(subject: string): string {
-  const without = subject.replace(/\[[^\]]*\]/g, (group) =>
-    keyShaped(group.slice(1, -1)) ? "" : group,
-  );
-  if (without === subject) {
-    // Nothing was cut, so nothing is tidied. This runs over a subject the rep
-    // is TYPING, and collapsing runs of spaces there would eat the space they
-    // just pressed before they can type the next word.
-    return subject;
-  }
-  // Removing a tag from mid-line leaves the spaces that surrounded it, and a
-  // subject reading "Re:  Hallo" is a tell that something was cut out of it.
-  return without.replace(/\s{2,}/g, " ");
+  // A removed tag takes ONE of the spaces that surrounded it with it, so
+  // "Re: [KEY] Hallo" becomes "Re: Hallo" rather than "Re:  Hallo". The rest of
+  // the line is returned byte for byte: this runs over a subject the rep is
+  // typing, and a global whitespace collapse would rewrite their spacing —
+  // eating the second space of "Re:  Kurzer" that they put there on purpose.
+  return subject.replace(/\s?\[[^\]]*\]\s?/g, (group) => {
+    const inner = group.trim().slice(1, -1);
+    if (!keyShaped(inner)) {
+      return group;
+    }
+    // Keep one separator when the tag sat BETWEEN two things; keep none when it
+    // sat at either end.
+    return group.startsWith(" ") && group.endsWith(" ") ? " " : "";
+  });
 }
 
 /** `subject` with a leading `tag` removed, if it carries one. */
