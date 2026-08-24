@@ -17,7 +17,7 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "./common";
-import { signalKindLabel, worstOf } from "./company360";
+import { worstOf } from "./company360";
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RANK,
@@ -30,6 +30,7 @@ import { SectionSummary, sectionAnswered } from "./companyrailshared";
 import { TagsSection } from "./companyrailtags";
 import { byReach } from "./coverage";
 import { roleOf } from "./provider-status";
+import { signalKindLabel } from "./record360";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,

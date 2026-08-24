@@ -9,8 +9,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
-import { SentenceList, WrittenBy } from "./company360";
 import { PersonMeetingBrief } from "./persondrawers";
+import { SentenceList, WrittenBy } from "./record360";
 import "./dealstatus.css";
 
 // Deal360 — the deal page's written briefing, read before a call.

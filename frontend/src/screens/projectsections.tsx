@@ -22,9 +22,9 @@ import {
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { dealRoleLabel } from "./company360";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
+import { dealRoleLabel } from "./record360";
 
 // The project page's sections, each drawn from ONE composite read
 // (GET /projects/{id}/360). Every card below answers the same three questions

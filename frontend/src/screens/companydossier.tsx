@@ -8,7 +8,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import { SentenceList, WrittenBy } from "./company360";
+import { SentenceList, WrittenBy } from "./record360";
 
 type Dossier = components["schemas"]["OrganizationDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];

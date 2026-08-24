@@ -63,7 +63,6 @@ import {
   DealsCard,
   NextSteps,
   type Org360Result,
-  OverlayFallback,
   PeopleCard,
   RecentActivityPanel,
   StateStrip,
@@ -123,6 +122,7 @@ import {
 } from "./listquery";
 import { PartnerTab } from "./partners";
 import { PersonMeetingBrief } from "./persondrawers";
+import { OverlayFallback } from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,

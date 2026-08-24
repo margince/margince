@@ -1,0 +1,315 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Grounded prose and the receipts under it.
+//
+// Every record page renders sentences a model or the deterministic fallback
+// wrote, each citing the records it rests on. This is that rendering, once: a
+// citation can never be clickable on the company page and flat on the deal
+// page, because both pages call the same component.
+
+import type { components } from "../../api/schema";
+import { Badge } from "../../design-system/atoms";
+import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+
+/**
+ * One sentence of grounded prose, with what it rests on.
+ *
+ * Typed against the contract's own shared sentence — which the contract
+ * spells `OrganizationBriefSentence` and uses for the org brief, the deal
+ * status card, Person360 and the growth-fit panel alike. The name is the
+ * contract's; the shape has never been a company's.
+ */
+export type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
+
+/** One record a sentence was written from. */
+export type Cited = BriefSentence["evidence"][number];
+
+/** Which kind of record a citation points at. */
+export type CitedKind = Cited["entity_type"];
+
+/** How prose says which writer produced it. */
+export type WrittenByWriter = components["schemas"]["WrittenBy"];
+
+export type CitationChip =
+  | {
+      openable: true;
+      entityType: CitedKind;
+      entityId: string;
+      count: number;
+      // The record's own name, when the citation carried one — a deal's
+      // name, an activity's subject. Absent on a grouped chip: a count
+      // already speaks for several records, and one of their names would
+      // read as though it spoke for the rest.
+      name?: string;
+    }
+  | { openable: false; entityType: CitedKind; count: number };
+
+/**
+ * citationChips turns a sentence's raw evidence into what a reader should see.
+ *
+ * Three reductions, all of which the raw list gets wrong on its own. The same
+ * record cited twice is one source, not two. Several records of a kind the app
+ * cannot open are one statement about that kind — rendered one by one they
+ * became a run of identical unopenable labels ("activity activity activity"),
+ * which says nothing the count does not say better. And several RECEIPT
+ * citations of the same kind (`groupable`) are one counted chip too, opening
+ * the first and stepping through the rest — rendered one per record they
+ * became the same run under a different reason: a receipt has no name of its
+ * own, so ten profile fields all read "profile field", ten times, with nothing
+ * to tell them apart. `deal`/`person` stay one chip per record: each opens its
+ * OWN screen rather than a shared stepper, so collapsing them would silently
+ * drop every record after the first.
+ *
+ * Order is first-seen, so the chips follow the sentence's own reasoning.
+ */
+export function citationChips(
+  evidence: readonly Cited[],
+  openable: (entityType: CitedKind) => boolean,
+  groupable: (entityType: CitedKind) => boolean = () => false,
+): CitationChip[] {
+  const chips: CitationChip[] = [];
+  const seen = new Set<string>();
+  const groupAt = new Map<CitedKind, number>();
+  for (const cited of evidence) {
+    const identity = `${cited.entity_type}:${cited.entity_id}`;
+    if (seen.has(identity)) {
+      continue;
+    }
+    seen.add(identity);
+    const isOpenable = openable(cited.entity_type);
+    if (isOpenable && !groupable(cited.entity_type)) {
+      chips.push({
+        openable: true,
+        entityType: cited.entity_type,
+        entityId: cited.entity_id,
+        count: 1,
+        name: cited.name,
+      });
+      continue;
+    }
+    const at = groupAt.get(cited.entity_type);
+    if (at === undefined) {
+      groupAt.set(cited.entity_type, chips.length);
+      chips.push(
+        isOpenable
+          ? {
+              openable: true,
+              entityType: cited.entity_type,
+              entityId: cited.entity_id,
+              count: 1,
+            }
+          : { openable: false, entityType: cited.entity_type, count: 1 },
+      );
+      continue;
+    }
+    chips[at].count += 1;
+  }
+  return chips;
+}
+
+// The citation kinds that open a RECEIPT rather than a record page. Only these
+// can be stepped through, because only these render in the drawer.
+const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
+
+// The citation kinds a reader can open something for. `deal` and `person` route
+// to their own screens; `fact` and `profile_field` open their receipt instead —
+// where the value came from, when it was read, and what could not be recorded.
+//
+// An activity has no detail route of its own (it lives in a timeline) and no
+// receipt either, and the organization citation is usually the page the reader
+// is already on. Both stay flat: a clickable element that does nothing teaches
+// the reader that citations do not work, which costs more than the click it
+// saves.
+const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
+
+/** One steppable citation, in the receipt's own shape. */
+export type CitedSibling = {
+  entityType: "fact" | "profile_field";
+  entityId: string;
+};
+
+// The sentence's receipt-bearing citations, once each, in the order it cites
+// them. Mapped here at the one place that knows both shapes: the wire is
+// snake_case and the drawer's CitedRecord is not.
+function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
+  const seen = new Set<string>();
+  const out: CitedSibling[] = [];
+  for (const each of evidence) {
+    const key = `${each.entity_type}:${each.entity_id}`;
+    if (!RECEIPT_CITATIONS.has(each.entity_type) || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push({
+      entityType: each.entity_type as "fact" | "profile_field",
+      entityId: each.entity_id,
+    });
+  }
+  return out;
+}
+
+/**
+ * Citations renders the chips for one sentence.
+ *
+ * A citation the app cannot open is rendered as a label, not as a button: a
+ * clickable element that does nothing teaches the reader that citations do not
+ * work, which costs more than the click it saves.
+ */
+export function Citations({
+  evidence,
+  onOpenRecord,
+}: Readonly<{
+  evidence: readonly Cited[];
+  onOpenRecord?: (
+    entityType: string,
+    entityId: string,
+    siblings?: readonly CitedSibling[],
+  ) => void;
+}>) {
+  const t = useT();
+  const chips = citationChips(
+    evidence,
+    (entityType) => Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(entityType),
+    (entityType) => RECEIPT_CITATIONS.has(entityType),
+  );
+  // THIS sentence's citations, in the order it cites them, so the receipt's
+  // prev/next walks the sentence the reader is actually looking at. The order
+  // belongs to the sentence, which is why it is passed from here rather than
+  // rebuilt in the drawer.
+  // Deduplicated, because the stepper finds its position by id: a sentence
+  // citing the same fact twice would leave `findIndex` returning the first
+  // occurrence forever, and Next would never move past it.
+  const siblings = dedupeCited(evidence);
+  if (chips.length === 0) {
+    return null;
+  }
+  return (
+    <span className="co-brief-cites">
+      {chips.map((chip) =>
+        chip.openable ? (
+          <button
+            key={`${chip.entityType}:${chip.entityId}`}
+            type="button"
+            className="co-brief-cite"
+            onClick={() =>
+              onOpenRecord?.(chip.entityType, chip.entityId, siblings)
+            }
+          >
+            {/* A grouped chip (fact/profile_field, several of the same kind
+                in one prose block) opens the FIRST and names the count; the
+                drawer's own stepper reaches the rest, which is the receipt
+                kind's whole reason for having one. A single deal or person
+                names ITSELF rather than its kind — "deal" told a reader
+                nothing they could not already see; the deal's own name tells
+                them which one. */}
+            {chip.count === 1 && chip.name
+              ? chip.name
+              : chip.count === 1
+                ? t(`co.brief.cite.${chip.entityType}`)
+                : t(`co.brief.cite.${chip.entityType}.many`, {
+                    count: chip.count,
+                  })}
+          </button>
+        ) : (
+          <span key={chip.entityType} className="co-brief-cite-flat">
+            {chip.count === 1
+              ? t(`co.brief.cite.${chip.entityType}`)
+              : t(`co.brief.cite.${chip.entityType}.many`, {
+                  count: chip.count,
+                })}
+          </span>
+        ),
+      )}
+    </span>
+  );
+}
+
+const NATURE_LABELS: Record<
+  NonNullable<BriefSentence["nature"]>,
+  MessageKey
+> = {
+  fact: "co.brief.nature.fact",
+  assessment: "co.brief.nature.assessment",
+  recommendation: "co.brief.nature.recommendation",
+};
+
+/**
+ * SentenceList renders grounded prose — the standing brief, the deal's status
+ * card and the answers to prepared questions read identically, because they
+ * are the same thing written from the same records with the same citations.
+ * One component, so a citation can never be clickable in one place and flat in
+ * the other.
+ */
+export function SentenceList({
+  sentences,
+  onOpenRecord,
+  citations = "per-sentence",
+}: Readonly<{
+  sentences: BriefSentence[];
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  // WHERE the receipts go, which is a reading decision rather than a styling
+  // one.
+  //
+  // "per-sentence" is the brief's: each line is a separate claim a reader
+  // checks on its own, so its chips belong beside it.
+  //
+  // "collected" is the dossier's: it is one continuous description of a
+  // record, and a chip after every clause turned three sentences into a wall
+  // of "fact fact fact". The sources are the same, gathered once underneath —
+  // every claim stays checkable, and the prose stays readable.
+  citations?: "per-sentence" | "collected";
+}>) {
+  const t = useT();
+  return (
+    <ul className="co-brief-lines">
+      {sentences.map((sentence, index) => (
+        // Indexed because two sentences may legitimately read the same;
+        // keying on the text collapses them into one row.
+        // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
+        <li key={index}>
+          {/* What KIND of claim this is, marked where it is made. A judgment
+              that looked like a stored fact would be the one thing a reader
+              could not check — and the prose is allowed to judge now. */}
+          {sentence.nature && sentence.nature !== "fact" && (
+            <Badge
+              tone={sentence.nature === "recommendation" ? "accent" : undefined}
+            >
+              {t(NATURE_LABELS[sentence.nature])}
+            </Badge>
+          )}{" "}
+          {sentence.text}
+          {citations === "per-sentence" && (
+            <Citations
+              evidence={sentence.evidence}
+              onOpenRecord={onOpenRecord}
+            />
+          )}
+        </li>
+      ))}
+      {citations === "collected" && (
+        <li className="co-brief-sources">
+          <Citations
+            evidence={sentences.flatMap((sentence) => sentence.evidence)}
+            onOpenRecord={onOpenRecord}
+          />
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/**
+ * WrittenBy names which writer produced a piece of prose. Always shown: a
+ * reader weighing a sentence needs to know whether a model or the
+ * deterministic fallback wrote it, and the two are not interchangeable.
+ */
+export function WrittenBy({ by }: Readonly<{ by: WrittenByWriter }>) {
+  const t = useT();
+  return (
+    <Badge tone={by === "model" ? "ai" : undefined}>
+      {t(`co.brief.by.${by}`)}
+    </Badge>
+  );
+}

@@ -18,11 +18,11 @@ import {
   CommercialPanel,
   NextSteps,
   PeopleCard,
-  SentenceList,
   type SuggestionAction,
   SuggestionsSection,
 } from "./company360";
 import { CompanyScreen } from "./organizations";
+import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
 // The company view's honesty rules, which are the whole point of the

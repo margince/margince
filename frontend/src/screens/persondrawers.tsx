@@ -25,12 +25,12 @@ import { Select } from "../design-system/select";
 import { webUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
-import { SentenceList } from "./company360";
 import { refusalOf, SendRefusal, scheduleFields } from "./compose";
 import { useConsentPurposes } from "./consent";
 import { PersonProviderSection } from "./personprovider";
 import type { Transport } from "./persontransports";
 import { useTransports } from "./persontransports";
+import { SentenceList } from "./record360";
 
 // The three surfaces the person page opens over itself: the composer, the
 // research drawer, and the meeting brief.

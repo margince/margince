@@ -12,8 +12,8 @@ import {
 } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { incompleteGraph } from "./company360";
 import { type StrengthBucket, useOrganizationGraph } from "./connections";
+import { incompleteGraph } from "./record360";
 
 // Comparing a chosen few colleagues against the account's contacts.
 //
