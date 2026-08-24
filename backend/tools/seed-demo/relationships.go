@@ -77,6 +77,12 @@ func seedRelationshipTypes(c *client, cfg demoConfig, refs pipelineRefs, mode ru
 		if err != nil {
 			return changed, fmt.Errorf("reading %s: %w", domain, err)
 		}
+		// relationship_types is a REPLACE-set, so this phase is the most
+		// destructive of the three: a type somebody added by hand is dropped,
+		// not merged. Only rows this seeder wrote are retyped.
+		if !seederOwns(current.Source) {
+			continue
+		}
 		want := withPartnerKept(relationshipTypesFor(domain, current.Lifecycle, cfg), current.Types)
 		if sameTypes(current.Types, want) {
 			continue
@@ -131,11 +137,13 @@ func sameTypes(a, b []string) bool {
 func organizationTypes(c *client, orgID string) (struct {
 	Lifecycle string   `json:"lifecycle"`
 	Types     []string `json:"relationship_types"`
+	Source    string   `json:"source"`
 	Version   int      `json:"version"`
 }, error) {
 	var out struct {
 		Lifecycle string   `json:"lifecycle"`
 		Types     []string `json:"relationship_types"`
+		Source    string   `json:"source"`
 		Version   int      `json:"version"`
 	}
 	err := c.get("/v1/organizations/"+orgID, nil, &out)

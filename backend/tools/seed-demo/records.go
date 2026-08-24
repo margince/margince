@@ -296,9 +296,15 @@ func seedLifecycle(c *client, cfg demoConfig, refs pipelineRefs, plan map[string
 				changed++
 				continue
 			}
-			current, version, err := organizationLifecycle(c, orgID)
+			current, version, source, err := organizationLifecycle(c, orgID)
 			if err != nil {
 				return changed, err
+			}
+			// A company whose record somebody else owns keeps the lifecycle
+			// stage it carries. Moving an account along the pipeline by hand is
+			// the demo's whole point; a re-seed must not walk it back.
+			if !seederOwns(source) {
+				continue
 			}
 			if current == stage {
 				continue
@@ -315,15 +321,16 @@ func seedLifecycle(c *client, cfg demoConfig, refs pipelineRefs, plan map[string
 	return changed, nil
 }
 
-func organizationLifecycle(c *client, orgID string) (stage string, version int, err error) {
+func organizationLifecycle(c *client, orgID string) (stage string, version int, source string, err error) {
 	var out struct {
 		Lifecycle string `json:"lifecycle"`
+		Source    string `json:"source"`
 		Version   int    `json:"version"`
 	}
 	if err := c.get("/v1/organizations/"+orgID, nil, &out); err != nil {
-		return "", 0, fmt.Errorf("reading organization %s: %w", orgID, err)
+		return "", 0, "", fmt.Errorf("reading organization %s: %w", orgID, err)
 	}
-	return out.Lifecycle, out.Version, nil
+	return out.Lifecycle, out.Version, out.Source, nil
 }
 
 // seedProducts fills the rate card the offers draw their line items from.
