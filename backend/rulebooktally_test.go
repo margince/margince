@@ -194,8 +194,8 @@ func prose(src string) []prosePara {
 	return out
 }
 
-// rulebookProse is every file whose prose this rule binds: each AGENTS.md in the
-// tree, and the module catalog they send a reader to. The CLAUDE.md shims are not
+// rulebookProse collects the files whose prose this rule binds: each AGENTS.md in
+// the tree, and the module catalog they send a reader to. The CLAUDE.md shims are not
 // scanned because they are one import line each and cannot hold a sentence —
 // `TestEveryClaudeShimIsNothingButTheImport` is what keeps that true. Derived
 // rather than listed, so a directory that grows a rulebook is covered the moment
