@@ -137,7 +137,13 @@ var appUserAlias = regexp.MustCompile(`(?i)\bapp_user\b(?:\s+AS)?\s+([a-z]\w*)`)
 // trailing `\b` already refuses `app_user_id`, since an underscore is a word
 // character. A statement that only carries the foreign key is not reading the
 // row, and asking it about liveness would report a pairing nobody wrote.
-var readsAppUser = regexp.MustCompile(`\bapp_user\b`)
+//
+// CASE-INSENSITIVE, like every other pattern here. Postgres folds an unquoted
+// identifier, so `FROM APP_USER` is the same relation and a case-sensitive
+// census would have passed straight over it — the same way `as` slipped past
+// an uppercase-only `AS`. Nothing in this tree writes it that way today, which
+// is exactly why nobody would notice the day something did.
+var readsAppUser = regexp.MustCompile(`(?i)\bapp_user\b`)
 
 func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	// A ratification that stops matching covers a site that has moved or been
@@ -376,8 +382,8 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 func liveMemberHalves(sql string) (status, archived bool) {
 	sql = stripAssignments(sql)
 	prefix := appUserPrefix(sql)
-	status = regexp.MustCompile(regexp.QuoteMeta(prefix) + `status\s*=\s*'active'`).MatchString(sql)
-	archived = regexp.MustCompile(regexp.QuoteMeta(prefix) + `archived_at\s+IS\s+NULL`).MatchString(sql)
+	status = regexp.MustCompile(`(?i)` + regexp.QuoteMeta(prefix) + `status\s*=\s*'active'`).MatchString(sql)
+	archived = regexp.MustCompile(`(?i)` + regexp.QuoteMeta(prefix) + `archived_at\s+IS\s+NULL`).MatchString(sql)
 	return status, archived
 }
 
@@ -453,7 +459,7 @@ func resolvesOneUserByID(sql string) bool {
 	// joined table's key excuse a liveness defect on app_user: `… JOIN app_user
 	// u … WHERE p.id = $1 AND u.archived_at IS NULL` names WHICH PROJECT, not
 	// which colleague, and the statement still chooses freely among seats.
-	return regexp.MustCompile(regexp.QuoteMeta(appUserPrefix(sql)) +
+	return regexp.MustCompile(`(?i)` + regexp.QuoteMeta(appUserPrefix(sql)) +
 		`id\s*(?:=\s*\$\d+|=\s*ANY\s*\(\s*\$\d+)`).MatchString(sql)
 }
 
@@ -625,6 +631,14 @@ func read() string {
 		` + "`" + `SELECT id FROM app_user WHERE ` + "`" + `,
 		` + "`" + `status = 'active' AND archived_at IS NULL` + "`" + `,
 	}, " ")
+}`},
+	{"the table name folded to upper case", "copy", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM APP_USER WHERE STATUS = 'active' AND ARCHIVED_AT IS NULL` + "`" + `
+}`},
+	{"the half-spelling, table name folded", "half", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM APP_USER WHERE display_name ILIKE $1 AND ARCHIVED_AT IS NULL` + "`" + `
 }`},
 	{"a lowercase alias keyword", "copy", "", `
 func read() string {

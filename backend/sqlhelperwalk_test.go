@@ -181,9 +181,6 @@ func markSeen(n ast.Node, seen map[ast.Node]bool) {
 	})
 }
 
-// firstEmploymentLine returns the line of the statement that names the
-// employment kind, so the report points at the statement rather than dumping
-
 // handWrittenGoSources walks the module for source a person maintains.
 func handWrittenGoSources(t *testing.T) []string {
 	t.Helper()
@@ -213,5 +210,3 @@ func handWrittenGoSources(t *testing.T) []string {
 	}
 	return paths
 }
-
-// employmentProbe is one planted source file and the answer the gate must give
