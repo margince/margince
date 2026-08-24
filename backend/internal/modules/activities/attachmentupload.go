@@ -84,7 +84,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		return crmcontracts.Attachment{}, err
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureAttachmentParentWritable(ctx, tx, in.EntityType, in.EntityID); err != nil {
+		if err := ensureAttachmentParentWritableLive(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
 		return ensureContractFileable(ctx, tx, in.ContractID)
@@ -129,7 +129,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		// document — the row commits against a record the caller can no longer
 		// see, and the reason has always been written here; it just used to
 		// cover one of the two.
-		if err := ensureAttachmentParentWritable(ctx, tx, in.EntityType, in.EntityID); err != nil {
+		if err := ensureAttachmentParentWritableLive(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
 		if err := ensureContractFileable(ctx, tx, in.ContractID); err != nil {

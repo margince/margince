@@ -19,39 +19,36 @@ package people
 // Art. 17 erasure had just cleared.
 
 import (
-	"context"
 	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
-
-// archiveRow retires a row by column rather than through the module's Archive
-// entry point: the rep these suites run as holds no delete grant, and widening
-// it would change what every other test in the package proves. The state under
-// test is the archived row, not how it came to be one.
-//
-// table is a test-local literal, never caller input.
-func archiveRow(ctx context.Context, t *testing.T, e *dedupeEnv, table string, id ids.UUID) {
-	t.Helper()
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE `+table+` SET archived_at = now() WHERE id = $1`, id)
-		return err
-	}); err != nil {
-		t.Fatalf("archive %s: %v", table, err)
-	}
-}
 
 func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	personID, orgID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
-	archiveRow(ctx, t, e, "organization", orgID.UUID)
-	archiveRow(ctx, t, e, "person", personID.UUID)
+
+	// Commissioned while the company is still live, because a deep-read fact
+	// carries a real site_read FK. Minted here rather than faked so the deep
+	// read below fails on the GATE when the gate is broken, instead of dying on
+	// a foreign key and reporting a refusal that never happened.
+	dossier, _, err := e.store.StartSiteRead(ctx, orgID, "https://voltaq.test/", "rep")
+	if err != nil {
+		t.Fatalf("commission the dossier while the company is live: %v", err)
+	}
+
+	archiver := e.asArchiver()
+	if _, err := e.store.ArchiveOrganization(archiver, orgID, nil); err != nil {
+		t.Fatalf("archive organization: %v", err)
+	}
+	if _, err := e.store.ArchivePerson(archiver, personID, nil); err != nil {
+		t.Fatalf("archive person: %v", err)
+	}
 
 	for _, tc := range []struct {
 		name string
@@ -78,14 +75,24 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 			name: "an accepted deep read",
 			why:  "ApplyDeepReadTx (organizationfact.go) — reachable with no human in the loop via deepreadautoapply",
 			call: func() error {
+				// Carries a FACT as well as a field, and specifically an
+				// employee_range one: size_band is filled from an applied fact
+				// (fillSizeBandFromFacts), so a fields-only proposal would leave
+				// that column empty however the gate behaved and the assertion
+				// on it below would pass over a broken branch.
 				return e.store.ApplyDeepRead(ctx, DeepReadProposal{
 					OrganizationID: orgID,
 					SourceURL:      "https://voltaq.test/about",
-					SiteReadID:     ids.NewV7(),
+					SiteReadID:     dossier.ID,
 					Fields: []DeepReadField{{
 						Field: "industry", Value: "Energietechnik",
 						EvidenceSnippet: `"Energietechnik"`,
 						SourceURL:       "https://voltaq.test/about", Confidence: 0.8,
+					}},
+					Facts: []DeepReadFact{{
+						Category: factCategoryCompany, Field: FactEmployeeRange,
+						Value: "51-200", EvidenceSnippet: `"51-200 Mitarbeitende"`,
+						SourceURL: "https://voltaq.test/about", Confidence: 0.8,
 					}},
 				})
 			},
@@ -120,13 +127,14 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 		})
 	}
 
-	// Nothing landed. The columns these applies write are the ones the census
-	// on #2145 found five paths competing over, so the assertion names them
-	// rather than trusting that a refused call wrote nothing.
+	// Nothing landed. Asserted on the columns rather than inferred from the
+	// four refusals, because a gate that returns the right error while still
+	// committing the write is the failure this exists to notice — and these are
+	// the columns the applies above would have moved.
 	for column, want := range map[string]string{
 		"legal_name": "", "industry": "", "size_band": "",
 	} {
-		if got := archivedOrgColumn(ctx, t, e, orgID, column); got != want {
+		if got := orgColumn(ctx, t, e, orgID, column); got != want {
 			t.Errorf("organization.%s = %q after refused applies, want %q", column, got, want)
 		}
 	}
@@ -140,22 +148,4 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 	if profileFields != 0 {
 		t.Errorf("person_profile_field rows = %d, want 0 — a refused apply wrote PII onto an archived subject", profileFields)
 	}
-}
-
-// archivedOrgColumn reads a nullable organization column as its empty string,
-// which orgColumn cannot do — that helper scans into a string and a NULL
-// legal_name on a company nobody has named would fail the scan rather than the
-// assertion.
-func archivedOrgColumn(
-	ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID, column string,
-) string {
-	t.Helper()
-	var v string
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT coalesce(`+column+`, '') FROM organization WHERE id = $1`, orgID).Scan(&v)
-	}); err != nil {
-		t.Fatalf("read organization.%s: %v", column, err)
-	}
-	return v
 }
