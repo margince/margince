@@ -6,7 +6,8 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
 import type { EntityKind } from "../app/entity";
-import { RECORD_ZONE, startOfDayInZone } from "../format/timezone";
+import { useRecordZone } from "../app/recordzone";
+import { startOfDayInZone } from "../format/timezone";
 import { entityTimelineKeys } from "../screens/activitykeys";
 import { throwProblem, useSorMode } from "../screens/common";
 import type { ISODate } from "./dateinput";
@@ -60,14 +61,18 @@ export function hasTimelineFilters(filters: TimelineFilters): boolean {
 export const TIMELINE_PAGE_SIZE = 20;
 
 /**
- * dayStartIso turns a picked calendar day into the instant it begins — in
- * RECORD_ZONE, the clock every timeline row is rendered in, so the day the
+ * dayStartIso turns a picked calendar day into the instant it begins — in the
+ * record zone, the clock every timeline row is rendered in, so the day the
  * reader picks is the day the rows show. `daysLater` shifts by whole days,
  * which is how an EXCLUSIVE `before` is spelled from an inclusive "to" date:
  * the next day's start.
+ *
+ * The zone is a parameter because this is a plain function and the zone now
+ * comes from the installation, which only a hook can read. It is threaded from
+ * `useRecordTimeline` rather than read here.
  */
-export function dayStartIso(day: ISODate, daysLater = 0): string {
-  return startOfDayInZone(day, RECORD_ZONE, daysLater);
+export function dayStartIso(day: ISODate, zone: string, daysLater = 0): string {
+  return startOfDayInZone(day, zone, daysLater);
 }
 
 /**
@@ -80,6 +85,7 @@ export function timelineQueryParams(
   entityType: EntityKind,
   id: string,
   filters: TimelineFilters,
+  zone: string,
   cursor?: string,
 ): ListActivitiesQuery {
   const query: ListActivitiesQuery = {
@@ -90,8 +96,9 @@ export function timelineQueryParams(
   if (cursor) query.cursor = cursor;
   if (filters.kind) query.kind = filters.kind;
   if (filters.q?.trim()) query.q = filters.q.trim();
-  if (filters.after) query.occurred_after = dayStartIso(filters.after);
-  if (filters.before) query.occurred_before = dayStartIso(filters.before, 1);
+  if (filters.after) query.occurred_after = dayStartIso(filters.after, zone);
+  if (filters.before)
+    query.occurred_before = dayStartIso(filters.before, zone, 1);
   return query;
 }
 
@@ -165,17 +172,22 @@ export function useRecordTimeline(
   // refuses (422) — skip the fetch in overlay; the record page renders the
   // honest unavailable state in the timeline slot instead.
   const overlay = useSorMode() === "overlay";
+  const zone = useRecordZone();
   const seedCursor = seed?.page.next_cursor ?? undefined;
   const query = useInfiniteQuery({
-    // The key the write path invalidates, extended by the filters and the
-    // seed's edge. Spelled without the filters, a kind-narrowed page would be
-    // handed to the unfiltered view; spelled without the edge, pages continued
-    // from a seed that has since changed would start from a cursor that no
-    // longer sits at its end.
+    // The key the write path invalidates, extended by the filters, the seed's
+    // edge and the zone. Spelled without the filters, a kind-narrowed page
+    // would be handed to the unfiltered view; spelled without the edge, pages
+    // continued from a seed that has since changed would start from a cursor
+    // that no longer sits at its end; spelled without the zone, a from/to
+    // filter cached under the old record zone would keep answering after an
+    // admin moved it, and the rows it returns are cut at day boundaries that
+    // have moved with it.
     queryKey: [
       ...entityTimelineKeys(entityType, id)[0],
       filters,
       { continuesFrom: seedCursor ?? null },
+      { zone },
     ],
     // With a seed the first page is already on screen: nothing is fetched
     // until the reader asks, and `fetchNextPage` fetches regardless of this.
@@ -186,7 +198,7 @@ export function useRecordTimeline(
     queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/activities", {
         params: {
-          query: timelineQueryParams(entityType, id, filters, pageParam),
+          query: timelineQueryParams(entityType, id, filters, zone, pageParam),
         },
       });
       if (error) {

@@ -1,13 +1,13 @@
 import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, TableScroll } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter, Sparkline } from "../design-system/readings";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, useFinanceSummary } from "./common";
@@ -80,6 +80,7 @@ export function CompanyFinanceCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const query = useFinanceSummary(orgId);
 
   if (lifecycle && NEVER_INVOICED.has(lifecycle)) {
@@ -143,7 +144,7 @@ export function CompanyFinanceCard({
           detail={{
             onRetry: () => void query.refetch(),
             staleAsOf: summary.last_synced_at
-              ? formatDate(summary.last_synced_at, locale, RECORD_ZONE)
+              ? formatDate(summary.last_synced_at, locale, recordZone)
               : undefined,
           }}
         >
@@ -428,6 +429,7 @@ function InvoiceRow({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const late = invoice.days_late != null && invoice.days_late > 0;
   return (
     // A row the customer still owes past its due date carries the tint, so the
@@ -439,8 +441,8 @@ function InvoiceRow({
         {invoice.number ?? t("finance.unnumbered")}
       </td>
       <td className="fin-cell-dates">
-        {formatDate(invoice.issued_at, locale, RECORD_ZONE)} →{" "}
-        {invoice.due_at ? formatDate(invoice.due_at, locale, RECORD_ZONE) : "—"}
+        {formatDate(invoice.issued_at, locale, recordZone)} →{" "}
+        {invoice.due_at ? formatDate(invoice.due_at, locale, recordZone) : "—"}
         {/* When it was actually settled, appended rather than given a column
             of its own: an unpaid invoice has no date to put there, and a
             column of dashes states nothing the status does not. */}
@@ -448,7 +450,7 @@ function InvoiceRow({
           <span className="fin-cell-paid">
             {" · "}
             {t("finance.paidOn", {
-              when: formatDate(invoice.paid_at, locale, RECORD_ZONE),
+              when: formatDate(invoice.paid_at, locale, recordZone),
             })}
           </span>
         )}
@@ -526,6 +528,7 @@ const STATUS_TONE: Record<
 function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   if (!summary.provider) {
     return null;
   }
@@ -535,7 +538,7 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
       {summary.last_synced_at
         ? t("finance.syncedFrom", {
             provider: summary.provider,
-            when: formatDate(summary.last_synced_at, locale, RECORD_ZONE),
+            when: formatDate(summary.last_synced_at, locale, recordZone),
           })
         : t("finance.fromNeverSynced", { provider: summary.provider })}
     </p>

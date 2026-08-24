@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
 import { Avatar, Badge, Disclosure } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
@@ -14,7 +15,6 @@ import {
 } from "../design-system/surfacestate";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "./common";
 import { signalKindLabel, worstOf } from "./company360";
@@ -401,6 +401,7 @@ function signalDotTone(severity: string): "warn" | "danger" | undefined {
 function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const query = useQuery({
     queryKey: ["signals", "organization", orgId],
     queryFn: async () => {
@@ -465,7 +466,7 @@ function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
               )}
             </span>
             <span className="co-row-meta">
-              {formatDate(signal.detected_at, locale, RECORD_ZONE)}
+              {formatDate(signal.detected_at, locale, recordZone)}
             </span>
           </PanelRow>
         ))

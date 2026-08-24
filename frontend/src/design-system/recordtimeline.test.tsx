@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { RECORD_ZONE } from "../format/timezone";
+import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider } from "../i18n";
 import { LoadMoreButton } from "../screens/common";
 import { groupChronology } from "../screens/timelinegroups";
@@ -83,6 +83,14 @@ function activityFeed(pages: Record<string, ActivityPage>) {
   };
 }
 
+// The installation's zone, stated by this suite rather than taken from a
+// default. It is deliberately NOT the fallback: a from/to filter cut on the
+// fallback clock and asserted against the fallback clock would agree with
+// itself no matter which zone the code actually read, so the one thing this
+// file has to prove — that the picked day is cut in the INSTALLATION's zone —
+// would be exactly what it could not see.
+const INSTALLATION_ZONE = "Asia/Ho_Chi_Minh";
+
 function Harness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
   const [filters, setFilters] = useTimelineFilters("p-1");
   const timeline = useRecordTimeline("person", "p-1", { filters, firstPage });
@@ -94,7 +102,7 @@ function Harness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
       <TimelineFilterBar value={filters} onChange={setFilters} />
       <GroupedTimelineList
         groups={groupChronology(entries, timeline.hasNextPage)}
-        zone={RECORD_ZONE}
+        zone={INSTALLATION_ZONE}
       />
       <LoadMoreButton query={timeline} />
     </>
@@ -108,7 +116,9 @@ function mount(firstPage?: ActivityPage) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <Harness firstPage={firstPage} />
+        <RecordZoneProvider zone={INSTALLATION_ZONE}>
+          <Harness firstPage={firstPage} />
+        </RecordZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -229,8 +239,12 @@ describe("a record timeline you can work in", () => {
       expect(feed.last().searchParams.get("occurred_before")).not.toBeNull(),
     );
     const params = feed.last().searchParams;
-    expect(params.get("occurred_after")).toBe(dayStartIso("2026-03-03"));
-    expect(params.get("occurred_before")).toBe(dayStartIso("2026-03-05", 1));
+    expect(params.get("occurred_after")).toBe(
+      dayStartIso("2026-03-03", INSTALLATION_ZONE),
+    );
+    expect(params.get("occurred_before")).toBe(
+      dayStartIso("2026-03-05", INSTALLATION_ZONE, 1),
+    );
   });
 
   it("folds a conversation into one row that opens, with the conversation's own verbs on it", async () => {

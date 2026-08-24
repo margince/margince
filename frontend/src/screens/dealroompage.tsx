@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Badge,
@@ -18,7 +19,6 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateAbbrev } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import {
@@ -147,6 +147,7 @@ function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
 function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   switch (room.state) {
     case "paused":
       return <Callout tone="warn">{t("roompage.banner.paused")}</Callout>;
@@ -160,7 +161,7 @@ function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
       return room.expires_at ? (
         <Callout tone="info">
           {t("roompage.banner.liveUntil", {
-            when: formatDateAbbrev(room.expires_at, locale, RECORD_ZONE),
+            when: formatDateAbbrev(room.expires_at, locale, recordZone),
           })}
         </Callout>
       ) : null;

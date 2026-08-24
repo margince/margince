@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
 import { Panel, PanelBody, PanelPlate, PanelRow } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -128,6 +128,7 @@ export function TodayOnThisAccount({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Called unconditionally regardless of the loading/failed branches below,
   // same as every other hook here — React requires it, and the hook itself
   // already answers "nothing to show" by returning `ready: false`.
@@ -160,7 +161,7 @@ export function TodayOnThisAccount({
   const ctx: TodayContext = {
     view,
     t,
-    when: (at: string) => formatDateTime(at, locale, RECORD_ZONE),
+    when: (at: string) => formatDateTime(at, locale, recordZone),
   };
   const lead = whoseMove(ctx);
   const items = todayContextItems(ctx);

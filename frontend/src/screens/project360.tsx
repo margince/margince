@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { RecordView } from "../design-system/composed";
 import {
@@ -15,7 +16,6 @@ import {
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
@@ -91,6 +91,7 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
 
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const project = view.project;
   const archivedReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
@@ -101,7 +102,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
     <RecordView
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
-      zone={RECORD_ZONE}
+      zone={recordZone}
       badges={
         <>
           <PhaseBadge phase={project.phase} />
@@ -180,6 +181,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
 function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const project = view.project;
   const company = view.organization;
   const companyState = sectionState(
@@ -210,7 +212,7 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
           <span aria-hidden="true">·</span>
           <span>
             {t("project.targetEndShort", {
-              date: formatDate(project.target_end_date, locale, RECORD_ZONE),
+              date: formatDate(project.target_end_date, locale, recordZone),
             })}
           </span>
         </>

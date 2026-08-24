@@ -840,6 +840,24 @@ export async function mockApi(
         system_of_record: { mode: sorMode },
       });
     }
+    if (path === "/installation/settings" && method === "GET") {
+      // The authenticated shell holds its first paint on this read, because
+      // `installation.timezone` is the clock every record date is rendered in
+      // and a page painted before it arrives would renumber under the reader.
+      // The catch-all would answer it with a list envelope — a 200 carrying no
+      // timezone — so every spec would silently run on the fallback zone while
+      // appearing to exercise the configured one.
+      //
+      // Europe/Berlin because the specs assert German dates against it.
+      return json({
+        name: "Brandt Automotive",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+        base_language: "de",
+        base_currency_locked: false,
+        max_upload_bytes: 25_000_000,
+      });
+    }
     // The two anonymous reads the unauthenticated surface makes. Both answer
     // before a session exists, by design: the surface has to show a stranger the
     // installation's posture and its working sign-in methods.

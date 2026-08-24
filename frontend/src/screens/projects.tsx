@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Hash } from "lucide-react";
 import { api } from "../api/client";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
@@ -165,6 +166,7 @@ const PHASE_CHIP_OPTIONS: { value: ProjectPhase; label: MessageKey }[] =
 export function ProjectsScreen() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const me = useMe();
   const overlay = useSorMode() === "overlay";
   const companies = useCompanyOptions();
@@ -251,7 +253,7 @@ export function ProjectsScreen() {
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),
-          lastActivityColumn<Project>(t, locale),
+          lastActivityColumn<Project>(t, locale, recordZone),
         ]}
         tools={<SaveViewAction resource="projects" query={state.query} />}
         rowKey={(project) => project.id}

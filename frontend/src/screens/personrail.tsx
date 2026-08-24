@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCan } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
   Avatar,
@@ -31,7 +32,6 @@ import {
   SurfaceState,
 } from "../design-system/surfacestate";
 import { formatDayMonth } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import {
@@ -676,7 +676,8 @@ function EmploymentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const detail = employmentDetail(employment, t, locale);
+  const recordZone = useRecordZone();
+  const detail = employmentDetail(employment, t, locale, recordZone);
   const ending =
     actions.end.isPending &&
     actions.end.variables?.relationship_id === employment.relationship_id;
@@ -940,6 +941,7 @@ function employmentDetail(
   employment: Employment,
   t: ReturnType<typeof useT>,
   locale: Locale,
+  recordZone: string,
 ): string {
   // The record's zone. These arrive as instants (`format: date-time`), but they
   // are WRITTEN from a date picker, so what is stored is midnight on the day a
@@ -948,10 +950,10 @@ function employmentDetail(
   // colleagues would quote different start dates for one employment. The
   // record's zone is never behind UTC, so it renders the day that was picked.
   const start = employment.started_at
-    ? formatDayMonth(employment.started_at, locale, RECORD_ZONE)
+    ? formatDayMonth(employment.started_at, locale, recordZone)
     : undefined;
   const end = employment.ended_at
-    ? formatDayMonth(employment.ended_at, locale, RECORD_ZONE)
+    ? formatDayMonth(employment.ended_at, locale, recordZone)
     : undefined;
   if (start && end) {
     return `${start} – ${end}`;

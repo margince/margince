@@ -4,12 +4,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
@@ -805,6 +805,7 @@ export function CompanyIdentityLine({
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
+  const recordZone = useRecordZone();
   // WHO wrote this record, by name. The roster is the page's existing one —
   // CompanyOwnerControl on the line above already reads it, and both share
   // react-query's `["users"]` entry, so this adds no request.
@@ -822,7 +823,7 @@ export function CompanyIdentityLine({
   // Withheld or still in flight, the line says nothing about it: naming no way
   // in on an account that has one is worse than saying nothing.
   const wayIn = loading ? undefined : view?.strength;
-  const when = (at: string) => formatDateAbbrev(at, locale, RECORD_ZONE);
+  const when = (at: string) => formatDateAbbrev(at, locale, recordZone);
   // Withheld, absent, or still in flight, the line says nothing about it at
   // all: "never contacted" read off data the page could not answer is a
   // business conclusion it has no basis for, and it is the one a rep would

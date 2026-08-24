@@ -7,9 +7,9 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./audit.css";
@@ -211,6 +211,7 @@ export function AuditEntryLine({
   meUserId,
 }: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <div className="audit-line">
       <ActorTag entry={entry} meUserId={meUserId} />
@@ -224,7 +225,7 @@ export function AuditEntryLine({
           record clock exists to prevent. `dateTime` carries the unambiguous
           instant for anyone who has to convert. */}
       <time className="audit-when" dateTime={entry.occurred_at}>
-        {formatDateTime(entry.occurred_at, locale, RECORD_ZONE)}
+        {formatDateTime(entry.occurred_at, locale, recordZone)}
       </time>
     </div>
   );

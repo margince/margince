@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import {
   Avatar,
@@ -42,7 +43,7 @@ import {
   formatMoneyCompact,
   formatMoneyOrAbsent,
 } from "../format/format";
-import { RECORD_ZONE, viewerZone } from "../format/timezone";
+import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -1156,6 +1157,7 @@ export function CommercialPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const deals = view?.deals;
   const state = sectionState(
     view,
@@ -1221,7 +1223,7 @@ export function CommercialPanel({
                       when: formatDate(
                         deal.expected_close_date,
                         locale,
-                        RECORD_ZONE,
+                        recordZone,
                       ),
                     })}
                   </span>
@@ -1280,10 +1282,14 @@ const RECENT_ACTIVITY_LIMIT = 5;
 // day is never revisited later in the same page.
 type ActivityDay = { key: string; entries: TimelineEntry[] };
 
-function groupByDay(entries: readonly TimelineEntry[], locale: Locale) {
+function groupByDay(
+  entries: readonly TimelineEntry[],
+  locale: Locale,
+  recordZone: string,
+) {
   const days: ActivityDay[] = [];
   for (const entry of entries) {
-    const key = formatDate(entry.atIso, locale, RECORD_ZONE);
+    const key = formatDate(entry.atIso, locale, recordZone);
     const last = days.at(-1);
     if (last?.key === key) {
       last.entries.push(entry);
@@ -1318,6 +1324,7 @@ export function RecentActivityPanel({
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
+  const recordZone = useRecordZone();
   // Every logged activity, not only the ones with a subject: a call or a note
   // often has none, and filtering them out here would under-report the
   // chronology and — because the count feeds sectionState — draw "nothing
@@ -1333,6 +1340,7 @@ export function RecentActivityPanel({
   const days = groupByDay(
     activityTimeline(logged.slice(0, RECENT_ACTIVITY_LIMIT), viewerId),
     locale,
+    recordZone,
   );
   return (
     <Panel
@@ -1351,7 +1359,7 @@ export function RecentActivityPanel({
             <h3 className="co-timeline-day-heading t-eyebrow">{day.key}</h3>
             <ul className="timeline">
               {day.entries.map((entry) => (
-                <TimelineRow key={entry.id} entry={entry} zone={RECORD_ZONE} />
+                <TimelineRow key={entry.id} entry={entry} zone={recordZone} />
               ))}
             </ul>
           </div>
@@ -1458,7 +1466,7 @@ export function NextSteps({
                       // calendar day than the one the picker chose, for every
                       // reader outside that zone — there is no organization
                       // reading of it to prefer. The timeline below still reads
-                      // in RECORD_ZONE, because an activity's occurrence IS a
+                      // in the record zone, because an activity's occurrence IS a
                       // fact about the record.
                       when: formatDate(step.due_at, locale, viewerZone()),
                     })}
@@ -1861,6 +1869,7 @@ export function AccountBrief({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const recordZone = useRecordZone();
   // The project the brief is about. Part of the query key, so a scoped brief
   // and the whole account's are two cached readings rather than one
   // overwriting the other on screen.
@@ -1933,7 +1942,7 @@ export function AccountBrief({
   const titleAction = readable && (
     <span className="t-small">
       {t("co.brief.generatedAt", {
-        when: formatDateTime(readable.generated_at, locale, RECORD_ZONE),
+        when: formatDateTime(readable.generated_at, locale, recordZone),
       })}
     </span>
   );
@@ -2068,6 +2077,7 @@ export function AskSection({
   const t = useT();
   const { locale } = useLocale();
   const [projectId, setProjectId] = useState("");
+  const recordZone = useRecordZone();
   const live = liveProjects(projects);
   useSoleProjectDefault(live, projectId, setProjectId);
   useClearVanishedChoice(live, projectId, setProjectId);
@@ -2160,7 +2170,7 @@ export function AskSection({
             <WrittenBy by={readable.generated_by} />
             <span>
               {t("co.brief.generatedAt", {
-                when: formatDate(readable.generated_at, locale, RECORD_ZONE),
+                when: formatDate(readable.generated_at, locale, recordZone),
               })}
             </span>
           </p>
@@ -2304,6 +2314,7 @@ export function StateStrip({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const strip = view?.state_strip;
   if (!strip) {
     // Absent for two different reasons, and only `sections_omitted` tells
@@ -2360,7 +2371,12 @@ export function StateStrip({
           // reading with nothing to add.
           detail={relationships === lifecycle ? undefined : relationships}
         />
-        <PipelineCard commercial={strip.commercial} locale={locale} t={t} />
+        <PipelineCard
+          commercial={strip.commercial}
+          locale={locale}
+          recordZone={recordZone}
+          t={t}
+        />
         {/* Expected close is a prospect's question — how soon a deal not yet
             won might land — and stays out of a customer's row, where a money
             reading already answers what is coming from them. The two are
@@ -2369,7 +2385,12 @@ export function StateStrip({
             sometimes drew a sixth would fold at a different width from one
             click away. */}
         {!customer && (
-          <CloseDateStat commercial={strip.commercial} locale={locale} t={t} />
+          <CloseDateStat
+            commercial={strip.commercial}
+            locale={locale}
+            recordZone={recordZone}
+            t={t}
+          />
         )}
         <HealthStat health={view?.health} withheld={healthWithheld} t={t} />
         {/* Whose move it is and the worst open signal both moved to the daily
@@ -2611,10 +2632,12 @@ type StripCommercial = NonNullable<
 function PipelineCard({
   commercial,
   locale,
+  recordZone,
   t,
 }: Readonly<{
   commercial?: StripCommercial | null;
   locale: Locale;
+  recordZone: string;
   t: ReturnType<typeof useT>;
 }>) {
   if (!commercial) {
@@ -2667,7 +2690,7 @@ function PipelineCard({
     commercial.converted_count > 0 && commercial.fx_as_of
       ? t("co.strip.convertedAsOf", {
           count: commercial.converted_count,
-          date: formatDate(commercial.fx_as_of, locale, RECORD_ZONE),
+          date: formatDate(commercial.fx_as_of, locale, recordZone),
         })
       : undefined;
   return (
@@ -2701,10 +2724,12 @@ function join(...parts: (string | undefined)[]): string {
 function CloseDateStat({
   commercial,
   locale,
+  recordZone,
   t,
 }: Readonly<{
   commercial?: StripCommercial | null;
   locale: Locale;
+  recordZone: string;
   t: ReturnType<typeof useT>;
 }>) {
   // Three readings, not one blank. Withheld deals are the reader's boundary;
@@ -2729,7 +2754,7 @@ function CloseDateStat({
   return (
     <StatCard
       label={t("co.strip.expectedClose")}
-      value={formatDate(commercial.next_close_on, locale, RECORD_ZONE)}
+      value={formatDate(commercial.next_close_on, locale, recordZone)}
     />
   );
 }
@@ -2966,6 +2991,7 @@ export function useSuggestionsBody({
 } {
   const { locale } = useLocale();
   const t = useT();
+  const recordZone = useRecordZone();
   const client = useQueryClient();
   const dismiss = useMutation({
     mutationFn: async (fingerprint: string) => {
@@ -3044,7 +3070,7 @@ export function useSuggestionsBody({
                 shows none. */}
             {suggestion.due_at && (
               <span className="co-row-meta">
-                {formatDate(suggestion.due_at, locale, RECORD_ZONE)}
+                {formatDate(suggestion.due_at, locale, recordZone)}
               </span>
             )}
           </span>

@@ -4,12 +4,12 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDateAbbrev } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
@@ -128,6 +128,7 @@ function FileRow({
 }: Readonly<{ dealId: string; doc: DealDocument; mayWrite: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const file = doc.attachment;
   const [confirming, setConfirming] = useState<"delete" | "hide" | null>(null);
   const verbs = useFileVerbs(dealId, file.id);
@@ -150,11 +151,11 @@ function FileRow({
                 when: formatDateAbbrev(
                   doc.origin.occurred_at,
                   locale,
-                  RECORD_ZONE,
+                  recordZone,
                 ),
               })
             : t("files.uploaded", {
-                when: formatDateAbbrev(file.created_at, locale, RECORD_ZONE),
+                when: formatDateAbbrev(file.created_at, locale, recordZone),
               })}
         </p>
       </div>

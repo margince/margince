@@ -1,11 +1,11 @@
 import { ExternalLink, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDayMonth, formatMoneyCompact } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
@@ -263,6 +263,7 @@ function Absent(): ReactNode {
 export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const commercial = view.commercial;
   if (!commercial) {
     // The section was withheld. "You may not see deals" and "there is no deal"
@@ -307,11 +308,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
                       // wire value with no instant to localize, and a reader
                       // west of UTC rendering it in their own would quote the
                       // day before to a colleague quoting the right one.
-                      date: formatDayMonth(
-                        deal.close_date,
-                        locale,
-                        RECORD_ZONE,
-                      ),
+                      date: formatDayMonth(deal.close_date, locale, recordZone),
                     })
                   : null,
               ]

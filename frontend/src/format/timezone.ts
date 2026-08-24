@@ -10,14 +10,20 @@
 // The two purposes are NOT interchangeable, and each has its own way of being
 // wrong:
 //
-//   RECORD_ZONE — the organization's own clock. Its dates belong to the
-//   record, not to whoever is looking at it. Following the reader here
-//   MISSTATES the record: a close date, a renewal, an invoice's issue day and
-//   a timeline's day headings have to read the same for every colleague, or two
-//   people quoting the same page quote different days. It is also the only
-//   correct answer for a date-only wire value (OpenAPI `format: date`): there
-//   is no instant in `2026-08-21` to localize, and reading it in a zone behind
-//   UTC prints the day before.
+//   useRecordZone() — the organization's own clock, as the installation
+//   configured it (`installation.timezone`, served by app/recordzone.tsx). Its
+//   dates belong to the record, not to whoever is looking at it. Following the
+//   reader here MISSTATES the record: a close date, a renewal, an invoice's
+//   issue day and a timeline's day headings have to read the same for every
+//   colleague, or two people quoting the same page quote different days. It is
+//   also the only correct answer for a date-only wire value (OpenAPI
+//   `format: date`): there is no instant in `2026-08-21` to localize, and
+//   reading it in a zone behind UTC prints the day before.
+//
+//   It is a HOOK rather than a constant because the answer belongs to the
+//   installation and arrives over the wire. A plain helper that needs it takes
+//   it as a parameter from the component that read it — never by importing the
+//   fallback below, which is a different value that only happens to agree.
 //
 //   viewerZone() — the reader's own clock, for a moment they relate to
 //   themselves: when a credential they are lending expires, when a paused job
@@ -33,19 +39,28 @@
 // "Genuinely both" means both readings are defensible, and that is a claim about
 // the STORED value, not about the screen. An activity's `due_at` is minted by
 // `dueInstant` as the end of the picked day in the BROWSER's zone, so the wire
-// value already carries the picker's clock; RECORD_ZONE does not read the
+// value already carries the picker's clock; the record zone does not read the
 // organization's day out of it, it reads a day the picker never chose, off by
 // one for every reader outside that zone. A value with no record reading has
 // nothing for the page to win against, so `due_at` takes viewerZone() wherever
 // it is shown — the tasks queue, the record's next steps, the task detail —
-// while the activity's `occurred_at` beside it stays on RECORD_ZONE, because
-// when something happened IS a fact about the record.
+// while the activity's `occurred_at` beside it stays on the record zone,
+// because when something happened IS a fact about the record.
 
-// The organization's zone. A constant, and deliberately not read from the
-// installation's configured timezone yet: every screen that renders a record
-// date has to agree, and a per-request value that arrives late would render the
-// first paint in one zone and the second in another.
-export const RECORD_ZONE = "Europe/Berlin";
+// The zone a record's dates are read in when the installation's own answer is
+// not on hand. It is the LAST resort, not the value: `useRecordZone` in
+// app/recordzone.tsx serves `installation.timezone`, and the authenticated
+// shell holds its first paint until that read lands, so no signed-in surface
+// renders a record date against this constant.
+//
+// It stays a real zone rather than UTC because the surfaces that can still
+// reach it are the ones outside the settings read — a story, a test that mounts
+// a screen bare — and those are easier to read against a zone with an offset
+// and a DST rule than against one with neither.
+//
+// Do not import it into a screen. The gate in zone-by-purpose.test.ts refuses
+// that, and names this comment when it does.
+export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
 
 /**
  * The zone the reader's own browser is in, or `UTC` when it will not say.
@@ -119,6 +134,64 @@ function instantInZone(
   return utcMs;
 }
 
+// The calendar day `zone`'s wall clock reads at `utcMs`, as `yyyy-mm-dd`.
+// Derived through Intl rather than by arithmetic on the offset, because the
+// offset is what is in question at the moments this is asked about.
+function dayInZone(utcMs: number, zone: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(new Date(utcMs))
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/**
+ * The first instant of `dateOnly` in `zone` — the day's true beginning, even
+ * when its midnight does not exist.
+ *
+ * A spring-forward transition can REMOVE a wall-clock hour, and some zones put
+ * that transition at midnight: Santiago goes from 23:00 on 5 September 2026
+ * straight to 01:00 on the 6th, so `2026-09-06T00:00` is a time that never
+ * happens there. Asked for it, `instantInZone` converges on the instant one
+ * hour before the jump, whose local reading is still 23:00 on the FIFTH — a
+ * "from 6 September" filter then pulls in an hour of the fifth, and an
+ * exclusive "to the fifth" end drops that hour instead.
+ *
+ * So the resolved instant is checked against the day it was supposed to land
+ * on. When it falls short, the day's first instant is the transition itself,
+ * found by stepping forward a minute at a time — a removed span is a whole
+ * number of minutes in every zone tzdata describes, and the largest is
+ * Lord Howe's 30, so the walk is bounded and short. Stepping BACK is never
+ * needed: the resolved instant is never later than the day's start, because a
+ * removed hour only ever moves the clock forward.
+ */
+function startOfDayInstant(dateOnly: string, zone: string): number {
+  const resolved = instantInZone(dateOnly, zone, 0, 0, 0);
+  if (dayInZone(resolved, zone) === dateOnly) {
+    return resolved;
+  }
+  const minute = 60_000;
+  // Two hours covers every transition tzdata records; the loop exits at the
+  // first minute that reads as the wanted day.
+  for (let step = 1; step <= 120; step += 1) {
+    const candidate = resolved + step * minute;
+    if (dayInZone(candidate, zone) === dateOnly) {
+      return candidate;
+    }
+  }
+  // No minute in two hours reads as the wanted day. That is not a zone rule
+  // this code knows how to interpret, and guessing would silently file records
+  // under a day nobody picked — so the honest answer is the unadjusted one,
+  // which is what every caller got before this correction existed.
+  return resolved;
+}
+
 /**
  * A calendar day, picked as a date-only string, read as a day in `zone`.
  * Minting it as `new Date(dateOnly).toISOString()` reads the string as UTC
@@ -126,10 +199,11 @@ function instantInZone(
  * forward for evening messages east of it: the picker and the rendered row
  * would then disagree about which day was meant.
  *
- * `startOfDayInZone` is the day's first instant; `daysLater` shifts by whole
- * calendar days, which is how an EXCLUSIVE range end is spelled from an
- * inclusive "to" day — the next day's start — without an arithmetic step
- * across a DST change.
+ * `startOfDayInZone` is the day's first instant — which is not always its
+ * midnight, since a spring-forward transition can remove one (see
+ * `startOfDayInstant`). `daysLater` shifts by whole calendar days, which is how
+ * an EXCLUSIVE range end is spelled from an inclusive "to" day — the next day's
+ * start — without an arithmetic step across a DST change.
  */
 export function startOfDayInZone(
   dateOnly: string,
@@ -140,7 +214,7 @@ export function startOfDayInZone(
   const shifted = new Date(Date.UTC(year, month - 1, day + daysLater))
     .toISOString()
     .slice(0, 10);
-  return new Date(instantInZone(shifted, zone, 0, 0, 0)).toISOString();
+  return new Date(startOfDayInstant(shifted, zone)).toISOString();
 }
 
 /** The day's last instant, 23:59:59.999 on `zone`'s wall clock. */

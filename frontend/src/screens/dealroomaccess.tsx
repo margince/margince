@@ -3,6 +3,7 @@ import { Copy, Link2, UserX } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -15,7 +16,6 @@ import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
@@ -155,6 +155,7 @@ function ParticipantRow({
 }: Readonly<{ room: DealRoom; participant: Participant; mayManage: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [confirming, setConfirming] = useState<
     "revoke" | "reissue" | "capability" | null
   >(null);
@@ -181,7 +182,7 @@ function ParticipantRow({
               ? t("access.state.active")
               : t("access.state.invited")}
           {participant.last_seen_at
-            ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, RECORD_ZONE) })}`
+            ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
             : ""}
         </p>
         <ReadingSoFar participant={participant} />
@@ -192,7 +193,7 @@ function ParticipantRow({
               when: formatDateAbbrev(
                 participant.link_requested_at,
                 locale,
-                RECORD_ZONE,
+                recordZone,
               ),
             })}
           </p>
@@ -473,6 +474,7 @@ function RevokeDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const queryClient = useQueryClient();
   const revoke = useMutation({
     mutationFn: async () => {
@@ -505,7 +507,7 @@ function RevokeDialog({
       <p>
         {participant.email}
         {participant.last_seen_at
-          ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, RECORD_ZONE) })}`
+          ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
           : ` · ${t("access.neverSignedIn")}`}
       </p>
       <p className="t-small">{t("access.revokeBody")}</p>

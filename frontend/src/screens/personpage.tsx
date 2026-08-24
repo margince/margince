@@ -13,11 +13,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { liveProjects } from "../design-system/projectpicker";
-import { RECORD_ZONE } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -146,6 +146,7 @@ export function PersonPageV2({
   tab,
 }: Readonly<{ id: string; tab: PersonTab }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   const view = useQuery({
     queryKey: ["person360", id],
     queryFn: async () => {
@@ -304,7 +305,7 @@ export function PersonPageV2({
           />
         }
         actionsInline
-        zone={RECORD_ZONE}
+        zone={recordZone}
         // The readings ride the band, above the columns and across the full
         // width: they describe the RELATIONSHIP, not one view of it, and a
         // strip that vanished on the Deals tab would move the tab bar and

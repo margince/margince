@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -13,7 +14,6 @@ import { EvidenceMark } from "../design-system/evidencemark";
 import { FactList } from "../design-system/factlist";
 import type { ConfidenceLevel } from "../design-system/trust";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { provenanceOf, throwProblem } from "./common";
 import { dealRoleLabel } from "./company360";
@@ -145,6 +145,7 @@ export function ThinState({
 export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const s = view.strength;
   const warmest = view.network?.colleagues[0];
 
@@ -168,14 +169,14 @@ export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
               // is a fact about the record, and two colleagues comparing the
               // same relationship have to name the same day for it.
               value: view.last_inbound_at
-                ? formatDate(view.last_inbound_at, locale, RECORD_ZONE)
+                ? formatDate(view.last_inbound_at, locale, recordZone)
                 : t("person.pulse.neverInbound"),
             },
             {
               key: "last-outbound",
               term: t("person.pulse.lastOutbound"),
               value: view.last_outbound_at
-                ? formatDate(view.last_outbound_at, locale, RECORD_ZONE)
+                ? formatDate(view.last_outbound_at, locale, recordZone)
                 : t("person.pulse.neverOutbound"),
             },
           ]}
@@ -436,6 +437,7 @@ function confidenceBand(score?: number | null): ConfidenceLevel | undefined {
 export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const colleagues = view.network?.colleagues ?? [];
   if (colleagues.length === 0) {
     return null;
@@ -449,7 +451,7 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Person360 }>) {
             <li key={c.user_id} style={{ padding: "8px 0" }}>
               <strong>{c.display_name}</strong>
               <div style={{ fontSize: 12, opacity: 0.75 }}>
-                {proofLine(c, t, locale)}
+                {proofLine(c, t, locale, recordZone)}
               </div>
             </li>
           ))}
@@ -468,6 +470,7 @@ function proofLine(
   c: Colleague,
   t: ReturnType<typeof useT>,
   locale: Locale,
+  recordZone: string,
 ): string {
   const twoWay = (c.inbound_90d ?? 0) > 0 && (c.outbound_90d ?? 0) > 0;
   const parts = [
@@ -478,7 +481,7 @@ function proofLine(
   if (c.last_inbound_at) {
     parts.push(
       t("person.network.replied", {
-        when: formatDate(c.last_inbound_at, locale, RECORD_ZONE),
+        when: formatDate(c.last_inbound_at, locale, recordZone),
       }),
     );
   }

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { emailSummaryText } from "../format/emailtext";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
@@ -36,6 +36,7 @@ type Filter = (typeof FILTERS)[number];
 export function PersonMemory({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [filter, setFilter] = useState<Filter>("all");
   const interactionLabel = useInteractionLabel();
   const entries = view.conversation_memory ?? [];
@@ -45,8 +46,10 @@ export function PersonMemory({ view }: Readonly<{ view: Person360 }>) {
   // beside it is withholding.
   const rows =
     entries.length > 0
-      ? entries.map((entry) => fromEntry(entry, t, interactionLabel, locale))
-      : foldActivities(view, t, interactionLabel, locale);
+      ? entries.map((entry) =>
+          fromEntry(entry, t, interactionLabel, locale, recordZone),
+        )
+      : foldActivities(view, t, interactionLabel, locale, recordZone);
   const shown = rows.filter((row) => matches(row, filter));
 
   return (
@@ -159,6 +162,8 @@ function channelKeyOf(
 
 // interactionLabel is useInteractionLabel's resolver, threaded in rather than
 // called here: a Row is built outside the component, and a hook may not be.
+// recordZone rides in the same way, for the same reason — useRecordZone is a
+// hook, so the zone is read once in PersonMemory and passed down.
 type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 
 function fromEntry(
@@ -166,12 +171,13 @@ function fromEntry(
   t: ReturnType<typeof useT>,
   interactionLabel: InteractionLabel,
   locale: Locale,
+  recordZone: string,
 ): Row {
   const status = entry.status ?? null;
   return {
     key: entry.key,
-    date: formatDayMonth(entry.occurred_at, locale, RECORD_ZONE),
-    time: formatTimeOfDay(entry.occurred_at, locale, RECORD_ZONE),
+    date: formatDayMonth(entry.occurred_at, locale, recordZone),
+    time: formatTimeOfDay(entry.occurred_at, locale, recordZone),
     // first_activity_id is what "expand to original" opens, and it is the right
     // anchor for a reply too: the send resolves the conversation from the
     // anchor's own links and thread key, so the first message of a thread names
@@ -201,6 +207,7 @@ function foldActivities(
   t: ReturnType<typeof useT>,
   interactionLabel: InteractionLabel,
   locale: Locale,
+  recordZone: string,
 ): Row[] {
   const rows = view.activities?.data ?? [];
   return rows
@@ -209,8 +216,8 @@ function foldActivities(
       const status = statusOf(row, view);
       return {
         key: row.id,
-        date: formatDayMonth(row.occurred_at, locale, RECORD_ZONE),
-        time: formatTimeOfDay(row.occurred_at, locale, RECORD_ZONE),
+        date: formatDayMonth(row.occurred_at, locale, recordZone),
+        time: formatTimeOfDay(row.occurred_at, locale, recordZone),
         activityId: row.id,
         kind: row.kind,
         channelProvider: row.channel_provider ?? null,

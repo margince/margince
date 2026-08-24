@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { formatDate, formatMoney } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 
@@ -46,6 +46,7 @@ export function CompanyLastOffer({
 }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const deals = view?.deals?.data ?? [];
   const truncated = view?.deals?.page?.has_more === true;
   // Offers are their own RBAC object: a reader who may see deals may not see
@@ -94,7 +95,7 @@ export function CompanyLastOffer({
         {offer.valid_until && (
           <span>
             {t("commercial.validUntil", {
-              when: formatDate(offer.valid_until, locale, RECORD_ZONE),
+              when: formatDate(offer.valid_until, locale, recordZone),
             })}
           </span>
         )}
@@ -183,6 +184,7 @@ export function CompanyContractState({
 }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const contracts = view?.state_strip?.contracts;
 
   // Absent means the reader has no contract grant — a different fact from an
@@ -226,7 +228,7 @@ export function CompanyContractState({
                 when: formatDate(
                   contracts.cancellation_effective_on,
                   locale,
-                  RECORD_ZONE,
+                  recordZone,
                 ),
               })}
             </Badge>
@@ -237,7 +239,7 @@ export function CompanyContractState({
               when: formatDate(
                 contracts.nearest_renewal_on,
                 locale,
-                RECORD_ZONE,
+                recordZone,
               ),
             })}
           </span>

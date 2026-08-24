@@ -1,10 +1,10 @@
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { provenanceOf } from "./common";
 import { confidenceLevel } from "./inbox";
@@ -107,6 +107,7 @@ export function PersonResearchTab({
 function ProfileFieldRow({ field }: Readonly<{ field: ProfileField }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const provenance = provenanceOf(field.captured_by);
   return (
     <PanelRow className="pe-row">
@@ -120,7 +121,7 @@ function ProfileFieldRow({ field }: Readonly<{ field: ProfileField }>) {
             provenance,
             confidence: confidenceLevel(field.confidence) ?? undefined,
             snippet: field.evidence_snippet,
-            at: formatDateAbbrev(field.captured_at, locale, RECORD_ZONE),
+            at: formatDateAbbrev(field.captured_at, locale, recordZone),
           }}
         />
       </span>

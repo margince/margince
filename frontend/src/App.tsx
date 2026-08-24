@@ -22,6 +22,7 @@ import {
   useBuiltinCommands,
   usePaletteHotkey,
 } from "./app/palette";
+import { RecordZoneProvider, useConfiguredRecordZone } from "./app/recordzone";
 import { SPA_RELEASE } from "./app/release";
 import {
   navigate,
@@ -741,6 +742,11 @@ function AuthedApp({
   const authed = !me.isPending && !me.isError;
   const company = useCompany(authed);
   const described = company.data !== null && company.data !== undefined;
+  // The organization's clock, for every record date under this boundary. Read
+  // here rather than per screen so all of them agree, and gated on the session
+  // for the same reason the company probe is: an unauthenticated read would
+  // 401 and say nothing about the installation.
+  const recordZone = useConfiguredRecordZone(authed);
 
   // route.screen is a dependency on purpose: the gate must hold on every
   // navigation, not only on first load — otherwise the palette or a typed hash
@@ -809,7 +815,12 @@ function AuthedApp({
   // screen to show. The gate lives here rather than on the login path because
   // a live session never passes through login — a reload would otherwise walk
   // straight past onboarding into a company that does not exist.
-  if (company.isPending) {
+  // The record zone joins this gate rather than getting one of its own: both
+  // are answers the authenticated shell needs before it draws, and a second
+  // splash after the first would read as two loads of one page. Holding here
+  // is what lets every screen below take the zone as a settled value — paint
+  // first and the day headings on an open timeline renumber under the reader.
+  if (company.isPending || recordZone.pending) {
     return (
       <RaillessFrame>
         <AuthSplash />
@@ -818,7 +829,7 @@ function AuthedApp({
   }
 
   return (
-    <>
+    <RecordZoneProvider zone={recordZone.zone}>
       <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
         <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
       </AuthedShell>
@@ -827,7 +838,7 @@ function AuthedApp({
         onClose={() => setPaletteOpen(false)}
         commands={commands}
       />
-    </>
+    </RecordZoneProvider>
   );
 }
 

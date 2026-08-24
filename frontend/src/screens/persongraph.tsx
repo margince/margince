@@ -3,9 +3,9 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
 import { formatDate } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 
@@ -304,6 +304,7 @@ function EdgeFacts({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Whom this edge joins the SELECTED node to. Both ends have to be read,
   // because an account-arm edge need not touch the anchor at all: reading `to`
   // alone named the selected node as its own counterpart whenever the edge
@@ -361,7 +362,7 @@ function EdgeFacts({
               {r.subject ?? t("person.graph.untitledMessage")} ·{" "}
               {/* The record's zone: a receipt is evidence of when a message
                   happened, so every reader of this edge names the same day. */}
-              {formatDate(r.occurred_at, locale, RECORD_ZONE)}
+              {formatDate(r.occurred_at, locale, recordZone)}
             </li>
           ))}
         </ul>

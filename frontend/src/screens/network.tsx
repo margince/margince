@@ -4,9 +4,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import "./network.css";
 import {
@@ -86,6 +86,7 @@ async function fetchDealCoverage(id: string): Promise<DealCoverage> {
 export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The projection is folded from natively captured participants, which the
   // incumbent mirror does not hold. Show the honest unavailable state rather
   // than a doomed fetch that renders as "nobody knows them".
@@ -127,7 +128,7 @@ export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
               )}
               <span className="t-caption">
                 {colleague.last_at
-                  ? formatDateTime(colleague.last_at, locale, RECORD_ZONE)
+                  ? formatDateTime(colleague.last_at, locale, recordZone)
                   : t("network.neverSpoken")}
               </span>
             </li>

@@ -10,9 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
-import { RECORD_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { LogActivity } from "./logactivity";
 import { PersonScreen } from "./people";
@@ -51,13 +51,22 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// The installation's zone this suite asserts against. Named rather than taken
+// from the fallback: what these tests prove is that a logged entry's stored
+// instant is cut on the INSTALLATION's clock, and a test that minted and read
+// back on the same default would agree with itself whichever zone the code
+// actually used.
+const INSTALLATION_ZONE = "Asia/Ho_Chi_Minh";
+
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <RecordZoneProvider zone={INSTALLATION_ZONE}>{ui}</RecordZoneProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -262,11 +271,11 @@ describe("log activity from a 360", () => {
     stubApi({ "POST /activities": createdActivity });
     // Read the clock on both sides of the render: a run that straddles
     // midnight would otherwise fail on which "today" the prefill caught. The
-    // zone is RECORD_ZONE because a note's day is the timeline heading it will
+    // zone is the installation's record zone because a note's day is the timeline heading it will
     // file under, and the timeline groups there.
-    const dayBeforeRender = calendarDay(new Date(), RECORD_ZONE);
+    const dayBeforeRender = calendarDay(new Date(), INSTALLATION_ZONE);
     render(<LogActivity entityType="organization" entityId="o1" />);
-    const dayAfterRender = calendarDay(new Date(), RECORD_ZONE);
+    const dayAfterRender = calendarDay(new Date(), INSTALLATION_ZONE);
     // A note's date is the day it happened, live from the start and showing
     // the today that would otherwise be assumed invisibly at submit.
     const noteDay = screen.getByLabelText<HTMLInputElement>("Date", {
@@ -301,11 +310,11 @@ describe("log activity from a 360", () => {
     const post = captured.find((entry) => entry.key === "POST /activities");
     if (!post) throw new Error("expected a POST /activities to be captured");
     // The instant lands on the day the writer picked in BOTH zones that
-    // matter: the record pages render timelines in RECORD_ZONE, and the
+    // matter: the record pages render timelines in the record zone, and the
     // writer reads their own wall clock — and a note never carries a due
     // date, backdated or not.
     const occurred = new Date(postedOccurredAt(post.body));
-    expect(calendarDay(occurred, RECORD_ZONE)).toBe(PICKED_DAY);
+    expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(PICKED_DAY);
     expect(calendarDay(occurred, READER_ZONE)).toBe(PICKED_DAY);
     expect(post.body).not.toHaveProperty("due_at");
   });
@@ -316,7 +325,7 @@ describe("log activity from a 360", () => {
     //
     // 23:00Z on 21 August is 16:00 the same afternoon in Los Angeles and 01:00
     // the NEXT day in Berlin. Offered the writer's own today, the composer
-    // named 21 August and the record timeline — which groups in RECORD_ZONE —
+    // named 21 August and the record timeline — which groups in that zone —
     // then filed the entry under 22 August: the composer promised a day it did
     // not deliver.
     // `toFake: ["Date"]` and not the default set: the default ALSO replaces
@@ -348,7 +357,7 @@ describe("log activity from a 360", () => {
     if (!post) throw new Error("expected a POST /activities to be captured");
     const occurred = new Date(postedOccurredAt(post.body));
     // The day the composer offered IS the day the timeline files it under.
-    expect(calendarDay(occurred, RECORD_ZONE)).toBe(noteDay.value);
+    expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(noteDay.value);
   });
 
   it("files a note on the day the writer overrode to, when the record's clock already calls it yesterday", async () => {
@@ -378,7 +387,7 @@ describe("log activity from a 360", () => {
     const post = captured.find((entry) => entry.key === "POST /activities");
     if (!post) throw new Error("expected a POST /activities to be captured");
     const occurred = new Date(postedOccurredAt(post.body));
-    expect(calendarDay(occurred, RECORD_ZONE)).toBe(writersOwnToday);
+    expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(writersOwnToday);
   });
 
   it("refuses a future day for a note but not for a task's due date", async () => {

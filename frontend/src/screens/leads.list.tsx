@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ToastRegion, useToast } from "../design-system/toast";
@@ -204,6 +205,7 @@ function LeadsWorkbench({
   const roster = useRoster("user", true);
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const overlay = useSorMode() === "overlay";
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
@@ -418,7 +420,7 @@ function LeadsWorkbench({
               </span>
             ),
           },
-          lastActivityColumn<Lead>(t, locale),
+          lastActivityColumn<Lead>(t, locale, recordZone),
           {
             key: "source",
             header: t("lead.source"),

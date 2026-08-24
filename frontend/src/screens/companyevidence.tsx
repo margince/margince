@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -9,7 +10,6 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
-import { RECORD_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -259,19 +259,20 @@ function EvidenceTimes({
   locale: "en" | "de" | "vi";
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   return (
     <>
       {retrievedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.retrievedAt", {
-            when: formatDateTime(retrievedAt, locale, RECORD_ZONE),
+            when: formatDateTime(retrievedAt, locale, recordZone),
           })}
         </p>
       )}
       {lastVerifiedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.verifiedAt", {
-            when: formatDateTime(lastVerifiedAt, locale, RECORD_ZONE),
+            when: formatDateTime(lastVerifiedAt, locale, recordZone),
           })}
         </p>
       )}
