@@ -451,14 +451,28 @@ function InstallationProfileDialog({
   // the `autoFocus` attribute, the same way the sign-in page does it, so the
   // a11y lint's blanket rule against autofocus stays intact.
   const asked = useRef<HTMLInputElement>(null);
-  // The language field is a `Select` — a button and a portalled listbox, not an
-  // input — so it takes neither the ref the three text fields share nor one of
-  // its own. Its trigger is found through the form, which keeps the same
-  // promise the other three keep: the verb beside a fact leads to the fact.
+  // Two of the fields are a `Select` — a button and a portalled listbox, not an
+  // input — so neither takes the ref the text fields share. Their triggers are
+  // found through the form, which keeps the same promise the text fields keep:
+  // the verb beside a fact leads to the fact.
+  //
+  // Found by the fact each one EDITS, not by `[role="combobox"]`. There are two
+  // comboboxes here now, and a query for the role returns whichever the form
+  // renders first — so pressing Edit beside the fiscal year focused the
+  // language instead, and a third Select would have moved that again silently.
+  //
+  // `Field` generates its control id with `useId`, which is a React handle
+  // (`:r3:`) and carries no fact name, so the marker is written at the call
+  // site instead. Explicit rather than inferred: a selector guessing at a
+  // generated id would break the day React changes the format, and nothing
+  // would fail except the focus nobody tests by hand.
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (focus === "base_language") {
-      form.current?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+    const picker = form.current?.querySelector<HTMLElement>(
+      `[data-fact="${focus}"] [role="combobox"]`,
+    );
+    if (picker) {
+      picker.focus();
       return;
     }
     asked.current?.focus();
@@ -540,77 +554,81 @@ function InstallationProfileDialog({
           )}
         </Field>
 
-        <Field
-          label={t("installationSettings.baseLanguage")}
-          hint={t("installationSettings.baseLanguageHint")}
-          error={refused.get("base_language")}
-        >
-          {(control) => (
-            <Select
-              {...control}
-              // `control.id` is spread through UNCHANGED: `Field` renders its
-              // label with `htmlFor` pointing at it, so replacing it would
-              // leave the combobox with no accessible name. The focus effect
-              // reads that same id back out of the DOM.
-              aria-describedby={describe(control)}
-              value={draft.base_language}
-              disabled={!canManage}
-              // Language names are proper nouns and deliberately untranslated,
-              // so every option is in a different language from the page around
-              // it — `lang` is WCAG 2.2 AA 3.1.2, and our locale codes are the
-              // BCP 47 subtags it wants.
-              options={LOCALES.map((locale) => ({
-                value: locale,
-                label: t(localeNameKey(locale)),
-                lang: locale,
-              }))}
-              // `Select` reports a string; narrowing it back through LOCALES is
-              // what makes it a locale without an assertion, and drops an
-              // answer the control was never offering.
-              onChange={(next) => {
-                const picked = LOCALES.find((locale) => locale === next);
-                if (picked) {
-                  onChange({ ...draft, base_language: picked });
-                }
-              }}
-            />
-          )}
-        </Field>
+        <div data-fact="base_language">
+          <Field
+            label={t("installationSettings.baseLanguage")}
+            hint={t("installationSettings.baseLanguageHint")}
+            error={refused.get("base_language")}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                // `control.id` is spread through UNCHANGED: `Field` renders its
+                // label with `htmlFor` pointing at it, so replacing it would
+                // leave the combobox with no accessible name. The focus effect
+                // reads that same id back out of the DOM.
+                aria-describedby={describe(control)}
+                value={draft.base_language}
+                disabled={!canManage}
+                // Language names are proper nouns and deliberately untranslated,
+                // so every option is in a different language from the page around
+                // it — `lang` is WCAG 2.2 AA 3.1.2, and our locale codes are the
+                // BCP 47 subtags it wants.
+                options={LOCALES.map((locale) => ({
+                  value: locale,
+                  label: t(localeNameKey(locale)),
+                  lang: locale,
+                }))}
+                // `Select` reports a string; narrowing it back through LOCALES is
+                // what makes it a locale without an assertion, and drops an
+                // answer the control was never offering.
+                onChange={(next) => {
+                  const picked = LOCALES.find((locale) => locale === next);
+                  if (picked) {
+                    onChange({ ...draft, base_language: picked });
+                  }
+                }}
+              />
+            )}
+          </Field>
+        </div>
 
-        <Field
-          label={t("installationSettings.fiscalYearStart")}
-          hint={t("installationSettings.fiscalYearStartHint")}
-          error={refused.get("fiscal_year_start_month")}
-        >
-          {(control) => (
-            <Select
-              {...control}
-              aria-describedby={describe(control)}
-              value={String(draft.fiscal_year_start_month)}
-              disabled={!canManage}
-              // Twelve months, each labelled with what a report would then be
-              // called — "April — FY2026/27". A bare number would make the
-              // admin work out the consequence of every option; this states it.
-              options={MONTHS.map((month) => ({
-                value: String(month),
-                label: fiscalYearStartSummary(
-                  month,
-                  locale,
-                  new Date().getFullYear(),
-                ),
-              }))}
-              // `Select` reports a string. Narrowed back through MONTHS rather
-              // than parsed, so an answer the control never offered cannot
-              // reach the draft.
-              onChange={(next) => {
-                const picked = MONTHS.find((month) => String(month) === next);
-                if (picked) {
-                  onChange({ ...draft, fiscal_year_start_month: picked });
-                }
-              }}
-            />
-          )}
-        </Field>
+        <div data-fact="fiscal_year_start_month">
+          <Field
+            label={t("installationSettings.fiscalYearStart")}
+            hint={t("installationSettings.fiscalYearStartHint")}
+            error={refused.get("fiscal_year_start_month")}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                aria-describedby={describe(control)}
+                value={String(draft.fiscal_year_start_month)}
+                disabled={!canManage}
+                // Twelve months, each labelled with what a report would then be
+                // called — "April — FY2026/27". A bare number would make the
+                // admin work out the consequence of every option; this states it.
+                options={MONTHS.map((month) => ({
+                  value: String(month),
+                  label: fiscalYearStartSummary(
+                    month,
+                    locale,
+                    new Date().getFullYear(),
+                  ),
+                }))}
+                // `Select` reports a string. Narrowed back through MONTHS rather
+                // than parsed, so an answer the control never offered cannot
+                // reach the draft.
+                onChange={(next) => {
+                  const picked = MONTHS.find((month) => String(month) === next);
+                  if (picked) {
+                    onChange({ ...draft, fiscal_year_start_month: picked });
+                  }
+                }}
+              />
+            )}
+          </Field>
+        </div>
 
         {/* Only what no field claimed. A refusal shown BOTH on the input and
             again in a paragraph below states one problem twice, and the

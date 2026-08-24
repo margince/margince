@@ -113,11 +113,25 @@ export function formatMoneyCompact(
  *
  * The day is fixed at the 1st and the year is arbitrary: only the month is
  * rendered, and a month name does not depend on either.
+ *
+ * `timeZone: "UTC"` is load-bearing, not tidiness. The instant is MINTED in UTC
+ * (`Date.UTC`), so formatting it on the reader's own clock reads it back in a
+ * different zone than it was written in — and midnight on the 1st is the worst
+ * possible instant for that, because any zone behind UTC lands on the last day
+ * of the PREVIOUS month. In America/New_York this returned "December" for
+ * month 1, so the fiscal-year picker offered a label one month off the value it
+ * saved.
+ *
+ * This is not a moment anybody is reading in their own zone: the argument is a
+ * month NUMBER, not a point in time, and the date is scaffolding for Intl's
+ * month table. Reading it back in the zone it was written in is what makes the
+ * scaffolding cancel out.
  */
 export function monthName(month: number, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: "long" }).format(
-    new Date(Date.UTC(2026, month - 1, 1)),
-  );
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2026, month - 1, 1)));
 }
 
 export function formatNumber(value: number, locale: Locale): string {
