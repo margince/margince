@@ -1007,9 +1007,14 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(page.getByTestId("person-strip")).toBeVisible();
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
-    // Deal 360: timeline, coverage, stakeholders, offers, and the context
-    // panel. Coverage joins the interaction projection too, so it is
-    // unavailable for the same reason rather than reporting a clean deal.
+    // Deal 360: timeline, coverage, offers, and the context panel. Coverage
+    // joins the interaction projection too, so it is unavailable for the same
+    // reason rather than reporting a clean deal.
+    //
+    // FOUR, not five: stakeholders is no longer a panel of its own. The seats
+    // and the findings about them are one card now, and that card states the
+    // overlay case itself — so the stakeholder fact is still refused honestly,
+    // it is refused by the coverage card rather than beside it.
     await page.goto("/#/deals/d-fleet");
     // `exact`, and this is the case that shows why: another test in this file
     // renames the same deal to "Fleet retrofit — expanded scope", and a
@@ -1021,7 +1026,7 @@ test.describe("B-EP09.23: overlay mode", () => {
         exact: true,
       }),
     ).toBeVisible();
-    await expect(page.getByText(unavailable)).toHaveCount(5);
+    await expect(page.getByText(unavailable)).toHaveCount(4);
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
     // Tasks (nav.tasks): a defining `kind=task` filter the mirror can't honor.
