@@ -62,6 +62,25 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // exist, be live, and be the caller's to change. Everything EnsureVisibleLive's
 // own comment says about why the live filter is load-bearing applies here
 // unchanged; this adds only the grant-access arm.
+//
+// THIS IS THE SPELLING A WRITE OWES, and the rule is stated here once rather
+// than re-argued at each gate: archived means frozen. A row that carries no
+// authority of its own — an attachment, a deal room, a contract, a commission
+// entry — is gated by its anchor being LIVE and not merely visible, because
+// "may I still change this" is a question about what the record means, not
+// about who is asking (#1405).
+//
+// A path that STAGES a proposal and applies it later needs this most, because
+// the archive lands inside that window and the window is the ordinary case
+// rather than a race. Three such applies wrote records the ordinary PATCH
+// refuses, and one of them wrote a declared-PII row back onto a person
+// anonymized under Art. 17 — erasure stamps archived_at and leaves the row
+// standing, so a probe without the live filter still answers "yours".
+//
+// Where a caller must reach an archived row ON PURPOSE — Art. 17 erasure, the
+// retention sweep, the archive transition itself, a merge retiring its source,
+// or a refusal path that writes nothing — it uses EnsureWritable and says why
+// at the call site.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
 		return err

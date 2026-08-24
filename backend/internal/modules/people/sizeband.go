@@ -170,8 +170,13 @@ func fillSizeBandFromFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, 
 		if !ok {
 			return nil
 		}
+		// archived_at IS NULL beside size_band IS NULL: the deep-read apply
+		// that calls this probes a live organization, and the statement says so
+		// itself rather than inheriting it, because a promotion onto an archived
+		// company is wrong no matter which caller reaches this helper.
 		tag, err := tx.Exec(ctx,
-			`UPDATE organization SET size_band = $2 WHERE id = $1 AND size_band IS NULL`,
+			`UPDATE organization SET size_band = $2
+			  WHERE id = $1 AND size_band IS NULL AND archived_at IS NULL`,
 			in.OrganizationID, band)
 		if err != nil {
 			return fmt.Errorf("fill size_band: %w", err)

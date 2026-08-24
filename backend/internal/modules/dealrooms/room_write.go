@@ -287,7 +287,12 @@ func changedFields(p *storekit.Patch) []string {
 
 // ensureDealWritable holds the rule that authority over a room follows
 // authority over its deal: reading the room proved the deal is visible, and a
-// mutation additionally needs write authority on it.
+// mutation additionally needs write authority on a LIVE one.
+//
+// The room is a child with no authority of its own, so the deal being archived
+// freezes it — editing the welcome text of a room whose deal is gone, or
+// publishing a release from it, is a change to a record the deal's own PATCH
+// refuses.
 func ensureDealWritable(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) error {
-	return auth.EnsureWritable(ctx, tx, dealTable, ids.UUID(room.DealId))
+	return auth.EnsureWritableLive(ctx, tx, dealTable, ids.UUID(room.DealId))
 }

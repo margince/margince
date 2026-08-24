@@ -70,7 +70,11 @@ func (s *Store) ApplyDiscoveredFields(ctx context.Context, personID ids.PersonID
 	}
 	var applied []string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "person", personID.UUID); err != nil {
+		// LIVE: person_profile_field is a declared PII table, and Art. 17
+		// erasure stamps archived_at rather than deleting the person — so an
+		// approved proposal applied afterwards writes the erased subject's
+		// details back into a table the erasure had just cleared.
+		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
 		out, err := fillDiscoveredFields(ctx, tx, personID, by, fields)
