@@ -24,6 +24,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/network"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -51,7 +52,7 @@ func readGraph(ctx context.Context, t *testing.T, e *Env, personID ids.UUID) (in
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/people/"+personID.String()+"/graph", nil).WithContext(ctx)
-	network.NewReads(e.Pool).GetPersonGraph(rec, req, crmcontracts.Id(personID))
+	network.NewReads(e.Pool, people.NewStore(e.DB())).GetPersonGraph(rec, req, crmcontracts.Id(personID))
 
 	var out crmcontracts.PersonGraph
 	if rec.Code == http.StatusOK {
