@@ -3027,7 +3027,6 @@ export function OffersPanel({
 const DEAL_TABS = ["overview", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
-
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new

@@ -191,9 +191,7 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
               <Badge tone={seat.engaged ? "success" : undefined}>
                 {seat.engaged ? t("coverage.engaged") : t("coverage.quiet")}
               </Badge>
-              <span className="t-caption">
-                {dealRoleLabel(seat.role, t)}
-              </span>
+              <span className="t-caption">{dealRoleLabel(seat.role, t)}</span>
             </li>
           ))}
         </ul>
