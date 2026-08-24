@@ -43,8 +43,7 @@ func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
 	ws := ids.NewV7()
 	ctx := context.Background()
 	if _, err := pool.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		ws, "captured-files-"+ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seed workspace: %v", err)
 	}
 	ctx = asConnector(principal.WithWorkspaceID(ctx, ws), "connector:imap")

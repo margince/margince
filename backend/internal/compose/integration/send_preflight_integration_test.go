@@ -76,7 +76,7 @@ func setupPreflightWithoutGoogleApp(t *testing.T) *preflightEnv {
 // activity being answered, and the acting human. extra carries whatever the
 // caller wants composed on top of the vault and the public base URL — which is
 // where the two setups above differ, and the only place. Each test boots its own
-// database, so the one installation slug serves both.
+// database, so the one installation serves both.
 func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
 	key := make([]byte, 32)
@@ -94,7 +94,6 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	// carries one — an install that can send at all has one.
 	opts = append(opts, compose.WithPublicBaseURL(preflightBaseURL))
 	e := apptest.SetupAppWithOptions(t, opts...)
-	e.Slug = "preflight-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Preflight E2E", "sender@fable.test", "Admin")
 
 	var person struct {
@@ -143,7 +142,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}
 
 	var ws, user string
-	if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT (SELECT id FROM workspace ORDER BY created_at LIMIT 1), id FROM app_user WHERE email = $1`, "sender@fable.test").Scan(&ws, &user)
 	}); err != nil {
@@ -188,7 +187,7 @@ func (p *preflightEnv) send(t *testing.T) (status int, code, message string) {
 func (p *preflightEnv) stagedDeliveries(t *testing.T) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM comms_outbound`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting staged deliveries: %v", err)
@@ -201,7 +200,7 @@ func (p *preflightEnv) stagedDeliveries(t *testing.T) int {
 // reads out of the row, not how the OAuth callback puts it there.
 func (p *preflightEnv) connect(t *testing.T, providerScopes ...string) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
 			VALUES ('gmail', $1, '{}', 'connected', $2, $3)

@@ -147,7 +147,7 @@ func TestResetEmptiesEveryDataTableIncludingTheAppendOnlyOnes(t *testing.T) {
 
 	ws := "00000000-0000-7000-8000-0000000000aa"
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO workspace (id, slug) VALUES ($1, 'reset-probe')`, ws); err != nil {
+		INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	// audit_log carries a BEFORE DELETE trigger that raises unconditionally, so
@@ -297,8 +297,8 @@ func TestResetReclaimsStorageFromABulkSeededTable(t *testing.T) {
 		t.Fatalf("reset to a known-clean start: %v", err)
 	}
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO workspace (id, slug)
-		SELECT uuidv7(), 'bulk-' || g FROM generate_series(1, 20000) g`); err != nil {
+		INSERT INTO workspace (id)
+		SELECT uuidv7() FROM generate_series(1, 20000)`); err != nil {
 		t.Fatalf("bulk-seeding workspace: %v", err)
 	}
 

@@ -31,7 +31,6 @@ import (
 
 func TestAnAgentDraftsPricesAndArchivesAnOfferOnItsOwnPassport(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "offers-pin"
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Pin", "pin@fable.test", "Admin")
 	_, token, offer := seedOfferForPin(t, e)
 	bearer := map[string]string{"Authorization": "Bearer " + token}

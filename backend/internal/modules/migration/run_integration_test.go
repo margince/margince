@@ -83,8 +83,7 @@ func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (co
 	migrationResetMu.Unlock()
 
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		ws, "migration-"+ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	user := ids.New[ids.UserKind]()

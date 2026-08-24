@@ -461,7 +461,7 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	// The run row exists — it was created before the file was read — and it
 	// must not be sitting in validating.
 	var runs []importRunDTO
-	if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT id::text, status FROM import_run WHERE connector = 'csv'`)
 		if err != nil {
 			return err

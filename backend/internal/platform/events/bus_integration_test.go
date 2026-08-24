@@ -74,7 +74,7 @@ func setup(t *testing.T) *busEnv {
 	// in their envelopes; the outbox itself is infra-owned (no RLS).
 	ws := ids.NewV7()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, 'bus-test')`, ws); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 

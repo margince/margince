@@ -115,7 +115,7 @@ func (p *preflightEnv) deliveryFor(t *testing.T, activityID ids.UUID) (ids.UUID,
 	t.Helper()
 	var id ids.UUID
 	var messageID string
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id, message_id FROM comms_outbound WHERE activity_id = $1`, activityID).Scan(&id, &messageID)
 	}); err != nil {
@@ -259,7 +259,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	}
 
 	var rows int
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE source_system = $1 AND source_id = $2`,
 			sourceSystem, messageID).Scan(&rows)
@@ -275,7 +275,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	// has to be stamped at send or the conversation has no identity.
 	var id ids.UUID
 	var threadKey *string
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id, thread_key FROM activity WHERE source_system = $1 AND source_id = $2`,
 			sourceSystem, messageID).Scan(&id, &threadKey)
@@ -415,7 +415,7 @@ func TestASenderDowngradedToAReadSeatParksAStagedDelivery(t *testing.T) {
 // path reads out of the row, not how the admin endpoint puts it there.
 func (p *preflightEnv) deactivateSender(t *testing.T) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, p.user)
 		return err
@@ -430,7 +430,7 @@ func (p *preflightEnv) deactivateSender(t *testing.T) {
 // from.
 func (p *preflightEnv) downgradeSenderToReadSeat(t *testing.T) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE app_user SET seat_type = 'read' WHERE id = $1`, p.user)
 		return err
@@ -443,7 +443,7 @@ func (p *preflightEnv) downgradeSenderToReadSeat(t *testing.T) {
 func (p *preflightEnv) deliveryReason(t *testing.T, deliveryID ids.UUID) string {
 	t.Helper()
 	var reason *string
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT reason FROM comms_outbound WHERE id = $1`, deliveryID).Scan(&reason)
 	}); err != nil {

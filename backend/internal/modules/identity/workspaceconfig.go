@@ -5,9 +5,9 @@ package identity
 
 // The workspace row is CONFIGURATION now: its identity — name, base currency,
 // timezone — moved into `setting` (ADR-0090/A135) and the columns were dropped
-// (0211), leaving the slug bootstrap derives and columns that arrive at the
-// default their migration declared and are changed later through a settings
-// surface. ResetWorkspaceConfig below restores those defaults. What a data
+// (0211), and ADR-0091 retired the slug after it, leaving only columns that
+// arrive at the default their migration declared and are changed later through
+// a settings surface. ResetWorkspaceConfig below restores those defaults. What a data
 // reset must not touch lives in `setting`, where platform/settings.ResetConfig
 // draws the same line: the installation itself survives the reset.
 
@@ -23,14 +23,15 @@ import (
 )
 
 // preservedWorkspaceColumns are the workspace columns the restore does not
-// assign: the primary key, the slug bootstrap derives from the organization
-// name, and the row's own lifecycle timestamps. A reset wipes an
-// installation's DATA — it does not re-create the installation, so its
-// identity and age outlive it.
+// assign: the primary key and the row's own lifecycle timestamps. A reset
+// wipes an installation's DATA — it does not re-create the installation, so
+// its identity and age outlive it.
 //
 // Name, currency and zone are absent because they are no longer columns
 // (0211): they are settings rows, and platform/settings.ResetConfig spares
-// them there for exactly this reason.
+// them there for exactly this reason. The slug is absent because ADR-0091
+// retired the column outright — nothing read it back, and the derived string
+// the agent seat's address needs is computed at bootstrap rather than stored.
 //
 // updated_at is listed for a different reason than the rest. The reset really
 // does write this row, so trg_workspace_updated moves that column, and it
@@ -45,7 +46,7 @@ import (
 // silently escaping the reset, and a column that genuinely belongs to the
 // installation's identity has to be declared here to be spared.
 var preservedWorkspaceColumns = map[string]bool{
-	"id": true, "slug": true,
+	"id":         true,
 	"created_at": true, "updated_at": true, "archived_at": true,
 }
 

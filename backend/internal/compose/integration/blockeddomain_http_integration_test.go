@@ -130,7 +130,7 @@ func TestBlockedDomainsSplitTheReadFromTheWrite(t *testing.T) {
 	}
 
 	// The read ceiling: the same human, now on a seat that may not mutate.
-	e.SetWorkspaceSeat(t, e.Slug, "read")
+	e.SetWorkspaceSeat(t, "read")
 
 	var list blockedDomainListDTO
 	if status := e.Call(t, "GET", "/v1/capture/blocked-domains", nil, nil, &list); status != http.StatusOK {

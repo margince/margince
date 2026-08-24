@@ -21,7 +21,6 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_BASE="${API_BASE:-http://localhost:8080}"
-WORKSPACE_SLUG="${WORKSPACE_SLUG:-demo-workspace}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 
@@ -41,7 +40,6 @@ trap 'rm -rf "$workdir"' EXIT
 echo "== verify-boot 1/4: login as the seeded demo admin =="
 login_status="$(curl -sS --max-time 15 -o "$workdir/login.json" -D "$workdir/headers" -w '%{http_code}' \
   -X POST "$API_BASE/v1/auth/login" \
-  -H "X-Workspace-Slug: $WORKSPACE_SLUG" \
   -H 'Content-Type: application/json' \
   --data "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')" || true)"
 if [ -z "$login_status" ] || [ "$login_status" = "000" ]; then
@@ -61,7 +59,6 @@ echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 echo "== verify-boot 2/4: seeded people are visible =="
 people_status="$(curl -sS --max-time 15 -o "$workdir/people.json" -w '%{http_code}' \
   "$API_BASE/v1/people?limit=100" \
-  -H "X-Workspace-Slug: $WORKSPACE_SLUG" \
   --cookie "crm_session=$session" || true)"
 if [ "$people_status" != "200" ]; then
   echo "  response body:" >&2
@@ -91,7 +88,6 @@ echo "== verify-boot 3/4: every composed unit's transport is registered =="
 expected_transports="$(jq -r '.channels // [] | .[].provider' "$REPO_DIR"/extensions/*/manifest.generated.json | sort -u)"
 providers_status="$(curl -sS --max-time 15 -o "$workdir/providers.json" -w '%{http_code}' \
   "$API_BASE/v1/channel-providers" \
-  -H "X-Workspace-Slug: $WORKSPACE_SLUG" \
   --cookie "crm_session=$session" || true)"
 if [ "$providers_status" != "200" ]; then
   echo "  response body:" >&2

@@ -88,7 +88,7 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	// rule a customer feels directly: read seats are how a workspace hands out
 	// visibility without paying for it.
 	before := seeded.SeatsUsed
-	e.SetWorkspaceSeat(t, e.Slug, "read")
+	e.SetWorkspaceSeat(t, "read")
 
 	var afterDemotion entitlement
 	if status := e.Call(t, "GET", "/v1/installation/license", nil, nil, &afterDemotion); status != http.StatusOK {

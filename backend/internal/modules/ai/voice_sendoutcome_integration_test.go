@@ -121,8 +121,7 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 	ctx := context.Background()
 	workspace := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		workspace, "vs-"+workspace.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, workspace); err != nil {
 		t.Fatal(err)
 	}
 

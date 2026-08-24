@@ -31,7 +31,7 @@ import (
 // state these queue tests are about has to be produced after the fact.
 func disownOverDB(t *testing.T, e *apptest.AppEnv, table, id string) {
 	t.Helper()
-	if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(t.Context(), `UPDATE `+table+` SET owner_id = NULL WHERE id = $1`, id)
 		return err
 	}); err != nil {
@@ -341,7 +341,7 @@ func TestThePerson360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
 		})
 		// The thread key is capture's to write, never the API's, so it is
 		// stamped the way capture leaves it.
-		if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+		if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 			_, err := tx.Exec(t.Context(), `UPDATE activity SET thread_key = 'thread-1' WHERE id = $1`, id)
 			return err
 		}); err != nil {

@@ -122,9 +122,9 @@ func seedOverlayModeWorkspace(t *testing.T) (ws, user ids.UUID) {
 	owner := integration.OwnerConn(t)
 	ws = ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO workspace (id, slug, x_sor_mode, x_incumbent)
-		 VALUES ($1, $2, 'overlay', 'hubspot')`,
-		ws, "overlay-"+ws.String()); err != nil {
+		`INSERT INTO workspace (id, x_sor_mode, x_incumbent)
+		 VALUES ($1, 'overlay', 'hubspot')`,
+		ws); err != nil {
 		t.Fatalf("seeding the overlay-mode workspace: %v", err)
 	}
 	user = ids.NewV7()

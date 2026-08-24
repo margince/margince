@@ -47,7 +47,6 @@ func ladderApp(t *testing.T, slug string, limits agentquota.Limits) (*apptest.Ap
 			compose.WithAgentQuota(meter),
 		}
 	})
-	e.Slug = slug
 	apptest.BootstrapWorkspaceSession(t, e, "Quota Ladder", slug+"@fable.test", "Admin")
 	return e, meter
 }

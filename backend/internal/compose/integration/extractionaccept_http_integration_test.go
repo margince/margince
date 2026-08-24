@@ -35,7 +35,6 @@ func uploadAttachmentHTTP(e *apptest.AppEnv, t *testing.T, entityType, entityID,
 		t.Fatalf("building upload request: %v", err)
 	}
 	req.Header.Set("Content-Type", ctype)
-	req.Header.Set("X-Workspace-Slug", e.Slug)
 	resp, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below; bodyclose only recognises a Close in the same package
 	if err != nil {
 		t.Fatalf("upload: %v", err)

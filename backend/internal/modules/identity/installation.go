@@ -220,8 +220,12 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	}
 
 	var wsID ids.WorkspaceID
+	// The row is identity and lifecycle now, nothing else: ADR-0090 moved the
+	// installation's configuration into `setting`, and ADR-0091 retired the
+	// slug it used to carry. boot.Slug survives as a DERIVED string — the agent
+	// seat's local address below is built from it — but nothing stores it.
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO workspace (slug) VALUES ($1) RETURNING id`, boot.Slug).Scan(&wsID); err != nil {
+		`INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&wsID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID.String()); err != nil {
@@ -331,9 +335,11 @@ func seedAgentSeat(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, boot Bo
 // domain is the reserved one the spec pins, so nothing can be delivered to it.
 func agentSeatEmail(slug string) string { return "agent@" + slug + ".gradion.local" }
 
-// slugify derives the workspace's stable slug from the organization name
-// — an internal identifier now (no subdomain resolves it), kept
-// subdomain-safe for the schema's slug shape.
+// slugify derives a stable label from the organization name, for the one
+// caller left: the agent seat's local email address. It is subdomain-safe
+// because that shape makes a valid address label, not because anything
+// resolves a subdomain — nothing has since ADR-0061, and ADR-0091 dropped the
+// column that used to persist it.
 func slugify(name string) string {
 	var b strings.Builder
 	for _, r := range strings.ToLower(strings.TrimSpace(name)) {

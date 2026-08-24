@@ -30,7 +30,6 @@ type configuredStage struct {
 
 func TestStageRemovalRefusesWhileDealsSitOnIt(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "stage-rm"
 	apptest.BootstrapWorkspaceSession(t, e, "Stage RM", "stage-rm@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.CreateOpenDeal(t, e, seeded)
@@ -100,7 +99,6 @@ func TestStageRemovalRefusesWhileDealsSitOnIt(t *testing.T) {
 
 func TestStageRemovalTakesTheVersionGuard(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "stage-rm-ver"
 	apptest.BootstrapWorkspaceSession(t, e, "Stage RM Ver", "stage-rm-ver@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	stages := readStages(t, e, seeded.PipelineID)
@@ -125,7 +123,6 @@ func TestStageRemovalTakesTheVersionGuard(t *testing.T) {
 // reorder that did not happen.
 func TestStageRemovalRenumbersWhateverLayoutItFinds(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "stage-rm-gap"
 	apptest.BootstrapWorkspaceSession(t, e, "Stage RM Gap", "stage-rm-gap@fable.test", "Admin")
 
 	var pipeline struct {

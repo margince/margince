@@ -68,7 +68,7 @@ func setupFacts(t *testing.T) *factsEnv {
 		t.Fatal(err)
 	}
 	e := &factsEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7()}
-	e.exec(t, `INSERT INTO workspace (id, slug) VALUES ($1, $2)`, e.ws, "facts-"+e.ws.String())
+	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, e.user, "rep-"+e.user.String()+"@facts.test")
 	pool, err := testdb.Pool(ctx, appDSN)
 	if err != nil {

@@ -275,8 +275,8 @@ ext-imports:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
 		scripts/ext-imports.test.ts
 
-## seed-dev — create/refresh the demo workspace (demo-workspace,
-## admin@demo.test / demo-password-123) through the public API, then seed
+## seed-dev — create/refresh the demo installation (admin@demo.test /
+## demo-password-123) through the public API, then seed
 ## demo FX rates (SQL — fx_rate has no API). Stack must be running
 ## (make dev). Idempotent; re-runs log in instead of re-bootstrapping.
 seed-dev:

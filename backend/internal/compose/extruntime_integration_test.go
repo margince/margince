@@ -118,23 +118,34 @@ func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 // TestRuntimeTxCommitsAndRollsBack walks the seam's own contract: the three
 // verbs work, fn returning nil commits, fn returning an error rolls back.
 //
-// It runs against `workspace` — a CORE table — because the extension's own
-// ext_* tables arrive with the demo unit and this seam has to be correct
-// before there is one. That it succeeds is also the honest demonstration of
-// what the containment wall is today: the tenant pin and the RLS policies,
-// and NOT a per-unit database role. runtime.go used to claim the latter; it
-// does not exist, and issue #628 tracks building it. When it does, this test
-// is expected to need a table the unit actually owns — and the fact that it
-// currently does not is the point being recorded here rather than hidden.
+// It runs against `app_user` — a CORE table, and one holding people's names —
+// because the extension's own ext_* tables arrive with the demo unit and this
+// seam has to be correct before there is one.
+//
+// That it SUCCEEDS is the honest demonstration, and the honest statement is
+// blunter than the one this comment used to make: for a core table there is no
+// containment wall at all. Core has carried no row-level security since 0217,
+// so the tenant pin binds a GUC that only the extension tables' policies read,
+// and this unit's SQL carries no workspace predicate of its own. runtime.go
+// once claimed a per-unit database role; none exists, and #628 tracks building
+// one. When it does, this test is expected to need a table the unit actually
+// owns — that it currently does not is the point being recorded here rather
+// than hidden.
+//
+// It used to write workspace.slug, until ADR-0091 retired that column. The
+// substitute is deliberately not another workspace column: the row is identity
+// and lifecycle now, so a unit writing it would be writing a timestamp or a
+// key rather than anything a reader would recognise as damage. A seat's
+// display name is legible as exactly what the missing wall would let through.
 func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 
-	// Commit: rename the fixture workspace, then read it back in a SECOND
+	// Commit: rename a fixture seat, then read it back in a SECOND
 	// transaction, so what is asserted is durability rather than the write's
 	// own snapshot.
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		n, err := tx.Exec(ctx, `UPDATE workspace SET slug = $1 WHERE id = $2`, "committed", e.WS)
+		n, err := tx.Exec(ctx, `UPDATE app_user SET display_name = $1 WHERE id = $2`, "committed", e.Rep1)
 		if err != nil {
 			return err
 		}
@@ -145,7 +156,7 @@ func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.workspaceSlug(ctx, t, rt); got != "committed" {
+	if got := e.seatName(ctx, t, rt); got != "committed" {
 		t.Fatalf("after a committing Tx the row reads %q, want committed", got)
 	}
 
@@ -153,31 +164,28 @@ func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
 	// the one the caller sees — not a wrapped commit failure.
 	sentinel := errors.New("the handler changed its mind")
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE workspace SET slug = $1 WHERE id = $2`, "rolled-back", e.WS); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE app_user SET display_name = $1 WHERE id = $2`, "rolled-back", e.Rep1); err != nil {
 			return err
 		}
 		return sentinel
 	}); !errors.Is(err, sentinel) {
 		t.Fatalf("Tx returned %v, want the callback's own error", err)
 	}
-	if got := e.workspaceSlug(ctx, t, rt); got != "committed" {
+	if got := e.seatName(ctx, t, rt); got != "committed" {
 		t.Fatalf("after a rolled-back Tx the row reads %q, want the committed value to have survived", got)
 	}
 }
 
-// workspaceSlug reads the fixture workspace back through the seam, exercising
-// Query/Rows on the way. It reads SLUG rather than name because main dropped
-// workspace.name (0211_drop_workspace_identity_columns) — slug is the remaining
-// writable text column, and what these tests need is any column the unit can
-// write through the seam, not this column in particular.
-// The cursor idiom the published Rows documents, iterated to exhaustion and
-// checked with Err.
-func (e *extRuntimeEnv) workspaceSlug(ctx context.Context, t *testing.T, rt *callRuntime) string {
+// seatName reads the fixture seat back through the seam, exercising Query/Rows
+// on the way — the cursor idiom the published Rows documents, iterated to
+// exhaustion and checked with Err. What these tests need is any column the unit
+// can write through the seam, not this column in particular.
+func (e *extRuntimeEnv) seatName(ctx context.Context, t *testing.T, rt *callRuntime) string {
 	t.Helper()
 	var name string
 	seen := 0
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT slug FROM workspace`)
+		rows, err := tx.Query(ctx, `SELECT display_name FROM app_user WHERE id = $1`, e.Rep1)
 		if err != nil {
 			return err
 		}
@@ -192,14 +200,14 @@ func (e *extRuntimeEnv) workspaceSlug(ctx context.Context, t *testing.T, rt *cal
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// The fixture seeds exactly one workspace, so a second row would mean the
-	// cursor is reading something other than what this test writes. It is NOT
-	// a proof of the tenant pin — `workspace` is the tenant row itself and
-	// carries no deny-on-unset policy of its own, so an unpinned read would
-	// see it too. The pin is proved against the GUC the policies read, in
+	// The row was VISIBLE, which is the only thing a primary-key lookup can
+	// report: zero would mean the seam hid it, not that a second one appeared.
+	// It is NOT a proof of the tenant pin either — core carries no
+	// deny-on-unset policy since 0217, so an unpinned read would see this row
+	// too. The pin is proved against the GUC the policies read, in
 	// TestRuntimeTxIsPinnedToTheInvokingWorkspace.
 	if seen != 1 {
-		t.Fatalf("the read saw %d workspace rows, want exactly the seeded one", seen)
+		t.Fatalf("the read saw %d rows for the seeded seat's primary key, want it visible through the seam", seen)
 	}
 	return name
 }
@@ -213,7 +221,7 @@ func TestRuntimeQueryRowReportsAnEmptyMatchAsErrNoRows(t *testing.T) {
 
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		var name string
-		err := tx.QueryRow(ctx, `SELECT slug FROM workspace WHERE id = $1`, ids.NewV7()).Scan(&name)
+		err := tx.QueryRow(ctx, `SELECT display_name FROM app_user WHERE id = $1`, ids.NewV7()).Scan(&name)
 		if !errors.Is(err, extension.ErrNoRows) {
 			t.Errorf("Scan on an empty match = %v, want extension.ErrNoRows", err)
 		}
