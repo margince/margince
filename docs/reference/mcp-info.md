@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 8 |
 | Tool catalog | 152.7 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39872 |
+| Approx. wire tokens | 39868 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,8 +30,8 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.9 KB | 22% | Yes, every step |
-| Input schemas | 34.0 KB | 22% | Yes, every step |
+| Descriptions (incl. governance clause) | 35.1 KB | 22% | Yes, every step |
+| Input schemas | 33.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
 | **Description + input schema** | **68.9 KB** | **45%** | **the recurring cost** |
 
@@ -4643,7 +4643,7 @@ The workspace's words for grouping records, with the tag_id apply_tag takes. Arc
 
 **Log an activity**
 
-Record something that happened — a call, a meeting, a note, a message — on the timeline of the records it was about. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
+Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a person, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is relink_activity, which a person has to approve. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -4687,7 +4687,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "EVERY record this was about, named in this one call — a meeting is with a person and also concerns their company and the deal it is for, so name all of them here. This call writes them all and needs no approval; attaching one afterwards is relink_activity, which a person has to approve before it takes effect. Unlinked, it appears on no timeline.",
+      "description": "Every record this was about — the person, their company, the deal. All of them here, in this call: it writes them together and needs no approval.",
       "items": {
         "additionalProperties": false,
         "properties": {

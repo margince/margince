@@ -136,6 +136,49 @@ func (t relinkActivity) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 	}))
 }
 
+// ResolverInput names the activity's CURRENT version alongside the arguments,
+// which is what lets relinkActivityTier's verdict stand.
+//
+// Without it every agent relink was raised to approval whatever its
+// destination. auth/admit.go refuses a dynamic tier that resolves to
+// auto-execute but cannot name the version it was resolved from — deliberately,
+// because an unpinned write would run unattended — and this tool answered no
+// version at all. The resolver's own contract says it "raises a relink onto a
+// PROJECT to confirm-first and leaves every other destination auto-executing";
+// that second half was unreachable, so relinking to a person, a company or a
+// deal cost a human decision the app itself does not ask for.
+//
+// The version comes from the same read the staging path already performs
+// (relinkActivityResolver.Subject), so a project relink still stages pinned to
+// the version its approval was given for.
+func (t relinkActivity) ResolverInput(ctx context.Context, in json.RawMessage) (mcp.TierResolverInput, error) {
+	var args relinkActivityArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return mcp.TierResolverInput{}, err
+	}
+	resolved := mcp.TierResolverInput{Args: in}
+	info, err := StageSubject(ctx, NewRelinkActivityCall(t.p, RelinkActivityCommand{
+		ActivityID: args.ActivityID, EntityType: args.EntityType, EntityID: args.EntityID,
+	}))
+	if err != nil {
+		// The read failed, or the guards refused. Answering NO VERSION rather
+		// than the error is deliberate: the gate then raises to confirm-first,
+		// which is the honest answer to "this server could not establish the
+		// record's state", and it keeps the resolver's contract that it may
+		// only ever RAISE. Returning err here would turn an unreadable activity
+		// into a hard failure at the gate, where a human decision is the safer
+		// answer and the one the REST door gives for the same shape.
+		return resolved, nil //nolint:nilerr // an unreadable record raises to a human, it does not fail the call
+	}
+	// A record with no version is left unreported rather than pinned at zero,
+	// for the reason dealmove.go states: zero is not a version any write can be
+	// conditioned on.
+	if info.TargetVersion != nil && *info.TargetVersion > 0 {
+		resolved.ObservedVersion = info.TargetVersion
+	}
+	return resolved, nil
+}
+
 func (t relinkActivity) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args relinkActivityArgs
 	if err := decodeArgs(in, &args); err != nil {

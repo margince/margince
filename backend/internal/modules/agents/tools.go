@@ -357,7 +357,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"EVERY record this was about, named in this one call — a meeting is with a person and also concerns their company and the deal it is for, so name all of them here. This call writes them all and needs no approval; attaching one afterwards is relink_activity, which a person has to approve before it takes effect. Unlinked, it appears on no timeline."},
+				"description":"Every record this was about — the person, their company, the deal. All of them here, in this call: it writes them together and needs no approval."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
