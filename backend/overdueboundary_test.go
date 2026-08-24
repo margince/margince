@@ -62,14 +62,68 @@ var schedulerClaims = gatekit.Waive(map[string]string{
 // asksIfLateInSQL matches a statement asking whether a due column has been
 // reached INCLUSIVELY — the reading no display wants.
 //
-// Both directions, and any right-hand side. This tree does not write the clock
-// literally: `deals/health.go` binds it as `a.due_at < $2`, so a census keyed on
-// `now()` could not have seen an inclusive version of the very statement it was
-// written to guard. `now() >= due_at` is the same question with the operands
-// swapped, which is how the Go arm was blind until this round too.
+// Both directions, because `now() >= due_at` is the same question with the
+// operands swapped — the blindness the Go arm carried until a round ago.
+//
+// The other side must be a CLOCK: `now()`, `current_timestamp`, or a bound
+// parameter, since this tree does not write the clock literally (`deals/health.go`
+// binds it as `a.due_at < $2`, so a census keyed on `now()` could not have seen
+// an inclusive version of the statement it was written to guard).
+//
+// Requiring a clock is also what keeps `due_at <= due_on` out. Two due dates
+// compared to each other is finding the earlier of them — a different and
+// legitimate question, permitted by the Go arm, and a census that refused it in
+// SQL while allowing it in Go would be two rules for one decision.
 var asksIfLateInSQL = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\bdue_at\s*<=`),
-	regexp.MustCompile(`(?i)(now\(\)|\$\d+|current_timestamp)\s*>=\s*[a-z_.]*\bdue_at\b`),
+	regexp.MustCompile(`(?i)\bdue_at\s*<=\s*(now\(\)|current_timestamp|\$\d+)`),
+	regexp.MustCompile(`(?i)(now\(\)|current_timestamp|\$\d+)\s*>=\s*[a-z_.]*\bdue_at\b`),
+}
+
+// TestTheSQLPatternsSeeWhatTheyClaimTo pins both what they catch and what they
+// must let through.
+//
+// A census asserting a shape is ABSENT passes identically over a clean tree and
+// over a pattern that has stopped matching.
+func TestTheSQLPatternsSeeWhatTheyClaimTo(t *testing.T) {
+	caught := []string{
+		"WHERE a.due_at <= now()",
+		"WHERE a.due_at <= $2",
+		"WHERE a.due_at <= current_timestamp",
+		"WHERE now() >= a.due_at",
+		"WHERE $3 >= due_at",
+		"where DUE_AT  <=  NOW()",
+	}
+	for _, statement := range caught {
+		if !anyAsksIfLate(statement) {
+			t.Errorf("the census does not see an inclusive reading it must:\n\t%s", statement)
+		}
+	}
+	missed := []string{
+		// The exclusive reading, which is the one every surface wants.
+		"WHERE a.due_at < now()",
+		"WHERE a.due_at < $2",
+		// Two due dates compared to each other: finding the earlier of them.
+		"WHERE due_at <= due_on",
+		"WHERE inv.due_at <= q.due_at",
+		// A due date in the FUTURE is a different question again.
+		"WHERE a.due_at >= now()",
+		// Another column entirely.
+		"WHERE expires_at <= now()",
+	}
+	for _, statement := range missed {
+		if anyAsksIfLate(statement) {
+			t.Errorf("the census reports something that is not an inclusive lateness test:\n\t%s", statement)
+		}
+	}
+}
+
+func anyAsksIfLate(statement string) bool {
+	for _, inclusive := range asksIfLateInSQL {
+		if inclusive.MatchString(statement) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
@@ -105,11 +159,8 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 			}
 			judged++
 			for _, statement := range sqlStatementsIn(t, path, string(source)) {
-				for _, inclusive := range asksIfLateInSQL {
-					if inclusive.MatchString(statement) && !schedulerClaims.Waived(t, rel) {
-						inSQL = append(inSQL, rel+": "+firstSQLStatementLine(statement))
-						break
-					}
+				if anyAsksIfLate(statement) && !schedulerClaims.Waived(t, rel) {
+					inSQL = append(inSQL, rel+": "+firstSQLStatementLine(statement))
 				}
 			}
 			file, parseErr := parser.ParseFile(fset, path, nil, 0)
