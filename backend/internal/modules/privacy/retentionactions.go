@@ -174,9 +174,27 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // the special-category risk; the record of the meeting stays, its content goes
 // — including any attached recording/transcript file (objects first, so the
 // purge shares the person-erase durability guarantee).
+//
+// `raw` goes with `body`. It is the re-parseable original the schema names, so
+// clearing the parsed copy while leaving the source is not an erasure at all —
+// it is the same content one parse away. Nothing populates the column in this
+// tree today, which is exactly why the omission was survivable and exactly why
+// it had to be fixed before something does: the first connector to store an
+// original would have made this sweep keep whole messages past their window,
+// silently. Both sibling erasers already clear it (Art. 17's redaction and the
+// restriction lift), and migration 0291 exists because a guard written from
+// the smaller of two content lists is how the paths come to destroy different
+// things.
+//
+// `counterparty_email` deliberately does NOT go, and that is the one place
+// this statement differs from its siblings on purpose: the retention action's
+// contract is that the RECORD of the meeting survives and its content goes,
+// and who the meeting was with is the record rather than the content. The
+// difference is declared in piicoverage_test.go's retentionErasures for
+// `activity` so it stays a decision rather than an oversight.
 func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx,
-		`UPDATE activity SET body = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
+		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
 		_, err = tx.Exec(ctx,

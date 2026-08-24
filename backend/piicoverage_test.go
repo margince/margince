@@ -95,10 +95,31 @@ var piiTables = map[string]piiHandling{
 	// often. Purged, never exported — like the embedding, it is a machine
 	// artifact rather than anything the subject supplied.
 	"graph_interaction_edge": {erasureWrite: true, sarRead: false},
-	"activity":               {erasureWrite: true, sarRead: true},
-	"attachment":             {erasureWrite: true, sarRead: true},
-	"raw_capture":            {erasureWrite: true, sarRead: true},
-	"embedding":              {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
+	// The Art. 17 cascade reaches activity, so erasureWrite is what this table
+	// promises. retentionErasures is declared ANYWAY, because the nightly
+	// sweep's activity/erase action is a SECOND eraser of the same content and
+	// the two have already drifted once: the sweep cleared `body` and left
+	// `raw`, the re-parseable original, which is the same content one parse
+	// away. Nothing populates the column today, so nothing would have reported
+	// it — the first connector to store an original is what would have made it
+	// a leak.
+	//
+	// `counterparty_email` is absent from this list ON PURPOSE. Both sibling
+	// erasers clear it; the sweep keeps it, because the retention action's
+	// contract is that the RECORD of the meeting survives and its content goes,
+	// and who it was with is the record. Declared here so the difference is a
+	// decision somebody can find rather than an omission nobody can date.
+	"activity": {
+		erasureWrite: true,
+		sarRead:      true,
+		retentionErasures: []string{
+			"body = NULL",
+			"raw = NULL",
+		},
+	},
+	"attachment":  {erasureWrite: true, sarRead: true},
+	"raw_capture": {erasureWrite: true, sarRead: true},
+	"embedding":   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// Field-level provenance names who captured which of the subject's
 	// fields from where — subject-linked metadata (B-E02.12).
 	"field_provenance": {erasureWrite: true, sarRead: true},
@@ -278,13 +299,27 @@ var erasureCascadeFiles = []string{
 // retention sweep can never be mistaken for an answer to an Art. 17 request.
 //
 // A LIST rather than one path, because the evaluator has already outgrown one
-// file once: splitting the AI-store sweeps out made three tables look
-// unswept, and a census keyed to a single filename reports a refactor as a
-// compliance regression.
+// file twice. Splitting the AI-store sweeps out made three tables look
+// unswept; then the per-action executors moved to retentionactions.go and the
+// list was not extended, so every assignment the sweep's OWN actions make —
+// activity/erase among them — was invisible to this gate. A census keyed to a
+// filename reports a refactor as a compliance regression, and worse reports
+// nothing at all when the refactor moves code OUT of the names it knows.
+//
+// It is still a list and not a glob over retention*.go, and that is the part
+// worth reading before "fixing" it. retentionrestricted.go is the RESTRICTION
+// LIFT — a different trigger — and it clears `raw` and `counterparty_email`
+// that the sweep does not. Folding it in would let the lift's assignments
+// satisfy the sweep's declarations below, so a retentionErasures entry would
+// pass whether or not the sweep still made it: the gate would go quietly green
+// over exactly the divergence it exists to catch. Over-recognition is the
+// failure mode a glob buys here, and it is the one with no failing assertion
+// to notice it.
 var retentionSweepFiles = []string{
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
+	"internal/modules/privacy/retentionactions.go",
 }
 
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
