@@ -39,12 +39,14 @@ import (
 // are not ours to edit while an older build may still be running.
 //
 // Each is that release's statement BYTE FOR BYTE, and the inconsistencies
-// between them are deliberately preserved. Five read current_setting with
-// missing_ok and never coalesce the NULL, so an unset GUC takes no lock at all;
-// one reads it WITHOUT missing_ok and raises instead; two coalesce. Tidying any
-// of that would change the key, or change when the statement fails, and the
-// only thing this text has to do is hash to what the old build hashes. What
-// serializes the CURRENT build is the bare key each site takes first.
+// between them are deliberately preserved. Under an UNSET GUC the eight behave
+// three different ways — take no lock, raise, or lock an empty-suffix key — and
+// each entry below says which it is rather than the count being tallied here,
+// because a tally in prose is one edit away from disagreeing with the list it
+// describes. Tidying any of that would change the key, or change when the
+// statement fails, and the only thing this text has to do is hash to what the
+// old build hashes. What serializes the CURRENT build is the bare key each site
+// takes first.
 //
 // When #2528 removes the legacy half, this whole file goes with it.
 //
@@ -53,13 +55,21 @@ import (
 // statement is the gate's own subject, and it is derived from the tree rather
 // than trusted, so a site added or dropped fails here.
 var legacyAdvisoryLockKeys = []string{
+	// compose/bootscope.go — coalesce: locks the empty-suffix key
 	`pg_advisory_xact_lock( hashtext($1 || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`,
+	// platform/extsecrets/scope.go — missing_ok, no coalesce: takes NO lock
 	`pg_advisory_xact_lock(hashtext( 'margince:extsecrets:' || current_setting('app.workspace_id', true) || ':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
+	// modules/identity/lastadmin.go — missing_ok, no coalesce: takes NO lock
 	`pg_advisory_xact_lock(hashtext('margince:admin-guard:' || current_setting('app.workspace_id', true))::bigint)`,
+	// modules/capture/pendingcap.go — missing_ok, no coalesce: takes NO lock
 	`pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || current_setting('app.workspace_id', true))::bigint)`,
+	// modules/capture/freemaildomain.go — missing_ok, no coalesce: takes NO lock
 	`pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || current_setting('app.workspace_id', true) || ':' || $1)::bigint)`,
+	// modules/overlay/visibility.go — no missing_ok: RAISES
 	`pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || current_setting('app.workspace_id'))::bigint)`,
+	// storekit.LockWriteIdentity — coalesce: locks the empty-suffix key
 	`pg_advisory_xact_lock(hashtextextended( $1 || ':' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $2, 0))`,
+	// storekit/suppression.go — coalesce: locks the empty-suffix key
 	`pg_advisory_xact_lock(hashtextextended( coalesce(current_setting('app.workspace_id', true), '') || ':' || $1, 0))`,
 }
 
