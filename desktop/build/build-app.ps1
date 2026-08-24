@@ -79,11 +79,11 @@ function Build-Frontend {
     }
 
     # Install at the REPO ROOT, build in frontend/. The lockfile is a root pnpm
-    # workspace -- a unit's frontend layer is a member of it -- so there is no
-    # frontend\pnpm-lock.yaml to install against, and --frozen-lockfile run
-    # from frontend\ would either resolve the root lockfile from a
-    # subdirectory or rewrite it. The Dockerfile's web stage splits the two
-    # steps for the same reason and is the reference for this lane.
+    # workspace, so there is no frontend\pnpm-lock.yaml to install against, and
+    # --frozen-lockfile run from frontend\ would either resolve the root
+    # lockfile from a subdirectory or rewrite it. The Dockerfile's web stage
+    # splits the two steps for the same reason and is the reference for this
+    # lane.
     #
     # --ignore-scripts matches every other frontend install in this repo: the
     # lockfile pins what is installed, and this stops a dependency's lifecycle
@@ -91,6 +91,28 @@ function Build-Frontend {
     Push-Location $RepoRoot
     try {
         Invoke-Native 'pnpm install' 'pnpm' 'install' '--frozen-lockfile' '--ignore-scripts'
+    } finally {
+        Pop-Location
+    }
+
+    # THEN the composed workspace, and the order is load-bearing -- the same
+    # order `make fe-typecheck-composed` documents, and the same second install
+    # build-app.sh performs. A unit's frontend layer is NOT a member of the root
+    # workspace (pnpm-workspace.yaml says why), so its react,
+    # @tanstack/react-query and @types/react come from the GENERATED workspace
+    # below. Without this the root install leaves a unit's screen resolving
+    # neither its peers nor its dev deps, and `pnpm build:composed` typechecks
+    # exactly those screens -- failing with TS2307 "cannot find module 'react'"
+    # in a unit's file, which names neither this script nor the missing step.
+    #
+    # --no-frozen-lockfile because that lockfile is generated build output.
+    $composedWorkspace = Join-Path $RepoRoot 'build\composition-frontend\workspace'
+    if (-not (Test-Path (Join-Path $composedWorkspace 'pnpm-workspace.yaml'))) {
+        throw "gen-composition did not produce $composedWorkspace\pnpm-workspace.yaml, so a unit's frontend dependencies cannot be resolved"
+    }
+    Push-Location $composedWorkspace
+    try {
+        Invoke-Native 'pnpm install (composed workspace)' 'pnpm' 'install' '--no-frozen-lockfile' '--ignore-scripts'
     } finally {
         Pop-Location
     }
