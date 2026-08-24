@@ -28,6 +28,7 @@ afterEach(() => {
 });
 
 const DEAL = "01a03000-0000-7000-8000-000000000001";
+const MAIL = "01a03000-0000-7000-8000-0000000000aa";
 
 type Risk = {
   kind: string;
@@ -85,6 +86,54 @@ function serve({
   );
 }
 
+// A card whose lead verdict sentence cites a record, so the head's receipts
+// have something to render.
+function serveCited() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/status")) {
+        return new Response(
+          JSON.stringify({
+            deal_id: DEAL,
+            story: { sentences: [{ text: "They asked.", evidence: [] }] },
+            verdict: {
+              standing: "blocked",
+              because: {
+                sentences: [
+                  {
+                    text: "Nobody sent the times.",
+                    evidence: [
+                      {
+                        entity_type: "activity",
+                        entity_id: MAIL,
+                        name: "Slots for the pilot review",
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            generated_at: "2026-08-24T00:00:00Z",
+            generated_by: "model",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          deal_id: DEAL,
+          stakeholders: [],
+          risks: [],
+          sections_omitted: [],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }),
+  );
+}
+
 function renderCard() {
   return render(
     <QueryClientProvider
@@ -135,12 +184,54 @@ describe("Deal360 leads with the call", () => {
     expect(screen.getByText("They asked for slots.")).toBeInTheDocument();
   });
 
+  it("keeps the lead sentence's citations on the page", async () => {
+    // The head used to take the sentence's bare TEXT, which left the one
+    // claim a reader is most likely to challenge as the only one on the card
+    // with no receipts under it. The fold renders sentences 1..n, so nothing
+    // else would have carried them either.
+    serveCited();
+    renderCard();
+    await screen.findByText("Blocked");
+    // An `activity` citation has no detail route, so it renders as a flat
+    // label rather than a button — the point is that the receipt is THERE,
+    // under the sentence it belongs to, not that it is clickable.
+    const cites = document.querySelectorAll(".r360-verdict .co-brief-cites");
+    expect(cites.length).toBeGreaterThan(0);
+    expect(cites[0].textContent).not.toBe("");
+  });
+
+  it("puts the rest of the reasoning in the fold, not nowhere", async () => {
+    // The head shows sentence 0 and the fold slices from 1. Without this the
+    // whole remainder could be dropped and every other test still passed —
+    // the fold test reads `story`, which is a different section.
+    serve({ standing: "blocked" });
+    renderCard();
+    await screen.findByText("Blocked");
+    const rest = await screen.findByText("That was three weeks ago.");
+    expect(rest.closest("details.deal360-fold")).not.toBeNull();
+  });
+
   it("renders a standing this build does not know rather than dropping it", async () => {
     // A newer server sending a fifth word is still making a call, and a card
     // that showed nothing would report a deal with no verdict at all.
     serve({ standing: "stalled_pending_legal" });
     renderCard();
-    expect(await screen.findByText("stalled_pending_legal")).toBeVisible();
+    const chip = await screen.findByText("stalled_pending_legal");
+    expect(chip).toBeVisible();
+    // And it must NOT wear the healthy colour. `live` and "I cannot read this
+    // word" were one tone, so a fifth standing from a newer server painted the
+    // loudest element on the card in the all-clear green.
+    expect(chip.className).toContain("r360-standing-unknown");
+    expect(chip.className).not.toContain("r360-standing-calm");
+  });
+
+  it("paints a live deal calm rather than unknown", async () => {
+    // The mirror of the case above: without it, a tone lookup that returned
+    // "unknown" for EVERYTHING would satisfy that assertion perfectly.
+    serve({ standing: "live" });
+    renderCard();
+    const chip = await screen.findByText("Live");
+    expect(chip.className).toContain("r360-standing-calm");
   });
 });
 

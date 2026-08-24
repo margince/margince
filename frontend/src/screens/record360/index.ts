@@ -26,6 +26,7 @@ export {
 export {
   type Signal,
   SignalStrip,
+  type SignalTone,
   type StandingTone,
   VerdictHead,
 } from "./verdict";

@@ -22,6 +22,7 @@ import (
 // so the model and the gate read one text; the fence is minted per request.
 //
 //promptlang:exempt gateEvidence drops any field whose text is not in the page's own bytes, so translating a foreign-language page's facts would drop every one of them.
+//promptvoice:exempt the reply is field values checked against the page's own bytes; a value we phrased would be a value gateEvidence drops.
 func companyFactsRequest(sourceLabel, sourceText, sourceURL string) model.Request {
 	// The page goes in exactly as it was fetched. A verbatim-markdown page can
 	// carry a literal </untrusted>, and it is welcome to: the boundary is this

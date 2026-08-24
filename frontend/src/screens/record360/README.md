@@ -38,3 +38,10 @@ on, and this kit leaves them alone. Renaming them reaches four stylesheets and
 every page that overrides one, which would bury the extraction it was mixed
 into. The names are wrong and the styles are shared; that is a rename to do on
 its own.
+
+One consequence to know about: `shells.tsx` imports `../company360.css`,
+because `SectionCard` renders `.co-card` and that rule lives there. Without the
+import the kit worked only by luck — both callers were on the company page,
+which loads the sheet anyway — and the first caller somewhere else would have
+rendered unstyled. `verdict.tsx` needs no such import; its classes are the
+kit's own and live in `record360.css`.

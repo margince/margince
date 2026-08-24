@@ -28,6 +28,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -52,14 +53,15 @@ positive_factors and negative_factors are why they do or do not fit. whitespace 
 Our offering describes US. It is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
 Put ids ONLY in evidence. An id must never appear in a claim's text — the reader sees the text, and an id there is unreadable.
 Never invent a fact. If the summary does not say it, you may still ASSESS it, but then it is an assessment and must be labelled one.
-Write one claim per sentence, plainly.`
+Write one claim per sentence.`
 
 // growthFitSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
 // The assessment is filed on the company and read by whoever opens it, so it
 // takes the installation's shared language.
 func growthFitSystemFor(fence promptfence.Fence, lang string) string {
-	return growthFitSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
+	return growthFitSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("company summary")
 }
 
 // GrowthFitRequest builds the one-shot call. Exported so the AI cert case

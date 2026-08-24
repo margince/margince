@@ -46,6 +46,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -252,7 +253,7 @@ func reEngagedMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.
 	if page.LastOutboundAt == nil {
 		return crmcontracts.PersonMoment{}, false
 	}
-	quiet := int(inbound.Sub(*page.LastOutboundAt).Hours() / 24)
+	quiet := elapsed.Days(*page.LastOutboundAt, inbound)
 	if quiet < reEngagedQuietDays {
 		return crmcontracts.PersonMoment{}, false
 	}
@@ -289,7 +290,7 @@ func overduePromiseMoment(now time.Time, page *crmcontracts.Person360) (crmcontr
 	if !ok {
 		return crmcontracts.PersonMoment{}, false
 	}
-	overdue := int(now.Sub(*claim.DueAt).Hours() / 24)
+	overdue := elapsed.Days(*claim.DueAt, now)
 	evidence := []crmcontracts.PersonMomentEvidence{{
 		Type:       crmcontracts.PersonMomentEvidenceTypeActivity,
 		Id:         &claim.SourceActivityId,
@@ -333,13 +334,13 @@ func goneQuietMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.
 		// They answered. Silence is not the story.
 		return crmcontracts.PersonMoment{}, false
 	}
-	waiting := int(now.Sub(outbound).Hours() / 24)
+	waiting := elapsed.Days(outbound, now)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.PersonMoment{}, false
 	}
 	quietFor := waiting
 	if page.LastInboundAt != nil {
-		quietFor = int(now.Sub(*page.LastInboundAt).Hours() / 24)
+		quietFor = elapsed.Days(*page.LastInboundAt, now)
 	}
 	evidence := outboundEvidence(page, outbound)
 	return crmcontracts.PersonMoment{

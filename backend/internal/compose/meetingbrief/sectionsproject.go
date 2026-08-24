@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // projectHeaderLine names the engagement and where it stands. The key rides
@@ -74,7 +76,7 @@ func priorMeetingLine(prior PriorMeetingIn, now time.Time) string {
 	if subject == "" {
 		subject = "A meeting"
 	}
-	days := int(now.Sub(prior.StartsAt).Hours() / 24)
+	days := elapsed.Days(prior.StartsAt, now)
 	switch {
 	case days <= 0:
 		return fmt.Sprintf("You met earlier today: %s.", subject)

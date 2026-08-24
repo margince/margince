@@ -50,11 +50,21 @@ const VERDICT_LABELS: Record<string, MessageKey> = {
 // colours every state has no colour left for the one that needs it, and a
 // healthy deal shouting is how a reader learns to stop looking at the strip.
 const VERDICT_TONE: Record<string, StandingTone> = {
-  live: undefined,
+  live: "calm",
   drifting: "warn",
   blocked: "danger",
   cold: "danger",
 };
+
+// The tone for a standing this build does not know. Own-property lookup, and
+// NOT the healthy tone: a fifth word from a newer server is a call the card
+// must show, and colouring it green would report an unreadable word as good
+// news in the loudest element on the page.
+function verdictTone(standing: string): StandingTone {
+  return Object.hasOwn(VERDICT_TONE, standing)
+    ? VERDICT_TONE[standing]
+    : "unknown";
+}
 
 // The card's read, shared. Deal360 draws the briefing from it and the email
 // box takes `reply_to` out of the same entry, so the two cannot end up
@@ -149,8 +159,20 @@ function Briefing({
       {card.verdict ? (
         <VerdictHead
           label={verdictLabel(card.verdict.standing, t)}
-          tone={VERDICT_TONE[card.verdict.standing]}
-          because={card.verdict.because.sentences[0]?.text}
+          tone={verdictTone(card.verdict.standing)}
+          // The lead sentence keeps its RECEIPTS. Passing its bare text was
+          // the one place on this card where a claim rendered uncited — and
+          // it is the sentence a reader is most likely to challenge, on a
+          // card whose whole premise is that they can. It goes through the
+          // same SentenceList every other sentence does.
+          because={
+            card.verdict.because.sentences.length > 0 ? (
+              <SentenceList
+                sentences={card.verdict.because.sentences.slice(0, 1)}
+                onOpenRecord={open}
+              />
+            ) : undefined
+          }
         />
       ) : null}
       <SignalStrip signals={coverage.signals} />

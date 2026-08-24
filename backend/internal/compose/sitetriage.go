@@ -132,6 +132,8 @@ func triageSchema() json.RawMessage {
 // triageRequest builds the ONE classification call. The fence is minted per
 // request: the page text inside it is a crawled site's own writing, and a
 // boundary reused across calls is one some site has already been shown.
+//
+//promptvoice:exempt decides what a website IS and answers a classification with a confidence; no sentence reaches a reader.
 func triageRequest(page crawlPage, lang string) model.Request {
 	fence := promptfence.New()
 	body := fmt.Sprintf("url: %s\n\n%s", page.URL, triageExcerpt(page.Text))

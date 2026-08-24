@@ -100,9 +100,16 @@ type requestSite struct {
 	where string
 	// governed is true when a language rule reaches this literal's System field.
 	governed bool
-	// waived is true when the enclosing function carries an exempt comment.
-	waived       bool
-	waiverReason string
+	// waived is true when the enclosing function carries a promptlang exempt
+	// comment. voiceWaived is the same answer for the VOICE gate, kept apart
+	// because a prompt can legitimately need one waiver and not the other.
+	waived            bool
+	waiverReason      string
+	voiceWaived       bool
+	voiceWaiverReason string
+	// voiceGoverned is true when the shared voice block reaches this literal's
+	// System field.
+	voiceGoverned bool
 }
 
 // everyModelRequest walks the prompt trees and returns one entry per
@@ -158,12 +165,16 @@ func requestSitesIn(t *testing.T, path string) []requestSite {
 			return true
 		}
 		pos := fset.Position(lit.Pos())
-		reason, waived := waiverAround(file, fset, lit)
+		reason, waived := waiverAround(file, fset, lit, waiverPrefix)
+		voiceReason, voiceWaived := waiverAround(file, fset, lit, voiceWaiverPrefix)
 		out = append(out, requestSite{
-			where:        fmt.Sprintf("%s:%d", path, pos.Line),
-			governed:     systemCarriesALanguageRule(lit, source),
-			waived:       waived,
-			waiverReason: reason,
+			where:             fmt.Sprintf("%s:%d", path, pos.Line),
+			governed:          systemCarriesALanguageRule(lit, source),
+			waived:            waived,
+			waiverReason:      reason,
+			voiceWaived:       voiceWaived,
+			voiceWaiverReason: voiceReason,
+			voiceGoverned:     systemCarriesTheVoice(lit, source),
 		})
 		return true
 	})
@@ -236,10 +247,17 @@ func hasSystemField(lit *ast.CompositeLit) bool {
 
 // waiverAround finds an exempt comment on the function enclosing this literal,
 // and returns the reason written after it.
-func waiverAround(file *ast.File, fset *token.FileSet, lit *ast.CompositeLit) (reason string, waived bool) {
+//
+// The PREFIX is a parameter because two gates waive independently: a prompt
+// whose reply is an enum needs no language rule and no voice, but the two
+// answers are not the same answer, and one comment must not silence the other
+// gate. It was a parameter from the second gate's first day precisely because
+// sharing the walk while hard-coding one prefix silently gave the voice gate
+// the language gate's waivers.
+func waiverAround(file *ast.File, fset *token.FileSet, lit *ast.CompositeLit, prefix string) (reason string, waived bool) {
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
-			if !strings.HasPrefix(comment.Text, waiverPrefix) {
+			if !strings.HasPrefix(comment.Text, prefix) {
 				continue
 			}
 			// A waiver governs the function it sits in or above, which is what
@@ -248,14 +266,46 @@ func waiverAround(file *ast.File, fset *token.FileSet, lit *ast.CompositeLit) (r
 			if fset.Position(comment.Pos()).Line > fset.Position(lit.Pos()).Line {
 				continue
 			}
+			// The waiver must belong to THIS function: it sits inside the
+			// declaration, or in the comment block immediately above it.
+			//
+			// "Immediately above" is a BLOCK and not a single line, because two
+			// gates waive independently and both waivers have to fit. A
+			// one-line rule silently rejected whichever of the two ended up
+			// second, so a request could carry a correctly written waiver and
+			// still be reported as unwaived.
 			if enclosing := functionAround(file, lit); enclosing != nil &&
-				fset.Position(comment.Pos()).Line < fset.Position(enclosing.Pos()).Line-1 {
+				fset.Position(comment.Pos()).Line < firstCommentLineAbove(file, fset, enclosing) {
 				continue
 			}
-			return strings.TrimSpace(strings.TrimPrefix(comment.Text, waiverPrefix)), true
+			return strings.TrimSpace(strings.TrimPrefix(comment.Text, prefix)), true
 		}
 	}
 	return "", false
+}
+
+// firstCommentLineAbove is the top of the contiguous comment block sitting
+// directly above a declaration — the line a waiver may not start before.
+//
+// Contiguous means no blank line: a comment separated from the func by an
+// empty line documents something else, and treating it as attached would let
+// one waiver silence a request further down the file.
+func firstCommentLineAbove(file *ast.File, fset *token.FileSet, decl *ast.FuncDecl) int {
+	top := fset.Position(decl.Pos()).Line
+	for {
+		found := false
+		for _, group := range file.Comments {
+			for _, comment := range group.List {
+				if fset.Position(comment.Pos()).Line == top-1 {
+					top--
+					found = true
+				}
+			}
+		}
+		if !found {
+			return top
+		}
+	}
 }
 
 // functionAround returns the function declaration containing this literal.

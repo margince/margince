@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -165,7 +166,7 @@ func changedClaimLine(claim ClaimIn) string {
 }
 
 func daysAgoPhrase(now, at time.Time) string {
-	days := int(now.Sub(at).Hours() / 24)
+	days := elapsed.Days(at, now)
 	switch {
 	case days <= 0:
 		return "earlier today"

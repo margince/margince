@@ -172,6 +172,7 @@ func (f fxRefresh) extract(ctx context.Context) ([]extractedFxPair, error) {
 // THIS call's system prompt, which a hostile page's author has never seen.
 //
 //promptlang:exempt returns exchange rates — decimal numbers and currency codes, no sentence a reader reads
+//promptvoice:exempt returns exchange rates — decimal numbers and currency codes.
 func fxExtractRequest(pageText string) model.Request {
 	fence := promptfence.New()
 	return model.Request{

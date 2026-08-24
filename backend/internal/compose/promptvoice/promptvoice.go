@@ -4,7 +4,8 @@
 // Package promptvoice is the one spelling of how Margince sounds when it
 // writes prose a person reads.
 //
-// Held by: TestEveryProseSurfaceSpeaksInTheOneVoice (backend/promptvoice_test.go)
+// Held by: TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot
+// (backend/promptvoice_test.go)
 //
 // Every prose surface used to carry its own voice paragraph, hand-written by
 // whoever built it. Two existed and they already disagreed: the deal card asked

@@ -107,6 +107,7 @@ func (rk briefL2Ranker) askModel(ctx context.Context, candidates []BriefQueueIte
 // matters regardless of what the model returns.
 //
 //promptlang:exempt the reply is a permutation of the candidate ids and nothing else — ParseRankOrder reads uuids and BoundToCandidates discards anything that is not one, so no sentence reaches a reader.
+//promptvoice:exempt the reply is a permutation of candidate ids and nothing else — ParseRankOrder reads uuids and BoundToCandidates discards anything that is not one, so no sentence reaches a reader.
 func RankRequest(candidates []BriefQueueItem) model.Request {
 	var b strings.Builder
 	b.WriteString("Candidates:\n")

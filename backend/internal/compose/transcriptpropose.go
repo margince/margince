@@ -131,6 +131,8 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // It is a PURE function of the lines so the certification case can issue the
 // SHIPPING request rather than a copy of it — a cert that grades a
 // hand-rewritten prompt certifies nothing about what runs.
+//
+//promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a person reads.
 func transcriptRequest(lines []string, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder

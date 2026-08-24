@@ -186,6 +186,7 @@ type voiceEvalDraft struct {
 // reason to answer it identically three times.
 //
 //promptlang:exempt an eval harness reproducing one member's writing voice from their own samples; the sample decides the language and a rule of ours would measure the wrong thing
+//promptvoice:exempt an eval harness measuring how closely drafts match one member's own writing samples; imposing our register would measure the wrong thing.
 func voiceEvalDraftRequest(personality string, artifact ai.VoiceArtifact, sample ai.VoiceSample, repeat int) model.Request {
 	// One fence per call, so the profile block and the excerpt are bounded by
 	// the marker THIS call's system prompt names.
@@ -307,6 +308,7 @@ var voiceEvalJudgeSchema = json.RawMessage(
 // instruction.
 //
 //promptlang:exempt an eval harness scoring how closely drafts match one member's own sample; it returns scores, and the sample decides the language
+//promptvoice:exempt an eval harness scoring how closely drafts match one member's own samples; it returns scores, and the sample decides the register.
 func voiceEvalJudgeRequest(original string, bodies []string) model.Request {
 	fence := promptfence.New()
 	var payload strings.Builder

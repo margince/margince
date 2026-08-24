@@ -18,6 +18,8 @@ package meetingbrief
 import (
 	"sort"
 	"time"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // rankedClaims is the single ordered set the sections draw from.
@@ -124,7 +126,7 @@ func urgency(claim ClaimIn, now time.Time) int {
 	if claim.DueAt == nil {
 		return 0
 	}
-	days := int(claim.DueAt.Sub(now).Hours() / 24)
+	days := elapsed.Days(now, *claim.DueAt)
 	if days < 0 {
 		return 30 + min(-days, 30)
 	}
@@ -139,7 +141,7 @@ func freshness(claim ClaimIn, now time.Time) int {
 	if claim.OccurredAt == nil {
 		return 0
 	}
-	age := max(int(now.Sub(*claim.OccurredAt).Hours()/24), 0)
+	age := max(elapsed.Days(*claim.OccurredAt, now), 0)
 	if age >= 60 {
 		return 0
 	}

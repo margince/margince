@@ -295,6 +295,7 @@ func parseRateExtraction(text string) ([]extractedModel, error) {
 // in THIS call's system prompt.
 //
 //promptlang:exempt returns model prices — decimal numbers keyed by model id, no sentence a reader reads
+//promptvoice:exempt returns model prices — decimal numbers keyed by model id.
 func rateExtractRequest(pageText string) model.Request {
 	fence := promptfence.New()
 	return model.Request{

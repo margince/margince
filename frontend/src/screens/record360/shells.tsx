@@ -18,6 +18,13 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+// SectionCard renders `.co-card` and `.co-card-actions`, which are defined in
+// company360.css. Imported HERE rather than left to the caller: it worked
+// only because both callers happened to be on the company page, and a third
+// one anywhere else would have rendered unstyled. The classes keep their `co-`
+// names for the reason README.md gives — renaming them reaches four
+// stylesheets and every page that overrides one.
+import "../company360.css";
 
 /** A card that renders one 360 section in whichever of its states it is in. */
 export function SectionCard({

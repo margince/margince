@@ -20,17 +20,26 @@ package backendarch
 // count written some other way — a day-granularity SQL date_part, say — so it
 // is a net under the known failure rather than a proof of uniqueness.
 //
-// AND IT IS SCOPED, deliberately and with a cost. The two trees carry nine
-// more sites with the same arithmetic, and they are not all the same rule:
+// AND IT IS SCOPED, with a cost worth naming precisely. The trees carry other
+// sites with the same arithmetic, and they are not all the same rule:
 // deals/health.go and people/leadscore.go return a FLOAT because they feed
 // decay curves, where a fractional day is the quantity and rounding it to a
-// calendar boundary would change what the product scores. Converting those
-// blind is a different change with its own risk, so this gate governs the
-// surfaces whose day count a person READS, and the rest are issue #2431's.
+// calendar boundary would change what the product scores. finance/summary.go
+// counts invoice lateness against a due DATE, and search/graphtrust.go decays
+// a score. Those are duration questions, and converting them blind is a
+// different change with its own risk.
 //
-// The cost of that scoping is real and worth naming: a NEW reader-facing count
-// written in an ungoverned file passes. governedSurfaces is the list to extend
-// when one appears.
+// So this gate governs the packages whose day count a person READS in a
+// sentence, and every one of those has been converted. The first version of
+// the comment here said "nine more sites" when there were twenty-three, and
+// justified the scope by pointing only at the float curves — while
+// meetingbrief/sections.go was printing "Last touch was %d days ago" with the
+// very arithmetic this change exists to remove. Both are fixed: the count is
+// measured rather than remembered, and meetingbrief, person360 and org360 are
+// governed here.
+//
+// The cost that remains: a NEW reader-facing count in an ungoverned package
+// still passes. governedSurfaces is the list to extend when one appears.
 
 import (
 	"os"
@@ -54,10 +63,10 @@ var durationOverADay = regexp.MustCompile(`\.Hours\(\)\s*/\s*(24|hoursPerDay)\b`
 var governedSurfaces = []string{
 	"internal/compose/dealstatus",
 	"internal/compose/network",
+	"internal/compose/meetingbrief",
+	"internal/compose/person360",
+	"internal/compose/org360",
 }
-
-// theOneSpelling is where the arithmetic is allowed to live.
-const theOneSpelling = "internal/shared/kernel/elapsed/elapsed.go"
 
 func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 	found := offenders(t)
@@ -119,9 +128,10 @@ func offenders(t *testing.T) []string {
 				return err
 			}
 			// Test files may legitimately spell the arithmetic to check it.
+			// elapsed's own file needs no exclusion: it lives in
+			// shared/kernel, which no governed package walk reaches.
 			if d.IsDir() || !strings.HasSuffix(path, ".go") ||
-				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||
-				filepath.ToSlash(path) == theOneSpelling {
+				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return nil
 			}
 			raw, err := os.ReadFile(path)

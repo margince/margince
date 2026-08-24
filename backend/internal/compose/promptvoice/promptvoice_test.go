@@ -59,8 +59,9 @@ func TestTheVoiceCarriesEveryInstructionItExistsFor(t *testing.T) {
 		"bans exclamation marks":     "No exclamation marks",
 		"bans hedging":               "it appears that",
 	}
+	rule := promptvoice.Rule
 	for what, instruction := range required {
-		if !strings.Contains(promptvoice.Rule, instruction) {
+		if !strings.Contains(rule, instruction) {
 			t.Errorf("the voice no longer %s: %q is gone from promptvoice.Rule", what, instruction)
 		}
 	}

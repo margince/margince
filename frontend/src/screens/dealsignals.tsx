@@ -21,7 +21,7 @@ import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import type { Signal, StandingTone } from "./record360";
+import type { Signal, SignalTone } from "./record360";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];
@@ -29,7 +29,7 @@ type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];
 // Every risk is a warning; only the two that mean somebody is GONE are danger.
 // A strip where six chips all shout is a strip a rep stops reading — the same
 // judgement the coverage card makes, and deliberately the same mapping.
-const RISK_TONE: Record<DealCoverageRisk["kind"], StandingTone> = {
+const RISK_TONE: Record<DealCoverageRisk["kind"], SignalTone> = {
   champion_left: "danger",
   stakeholder_left: "danger",
   going_cold: "warn",

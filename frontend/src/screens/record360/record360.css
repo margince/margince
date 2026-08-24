@@ -23,9 +23,17 @@
   white-space: nowrap;
 }
 
-.r360-standing-plain {
+.r360-standing-calm {
   background: var(--successBg);
   color: var(--success);
+}
+
+/* A standing this build does not recognise. Neutral on purpose: it is not the
+   all-clear, and painting it green told a reader a word nobody could read was
+   good news. */
+.r360-standing-unknown {
+  background: var(--bgHover);
+  color: var(--textSecondary);
 }
 
 .r360-standing-accent {
