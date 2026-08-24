@@ -1,12 +1,16 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../format/format";
 import { FALLBACK_RECORD_ZONE } from "../format/timezone";
 import {
   RecordZoneProvider,
   renderableRecordZone,
+  useConfiguredRecordZone,
   useRecordZone,
 } from "./recordzone";
+import { INSTALLATION_SETTINGS_KEY } from "./uploadlimit";
 
 // What the record zone must do with what the server sends it, and what a
 // screen under the provider sees.
@@ -90,3 +94,72 @@ describe("resolving the installation's configured zone", () => {
     }
   });
 });
+
+describe("an admin changing the zone while a record page is open", () => {
+  // The whole feature, end to end, at the seam where it could quietly not work:
+  // the settings screen writes the PATCH response straight into the settings
+  // cache (`setQueryData`), and nothing tells the record pages. They do not
+  // need telling — the date is computed at render time from the zone this
+  // context serves, so the write re-renders the provider and every screen under
+  // it — but that is a claim about React Query notifying an observer, which is
+  // exactly the kind of thing that is true until a library upgrade makes it
+  // false. Silently: the dates stay on the old clock and look fine.
+  //
+  // `waitFor` rather than a bare assertion after the write, because the
+  // notification is flushed asynchronously. Asserting immediately reads the DOM
+  // one tick early and reports a failure the product does not have.
+  it("re-renders an open date on the new clock", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ timezone: "Asia/Ho_Chi_Minh" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <ConfiguredRoot />
+      </QueryClientProvider>,
+    );
+
+    // 18:30 UTC is the 20th in Saigon and the 19th in Berlin — one instant, two
+    // calendar days, which is what makes this assertion able to fail.
+    await waitFor(() =>
+      expect(screen.getByTestId("when").textContent).toContain("20.08.2026"),
+    );
+
+    client.setQueryData(INSTALLATION_SETTINGS_KEY, {
+      timezone: "Europe/Berlin",
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("when").textContent).toContain("19.08.2026"),
+    );
+  });
+});
+
+// A record date, rendered the way a screen renders one: through the hook, at
+// render time, with no cache of its own.
+function WhenProbe() {
+  return (
+    <p data-testid="when">
+      {formatDateTime("2026-08-19T18:30:00Z", "de", useRecordZone())}
+    </p>
+  );
+}
+
+// The authenticated boundary's own wiring, in miniature.
+function ConfiguredRoot() {
+  const { zone } = useConfiguredRecordZone(true);
+  return (
+    <RecordZoneProvider zone={zone}>
+      <WhenProbe />
+    </RecordZoneProvider>
+  );
+}
