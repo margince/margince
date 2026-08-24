@@ -206,8 +206,11 @@
   color: var(--textMeta);
 }
 
+/* --textSecondary, not --textTertiary: at 12px the tertiary ink measures
+ * 2.5:1 against the page, and this line is the only place a reader is told the
+ * keyboard exists. A legend nobody can read is a legend that is not there. */
 .ddeck-keys {
-  color: var(--textTertiary);
+  color: var(--textSecondary);
 }
 
 /*
