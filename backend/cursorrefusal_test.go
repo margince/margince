@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -438,25 +439,56 @@ func handsOn(returned ast.Expr, guarded string) bool {
 	case *ast.Ident:
 		return node.Name == guarded
 	case *ast.CallExpr:
-		if decoderName(node) != "Errorf" {
-			return false
-		}
-		wrapped := false
-		for _, arg := range node.Args {
-			if lit, ok := arg.(*ast.BasicLit); ok && strings.Contains(lit.Value, "%w") {
-				wrapped = true
-			}
-		}
-		if !wrapped {
-			return false
-		}
-		for _, arg := range node.Args {
-			if ident, ok := arg.(*ast.Ident); ok && ident.Name == guarded {
-				return true
-			}
-		}
+		return wrapsGuarded(node, guarded)
 	}
 	return false
+}
+
+// wrapsGuarded reports whether an fmt.Errorf wraps THE guarded error.
+//
+// The %w's POSITION decides which argument is preserved, so `fmt.Errorf("%w
+// (%v)", otherErr, err)` wraps the other one and leaves the contract error
+// reachable by nothing. Matching "has a %w somewhere and names err somewhere"
+// would clear it.
+func wrapsGuarded(call *ast.CallExpr, guarded string) bool {
+	if decoderName(call) != "Errorf" || len(call.Args) < 2 {
+		return false
+	}
+	format, ok := call.Args[0].(*ast.BasicLit)
+	if !ok || format.Kind != token.STRING {
+		return false
+	}
+	text, err := strconv.Unquote(format.Value)
+	if err != nil {
+		return false
+	}
+	at := wrappedVerbIndex(text)
+	if at < 0 || at+1 >= len(call.Args) {
+		return false
+	}
+	ident, isIdent := call.Args[at+1].(*ast.Ident)
+	return isIdent && ident.Name == guarded
+}
+
+// wrappedVerbIndex is which operand the %w consumes, counting the verbs before
+// it, or -1 when the format wraps nothing.
+func wrappedVerbIndex(format string) int {
+	operand := 0
+	for i := 0; i < len(format)-1; i++ {
+		if format[i] != '%' {
+			continue
+		}
+		switch next := format[i+1]; next {
+		case '%':
+			i++
+		case 'w':
+			return operand
+		default:
+			operand++
+			i++
+		}
+	}
+	return -1
 }
 
 // decodesAToken reports whether an assignment's right-hand side reads a page
@@ -626,22 +658,28 @@ func returnedErrors(body *ast.BlockStmt) [][]ast.Expr {
 	return out
 }
 
+// buildsMalformedCursor reports whether an expression IS the contract's refusal
+// — not whether it merely mentions one.
+//
+// `fmt.Errorf("cursor: %v", &storekit.MalformedCursorError{})` mentions it and
+// throws it away: the text carries the words while errors.As finds nothing, so
+// httperr falls through to a 500. Only the construction itself, or a pointer to
+// it, is the answer.
 func buildsMalformedCursor(expr ast.Expr) bool {
-	found := false
-	ast.Inspect(expr, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.Ident:
-			if n.Name == "MalformedCursorError" {
-				found = true
-			}
-		case *ast.SelectorExpr:
-			if n.Sel.Name == "MalformedCursorError" {
-				found = true
-			}
-		}
-		return true
-	})
-	return found
+	if unary, ok := expr.(*ast.UnaryExpr); ok && unary.Op == token.AND {
+		expr = unary.X
+	}
+	lit, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return false
+	}
+	switch typ := lit.Type.(type) {
+	case *ast.Ident:
+		return typ.Name == "MalformedCursorError"
+	case *ast.SelectorExpr:
+		return typ.Sel.Name == "MalformedCursorError"
+	}
+	return false
 }
 
 func callsADecoder(call *ast.CallExpr) bool {
