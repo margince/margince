@@ -143,14 +143,17 @@ var BaseLanguage = settings.Define[string](
 // BaseCurrency, which freezes: a fiscal year is a way of cutting time, not a
 // value anything has already converted against.
 //
-// The one thing it does re-mean is a SAVED report view. A period bucket's text
-// travels out in a derivation handle and binds back as an equality filter
-// (reportperiod.go), so "FY2026/27" in somebody's saved view is matched against
-// what this setting produces today. Move the fiscal start and that view asks
-// for a span of months nobody chose — the report still runs and still looks
-// right. Nothing here can prevent that; it is why the label spells BOTH years
-// rather than one, so at least the answer a reader gets is unambiguous about
-// which twelve months it covers.
+// It does re-point a SAVED report view, which is a real gap rather than a
+// property of this setting: a period bucket's text travels out in a derivation
+// handle and binds back as an equality filter (reportperiod.go), so a view
+// saved under one fiscal start names a different span after it moves. Tracked
+// as its own decision — re-point, invalidate, or warn — rather than settled
+// here, because none of the three is obviously right and the label cannot fix
+// it either way.
+//
+// What the label DOES fix is the reader's half: spelling both years means the
+// answer they get is unambiguous about which twelve months it covers, even when
+// the filter that produced it is stale.
 var FiscalYearStartMonth = settings.Define[int](
 	"installation.fiscal_year_start_month",
 	installationSettingsObject,

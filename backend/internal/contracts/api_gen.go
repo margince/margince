@@ -16837,10 +16837,7 @@ type InstallationSettings struct {
 	// setting existed.
 	//
 	// It buckets period reports on READ and stores nothing, so changing it re-labels
-	// every report immediately and re-means no stored row. What it DOES re-mean is a
-	// saved report view: a period bucket's text travels out in a derivation handle and
-	// binds back as an equality filter, so a view saved under one fiscal start asks for
-	// a span of months nobody chose after it moves.
+	// every report immediately and re-means no stored row.
 	//
 	// The label spells both calendar years a non-January year spans — `FY2026/27` — so
 	// a reader can tell which twelve months a bucket covers without knowing the
@@ -23145,11 +23142,8 @@ type UpdateInstallationSettingsRequest struct {
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
 	// FiscalYearStartMonth The month the installation's business year begins, 1..12. Never frozen: it cuts
-	// reports on read and stores nothing.
-	//
-	// Moving it re-labels every period report at once, and re-points any saved report
-	// view whose filter names a period bucket — the report still runs and still looks
-	// right, over a different twelve months.
+	// reports on read and stores nothing, so moving it re-labels every period report at
+	// once and re-means no stored row.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
 	// Name Rename the organization.

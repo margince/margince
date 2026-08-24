@@ -97,7 +97,7 @@ func OrgHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID
 		if err := auth.EnsureVisible(ctx, tx, "organization", rootID); err != nil {
 			return err
 		}
-		baseCurrency, loc, err := rollupInstallationMeta(ctx, tx)
+		baseCurrency, loc, fiscalStart, err := rollupInstallationMeta(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func OrgHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID
 		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx); err != nil {
 			return err
 		}
-		if result.ClosedWonMinor, err = closedWonMinorThisQuarter(ctx, tx, included, asOf, loc); err != nil {
+		if result.ClosedWonMinor, err = closedWonMinorThisQuarter(ctx, tx, included, asOf, loc, fiscalStart); err != nil {
 			return err
 		}
 		if result.ActivityCount30d, err = orgActivityCount30d(ctx, tx, included, asOf); err != nil {
@@ -136,25 +136,35 @@ func OrgHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID
 	return result, nil
 }
 
-// rollupInstallationMeta reads the installation's base currency and reporting
-// timezone. A stored zone the host cannot resolve degrades the quarter
-// window to UTC rather than failing the read — the zone was validated
-// at write time, so this only fires when the host lost its tzdata, and
-// an aggregate read is the wrong place to surface that deployment fault.
-func rollupInstallationMeta(ctx context.Context, tx pgx.Tx) (string, *time.Location, error) {
+// rollupInstallationMeta reads the installation's base currency, reporting
+// timezone and the month its business year begins — the basis every figure in
+// this rollup is expressed in. A stored zone the host cannot resolve degrades
+// the quarter window to UTC rather than failing the read — the zone was
+// validated at write time, so this only fires when the host lost its tzdata,
+// and an aggregate read is the wrong place to surface that deployment fault.
+//
+// All three read here rather than where each is used, so one rollup takes one
+// settings read per value. The fiscal month in particular is used by a leaf
+// function that runs once per read, and resolving it there would have been a
+// second answer to a question this function already asks.
+func rollupInstallationMeta(ctx context.Context, tx pgx.Tx) (string, *time.Location, int, error) {
 	baseCurrency, err := identity.BaseCurrencyOf(ctx, tx)
 	if err != nil {
-		return "", nil, err
+		return "", nil, 0, err
 	}
 	tzName, err := identity.TimezoneOf(ctx, tx)
 	if err != nil {
-		return "", nil, err
+		return "", nil, 0, err
 	}
 	loc, err := time.LoadLocation(tzName)
 	if err != nil {
 		loc = time.UTC
 	}
-	return baseCurrency, loc, nil
+	fiscalStart, err := identity.FiscalYearStartMonthOf(ctx, tx)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	return baseCurrency, loc, fiscalStart, nil
 }
 
 // orgRollupMaxDepth caps the recursive tree walk. The DB trigger already
@@ -381,18 +391,14 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 // here: the deal_closed_fx CHECK guarantees fx_rate_to_base for every
 // closed deal that has an amount, and an amountless won deal's NULL
 // amount_minor_base is skipped by SUM — an honest 0, not an invented rate.
-func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location) (int64, error) {
-	// The quarter is the installation's FISCAL one. A reader who checks this
-	// figure against the win-loss report by quarter is comparing two answers to
-	// one question, and they have to be cut the same way or the company page
-	// and the report disagree in front of them.
-	fiscalStart, err := identity.FiscalYearStartMonthOf(ctx, tx)
-	if err != nil {
-		return 0, err
-	}
+// The quarter is the installation's FISCAL one, threaded in alongside the zone
+// it is cut in. A reader who checks this figure against the win-loss report by
+// quarter is comparing two answers to one question, and they have to be cut the
+// same way or the company page and the report disagree in front of them.
+func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location, fiscalStart int) (int64, error) {
 	start, end := currentQuarterBounds(asOf, loc, fiscalStart)
 	var total int64
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT COALESCE(SUM(d.amount_minor_base), 0)::bigint
 		FROM deal d
 		WHERE d.organization_id = ANY($1) AND d.status = 'won' AND d.archived_at IS NULL

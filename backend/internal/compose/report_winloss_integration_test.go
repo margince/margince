@@ -64,19 +64,22 @@ func (e *forecastEnv) setInstallationZone(t *testing.T, zone string) {
 
 // setFiscalYearStart moves the month the installation's business year begins.
 //
-// An upsert rather than the plain UPDATE its zone sibling uses. This harness
-// seeds no installation settings at all, so there is no row to update: an
-// UPDATE matches nothing, succeeds, and leaves the test asserting against the
-// January default while believing it had set something. That is the shape of
-// failure a setting-driven test must not have — it passes for the wrong
-// reason, and only in the direction that hides a real defect.
+// Seeded as January by setupForecast, the same way the zone is seeded as UTC —
+// so this is a plain UPDATE like its sibling, and a statement that matched
+// nothing would be a fixture that had stopped seeding the row.
 func (e *forecastEnv) setFiscalYearStart(t *testing.T, month int) {
 	t.Helper()
-	if _, err := e.owner.Exec(t.Context(),
-		`INSERT INTO setting (key, value)
-		 VALUES ('installation.fiscal_year_start_month', to_jsonb($1::int))
-		 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, month); err != nil {
+	tag, err := e.owner.Exec(t.Context(),
+		`UPDATE setting SET value = to_jsonb($1::int)
+		 WHERE key = 'installation.fiscal_year_start_month'`, month)
+	if err != nil {
 		t.Fatalf("setting the fiscal year start: %v", err)
+	}
+	// An UPDATE that matches nothing SUCCEEDS, and the test would then assert
+	// against the January default while believing it had set something —
+	// passing for the wrong reason, in the direction that hides a defect.
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("the fiscal-year-start row is not seeded: UPDATE touched %d rows", tag.RowsAffected())
 	}
 }
 

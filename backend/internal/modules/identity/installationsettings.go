@@ -153,8 +153,19 @@ func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (bool,
 
 // encodeInstallationPatch reduces every field of a sparse patch to its wire
 // bytes. Every field appears exactly once, and a field left out here is a value
-// that silently stops saving — which is why they are collected in one place
-// rather than encoded at the call site.
+// that silently stops saving — the form still shows it, the PATCH still carries
+// it, the write still returns 200, and the row never moves.
+//
+// Held by TestEveryInstallationPatchFieldIsEncoded, which derives the expected
+// list from InstallationPatch by reflection rather than restating it: a sixth
+// setting added to that struct fails until it is encoded here. The claim was a
+// comment first, and dropping a line from the slice below left the whole tree
+// green.
+//
+// The error returns are not dead despite json.Marshal never failing on the
+// string and int fields that exist today: encodePatchField is generic, and the
+// first field whose type has a MarshalJSON that can fail arrives without
+// touching this function.
 func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	name, err := encodePatchField(Name, in.Name)
 	if err != nil {

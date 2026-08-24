@@ -16,10 +16,18 @@
  * mislabelling a report.
  *
  * That is why the preview is not derived from the server: asking it would mean
- * running a report to render a settings row. The mirror is held instead by
- * `backend/frontendfiscalyear_test.go`, which executes both spellings against
- * the same months and fails in either direction — the pattern
- * `values.MinorUnitExceptions()` is held against `format/minorunits.ts` by.
+ * running a report to render a settings row.
+ *
+ * Two things hold the two together, and neither is the whole job:
+ * `backend/frontendfiscalyear_test.go` reads both sources and checks that the
+ * January branch and the FY<full>/<two> shape still exist on both sides — it
+ * executes nothing, so it can see a shape change and not an arithmetic one.
+ * What the SQL actually produces is held by
+ * `TestWinLossPeriodBucketsFollowTheInstallationFiscalYear` and
+ * `TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay` in
+ * `internal/compose/report_winloss_integration_test.go`, which run the real
+ * statement against Postgres. The values THIS module produces are held by
+ * `fiscalyear.test.ts` beside it.
  */
 
 /**

@@ -42,25 +42,11 @@ const (
 	patternQuarter = `YYYY"-Q"Q`
 	patternMonth   = "YYYY-MM"
 
-	// The fiscal spellings of the year and quarter, for an installation whose
-	// business year does not start in January. A month keeps its calendar
-	// spelling under every fiscal start — March is March — so there is no
-	// fiscal patternMonth.
-	//
-	// Both name BOTH calendar years the fiscal year spans: "FY2026/27" rather
-	// than "FY2026" or "FY2027". Those two shorter forms are each a real
-	// convention somewhere — the UK names a fiscal year for the year it starts
-	// in, Australia and Japan for the year it ends — so either alone is read
-	// wrong by half the readers, and this product is deployed in Europe and
-	// Vietnam at once. The label is also effectively permanent (see
-	// periodBucketExpr on the derivation round trip), which is what makes five
-	// extra characters the cheaper side of the trade.
-	//
-	// They still sort as text, which is the property the calendar patterns
-	// above are chosen for and the one a longer label could have broken. The
-	// leading four-digit year carries the ordering and the "/YY" is decorative,
-	// so 'FY2099/00-Q1' sorts after 'FY2026/27-Q4' rather than before it.
-	patternFiscalYear    = "YYYY"
+	// A fiscal year renders through patternYear above — the SHIFT is what makes
+	// it fiscal, not the pattern — and a month keeps its calendar spelling under
+	// every fiscal start, since March is March. Only the quarter needs a
+	// spelling of its own: bare Q, because the year half is built separately
+	// and the two are concatenated.
 	patternFiscalQuarter = "Q"
 )
 
@@ -120,7 +106,8 @@ func fiscalAnchor(anchor string) string {
 // and no saved view starts asking for a span nobody chose. Spelling a calendar
 // year 'FY2026/27' would also just be false: it does not span 2027.
 //
-// The spanning form names BOTH years for the reason patternFiscalYear records.
+// The spanning form is spanningYearLabel below, which records why it names
+// both years.
 // Its second half is read off the shifted anchor plus a year rather than by
 // adding one to the first, so Postgres does the arithmetic and the century
 // rolls over on its own — 'FY2099/00' comes out right with nobody having
@@ -135,9 +122,22 @@ func fiscalYearLabel(anchor string) string {
 // spanningYearLabel is the 'FY2025/26' half, without the calendar branch — so
 // the quarter label can build on it rather than nesting one CASE inside
 // another's ELSE.
+//
+// It names BOTH calendar years the fiscal year spans rather than one. "FY2026"
+// alone is a real convention in two incompatible directions — the UK names a
+// fiscal year for the year it starts in, Australia and Japan for the year it
+// ends — so either short form reads as the other twelve months to half the
+// readers, and this product is deployed in Europe and Vietnam at once. The
+// label is also effectively permanent (see periodBucketExpr on the derivation
+// round trip), which makes five extra characters the cheaper side of the trade.
+//
+// It still sorts as text, which is the property the calendar patterns are
+// chosen for and the one a longer label could have broken silently. The leading
+// four-digit year carries the ordering and the "/YY" is decorative, so
+// 'FY2099/00-Q1' sorts after 'FY2026/27-Q4' rather than before it.
 func spanningYearLabel(anchor string) string {
 	shifted := fiscalAnchor(anchor)
-	return "'FY' || to_char(" + shifted + ", '" + patternFiscalYear + "')" +
+	return "'FY' || to_char(" + shifted + ", '" + patternYear + "')" +
 		" || '/' || to_char(" + shifted + " + interval '1 year', 'YY')"
 }
 

@@ -29,8 +29,20 @@ package backendarch
 //
 // What it cannot see: an off-by-one in the SQL's month shift, or a to_char
 // pattern that renders the right shape from the wrong instant. Those are
-// arithmetic rather than shape, and TestQuarterBounds plus the report
-// integration tests are what hold them.
+// arithmetic rather than shape, and they are held by TestQuarterBounds and by
+// TestWinLossPeriodBucketsFollowTheInstallationFiscalYear /
+// TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay in
+// internal/compose/report_winloss_integration_test.go, which execute the real
+// statement against Postgres. The second of those exists BECAUSE this gate
+// could not see the shift: dropping the `- 1` left every assertion here green
+// while an April-start installation labelled its year one year early.
+//
+// It also matches SOURCE FRAGMENTS, which is a real limitation in the other
+// direction: an innocuous refactor that extracts `'FY'` to a constant or
+// reorders the concatenation fails it, even though the behaviour is unchanged.
+// That is the trade a shape gate makes, and the failure is loud and obvious
+// rather than silent — fix the fragments here, and let the integration tests
+// above say whether the behaviour actually moved.
 
 import (
 	"os"
@@ -44,13 +56,110 @@ const (
 	backendFiscalYear  = "internal/compose/reportperiod.go"
 )
 
+// readFiscalSource reads a file with its COMMENTS REMOVED.
+//
+// Load-bearing, not tidiness. Every fragment this gate matches is prose-shaped
+// enough to survive being quoted in a comment, so a plain read would let the
+// gate be satisfied by its own subject's obituary: rewrite the January branch
+// to `= 99` and leave `// was: ... " = 1"` above it, and the gate stays green
+// over code that no longer does what it checks. Verified by doing exactly that
+// before this existed.
+//
+// Blanked rather than deleted, keeping the newlines, so a finding's line number
+// still points at the code rather than at whatever the collapse shifted into
+// its place.
 func readFiscalSource(t *testing.T, path string) string {
 	t.Helper()
 	body, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
-	return string(body)
+	return blankComments(string(body))
+}
+
+// blankComments replaces every // and /* */ comment with spaces, preserving
+// newlines and the length of the file.
+//
+// A scanner rather than a regexp, because a comment opener is not something a
+// pattern can settle: `//` sits inside every URL, and both openers sit inside
+// ordinary string literals — this very file contains `"'FY' || to_char("`. A
+// pattern that paired an opener with the next terminator would blank real code
+// and report success over lines it never read, which is worse than a false
+// finding: a finding gets looked at, a blind spot reports PASS. The frontend's
+// zone-by-purpose gate reaches for the TypeScript parser for the same reason.
+func blankComments(source string) string {
+	out := []rune(source)
+	const (
+		code = iota
+		lineComment
+		blockComment
+		stringLit
+		rawStringLit
+		runeLit
+	)
+	state := code
+	blank := func(i int) {
+		if out[i] != '\n' {
+			out[i] = ' '
+		}
+	}
+	for i := 0; i < len(out); i++ {
+		c := out[i]
+		next := rune(0)
+		if i+1 < len(out) {
+			next = out[i+1]
+		}
+		switch state {
+		case code:
+			switch {
+			case c == '/' && next == '/':
+				state = lineComment
+				blank(i)
+			case c == '/' && next == '*':
+				state = blockComment
+				blank(i)
+			case c == '"':
+				state = stringLit
+			case c == '`':
+				state = rawStringLit
+			case c == '\'':
+				state = runeLit
+			}
+		case lineComment:
+			if c == '\n' {
+				state = code
+			} else {
+				blank(i)
+			}
+		case blockComment:
+			blank(i)
+			if c == '*' && next == '/' {
+				blank(i + 1)
+				i++
+				state = code
+			}
+		case stringLit:
+			switch c {
+			// An escaped quote does not close the literal.
+			case '\\':
+				i++
+			case '"':
+				state = code
+			}
+		case rawStringLit:
+			if c == '`' {
+				state = code
+			}
+		case runeLit:
+			switch c {
+			case '\\':
+				i++
+			case '\'':
+				state = code
+			}
+		}
+	}
+	return string(out)
 }
 
 // TestFiscalYearLabelIsSpelledTheSameOnBothSidesOfTheWire holds the mirror.
@@ -100,4 +209,38 @@ func TestFiscalYearLabelIsSpelledTheSameOnBothSidesOfTheWire(t *testing.T) {
 			t.Error("the SQL quarter no longer extends the fiscal year label")
 		}
 	})
+}
+
+// TestTheGateReadsCodeRatherThanComments is the gate's own acceptance test.
+//
+// blankComments is what stops a fragment migrating into a comment from
+// satisfying an assertion about code, and a stripper that quietly stopped
+// stripping would take the gate with it — silently, since every assertion
+// would keep passing. So the two directions are both planted here: a fragment
+// in a comment must NOT be seen, and the same fragment in code must be.
+func TestTheGateReadsCodeRatherThanComments(t *testing.T) {
+	source := "package p\n" +
+		"// was: reportFiscalStartMonthToken + \" = 1\"\n" +
+		"/* also: reportFiscalStartMonthToken + \" = 1\" */\n" +
+		"const url = \"https://example.test/a//b\"\n" +
+		"const live = reportFiscalStartMonthToken + \" = 99\"\n"
+
+	stripped := blankComments(source)
+
+	if strings.Contains(stripped, `" = 1"`) {
+		t.Error("a fragment inside a comment survived the strip, so the gate can be satisfied by prose")
+	}
+	if !strings.Contains(stripped, `" = 99"`) {
+		t.Error("the strip ate real code")
+	}
+	// The URL's `//` is inside a string literal and opens no comment; a
+	// pattern-based stripper blanks the rest of that line and every line under
+	// it, which is how a gate goes blind while reporting PASS.
+	if !strings.Contains(stripped, "https://example.test/a//b") {
+		t.Error("a URL inside a string literal was treated as a comment opener")
+	}
+	// Line numbers must survive, or a finding points at innocent code.
+	if strings.Count(stripped, "\n") != strings.Count(source, "\n") {
+		t.Error("the strip changed the line count")
+	}
 }
