@@ -60,6 +60,7 @@ maps the codebase and links everything below.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
+
 Several reference pages are **generated** and say so in their own first lines —
 `mcp-info`, `agent-tool-budget`, `rbac-matrix`, `performance-budgets` and the
 `perfbench/` records. Do not hand-edit them, and do not try to shorten them: their

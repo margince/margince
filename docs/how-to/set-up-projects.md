@@ -5,11 +5,8 @@ code, no API. It says who can do what with a project, how to choose keys, when
 to create a project, how visibility and sharing work, and what the fixed
 vocabularies are. The things you *cannot* do from the UI are listed at the end.
 
-New to this? Start with
-this page —
-one ERP rollout followed from the first conversation to close. For the
-day-to-day page (the project page section by section, and how email finds its
-project) see [run-a-project.md](run-a-project.md).
+For the day-to-day page — the project page section by section, and how email
+finds its project — see [run-a-project.md](run-a-project.md).
 
 ## What a project is in Margince
 

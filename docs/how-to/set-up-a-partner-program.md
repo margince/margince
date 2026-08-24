@@ -5,10 +5,8 @@ partners live in the app, how to make a company a partner, what every field on t
 and how to work the pipeline afterwards. The one thing you *cannot* do from the UI — changing
 the value lists themselves — is covered at the end.
 
-New to this? Start with
-this page — what partner
-programs are, what you can do with them, and one deal followed from the introduction to the
-money it earns. This guide is the reference you come back to for what a particular field means.
+This guide is the reference you come back to for what a particular field means;
+the partner concepts it assumes are introduced in the sections below.
 
 ## What a partner is in Margince
 
