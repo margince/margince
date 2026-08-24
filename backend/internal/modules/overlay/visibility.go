@@ -231,13 +231,13 @@ func lockWorkspaceVisibility(ctx context.Context, tx pgx.Tx) error {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock: %w", err)
 	}
 	// Plus the legacy workspace-qualified key, for the rolling-deploy window
-	// storekit.LockWriteIdentity explains. coalesce, because
-	// pg_advisory_xact_lock is STRICT: an unset GUC would make the whole
-	// argument NULL, take NO lock, and say nothing about having done so. It
-	// reproduces the previous release's key exactly whenever the GUC IS set,
-	// which is the only case in which the two builds have to meet.
+	// storekit.LockWriteIdentity explains. Byte-identical to the previous
+	// release's statement, including current_setting WITHOUT missing_ok: this
+	// site alone failed CLOSED on an unset GUC, raising rather than resolving
+	// to NULL, and softening that here would be a new behaviour rather than a
+	// compatibility key.
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || current_setting('app.workspace_id'))::bigint)`); err != nil {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock (legacy key): %w", err)
 	}
 	return nil

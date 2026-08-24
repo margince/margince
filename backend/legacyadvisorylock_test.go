@@ -23,10 +23,13 @@ package backendarch
 // a site that quietly drops one fails rather than going unnoticed.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -35,12 +38,13 @@ import (
 // the previous release took, normalized to single-spaced text. Frozen: these
 // are not ours to edit while an older build may still be running.
 //
-// Each was checked against its origin/main original at the time §5 landed. They
-// differ from it in one way only — a coalesce around current_setting — which
-// changes the key exclusively when the GUC is UNSET, and there the previous
-// release passed NULL to a STRICT function and took no lock at all. Whenever
-// the GUC is set, and that is the only case in which two builds have to meet,
-// the text below computes what the previous release computed.
+// Each is that release's statement BYTE FOR BYTE, and the inconsistencies
+// between them are deliberately preserved. Five read current_setting with
+// missing_ok and never coalesce the NULL, so an unset GUC takes no lock at all;
+// one reads it WITHOUT missing_ok and raises instead; two coalesce. Tidying any
+// of that would change the key, or change when the statement fails, and the
+// only thing this text has to do is hash to what the old build hashes. What
+// serializes the CURRENT build is the bare key each site takes first.
 //
 // When #2528 removes the legacy half, this whole file goes with it.
 //
@@ -50,11 +54,11 @@ import (
 // than trusted, so a site added or dropped fails here.
 var legacyAdvisoryLockKeys = []string{
 	`pg_advisory_xact_lock( hashtext($1 || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`,
-	`pg_advisory_xact_lock(hashtext( 'margince:extsecrets:' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
-	`pg_advisory_xact_lock(hashtext('margince:admin-guard:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`,
-	`pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`,
-	`pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $1)::bigint)`,
-	`pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`,
+	`pg_advisory_xact_lock(hashtext( 'margince:extsecrets:' || current_setting('app.workspace_id', true) || ':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
+	`pg_advisory_xact_lock(hashtext('margince:admin-guard:' || current_setting('app.workspace_id', true))::bigint)`,
+	`pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || current_setting('app.workspace_id', true))::bigint)`,
+	`pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || current_setting('app.workspace_id', true) || ':' || $1)::bigint)`,
+	`pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || current_setting('app.workspace_id'))::bigint)`,
 	`pg_advisory_xact_lock(hashtextextended( $1 || ':' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $2, 0))`,
 	`pg_advisory_xact_lock(hashtextextended( coalesce(current_setting('app.workspace_id', true), '') || ':' || $1, 0))`,
 }
@@ -82,11 +86,11 @@ func TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease(t *testing.T) {
 				strings.HasSuffix(path, "_test.go") || !d.Type().IsRegular() {
 				return nil
 			}
-			b, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
+			stmts, err := advisoryLockStatements(path)
 			if err != nil {
 				return err
 			}
-			for _, stmt := range advisoryLockStatements(string(b)) {
+			for _, stmt := range stmts {
 				if strings.Contains(stmt, "app.workspace_id") {
 					found = append(found, stmt)
 				}
@@ -116,14 +120,45 @@ func TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease(t *testing.T) {
 	}
 }
 
-// advisoryLockStatements returns every pg_advisory_xact_lock(…) call in one Go
-// source file, normalized to single-spaced text so that reindenting a statement
-// is not reported as changing its key.
+// advisoryLockStatements returns every pg_advisory_xact_lock(…) call written
+// in one Go source file's STRING LITERALS, normalized to single-spaced text so
+// that reindenting a statement is not reported as changing its key.
 //
-// It matches the CALL and balances its parentheses rather than reading lines:
-// these statements wrap across three and four lines, and a line-wise scan would
-// see fragments of the key it is meant to be pinning.
-func advisoryLockStatements(src string) []string {
+// It parses rather than scanning the raw file, because a comment is allowed to
+// discuss these statements and several of them do — including the doc this gate
+// is named in. A text scan cannot tell a comment's mention from a real
+// statement, so one prose example would either be counted as a ninth key or,
+// with an unbalanced parenthesis, swallow the real statement that follows it.
+// Either way the census reports a number that is not the tree's, which is the
+// one failure mode a gate must not have.
+//
+// Within a literal it matches the CALL and balances its parentheses rather than
+// reading lines: these statements wrap across three and four lines, and a
+// line-wise scan would see fragments of the key it is meant to be pinning.
+func advisoryLockStatements(path string) ([]string, error) {
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return true
+		}
+		text, err := strconv.Unquote(lit.Value)
+		if err != nil {
+			return true
+		}
+		out = append(out, advisoryLockCalls(text)...)
+		return true
+	})
+	return out, nil
+}
+
+// advisoryLockCalls pulls the balanced pg_advisory_xact_lock(…) calls out of
+// one string literal's text.
+func advisoryLockCalls(src string) []string {
 	const open = "pg_advisory_xact_lock("
 	var out []string
 	for i := 0; ; {
@@ -149,8 +184,8 @@ func advisoryLockStatements(src string) []string {
 			}
 		}
 		if end < 0 {
-			// An unbalanced call means the scan lost the shape of the file, and
-			// reporting what it found so far would under-count silently.
+			// An unbalanced call means the scan lost the shape of the literal,
+			// and reporting what it found so far would under-count silently.
 			return append(out, "UNPARSEABLE pg_advisory_xact_lock call")
 		}
 		out = append(out, strings.Join(strings.Fields(src[start:end+1]), " "))

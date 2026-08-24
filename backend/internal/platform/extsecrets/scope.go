@@ -125,13 +125,14 @@ func (s *store) lockKey(ctx context.Context, tx pgx.Tx, user *ids.UserID, key st
 		s.unit, scope, holder, key); err != nil {
 		return fmt.Errorf("extsecrets: serializing the store of %q: %w", key, err)
 	}
-	// The legacy workspace-qualified key. coalesce because
-	// pg_advisory_xact_lock is STRICT and the previous release's own key did
-	// without it: an unset GUC made the whole argument NULL and took no lock
-	// at all.
+	// The legacy workspace-qualified key, byte-identical to the previous
+	// release's, missing_ok and all: on an unset GUC it resolves to NULL and
+	// pg_advisory_xact_lock, being STRICT, takes no lock. That is what the old
+	// build does too, so the two still agree — and the key above, which needs
+	// no GUC, is what actually serializes THIS build.
 	if _, err := tx.Exec(ctx, `
 		SELECT pg_advisory_xact_lock(hashtext(
-			'margince:extsecrets:' || coalesce(current_setting('app.workspace_id', true), '') ||
+			'margince:extsecrets:' || current_setting('app.workspace_id', true) ||
 			':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
 		s.unit, scope, holder, key); err != nil {
 		return fmt.Errorf("extsecrets: serializing the store of %q (legacy key): %w", key, err)

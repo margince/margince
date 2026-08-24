@@ -36,7 +36,7 @@ func lastActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 	// storekit.LockWriteIdentity explains. Two concurrent removals that did not
 	// contend could leave this installation with no active human administrator.
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard:' || current_setting('app.workspace_id', true))::bigint)`); err != nil {
 		return false, fmt.Errorf("identity: serializing the last-admin guard (legacy key): %w", err)
 	}
 	var targetIsAdmin bool

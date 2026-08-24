@@ -24,9 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // reconnectConnection revives the workspace's revoked incumbent_connection
@@ -39,14 +37,10 @@ import (
 // detail: teardown deliberately leaves a tombstone per purged record so a
 // stray in-flight sweep cannot resurrect it (purgeMirror), and only a NEW
 // connection — a fresh trust decision by an admin — may mirror them again.
-func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string) (Connection, error) {
+func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string, ws ids.UUID) (Connection, error) {
 	var out Connection
 	var supersededRef string
-	ws, err := s.boundWorkspace(ctx)
-	if err != nil {
-		return Connection{}, err
-	}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var id ids.UUID
 		var previousIncumbent, previousRegion string
 		// The pre-read is FOR UPDATE so a concurrent reconnect serializes behind
@@ -93,15 +87,11 @@ func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref 
 		// path answers, and the ref this attempt sealed is orphaned exactly the
 		// same way.
 		if errors.Is(err, pgx.ErrNoRows) {
-			ws, ok := principal.WorkspaceID(ctx)
-			if !ok {
-				return Connection{}, apperrors.ErrIncumbentAlreadyConnected
-			}
 			return Connection{}, s.cleanupOrphanedRef(ctx, ws, ref)
 		}
 		return Connection{}, err
 	}
-	s.deleteSupersededRef(ctx, keyvault.Ref(supersededRef))
+	s.deleteSupersededRef(ctx, ws, keyvault.Ref(supersededRef))
 	return out, nil
 }
 
@@ -109,14 +99,14 @@ func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref 
 // points at the new ref, so the old blob is unreferenced. It is the reconnect
 // half of the post-commit cleanup deleteUnreferencedRef (connection.go) owns —
 // see that function for why the delete outlives the request and why a failure
-// is logged rather than returned. A workspace-less context cannot happen on
-// this path (reconnectConnection only runs inside one) but is a no-op rather
-// than a panic, since there is no workspace whose vault to reach into.
-func (s *Service) deleteSupersededRef(ctx context.Context, ref keyvault.Ref) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return
-	}
+// is logged rather than returned.
+//
+// ws is Connect's, resolved once from the database handle and passed down. It
+// is not re-read from the request context here: the vault entry being deleted
+// was sealed under that same id, and a second resolution is a second chance to
+// name a different workspace — which on this path would mean skipping the
+// delete and stranding the superseded credential.
+func (s *Service) deleteSupersededRef(ctx context.Context, ws ids.UUID, ref keyvault.Ref) {
 	s.deleteUnreferencedRef(ctx, ws, ref, "reconnect")
 }
 

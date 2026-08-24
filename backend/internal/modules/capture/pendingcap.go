@@ -85,7 +85,7 @@ func lockWorkspaceDeferrals(ctx context.Context, tx pgx.Tx) error {
 	// Plus the legacy workspace-qualified key, for the rolling-deploy window
 	// storekit.LockWriteIdentity explains.
 	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`); err != nil {
+		`SELECT pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || current_setting('app.workspace_id', true))::bigint)`); err != nil {
 		return fmt.Errorf("capture: serializing the deferral ceiling (legacy key): %w", err)
 	}
 	return nil

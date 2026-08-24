@@ -348,10 +348,12 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 // transaction, so a caller that locked at its precondition read may write
 // through the same store path without deadlock.
 //
-// # Why every advisory lock in this tree currently takes TWO keys
+// # Why the migrated workspace-qualified locks currently take TWO keys
 //
-// This doc is what the other dual-locking sites point at; they all take their
-// pair for the reason set out here.
+// This applies to the eight sites whose key USED to carry the workspace, not to
+// advisory locks in general — a lock that never had a workspace in it needs
+// nothing here. Those eight point at this doc, and the gate named below
+// enumerates them.
 //
 // ADR-0091 §5 removed the workspace from these lock identities: with one
 // organization per installation (ADR-0061) it distinguished nothing. But a
@@ -369,11 +371,13 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 // double the lock-table slots for the length of the transaction, not one
 // extra.
 //
-// Each legacy statement reproduces the previous release's key BYTE FOR BYTE
-// whenever the GUC is set, which is the only case in which the two builds
-// have to meet; TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease pins
-// every one of them against a golden hash, because an innocuous edit to one
-// of those SQL literals would break the rendezvous with nothing failing.
+// Each legacy statement is the previous release's, BYTE FOR BYTE — including
+// where that release read the GUC without missing_ok, or without coalescing a
+// NULL. Those are not defects to tidy on the way past: the key has to hash to
+// what the old build hashes, and the bare key taken first is what serializes
+// this build regardless. TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease
+// pins every one of them, because an innocuous edit to one of those SQL
+// literals would break the rendezvous with nothing failing.
 //
 // The legacy half comes out one release after this ships, when no old build
 // can still be running. Tracked as #2528 rather than left to be noticed.
