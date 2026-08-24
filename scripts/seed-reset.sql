@@ -21,13 +21,19 @@ DECLARE
   ws uuid;
   t  text;
 BEGIN
-  -- The installation's one workspace (ADR-0061); ADR-0091 retired the slug
-  -- this used to match on.
-  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
-  IF ws IS NULL THEN
-    RAISE NOTICE 'seed-reset: no live workspace — nothing to do';
-    RETURN;
-  END IF;
+  -- The installation's one workspace (ADR-0061); ADR-0091 retired the slug this
+  -- used to match on. INTO STRICT, not LIMIT 1, and the distinction matters more
+  -- here than anywhere: this block DELETES. Picking whichever workspace happened
+  -- to be oldest would wipe a tenant nobody named.
+  BEGIN
+    SELECT id INTO STRICT ws FROM workspace WHERE archived_at IS NULL;
+  EXCEPTION
+    WHEN no_data_found THEN
+      RAISE NOTICE 'seed-reset: no live workspace — nothing to do';
+      RETURN;
+    WHEN too_many_rows THEN
+      RAISE EXCEPTION 'seed-reset: more than one live workspace — refusing to delete, since there is no such thing as THE demo installation here';
+  END;
 
   -- Tenant tables carry FORCE RLS, which binds even a non-superuser table
   -- owner; bind the GUC so the deletes see the rows on such a connection.

@@ -38,15 +38,38 @@
 
 BEGIN;
 
+-- installation_workspace resolves THE installation's workspace, and refuses any
+-- other answer. One spelling for all three blocks below, because the question is
+-- one question and three copies of it are three chances to drift.
+--
+-- It mirrors identity.activeWorkspaces, the production authority: archived rows
+-- are excluded, and MORE THAN ONE live row raises rather than being picked
+-- between. `LIMIT 1` would have made this script seed whichever workspace
+-- happened to be oldest — silently, and with no tenant column left on core for
+-- the mismatch to surface on afterwards.
+--
+-- pg_temp, so it lives for this session only and cannot leak into the schema
+-- these scripts are pointed at.
+CREATE FUNCTION pg_temp.installation_workspace() RETURNS uuid AS $fn$
+DECLARE ws uuid;
+BEGIN
+  SELECT id INTO STRICT ws FROM workspace WHERE archived_at IS NULL;
+  RETURN ws;
+EXCEPTION
+  -- Absent is a state the caller handles (nothing bootstrapped yet); ambiguous
+  -- is not one this script may guess its way through.
+  WHEN no_data_found THEN
+    RETURN NULL;
+  WHEN too_many_rows THEN
+    RAISE EXCEPTION 'seed-dev.sql: more than one live workspace, so there is no such thing as THE installation''s workspace here — refusing rather than seeding whichever is oldest';
+END;
+$fn$ LANGUAGE plpgsql;
+
 DO $$
 DECLARE
   ws uuid;
 BEGIN
-  -- The installation's one workspace (ADR-0061), not a row selected by name:
-  -- ADR-0091 retired the slug this used to match on. Archived rows are
-  -- excluded and the id breaks a created_at tie, so this asks the same
-  -- question identity.activeWorkspaces asks.
-  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
+  ws := pg_temp.installation_workspace();
   IF ws IS NULL THEN
     RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
     RETURN;
@@ -79,11 +102,7 @@ DECLARE
   rep2_id uuid;
   dach_team_id uuid;
 BEGIN
-  -- The installation's one workspace (ADR-0061), not a row selected by name:
-  -- ADR-0091 retired the slug this used to match on. Archived rows are
-  -- excluded and the id breaks a created_at tie, so this asks the same
-  -- question identity.activeWorkspaces asks.
-  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
+  ws := pg_temp.installation_workspace();
   IF ws IS NULL THEN
     RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
     RETURN;
@@ -237,7 +256,7 @@ DECLARE
   conn uuid;
   org  RECORD;
 BEGIN
-  SELECT id INTO ws FROM workspace WHERE archived_at IS NULL ORDER BY created_at, id LIMIT 1;
+  ws := pg_temp.installation_workspace();
   IF ws IS NULL THEN
     RETURN;
   END IF;
