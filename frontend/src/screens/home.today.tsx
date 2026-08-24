@@ -9,6 +9,7 @@ import {
   type BriefItemLabels,
 } from "../design-system/briefitem";
 import { Panel, PanelBody } from "../design-system/panel";
+import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -60,14 +61,15 @@ export function TodaySection({
   brief,
   deals,
   nowMs,
-  ready,
+  state,
 }: Readonly<{
   brief: MorningBrief | null;
   deals: readonly Deal[];
   nowMs: number;
-  /** Whether the read has answered. Before it has, the panel holds its shape
-   *  rather than claiming there is no run. */
-  ready: boolean;
+  /** What the read behind the queue says. Before it has answered the panel
+   *  holds its shape, and a FAILED read says so — `ready` as a boolean could
+   *  only tell the two apart by drawing a failure as an empty queue. */
+  state: SectionState;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -111,7 +113,7 @@ export function TodaySection({
             brief={brief}
             deals={deals}
             nowMs={nowMs}
-            ready={ready}
+            state={state}
             mark={mark}
           />
         </PanelBody>
@@ -132,19 +134,30 @@ function TodayBody({
   brief,
   deals,
   nowMs,
-  ready,
+  state,
   mark,
 }: Readonly<{
   brief: MorningBrief | null;
   deals: readonly Deal[];
   nowMs: number;
-  ready: boolean;
+  state: SectionState;
   mark: ReturnType<typeof useBriefItemMark>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  if (!ready) {
-    return null;
+  // Anything but a served read is the state vocabulary's to draw. A failure used
+  // to fall through the `ready` guard and render nothing, so a queue nobody
+  // could read looked exactly like a morning with nothing in it.
+  if (state !== "ready") {
+    return (
+      <SurfaceState
+        state={state}
+        emptyLabel={t("home.noneBody")}
+        loadingLabel={t("home.panel.today")}
+      >
+        {null}
+      </SurfaceState>
+    );
   }
   if (brief === null) {
     return <EmptyState>{t("home.noneBody")}</EmptyState>;

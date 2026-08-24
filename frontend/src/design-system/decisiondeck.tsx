@@ -271,8 +271,15 @@ export type DecisionDeckProps = Readonly<{
   title?: string;
   /** Fired ONCE, on the explicit commit, with exactly what is in the tray. */
   onCommit: (staged: readonly StagedDecision[]) => void;
-  /** Told when a verdict enters or leaves the tray, for a caller keeping a count
-   *  of its own. Neither sends anything. */
+  /**
+   * Told when a PERSON puts a verdict in the tray or takes it back out, for a
+   * caller keeping a count of its own. Neither sends anything.
+   *
+   * User-triggered only, and deliberately: the tray also empties on its own —
+   * when a committed item leaves the queue, and when a verdict that sends
+   * nothing is committed — and reporting those as un-staging would tell a caller
+   * that somebody changed their mind about a decision that has already gone.
+   */
   onStage?: (staged: StagedDecision) => void;
   onUnstage?: (staged: StagedDecision) => void;
   /**
@@ -323,10 +330,17 @@ export function DecisionDeck({
   const [tally, setTally] = useState<{ count: number; at: number } | null>(
     null,
   );
+  // Answered with a verdict that SENDS NOTHING — later, or edit-elsewhere — and
+  // committed. Those items are still pending on the server, so they never leave
+  // `items` and the tray would hold them for the rest of the session: the plate
+  // read "clear" with a commit control over a tray whose only contents could be
+  // pressed forever without anything happening. They are held here instead, out
+  // of the deck and out of the tray, which is what "later" means.
+  const [deferred, setDeferred] = useState<readonly string[]>([]);
   const commitRef = useRef<HTMLButtonElement>(null);
 
-  const stagedIds = new Set(staged.map((entry) => entry.id));
-  const waiting = items.filter((item) => !stagedIds.has(item.id));
+  const held = new Set([...staged.map((entry) => entry.id), ...deferred]);
+  const waiting = items.filter((item) => !held.has(item.id));
 
   // A staged verdict whose item has left `items` was DECIDED — the caller sent
   // it and the queue answered without it. That is the one signal this component
@@ -373,9 +387,24 @@ export function DecisionDeck({
     onUnstage?.(last);
   };
 
+  /** Whether this verdict is one the caller will actually send. */
+  const sends = (entry: StagedDecision) =>
+    entry.verdict === "accept" || entry.verdict === "reject";
+
   const commit = () => {
-    if (staged.length > 0 && commitState !== "sending") {
-      onCommit(staged);
+    if (staged.length === 0 || commitState === "sending") {
+      return;
+    }
+    onCommit(staged);
+    // The tray keeps only what is now in flight. A verdict that sends nothing
+    // has done everything it is going to do at the moment of the press — later
+    // means later, and an edit is answered on the queue's own form — so it moves
+    // out of the tray and out of the deck rather than sitting under a commit
+    // control that can be pressed again to no effect.
+    const quiet = staged.filter((entry) => !sends(entry));
+    if (quiet.length > 0) {
+      setDeferred((prev) => [...prev, ...quiet.map((entry) => entry.id)]);
+      setStaged((prev) => prev.filter(sends));
     }
   };
 
@@ -423,11 +452,33 @@ export function DecisionDeck({
       return;
     }
     setDrag(null);
-    const verdict = dragVerdict(drag.dx, drag.dy);
+    // Measured from THIS event, not from the last move. A pointer that travels
+    // and lifts without another `pointermove` in between — a fast flick, a
+    // synthetic release, a pen leaving the surface — would otherwise be judged
+    // on where it last was seen rather than on where it let go, which decides
+    // both the verdict and where the exit starts.
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    const verdict = dragVerdict(dx, dy);
     if (verdict && live) {
       // Where the hand let go, so the card continues out from there rather than
       // restarting its flight from the middle of the plate.
-      stage(live, verdict, { dx: drag.dx, dy: drag.dy });
+      stage(live, verdict, { dx, dy });
+    }
+  };
+
+  /**
+   * The gesture taken away rather than finished — the browser cancelling the
+   * pointer (a system gesture, a scroll takeover, the pen leaving range).
+   *
+   * Nothing is staged. A cancelled drag is one the person never completed, and
+   * treating it as a release meant the system could decide a proposal on the
+   * reader's behalf: a swipe interrupted past the threshold sent the card. The
+   * card springs back instead, which is what a cancellation looks like.
+   */
+  const onPointerCancel = (event: PointerEvent<HTMLFieldSetElement>) => {
+    if (drag && drag.pointerId === event.pointerId) {
+      setDrag(null);
     }
   };
 
@@ -522,6 +573,7 @@ export function DecisionDeck({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
             onLeaveEnd={() => setLeaving(null)}
           />
         ) : (
@@ -612,6 +664,7 @@ function DeckStack({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerCancel,
   onLeaveEnd,
 }: Readonly<{
   live: DecisionDeckItem | undefined;
@@ -630,6 +683,7 @@ function DeckStack({
   onPointerDown: (event: PointerEvent<HTMLFieldSetElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLFieldSetElement>) => void;
   onPointerUp: (event: PointerEvent<HTMLFieldSetElement>) => void;
+  onPointerCancel: (event: PointerEvent<HTMLFieldSetElement>) => void;
   onLeaveEnd: () => void;
 }>) {
   if (!live) {
@@ -699,7 +753,7 @@ function DeckStack({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerCancel={onPointerCancel}
         >
           {/*
             The moving part, and KEYED ON THE CARD.

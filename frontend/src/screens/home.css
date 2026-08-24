@@ -106,12 +106,21 @@
     border-color var(--dur-state) var(--ease-out);
 }
 
-.glance-count:hover {
+/* The flat form: a figure with no destination. It keeps the numeral's ground so
+ * the column of counts still reads as one column, and gives up the arrow, the
+ * hover and the pointer — nothing here can be pressed. */
+.glance-count-flat {
+  cursor: default;
+}
+
+/* Scoped to the BUTTON: the flat form wears the same class for the same ground,
+   and a hover state on a figure nobody can press is a promise of a control. */
+button.glance-count:hover {
   background: var(--accentMed);
   border-color: var(--accent);
 }
 
-.glance-count:active {
+button.glance-count:active {
   transition-duration: var(--dur-tap);
 }
 

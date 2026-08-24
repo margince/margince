@@ -117,7 +117,17 @@ function CountMark({
   count,
   onClick,
   label,
-}: Readonly<{ count: number; onClick: () => void; label: string }>) {
+}: Readonly<{ count: number; onClick?: () => void; label?: string }>) {
+  // A figure with nowhere to go is a figure, not a control. The overnight
+  // capture count is the case: Home has no destination that lists the messages
+  // it counts, and pointing it at the dedupe queue sent a reader to a different
+  // dataset from the number they pressed. It keeps the numeral's ground and
+  // loses the arrow and the press target, which is the honest reading.
+  if (!onClick) {
+    return (
+      <span className="glance-count glance-count-flat t-mono">{count}</span>
+    );
+  }
   return (
     <button
       type="button"
@@ -140,8 +150,9 @@ function GlanceLine({
   testId,
 }: Readonly<{
   count: number;
-  onClick: () => void;
-  goLabel: string;
+  /** Omitted where the figure has no destination — see `CountMark`. */
+  onClick?: () => void;
+  goLabel?: string;
   children: ReactNode;
   testId: string;
 }>) {
@@ -237,12 +248,7 @@ export function HomeGlance({
           </GlanceLine>
         )}
         {overnight !== null && (
-          <GlanceLine
-            testId="glance-captured"
-            count={overnight.captured}
-            onClick={onGoToDuplicates}
-            goLabel={t("home.glance.goOvernight")}
-          >
+          <GlanceLine testId="glance-captured" count={overnight.captured}>
             {t(
               overnight.captured === 1
                 ? "home.glance.captured.one"

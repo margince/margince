@@ -155,6 +155,9 @@ describe("DecisionDeck — stage, then commit", () => {
 
   // An empty tray has nothing to send, and a commit that fired anyway would ask
   // the server to decide nothing at all.
+  // Focus FIRST: the shortcut lives on the deck's own surface, so an Enter
+  // pressed at the document proves nothing about the empty-tray guard — the
+  // handler was never reached, and dropping the guard would leave this green.
   it("sends nothing while the tray is empty", async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
@@ -162,6 +165,7 @@ describe("DecisionDeck — stage, then commit", () => {
     expect(
       screen.queryByRole("button", { name: "Commit" }),
     ).not.toBeInTheDocument();
+    liveSurface().focus();
     await user.keyboard("{Enter}");
     expect(onCommit).not.toHaveBeenCalled();
   });
@@ -503,5 +507,28 @@ describe("DecisionDeck — the head", () => {
     expect(
       screen.queryByRole("button", { name: "Deck" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("DecisionDeck — a verdict that sends nothing", () => {
+  // "Later" is answered by the deck itself: the caller sends nothing for it, the
+  // item stays pending on the server, and it therefore never leaves `items`. Left
+  // in the tray it sat under a commit control that could be pressed forever with
+  // nothing happening, while the plate behind it read "clear".
+  it("leaves the tray on commit, and the deck with it", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(deck({ items: [single(1), single(2)], onCommit }));
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(screen.getByText("1 staged")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Commit" }));
+    // The caller was told what the reader answered...
+    expect(onCommit).toHaveBeenCalledWith([{ id: "id-1", verdict: "skip" }]);
+    // ...and the tray is empty rather than holding a verdict nobody will send.
+    expect(screen.queryByText("1 staged")).not.toBeInTheDocument();
+    // The deferred card does not come back in this session either: later means
+    // later, and re-offering it immediately is the one thing "later" rules out.
+    expect(screen.getByText("Subject 2")).toBeInTheDocument();
+    expect(screen.queryByText("Subject 1")).not.toBeInTheDocument();
   });
 });

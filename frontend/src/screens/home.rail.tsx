@@ -4,10 +4,11 @@
 import { ArrowRight } from "lucide-react";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Button, EmptyState } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DealCard } from "../design-system/composed";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -319,23 +320,25 @@ export function PositionPanel() {
  */
 export function WatchPanel({
   deals,
-  pending,
-}: Readonly<{ deals: readonly Deal[]; pending: boolean }>) {
+  state,
+}: Readonly<{ deals: readonly Deal[]; state: SectionState }>) {
   const t = useT();
   // No page of organizations to draw on here — this is a short list, and every
   // company it names is resolved by id and cached.
   const naming = useOrgMarks([...deals], [], true);
-  if (pending) {
+  if (state === "loading") {
     return null;
   }
+  // "Nothing has gone quiet" is a CLAIM about the deals, so it may only be made
+  // once they have been read. A failed read used to reach the same sentence,
+  // which told a reader their pipeline was healthy on the strength of a request
+  // that never answered.
+  const resolved: SectionState =
+    state === "ready" && deals.length === 0 ? "empty" : state;
   return (
     <Panel title={t("home.panel.watch")} className="rail-panel">
-      {deals.length === 0 ? (
-        <PanelBody>
-          <EmptyState>{t("home.watch.clear")}</EmptyState>
-        </PanelBody>
-      ) : (
-        <PanelBody className="rail-watch-list">
+      <PanelBody className={deals.length > 0 ? "rail-watch-list" : undefined}>
+        <SurfaceState state={resolved} emptyLabel={t("home.watch.clear")}>
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -343,8 +346,8 @@ export function WatchPanel({
               onOpen={() => navigate({ screen: "deals", id: deal.id })}
             />
           ))}
-        </PanelBody>
-      )}
+        </SurfaceState>
+      </PanelBody>
     </Panel>
   );
 }

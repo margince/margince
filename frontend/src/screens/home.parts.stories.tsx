@@ -211,7 +211,7 @@ export const DecisionsRefused: Story = {
 // reads first.
 export const Today: Story = {
   render: part(
-    <TodaySection brief={ranked} deals={deals} nowMs={NOW} ready />,
+    <TodaySection brief={ranked} deals={deals} nowMs={NOW} state="ready" />,
     { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(ranked) },
   ),
 };
@@ -220,7 +220,7 @@ export const Today: Story = {
 // and no invented urgency.
 export const TodayQuietRun: Story = {
   render: part(
-    <TodaySection brief={quietRun} deals={deals} nowMs={NOW} ready />,
+    <TodaySection brief={quietRun} deals={deals} nowMs={NOW} state="ready" />,
     { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(quietRun) },
   ),
 };
@@ -228,10 +228,22 @@ export const TodayQuietRun: Story = {
 // No run has ever been made. The panel offers to make one instead of drawing an
 // empty queue that looks like a failure.
 export const TodayNoRun: Story = {
-  render: part(<TodaySection brief={null} deals={deals} nowMs={NOW} ready />, {
-    ...RAIL_ROUTES,
-    "POST /brief": () => jsonResponse(ranked),
-  }),
+  render: part(
+    <TodaySection brief={null} deals={deals} nowMs={NOW} state="ready" />,
+    {
+      ...RAIL_ROUTES,
+      "POST /brief": () => jsonResponse(ranked),
+    },
+  ),
+};
+
+// The read behind the queue failed. The panel says so where the cards would be,
+// rather than drawing the empty plate a morning with no run would show — the two
+// are different facts and used to look identical.
+export const TodayRefused: Story = {
+  render: part(
+    <TodaySection brief={null} deals={deals} nowMs={NOW} state="failed" />,
+  ),
 };
 
 // ── The context rail ────────────────────────────────────────────────────────
@@ -262,11 +274,19 @@ export const Position: Story = {
 // carries no edge stripe saying the same thing a second time.
 export const Watch: Story = {
   render: part(
-    <WatchPanel deals={deals.filter((deal) => deal.stalled)} pending={false} />,
+    <WatchPanel deals={deals.filter((deal) => deal.stalled)} state="ready" />,
   ),
 };
 
 // Nothing has gone quiet, which is news worth drawing rather than an empty rail.
 export const WatchClear: Story = {
-  render: part(<WatchPanel deals={[]} pending={false} />),
+  render: part(<WatchPanel deals={[]} state="ready" />),
+};
+
+// The deals read failed. "Nothing has gone quiet" is a claim about the deals, so
+// it may only be made once they have been read — a failure that reached that
+// sentence told a reader their pipeline was healthy on the strength of a request
+// that never answered.
+export const WatchRefused: Story = {
+  render: part(<WatchPanel deals={[]} state="failed" />),
 };

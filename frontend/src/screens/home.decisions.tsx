@@ -270,8 +270,14 @@ export function DecisionsSection({
       }
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       // The full queue is where an edit's form lives, so the reader is taken
-      // there rather than told the deck cannot do it.
-      if (result.edits > 0) {
+      // there rather than told the deck cannot do it — but NOT over the top of a
+      // token. A commit carrying both an approval and an edit mints a one-time
+      // token that is shown once and cannot be fetched again, and navigating
+      // unmounted the surface holding it before anybody could read it. With a
+      // token on screen the reader keeps it and the edit keeps its place in the
+      // queue, one click away in the sidebar: an edit deferred by a screen is
+      // recoverable, a token taken off the screen is not.
+      if (result.edits > 0 && !result.token) {
         navigate({ screen: "inbox" });
       }
     },

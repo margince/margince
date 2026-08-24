@@ -37,6 +37,17 @@ export function HomeReadingsStrip({
   quiet,
 }: HomeReadings) {
   const t = useT();
+  // Nothing to compare is nothing to draw. With every reading unread the strip
+  // rendered as an empty bordered plate — a card claiming a row of figures it
+  // does not have, and now with a card's shadow under it.
+  if (
+    decisions === null &&
+    open === null &&
+    ranked === null &&
+    quiet === null
+  ) {
+    return null;
+  }
   return (
     <StatStrip className="home-readings" testId="home-readings">
       {decisions && (

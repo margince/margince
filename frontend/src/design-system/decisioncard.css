@@ -120,6 +120,10 @@
 .dcard-draft-body {
   margin-top: var(--space-1);
   white-space: pre-wrap;
+  /* A URL or a signature block with no spaces in it is ordinary in a drafted
+     mail, and the deck card clips to its own radius — so an unbroken token
+     would be cut off rather than wrapped, with no scrollbar to reach it. */
+  overflow-wrap: anywhere;
   color: var(--textContent);
   font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
@@ -241,6 +245,30 @@
 .dcard[data-layout="deck"] .approval-headline,
 .dcard[data-layout="deck"] .approval-why {
   max-inline-size: 72ch;
+}
+
+/*
+ * A lapsed card keeps the neutral ground the lapse rule above gives it, in the
+ * deck as well. The two rules tie on specificity and the deck's comes later, so
+ * without this an expired card in the deck drew the live card's paper and the
+ * only thing saying it was over was the sentence where the verbs had been.
+ */
+.dcard[data-lapsed][data-layout="deck"],
+.dcard[data-urgency="lapsed"][data-layout="deck"] {
+  background: var(--bgCard);
+}
+
+/* A lapsed card's bands go neutral with it: the staged tint on the header and
+   the AI rule under it belong to a proposal somebody can still answer. */
+.dcard[data-lapsed][data-layout="deck"] > .dcard-meta,
+.dcard[data-urgency="lapsed"][data-layout="deck"] > .dcard-meta {
+  background: transparent;
+  border-bottom-color: var(--borderSubtle);
+}
+
+.dcard[data-lapsed][data-layout="deck"] .dcard-verbs,
+.dcard[data-urgency="lapsed"][data-layout="deck"] .dcard-verbs {
+  border-top-color: var(--borderSubtle);
 }
 
 /* The evidence keeps its distance from the footer rule: without it the last chip

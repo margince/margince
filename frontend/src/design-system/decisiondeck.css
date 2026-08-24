@@ -114,7 +114,14 @@
   min-inline-size: 0;
   position: relative;
   z-index: 1;
-  touch-action: none;
+  /* `pan-y`, not `none`. The card fills the plate, so taking every touch action
+     on it took the PAGE's scrolling with it: a long draft, its evidence, or an
+     expanded bundle trapped a thumb inside the card with no way past it. The
+     browser keeps vertical panning, this surface keeps the horizontal gesture —
+     which is accept and reject, the two verdicts a swipe is for. Edit and later
+     stay on their buttons and their keys, where a touch reader was reaching
+     anyway. */
+  touch-action: pan-y;
 }
 
 /*

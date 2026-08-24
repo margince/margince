@@ -325,12 +325,28 @@ function DecisionEvidence({
   evidence: DecisionApproval["evidence"];
   collapsed: boolean;
 }>) {
+  // Two rows of one source can open with the same twelve characters — a quoted
+  // thread quotes itself — and a duplicate key hands one chip's expansion state
+  // to another on the next render. So the key carries an occurrence count of the
+  // otherwise-identical string: derived from the data rather than from the
+  // position, which is what makes it survive a list that arrives in a different
+  // order.
+  const seen = new Map<string, number>();
+  const keyOf = (item: { source_id?: string | null; snippet: string }) => {
+    const base = `${item.source_id ?? ""}-${item.snippet.slice(0, 12)}`;
+    const before = seen.get(base) ?? 0;
+    seen.set(base, before + 1);
+    return before === 0 ? base : `${base}#${before}`;
+  };
   return (
     <>
       {evidence?.map((item) =>
         item.evidence_snippet ? (
           <EvidenceChip
-            key={`${item.source_id}-${item.evidence_snippet.slice(0, 12)}`}
+            key={keyOf({
+              source_id: item.source_id,
+              snippet: item.evidence_snippet,
+            })}
             collapsed={collapsed}
             evidence={{
               snippet: item.evidence_snippet,
@@ -589,7 +605,11 @@ export function DecisionCard({
           on it would be a control whose only possible answer is a refusal. */}
       {lapsed && <p className="dcard-lapsed">{labels.expired}</p>}
       {detail}
-      {editor}
+      {/* An open editor closes with the deadline. Left drawn, a proposal that
+          lapsed while somebody was editing it still offered "approve edited" —
+          a write the server can only refuse, and the one control this card is
+          careful never to draw (the verbs go for the same reason, below). */}
+      {!lapsed && editor}
       {!decided && !lapsed && !editor && (
         <DecisionVerbs
           labels={labels}

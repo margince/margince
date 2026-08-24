@@ -146,6 +146,21 @@ function goToSection(id: string): void {
 }
 
 /**
+ * What one read says about itself, in the state vocabulary every section draws
+ * from. Three of Home's five reads answer the same question, and answering it
+ * three times inline is how a page ends up drawing a failure as an empty list on
+ * two of them and honestly on the third.
+ */
+function readState(
+  query: Readonly<{ isError: boolean; isPending: boolean }>,
+): SectionState {
+  if (query.isError) {
+    return "failed";
+  }
+  return query.isPending ? "loading" : "ready";
+}
+
+/**
  * The work column, in the order the day sets: a deadline leads until there is no
  * deadline left, and then the plan does.
  */
@@ -155,7 +170,7 @@ function HomeWork({
   deckState,
   brief,
   deals,
-  briefQueryReady,
+  briefState,
   onApproved,
   onAlreadyDecided,
 }: Readonly<{
@@ -164,7 +179,7 @@ function HomeWork({
   deckState: SectionState;
   brief: MorningBrief | null;
   deals: readonly Deal[];
-  briefQueryReady: boolean;
+  briefState: SectionState;
   onApproved: (approvalId: string, token: string) => void;
   onAlreadyDecided: () => void;
 }>) {
@@ -184,7 +199,7 @@ function HomeWork({
       brief={brief}
       deals={deals}
       nowMs={nowMs}
-      ready={briefQueryReady}
+      state={briefState}
     />
   );
   // A KEYED array, not two fragments. Positional children of a fragment are
@@ -270,14 +285,14 @@ export function HomeScreen() {
   // as a whole: gating the column would hide a healthy ranked queue behind a
   // failed decisions read, which is exactly the coupling five separate reads
   // exist to avoid.
-  const deckState: SectionState = approvalsQuery.isError
-    ? "failed"
-    : approvalsQuery.isPending
-      ? "loading"
-      : "ready";
+  const deckState = readState(approvalsQuery);
+  // ONE decision per deck item, not per proposal. An act's bundle is decided in
+  // one call and the deck draws it as one card, so counting raw approvals here
+  // made the same queue read as two different sizes on one page: the strip said
+  // six while the deck drew four and its tray sent "4 decisions".
   const decisionReadings = approvalsReady
     ? {
-        pending: approvals.length,
+        pending: items.length,
         expiringToday: expiringToday(approvals, nowMs),
       }
     : null;
@@ -327,7 +342,7 @@ export function HomeScreen() {
             deckState={deckState}
             brief={brief}
             deals={deals}
-            briefQueryReady={briefQuery.isSuccess}
+            briefState={readState(briefQuery)}
             onApproved={onApproved}
             onAlreadyDecided={onAlreadyDecided}
           />
@@ -339,7 +354,7 @@ export function HomeScreen() {
             <OvernightPanel />
             <PositionPanel />
             <section id="home-watch">
-              <WatchPanel deals={quiet} pending={dealsQuery.isPending} />
+              <WatchPanel deals={quiet} state={readState(dealsQuery)} />
             </section>
           </>
         }

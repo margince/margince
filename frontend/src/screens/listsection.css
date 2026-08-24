@@ -16,6 +16,10 @@
   border: 0;
   border-radius: 0;
   background: transparent;
+  /* And the card shadow with the rest of the chrome: the Panel around it is the
+     surface here, so a shadow under a borderless, groundless list would be a
+     card's edge drawn where there is no card. */
+  box-shadow: none;
   /* The surface is sized by its rows here, not by a viewport: on a list SCREEN
      `.wrap:has(> .lt)` gives it a height to fill, and that selector needs `.lt`
      to be a direct child of `.wrap`, which inside a settings stack it is not.
