@@ -135,3 +135,27 @@ func TestADualRolePartnerIsPromotedBeforeItIsTyped(t *testing.T) {
 		}
 	}
 }
+
+// TestSeederOwnsOnlyItsOwnRows pins the rule that makes a re-seed safe on a
+// demo installation somebody has been working in: the three phases that
+// CORRECT a record already on file — owner, lifecycle, relationship types —
+// consult seederOwns first, so a company added or edited through the UI keeps
+// what a person put there.
+func TestSeederOwnsOnlyItsOwnRows(t *testing.T) {
+	for _, tc := range []struct {
+		source string
+		want   bool
+	}{
+		{seedSource, true},
+		{inventedPersonSource, true},
+		{"", false},
+		{"manual", false},
+		{"human", false},
+		{"import:hubspot", false},
+		{"seed:demo ", false},
+	} {
+		if got := seederOwns(tc.source); got != tc.want {
+			t.Errorf("seederOwns(%q) = %v, want %v", tc.source, got, tc.want)
+		}
+	}
+}
