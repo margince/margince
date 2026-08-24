@@ -66,7 +66,7 @@ deliberately). These record *why the issue exists*, which is the one thing
 nobody can reconstruct later — prefer keeping them over tidying them away.
 
 **`security` is not a way to report a vulnerability.** This repo is public, and
-[SECURITY.md](SECURITY.md) is explicit that an exploitable weakness goes to a
+[SECURITY.md](../../SECURITY.md) is explicit that an exploitable weakness goes to a
 private GitHub Security Advisory, never a public issue or pull request, because
 a public report before a fix ships puts every deployment at risk. The label is
 for hardening and defence-in-depth work that carries no live exploit. The test

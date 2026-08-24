@@ -100,7 +100,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   `backend/tableownership_test.go`.
   Which module owns what — purpose, spine shape, owned tables and HTTP
   surface, plus the compose-owned tables and the notable subpackages — is
-  the table in [docs/reference/modules.md](docs/reference/modules.md). Read
+  the table in [docs/reference/modules.md](../reference/modules.md). Read
   it to place a change rather than guessing from the package name, and take
   `internal/modules/` itself as the authority on which capabilities exist:
   the catalog is editorial, so a directory it has not caught up with is
@@ -135,9 +135,9 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
 - `frontend/` — the Vite/React web UI: a standalone static build served
   separately from the API binary (which serves `/v1` only — no embedded
   SPA); `make frontend-check` / `make dev` exist at the repo root.
-  **Working in here? Read [frontend/AGENTS.md](frontend/AGENTS.md) first**, and
+  **Working in here? Read `frontend/AGENTS.md` first**, and
   then the file it opens with:
-  **[frontend/src/design-system/README.md](frontend/src/design-system/README.md)
+  **[frontend/src/design-system/README.md](../../frontend/src/design-system/README.md)
   is the catalog of every control that already exists** — cards, buttons,
   inputs, fields, badges, tables, menus, dialogs, empty states. Open it BEFORE
   building anything visible. Every interactive control comes from

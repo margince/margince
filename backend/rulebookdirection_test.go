@@ -31,13 +31,21 @@ import (
 	"testing"
 )
 
-// upwardLink matches a markdown link whose target climbs out of docs/ to a
-// rulebook, with or without an anchor: `](../AGENTS.md#craftsmanship)`.
+// upwardLink matches a markdown link whose target is a rulebook, with or without
+// an anchor: `](../AGENTS.md#craftsmanship)`.
+//
+// The target path is NOT part of the pattern, and that is the whole point. An
+// earlier spelling anchored on `(?:\.\./)+`, which reads as the obvious way to
+// say "climbs out of docs/" and is a census that fails short: it cannot see
+// `](frontend/AGENTS.md)` or `](/AGENTS.md)`, and it reports the same word for a
+// tree it did not read — PASS. The first of those escaped it in this tree. There is no
+// rulebook anywhere under docs/, so ANY link whose target file is AGENTS.md or
+// CLAUDE.md leaves docs/ by construction, whatever the path spelling.
 //
 // It deliberately does NOT match a bare mention. Naming `AGENTS.md` in prose or
 // in backticks is the sanctioned way to point at a rule, so only an actual link
 // target is a finding.
-var upwardLink = regexp.MustCompile(`]\(\s*(?:\.\./)+(?:AGENTS|CLAUDE)\.md(?:#[^)]*)?\s*\)`)
+var upwardLink = regexp.MustCompile(`]\(\s*[^)\s]*(?:AGENTS|CLAUDE)\.md(?:#[^)\s]*)?\s*\)`)
 
 func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
 	const docsRoot = "../docs"
@@ -73,5 +81,36 @@ func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
 	}
 	if scanned == 0 {
 		t.Fatalf("no markdown found under %s — this gate is reading a tree shape that is gone", docsRoot)
+	}
+}
+
+// The walk above reads the real tree, so a green run proves only that today's
+// docs/ is clean — it cannot prove the pattern would notice a defect that is not
+// currently present. These planted cases do that half, and they are the reason
+// the pattern stopped naming a path spelling: every `want: true` row below except
+// the first is a link the `(?:\.\./)+` spelling reported as clean.
+func TestTheUpwardLinkPatternSeesEverySpellingOfTheDefect(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		line string
+		want bool
+	}{
+		{"parent with anchor", "see [*Craftsmanship*](../../AGENTS.md#craftsmanship).", true},
+		{"parent without anchor", "see [AGENTS.md](../AGENTS.md).", true},
+		{"no dot-dot prefix at all", "read [frontend/AGENTS.md](frontend/AGENTS.md) first", true},
+		{"repo-absolute", "read [the rulebook](/AGENTS.md) first", true},
+		{"the harness shim", "the shim is [CLAUDE.md](../../CLAUDE.md)", true},
+		{"padded target", "see [rules]( ../AGENTS.md ).", true},
+
+		{"bare prose mention", "the rulebook's *Reuse before you build* in AGENTS.md", false},
+		{"backticked mention", "add a `## Craftsmanship` section to `frontend/AGENTS.md`", false},
+		{"a sideways link inside docs", "see [modules](../reference/modules.md).", false},
+		{"a link out to a non-rulebook", "see [SECURITY.md](../../SECURITY.md).", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := upwardLink.MatchString(tc.line); got != tc.want {
+				t.Errorf("upwardLink.MatchString(%q) = %v, want %v", tc.line, got, tc.want)
+			}
+		})
 	}
 }
