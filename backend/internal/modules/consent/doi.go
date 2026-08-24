@@ -65,7 +65,15 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 	}
 	var out IssuedDOI
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "person", personID.UUID); err != nil {
+		// Live, for the same reason Record refuses a grant against an archived
+		// subject: a double opt-in is a GRANT flow — the token exists so the
+		// subject can confirm one — so issuing it for a person the installation
+		// was told to forget is the same lawful-basis claim by a slower route.
+		//
+		// The `archived_at IS NULL` on the purpose read below is a different
+		// question and does not cover this one: it asks whether the PURPOSE is
+		// live, not whether the subject is.
+		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
 		var requiresDOI bool
