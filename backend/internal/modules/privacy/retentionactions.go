@@ -211,15 +211,18 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 
 // anonymizePersonRecord is the person/anonymize action: it strips the subject's
 // own identifying fields and the rows that carry their addresses, so the record
-// stops naming them. The subject may lawfully return, so no suppression entry is
+// stops naming them by any key it is resolved on. The subject may lawfully return, so no suppression entry is
 // written.
 //
-// It is NOT what the eraser does minus that entry, and it once said it was.
-// Twenty-one tables the eraser clears are untouched here — the provenance of
-// their field values, the raw captures and attachments their messages came from,
-// their lead rows and scores, their preference tokens. What survives is written
-// down per table in TestErasingAndAnonymizingClearTheSameTables
-// (backend/personscrub_test.go), which fails when the gap widens.
+// It is NOT what the eraser does minus that entry. Tables the eraser clears are
+// untouched here — the raw captures and attachments their messages came from,
+// their lead rows and scores, their preference tokens — and the person row's
+// CUSTOM columns are nulled by the eraser and not by this, so a custom field
+// holding a note about them survives at the same depth their name does not.
+//
+// What survives is written down per table in
+// TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go),
+// which fails when the gap widens in either direction.
 //
 // Held by: TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go)
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
@@ -286,6 +289,21 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err == nil {
 		_, err = tx.Exec(ctx,
 			`DELETE FROM embedding WHERE entity_type = 'person' AND entity_id = $1`, id)
+	}
+	if err == nil {
+		// A provenance row names where a field value came from — its source,
+		// who captured it, the evidence it was read out of — and it points at
+		// the fields the statements above just nulled. There is nothing in it
+		// to anonymize: what identifies the subject IS the record of where they
+		// were found. The eraser deletes it for that reason and so does this.
+		_, err = tx.Exec(ctx,
+			`DELETE FROM field_provenance WHERE object_type = 'person' AND object_id = $1`, id)
+	}
+	if err == nil {
+		// Feedback rows name this person as the subject an AI answer was judged
+		// about. The judgement is about them and cannot be held without them.
+		_, err = tx.Exec(ctx,
+			`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`, id)
 	}
 	if err == nil {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName)
