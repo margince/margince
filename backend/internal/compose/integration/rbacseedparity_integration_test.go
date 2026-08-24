@@ -20,18 +20,31 @@ package integration
 // inside the fence, renders the documents from policy.MustDefaultJSON, and pins
 // them to that fixture on every unit pass, so the fixture IS policy's value.
 //
-// WHAT THIS DOES NOT PROVE, stated because the gap is real and filed (#2377):
-// each write is replayed against today's matrix minus its OWN objects, so two
-// backfills are never composed and an installation older than both is not
-// modelled. The cohort that would model it is
-// migrations/testdata/rbac_legacy_installs.json, which the deleted replay seeded
-// and nothing reads today.
+// TWO PRE-STATES, because neither one alone answers the obligation:
+//
+//   - PER WRITE — today's matrix minus that write's own objects. It ISOLATES, so
+//     a failure names one migration. The cost is that the writes are never
+//     composed, and the state is modern apart from the objects removed, which is
+//     a state no installation was ever actually in.
+//   - COMPOSED — the documents an installation bootstrapped AT THE BASELINE
+//     really held, read out of git, with every write replayed over them in
+//     version order. That state is real, and it is the OLDEST one that can reach
+//     head at all, so this is the arm that models the obligation. The cost is
+//     that a failure names the sequence rather than the migration.
+//
+// The composed arm is also the only one that can see an object added to the
+// policy with NO backfill at all — which is the defect this whole family exists
+// for, and the one the deleted replay was the only gate for. The per-write arm
+// cannot: it derives its pre-state FROM the writes, so an object that no
+// migration mentions is never removed from the pre-state and so never missed.
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -49,6 +62,30 @@ import (
 
 // seededDefaults is the matrix identity seeds, as identity itself renders it.
 const seededDefaults = "../../../migrations/testdata/rbac_seeded_defaults.json"
+
+// baselineCommit is the commit that replaced core's 318 migrations with one
+// baseline (#2189), and it is the FLOOR of the upgrade path rather than merely
+// an old commit: dbmigrate.assertLedgerMatches refuses any database whose ledger
+// records core 0001 under a different name, and every pre-baseline database
+// records it as "foundation". Such a database cannot be repaired forward — the
+// migrator says so and tells the operator to rebuild — so an installation
+// bootstrapped at this commit is the OLDEST one that can reach head, and its
+// role documents are the oldest pre-state it is meaningful to prove anything
+// about.
+//
+// A commit and not a fixture ON PURPOSE. A committed copy of these documents
+// would be hand-editable, and editing it is exactly how a developer whose
+// backfill does not work makes this gate pass: move the object into the
+// starting state and the convergence it never delivered is already there. Git
+// history is not editable in a pull request, so the pre-state cannot be
+// negotiated with.
+const baselineCommit = "0e4806a38"
+
+// baselineEraDefaults is where the seeded-matrix fixture lived at that commit.
+// It was pinned to policy by identity's bridge test on that day exactly as it is
+// today, so reading it back needs no evaluator — it already IS what the server
+// seeded then.
+const baselineEraDefaults = "backend/migrations/testdata/rbac_seeded_defaults.json"
 
 // controlRole is a role the seeded matrix does not name, carrying a document of
 // its own, present for every replay below.
@@ -155,6 +192,96 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 			assertControlRoleUntouched(ctx, t, e.Owner, write.name)
 		})
 	}
+}
+
+// Every write COMPOSED, replayed in version order over the documents an
+// installation bootstrapped at the baseline actually held.
+//
+// The per-write arm above cannot make this claim. It rebuilds a pre-state per
+// migration, so write B is always replayed against a database that already
+// contains write A's result — an ordering dependency between two backfills has
+// nowhere to show itself, and an installation older than both is never the thing
+// under test.
+//
+// It is also the arm that catches the ORIGINAL defect: an object added to the
+// policy with no backfill written for it. The per-write arm derives its pre-state
+// from the writes themselves, so an object no migration mentions is never absent
+// from the pre-state and its missing backfill is invisible. Here the pre-state
+// comes from history, independently of what the migrations happen to say, so the
+// object is missing at the start and still missing at the end.
+//
+// Version order and not file order: dbmigrate sorts versions as STRINGS and
+// applies them in that order, and rolePermissionMigrations sorts by the same key,
+// so the sequence replayed here is the sequence a real upgrade runs.
+func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
+	seeded := readSeededDefaults(t)
+	baselineEra := readBaselineEraDefaults(t)
+	writes := rolePermissionMigrations(t)
+
+	// Same reasoning as the per-write arm: core carries backfills today, so an
+	// empty set means the detection went blind rather than that there is nothing
+	// to compose.
+	if len(writes) == 0 {
+		t.Fatal("no migration writes role.permissions, but core carries at least one — " +
+			"the detection in rolePermissionMigrations has gone blind")
+	}
+	assertPreStateIsNotAlreadyTheAnswer(t, baselineEra, seeded)
+
+	e := apptest.SetupApp(t)
+	ctx := context.Background()
+	bootstrapInstallation(t, e)
+	rewindToBaselineEra(ctx, t, e, baselineEra)
+
+	for _, write := range writes {
+		for _, statement := range write.statements {
+			if _, err := e.Owner.Exec(ctx, statement); err != nil {
+				t.Fatalf("replaying %s over the baseline-era documents: %v\n%s",
+					write.name, err, statement)
+			}
+		}
+	}
+	const via = "the composed replay from the baseline era"
+	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), via)
+	assertControlRoleUntouched(ctx, t, e.Owner, via)
+}
+
+// assertPreStateIsNotAlreadyTheAnswer refuses a pre-state that already equals
+// the matrix the replay is supposed to reach.
+//
+// Without it this arm degrades silently into a second copy of the fresh-install
+// test: replaying writes that all no-op over a state that is already correct
+// asserts nothing and reports the same word for it, PASS. That happens for a
+// real reason rather than a hypothetical one — the day the vocabulary stops
+// growing, the baseline-era documents catch up with head — so the gate has to
+// say it has run out of distance instead of quietly passing.
+func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]roleDocument) {
+	t.Helper()
+	for role, want := range after {
+		got, ok := before[role]
+		if !ok {
+			// A role the baseline era did not have. No permissions write can
+			// CREATE a role row, so this is a different obligation than the one
+			// under test, and it would surface here as a puzzling missing-role
+			// error rather than as what it is.
+			t.Fatalf("the seeded matrix names role %q and the baseline-era documents do not. "+
+				"A role.permissions backfill only ever UPDATEs, so no migration can bring this "+
+				"role to an installation that predates it — the seed and the upgrade path have "+
+				"diverged, and that is a gap in the migration rather than in this gate", role)
+		}
+		if got.RowScope != want.RowScope {
+			return
+		}
+		for object := range want.Objects {
+			if _, held := got.Objects[object]; !held {
+				return
+			}
+		}
+	}
+	t.Fatalf("the documents at %s:%s already equal the matrix the replay must reach, so this arm "+
+		"proves nothing: every write below can no-op and the comparison still passes.\n"+
+		"The baseline-era pre-state has caught up with head. Repoint baselineCommit at a later "+
+		"consolidation floor if one has landed, or delete this arm — do NOT leave it green over "+
+		"a comparison with no distance in it.", baselineCommit, baselineEraDefaults)
 }
 
 // assertSameMatrix compares two role matrices and names every disagreement.
@@ -284,12 +411,49 @@ func rewindTo(ctx context.Context, t *testing.T, e *apptest.AppEnv, objects []st
 			t.Fatalf("rewinding %q out of the seeded documents: %v", object, err)
 		}
 	}
+	seedControlRole(ctx, t, e)
+}
+
+// seedControlRole puts the missing-predicate detector in front of a replay.
+func seedControlRole(ctx context.Context, t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
 	if _, err := e.Owner.Exec(ctx,
 		`INSERT INTO role (key, name, is_system, permissions) VALUES ($1, $1, false, $2)
 		 ON CONFLICT (key) DO UPDATE SET permissions = EXCLUDED.permissions`,
 		controlRole, controlDocument); err != nil {
 		t.Fatalf("seeding the control role: %v", err)
 	}
+}
+
+// rewindToBaselineEra replaces each seeded role's permissions document with the
+// one that role held at the baseline, leaving every other column as the real
+// seeder wrote it — the same discipline as rewindTo, and for the same reason:
+// rows built here would be a state no installation was ever in.
+//
+// RowsAffected is checked. An UPDATE that matches nothing is not an error in
+// Postgres, so a role the pre-state names and the database does not would leave
+// that role at its MODERN document while this function reported success — and
+// the replay would then be proving convergence from a state it never reached.
+func rewindToBaselineEra(ctx context.Context, t *testing.T, e *apptest.AppEnv, documents map[string]roleDocument) {
+	t.Helper()
+	for _, role := range sortedKeys(documents) {
+		document, err := json.Marshal(documents[role])
+		if err != nil {
+			t.Fatalf("encoding the baseline-era document for %q: %v", role, err)
+		}
+		tag, err := e.Owner.Exec(ctx,
+			`UPDATE role SET permissions = $2 WHERE key = $1 AND is_system`, role, document)
+		if err != nil {
+			t.Fatalf("seeding the baseline-era document for %q: %v", role, err)
+		}
+		if tag.RowsAffected() != 1 {
+			t.Fatalf("seeding the baseline-era document for %q matched %d system role rows, want 1 — "+
+				"the bootstrap did not create the role this pre-state describes, so the replay would "+
+				"start from a mixture of eras rather than from the baseline",
+				role, tag.RowsAffected())
+		}
+	}
+	seedControlRole(ctx, t, e)
 }
 
 // permissionWrite is one migration's writes to role.permissions.
@@ -494,6 +658,43 @@ bootstrap_admin:
 	if err := compose.EnsureInstallation(ctx, e.Pool, slog.New(slog.DiscardHandler), cfg); err != nil {
 		t.Fatalf("bootstrapping: %v", err)
 	}
+}
+
+// readBaselineEraDefaults reads the seeded matrix as it stood at baselineCommit.
+//
+// It FAILS rather than skipping when history is unreachable. The integration lane
+// checks out with fetch-depth: 0 today, and if that ever changes the honest
+// outcome is a red gate that names the cause — a gate that degraded to "no
+// history, nothing to compose" would look exactly like a passing one, and this
+// is the only arm that can see a missing backfill at all.
+func readBaselineEraDefaults(t *testing.T) map[string]roleDocument {
+	t.Helper()
+	// -C ../../../.. : this package sits at backend/internal/compose/integration,
+	// and the paths recorded in history are relative to the repository root.
+	out, err := exec.Command("git", "-C", "../../../..",
+		"show", baselineCommit+":"+baselineEraDefaults).Output()
+	if err != nil {
+		detail := err.Error()
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			detail = strings.TrimSpace(string(exit.Stderr))
+		}
+		t.Fatalf("reading %s:%s: %s\nThe pre-state this arm replays over is the seeded matrix as it "+
+			"stood at the migration baseline, so this gate needs FULL history. If this is CI, give "+
+			"the integration lane `fetch-depth: 0` — it has it today. Deepen the checkout; do not "+
+			"weaken the gate, because a pre-state that silently becomes today's makes every object "+
+			"look as though its backfill already ran.",
+			baselineCommit, baselineEraDefaults, detail)
+	}
+	var documents map[string]roleDocument
+	if err := json.Unmarshal(out, &documents); err != nil {
+		t.Fatalf("decoding %s:%s: %v", baselineCommit, baselineEraDefaults, err)
+	}
+	if len(documents) == 0 {
+		t.Fatalf("%s:%s holds no roles; an empty pre-state would seed nothing and leave the replay "+
+			"running against today's documents", baselineCommit, baselineEraDefaults)
+	}
+	return documents
 }
 
 func sortedKeys[V any](m map[string]V) []string {

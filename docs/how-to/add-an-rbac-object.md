@@ -113,8 +113,9 @@ That makes a typo in the migration's JSON path far worse than a missing grant. I
 you write `'{objects,webook_subscription}'`, the migration succeeds, the object is
 never granted, **and every user holding that role can no longer log in** — the
 document now names an object outside the closed set. Spell the path from the same
-string literal you added to `coreObjects`, and prove it by running the replay in
-step 6 rather than by reading it twice.
+string literal you added to `coreObjects`, and prove it by running the integration
+lane in step 6 rather than by reading it twice — a typo'd path leaves the object
+ungranted, which is what the convergence arms fail on.
 
 ## 4. Regenerate the published matrix
 
@@ -174,27 +175,34 @@ Run both lanes, and know which one proves what:
   matches the seeded documents. Catches step 4 not run.
 - `TestEveryStoreEntryPointIsAuthGated` — no ungated store entry point. Catches
   step 5 missing on the server.
-- `TestLegacyInstallFixtureIsTheInitialCommitVocabulary`,
-  `TestLegacyInstallFixtureReproducesTheInitialCommitGrants`,
-  `TestMidlifeInstallFixtureSitsBetweenTheInitialCohortAndHead`
-  (`backend/rbaclegacyinstall_test.go`, `backend/rbaclegacydocument_test.go`) —
-  the replay's *starting state* is still faithfully derived from git history, so
-  nobody can make step 6's replay pass by editing the fixture to already contain
-  the grant the migration failed to deliver.
 - `make check-fe` — the TypeScript build proves the new object is expressible in
   the capability hooks.
 
 **`make test-integration`** — the real-Postgres lane, and **the only thing that
-proves the backfill landed on an old install**.
-`TestUpgradingALegacyInstallationYieldsTheSeededMatrix`
-(`backend/migrations/rbac_upgrade_replay_integration_test.go`) seeds the role
-documents an old installation actually held, migrates it to head, and asserts the
-end state equals the matrix the server seeds today. It executes the obligation
-rather than approximating it — which is why no list of objects, and no scan of
-the migration SQL for `'{objects,<name>}'`, survives in that gate. Two
-installations are replayed, an oldest-possible one and a mid-life one, because a
-conditionally-written backfill only has somewhere to fail on a document that
-already holds half the vocabulary.
+proves the backfill landed on an old install**. All three gates live in
+`backend/internal/compose/integration/rbacseedparity_integration_test.go` and
+they EXECUTE the obligation rather than scanning for it, which is why no list of
+objects and no grep for `'{objects,<name>}'` decides any of them:
+
+- `TestTheRealBootstrapSeedsTheDocumentedMatrix` — the real bootstrap writes the
+  documented matrix. Catches step 1 or step 4 not landing on a fresh install.
+- `TestEveryRBACBackfillConvergesOnTheSeededMatrix` — each backfill, replayed
+  against today's matrix minus its own objects, converges back onto the matrix.
+  This is the arm that ISOLATES: a failure names your migration. It is where a
+  typo'd jsonb path from step 3, a wrong verb, or a `WHERE` clause that matches
+  no rows shows up.
+- `TestTheBackfillsComposeFromTheOldestUpgradableInstallation` — every backfill
+  replayed in version order over the documents an installation bootstrapped at
+  the migration baseline really held, read out of history. **This is the arm that
+  catches step 3 missing entirely.** The isolating arm cannot: it derives its
+  starting state from the migrations, so an object no migration mentions is never
+  absent from that state and its missing backfill is invisible.
+
+The starting state of the composed arm is read from a pinned commit rather than
+from a committed fixture, and that is deliberate: a fixture would be editable, and
+editing it is exactly how a backfill that does not work is made to look like one
+that does — move the object into the starting state and the convergence it never
+delivered is already there.
 
 Commit the policy change, the contract, the migration pair, the regenerated
 matrix and the UI binding together — they are one change, and any one of them
