@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowRight } from "lucide-react";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DealCard } from "../design-system/composed";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { useRecordZone } from "../app/recordzone";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
