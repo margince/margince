@@ -31,6 +31,12 @@ fixture() {
   # the real tree and report a skip, which every case would then "pass".
   cp "$GATE_SRC" "$dir/scripts/check-migration-versions.sh"
   git -C "$dir" init -q --template=
+  # BEFORE the first command that can run a hook. This is the check that makes
+  # the header's hermeticity claim a held one rather than a promise: whatever
+  # route a caller finds to inject config, an injected core.hooksPath shows up
+  # here. Placed after `commit` it fired but too late — the hook had already
+  # executed, which is the whole thing it exists to prevent.
+  [ -z "$(git -C "$dir" config core.hooksPath 2>/dev/null)" ] || return 1
   git -C "$dir" config user.email probe@example.com
   git -C "$dir" config user.name probe
   for v in 0001_alpha 0002_beta 0003_gamma; do
@@ -47,8 +53,11 @@ fixture() {
   [ -f "$dir/backend/migrations/core/0001_alpha.up.sql" ] || return 1
 }
 
-# HERMETIC: nothing the caller exported decides a verdict here, and nothing this
-# script does reaches outside its own temp directory.
+# HERMETIC — and stated as the enumeration below plus a CHECK, not as a promise.
+# This header has twice claimed "nothing the caller exported decides a verdict
+# here" and twice been wrong (the gate's own switch, then GIT_CONFIG_COUNT). So
+# the variables it disarms are listed, and `fixture` verifies the OUTCOME on the
+# repository it builds rather than trusting that the list is complete.
 #
 # The gate's own switch, first. ci.yml sets MIGRATION_VERSIONS_BASELINE_RESET=1
 # on the `make check-backend` STEP, which is where this target runs, so every
@@ -74,10 +83,18 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
 # The caller's git CONFIG, third. `git init` honours a global init.templateDir,
 # which copies hooks into the fixture that `git commit` then EXECUTES, and a
 # global absolute core.hooksPath runs the developer's real hooks against a temp
-# directory. /dev/null for both scopes is the only way to be sure which config a
-# verdict was reached under. (The repo-local core.hooksPath the Makefile sets is
-# relative, so it cannot reach out of the fixture.)
+# directory. (The repo-local core.hooksPath the Makefile sets is relative, so it
+# cannot reach out of the fixture.)
+#
+# /dev/null for both scopes is NOT sufficient on its own, which is why the count
+# variables are here too: GIT_CONFIG_COUNT with GIT_CONFIG_KEY_n/VALUE_n injects
+# settings that survive both scopes being empty. Measured — with COUNT=1 and
+# KEY_0=core.hooksPath, `git config core.hooksPath` inside a fresh fixture
+# returns the caller's path and the injected pre-commit hook RUNS. Unsetting
+# COUNT is what disarms the indexed pairs; GIT_CONFIG_PARAMETERS is the internal
+# spelling of the same thing.
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_TERMINAL_PROMPT=0
+unset GIT_CONFIG GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS
 
 # expect <name> <want-exit> <declared-reset> <mutation-fn> <want-diagnostic>
 #
@@ -152,7 +169,7 @@ adds_above() {
 
 # Two different migrations at one version — the outage this gate was built for.
 collides() {
-  git -C "$1" rm -q "backend/migrations/core/0002_beta.up.sql" "backend/migrations/core/0002_beta.down.sql"
+  git -C "$1" rm -q "backend/migrations/core/0002_beta.up.sql" "backend/migrations/core/0002_beta.down.sql" || return 1
   printf -- '-- probe\n' > "$1/backend/migrations/core/0002_different.up.sql"
   printf -- '-- probe\n' > "$1/backend/migrations/core/0002_different.down.sql"
 }
@@ -171,7 +188,7 @@ consolidates() {
     backend/migrations/core/0002_beta.up.sql \
     backend/migrations/core/0002_beta.down.sql \
     backend/migrations/core/0003_gamma.up.sql \
-    backend/migrations/core/0003_gamma.down.sql
+    backend/migrations/core/0003_gamma.down.sql || return 1
   mkdir -p "$1/backend/migrations/core"
   printf -- '-- probe\n' > "$1/backend/migrations/core/0001_baseline.up.sql"
   printf -- '-- probe\n' > "$1/backend/migrations/core/0001_baseline.down.sql"
@@ -183,7 +200,7 @@ partial_rewrite() {
   git -C "$1" rm -q backend/migrations/core/0002_beta.up.sql \
     backend/migrations/core/0002_beta.down.sql \
     backend/migrations/core/0003_gamma.up.sql \
-    backend/migrations/core/0003_gamma.down.sql
+    backend/migrations/core/0003_gamma.down.sql || return 1
   mkdir -p "$1/backend/migrations/core"
   printf -- '-- probe\n' > "$1/backend/migrations/core/0002_baseline.up.sql"
   printf -- '-- probe\n' > "$1/backend/migrations/core/0002_baseline.down.sql"
@@ -192,9 +209,12 @@ partial_rewrite() {
 # Renaming a namespace's files one-for-one: shares no version, but does not
 # collapse, so it is a rebase accident rather than a consolidation.
 renames_without_collapsing() {
+  # Every status propagated. A `git mv` that failed left the tree unchanged while
+  # the function still returned 0, so the "mutation failed" guard could not see
+  # it and the case ran against a clean fixture — which passes.
   for pair in 0001_alpha:0001_one 0002_beta:0002_two 0003_gamma:0003_three; do
-    git -C "$1" mv "backend/migrations/core/${pair%%:*}.up.sql" "backend/migrations/core/${pair##*:}.up.sql"
-    git -C "$1" mv "backend/migrations/core/${pair%%:*}.down.sql" "backend/migrations/core/${pair##*:}.down.sql"
+    git -C "$1" mv "backend/migrations/core/${pair%%:*}.up.sql" "backend/migrations/core/${pair##*:}.up.sql" || return 1
+    git -C "$1" mv "backend/migrations/core/${pair%%:*}.down.sql" "backend/migrations/core/${pair##*:}.down.sql" || return 1
   done
 }
 

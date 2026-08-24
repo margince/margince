@@ -90,6 +90,11 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// https://github.com/margince/margince/issues/2552, filed rather than waived
 	// here, because whether a raw relocation should log at all is capture's
 	// posture to decide and not something this waiver gets to assume.
+	//
+	// This waiver is MODULE-WIDE, so on its own it would also absorb a writer
+	// added tomorrow that records nothing. vaultwriters_test.go holds the census
+	// that stops it: every caller of vault.Put is enumerated with the ledger its
+	// act lands in, and a new one fails until somebody gives it a verdict.
 	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; keyvault is a seam whose callers each audit their own act in their own module, and the vault row is that act's storage rather than a second fact — except capture's boot-time credential relocation, which records nothing (#2552)",
 
 	// Operational state whose DOMAIN writes are audited elsewhere.
