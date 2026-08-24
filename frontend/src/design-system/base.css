@@ -458,6 +458,23 @@ a:not([class]):focus-visible {
   color: var(--textMeta);
 }
 
+/* The failure said in the surrounding type's size. Eleven sites across both
+   sides of the Deal Room write `t-small t-danger` for a refusal or a request
+   that failed, and no sheet declared it — so every one of them rendered in
+   meta grey, which reads as an aside rather than a problem. It sets colour
+   only: it is always worn over a size class, and a second font-size here
+   would fight whichever one that is.
+
+   `.co-error` below says nearly the same thing and is the older spelling: it
+   sets a size as well, and one screen uses it against this one's thirteen.
+   Two names for "this failed" is one too many — folding that single caller
+   into this class is the resolution, and it is not done here because it
+   belongs in its own change rather than riding along with a Deal Room fix. */
+.t-danger {
+  color: var(--danger);
+  font-weight: var(--fw-medium);
+}
+
 /* The quiet aside and the spoken failure. Five screens ask for these two —
    the LinkedIn dialogs, the reach panel, the import screen — and no stylesheet
    answered, so every "this is only background" line rendered at full body

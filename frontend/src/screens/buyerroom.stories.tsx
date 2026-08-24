@@ -28,6 +28,29 @@ const ROOM = {
   steward_name: "Ada Admin",
 };
 
+// The railless shell frame, reproduced because the bug this screen shipped
+// lived ENTIRELY in it. `room` is in RAIL_LESS_SCREENS, so Shell renders
+// `.app.railless > .main > .scroll` around it: `.main` is a flex column with
+// `overflow: hidden` and `.scroll` is `flex: 1`, which hands the page a
+// definite height. Under that height the buyer column's panels were shrunk to
+// fit and `.panel { overflow: hidden }` discarded the rest — the documents
+// panel drew 155px of 575px, so the buyer saw a filename and none of the
+// threads or composer beneath it.
+//
+// Mounted bare in StoryProviders, as this file used to, there is no bounded
+// height, nothing shrinks, and the story renders a page the product cannot
+// produce. The height is fixed rather than viewport-relative so the constraint
+// exists in a docs frame too.
+function RaillessFrame({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <div className="app railless" style={{ height: "640px" }}>
+      <main className="main">
+        <div className="scroll">{children}</div>
+      </main>
+    </div>
+  );
+}
+
 function room(routes: RouteMap, session = true) {
   return () => {
     installFetchStub(routes);
@@ -38,7 +61,9 @@ function room(routes: RouteMap, session = true) {
     }
     return (
       <StoryProviders>
-        <BuyerRoomScreen />
+        <RaillessFrame>
+          <BuyerRoomScreen />
+        </RaillessFrame>
       </StoryProviders>
     );
   };

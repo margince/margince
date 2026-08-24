@@ -170,3 +170,43 @@ describe("a refused new thread", () => {
     expect(screen.queryByText(/dealroom\.open_thread/)).toBeNull();
   });
 });
+
+// A reader who may NOT write — a seller previewing the room, a read-only
+// seat, a closed room. What they see has to answer two questions at once:
+// that writing is refused, and WHERE writing would otherwise happen. Drawing
+// nothing answers only the first, and a rep previewing their own room then
+// cannot tell a commenting buyer's page from a read-only one, because the two
+// render identically.
+describe("a board nobody may write to", () => {
+  const REFUSAL = "A preview cannot write.";
+
+  it("still shows where a reply would go, refused and reasoned", () => {
+    draw({ refusal: REFUSAL });
+
+    const ask = screen.getByRole("button", {
+      name: "Ask about this document",
+    });
+    // Refused, not absent: the affordance is on the page and cannot be used.
+    expect(ask).toBeDisabled();
+    // And the reason reaches a screen reader from the control itself, rather
+    // than living only in prose somewhere below it.
+    const describedBy = ask.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    const reason = document.getElementById(describedBy as string);
+    expect(reason?.textContent).toContain(REFUSAL);
+  });
+
+  it("says the reason once, not under every document", () => {
+    draw({ refusal: REFUSAL });
+    expect(screen.getAllByText(REFUSAL)).toHaveLength(1);
+  });
+
+  it("offers no composer at all when there is no reason to give", () => {
+    // No `refusal` and no `open`: nothing to say and nothing to press, so the
+    // card must not grow a dead control with an empty explanation.
+    draw({});
+    expect(
+      screen.queryByRole("button", { name: "Ask about this document" }),
+    ).toBeNull();
+  });
+});
