@@ -4,9 +4,15 @@ Guides for the person **working in** Margince — a rep, a delivery lead, an
 account owner. No code, no API: a sign-in and the app.
 
 They live here rather than under [`docs/`](../docs/README.md) because that tree is
-for the person **changing** the code: how a module is shaped, which gate holds
-which invariant, how to add an endpoint. Both audiences deserve documentation and
-neither is served by having to sort the other's out of the way.
+mostly for the person **changing** the code: how a module is shaped, which gate
+holds which invariant, how to add an endpoint.
+
+The split is by document TYPE, not strictly by tree, and it is worth being exact
+about that. `docs/how-to/` holds both kinds — how to add an endpoint sits beside
+how to work your pipeline — because a how-to is what you come back to for one
+answer, and that is as true of a field reference for a rep as of a recipe for an
+engineer. What lives HERE is the other shape: a walkthrough you follow once, end
+to end.
 
 - [run-your-first-project.md](run-your-first-project.md) — one ERP rollout followed
   from the first conversation, through the deal, into delivery and close: the key
