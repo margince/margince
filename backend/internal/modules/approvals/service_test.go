@@ -304,23 +304,34 @@ func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 			if tc.want && err != nil {
 				t.Fatalf("refused a decision it may make: %v", err)
 			}
-			if !tc.want && err == nil {
-				t.Fatal("a credential released the proposal it made")
+			if !tc.want {
+				if err == nil {
+					t.Fatal("a credential released the proposal it made")
+				}
+				// The SENTINEL, not merely an error: swapping the refusal for an
+				// unrelated internal failure would leave a bare non-nil check
+				// green while the caller stopped seeing a 403.
+				if !errors.Is(err, apperrors.ErrPermissionDenied) {
+					t.Fatalf("refused with %v, want a permission denial", err)
+				}
 			}
 		})
 	}
 }
 
-// A HUMAN is never caught by the rule, whatever passport staged the row: the
-// person answering in a chat window is the person answering in a browser tab
-// (ADR-0055), and agentMayDecide returns early for them. Held here so a future
-// spelling that reads the row's passport before the principal's type cannot
-// lock the lender out of their own inbox.
+// A HUMAN is never caught by the rule, and the case that matters is the one the
+// type switch alone does not describe: a human whose OWN UserID is what the
+// staging passport was minted by. agentMayDecide returns early for every
+// non-agent, so this is a guard on the ORDER of that function rather than on new
+// behaviour — a spelling that read the row's passport before the principal's
+// type would lock the lender out of the inbox they lent from, and nothing else
+// in this file pairs a human with a passport-staged row.
 func TestTheHumanBehindACredentialStillDecidesItsProposal(t *testing.T) {
-	passport := ids.From[ids.PassportKind](ids.NewV7())
-	human := principal.Principal{Type: principal.PrincipalHuman, UserID: ids.NewV7()}
+	lender := ids.NewV7()
+	passport := ids.From[ids.PassportKind](lender)
+	human := principal.Principal{Type: principal.PrincipalHuman, UserID: lender}
 	if err := agentMayDecide(human, row{Kind: "advance_deal", PassportID: &passport}, true); err != nil {
-		t.Fatalf("a human was refused their own agent's proposal: %v", err)
+		t.Fatalf("a human was refused a proposal their own credential staged: %v", err)
 	}
 }
 
