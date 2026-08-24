@@ -337,6 +337,43 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retentionactions.go",
 }
 
+// setClause is the assignment list of an UPDATE: everything between SET and the
+// WHERE that ends it. Matched so a retained column can be looked for where it
+// would be WRITTEN rather than anywhere in the statement — `WHERE
+// counterparty_email IS NOT NULL` selects rows, it does not destroy them.
+var setClause = regexp.MustCompile(`(?is)\bSET\b(.*?)(?:\bWHERE\b|$)`)
+
+// deleteFrom matches a statement that removes the row outright, which takes
+// every column with it including the retained one.
+var deleteFrom = regexp.MustCompile(`(?is)^\s*DELETE\s+FROM\s+([a-z_]+)`)
+
+// statementDestroying returns the sweep statement that would destroy column on
+// table, or "" if none does.
+//
+// It asks whether the column is ASSIGNED AT ALL rather than whether it is
+// assigned NULL, and that is deliberate: `col = NULL`, `col=NULL`,
+// `col = CAST(NULL AS text)` and `col = ”` are the same act wearing four
+// spellings, and a check that recognised one of them would go quietly green on
+// the other three. A retained column is one the sweep does not write, so any
+// write to it is the finding. A DELETE of the whole row counts too — it takes
+// the retained column with it.
+func statementDestroying(statements []string, table, column string) string {
+	needle := regexp.MustCompile(`(?is)\b` + regexp.QuoteMeta(strings.ToLower(column)) + `\s*=`)
+	for _, stmt := range statements {
+		if m := deleteFrom.FindStringSubmatch(stmt); m != nil && m[1] == table {
+			return stmt
+		}
+		sets := setClause.FindStringSubmatch(stmt)
+		if sets == nil {
+			continue
+		}
+		if needle.MatchString(sets[1]) {
+			return stmt
+		}
+	}
+	return ""
+}
+
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	writes := map[string]bool{}
 	for _, path := range erasureCascadeFiles {
@@ -350,10 +387,17 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// the declared erasure assignments are checked against the statement that
 	// erases THIS table rather than against retention.go as a whole.
 	sweeps := map[string]string{}
+	// Kept per STATEMENT as well, because the two checks below ask different
+	// questions of them. "Is this assignment still made" is answered by the
+	// concatenation; "does the sweep touch a column it promised not to" has to
+	// look inside one statement's SET clause, or a WHERE predicate naming the
+	// column in a neighbouring statement would answer for it.
+	sweepStatements := map[string][]string{}
 	for _, path := range retentionSweepFiles {
 		for _, lit := range sqlLiterals(t, path) {
 			for _, table := range sqlWriteTargets(lit) {
 				sweeps[table] += " " + collapsedSQL(lit)
+				sweepStatements[table] = append(sweepStatements[table], collapsedSQL(lit))
 			}
 		}
 	}
@@ -396,9 +440,9 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			}
 		}
 		for _, column := range h.retentionKeeps {
-			if strings.Contains(sweeps[table], strings.ToLower(column)+" = null") {
-				missing = append(missing, "the retention sweep now clears `"+column+"` on PII table "+table+
-					", which is registered as a column it deliberately KEEPS — the retention action's contract is that the record of the event survives and its content goes. If that ruling has changed, move the column into retentionErasures in the same commit so the change is the declaration and not a side effect of it")
+			if destroyer := statementDestroying(sweepStatements[table], table, column); destroyer != "" {
+				missing = append(missing, "the retention sweep now destroys `"+column+"` on PII table "+table+
+					" (`"+destroyer+"`), which is registered as a column it deliberately KEEPS — the retention action's contract is that the record of the event survives and its content goes. If that ruling has changed, move the column into retentionErasures in the same commit so the change is the declaration and not a side effect of it")
 			}
 		}
 		if h.sarRead && !reads[table] {
