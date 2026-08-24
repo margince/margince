@@ -75,6 +75,24 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 			personID, seededPreferenceToken(personID)); err != nil {
 			return err
 		}
+		// The OTHER consent capability. A double-opt-in token is a bearer
+		// secret in the subject's own mailbox whose only function is to
+		// authorise a grant, so an erasure that left it standing would leave a
+		// live invitation to consent outliving the certificate that says the
+		// data was destroyed.
+		purposeID := ids.NewV7()
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+			 VALUES ($1, 'doi_fixture_' || $2::text, 'Newsletter', true)`,
+			purposeID, personID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
+			 VALUES ($1, $2, 'hash-for-erasure-fixture', now(), now() + interval '72 hours')`,
+			personID, purposeID); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO raw_capture (source_system, source_id, payload)
 			 VALUES ('gmail', 'msg-1', jsonb_build_object('from', $1::text, 'body', 'quarterly numbers'))`,
@@ -113,6 +131,7 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 			{"embeddings", `SELECT count(*) FROM embedding WHERE entity_type = 'person' AND entity_id = $1`, 0},
 			{"search hits for the name", `SELECT count(*) FROM person WHERE id = $1 AND search_tsv @@ plainto_tsquery('simple', 'Selma')`, 0},
 			{"preference-center tokens", `SELECT count(*) FROM preference_token WHERE person_id = $1`, 0},
+			{"double-opt-in tokens", `SELECT count(*) FROM consent_doi_token WHERE person_id = $1`, 0},
 			{"suppression entries", `SELECT count(*) FROM erasure_suppression WHERE kind = 'email'`, 1},
 			{"erase tombstones", `SELECT count(*) FROM audit_log WHERE action = 'erase' AND entity_id = $1`, 1},
 		}

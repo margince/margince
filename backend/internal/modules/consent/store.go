@@ -273,25 +273,29 @@ func consentSubject(in RecordInput) (subject, error) {
 // input-shape refusal together at the front, the order CreateRelationship
 // already uses for an unknown kind. A required field's NAME is published
 // contract, so answering it ahead of authority discloses nothing.
-func admitRecord(ctx context.Context, in RecordInput) (subject, error) {
+func admitRecord(ctx context.Context, in RecordInput) (subject, ConsentState, error) {
 	sub, err := consentSubject(in)
 	if err != nil {
-		return subject{}, err
+		return subject{}, "", err
 	}
 	// purpose_id is required by the contract, which is a claim only a check makes
 	// true: an absent key decodes to the zero UUID with no error, and the purpose
 	// read inside the transaction would answer not-found for a purpose the caller
 	// never named.
 	if err := httperr.RequireBodyID(purposeIDField, in.PurposeID.UUID); err != nil {
-		return subject{}, err
+		return subject{}, "", err
 	}
 	if err := auth.Require(ctx, sub.entityType, principal.ActionUpdate); err != nil {
-		return subject{}, err
+		return subject{}, "", err
 	}
-	if _, err := ParseRecordableState(in.NewState); err != nil {
-		return subject{}, err
+	// Returned rather than discarded: Record decides which row probe to run
+	// from this value, and re-deriving it there with a string conversion would
+	// be a second parse that could disagree with this one.
+	state, err := ParseRecordableState(in.NewState)
+	if err != nil {
+		return subject{}, "", err
 	}
-	return sub, nil
+	return sub, state, nil
 }
 
 // Record sets one subject×purpose state and appends the proof row —
@@ -300,7 +304,7 @@ func admitRecord(ctx context.Context, in RecordInput) (subject, error) {
 // person or, before promotion, a lead (E12.20). Re-asserting the
 // current state is idempotent: no second proof row, no second event.
 func (s *Store) Record(ctx context.Context, in RecordInput) (State, error) {
-	sub, err := admitRecord(ctx, in)
+	sub, state, err := admitRecord(ctx, in)
 	if err != nil {
 		return State{}, err
 	}
@@ -308,27 +312,37 @@ func (s *Store) Record(ctx context.Context, in RecordInput) (State, error) {
 
 	var out State
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Which probe depends on WHAT is being recorded, and the split is the
-		// ruling on #2145 rather than a convenience.
-		//
+		// Which row probe runs depends on WHAT is being recorded.
 		// A WITHDRAWAL stays recordable against an archived — including an
-		// Art. 17 anonymized — subject. Erasure stamps archived_at and leaves
-		// the row standing, and a suppression is exactly the thing you most
-		// want still working once somebody has asked to be forgotten.
+		// Art. 17 anonymized — subject: suppression is what you most want still
+		// working once somebody has asked to be forgotten.
 		//
-		// A GRANT does not. It is a lawful-basis claim about a person the
-		// installation was told to forget, and person_consent is a declared PII
-		// table (piicoverage_test.go), so a grant against an erased subject puts
-		// back a row the erasure had just deleted. IssueDoubleOptIn already
-		// refuses one, and a grant flow that agreed with itself only when it
-		// happened to go through double opt-in would be no rule at all.
+		// A GRANT does not. Anonymize-in-place leaves the person row standing,
+		// so an erased subject would go on accruing person_consent,
+		// consent_event, audit and outbox rows — the accrual erasure destroys
+		// the emailed capabilities to stop. This closes it from the other end.
 		//
-		// admitRecord has already run ParseRecordableState, so NewState is one
-		// of exactly these two; a third recordable state has to come here and
-		// say whether it is a claim or a suppression.
-		probe := auth.EnsureWritable
-		if ConsentState(in.NewState) == StateGranted {
+		// "Permissive" is weaker than it sounds: EnsureWritable runs NO
+		// statement for an actor unbounded on the table, and every human is
+		// unbounded on `lead` — so that arm is ungated for a lead, and gated
+		// for a person only by capture privacy. Nothing outside tests sets
+		// LeadID, which is why that is a note not a finding (#2574).
+		//
+		// Exhaustive rather than defaulted: a state added to
+		// ParseRecordableState must come here and say whether it is a claim or
+		// a suppression, and is refused until it does.
+		var probe func(context.Context, pgx.Tx, string, ids.UUID) error
+		switch state {
+		case StateGranted:
 			probe = auth.EnsureWritableLive
+		case StateWithdrawn:
+			probe = auth.EnsureWritable
+		default:
+			// Not a bad request: ParseRecordableState already admitted this
+			// value, so arriving here means the vocabulary grew and this
+			// decision was not made. That is a defect in the code, and it
+			// refuses rather than guessing which probe the new state wants.
+			return fmt.Errorf("consent: %q is recordable but no row probe has been chosen for it — decide whether it is a lawful-basis claim (live subject only) or a suppression (any subject)", state)
 		}
 		if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err

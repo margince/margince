@@ -99,14 +99,24 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// consent_doi_token rows are a security artifact, not a kernel
 		// entity, so the row id stays untyped.
 		var tokenRowID ids.UUID
-		// The subject's liveness rides the INSERT as well as the probe above.
-		// The probe and this statement are two statements, and an erasure
-		// committing between them would otherwise mint a live invitation to
-		// grant consent for somebody the installation has just been told to
-		// forget — a working token, in the post, for an erased person.
+		// The subject's liveness rides the INSERT as well as the probe above,
+		// and it is worth being exact about what that buys. It closes the
+		// window between the probe and this statement — an erasure committing
+		// there would otherwise mint a live invitation to grant consent for
+		// somebody the installation has just been told to forget, and the token
+		// would work. It does NOT close the window between this statement and
+		// COMMIT; an erasure landing there still wins, and closing that needs a
+		// row lock on the subject rather than a predicate.
+		//
+		// So this is a narrowing, not a proof, and it is the only statement in
+		// the module that carries one — every other EnsureWritableLive site is
+		// probe-then-write and takes the same residual risk unremarked. Both
+		// halves are tracked on #2574, which decides lock-versus-predicate for
+		// the primitive rather than leaving each statement to answer it.
 		//
 		// No row means the subject went while we were deciding, which is the
-		// same answer the probe would have given a moment earlier.
+		// answer the probe would have given a moment earlier, so it refuses the
+		// same way rather than failing on a scan.
 		err = tx.QueryRow(ctx, `
 			INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
 			SELECT $1, $2, $3, $4, $5

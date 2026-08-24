@@ -114,14 +114,49 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
-	for _, c := range req.Choices {
-		if _, err := ParseRecordableState(c.State); err != nil {
+	states := make([]ConsentState, len(req.Choices))
+	for i, c := range req.Choices {
+		state, err := ParseRecordableState(c.State)
+		if err != nil {
 			httperr.Write(w, r, httperr.Validation("state", "invalid", "must be granted or withdrawn"))
 			return
 		}
-		if _, err := h.store.PublicSetConsent(r.Context(), ref.PersonID, c.PurposeKey, c.State, c.Wording); err != nil {
-			writeConsentErr(w, r, err)
-			return
+		states[i] = state
+	}
+	// A purpose named twice in one save is settled BEFORE anything is written,
+	// and it settles toward the withdrawal. Request order used to decide it by
+	// accident; the two passes below would have decided it the other way, and
+	// on a consent surface the direction is not a coin toss — a body carrying
+	// both answers for one purpose is a client bug, and suppressing is the safe
+	// reading of it.
+	for i, c := range req.Choices {
+		for j := i + 1; j < len(req.Choices); j++ {
+			if req.Choices[j].PurposeKey != c.PurposeKey {
+				continue
+			}
+			if states[i] == StateWithdrawn || states[j] == StateWithdrawn {
+				states[i], states[j] = StateWithdrawn, StateWithdrawn
+				req.Choices[i].State, req.Choices[j].State = string(StateWithdrawn), string(StateWithdrawn)
+			}
+		}
+	}
+	// WITHDRAWALS FIRST, and that ordering is load-bearing rather than tidy.
+	//
+	// A save carries several choices and this loop stops at the first refusal.
+	// Record refuses a GRANT for an archived subject and admits a withdrawal
+	// from anyone — so a mixed save recorded in request order would refuse
+	// halfway and drop the withdrawals behind it, losing the one thing a
+	// subject in that state most needs this page to do. Taking them first means
+	// a refused grant can only cost the grant.
+	for _, pass := range []ConsentState{StateWithdrawn, StateGranted} {
+		for i, c := range req.Choices {
+			if states[i] != pass {
+				continue
+			}
+			if _, err := h.store.PublicSetConsent(r.Context(), ref.PersonID, c.PurposeKey, c.State, c.Wording); err != nil {
+				writeConsentErr(w, r, err)
+				return
+			}
 		}
 	}
 	choices, err := h.store.PublicPurposeStates(r.Context(), ref.PersonID)
