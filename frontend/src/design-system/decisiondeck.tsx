@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
@@ -231,6 +232,25 @@ type Drag = Readonly<{
   dy: number;
 }>;
 
+/**
+ * The card on its way out: which verdict sent it, and WHERE THE HAND LET GO.
+ *
+ * The offset is the whole point of this being an object rather than a verdict.
+ * A card that leaves from the middle of the plate after a swipe that ended 90px
+ * to the right reads as a second, different card — the eye tracks the one it was
+ * dragging, and losing it at the release point is what made the exit look like a
+ * snap-back. Staged from the keyboard there is no gesture to continue, and the
+ * offsets are zero.
+ */
+type Leaving = Readonly<{
+  verdict: DeckVerdict;
+  dx: number;
+  dy: number;
+}>;
+
+/** The release point, handed to the exit animation as custom properties. */
+type GhostVars = CSSProperties & Record<`--${string}`, string>;
+
 export type DecisionDeckProps = Readonly<{
   /** Everything still waiting. The deck reorders nothing. */
   items: readonly DecisionDeckItem[];
@@ -299,7 +319,7 @@ export function DecisionDeck({
   // The card flying off, kept only until its animation ends. It carries no text
   // and no control — it is the silhouette leaving, so nothing a reader or a test
   // can reach is on screen twice.
-  const [leaving, setLeaving] = useState<DeckVerdict | null>(null);
+  const [leaving, setLeaving] = useState<Leaving | null>(null);
   const [tally, setTally] = useState<{ count: number; at: number } | null>(
     null,
   );
@@ -322,7 +342,11 @@ export function DecisionDeck({
     setTally((prev) => ({ count: (prev?.count ?? 0) + gone.length, at: now }));
   }, [items, staged, now]);
 
-  const stage = (item: DecisionDeckItem, verdict: DeckVerdict) => {
+  const stage = (
+    item: DecisionDeckItem,
+    verdict: DeckVerdict,
+    from?: { dx: number; dy: number },
+  ) => {
     // A lapsed proposal cannot be accepted, and the guard lives here rather than
     // only on the card: the card withholds the button, and the keyboard and the
     // swipe reach the same verdict without one.
@@ -334,7 +358,9 @@ export function DecisionDeck({
     // one: a tray holding "accept" and "reject" for one proposal is a tray with
     // no answer in it.
     setStaged((prev) => [...prev.filter((held) => held.id !== item.id), entry]);
-    setLeaving(reduced ? null : verdict);
+    setLeaving(
+      reduced ? null : { verdict, dx: from?.dx ?? 0, dy: from?.dy ?? 0 },
+    );
     onStage?.(entry);
   };
 
@@ -399,7 +425,9 @@ export function DecisionDeck({
     setDrag(null);
     const verdict = dragVerdict(drag.dx, drag.dy);
     if (verdict && live) {
-      stage(live, verdict);
+      // Where the hand let go, so the card continues out from there rather than
+      // restarting its flight from the middle of the plate.
+      stage(live, verdict, { dx: drag.dx, dy: drag.dy });
     }
   };
 
@@ -589,11 +617,15 @@ function DeckStack({
   live: DecisionDeckItem | undefined;
   waiting: readonly DecisionDeckItem[];
   drag: Drag | null;
-  leaving: DeckVerdict | null;
+  leaving: Leaving | null;
   now: number;
   labels: DecisionDeckLabels;
   chips?: (approval: DecisionApproval) => DecisionDeckChips;
-  onStage: (item: DecisionDeckItem, verdict: DeckVerdict) => void;
+  onStage: (
+    item: DecisionDeckItem,
+    verdict: DeckVerdict,
+    from?: { dx: number; dy: number },
+  ) => void;
   onKeyDown: (event: KeyboardEvent<HTMLFieldSetElement>) => void;
   onPointerDown: (event: PointerEvent<HTMLFieldSetElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLFieldSetElement>) => void;
@@ -627,8 +659,20 @@ function DeckStack({
         {leaving && (
           <div
             className="ddeck-ghost"
-            data-verdict={leaving}
+            data-verdict={leaving.verdict}
             aria-hidden="true"
+            // Where the flight STARTS: the point the hand released, as the
+            // transform the keyframes open on. Custom properties rather than a
+            // second keyframe set per verdict — the offset is data, and eight
+            // hand-written keyframes to say four directions from an arbitrary
+            // point is not.
+            style={
+              {
+                "--ddeck-from-x": `${leaving.dx}px`,
+                "--ddeck-from-y": `${leaving.dy}px`,
+                "--ddeck-from-rot": `${leaving.dx / DRAG_ROTATION_DIVISOR}deg`,
+              } as GhostVars
+            }
             onAnimationEnd={onLeaveEnd}
           />
         )}
@@ -651,30 +695,57 @@ function DeckStack({
           tabIndex={0}
           aria-label={labels.deckLabel}
           aria-keyshortcuts="ArrowRight ArrowLeft ArrowUp ArrowDown U Enter"
-          data-dragging={drag ? "" : undefined}
-          style={
-            drag
-              ? {
-                  transform: `translate(${drag.dx}px, ${drag.dy}px) rotate(${
-                    drag.dx / DRAG_ROTATION_DIVISOR
-                  }deg)`,
-                }
-              : undefined
-          }
           onKeyDown={onKeyDown}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <ItemCard
-            item={live}
-            layout="deck"
-            now={now}
-            labels={labels}
-            chips={chips}
-            onStage={onStage}
-          />
+          {/*
+            The moving part, and KEYED ON THE CARD.
+
+            Everything that moves lives in here rather than on the fieldset, and
+            the split is what fixes two things at once. Keyed, React mounts a
+            fresh box for the next card — so the transform the swipe left behind
+            cannot transition back to zero on the card that has just arrived,
+            which is exactly the "the same card snapped back into the pile" this
+            deck was reported for, and the arrival animation plays because a
+            remount is what plays it. And because the KEYBOARD surface is the
+            fieldset outside it, none of that touches focus: a reader working the
+            queue with the arrow keys keeps their tab stop through every verdict.
+          */}
+          <div
+            key={live.id}
+            className="ddeck-card"
+            data-dragging={drag ? "" : undefined}
+            // The verdict this drag WOULD stage, once it has travelled far
+            // enough to be one. Drawn as a ring in the verdict's own colour, so
+            // a reader learns what right and left mean while their finger is
+            // still down rather than after the card has gone. It says nothing an
+            // assistive reader is missing: the four buttons inside carry the same
+            // four verdicts in words at every moment.
+            data-verdict={
+              (drag ? dragVerdict(drag.dx, drag.dy) : null) ?? undefined
+            }
+            style={
+              drag
+                ? {
+                    transform: `translate(${drag.dx}px, ${drag.dy}px) rotate(${
+                      drag.dx / DRAG_ROTATION_DIVISOR
+                    }deg)`,
+                  }
+                : undefined
+            }
+          >
+            <ItemCard
+              item={live}
+              layout="deck"
+              now={now}
+              labels={labels}
+              chips={chips}
+              onStage={onStage}
+            />
+          </div>
         </fieldset>
       </div>
       <p className="t-small ddeck-behind">

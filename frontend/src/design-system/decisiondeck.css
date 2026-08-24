@@ -97,10 +97,10 @@
 }
 
 /*
- * The live card's own box. It carries the transform while a finger is on it and
- * the spring back when the finger leaves without travelling far enough — the
- * ONE place `--ease-spring` is honest, per its own token note: the finger left,
- * the control springs back.
+ * The live card's KEYBOARD surface: a tab stop, the four arrow keys, and the
+ * pointer handlers. It does not move — everything that moves is the box inside
+ * it (`.ddeck-card`), which is keyed on the card so it can be replaced without
+ * this element, and therefore without the reader's focus, going anywhere.
  */
 .ddeck-live {
   /* A `fieldset`, so the four verbs inside it are grouped by the browser rather
@@ -115,6 +115,15 @@
   position: relative;
   z-index: 1;
   touch-action: none;
+}
+
+/*
+ * The moving box. It carries the transform while a finger is on it and the
+ * spring back when the finger leaves without travelling far enough — the ONE
+ * place `--ease-spring` is honest, per its own token note: the finger left, the
+ * control springs back.
+ */
+.ddeck-card {
   transition: transform var(--dur-move) var(--ease-spring);
   /* The next card RISES into the live position. Keyed on the card's identity, so
      React's remount is what plays it — there is no state to hold and nothing to
@@ -124,16 +133,53 @@
 
 /* While a finger is down the card follows it with no transition at all: a
    transition here would make the card lag the pointer, which reads as the app
-   being slow rather than the card being heavy. */
-.ddeck-live[data-dragging] {
+   being slow rather than the card being heavy.
+
+   The arrival animation is cancelled with it, and that is not tidiness: an
+   animation outranks an inline style, so a card grabbed inside the 140ms it is
+   still rising ignored the finger entirely for the rest of that run — worst
+   exactly where it is most likely, on the second and third card of somebody
+   working the queue quickly. */
+.ddeck-card[data-dragging] {
   transition: none;
+  animation: none;
   cursor: grabbing;
 }
 
 .ddeck-live:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 3px;
+}
+
+/*
+ * WHAT THIS SWIPE WOULD DO, while the finger is still down. A ring in the
+ * verdict's own colour the moment the drag has travelled far enough to be one —
+ * so a reader learns which direction means what before committing to it, and a
+ * drag that stops short shows nothing, which is the honest reading of a gesture
+ * that will spring back.
+ *
+ * A ring rather than a tint: the card underneath carries drafted prose somebody
+ * is reading, and a colour wash over it changes every contrast measurement on
+ * the card at the moment they are trying to read it.
+ */
+.ddeck-card[data-verdict] {
   border-radius: var(--r-md);
+}
+
+.ddeck-card[data-verdict="accept"] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.ddeck-card[data-verdict="reject"] {
+  box-shadow: 0 0 0 2px var(--danger);
+}
+
+.ddeck-card[data-verdict="edit"] {
+  box-shadow: 0 0 0 2px var(--ai);
+}
+
+.ddeck-card[data-verdict="skip"] {
+  box-shadow: 0 0 0 2px var(--borderStrong);
 }
 
 @keyframes ddeck-rise {
@@ -151,6 +197,12 @@
  * and the same four buttons would be one more thing on screen claiming to be
  * live. It carries no text and no control, and it is removed the moment its
  * animation ends.
+ *
+ * It leaves FROM THE RELEASE POINT and in the verdict's own colour. Starting at
+ * the middle of the plate, it read as some other card flying off while the one
+ * the hand had been holding appeared to spring back — the exit has to continue
+ * the gesture that caused it, or it denies it. The shadow is what makes it read
+ * as a card lifting off the pile rather than a rectangle fading.
  */
 .ddeck-ghost {
   position: absolute;
@@ -160,7 +212,36 @@
   border: 1.5px dashed var(--aiMed);
   border-radius: var(--r-md);
   background: var(--bgElevated);
+  box-shadow: var(--shadow-pop);
   pointer-events: none;
+}
+
+/* The four verdicts, each in the colour the reader has already met: accept is
+   the accent the Accept button is filled with, reject is the danger family, edit
+   is the AI hue of the surface it hands the reader to, and later is neutral
+   because nothing happened. Ground and edge together — a tint alone is not
+   legible for the 200ms this exists. */
+.ddeck-ghost[data-verdict="accept"] {
+  border-color: var(--accent);
+  background:
+    linear-gradient(var(--accentLight), var(--accentLight)), var(--bgElevated);
+}
+
+.ddeck-ghost[data-verdict="reject"] {
+  border-color: var(--danger);
+  background:
+    linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
+}
+
+.ddeck-ghost[data-verdict="edit"] {
+  border-color: var(--ai);
+  background:
+    linear-gradient(var(--aiLight), var(--aiLight)), var(--bgElevated);
+}
+
+.ddeck-ghost[data-verdict="skip"] {
+  border-color: var(--borderStrong);
+  background: var(--bgCard);
 }
 
 .ddeck-ghost[data-verdict="accept"] {
@@ -179,32 +260,62 @@
   animation: ddeck-fly-down var(--dur-move) var(--ease-out) forwards;
 }
 
-/* The lean is small on purpose. A card that spins reads as a game; a card that
-   tips a few degrees reads as a hand putting it down. */
+/* Every flight OPENS where the hand let go — `--ddeck-from-*`, set on the
+   element by the component — and carries on in the verdict's direction from
+   there. The defaults are zero, which is the keyboard's answer: no gesture to
+   continue, so the card leaves from the middle of the plate.
+
+   `from` and `to` state the same transform functions in the same order on
+   purpose: a list that changes shape between the two ends is interpolated as a
+   matrix, and a matrix cannot carry the percentage that makes the exit
+   card-width-relative.
+
+   The lean is small. A card that spins reads as a game; a card that tips a few
+   degrees reads as a hand putting it down. */
 @keyframes ddeck-fly-right {
+  from {
+    transform: translate(var(--ddeck-from-x, 0px), var(--ddeck-from-y, 0px))
+      rotate(var(--ddeck-from-rot, 0deg));
+    opacity: 1;
+  }
   to {
-    transform: translateX(120%) rotate(9deg);
+    transform: translate(130%, var(--ddeck-from-y, 0px)) rotate(11deg);
     opacity: 0;
   }
 }
 
 @keyframes ddeck-fly-left {
+  from {
+    transform: translate(var(--ddeck-from-x, 0px), var(--ddeck-from-y, 0px))
+      rotate(var(--ddeck-from-rot, 0deg));
+    opacity: 1;
+  }
   to {
-    transform: translateX(-120%) rotate(-9deg);
+    transform: translate(-130%, var(--ddeck-from-y, 0px)) rotate(-11deg);
     opacity: 0;
   }
 }
 
 @keyframes ddeck-fly-up {
+  from {
+    transform: translate(var(--ddeck-from-x, 0px), var(--ddeck-from-y, 0px))
+      scale(1);
+    opacity: 1;
+  }
   to {
-    transform: translateY(-110%) scale(0.96);
+    transform: translate(var(--ddeck-from-x, 0px), -115%) scale(0.94);
     opacity: 0;
   }
 }
 
 @keyframes ddeck-fly-down {
+  from {
+    transform: translate(var(--ddeck-from-x, 0px), var(--ddeck-from-y, 0px))
+      scale(1);
+    opacity: 1;
+  }
   to {
-    transform: translateY(110%) scale(0.96);
+    transform: translate(var(--ddeck-from-x, 0px), 115%) scale(0.94);
     opacity: 0;
   }
 }
@@ -316,7 +427,7 @@
  * expensive way.
  */
 @media (prefers-reduced-motion: reduce) {
-  .ddeck-live {
+  .ddeck-card {
     transition: none;
     animation: none;
   }

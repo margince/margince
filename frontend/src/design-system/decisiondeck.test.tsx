@@ -95,6 +95,22 @@ function liveSurface(): HTMLElement {
   return screen.getByRole("group", { name: "Decisions waiting on you" });
 }
 
+/**
+ * The box inside that surface that actually MOVES.
+ *
+ * The two are deliberately separate elements: the surface holds the tab stop and
+ * the handlers and never moves, so replacing the card cannot take a reader's
+ * focus with it. By class because the box is chrome — it carries no role, no
+ * name and nothing to read, which is the whole reason it can be replaced.
+ */
+function liveBox(): HTMLElement {
+  const box = liveSurface().querySelector<HTMLElement>(".ddeck-card");
+  if (!box) {
+    throw new Error("the live card's moving box is not rendered");
+  }
+  return box;
+}
+
 describe("DecisionDeck — stage, then commit", () => {
   // The whole reason this component exists. A recorded decision has no reverse
   // (approving mints a token and executes the effect), so a surface that sent a
@@ -399,7 +415,7 @@ describe("DecisionDeck — a press on a control belongs to the control", () => {
     render(deck());
     const accept = screen.getByRole("button", { name: "Accept" });
     fireEvent.pointerDown(accept, { button: 0, pointerId: 1 });
-    expect(liveSurface()).not.toHaveAttribute("data-dragging");
+    expect(liveBox()).not.toHaveAttribute("data-dragging");
   });
 
   it("still starts a drag from the card itself", () => {
@@ -410,7 +426,50 @@ describe("DecisionDeck — a press on a control belongs to the control", () => {
       clientX: 0,
       clientY: 0,
     });
-    expect(liveSurface()).toHaveAttribute("data-dragging");
+    expect(liveBox()).toHaveAttribute("data-dragging");
+  });
+});
+
+describe("DecisionDeck — what the swipe tells the reader", () => {
+  // The whole point of the hint: which direction means what, learned while the
+  // finger is still down rather than after the card has gone.
+  it("names the verdict a drag would stage, once it has travelled far enough", () => {
+    render(deck());
+    const surface = liveSurface();
+    fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 20, clientY: 0 });
+    // Short of the threshold there is no verdict yet, and claiming one would
+    // promise a card that is about to spring back.
+    expect(liveBox()).not.toHaveAttribute("data-verdict");
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 120, clientY: 0 });
+    expect(liveBox()).toHaveAttribute("data-verdict", "accept");
+  });
+
+  // The exit continues the gesture. Starting the flight from the middle of the
+  // plate is what made a successful swipe read as the same card snapping back.
+  it("starts the card's exit where the hand let go", () => {
+    const { container } = render(deck());
+    const surface = liveSurface();
+    fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 130, clientY: 12 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 130, clientY: 12 });
+    const ghost = container.querySelector<HTMLElement>(".ddeck-ghost");
+    expect(ghost).not.toBeNull();
+    expect(ghost?.getAttribute("data-verdict")).toBe("accept");
+    expect(ghost?.style.getPropertyValue("--ddeck-from-x")).toBe("130px");
+    expect(ghost?.style.getPropertyValue("--ddeck-from-y")).toBe("12px");
+  });
+
+  // The card that moves is replaced per verdict; the surface that holds focus is
+  // not. Without the split, a reader working the queue from the keyboard lost
+  // their tab stop on the first arrow key and the rest of the queue was
+  // unreachable without tabbing back in from the top.
+  it("keeps the keyboard's tab stop through a verdict", async () => {
+    const user = userEvent.setup();
+    render(deck());
+    liveSurface().focus();
+    await user.keyboard("{ArrowRight}");
+    expect(document.activeElement).toBe(liveSurface());
   });
 });
 
