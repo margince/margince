@@ -45,6 +45,15 @@ type piiHandling struct {
 	// the plaintext wipe was deleted would keep that claim true while the
 	// content survived its window. These are the assignments the erasure IS.
 	retentionErasures []string
+	// retentionKeeps names columns the sweep deliberately does NOT clear on this
+	// table, where a sibling eraser does. retentionErasures can only report that
+	// a declared assignment went missing; it says nothing about one that
+	// APPEARS, so a decision to keep a column lives in a comment and reverses
+	// silently the first time somebody "completes" the statement from the
+	// fuller list beside it. That is how migration 0291 came to exist. Naming
+	// the column here makes reversing the decision fail rather than pass, so it
+	// has to be an edit to this line and not a quiet widening.
+	retentionKeeps []string
 	// sarRead: SAR assembly must read this table into the export package.
 	// False only for opaque derived artifacts (vectors) that carry no
 	// human-readable PII to hand back — they are purged, never exported.
@@ -115,7 +124,13 @@ var piiTables = map[string]piiHandling{
 		retentionErasures: []string{
 			"body = NULL",
 			"raw = NULL",
+			// The tombstone is part of the erasure, not decoration beside it:
+			// the row keeps saying a meeting happened while saying nothing
+			// about what was in it, and a sweep that stopped writing it would
+			// leave the old subject line standing.
+			"subject = $2",
 		},
+		retentionKeeps: []string{"counterparty_email"},
 	},
 	"attachment":  {erasureWrite: true, sarRead: true},
 	"raw_capture": {erasureWrite: true, sarRead: true},
@@ -378,6 +393,12 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			if !strings.Contains(sweeps[table], strings.ToLower(assignment)) {
 				missing = append(missing, "the retention sweep no longer assigns `"+assignment+"` on PII table "+table+
 					" — the content it was written to erase now outlives its window; restore the assignment or amend the declared erasure")
+			}
+		}
+		for _, column := range h.retentionKeeps {
+			if strings.Contains(sweeps[table], strings.ToLower(column)+" = null") {
+				missing = append(missing, "the retention sweep now clears `"+column+"` on PII table "+table+
+					", which is registered as a column it deliberately KEEPS — the retention action's contract is that the record of the event survives and its content goes. If that ruling has changed, move the column into retentionErasures in the same commit so the change is the declaration and not a side effect of it")
 			}
 		}
 		if h.sarRead && !reads[table] {
