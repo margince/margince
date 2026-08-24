@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -52,13 +53,15 @@ Cite the ids the summary gave you, in evidence only. An id must never appear in 
 Voice: write like a calm, capable colleague. Lead with the result. One idea per sentence. Short sentences. Use contractions. Address the reader as "you".
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
-LANGUAGE
-Write in the language named by "language" in the summary. Write naturally in that language rather than translating English phrasing.
-Leave everything that is not a sentence exactly as given: ids, urls, email addresses, people's names, company names, and any text you are quoting.`
+`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func briefSystemFor(fence promptfence.Fence) string {
-	return briefSystem + "\n" + fence.Rule("meeting summary")
+// The brief is written in the installation's language, the same as every other
+// AI surface. It used to point the model at a "language" field in the summary
+// instead — which json.Marshal emitted as "Language", so the field the prompt
+// named was never actually present.
+func briefSystemFor(fence promptfence.Fence, lang string) string {
+	return briefSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("meeting summary")
 }
 
 // maxRecommendations bounds the advice. Three moves are a plan a rep can hold
@@ -87,12 +90,12 @@ const natureFact = string(crmcontracts.Fact)
 // Write produces the brief's sections. lane may be nil, which is not an error:
 // it is the deployment saying this role runs no model, and the deterministic
 // floor is the answer.
-func Write(ctx context.Context, lane Completer, in Input) ([]Section, crmcontracts.WrittenBy) {
+func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Section, crmcontracts.WrittenBy) {
 	floor := Deterministic(in)
 	if lane == nil {
 		return floor, crmcontracts.Deterministic
 	}
-	written, err := writeWithModel(ctx, lane, in)
+	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
 		// The declared degrade posture, not a swallowed error. A model that is
 		// unavailable, over budget or answering unparseable JSON must not take
@@ -146,8 +149,8 @@ func floorSection(floor []Section, kind crmcontracts.MeetingBriefSectionKind) (S
 	return Section{}, false
 }
 
-func writeWithModel(ctx context.Context, lane Completer, in Input) ([]Section, error) {
-	resp, err := lane.Complete(ctx, BriefRequest(in))
+func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
+	resp, err := lane.Complete(ctx, BriefRequest(in, lang))
 	if err != nil {
 		return nil, err
 	}
@@ -170,10 +173,10 @@ func writeWithModel(ctx context.Context, lane Completer, in Input) ([]Section, e
 // text written by people outside this workspace. It is fenced with a nonce the
 // writer has never seen, so no subject line can close the span and be read as
 // instruction.
-func BriefRequest(in Input) model.Request {
+func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:         briefSystemFor(fence),
+		System:         briefSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),

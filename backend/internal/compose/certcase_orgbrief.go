@@ -33,6 +33,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -95,7 +96,13 @@ func (orgBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepare
 		return nil, fmt.Errorf("summarize/org_brief: %w", err)
 	}
 	return &orgBriefCase{
-		site: "summarize/org_brief", request: orgbrief.BriefRequest,
+		site: "summarize/org_brief",
+		// English, pinned, rather than the installation's base language: a
+		// certification record grades a fixed corpus, and a score that moved
+		// with a settings row would not be comparable between installations.
+		request: func(in orgbrief.Input) model.Request {
+			return orgbrief.BriefRequest(in, string(textlang.English))
+		},
 		in: in, orgID: ids.NewV7().String(), label: label, expected: want,
 	}, nil
 }

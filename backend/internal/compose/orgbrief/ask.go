@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -77,8 +78,11 @@ Write one claim per sentence, and cite the ONE record that sentence is about. Th
 If the summary does not answer the question, return an empty sentences array rather than a sentence that talks around it.
 If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
-func askSystemFor(question crmcontracts.OrganizationQuestion, fence promptfence.Fence) string {
-	return askSystem + "\n" + askInstruction[question] + "\n" + fence.Rule("account summary")
+// The answer is filed against the account and read by whoever asks the same
+// question next, so it takes the installation's language like the brief above.
+func askSystemFor(question crmcontracts.OrganizationQuestion, fence promptfence.Fence, lang string) string {
+	return askSystem + "\n" + askInstruction[question] + "\n" +
+		promptlang.Rule(lang) + "\n" + fence.Rule("account summary")
 }
 
 // AskRequest builds the one request a prepared question sends. Exported for
@@ -90,17 +94,17 @@ func askSystemFor(question crmcontracts.OrganizationQuestion, fence promptfence.
 // prepared questions asks about them. A model that had read them could
 // paraphrase one into an answer about something else entirely, cited to the
 // organization and so accepted by the grounding check.
-func AskRequest(question crmcontracts.OrganizationQuestion, in Input) model.Request {
-	return groundedRequest(func(fence promptfence.Fence) string {
-		return askSystemFor(question, fence)
-	}, in.withoutProfile())
+func AskRequest(question crmcontracts.OrganizationQuestion, in Input, lang string) model.Request {
+	return groundedRequest(func(fence promptfence.Fence, forLang string) string {
+		return askSystemFor(question, fence, forLang)
+	}, in.withoutProfile(), lang)
 }
 
 // Answer writes the answer to one prepared question. lane may be nil, which
 // is not an error state: it is the deployment saying this role runs no model,
 // and the deterministic floor is the answer.
 func Answer(
-	ctx context.Context, lane Completer, raw crmcontracts.OrganizationQuestion, orgID string, in Input,
+	ctx context.Context, lane Completer, raw crmcontracts.OrganizationQuestion, orgID string, in Input, lang string,
 ) ([]Sentence, crmcontracts.WrittenBy, error) {
 	// Validated HERE, not only in the service: this is exported, so a second
 	// caller must not be able to reach the writers with a question the package
@@ -114,7 +118,7 @@ func Answer(
 	if lane == nil {
 		return deterministic, crmcontracts.Deterministic, nil
 	}
-	written, modelErr := answerWithModel(ctx, lane, question, orgID, in)
+	written, modelErr := answerWithModel(ctx, lane, question, orgID, in, lang)
 	if modelErr != nil {
 		// The declared degrade posture, not a swallowed error: a model that is
 		// unavailable, over budget, or answering unparseable JSON must not take
@@ -127,9 +131,9 @@ func Answer(
 }
 
 func answerWithModel(
-	ctx context.Context, lane Completer, question crmcontracts.OrganizationQuestion, orgID string, in Input,
+	ctx context.Context, lane Completer, question crmcontracts.OrganizationQuestion, orgID string, in Input, lang string,
 ) ([]Sentence, error) {
-	resp, err := lane.Complete(ctx, AskRequest(question, in))
+	resp, err := lane.Complete(ctx, AskRequest(question, in, lang))
 	if err != nil {
 		return nil, err
 	}

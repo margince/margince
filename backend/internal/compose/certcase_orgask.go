@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -73,7 +74,10 @@ func (orgAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedC
 	return &orgBriefCase{
 		site: "summarize/org_ask",
 		request: func(in orgbrief.Input) model.Request {
-			return orgbrief.AskRequest(question, in)
+			// English, pinned, rather than the installation's base language: a
+			// certification record grades a fixed corpus, and a score that moved
+			// with a settings row would not be comparable between installations.
+			return orgbrief.AskRequest(question, in, string(textlang.English))
 		},
 		in: in, orgID: ids.NewV7().String(), label: label, expected: want,
 	}, nil
