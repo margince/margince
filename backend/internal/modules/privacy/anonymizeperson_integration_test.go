@@ -71,7 +71,7 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 	ws, user := ids.NewV7(), ids.NewV7()
 	person := ids.New[ids.PersonKind]()
 	const subjectEmail = "hedda@anon.test"
-	mustExec(ctx, t, tx, `INSERT INTO workspace (id, slug) VALUES ($1, $2)`, ws, "anon-"+ws.String())
+	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
 	mustExec(ctx, t, tx,
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 		user, "admin-"+user.String()+"@anon.test")
