@@ -1719,7 +1719,6 @@ export const de = {
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
-  "deal.stakeholders": "Beteiligte",
   "deal.edit": "Deal bearbeiten",
   "deal.ownerKeep": "Aktuellen Inhaber behalten",
   "deal.ownerMe": "Mir zuweisen",

@@ -1707,7 +1707,6 @@ export const vi = {
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
-  "deal.stakeholders": "Bên liên quan",
   "deal.edit": "Sửa deal",
   "deal.ownerKeep": "Giữ người phụ trách hiện tại",
   "deal.ownerMe": "Giao cho tôi",

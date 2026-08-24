@@ -1744,7 +1744,6 @@ export const en = {
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
-  "deal.stakeholders": "Stakeholders",
   "deal.edit": "Edit deal",
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
