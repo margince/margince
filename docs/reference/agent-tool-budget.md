@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2190 | 9% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 17063 | 71% | — | — | — |
+| _whole served catalog, for scale_ | 56 | 17106 | 71% | — | — | — |
 
 ### `morning_brief`
 
@@ -118,7 +118,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 281 tokens, mean 304, across 56 served tools.
+Median 281 tokens, mean 305, across 56 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -138,10 +138,10 @@ a term in an addition.
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 431 | — |
 | `query_workspace` | 402 | 3 scenarios |
+| `preview_import` | 396 | — |
 | `search_records` | 392 | 6 scenarios |
 | `create_record` | 391 | 1 scenario |
 | `enrich` | 386 | — |
-| `preview_import` | 353 | — |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |

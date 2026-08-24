@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 8,
-    "tool_catalog_bytes": 155916,
+    "tool_catalog_bytes": 156087,
     "resource_catalog_bytes": 3108,
-    "approx_wire_tokens_total": 39756,
+    "approx_wire_tokens_total": 39798,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 35655,
-      "input_schema_bytes": 34470,
+      "description_bytes": 35742,
+      "input_schema_bytes": 34554,
       "output_schema_bytes": 73753,
-      "description_plus_input_schema_bytes": 70125
+      "description_plus_input_schema_bytes": 70296
     }
   },
   "tools": {
@@ -5108,7 +5108,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. To CORRECT companies rather than add them, map a column to `id` and give each row the id of the company it is — read them out first. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. People arrive as leads, so `object` is lead or organization. A row naming a company already here is counted in `duplicates`, and created unless on_duplicate is skip. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5125,7 +5125,7 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company each row IS — that row updates it instead of creating one.",
+              "description": "Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add.",
               "type": "object"
             },
             "object": {
