@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -105,19 +106,25 @@ Write one claim per sentence, plainly, in the reader's second person where natur
 If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func briefSystemFor(fence promptfence.Fence) string {
-	return briefSystem + "\n" + fence.Rule("account summary")
+//
+// The brief takes the installation's language, like every other AI surface.
+// It is cached per reader, but that split is about PERMISSIONS — the brief is
+// assembled from records that reader may see, and two people with different
+// access get different facts — not about preference. Language is not a
+// permission, so it does not follow the reader.
+func briefSystemFor(fence promptfence.Fence, lang string) string {
+	return briefSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("account summary")
 }
 
 // Write produces the brief. lane may be nil, which is not an error state:
 // it is the deployment saying this role runs no model, and the
 // deterministic floor is the answer.
-func Write(ctx context.Context, lane Completer, orgID string, in Input) ([]Section, crmcontracts.WrittenBy, error) {
+func Write(ctx context.Context, lane Completer, orgID string, in Input, lang string) ([]Section, crmcontracts.WrittenBy, error) {
 	deterministic := DeterministicSections(orgID, in)
 	if lane == nil {
 		return deterministic, crmcontracts.Deterministic, nil
 	}
-	written, err := writeWithModel(ctx, lane, orgID, in)
+	written, err := writeWithModel(ctx, lane, orgID, in, lang)
 	if err != nil {
 		// The declared degrade posture, not a swallowed error. A model that
 		// is unavailable, over budget, or answering unparseable JSON must
@@ -151,8 +158,8 @@ func accountEvidence(orgID string) []Evidence {
 // organization and so accepted by the grounding check. Withholding them is
 // what makes "the model never rewrites the company description" true of the
 // request rather than of the concatenation.
-func BriefRequest(in Input) model.Request {
-	return groundedRequest(briefSystemFor, in)
+func BriefRequest(in Input, lang string) model.Request {
+	return groundedRequest(briefSystemFor, in, lang)
 }
 
 // groundedRequest is the one request shape both of this package's sites send:
@@ -160,12 +167,10 @@ func BriefRequest(in Input) model.Request {
 // prompt that names that same nonce as the data boundary. systemFor receives
 // the fence so the two can never disagree — a request whose prompt named a
 // different boundary than the one wrapping the data would fence nothing.
-//
-//promptlang:exempt DEFERRED, and the question is WHICH language rather than whether. A brief is cached per reader and written for that one reader, so it takes the reader's language and not the installation's — the rule the dossier beside it follows in the other direction, because a dossier is filed on the company and read by everyone. Where a reader's language comes from is unsettled: compose/meetingbrief reads Accept-Language, app_user.locale now holds a stored choice, and the two disagree for the same person on a borrowed laptop. Picking one here would put a third answer in the tree.
-func groundedRequest(systemFor func(promptfence.Fence) string, in Input) model.Request {
+func groundedRequest(systemFor func(promptfence.Fence, string) string, in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:         systemFor(fence),
+		System:         systemFor(fence, lang),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
@@ -203,8 +208,8 @@ func ParseBrief(text, orgID string, in Input) ([]Sentence, error) {
 	return keepGroundedSentences(reply.Sentences, orgID, in), nil
 }
 
-func writeWithModel(ctx context.Context, lane Completer, orgID string, in Input) ([]Section, error) {
-	req := BriefRequest(in)
+func writeWithModel(ctx context.Context, lane Completer, orgID string, in Input, lang string) ([]Section, error) {
+	req := BriefRequest(in, lang)
 	resp, err := lane.Complete(ctx, req)
 	if err != nil {
 		return nil, err

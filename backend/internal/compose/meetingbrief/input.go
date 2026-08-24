@@ -28,14 +28,6 @@ type Input struct {
 	// several places that could straddle a midnight.
 	Now time.Time
 
-	// Language is the BCP-47 tag the reader reads in, carried so the model lane
-	// answers in it. A brief about a German conversation, read by a German rep,
-	// answering in English is a translation task handed back to the person who
-	// asked for a summary. The deterministic floor ignores it: its sentences
-	// are English templates, and pretending otherwise would ship half a
-	// translation.
-	Language string
-
 	Company string
 	Deal    *DealIn
 	// Project is the body of work the meeting belongs to, when it is filed

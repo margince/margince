@@ -20,6 +20,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -145,7 +146,11 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	}
 	// The lane rewrites the same facts in Margince's voice, or answers the
 	// floor: Write decides, and writtenBy tells the reader which they got.
-	sections, writtenBy := Write(ctx, s.lane, in)
+	// The installation's language, not the reader's. This product has ONE answer
+	// to "what language is AI writing in" — the admin's setting — and a brief
+	// that asked the browser instead would be the single surface disagreeing
+	// with every other one.
+	sections, writtenBy := Write(ctx, s.lane, in, identity.BaseLanguageForPrompt(ctx, s.pool))
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
@@ -252,7 +257,6 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	}
 
 	in := FromMeeting(room, perAttendee, s.now().UTC())
-	in.Language = ReaderLanguage(ctx)
 	in.PriorMeetings = foldPriorMeetings(earlier)
 	in.LastSpokeAt = lastSpoke
 	in.DealMoves = moves

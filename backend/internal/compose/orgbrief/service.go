@@ -28,6 +28,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -141,7 +142,8 @@ func (s *Service) GetScoped(
 	if err != nil {
 		return crmcontracts.OrganizationBrief{}, err
 	}
-	fingerprint, err := Fingerprint(in, s.routingVersion)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
 	if err != nil {
 		return crmcontracts.OrganizationBrief{}, err
 	}
@@ -157,7 +159,7 @@ func (s *Service) GetScoped(
 		return cached.wire(orgID, scope), nil
 	}
 
-	sections, by, err := Write(ctx, s.lane, orgID.String(), in)
+	sections, by, err := Write(ctx, s.lane, orgID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.OrganizationBrief{}, err
 	}
@@ -209,7 +211,7 @@ func (s *Service) AskScoped(
 	if err != nil {
 		return crmcontracts.OrganizationAnswer{}, err
 	}
-	sentences, by, err := Answer(ctx, s.lane, question, orgID.String(), in)
+	sentences, by, err := Answer(ctx, s.lane, question, orgID.String(), in, identity.BaseLanguageForPrompt(ctx, s.pool))
 	if err != nil {
 		return crmcontracts.OrganizationAnswer{}, err
 	}

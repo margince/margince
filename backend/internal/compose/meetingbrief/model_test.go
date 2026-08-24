@@ -12,11 +12,11 @@ package meetingbrief
 import (
 	"context"
 	"errors"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -36,7 +36,7 @@ func (l *laneReturning) Complete(_ context.Context, req model.Request) (model.Re
 }
 
 func TestNoLaneIsTheDeterministicFloorRatherThanAnError(t *testing.T) {
-	sections, by := Write(context.Background(), nil, fullInput())
+	sections, by := Write(context.Background(), nil, fullInput(), string(textlang.English))
 	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %v, want deterministic for a deployment with no model", by)
 	}
@@ -47,7 +47,7 @@ func TestNoLaneIsTheDeterministicFloorRatherThanAnError(t *testing.T) {
 
 func TestALaneThatFailsFallsBackAndSaysSo(t *testing.T) {
 	lane := &laneReturning{err: errors.New("over budget")}
-	sections, by := Write(context.Background(), lane, fullInput())
+	sections, by := Write(context.Background(), lane, fullInput(), string(textlang.English))
 	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %v, want deterministic when the lane failed", by)
 	}
@@ -61,7 +61,7 @@ func TestARepliedBriefIsAttributedToTheModel(t *testing.T) {
 	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
 		{"text":"Get them to name a date.","nature":"recommendation",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
-	sections, by := Write(context.Background(), lane, in)
+	sections, by := Write(context.Background(), lane, in, string(textlang.English))
 	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model for a reply that survived the filter", by)
 	}
@@ -80,7 +80,7 @@ func TestASentenceCitingARecordTheBriefNeverSawIsDropped(t *testing.T) {
 		 "evidence":[{"entity_type":"deal","entity_id":"0198f000-0000-7000-8000-0000000000ff"}]},
 		{"text":"Real.","nature":"fact",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
-	sections, by := Write(context.Background(), lane, in)
+	sections, by := Write(context.Background(), lane, in, string(textlang.English))
 	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model", by)
 	}
@@ -95,7 +95,7 @@ func TestAReplyThatCitesNothingRealFallsBackToTheFloor(t *testing.T) {
 	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
 		{"text":"All invented.","nature":"fact",
 		 "evidence":[{"entity_type":"deal","entity_id":"0198f000-0000-7000-8000-0000000000ff"}]}]}]}`}
-	sections, by := Write(context.Background(), lane, fullInput())
+	sections, by := Write(context.Background(), lane, fullInput(), string(textlang.English))
 	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %v, want the floor when nothing survived grounding", by)
 	}
@@ -111,7 +111,7 @@ func TestAJudgementIsRefusedInASectionThatMayOnlyStateFacts(t *testing.T) {
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]},
 		{"kind":"risks","sentences":[{"text":"They are stalling.","nature":"assessment",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
-	sections, _ := Write(context.Background(), lane, in)
+	sections, _ := Write(context.Background(), lane, in, string(textlang.English))
 	// The section itself survives — the floor's own attendee lines are
 	// restored when the model's are refused. What must not survive is the
 	// model's judgement inside it.
@@ -133,7 +133,7 @@ func TestTheAdviceIsCappedAcrossTheWholeBriefNotPerSection(t *testing.T) {
 	lane := &laneReturning{reply: `{"sections":[
 		{"kind":"goal","sentences":[` + one + `,` + one + `]},
 		{"kind":"talking_points","sentences":[` + one + `,` + one + `,` + one + `]}]}`}
-	sections, _ := Write(context.Background(), lane, in)
+	sections, _ := Write(context.Background(), lane, in, string(textlang.English))
 	advice := 0
 	for _, section := range sections {
 		for _, line := range section.Sentences {
@@ -147,41 +147,25 @@ func TestTheAdviceIsCappedAcrossTheWholeBriefNotPerSection(t *testing.T) {
 	}
 }
 
-func TestTheRequestFencesTheMeetingAndNamesTheReadersLanguage(t *testing.T) {
+func TestTheRequestFencesTheMeetingAndNamesTheLanguageItWasGiven(t *testing.T) {
 	in := fullInput()
-	in.Language = "de"
-	req := BriefRequest(in)
+	req := BriefRequest(in, string(textlang.German))
 	if !strings.Contains(req.Messages[0].Content, in.Subject) {
 		t.Error("the request does not carry the meeting it is about")
 	}
 	if strings.Contains(req.System, in.Subject) {
 		t.Error("the meeting's own text reached the SYSTEM prompt, outside the fence")
 	}
-	if !strings.Contains(req.System, "language") {
-		t.Error("the prompt never tells the writer which language to answer in")
-	}
-	if !strings.Contains(req.Messages[0].Content, `"Language":"de"`) &&
-		!strings.Contains(req.Messages[0].Content, `"language":"de"`) {
-		t.Errorf("the summary does not name the reader's language: %s", req.Messages[0].Content)
-	}
-}
-
-func TestTheReadersLanguageComesFromTheRequestAndFallsBackToEnglish(t *testing.T) {
-	for header, want := range map[string]string{
-		"de":             "de",
-		"de-AT":          "de",
-		"vi,en;q=0.9":    "vi",
-		"fr":             "en",
-		"":               "en",
-		"  DE-CH , en  ": "de",
-	} {
-		r := httptest.NewRequest("GET", "/v1/meetings/x/brief", nil)
-		if header != "" {
-			r.Header.Set("Accept-Language", header)
-		}
-		if got := languageOf(r); got != want {
-			t.Errorf("Accept-Language %q read as %q, want %q", header, got, want)
-		}
+	// The language this call was GIVEN, not merely the word "language". The
+	// previous spelling looked for that word in the system prompt, which the
+	// surrounding prose contains whatever language is passed — it passed for
+	// years over a prompt that pointed the model at a summary field that was
+	// never present, because json.Marshal emitted it as "Language".
+	//
+	// German rather than English, so a builder that ignored its argument and
+	// hard-coded the default would fail here rather than pass.
+	if !strings.Contains(req.System, "German") {
+		t.Errorf("the prompt was built for German and does not ask for it:\n%s", req.System)
 	}
 }
 
@@ -193,7 +177,7 @@ func TestASparseReplyKeepsTheFloorsCoverage(t *testing.T) {
 	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
 		{"text":"Get them to name a date.","nature":"recommendation",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
-	sections, by := Write(context.Background(), lane, in)
+	sections, by := Write(context.Background(), lane, in, string(textlang.English))
 	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model", by)
 	}
