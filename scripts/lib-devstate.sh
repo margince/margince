@@ -72,35 +72,32 @@ dev_bucket_for_slug() { # slug → an S3-legal bucket name
 # --git-common-dir. The latter can print a relative path, so it is resolved
 # before the comparison.
 dev_derive_slug() { # → "" in the primary worktree, this worktree's name in a linked one
-  local gitdir commondir top name digest
+  local gitdir commondir name digest
   gitdir=$(git rev-parse --absolute-git-dir) || return 1
   commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || return 1
   [[ "$gitdir" == "$commondir" ]] && return 0
 
-  top="$(git rev-parse --show-toplevel)"
-  name="$(dev_sanitize_slug "$(basename "$top")")"
-
-  # The digest is of the FULL PATH and is ALWAYS appended. Two things force that,
-  # and the second is the one that matters:
+  # The worktree's ADMIN name — the directory git keeps for it under
+  # <common>/worktrees/ — not its checkout path.
   #
-  #   - a basename does not identify a worktree. Two can both be called `feature`,
-  #     and one slug between them is one database, one Redis logical database and
-  #     one bucket shared by two stacks.
-  #   - a slug must be STABLE for as long as a stack runs. An earlier version
-  #     appended the digest only when a twin existed, so creating a second
-  #     `feature` worktree renamed a RUNNING stack from `feature` to
-  #     `feature-<digest>` — after which dev-stop resolved a slug with no record
-  #     and could not stop it.
-  #
-  # So the name is noisier than it could be, and reliably its own.
-  digest="$(printf '%s' "$top" | shasum -a 256 | cut -c1-8)"
+  # Two properties the path does not have. It is assigned at creation and git
+  # keeps it across `git worktree move`, so moving a checkout does not rename a
+  # RUNNING stack out from under dev-stop. And git guarantees it is unique among
+  # this repository's worktrees, so two checkouts cannot derive one slug however
+  # they are named on disk.
+  name="$(dev_sanitize_slug "$(basename "$gitdir")")"
 
-  # Bounded so the names built from it fit their own limits: this slug becomes
-  # `margince_dev_<slug>` (Postgres caps an identifier at 63 bytes) and
-  # `margince-dev-<slug>` (S3 caps a bucket name at 63). 24 + 1 + 8 = 33 leaves
-  # both prefixes room. A name that sanitises away to nothing — a directory of
-  # pure punctuation — must not yield the empty answer that means PRIMARY, so it
-  # gets the digest alone.
+  # The digest identifies the REPOSITORY, so two clones on one machine — the
+  # registry is machine-global — cannot collide on a shared admin name like
+  # `feature`. It is of the common dir, which is stable for as long as the clone
+  # stays put.
+  digest="$(printf '%s' "$commondir" | shasum -a 256 | cut -c1-8)"
+
+  # Bounded so the names built from it fit their own limits: `margince_dev_<slug>`
+  # (Postgres caps an identifier at 63 bytes) and `margince-dev-<slug>` (S3 caps a
+  # bucket name at 63). 24 + 1 + 8 = 33 leaves both prefixes room. A name that
+  # sanitises away to nothing must not yield the empty answer that means PRIMARY,
+  # so it gets the digest alone.
   if [[ -z "$name" ]]; then
     printf 'wt-%s' "$digest"
     return 0

@@ -313,9 +313,9 @@ git init -q "$probe/primary"
     git worktree add -q "$probe/$(printf 'w%.0s' $(seq 1 60))-two" --detach
 )
 
-check "" "$(cd "$probe/primary" && _testdb_worktree_slug)" \
+check "" "$(cd "$probe/primary" || exit 1; _testdb_worktree_slug)" \
       "a primary worktree yields no slug, so CI and the main checkout keep margince_test"
-check "linked" "$(cd "$probe/linked" && _testdb_worktree_slug)" \
+check "linked" "$(cd "$probe/linked" || exit 1; _testdb_worktree_slug)" \
       "a linked worktree yields its own name, so a parallel branch cannot rebuild your template"
 
 # dev_derive_slug, in the same throwaway repositories. An empty answer means THE
@@ -326,7 +326,7 @@ check "linked" "$(cd "$probe/linked" && _testdb_worktree_slug)" \
 git -C "$probe/primary" worktree add -q "$probe/_" --detach
 check "" "$(dev_sanitize_slug "_")" \
       "the sanitiser really does reduce this name to nothing, which is what makes the next check the real case"
-check "1" "$([ -n "$(cd "$probe/_" && dev_derive_slug)" ] && echo 1 || echo 0)" \
+check "1" "$([ -n "$(cd "$probe/_" || exit 1; dev_derive_slug)" ] && echo 1 || echo 0)" \
       "a name that sanitises to nothing still yields a slug, never the empty answer that means primary"
 
 # Two worktrees whose basenames are identical must not share one slug: that would
@@ -334,26 +334,38 @@ check "1" "$([ -n "$(cd "$probe/_" && dev_derive_slug)" ] && echo 1 || echo 0)" 
 mkdir -p "$probe/a" "$probe/b"
 git -C "$probe/primary" worktree add -q "$probe/a/dup" --detach
 git -C "$probe/primary" worktree add -q "$probe/b/dup" --detach
-check "1" "$([ "$(cd "$probe/a/dup" && dev_derive_slug)" != "$(cd "$probe/b/dup" && dev_derive_slug)" ] && echo 1 || echo 0)" \
+check "1" "$([ "$(cd "$probe/a/dup" || exit 1; dev_derive_slug)" != "$(cd "$probe/b/dup" || exit 1; dev_derive_slug)" ] && echo 1 || echo 0)" \
       "two worktrees with the SAME basename get different slugs, so they cannot share a database"
 
 # A slug must be STABLE for as long as a stack runs. An earlier version appended
 # the digest only when a twin existed, so creating a second worktree of the same
 # name RENAMED a running stack — and dev-stop then resolved a slug with no record
 # and could not stop it. The slug must not depend on what else exists.
-slug_before="$(cd "$probe/linked" && dev_derive_slug)"
+slug_before="$(cd "$probe/linked" || exit 1; dev_derive_slug)"
 git -C "$probe/primary" worktree add -q "$probe/c/linked" --detach
-check "$slug_before" "$(cd "$probe/linked" && dev_derive_slug)" \
+check "$slug_before" "$(cd "$probe/linked" || exit 1; dev_derive_slug)" \
       "adding a same-named worktree does NOT rename an existing one — a running stack stays stoppable"
+
+# And moving the checkout does not rename it either. The slug comes from the
+# worktree's ADMIN name under <common>/worktrees/, which git keeps across
+# `git worktree move` — a path-derived slug changed here, so relocating a checkout
+# renamed a running stack and dev-stop then missed its claim.
+git -C "$probe/primary" worktree move "$probe/linked" "$probe/linked-moved"
+check "$slug_before" "$(cd "$probe/linked-moved" || exit 1; dev_derive_slug)" \
+      "moving a worktree does NOT rename it, so a running stack survives the move"
 
 # The slug becomes margince_dev_<slug> (Postgres caps an identifier at 63 bytes)
 # and margince-dev-<slug> (S3 caps a bucket name at 63), so it has to leave room
 # for both prefixes however long the directory name is.
-long_slug="$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && dev_derive_slug)"
+long_slug="$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" || exit 1; dev_derive_slug)"
 check "1" "$([ "${#long_slug}" -le 40 ] && echo 1 || echo 0)" \
       "a long directory name still yields a slug short enough for the database and bucket names built from it"
-check "1" "$([ "${#long_slug}" -gt 8 ] && echo 1 || echo 0)" \
-      "and it keeps enough of the name to be recognisable, not just the digest"
+case "$long_slug" in
+    www*) recognisable=1 ;;
+    *)    recognisable="digest only ($long_slug)" ;;
+esac
+check "1" "$recognisable" \
+      "and it still opens with the worktree's own name — a digest-only slug would pass a length check and tell a reader nothing"
 
 long_one="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && _testdb_worktree_slug)"
 long_two="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-two" && _testdb_worktree_slug)"

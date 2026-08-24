@@ -12,12 +12,14 @@ DB_NAME   ?= margince
 # made `make dev` fail at db-init with "database does not exist".
 #
 # Lazy (`?=` makes a recursively expanded variable), so the git calls only happen
-# for a target that reads it. NO fallback to margince on failure: a failed
+# for a target that reads it. Through a script reached by a RELATIVE path, because
+# make hands a `$(shell …)` string to /bin/sh and an absolute checkout path
+# containing an apostrophe breaks that quoting before the shell reaches anything. NO fallback to margince on failure: a failed
 # resolution means an invalid DEV_SLUG or a worktree identity git could not answer
 # for, and defaulting to the shared database there would point a linked worktree's
 # psql at the primary's data — silently, which is the failure this exists to
 # prevent. An empty name makes psql fail loudly instead.
-DEV_DB_NAME ?= $(shell bash -c '. "$$1" && dev_database_name' -- '$(CURDIR)/../scripts/lib-devstate.sh')
+DEV_DB_NAME ?= $(shell bash ../scripts/dev-database-name.sh)
 # An ambient MARGINCE_OWNER_DSN redirects every migrate target here, because it is
 # the same variable cmd/migrate reads when no --dsn is given — the two can never
 # name different databases. That also means a staging or production owner DSN

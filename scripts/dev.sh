@@ -292,6 +292,23 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
     printf '%s %s' "$db" "$port"
     return 0
   fi
+  # Nor one another `make dev` is still starting. Two runs that overlap before
+  # either writes its pids would otherwise both rewrite this file, and whichever
+  # wrote last would own it — so the one that then failed its port check released
+  # the claim the other was booting against.
+  local holder=''
+  if [[ -f "${root}/${want}/env" ]]; then
+    holder=$(
+      STARTER_PID=''
+      # shellcheck disable=SC1090
+      . "${root}/${want}/env"
+      printf '%s' "${STARTER_PID:-}"
+    )
+  fi
+  if [[ -n "$holder" && "$holder" != "$STACK_STARTER_PID" ]] && kill -0 "$holder" 2>/dev/null; then
+    echo "FAIL: another 'make dev' (pid ${holder}) is already starting the '${want}' stack. Wait for it, or stop it with 'make dev-stop'." >&2
+    return 1
+  fi
 
   mkdir -p "${root}/${want}"
   # STARTER_PID is who is booting this stack. release_unconfirmed_stack reads it
