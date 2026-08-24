@@ -1,5 +1,11 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -171,12 +177,25 @@ describe("editing a value where it is read", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("does not pull focus back to the trigger when Tab moves it forward", async () => {
+  it("does not reach for the trigger when Tab leaves the open list", async () => {
     const { onSave } = renderChoice();
     await userEvent.click(
       screen.getByRole("button", { name: "Change Account lifecycle" }),
     );
-    await userEvent.tab();
+    // The keydown alone, deliberately, rather than `userEvent.tab()`: moving
+    // focus is the BROWSER's half of a Tab press, and it is the half no DOM
+    // emulation models. A browser remembers the place a removed focused
+    // element held — the sequential focus navigation starting point — and
+    // carries the reader on from there. jsdom keeps no such place, so once
+    // this picker unmounts the emulation restarts from the top of the
+    // document and lands on the resting trigger of its own accord, which
+    // would read here as the control having reached for focus. Dispatching
+    // the press by itself leaves exactly the half this control owns, which is
+    // the half the name of this test claims and no more. The browser's half —
+    // a Tab press carrying the reader to the next field — is checked in
+    // select.test.tsx, where the trigger survives the press and so jsdom can
+    // still model where focus goes.
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
     // Tab already moved the reader on — reclaiming focus here would fight
     // the very key that just moved it, the opposite of what Escape does.
     const trigger = screen.getByRole("button", {
