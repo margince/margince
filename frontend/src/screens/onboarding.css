@@ -210,13 +210,6 @@
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
-.rcard {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-}
 .rcard .rh {
   display: flex;
   align-items: center;
@@ -644,14 +637,6 @@
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
-.legal-preview-card {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-}
 .legal-preview-card strong,
 .legal-preview-card span,
 .legal-preview-card small {
@@ -717,13 +702,6 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
   padding: var(--space-5);
-}
-.finding-card {
-  min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgPage);
 }
 .finding-label {
   display: flex;
@@ -1232,7 +1210,19 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
-.legal-card {
+/* The one card a reader PICKS: a fact to keep, a legal entity to adopt. It is
+   a button, not a surface, which is why it is not `Card` — `Card` is a section
+   of a page and this is a press target with a pressed state.
+
+   It replaces two classes whose base rules were byte-identical and whose text
+   rules were not: one gave the value line a secondary colour and a readable
+   line-height and the other did not, and the evidence line's air was 4px on one
+   and 8px on the other. Nobody chose either difference — the second card was
+   copied from the first and drifted — and the tell was that the legal card
+   already borrowed `.choice-check` from the fact card's block, so the two were
+   never really separate. Where they disagreed this keeps the considered value:
+   the coloured, leaded value line, and the wider gap before the quote. */
+.choice-card {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
@@ -1244,28 +1234,33 @@
   background: var(--bgElevated);
   cursor: pointer;
 }
-.legal-card.selected {
+.choice-card.selected {
   border-color: var(--accent);
   background: var(--accentLight);
 }
-.legal-card b,
-.legal-card span span,
-.legal-card small {
+.choice-check svg {
+  width: 14px;
+  color: var(--accent);
+}
+.choice-card b,
+.choice-card span span,
+.choice-card small {
   display: block;
 }
-.legal-card b {
+.choice-card b {
   font-size: var(--fs-meta);
 }
-.legal-card span span {
+.choice-card span span {
   margin-top: var(--space-1);
   color: var(--textSecondary);
   font-size: var(--fs-meta);
   line-height: var(--lh-normal);
 }
-.legal-card small {
-  margin-top: var(--space-1);
+.choice-card small {
+  margin-top: var(--space-2);
   color: var(--textTertiary);
   font-size: var(--fs-meta);
+  line-height: var(--lh-normal);
 }
 @media (max-width: 720px) {
   .legal-grid {
@@ -1296,44 +1291,6 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
   margin-top: var(--space-3);
-}
-.fact-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  color: var(--textPrimary);
-  text-align: left;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-  cursor: pointer;
-}
-.fact-card.selected {
-  border-color: var(--accent);
-  background: var(--accentLight);
-}
-.fact-check svg {
-  width: 14px;
-  color: var(--accent);
-}
-.fact-card b,
-.fact-card span span,
-.fact-card small {
-  display: block;
-}
-.fact-card b {
-  font-size: var(--fs-meta);
-}
-.fact-card span span {
-  margin-top: var(--space-1);
-  font-size: var(--fs-meta);
-}
-.fact-card small {
-  margin-top: var(--space-2);
-  color: var(--textTertiary);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
 }
 .understanding-reveal {
   margin: var(--space-6) 0;

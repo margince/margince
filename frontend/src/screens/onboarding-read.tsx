@@ -15,7 +15,7 @@ import {
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { Button, Card } from "../design-system/atoms";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
 import { formatDateTime } from "../format/format";
@@ -889,7 +889,8 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
           <p>{t("ob.legalFoundBody")}</p>
           <div className="legal-preview-grid">
             {legalEntities.map((entity) => (
-              <article
+              <Card
+                as="article"
                 key={`${entity.name}:${entity.register_number ?? ""}:${entity.source_url}`}
                 className="legal-preview-card"
               >
@@ -903,7 +904,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
                 {entity.register_number && (
                   <small>{entity.register_number}</small>
                 )}
-              </article>
+              </Card>
             ))}
           </div>
         </section>
@@ -914,10 +915,11 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
           <p>{t("ob.coreFindingsBody")}</p>
           <div className="finding-grid">
             {read.profile_fields.map((field) => (
-              <article
+              <Card
+                as="article"
                 key={field.field}
                 className="finding-card"
-                data-finding-id={field.field}
+                testId={`finding-${field.field}`}
               >
                 <div className="finding-label">
                   <Check aria-hidden /> {coldFieldLabel(field.field, t)}
@@ -925,7 +927,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
                 </div>
                 <strong>{field.value}</strong>
                 <blockquote>“{field.evidence_snippet}”</blockquote>
-              </article>
+              </Card>
             ))}
           </div>
         </>
@@ -935,7 +937,8 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
           <h2>{t("ob.factsTitle")}</h2>
           <div className="finding-grid">
             {read.facts.slice(0, 12).map((fact) => (
-              <article
+              <Card
+                as="article"
                 key={`${fact.category}:${fact.field}:${fact.value_key}`}
                 className="finding-card"
               >
@@ -945,7 +948,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
                 </div>
                 <strong>{fact.value}</strong>
                 <blockquote>“{fact.evidence_snippet}”</blockquote>
-              </article>
+              </Card>
             ))}
           </div>
         </section>
