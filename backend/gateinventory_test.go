@@ -374,12 +374,18 @@ const gateCitationFloor = 20
 
 func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
 	for _, tc := range []struct{ name, prose, want string }{
-		{"legal citation", "The Art. 7(1) invariant holds. The rest does not.",
-			"The Art. 7(1) invariant holds."},
-		{"abbreviation before a capital", "Every Art. Fifteen request. And then more.",
-			"Every Art. Fifteen request."},
-		{"file name", "crm.yaml is the contract. The rest follows.",
-			"crm.yaml is the contract."},
+		{
+			"legal citation", "The Art. 7(1) invariant holds. The rest does not.",
+			"The Art. 7(1) invariant holds.",
+		},
+		{
+			"abbreviation before a capital", "Every Art. Fifteen request. And then more.",
+			"Every Art. Fifteen request.",
+		},
+		{
+			"file name", "crm.yaml is the contract. The rest follows.",
+			"crm.yaml is the contract.",
+		},
 		{"no terminator", "One clause with no full stop", "One clause with no full stop"},
 		{"wrapped across lines", "A rule\n  spelled once. Then another.", "A rule spelled once."},
 	} {
