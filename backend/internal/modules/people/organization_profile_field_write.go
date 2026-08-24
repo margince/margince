@@ -181,9 +181,10 @@ func (s *Store) writeProfileField(
 //     provenance and nothing else, so a legal-name correction must not stamp
 //     it: that would claim a human authored a display name nobody touched, and
 //     PromoteOrgNameTx (which promotes only while it still reads 'domain')
-//     would refuse that company its real name forever. 'human' means a
-//     display-name authoring here exactly as it does in UpdateOrganization and
-//     in the cold-start create.
+//     would refuse that company its real name forever. The rule is not local
+//     to this writer: UpdateOrganization stamps 'human' only when display_name
+//     actually moved, and the cold-start create declines the value outright,
+//     reserving it in its own comment for a human's naming.
 //   - THE RENAME RECHECK RUNS. A new name can collide with an existing company,
 //     and the duplicate queue only learns about it if this asks. Either name
 //     can collide, so either name pays for it.
