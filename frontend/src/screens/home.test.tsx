@@ -10,20 +10,42 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { HomeScreen } from "./home";
+import { HomeGlance } from "./home.glance";
+import type { Deal, MorningBrief } from "./home.queries";
 
-// Home / Morning Brief acceptance: the /brief run IS the queue (ranked items
-// with the §10.1 factor decomposition and evidence counts), a 404 renders the
-// honest generate card (never a fake run), an empty run renders honest quiet,
-// and act/dismiss mark the item without removing it from the morning's view.
+// Home — the morning handover, held to the three things its shape claims.
+//
+//   1. The DECK STAGES. A verdict a reader gives here does not leave the
+//      browser: the assertion that proves it is a COUNT OF WRITES, and it is
+//      zero until the explicit commit. Then exactly the staged verdicts go, a
+//      bundle through its own endpoint once rather than per member, and an
+//      `edit` sends nothing at all because the deck cannot edit — it hands the
+//      reader to the Decisions screen instead.
+//   2. The page's ORDER follows the day: decisions lead while any are waiting,
+//      the ranked queue leads once the deck is clear.
+//   3. Every reading is gated on its OWN read, and a reading still in flight is
+//      absent rather than zero. "Nothing is waiting on you" is a claim, and a
+//      page that makes it while the queue is still loading is lying.
+//
+// The clock is never the real one where a test depends on it: the greeting takes
+// `now` as a prop and is driven by a fixed instant, and the one case that asks
+// what "today" means pins the system clock. Every fixed instant is built with
+// the LOCAL Date constructor, so a machine in any zone reads the hour the case
+// is named for.
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   window.location.hash = "";
 });
+
+type Approval = components["schemas"]["Approval"];
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -43,7 +65,90 @@ function render(ui: ReactNode) {
   );
 }
 
-const fleetDeal = {
+const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
+
+/** One request the screen made, as the route it names and what it carried. */
+type Call = { method: string; path: string; body: unknown };
+
+type Routes = Record<string, (body: unknown) => Response | Promise<Response>>;
+
+// Every read Home fans out to, answered honestly by default so each case
+// declares only the route it is about: a session, no nightly digest, no brief
+// run, and a pipeline report with no rows. The report matters — the fallback
+// empty PAGE carries no `rows`, which the pipeline reading would read as a
+// failure and put a refusal in the rail of every case in this file.
+const DEFAULTS: Routes = {
+  "GET /me": () => jsonResponse(meFixture()),
+  "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
+  "GET /digest": () =>
+    jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
+  "POST /reports/deals-by-stage": () =>
+    jsonResponse({ report: "deals-by-stage", plan: {}, columns: [], rows: [] }),
+};
+
+/**
+ * Routes the stubbed fetch by method+path and RECORDS every call, because what
+ * this screen must not do is as load-bearing as what it must: a staged verdict
+ * is only staged if nothing was sent, and no rendering can prove that.
+ */
+function stubApi(routes: Routes): Call[] {
+  const calls: Call[] = [];
+  const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : null;
+    const url = new URL(
+      request ? request.url : String(input),
+      "https://test.local",
+    );
+    const method = request?.method ?? init?.method ?? "GET";
+    const path = url.pathname.replace(/^\/v1/, "");
+    let body: unknown = null;
+    if (method !== "GET") {
+      try {
+        // `clone()`: the client sends a Request and the handler below may read
+        // the same body again.
+        body = request
+          ? await request.clone().json()
+          : JSON.parse(String(init?.body));
+      } catch {
+        // A write with no body at all (POST /brief) is not a malformed one.
+        body = null;
+      }
+    }
+    calls.push({ method, path, body });
+    const handler =
+      routes[`${method} ${path}`] ?? DEFAULTS[`${method} ${path}`];
+    return handler ? handler(body) : jsonResponse(emptyPage);
+  });
+  vi.stubGlobal("fetch", mock);
+  return calls;
+}
+
+/**
+ * Everything that left the browser as a write, in the order it went.
+ *
+ * `/reports/{report}` is excluded because it is a READ spelled as a POST — the
+ * query plan does not fit a URL — and the rail runs one on every mount. Counting
+ * it would make "nothing was sent" untrue of a page that sent nothing.
+ */
+function writes(calls: readonly Call[]): Call[] {
+  return calls.filter(
+    (call) => call.method !== "GET" && !call.path.startsWith("/reports/"),
+  );
+}
+
+/** The routes those writes named, which is what a commit is judged on. */
+function writeRoutes(calls: readonly Call[]): string[] {
+  return writes(calls).map((call) => `${call.method} ${call.path}`);
+}
+
+/** Home's two work sections, in the order the document holds them. */
+function workOrder(): string[] {
+  return [...document.querySelectorAll("#home-decisions, #home-today")].map(
+    (section) => section.id,
+  );
+}
+
+const fleetDeal: Deal = {
   id: "d-1",
   name: "Fleet retrofit",
   amount_minor: 4_800_000,
@@ -59,7 +164,7 @@ const fleetDeal = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-const run = {
+const run: MorningBrief = {
   id: "br-1",
   generated_at: "2026-07-05T05:30:00Z",
   as_of: "2026-07-05T05:00:00Z",
@@ -84,50 +189,448 @@ const run = {
   ],
 };
 
-const emptyPage = { data: [], page: { next_cursor: null } };
-
-// Routes the stubbed fetch by path+method so each test declares only the
-// interesting responses; everything else answers an empty page. /digest
-// defaults to the honest 404 (no nightly run yet) so brief-focused cases
-// exercise Home without a digest card.
-function stubApi(
-  routes: Record<string, (init?: RequestInit) => Response>,
-): ReturnType<typeof vi.fn> {
-  const defaults: Record<string, () => Response> = {
-    "GET /digest": () =>
-      jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
+/** One staged proposal, named by the sentence its card leads with. */
+function proposal(id: string, summary: string, over: Partial<Approval> = {}) {
+  const staged: Approval = {
+    id,
+    kind: "send_email",
+    status: "pending",
+    proposed_by: "agent:runner",
+    summary,
+    proposed_change: { body: "Hi — shall we sync next week?" },
+    created_at: "2026-07-05T05:00:00Z",
+    ...over,
   };
-  const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = new URL(
-      request ? request.url : String(input),
-      "https://test.local",
-    );
-    const method = request?.method ?? init?.method ?? "GET";
-    const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
-    const handler = routes[key] ?? defaults[key];
-    return handler ? handler(init) : jsonResponse(emptyPage);
-  });
-  vi.stubGlobal("fetch", mock);
-  return mock;
+  return staged;
 }
 
-describe("HomeScreen (Morning Brief on the /brief spine)", () => {
-  it("renders the ranked run: deal name, factor decomposition, evidence count, honest-short line", async () => {
+/** The pending queue, minus whatever the case has had decided. */
+function pendingPage(queue: readonly Approval[], decided: ReadonlySet<string>) {
+  return jsonResponse({
+    data: queue.filter((approval) => !decided.has(approval.id)),
+    page: { next_cursor: null, has_more: false },
+  });
+}
+
+// ── The deck: staging is local, the commit is the only thing that sends ──
+
+describe("HomeScreen — the deck stages, and only the commit sends", () => {
+  it("stages three verdicts without a single write, then sends exactly the two that are verdicts", async () => {
+    const queue = [
+      proposal("ap-1", "Send the Weber follow-up"),
+      proposal("ap-2", "Advance the PIM deal"),
+      proposal("ap-3", "Promote Kilian Wenzel"),
+    ];
+    const decided = new Set<string>();
+    const calls = stubApi({
+      "GET /approvals": () => pendingPage(queue, decided),
+      "POST /approvals/ap-1/approve": () => {
+        decided.add("ap-1");
+        return jsonResponse({ ...queue[0], status: "approved" });
+      },
+      "POST /approvals/ap-2/reject": () => {
+        decided.add("ap-2");
+        return jsonResponse({ ...queue[1], status: "rejected" });
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    // One card at a time: staging the live one brings the next forward.
+    await screen.findByText("Send the Weber follow-up");
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    await screen.findByText("Advance the PIM deal");
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await screen.findByText("Promote Kilian Wenzel");
+    await user.click(screen.getByRole("button", { name: "Later" }));
+
+    // The whole point of the tray: three answers given, nothing sent. A
+    // committed decision cannot be undone, so this is where the undo lives.
+    expect(writes(calls)).toEqual([]);
+    expect(screen.getByText("3 decisions staged")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Send staged decisions" }),
+    );
+    await waitFor(() =>
+      expect(writeRoutes(calls)).toEqual([
+        "POST /approvals/ap-1/approve",
+        "POST /approvals/ap-2/reject",
+      ]),
+    );
+    // Later means later: ap-3 was never sent, and the deck says two went.
+    expect(await screen.findByText("2 decisions sent")).toBeTruthy();
+    expect(writes(calls)[1].body).toEqual({ reason: "" });
+  });
+
+  // The API decides a bundle as a unit, so a reader answering it card by card
+  // would be answering a question that no longer exists after the first one.
+  it("commits a bundle through the bundle endpoint once, not once per member", async () => {
+    const bundleId = "bn-1";
+    const queue = [
+      proposal("apb-1", "Publish the acme.example facts", {
+        bundle_id: bundleId,
+      }),
+      proposal("apb-2", "Lead: Anna Weber", { bundle_id: bundleId }),
+      proposal("apb-3", "Lead: Mira Osei", { bundle_id: bundleId }),
+    ];
+    const decided = new Set<string>();
+    const calls = stubApi({
+      "GET /approvals": () => pendingPage(queue, decided),
+      "POST /approval-bundles/bn-1/approve": () => {
+        for (const member of queue) {
+          decided.add(member.id);
+        }
+        return jsonResponse({
+          bundle_id: bundleId,
+          data: queue.map((approval) => ({
+            approval: { ...approval, status: "approved" },
+            outcome: "decided",
+          })),
+        });
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    // Three proposals, ONE card. The card is headlined by the member it
+    // represents, says how much saying yes decides, and keeps the other two
+    // behind an expander rather than drawing three questions.
+    expect(await screen.findByText("One decision · 3 items")).toBeTruthy();
+    expect(document.querySelectorAll(".dcard").length).toBe(1);
+    expect(document.querySelector(".approval-headline")?.textContent).toBe(
+      "Publish the acme.example facts",
+    );
+    expect(screen.getByText("Show the 3 items")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    expect(writes(calls)).toEqual([]);
+    await user.click(
+      screen.getByRole("button", { name: "Send staged decisions" }),
+    );
+    await waitFor(() =>
+      expect(writeRoutes(calls)).toEqual([
+        "POST /approval-bundles/bn-1/approve",
+      ]),
+    );
+    // One call decided all three members, so the card is gone from the queue.
+    await waitFor(() =>
+      expect(screen.queryByText("One decision · 3 items")).toBeNull(),
+    );
+    // And the plate the commit earned is actually drawn. Emptying the deck also
+    // flips the column's order, and while the two sections were positional
+    // children of a fragment that flip REMOUNTED the deck — losing the tally
+    // behind this plate, so clearing the queue could never show the one state
+    // clearing it exists to reach. The sections carry keys for this reason.
+    expect(await screen.findByText("Deck clear")).toBeTruthy();
+    expect(screen.getByText("1 decision sent")).toBeTruthy();
+  });
+
+  // An edit re-enters the admission gate with a new payload, which is a form
+  // rather than a swipe — so the deck sends nothing and hands the reader over.
+  it("sends nothing for a staged edit and lands the reader on the Decisions screen", async () => {
+    const queue = [proposal("ap-1", "Send the Weber follow-up")];
+    const calls = stubApi({
+      "GET /approvals": () => pendingPage(queue, new Set()),
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    await screen.findByText("Send the Weber follow-up");
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(
+      screen.getByRole("button", { name: "Send staged decisions" }),
+    );
+
+    await waitFor(() => expect(window.location.hash).toBe("#/inbox"));
+    expect(writes(calls)).toEqual([]);
+  });
+
+  // Somebody else answered one of them first. That is news, not a failed
+  // commit: the rest of the tray still deserves to go.
+  it("surfaces an already-decided 409 without abandoning the rest of the tray", async () => {
+    const queue = [
+      proposal("ap-1", "Send the Weber follow-up"),
+      proposal("ap-2", "Advance the PIM deal"),
+    ];
+    const decided = new Set<string>();
+    const calls = stubApi({
+      "GET /approvals": () => pendingPage(queue, decided),
+      "POST /approvals/ap-1/approve": () => {
+        decided.add("ap-1");
+        return jsonResponse(
+          { title: "Conflict", code: "already_decided" },
+          409,
+        );
+      },
+      "POST /approvals/ap-2/approve": () => {
+        decided.add("ap-2");
+        return jsonResponse({ ...queue[1], status: "approved" });
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    await screen.findByText("Send the Weber follow-up");
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    await screen.findByText("Advance the PIM deal");
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    await user.click(
+      screen.getByRole("button", { name: "Send staged decisions" }),
+    );
+
+    expect(
+      await screen.findByText("Already decided — nothing left to do here."),
+    ).toBeTruthy();
+    // The refusal on the first item did not swallow the second one.
+    expect(writeRoutes(calls)).toEqual([
+      "POST /approvals/ap-1/approve",
+      "POST /approvals/ap-2/approve",
+    ]);
+  });
+
+  // The token is minted by the approve and the row that triggered it unmounts on
+  // the invalidation, so it has to be caught at SCREEN level to be readable.
+  it("keeps the once-minted approval token on screen after the commit re-reads the queue", async () => {
+    const queue = [proposal("ap-1", "Send the Weber follow-up")];
+    const decided = new Set<string>();
     stubApi({
+      "GET /approvals": () => pendingPage(queue, decided),
+      "POST /approvals/ap-1/approve": () => {
+        decided.add("ap-1");
+        return jsonResponse({
+          ...queue[0],
+          status: "approved",
+          approval_token: "example-home-token",
+        });
+      },
+    });
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    await screen.findByText("Send the Weber follow-up");
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    await user.click(
+      screen.getByRole("button", { name: "Send staged decisions" }),
+    );
+
+    expect(await screen.findByText("example-home-token")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+  });
+});
+
+// ── The page's order follows the day ──
+
+describe("HomeScreen — the order of the page follows the day", () => {
+  it("leads with the decisions while any are waiting", async () => {
+    stubApi({
+      "GET /approvals": () =>
+        pendingPage([proposal("ap-1", "Send the Weber follow-up")], new Set()),
       "GET /brief": () => jsonResponse(run),
-      "GET /deals/d-1": () => jsonResponse(fleetDeal),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+
+    await screen.findByText("Send the Weber follow-up");
+    expect(workOrder()).toEqual(["home-decisions", "home-today"]);
+  });
+
+  it("leads with the ranked queue once the deck is clear", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Fleet retrofit");
+    expect(workOrder()).toEqual(["home-today", "home-decisions"]);
+  });
+});
+
+// ── The greeting, on a clock the test owns ──
+
+describe("HomeGlance — the greeting follows the reader's own hour", () => {
+  // A local-time instant, so the hour the case names is the hour the reader's
+  // own zone reports whatever machine this runs on.
+  function greetingAt(hour: number, firstName: string | null): string {
+    const view = rtlRender(
+      <LocaleProvider initial="en">
+        <HomeGlance
+          firstName={firstName}
+          now={new Date(2026, 6, 5, hour, 30, 0)}
+          decisions={null}
+          brief={null}
+          overnight={null}
+          stalled={null}
+          onGoToDecisions={() => {}}
+          onGoToToday={() => {}}
+          onGoToDuplicates={() => {}}
+          onGoToWatch={() => {}}
+        />
+      </LocaleProvider>,
     );
-    expect(screen.getByText("#1")).toBeTruthy();
-    expect(screen.getByText("score 74%")).toBeTruthy();
-    expect(screen.getByText("Winnability")).toBeTruthy();
-    expect(screen.getByText("Warmth")).toBeTruthy();
+    const greeting =
+      screen.getByRole("heading", { level: 1 }).textContent ?? "";
+    view.unmount();
+    return greeting;
+  }
+
+  it("names four bands, at the boundaries of each", () => {
+    expect(greetingAt(5, "Ada")).toBe("Good morning, Ada.");
+    expect(greetingAt(11, "Ada")).toBe("Good morning, Ada.");
+    expect(greetingAt(12, "Ada")).toBe("Good afternoon, Ada.");
+    expect(greetingAt(17, "Ada")).toBe("Good afternoon, Ada.");
+    expect(greetingAt(18, "Ada")).toBe("Good evening, Ada.");
+    expect(greetingAt(21, "Ada")).toBe("Good evening, Ada.");
+    expect(greetingAt(22, "Ada")).toBe("Still at it, Ada.");
+    expect(greetingAt(4, "Ada")).toBe("Still at it, Ada.");
+  });
+
+  // The hour is known before the name is. Greeting nobody until /me answers
+  // would move the heading under the reader a moment after they read it.
+  it("greets the hour with no name at all while the session is in flight", () => {
+    expect(greetingAt(9, null)).toBe("Good morning.");
+    expect(greetingAt(2, null)).toBe("Still at it.");
+  });
+
+  it("draws no line for a reading it was not given", () => {
+    rtlRender(
+      <LocaleProvider initial="en">
+        <HomeGlance
+          firstName="Ada"
+          now={new Date(2026, 6, 5, 9, 0, 0)}
+          decisions={null}
+          brief={null}
+          overnight={null}
+          stalled={null}
+          onGoToDecisions={() => {}}
+          onGoToToday={() => {}}
+          onGoToDuplicates={() => {}}
+          onGoToWatch={() => {}}
+        />
+      </LocaleProvider>,
+    );
+    // Not one of them, and in particular not the "nothing is waiting" claim: an
+    // unread queue is not an empty one.
+    expect(screen.queryByTestId("glance-decisions")).toBeNull();
+    expect(screen.queryByTestId("glance-ranked")).toBeNull();
+    expect(screen.queryByTestId("glance-captured")).toBeNull();
+    expect(screen.queryByTestId("glance-quiet")).toBeNull();
+    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+});
+
+// ── A reading is absent until it is read. Never zero. ──
+
+describe("HomeScreen — a reading in flight is absent, not zero", () => {
+  /** The deck's own section, which is where a failed decisions read belongs. */
+  function deckSection(): HTMLElement {
+    const section = document.getElementById("home-decisions");
+    if (!section) {
+      throw new Error("Home rendered no decisions section");
+    }
+    return section;
+  }
+
+  it("draws no decisions tile while the queue is still loading, and keeps the ranked queue", async () => {
+    stubApi({
+      // Never settles: the queue is in flight for the whole case.
+      "GET /approvals": () => new Promise<Response>(() => {}),
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The other four reads land, so the strip is drawn and its silence about
+    // decisions is a choice rather than a page that has not started.
+    const strip = await screen.findByTestId("home-readings");
+    await waitFor(() =>
+      expect(within(strip).getByText("Gone quiet")).toBeTruthy(),
+    );
+    expect(within(strip).queryByText("Waiting on you")).toBeNull();
+    expect(within(strip).queryByText("none expire today")).toBeNull();
+    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(screen.queryByTestId("glance-decisions")).toBeNull();
+    // The wait belongs to the deck alone. Five independent reads exist so that
+    // one of them being slow cannot blank the other four.
+    expect(deckSection().querySelector("[aria-busy='true']")).toBeTruthy();
+    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
+  });
+
+  it("shows a failed decisions read in the deck alone, with the ranked queue intact", async () => {
+    stubApi({
+      "GET /approvals": () => jsonResponse({ title: "Server Error" }, 500),
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    const strip = await screen.findByTestId("home-readings");
+    await waitFor(() =>
+      expect(within(strip).getByText("Gone quiet")).toBeTruthy(),
+    );
+    expect(within(strip).queryByText("Waiting on you")).toBeNull();
+    // Not "nothing is waiting": a queue that could not be read is not an empty
+    // one, and the deck says which of the two this is.
+    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(
+      within(deckSection()).getByText("This section did not load."),
+    ).toBeTruthy();
+    // A healthy ranked queue is not hidden behind a failed decisions read.
+    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
     expect(screen.getByText("2 evidence rows")).toBeTruthy();
-    expect(screen.getByText("€48,000.00")).toBeTruthy();
+  });
+
+  // What "today" means is the reader's own calendar day, so this is the one case
+  // that pins the clock rather than reading it.
+  it("counts what stops waiting today in the reader's own day", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 6, 5, 12, 0, 0));
+    stubApi({
+      "GET /approvals": () =>
+        pendingPage(
+          [
+            proposal("ap-1", "Send the Weber follow-up", {
+              expires_at: new Date(2026, 6, 5, 18, 0, 0).toISOString(),
+            }),
+            proposal("ap-2", "Advance the PIM deal", {
+              expires_at: new Date(2026, 6, 6, 9, 0, 0).toISOString(),
+            }),
+          ],
+          new Set(),
+        ),
+    });
+    render(<HomeScreen />);
+
+    const strip = await screen.findByTestId("home-readings");
+    await waitFor(() =>
+      expect(within(strip).getByText("Waiting on you")).toBeTruthy(),
+    );
+    expect(within(strip).getByText("2")).toBeTruthy();
+    expect(within(strip).getByText("1 expires today")).toBeTruthy();
+    expect(screen.getByTestId("glance-expiring").textContent).toContain("1");
+  });
+});
+
+// ── The ranked queue ──
+
+describe("HomeScreen — the ranked queue", () => {
+  it("renders the run: the deal, its money, the decomposition, the evidence and the honest-short line", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    const card = await screen.findByTestId("brief-item-bi-1");
+    expect(within(card).getByText("Fleet retrofit")).toBeTruthy();
+    expect(card.textContent).toContain("#1");
+    expect(within(card).getByText("Score")).toBeTruthy();
+    expect(within(card).getByText("74%")).toBeTruthy();
+    expect(within(card).getByText("Winnability")).toBeTruthy();
+    expect(within(card).getByText("Warmth")).toBeTruthy();
+    expect(within(card).getByText("2 evidence rows")).toBeTruthy();
+    expect(within(card).getByText("€48,000.00")).toBeTruthy();
     expect(
       screen.getByText(
         "Only 1 deals cleared the bar — the queue is never padded.",
@@ -136,24 +639,25 @@ describe("HomeScreen (Morning Brief on the /brief spine)", () => {
   });
 
   // A money figure is an amount AND its currency. The amount on its own is not
-  // one: naming a currency for it puts a euro sign on money that might be dong,
-  // and the reader cannot tell that apart from a real EUR figure.
-  it("a brief deal with an amount but no currency states no figure", async () => {
+  // one: naming a currency for it puts a euro sign on money that might be dong.
+  it("states no figure for a brief deal with an amount and no currency", async () => {
     stubApi({
       "GET /brief": () => jsonResponse(run),
-      "GET /deals/d-1": () => jsonResponse({ ...fleetDeal, currency: null }),
+      "GET /deals": () =>
+        jsonResponse({ data: [{ ...fleetDeal, currency: null }] }),
     });
     render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
-    );
+
+    const card = await screen.findByTestId("brief-item-bi-1");
     expect(
-      screen.getByText(MONEY_ABSENT, { selector: ".brief-deal-amount" }),
+      within(card).getByText(MONEY_ABSENT, {
+        selector: ".brief-item-amount",
+      }),
     ).toBeTruthy();
-    expect(screen.queryByText(/48,000/)).toBeNull();
+    expect(within(card).queryByText(/48,000/)).toBeNull();
   });
 
-  it("a 404 (no run yet) renders the generate card, and generating renders the fresh run", async () => {
+  it("offers to make the first run when there is none, and renders the one it makes", async () => {
     let generated = false;
     stubApi({
       "GET /brief": () =>
@@ -164,20 +668,36 @@ describe("HomeScreen (Morning Brief on the /brief spine)", () => {
         generated = true;
         return jsonResponse(run, 201);
       },
-      "GET /deals/d-1": () => jsonResponse(fleetDeal),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
+    const user = userEvent.setup();
     render(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText("No brief yet")).toBeTruthy());
-    await userEvent.click(screen.getByText("Generate my first brief"));
-    await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+
+    await screen.findByText(/ranks the deals worth your first hour/);
+    await user.click(
+      screen.getByRole("button", { name: /Generate my first brief/ }),
     );
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
   });
 
-  it("acting on an item marks it acted in place (still visible, receded)", async () => {
+  it("says the quiet out loud when a run ranked nothing — no invented urgency", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({ ...run, candidate_count: 0, items: [] }),
+    });
+    render(<HomeScreen />);
+
+    expect(
+      await screen.findByText(
+        "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("marks an item acted in place, still visible and receded", async () => {
     stubApi({
       "GET /brief": () => jsonResponse(run),
-      "GET /deals/d-1": () => jsonResponse(fleetDeal),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
       "POST /brief/items/bi-1/act": () =>
         jsonResponse({
           ...run.items[0],
@@ -185,471 +705,47 @@ describe("HomeScreen (Morning Brief on the /brief spine)", () => {
           state_at: "2026-07-05T06:00:00Z",
         }),
     });
+    const user = userEvent.setup();
     render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
-    );
-    await userEvent.click(screen.getByText("Done"));
-    await waitFor(() => expect(screen.getByText("acted")).toBeTruthy());
+
+    await screen.findByText("Fleet retrofit");
+    await user.click(screen.getByRole("button", { name: /Done/ }));
+    expect(await screen.findByText("acted")).toBeTruthy();
     expect(screen.getByText("Fleet retrofit")).toBeTruthy();
   });
 
-  it("an empty run renders honest quiet — no invented urgency", async () => {
-    stubApi({
-      "GET /brief": () =>
-        jsonResponse({ ...run, candidate_count: 0, items: [] }),
+  // The contract requires a FUTURE instant, and the product has no picker yet:
+  // Home's promise is "back tomorrow morning", in the reader's own zone.
+  it("snoozes an item until tomorrow morning in the reader's own zone", async () => {
+    const calls = stubApi({
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "POST /brief/items/bi-1/snooze": () =>
+        jsonResponse({
+          ...run.items[0],
+          state: "snoozed",
+          state_at: "2026-07-05T06:00:00Z",
+          snoozed_until: "2026-07-06T06:00:00Z",
+        }),
     });
+    const user = userEvent.setup();
     render(<HomeScreen />);
+
+    await screen.findByText("Fleet retrofit");
+    await user.click(screen.getByRole("button", { name: /Snooze/ }));
     await waitFor(() =>
-      expect(
-        screen.getByText(
-          "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
-        ),
-      ).toBeTruthy(),
+      expect(writeRoutes(calls)).toEqual(["POST /brief/items/bi-1/snooze"]),
     );
-  });
 
-  // AC-4 cross-surface: approving a morning-brief row mints an approval_token
-  // too. The row unmounts on the pending invalidation, so the token must be
-  // caught at screen level (the shared useApprovalTokenSink) on Home as well —
-  // not just InboxScreen.
-  it("surfaces the minted token at screen level when approving a Home-rendered row, surviving the refetch", async () => {
-    let approved = false;
-    const staged = {
-      id: "ap-h1",
-      kind: "send_email",
-      status: "pending",
-      proposed_by: "agent:runner",
-      summary: "Send the Home follow-up",
-      proposed_change: { subject: "Hi" },
-      created_at: "2026-07-05T05:00:00Z",
-    };
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /approvals": () => jsonResponse({ data: approved ? [] : [staged] }),
-      "POST /approvals/ap-h1/approve": () => {
-        approved = true;
-        return jsonResponse({
-          ...staged,
-          status: "approved",
-          approval_token: "example-home-token",
-        });
-      },
-    });
-    render(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText("Send an email")).toBeTruthy());
-    await userEvent.click(screen.getByRole("button", { name: "Accept" }));
-    // The approved row leaves the pending list on refetch…
-    await waitFor(() => expect(screen.queryByText("Send an email")).toBeNull());
-    // …but the once-shown token stays visible + copyable at screen level.
-    expect(screen.getByText("example-home-token")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
-  });
-
-  // AC-6 cross-surface: a 409 already_decided from a Home-rendered row must
-  // show the honest screen-level note (same shared sink as InboxScreen), not
-  // drop the row silently.
-  it("shows the already-decided note at screen level when a Home approve 409s", async () => {
-    let decidedElsewhere = false;
-    const staged = {
-      id: "ap-h2",
-      kind: "send_email",
-      status: "pending",
-      proposed_by: "agent:runner",
-      summary: "Send the Home follow-up",
-      proposed_change: { subject: "Hi" },
-      created_at: "2026-07-05T05:00:00Z",
-    };
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /approvals": () =>
-        jsonResponse({ data: decidedElsewhere ? [] : [staged] }),
-      "POST /approvals/ap-h2/approve": () => {
-        decidedElsewhere = true;
-        return jsonResponse(
-          { title: "Conflict", code: "already_decided" },
-          409,
-        );
-      },
-    });
-    render(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText("Send an email")).toBeTruthy());
-    await userEvent.click(screen.getByRole("button", { name: "Accept" }));
-    // Stale row leaves…
-    await waitFor(() => expect(screen.queryByText("Send an email")).toBeNull());
-    // …and the honest note is surfaced at screen level (not a silent drop).
-    expect(
-      screen.getByText("Already decided — nothing left to do here."),
-    ).toBeTruthy();
-  });
-
-  // CAP-WIRE-6 read side: the stored nightly digest renders as one card —
-  // captured counts, the review numbers, the classify tally — and the
-  // dedupe count is the jump-off into the review queue.
-  it("renders the overnight digest card and jumps to the dedupe queue", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /digest": () =>
-        jsonResponse({
-          date: "2026-07-16",
-          generated_at: "2026-07-17T03:00:00Z",
-          capture: {
-            messages_synced: 42,
-            activities_created: 42,
-            people_created: 5,
-            organizations_created: 2,
-          },
-          review: {
-            dedupe_open: 3,
-            approvals_pending: 1,
-            classify: { commitments: 4, meetings: 2, noise: 30 },
-          },
-          connectors: [],
-        }),
-    });
-    render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Overnight capture")).toBeTruthy(),
+    const sent = writes(calls)[0].body;
+    const until = new Date(
+      String((sent as { snoozed_until: string }).snoozed_until),
     );
-    expect(screen.getByText("42")).toBeTruthy();
-    expect(screen.getByText("Emails synced")).toBeTruthy();
-    expect(screen.getByText("People created")).toBeTruthy();
-    expect(screen.getByText("Companies created")).toBeTruthy();
-    expect(screen.getByText("Approvals pending")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Classified overnight: 4 commitments · 2 meetings · 30 noise",
-      ),
-    ).toBeTruthy();
-    await userEvent.click(screen.getByText("Duplicates to review"));
-    expect(window.location.hash).toBe("#/dedupe");
-  });
-
-  // The state a real installation is in: /digest is a specified operation with
-  // no implementation behind it, so the server answers 501, not 404. Read as an
-  // error that is a 5xx, the query client retried it — and React Query pauses
-  // between retries while the tab is not the focused one, so the query never
-  // settled and Home carried three grey skeleton bars that would still be there
-  // the next day. A refusal is not a delay.
-  it("a 501 not_implemented renders no digest card, and no loading block either", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /digest": () =>
-        jsonResponse(
-          {
-            title: "Not Implemented",
-            code: "not_implemented",
-            detail:
-              "operation GetMorningDigest is specified but not yet implemented",
-          },
-          501,
-        ),
-    });
-    render(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText("No brief yet")).toBeTruthy());
-    expect(screen.queryByTestId("digest-card")).toBeNull();
-    // Neither the skeletons that stood in for the refusal, nor the generic
-    // "Couldn't load this view" with a Try again that could never succeed.
-    expect(document.querySelector("[aria-busy='true']")).toBeNull();
-    expect(screen.queryByText(/couldn't load/i)).toBeNull();
-    expect(document.body.textContent).not.toContain("not yet implemented");
-  });
-
-  it("a 404 no_digest_yet renders no digest card at all — never fabricated zeros", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-    });
-    render(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText("No brief yet")).toBeTruthy());
-    expect(screen.queryByTestId("digest-card")).toBeNull();
-    expect(screen.queryByText("Overnight capture")).toBeNull();
-  });
-
-  // This is the one place connector health reaches a user without visiting
-  // Settings (Task 11) — a degraded source is news, so the sentence (the
-  // shared connectors.* vocabulary, Task 5) shows and jumps into Settings →
-  // Connections, which is where a reader's own mailboxes live.
-  const digestBase = {
-    date: "2026-07-16",
-    generated_at: "2026-07-17T03:00:00Z",
-    capture: {
-      messages_synced: 42,
-      activities_created: 42,
-      people_created: 5,
-      organizations_created: 2,
-    },
-    review: {
-      dedupe_open: 0,
-      approvals_pending: 0,
-      classify: { commitments: 0, meetings: 0, noise: 0 },
-    },
-  };
-
-  it("shows a connector-health line when a digest source is unhealthy, and jumps to Settings → Connections", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /digest": () =>
-        jsonResponse({
-          ...digestBase,
-          connectors: [
-            {
-              provider: "gmail",
-              status: "reauth_required",
-              last_sync_error_class: "auth",
-            },
-          ],
-        }),
-    });
-    render(<HomeScreen />);
-    const line = await screen.findByText(/rejected our credentials/i);
-    await userEvent.click(line);
-    expect(window.location.hash).toBe("#/settings/connections");
-  });
-
-  // The projects block: each project named is a link to its page (the
-  // section exists to send the reader there), the ladder move reads in words,
-  // and a digest built without the section renders no block at all.
-  it("lists the projects that moved, gained commitments or went quiet, each linking to its page", async () => {
-    const projectId = "01a00000-0000-7000-8000-000000000001";
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
-        jsonResponse({ id: projectId, name: "ERP replacement" }),
-      "GET /digest": () =>
-        jsonResponse({
-          ...digestBase,
-          connectors: [],
-          projects: {
-            phase_changes: [
-              {
-                project_id: projectId,
-                name: "ERP replacement",
-                from_phase: "pursuing",
-                to_phase: "delivering",
-                occurred_at: "2026-07-17T01:00:00Z",
-              },
-            ],
-            new_commitments: [],
-            gone_quiet: [
-              {
-                project_id: projectId,
-                name: "ERP replacement",
-                phase: "delivering",
-                quiet_since: "2026-06-07T01:00:00Z",
-                days_quiet: 40,
-              },
-            ],
-          },
-        }),
-    });
-    render(<HomeScreen />);
-    const block = await screen.findByTestId("digest-projects");
-    expect(block.textContent).toContain("Pursuing → Delivering");
-    expect(block.textContent).toContain("quiet for 40 days");
-    // EntityRef renders the resolved name as a button that routes.
-    const links = await within(block).findAllByRole("button", {
-      name: "ERP replacement",
-    });
-    expect(links.length).toBe(2);
-    await userEvent.click(links[0]);
-    expect(window.location.hash).toBe(`#/projects/${projectId}`);
-  });
-
-  it("renders no projects block when the digest carries no section", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
-    });
-    render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Overnight capture")).toBeTruthy(),
-    );
-    expect(screen.queryByTestId("digest-projects")).toBeNull();
-  });
-
-  it("stays quiet when every digest connector is healthy — a green row is noise", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /digest": () =>
-        jsonResponse({
-          ...digestBase,
-          connectors: [{ provider: "gmail", status: "connected" }],
-        }),
-    });
-    render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Overnight capture")).toBeTruthy(),
-    );
-    expect(screen.queryByTestId("digest-connector-health")).toBeNull();
-  });
-});
-
-// The open pipeline is what a rep opens Home to see. It is grouped by
-// currency and rendered one line each rather than summed: adding native minor
-// units across currencies produces a number that is not money.
-describe("HomeScreen — the open pipeline", () => {
-  it("shows the server's raw and weighted totals", async () => {
-    stubApi({
-      // The brief and digest are other sections; a 404 is their honest empty
-      // state and keeps this test about the pipeline tile alone.
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          rows: [
-            {
-              currency: "EUR",
-              deals: 12,
-              raw_minor: 9_900_000,
-              weighted_minor: 3_300_000,
-            },
-          ],
-        }),
-    });
-    render(<HomeScreen />);
-
-    expect(await screen.findByText("€99,000.00")).toBeTruthy();
-    expect(screen.getByText("€33,000.00 weighted")).toBeTruthy();
-    expect(screen.getByText("12 open deals")).toBeTruthy();
-  });
-
-  it("gives each currency its own line rather than one meaningless sum", async () => {
-    stubApi({
-      // The brief and digest are other sections; a 404 is their honest empty
-      // state and keeps this test about the pipeline tile alone.
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          rows: [
-            {
-              currency: "EUR",
-              deals: 2,
-              raw_minor: 100_000,
-              weighted_minor: 40_000,
-            },
-            {
-              currency: "USD",
-              deals: 3,
-              raw_minor: 200_000,
-              weighted_minor: 50_000,
-            },
-          ],
-        }),
-    });
-    render(<HomeScreen />);
-
-    expect(await screen.findByText("€1,000.00")).toBeTruthy();
-    expect(screen.getByText("US$2,000.00")).toBeTruthy();
-    // No combined figure anywhere: 300_000 minor units is not a currency.
-    expect(screen.queryByText("€3,000.00")).toBeNull();
-  });
-
-  // The filter is load-bearing: the deals-by-stage report's own base predicate
-  // is unarchived-only, so without status=open this headline would count won
-  // and lost deals and grow every time somebody closed something. Asserting the
-  // rendered numbers cannot catch that — only the request can.
-  it("asks for open deals only, grouped by currency", async () => {
-    const mock = stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          rows: [],
-        }),
-    });
-    render(<HomeScreen />);
-
-    // The client sends a Request object, so the body is read off the call
-    // rather than off the init the route handler is given.
-    const reportCall = async () => {
-      for (const call of mock.mock.calls) {
-        const input = call[0] as RequestInfo | URL;
-        if (input instanceof Request && input.url.includes("deals-by-stage")) {
-          return (await input.clone().json()) as Record<string, unknown>;
-        }
-      }
-      return undefined;
-    };
-    await waitFor(async () => expect(await reportCall()).toBeTruthy());
-    const body = await reportCall();
-    expect(body?.filters).toEqual({ status: "open" });
-    expect(body?.group_by).toEqual(["currency"]);
-    expect(body?.aggregates).toEqual([
-      { fn: "count", as: "deals" },
-      { fn: "sum", field: "amount_minor", as: "raw_minor" },
-      { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
-    ]);
-  });
-
-  // A refusal is not an absence. An empty tile would read as "there is no
-  // pipeline", which is a claim about the data standing in for a claim about
-  // authority.
-  it("keeps its place and says so when the figure cannot be read", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({ title: "Forbidden" }, 403),
-    });
-    render(<HomeScreen />);
-
-    expect(
-      await screen.findByText("This figure could not be loaded."),
-    ).toBeTruthy();
-  });
-
-  // A mask kept rows out of the sums, so the figures understate the pipeline.
-  it("says when a mask has kept deals out of the figures", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          excluded_by_permission: 4,
-          rows: [
-            {
-              currency: "EUR",
-              deals: 1,
-              raw_minor: 100_000,
-              weighted_minor: 40_000,
-            },
-          ],
-        }),
-    });
-    render(<HomeScreen />);
-
-    expect(
-      await screen.findByText(
-        "4 deals are not in these figures — your access does not cover them.",
-      ),
-    ).toBeTruthy();
-    // And the singular reads as one deal, not "1 open deals".
-    expect(screen.getByText("1 open deal")).toBeTruthy();
-  });
-
-  it("says nothing at all when there is no open pipeline", async () => {
-    stubApi({
-      // The brief and digest are other sections; a 404 is their honest empty
-      // state and keeps this test about the pipeline tile alone.
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "POST /reports/deals-by-stage": () =>
-        jsonResponse({
-          report: "deals-by-stage",
-          plan: {},
-          columns: [],
-          rows: [],
-        }),
-    });
-    render(<HomeScreen />);
-
-    await waitFor(() => expect(screen.queryByText("Open pipeline")).toBeNull());
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    expect(until.getTime()).toBeGreaterThan(Date.now());
+    expect(until.getHours()).toBe(8);
+    expect(until.toDateString()).toBe(tomorrow.toDateString());
+    expect(await screen.findByText("snoozed")).toBeTruthy();
   });
 });

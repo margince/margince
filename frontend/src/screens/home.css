@@ -1,294 +1,235 @@
-/* Home / Morning Brief — the /brief run rendered as a ranked queue: rank,
- * deal, the §10.1 factor decomposition as readable bars (no mystery number),
- * evidence count, and the act/dismiss pair. Settled items stay visible but
- * recede, so the morning reads as progress, not deletion. */
+/* Home — the morning handover.
+ *
+ * Three registers, in the order they decay: what is WAITING on a person (it
+ * expires), what is PLANNED for today (it is a ranking), and the CONTEXT the
+ * two are read against (it just is). The first two are the work and sit in the
+ * main column; the third is the rail beside them.
+ *
+ * The grid itself is not here: it is `PageZones` in the design system, the same
+ * primitive the record pages use, so Home and a company record fold at the same
+ * two widths and never disagree about what a rail is. What lives in this sheet
+ * is Home's own voice — the briefing block, the readings plate's placement, and
+ * the shapes inside the rail's panels. */
 
-.brief-runbar {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
+/* ── The briefing ──────────────────────────────────────────────────────────
+ * A greeting, then the day in sentences. It is a header, not a card: a box
+ * around it would make it one more panel to read rather than the sentence the
+ * page opens with. */
 
-.brief-runbar > :first-child {
-  flex: 1;
-  min-width: 0;
-}
-
-.brief-runbar > button {
-  margin-top: 4px;
-  flex: none;
-}
-
-.brief-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.brief-deal {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.brief-deal.settled {
-  opacity: 0.6;
-}
-
-.brief-deal-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.brief-deal-head .brief-rank {
-  font-family: var(--f-mono);
-  font-size: 12px;
-  color: var(--textSecondary);
-  flex: none;
-}
-
-.brief-deal-name {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  color: var(--textPrimary);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.brief-deal-name:hover {
-  color: var(--accent);
-}
-
-.brief-deal-name svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-
-.brief-deal-amount {
-  color: var(--textSecondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.brief-score {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--textSecondary);
-  flex: none;
-}
-
-.brief-factors {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.brief-factor {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.brief-factor-label {
-  color: var(--textSecondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.brief-factor-track {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--borderSubtle);
-  overflow: hidden;
-}
-
-.brief-factor-fill {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
-.brief-deal-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.brief-deal-actions {
-  margin-left: auto;
-  display: inline-flex;
-  gap: 8px;
-}
-
-.brief-deal-actions svg,
-.brief-runbar svg {
-  width: 14px;
-  height: 14px;
-}
-
-.brief-honesty {
-  color: var(--textSecondary);
-  margin: 2px 2px 0;
-}
-
-.brief-none {
-  padding: 18px;
-}
-
-/* Overnight digest — the stored nightly counts as one honest strip:
- * captured totals left, the review numbers (dedupe is the only jump-off)
- * right, the classify tally as a quiet footer. */
-
-.digest-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.digest-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.digest-title {
-  font-weight: 600;
-}
-
-.digest-head .t-caption,
-.digest-stat-label,
-.digest-classify {
-  color: var(--textSecondary);
-}
-
-.digest-stats {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.digest-stat {
+.glance {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-width: 0;
+  padding: var(--space-4) 0 var(--space-5);
 }
 
-.digest-stat-value {
-  font-variant-numeric: tabular-nums;
+.glance-greeting {
+  margin: 0;
 }
 
-.digest-dedupe {
-  background: none;
-  border: 0;
+.glance-intro {
+  margin: 0;
+  color: var(--textSecondary);
+}
+
+.glance-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+.glance-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--fs-lead);
+  color: var(--textPrimary);
+}
+
+/* A line with no figure to press — "nothing is waiting on you" — reads as
+ * prose, so it is not indented to a numeral that is not there. */
+.glance-line-plain {
+  color: var(--textSecondary);
+}
+
+.glance-clause {
+  color: var(--textSecondary);
+}
+
+.glance-leader {
+  color: var(--textPrimary);
+}
+
+/* The numeral IS the control: every one of these goes somewhere, and a figure
+ * that looks pressable and is not is worse than a plain one. Mono so a column
+ * of them lines up as the day's counts rather than shifting per digit. */
+.glance-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  background: var(--accentLight);
+  color: var(--accent);
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-state) var(--ease-out),
+    border-color var(--dur-state) var(--ease-out);
+}
+
+.glance-count:hover {
+  background: var(--accentMed);
+  border-color: var(--accent);
+}
+
+.glance-count:active {
+  transition-duration: var(--dur-tap);
+}
+
+.glance-count:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── The readings plate ────────────────────────────────────────────────────
+ * `StatStrip` owns the plate; this only places it. It sits between the
+ * briefing and the work, which is the reading order the sentences promise. */
+
+.home-readings {
+  margin-bottom: var(--space-5);
+}
+
+/* ── The work column ───────────────────────────────────────────────────────
+ * Two panels, in the order the day decides (see `home.tsx`): the deck first
+ * while decisions are waiting, the ranked queue first once the deck is clear. */
+
+.home-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.home-today-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The honest tail under a ranked queue: how many candidates there were, when
+ * the run shows fewer. */
+.home-honesty {
+  color: var(--textSecondary);
+}
+
+.home-error {
+  color: var(--danger);
+  margin: 0;
+}
+
+/* ── The context rail ─────────────────────────────────────────────────────
+ * One column of `Panel`s, never a grid: a rail that re-columns is a second
+ * body rather than a margin. */
+
+.home-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rail-count,
+.rail-count-go {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+/* The row is the press target only where the count HAS a destination, so the
+ * button fills it rather than sitting inside it as a second edge. */
+.rail-count-go {
   padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.digest-dedupe:hover .digest-stat-label {
-  color: var(--accent);
+.rail-count-go:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
-.digest-dedupe svg {
-  width: var(--space-3);
-  height: var(--space-3);
-  vertical-align: text-bottom;
+.rail-count-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--textSecondary);
 }
 
-.digest-classify {
-  margin: 0;
+.rail-count-value {
+  flex: none;
+  font-weight: var(--fw-semibold);
 }
 
-/* The projects block: what moved on the bodies of work overnight, each one a
- * link to its page. Lists, because the reader scans for a name they own. */
+.rail-money {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
 
-.digest-projects {
+.rail-money-raw {
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-semibold);
+}
+
+.rail-projects {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.digest-projects-title {
-  color: var(--textSecondary);
-}
-
-.digest-project-list {
+.rail-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.rail-watch-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
-/* The connector-health line (Task 11): renders only when the digest's
- * connectors[] holds an unhealthy source — a degraded mailbox is news, a
- * healthy one is not — and deep-links into Settings → Connections, where a
- * reader's own mailboxes are. */
+/* ── Folds ────────────────────────────────────────────────────────────────
+ * `PageZones` folds the columns; what folds here is the briefing's own scale.
+ * A display-size greeting on a phone costs three lines before a reader has
+ * learned anything. */
 
-.digest-connector-health {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  color: var(--danger);
-}
-
-.digest-connector-health:hover {
-  text-decoration: underline;
-}
-
-.digest-connector-health svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-
-@media (max-width: 640px) {
-  .digest-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 720px) {
+  .glance {
+    padding: var(--space-3) 0 var(--space-4);
   }
-}
 
-@media (max-width: 640px) {
-  .brief-factors {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .glance-greeting {
+    font-size: var(--fs-h2);
   }
-}
 
-/* One currency's open pipeline: the total, what it is worth weighted, and how
-   many deals stand behind it — on one line, so several currencies stack
-   without becoming a table. */
-.home-pipeline-row {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-.home-pipeline-row + .home-pipeline-row {
-  margin-top: var(--space-2);
+  .glance-line {
+    font-size: var(--fs-body);
+  }
+
+  .glance-count {
+    font-size: var(--fs-body);
+  }
 }

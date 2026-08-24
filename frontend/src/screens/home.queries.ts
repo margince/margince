@@ -1,0 +1,258 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import {
+  type UseQueryResult,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { throwProblem } from "./common";
+
+// Home's reads, in one place. The screen fans out to five of them and each is
+// gated on its own, deliberately: a transient failure in the decisions queue
+// must never hide a healthy brief, and one combined "my day" payload does not
+// exist on the server.
+
+export type MorningBrief = components["schemas"]["MorningBrief"];
+export type MorningBriefItem = components["schemas"]["MorningBriefItem"];
+export type MorningDigest = components["schemas"]["MorningDigest"];
+export type Deal = components["schemas"]["Deal"];
+
+export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
+  return useQuery({
+    queryKey: ["brief"],
+    queryFn: async (): Promise<MorningBrief | null> => {
+      const { data, error, response } = await api.GET("/brief");
+      // No run yet is not a failure: it is a page that offers to make one.
+      if (response.status === 404) {
+        return null;
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      return data ?? null;
+    },
+  });
+}
+
+/**
+ * The overnight digest (CAP-WIRE-6): the nightly build's stored counts — what
+ * capture landed and what awaits review.
+ *
+ * `404 no_digest_yet` and `501` are the same fact to a reader (there is no
+ * digest to show) and both return null. Reading 501 as an error is what once
+ * put a permanent loading block on this page: a 501 is a 5xx, so the query
+ * client retried it, and React Query PAUSES between retry attempts while the
+ * document is hidden — the query sat at fetchStatus "paused" and never settled,
+ * and the pending skeleton stood in for the refusal indefinitely.
+ */
+export function useMorningDigest(): UseQueryResult<MorningDigest | null> {
+  return useQuery({
+    queryKey: ["digest"],
+    queryFn: async (): Promise<MorningDigest | null> => {
+      const { data, error, response } = await api.GET("/digest");
+      if (response.status === 404 || response.status === 501) {
+        return null;
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      return data ?? null;
+    },
+  });
+}
+
+/** One currency's open pipeline: what it is worth, and what it is worth once
+ *  each deal is weighted by its stage's probability. */
+export type PipelineValue = {
+  currency: string;
+  rawMinor: number;
+  weightedMinor: number;
+  deals: number;
+};
+
+/** What the report answered: the per-currency lines, and whether a field mask
+ *  kept rows out of them. */
+export type PipelineReading = {
+  rows: PipelineValue[];
+  /** Rows a mask withheld from every total here. Non-zero means the figures
+   *  understate the pipeline, and saying so is the difference between a
+   *  partial answer and a wrong one. */
+  excluded: number;
+};
+
+/**
+ * The open pipeline, per currency.
+ *
+ * Grouped by currency and rendered one line each rather than summed: adding
+ * native minor units across currencies produces a number that is not money,
+ * which is the rule the board's mixed-currency columns already follow.
+ *
+ * The report never includes archived deals, and this asks only for open ones —
+ * a won deal is revenue, not pipeline, and counting it here would make the
+ * headline grow every time somebody closed something.
+ */
+export function usePipelineValue(): UseQueryResult<PipelineReading> {
+  return useQuery({
+    // Under ["deals"] so the invalidation every deal mutation already fires
+    // reaches this too. Keyed apart, the headline went on naming yesterday's
+    // pipeline after a rep won something and came back to Home.
+    queryKey: ["deals", "home-pipeline-value"],
+    queryFn: async (): Promise<PipelineReading> => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        params: { path: { report: "deals-by-stage" } },
+        body: {
+          group_by: ["currency"],
+          aggregates: [
+            { fn: "count", as: "deals" },
+            { fn: "sum", field: "amount_minor", as: "raw_minor" },
+            { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
+          ],
+          filters: { status: "open" },
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return {
+        rows: data.rows.flatMap((row) => {
+          const currency = row.currency;
+          // A SUM over deals nobody priced is absent, not zero, and a row with
+          // no currency cannot be rendered as money at all.
+          if (
+            typeof currency !== "string" ||
+            typeof row.raw_minor !== "number"
+          ) {
+            return [];
+          }
+          return [
+            {
+              currency,
+              rawMinor: row.raw_minor,
+              weightedMinor:
+                typeof row.weighted_minor === "number" ? row.weighted_minor : 0,
+              deals: typeof row.deals === "number" ? row.deals : 0,
+            },
+          ];
+        }),
+        excluded: data.excluded_by_permission ?? 0,
+      };
+    },
+  });
+}
+
+/**
+ * The deals page Home reads twice over: the quiet ones it lists, and the count
+ * of open ones its readings strip reports.
+ *
+ * One query rather than two because there is no server-side "stalled" filter to
+ * ask for — the flag arrives on the row and the filtering is ours.
+ */
+export function useHomeDeals(): UseQueryResult<Deal[]> {
+  return useQuery({
+    queryKey: ["deals"],
+    queryFn: async (): Promise<Deal[]> => {
+      const { data, error } = await api.GET("/deals", {
+        params: { query: { limit: 100 } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data;
+    },
+  });
+}
+
+/** The open deals that have gone quiet, in the order the wire sent them. */
+export function quietDeals(deals: readonly Deal[]): Deal[] {
+  return deals.filter((deal) => deal.stalled && deal.status === "open");
+}
+
+/** Every open deal, quiet or not — what the readings strip counts. */
+export function openDeals(deals: readonly Deal[]): Deal[] {
+  return deals.filter((deal) => deal.status === "open");
+}
+
+/**
+ * Re-rank the brief. A human-only refresh: the nightly run owns the schedule,
+ * this is the reader saying "again, now".
+ */
+export function useBriefRefresh() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await api.POST("/brief");
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["brief"], data ?? null);
+    },
+  });
+}
+
+/**
+ * What a reader can do to one brief item.
+ *
+ * A union rather than a mark plus an optional instant: `snoozed_until` is
+ * REQUIRED by the contract and must be in the future, so a shape that lets a
+ * caller ask for a snooze without naming when it comes back is a 422 waiting to
+ * be written.
+ */
+export type BriefMarkRequest =
+  | { itemId: string; mark: "act" | "dismiss" }
+  | { itemId: string; mark: "snooze"; snoozedUntil: string };
+
+/**
+ * Act on, dismiss or snooze one item.
+ *
+ * The item id travels as a mutation VARIABLE rather than in the closure: the
+ * click handler belongs to the committed render, so a variable it passes cannot
+ * be older than the control that carried it (frontend/CLAUDE.md, and the gate
+ * in `mutation-variable-coverage.test.ts`).
+ */
+export function useBriefItemMark() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (variables: BriefMarkRequest) => {
+      if (variables.mark === "snooze") {
+        const { data, error } = await api.POST("/brief/items/{itemId}/snooze", {
+          params: { path: { itemId: variables.itemId } },
+          body: { snoozed_until: variables.snoozedUntil },
+        });
+        if (error) {
+          throwProblem(error);
+        }
+        return data;
+      }
+      const path =
+        variables.mark === "act"
+          ? "/brief/items/{itemId}/act"
+          : "/brief/items/{itemId}/dismiss";
+      const { data, error } = await api.POST(path, {
+        params: { path: { itemId: variables.itemId } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<MorningBrief | null>(["brief"], (current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) =>
+                item.id === updated.id ? updated : item,
+              ),
+            }
+          : current,
+      );
+    },
+  });
+}
