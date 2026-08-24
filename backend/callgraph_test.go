@@ -42,6 +42,16 @@ type graphFunc struct {
 	// its own binding and not of the package value that happens to share the
 	// spelling.
 	shadowed map[string]bool
+	// hidden are package-level names this function both declares AND reads,
+	// where the package value holds statements. Suppression is function-wide
+	// rather than lexical, so a `query := …` inside one block silences a read of
+	// the package's `query` in another — and for a census asking "does this
+	// function write X" that is the direction that MISSES a writer.
+	//
+	// So the approximation reports itself. A caller can ask whether its verdict
+	// rests on a name it could not read, instead of the walk deciding quietly
+	// that it did not matter.
+	hidden []string
 }
 
 // declaredNames collects every identifier a function binds: its parameters and
@@ -185,6 +195,9 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 		}
 		for name := range entry.reads {
 			if entry.shadowed[name] {
+				if len(held[name]) > 0 {
+					entry.hidden = append(entry.hidden, held[name]...)
+				}
 				continue
 			}
 			entry.statements = append(entry.statements, held[name]...)

@@ -69,15 +69,25 @@ var assemblesAnOrganizationUpdate = regexp.MustCompile(`(?is)UPDATE\s+organizati
 // by stripping quotes first; an escaped quote (`”`) closes and reopens, which
 // is the same result for this purpose.
 func withoutSQLNoise(statement string) string {
+	statement = sqlDollarQuoted.ReplaceAllString(statement, "$$$$")
 	statement = sqlQuoted.ReplaceAllString(statement, "''")
+	statement = sqlBlockComment.ReplaceAllString(statement, " ")
 	return sqlLineComment.ReplaceAllString(statement, "")
 }
 
-// sqlQuoted is a single-quoted literal's body. The comment half of the job is
-// versionguard_test.go's sqlLineComment, which already strips `-- …` for the
-// same reason and is in this package — a second spelling of it here would be
-// two answers to one question.
-var sqlQuoted = regexp.MustCompile(`'[^']*'`)
+// The non-code regions of a statement, stripped widest-first: a `--` inside a
+// block comment is not a line comment, and a `;` inside any of them does not end
+// the statement. `UPDATE organization /* ; */ SET legal_name = $1` was read as
+// ending at that semicolon and so was not a rename at all.
+//
+// The line-comment half is versionguard_test.go's sqlLineComment, which already
+// strips `-- …` for the same reason and is in this package — a second spelling
+// of it here would be two answers to one question.
+var (
+	sqlQuoted       = regexp.MustCompile(`'[^']*'`)
+	sqlBlockComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	sqlDollarQuoted = regexp.MustCompile(`(?s)\$([A-Za-z_]\w*)?\$.*?\$([A-Za-z_]\w*)?\$`)
+)
 
 // remembersTheRecheckItself ratifies a writer that cannot reach the re-check
 // through an edge this graph can follow.
@@ -99,11 +109,14 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 			"the re-check has been renamed or moved out of %s", renameRecheck, peoplePackage)
 	}
 
-	var findings []string
+	var findings, unreadable []string
 	writers, named, assembled := 0, 0, 0
 	for name, entry := range graph {
 		if name == renameRecheck {
 			continue
+		}
+		if statement, hiddenRename := firstRenameStatement(entry.hidden); hiddenRename {
+			unreadable = append(unreadable, fmt.Sprintf("%s\n      %s", name, statement))
 		}
 		statement, renames := firstRenameStatement(entry.statements)
 		if !renames {
@@ -133,6 +146,15 @@ func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
 			"reaches a function has stopped working rather than the tree having changed",
 			named, assembled, writers)
 	}
+	if len(unreadable) > 0 {
+		t.Errorf("these functions declare a local with the same name as a package-level "+
+			"statement that renames an organization, so this census could not tell which one "+
+			"they read:\n    %s\n\n"+
+			"Suppression here is per FUNCTION rather than per block, which is the direction "+
+			"that misses a writer — so it is reported instead of assumed harmless. Rename the "+
+			"local, or rename the package value.",
+			strings.Join(unreadable, "\n    "))
+	}
 	if len(findings) > 0 {
 		t.Errorf("these functions rename an organization, and no route to them calls %s:\n    %s\n\n"+
 			"A name is the axis on which two records of one company converge — PO-F-2 has nothing to "+
@@ -155,4 +177,52 @@ func firstRenameStatement(statements []string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// The detector reads STATEMENTS, and a statement carries prose. These are the
+// shapes that fooled it, kept because the census above is a census of zero once
+// the tree is clean: it reads the same over a clean tree and over a detector
+// that has stopped detecting.
+func TestTheRenameDetectorReadsSQLAndNotProse(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		sql    string
+		reads  bool
+		reason string
+	}{
+		{
+			"a semicolon inside a block comment", "UPDATE organization /* ; */ SET legal_name = $1", true,
+			"the scan stopped at a semicolon that ends nothing, so a real rename went unseen",
+		},
+		{
+			"a semicolon inside a line comment", "UPDATE organization -- ;\n SET legal_name = $1", true,
+			"same, with the comment spelled the other way",
+		},
+		{
+			"a semicolon inside a dollar-quoted body", "UPDATE organization SET legal_name = $tag$ ; $tag$", true,
+			"a dollar-quoted literal is a body, not the end of a statement",
+		},
+		{
+			"a column named only inside a comment", "UPDATE organization SET description = $1 -- legal_name =", false,
+			"a rename mentioned in prose is not a rename, and reporting it teaches readers to skip this gate",
+		},
+		{
+			"a column named only inside a string", "UPDATE organization SET description = 'legal_name = x'", false,
+			"same, inside a literal the database stores rather than executes",
+		},
+		{
+			"the column assembled by the caller", "UPDATE organization SET ", true,
+			"the fragment names no column because the caller supplies it; the gate asks anyway",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			readable := withoutSQLNoise(tc.sql)
+			got := setsAnOrganizationName.MatchString(readable) ||
+				assemblesAnOrganizationUpdate.MatchString(readable)
+			if got != tc.reads {
+				t.Errorf("reads as an organization rename = %v, want %v — %s\n  raw:      %q\n  stripped: %q",
+					got, tc.reads, tc.reason, tc.sql, readable)
+			}
+		})
+	}
 }
