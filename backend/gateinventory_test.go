@@ -235,15 +235,16 @@ func isMachineReadable(group *ast.CommentGroup) bool {
 	return true
 }
 
-// sentenceEnd is a full stop that ends a sentence: one followed by a space and
-// either a capital letter or a backtick. `crm.yaml` and `§4.2` keep their dots
-// because what follows is not a space, and `Art. 7(1)` because what follows is
-// a digit.
+// sentenceEnd is a full stop followed by whitespace. `crm.yaml` and `§4.2`
+// keep their dots because what follows is not whitespace.
 //
-// The backtick earns its place: these comments routinely open a sentence with a
-// quoted identifier, and without it a cell ran to three sentences before the
-// next capital arrived.
-var sentenceEnd = regexp.MustCompile("\\.\\s+[A-Z`]")
+// Deliberately NOT "followed by a capital". That reads like the safer rule and
+// is a census that fails short: these comments open a sentence with a lowercase
+// path or identifier often enough that twenty-one cells ran past their first
+// sentence under it — silently, because a cell that is too long looks like a
+// long sentence. What a stop does NOT end is the narrow case, so it is the
+// exclusion, spelled in abbreviations below.
+var sentenceEnd = regexp.MustCompile(`\.\s+`)
 
 // abbreviations are the short forms this tree's gate comments write before a
 // capitalised word, where the dot is part of the word rather than the end of a
@@ -309,10 +310,19 @@ func capitalized(kind string) string {
 	return strings.ToUpper(kind[:1]) + kind[1:]
 }
 
-// cellText makes a sentence safe inside a markdown table cell: a pipe would
-// end the column early, and a newline the row.
+// cellText makes a sentence safe inside a markdown table cell: a pipe would end
+// the column early, and a bare `*` opens an emphasis run that swallows the text
+// after it — `*Store or *Service` renders as one italic word.
+//
+// Escaped HERE rather than in the 130 doc comments this page renders. The
+// comments are Go prose read in an editor, where `*Store` is the correct
+// spelling of a pointer type; asking each of them to be markdown-safe is a rule
+// nothing enforces, and the next gate that writes a `*` breaks the page again.
+// The renderer owns rendering.
 func cellText(prose string) string {
-	prose = strings.ReplaceAll(prose, "|", `\|`)
+	for _, escape := range []string{`\`, "|", "*", "_", "<"} {
+		prose = strings.ReplaceAll(prose, escape, `\`+escape)
+	}
 	if prose == "" {
 		return "_(no doc comment)_"
 	}
