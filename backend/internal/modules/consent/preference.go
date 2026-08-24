@@ -41,7 +41,7 @@ const PurposeTransactional = "transactional"
 // public preference surface. Locked purposes also carry no unsubscribe
 // header — there is nothing to unsubscribe from.
 func LockedPurpose(key string) bool {
-	return strings.TrimSpace(strings.ToLower(key)) == PurposeTransactional
+	return normalizedPurposeKey(key) == PurposeTransactional
 }
 
 // PreferenceRef is a token's resolution: whose consent.
@@ -286,7 +286,7 @@ func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) 
 // withdrawals in a save before its grants for that reason, so a refused
 // re-grant costs the re-grant and nothing beside it.
 func (s *Store) PublicSetConsent(ctx context.Context, personID ids.PersonID, purposeKey, newState string, wording *string) (State, error) {
-	purposeKey = strings.TrimSpace(strings.ToLower(purposeKey))
+	purposeKey = normalizedPurposeKey(purposeKey)
 	if LockedPurpose(purposeKey) {
 		return State{}, &ValidationError{Field: "purpose_key", Reason: "transactional consent is locked and cannot be changed from the preference center"}
 	}

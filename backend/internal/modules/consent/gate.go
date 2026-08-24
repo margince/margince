@@ -6,7 +6,6 @@ package consent
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,7 +58,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			return fmt.Errorf("consent: this recipient cannot be put to the gate: %w", err)
 		}
 	}
-	purposeKey = strings.TrimSpace(strings.ToLower(purposeKey))
+	purposeKey = normalizedPurposeKey(purposeKey)
 	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var purpose PurposeRow
 		err := tx.QueryRow(ctx,

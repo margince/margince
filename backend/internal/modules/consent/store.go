@@ -99,7 +99,7 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 	if err := auth.Require(ctx, "pipeline", principal.ActionCreate); err != nil {
 		return Purpose{}, err
 	}
-	key = strings.TrimSpace(strings.ToLower(key))
+	key = normalizedPurposeKey(key)
 	if key == "" || strings.TrimSpace(label) == "" {
 		return Purpose{}, &ValidationError{Field: "key", Reason: "key and label are required"}
 	}

@@ -115,6 +115,12 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 		return
 	}
 	states := make([]ConsentState, len(req.Choices))
+	// Keys are compared AS PublicSetConsent will read them. It trims and
+	// lowercases before resolving the purpose, so "Newsletter " and "newsletter"
+	// are one purpose downstream — and a duplicate check on the raw strings
+	// would not see them as a pair, letting the grant land after the withdrawal
+	// on the very surface the rule below exists to protect.
+	keys := make([]string, len(req.Choices))
 	for i, c := range req.Choices {
 		state, err := ParseRecordableState(c.State)
 		if err != nil {
@@ -122,6 +128,7 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 			return
 		}
 		states[i] = state
+		keys[i] = normalizedPurposeKey(c.PurposeKey)
 	}
 	// A purpose named twice in one save is settled BEFORE anything is written,
 	// and it settles toward the withdrawal. Request order used to decide it by
@@ -129,9 +136,9 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 	// on a consent surface the direction is not a coin toss — a body carrying
 	// both answers for one purpose is a client bug, and suppressing is the safe
 	// reading of it.
-	for i, c := range req.Choices {
+	for i := range req.Choices {
 		for j := i + 1; j < len(req.Choices); j++ {
-			if req.Choices[j].PurposeKey != c.PurposeKey {
+			if keys[j] != keys[i] {
 				continue
 			}
 			if states[i] == StateWithdrawn || states[j] == StateWithdrawn {

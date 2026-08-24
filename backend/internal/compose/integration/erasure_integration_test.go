@@ -83,14 +83,14 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 		purposeID := ids.NewV7()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
-			 VALUES ($1, 'doi_fixture_' || $2::text, 'Newsletter', true)`,
-			purposeID, personID); err != nil {
+			 VALUES ($1, $2, 'Newsletter', true)`,
+			purposeID, "doi_fixture_"+personID.String()); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
-			 VALUES ($1, $2, 'hash-for-erasure-fixture', now(), now() + interval '72 hours')`,
-			personID, purposeID); err != nil {
+			 VALUES ($1, $2, $3, now(), now() + interval '72 hours')`,
+			personID, purposeID, "doi-hash-"+personID.String()); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
