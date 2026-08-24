@@ -1,6 +1,6 @@
 import { Check, CheckCircle2, Lock, Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
-import { Disclosure } from "../design-system/atoms";
+import { Card, Disclosure } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
@@ -91,7 +91,7 @@ export function ResultsStep({
       )}
       <div className="rcards">
         {cards.map((c) => (
-          <div key={c.title} className="rcard">
+          <Card key={c.title} as="div" className="rcard">
             <div className="rh">
               <span className="ck">
                 <Check aria-hidden />
@@ -99,7 +99,7 @@ export function ResultsStep({
               {t(c.title)}
             </div>
             <p>{t(c.body)}</p>
-          </div>
+          </Card>
         ))}
       </div>
       {/* Where the pipeline came from is background: true, worth having, and
