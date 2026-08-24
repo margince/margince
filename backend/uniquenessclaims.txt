@@ -48,8 +48,6 @@ cmd/worker/boot.go#func workerModelPathSpec
 consumermailonelist_test.go#var baselineDomains
 edgereaders_test.go#const edgeTable
 edgereaders_test.go#var edgeReaderScope
-employmentcurrency_test.go#func flattenSQL
-employmentcurrency_test.go#type helperScope
 enumsync_test.go#func recordChecks
 envcontract_test.go#func liveEnvVars
 envcontract_test.go#var deploySurfaceRoots
@@ -183,7 +181,6 @@ internal/compose/offeringconfirmed.go#func offeringConfirmed
 internal/compose/org360/assemble.go#const block at const sectionPeople
 internal/compose/org360/deals.go#func openDealsWhere
 internal/compose/org360/graph.go#const block at const graphGroupContacts
-internal/compose/org360/graphourside.go#const liveMemberWhere
 internal/compose/org360/graphplace.go#const block at const graphRelationParent
 internal/compose/org360/graphplace.go#method graphAssembly.keptDeals
 internal/compose/org360/graphreads.go#method graphAssembly.readOpenDeals
@@ -530,7 +527,6 @@ internal/modules/search/binding.go#method Store.SeedBinding
 internal/modules/search/embedgen.go#const block at const entityPerson
 internal/modules/search/graphactivity.go#var activityLinkArms
 internal/modules/search/graphedge.go#const audienceWorkspaceOnly
-internal/modules/search/graphedge.go#const liveMemberJoin
 internal/modules/search/graphtrust.go#var block at var humanWriterPrefix
 internal/modules/search/querybudget.go#func NewQueryExecutorWithBudget
 internal/modules/search/queryjoins.go#const block at const columnArchivedAt

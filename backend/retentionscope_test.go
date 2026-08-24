@@ -166,9 +166,13 @@ func namesRetentionScopeBuilder(n ast.Node) bool {
 	return false
 }
 
-// calleeName is the called function's own name, ignoring any qualifier. Sound
-// only because TestTheRetentionScopeSinkIsTheOneTheGateMeans pins the sink to a
-// single declaration.
+// calleeName is the called function's own name, ignoring any qualifier.
+//
+// Dropping the qualifier makes this NAME alone, so a caller that cares which
+// package the name came from must establish that itself — the retention sink
+// does it by pinning the sink to a single declaration
+// (TestTheRetentionScopeSinkIsTheOneTheGateMeans), the helper walk by checking
+// the package before it ever asks for a name (helperScope.isOneDefinition).
 func calleeName(call *ast.CallExpr) string {
 	switch fun := call.Fun.(type) {
 	case *ast.Ident:

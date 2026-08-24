@@ -356,7 +356,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND s.revoked_at IS NULL
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
-			   AND u.status = 'active' AND u.archived_at IS NULL`,
+			   AND `+LiveMemberSQL("u")+``,
 			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

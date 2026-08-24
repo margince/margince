@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/capture/offlinedemo"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 )
 
@@ -70,7 +71,7 @@ func (d offlineDemoDirectory) load(ctx context.Context, tx pgx.Tx, userID string
 	// failure: the generator simply CCs nobody.
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(display_name, email), email
-		  FROM app_user WHERE id <> $1 AND status = 'active'
+		  FROM app_user WHERE id <> $1 AND `+identity.LiveMemberSQL("")+`
 		 ORDER BY created_at LIMIT 1`, userID).Scan(&box.ColleagueName, &box.ColleagueEmail); err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("reading a colleague to copy: %w", err)
