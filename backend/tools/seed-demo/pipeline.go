@@ -154,7 +154,7 @@ func seedLeads(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (int,
 		// re-running finds the same lead rather than filing a second one.
 		body := jsonBody{
 			"source":        seedSource,
-			"source_system": "seed",
+			"source_system": seedSourceSystem,
 			"source_id":     lead.Ref,
 			"status":        lead.Status,
 		}

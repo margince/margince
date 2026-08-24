@@ -211,7 +211,7 @@ func seedGeneratedLeads(c *client, refs pipelineRefs, plan map[string]profile, m
 		if existing[sourceID] == "" {
 			body := jsonBody{
 				"source":        seedSource,
-				"source_system": "seed",
+				"source_system": seedSourceSystem,
 				"source_id":     sourceID,
 				"status":        leadCreateStatus(p.LeadState),
 				"full_name":     first + " " + last,

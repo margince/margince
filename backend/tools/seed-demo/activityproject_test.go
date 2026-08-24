@@ -4,6 +4,7 @@
 package main
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -105,8 +106,9 @@ func TestProjectRelinkFor(t *testing.T) {
 		seededProject{ID: "migration", StartedAt: "2025-10-28"},
 		seededProject{ID: "second-tenant", StartedAt: "2026-08-06"},
 	)
-	// A mail from during the migration, which is what the fixtures are about.
 	act := demoActivity{Company: "acme.test", DaysAgo: 214}
+	// During the migration, long before the second tenant began.
+	const during = "2026-01-22T09:00:00Z"
 
 	for _, tc := range []struct {
 		name     string
@@ -120,7 +122,7 @@ func TestProjectRelinkFor(t *testing.T) {
 			// exists, carries no project link, and reseeding never gave it
 			// one because the create path replays instead of re-linking.
 			name:     "unfiled activity is filed",
-			existing: seededActivity{ID: "a1"},
+			existing: seededActivity{ID: "a1", OccurredAt: during},
 			act:      act,
 			wantID:   "migration",
 			wantMove: true,
@@ -129,7 +131,7 @@ func TestProjectRelinkFor(t *testing.T) {
 			// What the old list-order linker left behind: filed under a
 			// project that had not started when the mail was sent.
 			name:     "wrongly filed activity is moved",
-			existing: seededActivity{ID: "a1", ProjectID: "second-tenant"},
+			existing: seededActivity{ID: "a1", OccurredAt: during, ProjectID: "second-tenant"},
 			act:      act,
 			wantID:   "migration",
 			wantMove: true,
@@ -137,7 +139,7 @@ func TestProjectRelinkFor(t *testing.T) {
 		{
 			// A converged installation. The pass must be silent.
 			name:     "correctly filed activity is left alone",
-			existing: seededActivity{ID: "a1", ProjectID: "migration"},
+			existing: seededActivity{ID: "a1", OccurredAt: during, ProjectID: "migration"},
 			act:      act,
 			wantMove: false,
 		},
@@ -145,14 +147,22 @@ func TestProjectRelinkFor(t *testing.T) {
 			// Older than every project on the account, so it is about none of
 			// them. Filing it anyway stamps a record that had no reason to be.
 			name:     "activity predating every project is left alone",
-			existing: seededActivity{ID: "a1"},
-			act:      demoActivity{Company: "acme.test", DaysAgo: 900},
+			existing: seededActivity{ID: "a1", OccurredAt: "2024-01-05T09:00:00Z"},
+			act:      act,
 			wantMove: false,
 		},
 		{
 			name:     "activity on a company with no project is left alone",
+			existing: seededActivity{ID: "a1", OccurredAt: during},
+			act:      demoActivity{Company: "nobody.test"},
+			wantMove: false,
+		},
+		{
+			// An activity the server returned without a date cannot be dated
+			// against, and guessing is what this function exists to avoid.
+			name:     "activity with no occurred_at is left alone",
 			existing: seededActivity{ID: "a1"},
-			act:      demoActivity{Company: "nobody.test", DaysAgo: 30},
+			act:      act,
 			wantMove: false,
 		},
 	} {
@@ -165,5 +175,94 @@ func TestProjectRelinkFor(t *testing.T) {
 				t.Errorf("project = %q, want %q", gotID, tc.wantID)
 			}
 		})
+	}
+}
+
+// TestTheReconciliationDatesByTheRecordNotTheDataset — the drift a review
+// caught, and the reason projectRelinkFor takes its date from the stored row.
+//
+// days_ago is relative to the day the seeder RUNS. occurred_at was frozen by
+// the first run and never moves again. So on any later day the two disagree,
+// and a pass that dated by the offset would decide an activity nothing had
+// touched now belongs to a different project — then relink it, stamping
+// six-year retention that cannot be lifted.
+func TestTheReconciliationDatesByTheRecordNotTheDataset(t *testing.T) {
+	refs := refsWithProjects(
+		seededProject{ID: "migration", StartedAt: "2025-10-28"},
+		seededProject{ID: "second-tenant", StartedAt: "2026-08-06"},
+	)
+	// The record says this mail was sent during the migration, and that does
+	// not change however long ago the seeder last ran.
+	existing := seededActivity{ID: "a1", OccurredAt: "2026-01-22T09:00:00Z", ProjectID: "migration"}
+
+	// The same entry read on a day when its days_ago offset would now land
+	// after the second tenant started. Dating by the offset would move it.
+	act := demoActivity{Company: "acme.test", DaysAgo: 1}
+	if _, move := projectRelinkFor(refs, act, existing); move {
+		t.Error("the pass dated by the dataset offset and would relink an activity nothing had changed")
+	}
+	if want := projectForActivity(refs, act); want != "second-tenant" {
+		t.Fatalf("the fixture no longer demonstrates the drift: offset dating gives %q", want)
+	}
+}
+
+// TestASeededActivityIsIdentifiedByBothHalvesOfItsKey — source_id alone is
+// not an identity.
+//
+// The database is unique on (source_system, source_id), and this tool's own
+// ids are "act-0", "act-1" — spellings any connector is free to use. While the
+// activity index only counted rows, a collision merely miscounted. Now that it
+// decides which activity gets RELINKED, the same collision would file a
+// stranger's mail under a demo project and stamp it with six-year retention
+// that cannot be lifted.
+func TestASeededActivityIsIdentifiedByBothHalvesOfItsKey(t *testing.T) {
+	page := json.RawMessage(`[
+	  {"id":"theirs","source_system":"gmail","source_id":"act-0","occurred_at":"2026-01-22T09:00:00Z",
+	   "links":[{"entity_type":"organization","entity_id":"org-2"}]},
+	  {"id":"ours","source_system":"seed","source_id":"act-0","occurred_at":"2026-01-22T09:00:00Z",
+	   "links":[{"entity_type":"organization","entity_id":"org-1"}]}
+	]`)
+	seen := map[string]seededActivity{}
+	if err := indexSeededActivities(page, seen); err != nil {
+		t.Fatalf("indexing the page: %v", err)
+	}
+	if len(seen) != 1 {
+		t.Errorf("indexed %d activities, want only the seeded one", len(seen))
+	}
+	got, ok := seen["act-0"]
+	if !ok {
+		t.Fatal("the seeded activity was not indexed at all")
+	}
+	if got.ID != "ours" {
+		t.Errorf("act-0 resolved to %q — a row from another source system claimed the key", got.ID)
+	}
+	if got.OrganizationID != "org-1" {
+		t.Errorf("organization = %q, want org-1", got.OrganizationID)
+	}
+}
+
+// TestTheIndexReadsBothLinksItActsOn — the reconciliation decides from the
+// project link (what is filed now) and the organization link (whether this is
+// even the right row), so a page that carries both must yield both.
+func TestTheIndexReadsBothLinksItActsOn(t *testing.T) {
+	page := json.RawMessage(`[
+	  {"id":"a1","source_system":"seed","source_id":"act-7","occurred_at":"2026-01-22T09:00:00Z",
+	   "links":[{"entity_type":"organization","entity_id":"org-1"},
+	            {"entity_type":"person","entity_id":"p-1"},
+	            {"entity_type":"project","entity_id":"proj-1"}]}
+	]`)
+	seen := map[string]seededActivity{}
+	if err := indexSeededActivities(page, seen); err != nil {
+		t.Fatalf("indexing the page: %v", err)
+	}
+	got := seen["act-7"]
+	if got.ProjectID != "proj-1" {
+		t.Errorf("project = %q, want proj-1", got.ProjectID)
+	}
+	if got.OrganizationID != "org-1" {
+		t.Errorf("organization = %q, want org-1", got.OrganizationID)
+	}
+	if got.OccurredAt == "" {
+		t.Error("occurred_at was dropped; the reconciliation dates against it")
 	}
 }

@@ -38,6 +38,16 @@ func relinkActivitiesToProjects(c *client, cfg demoConfig, refs pipelineRefs, se
 			// Not on file before this run, so the create above linked it.
 			continue
 		}
+		// The stored row must be the account this entry is about. A source id
+		// here is the entry's POSITION ("act-0", "act-1") and the dataset
+		// gives activities no ref of their own, so inserting an entry in the
+		// middle of the array renames every row after it. Relinking on a
+		// mismatched id would file one company's mail under another company's
+		// project and stamp it with retention nobody can lift, so a
+		// disagreement means leave it alone.
+		if orgID, ok := refs.orgsByDom[strings.ToLower(act.Company)]; !ok || existing.OrganizationID != orgID {
+			continue
+		}
 		want, move := projectRelinkFor(refs, act, existing)
 		if !move {
 			continue
@@ -67,7 +77,14 @@ func relinkActivitiesToProjects(c *client, cfg demoConfig, refs pipelineRefs, se
 // what was already right would write for no reason and stamp records that had
 // no business being stamped.
 func projectRelinkFor(refs pipelineRefs, act demoActivity, existing seededActivity) (projectID string, move bool) {
-	want := projectForActivity(refs, act)
+	// Dated against the record, not the dataset — see projectForActivityOn.
+	// An activity on file whose occurred_at the server did not return cannot
+	// be dated at all, and guessing is what this function exists to avoid.
+	when, _, found := strings.Cut(existing.OccurredAt, "T")
+	if !found || when == "" {
+		return "", false
+	}
+	want := projectForActivityOn(refs, act.Company, when)
 	if want == "" {
 		// Older than every project on the account, so it belongs to none.
 		// Inventing a link here is worse than leaving it: the stamp is
@@ -94,17 +111,28 @@ func projectRelinkFor(refs pipelineRefs, act demoActivity, existing seededActivi
 // answer: correspondence from before any delivery work began was not about
 // delivery work.
 func projectForActivity(refs pipelineRefs, act demoActivity) string {
-	projects := refs.projectsByCompany[strings.ToLower(act.Company)]
-	if len(projects) == 0 {
-		return ""
-	}
-	// The same offset seedActivities computes, as a date, so it compares
-	// against started_at on its own terms.
+	// The offset the dataset gives, as a date. Right for an activity being
+	// written now, because that is the same clock the create call uses.
 	occurred := -act.DaysAgo
 	if act.DaysIn > 0 {
 		occurred = act.DaysIn
 	}
-	when := refs.date(occurred)
+	return projectForActivityOn(refs, act.Company, refs.date(occurred))
+}
+
+// projectForActivityOn is projectForActivity against a date the caller names.
+//
+// The reconciliation pass needs this because it must NOT use the dataset's
+// offset. days_ago is relative to the day the seeder runs, while the
+// occurred_at on file was frozen by the first run and never moves again — so
+// on any later day the two disagree, and a pass that dated by the offset would
+// decide an unchanged activity now belongs to a different project. It would
+// then relink it, which stamps six-year retention that cannot be lifted.
+func projectForActivityOn(refs pipelineRefs, company, when string) string {
+	projects := refs.projectsByCompany[strings.ToLower(company)]
+	if len(projects) == 0 {
+		return ""
+	}
 
 	chosen := ""
 	for _, proj := range projects {

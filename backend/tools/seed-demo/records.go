@@ -66,7 +66,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 			"kind":          act.Kind,
 			"occurred_at":   refs.timestamp(occurred),
 			"source":        seedSource,
-			"source_system": "seed",
+			"source_system": seedSourceSystem,
 			"source_id":     fmt.Sprintf("act-%d", i),
 			"links":         links,
 		}
@@ -182,36 +182,54 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 func loadActivitySourceIDs(c *client) (map[string]seededActivity, error) {
 	seen := map[string]seededActivity{}
 	err := c.getAll("/v1/activities", nil, func(raw json.RawMessage) error {
-		var rows []struct {
-			ID       string `json:"id"`
-			SourceID string `json:"source_id"`
-			Links    []struct {
-				EntityType string `json:"entity_type"`
-				EntityID   string `json:"entity_id"`
-			} `json:"links"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			if row.SourceID == "" {
-				continue
-			}
-			found := seededActivity{ID: row.ID}
-			for _, link := range row.Links {
-				if link.EntityType == "project" {
-					found.ProjectID = link.EntityID
-					break
-				}
-			}
-			seen[row.SourceID] = found
-		}
-		return nil
+		return indexSeededActivities(raw, seen)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing activities: %w", err)
 	}
 	return seen, nil
+}
+
+// indexSeededActivities adds one page of activities to the index, keeping only
+// the rows this tool captured.
+func indexSeededActivities(raw json.RawMessage, seen map[string]seededActivity) error {
+	var rows []struct {
+		ID           string `json:"id"`
+		SourceSystem string `json:"source_system"`
+		SourceID     string `json:"source_id"`
+		OccurredAt   string `json:"occurred_at"`
+		Links        []struct {
+			EntityType string `json:"entity_type"`
+			EntityID   string `json:"entity_id"`
+		} `json:"links"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		// BOTH halves of the key, because source_id alone is not one.
+		// The database is unique on (source_system, source_id), and the
+		// seeder's own ids are "act-0", "act-1" — spellings a connector
+		// is free to use too. Keying on the id alone once only miscounted
+		// how many rows a run created; now that this map decides which
+		// activity gets relinked, the same collision would file somebody
+		// else's mail under a demo project and stamp it with six-year
+		// retention that cannot be lifted.
+		if row.SourceSystem != seedSourceSystem || row.SourceID == "" {
+			continue
+		}
+		found := seededActivity{ID: row.ID, OccurredAt: row.OccurredAt}
+		for _, link := range row.Links {
+			switch link.EntityType {
+			case "project":
+				found.ProjectID = link.EntityID
+			case "organization":
+				found.OrganizationID = link.EntityID
+			}
+		}
+		seen[row.SourceID] = found
+	}
+	return nil
 }
 
 // seededActivity is one activity already on file, as the reconciliation pass
@@ -220,6 +238,18 @@ func loadActivitySourceIDs(c *client) (map[string]seededActivity, error) {
 type seededActivity struct {
 	ID        string
 	ProjectID string
+	// OccurredAt is when the activity says it happened, as the server stored
+	// it. The reconciliation dates against THIS rather than against the
+	// dataset's days_ago offset: the offset is relative to the day the seeder
+	// runs, and occurred_at was frozen on the first run and never moves after
+	// it, so on any later day the two disagree.
+	OccurredAt string
+	// OrganizationID is the account this activity is filed on. The
+	// reconciliation checks it against the dataset entry before touching
+	// anything: source ids here are positional ("act-0", "act-1"), so
+	// reordering the activities array silently remaps which stored row an
+	// index names, and relinking the wrong one cannot be undone.
+	OrganizationID string
 }
 
 // seedLifecycle says where each account stands with us.
