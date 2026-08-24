@@ -139,12 +139,14 @@ Note the `== 'true'` on each output expression. paths-filter emits the **string*
 string `"false"` is truthy — without the comparison every scope would read as
 true on every event.
 
-`backend` and `backend_db` are the same set apart from the two agent
-rulebooks. They are split because one flag was driving two unrelated things:
-run the Go unit gates, and boot the sharded Postgres databases. `AGENTS.md` and
-`CLAUDE.md` are read by `backend/agentsdocparity_test.go`, so an edit to
-either has to run a unit lane — and by no integration test, so it must not
-run the database lanes. The two shards move in lockstep with the
+`backend` and `backend_db` are the same set apart from the agent rulebooks and
+`docs/**`. They are split because one flag was driving two unrelated things: run
+the Go unit gates, and boot the sharded Postgres databases. `AGENTS.md`, `CLAUDE.md`,
+`frontend/AGENTS.md`, `frontend/CLAUDE.md` and `docs/**` are each read by a Go
+gate —
+`backend/rulebookdelegation_test.go`, `backend/rulebookdirection_test.go` and
+`backend/rulebooktally_test.go` — so an edit to any of them has to run a unit
+lane, and by no integration test, so it must not run the database lanes. The two shards move in lockstep with the
 `integration` fan-in, which asserts `success` from them: skipping one alone
 would report a documentation PR as a broken integration lane.
 

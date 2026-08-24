@@ -1178,9 +1178,9 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
   // width. Below 561px it is not: the phone layout is the task alone — the
   // region goes, and the Core goes with it (see the ≤560 block in auth.css),
   // because on a phone the form is the only thing the screen is for. That is a
-  // deliberate reversal of Decision 1 for phones only — raised in STATUS.md —
-  // and it is pinned here rather than left to drift, because the alternative is
-  // a suite that still forbids the shipped design.
+  // deliberate reversal of Decision 1 for phones only, and this suite is the
+  // record of it: pinned here rather than left to drift, because the alternative
+  // is a suite that still forbids the shipped design.
   const NARROW = [
     { label: "390px mobile", width: 390, height: 844, identity: false },
     { label: "320px narrow", width: 320, height: 568, identity: false },

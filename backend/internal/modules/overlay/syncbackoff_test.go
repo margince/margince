@@ -41,7 +41,7 @@ func TestClassifySweepError(t *testing.T) {
 // bounds without depending on the ±20% jitter: delay(n) sits within ±20%
 // of min(base·2^n, cap), so it grows with n and never exceeds the cap by
 // more than the jitter. Asserting bounds (not an exact value) keeps the
-// test deterministic despite the randomised jitter (T11).
+// test deterministic despite the randomised jitter (P3).
 func TestSweepBackoffDelayStaysWithinTheJitteredLadder(t *testing.T) {
 	within := func(t *testing.T, got, center time.Duration) {
 		t.Helper()

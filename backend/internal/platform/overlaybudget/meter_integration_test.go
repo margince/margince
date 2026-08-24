@@ -10,7 +10,7 @@ package overlaybudget_test
 // isolation (OVB-AC-3), the per-source breakdown reconciling to the REST
 // total (OVB-AC-5), the `~unknown` headroom sentinel (OVB-AC-1), the
 // per-second search burst gate, fixed-window rollover via the injected
-// clock (T11 — no sleeps), and fail-closed answers when the meter cannot
+// clock (P3 — no sleeps), and fail-closed answers when the meter cannot
 // truthfully account. The meter is Redis-only (no Postgres), so a
 // workspace-bound context is all the fixture it needs — no DB row.
 

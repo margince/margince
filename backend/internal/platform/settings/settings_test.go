@@ -253,7 +253,7 @@ func TestGetTxReportsAnUndecodableStoredValue(t *testing.T) {
 	}
 }
 
-// settingRowTx is the DB boundary — the only boundary this file fakes (T11). It
+// settingRowTx is the DB boundary — the only boundary this file fakes (P3). It
 // answers the one QueryRow currentJSON issues, either with a stored value or
 // with pgx.ErrNoRows for the absent row. refuseRead makes the read itself a test
 // failure, for the case that must never reach SQL. Every other pgx.Tx method

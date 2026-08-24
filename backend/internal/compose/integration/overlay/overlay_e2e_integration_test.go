@@ -153,7 +153,7 @@ func TestOverlayReadAndSyncEndToEnd(t *testing.T) {
 // (reconcile's on-demand sweep, once connected, always builds a REAL
 // hubspot.Adapter from the connection's own vaulted region+token — see
 // compose/jobs.go's reconcileConnection — so this suite never calls it
-// against a connected workspace; T11 bars real-network reliance in a test).
+// against a connected workspace; P3 bars real-network reliance in a test).
 func assertOverlayOpsGatedInNativeMode(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	for _, path := range []string{"/v1/overlay/sync-status", "/v1/overlay/budget"} {

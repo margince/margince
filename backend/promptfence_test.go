@@ -125,7 +125,7 @@ func TestNoPromptDeclaresAFixedDataBoundary(t *testing.T) {
 // is per FILE, not per prompt. A file that makes the claim and builds a fence
 // somewhere passes, so a second builder in that same file could still promise a
 // boundary it never mints. Closing that needs the claim and the fence located in
-// the same prompt via the AST, which is worth doing and is recorded in STATUS.md
+// the same prompt via the AST, which is worth doing and is tracked in #2477
 // alongside the corpus pin gate. What this does catch is a whole file — a whole
 // lane — making the promise with no nonce behind it anywhere, which is the shape
 // every instance found so far has taken.

@@ -26,7 +26,7 @@ const keyPrefix = "ovb:"
 // calendar-day window, not a sliding 24h one: the spec's mechanism is
 // "fixed-window counters with expiry", so the daily allocation resets at
 // UTC midnight). The bucket comes from the injected clock, never redis
-// TIME, so window rollover is deterministic under test (T11).
+// TIME, so window rollover is deterministic under test (P3).
 func searchKey(ws ids.UUID, incumbent string, second int64) string {
 	return fmt.Sprintf(keyPrefix+"%s:%s:search:%d", ws.String(), incumbent, second)
 }

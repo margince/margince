@@ -128,7 +128,7 @@ func TestAnAgentWithNoPassportIsStillMetered(t *testing.T) {
 }
 
 // The window bucket comes from the injected clock, so rollover is a property
-// asserted by advancing time rather than by sleeping (T11). Two moments inside
+// asserted by advancing time rather than by sleeping (P3). Two moments inside
 // one window share a bucket; two moments either side of it do not.
 func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)

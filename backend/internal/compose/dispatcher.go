@@ -59,7 +59,7 @@ type Dispatcher struct {
 	pool    *pgxpool.Pool
 	now     func() time.Time
 	// queryMode reads one workspace's x_sor_mode from the workspace row.
-	// Injected for the same reason now is (T11: no real dependency in a
+	// Injected for the same reason now is (P3: no real dependency in a
 	// cache-behaviour test) — it is the seam that lets a unit test prove the
 	// write path ignores the cache, which is precisely the property that
 	// cannot be observed by seeding the cache and reading the answer back.
@@ -84,7 +84,7 @@ func NewDispatcher(native *Provider, overlayProvider *overlay.Provider, pool *pg
 	return newDispatcherWithClock(native, overlayProvider, pool, time.Now)
 }
 
-// newDispatcherWithClock is NewDispatcher with an injectable clock (T11:
+// newDispatcherWithClock is NewDispatcher with an injectable clock (P3:
 // no real-clock reliance in a TTL-cache test) — used only by this
 // package's own tests to exercise the TTL boundary without a
 // time.Sleep.

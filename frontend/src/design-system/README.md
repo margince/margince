@@ -235,7 +235,7 @@ the test tree regresses.
 
 | Gate | What it refuses |
 |---|---|
-| `frontend/scripts/check-native-controls.sh` | `<select>` / `<option>` / `<optgroup>` anywhere under `src/` except `design-system/select.tsx` — no browser-drawn dropdown |
+| `make native-controls` (`src/design-system/native-controls.test.ts`) | `<select>` / `<option>` / `<optgroup>` anywhere under `src/`, and in every extension frontend layer — with **no exemption**, `design-system/select.tsx` included: it contains no native control, so the old shell gate's path exemption covered nothing |
 | `frontend/scripts/check-ds-purity.sh` | A hex literal or `rgb()`/`hsl()`/`oklch()` outside `tokens.css` |
 | `frontend/scripts/check-font-lock.sh` | A fourth type family |
 | `frontend/scripts/check-icon-glyph.sh` | An emoji glyph in a source string — Lucide only |

@@ -18,8 +18,8 @@ var checks = []struct {
 	run  func(fc *fileContext, cfg Config) []Finding
 }{
 	{"swallowed-errors", swallowedErrors},  // §F / T2: the top reliability smell
-	{"test-sleep", testSleep},              // T11: sleeps make suites flaky
-	{"assertion-free-test", assertionFree}, // T11: a test that can't fail is a false green
+	{"test-sleep", testSleep},              // P3: sleeps make suites flaky
+	{"assertion-free-test", assertionFree}, // P3: a test that can't fail is a false green
 	{"boolean-trap", booleanTrap},          // §C: unreadable at the call site
 	{"naked-any", nakedAny},                // T6: type escape hatch
 	{"panic-in-domain", panicInDomain},     // §F: panics across a domain boundary

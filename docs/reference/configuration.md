@@ -5,6 +5,13 @@ flags; where a flag has an environment fallback it is listed. An empty
 required value is a boot error, as is an invalid `--log-level` /
 `--log-format`.
 
+**One installation serves one organization** (A107/ADR-0061). No request selects
+a tenant — the server resolves its singleton organization itself, so a call
+carries only the caller's own credential: a `crm_session` cookie for a human, a
+bearer passport for an agent or an MCP client. A worked first call is in
+[tutorials/getting-started.md](../tutorials/getting-started.md).
+
+
 ## Common log flags (api, worker)
 
 | Flag | Env | Default | Values |

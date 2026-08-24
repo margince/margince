@@ -4,7 +4,7 @@
 including what you delete tomorrow.**
 
 The binding form is
-[*This repository is public*](../../CLAUDE.md#this-repository-is-public). This
+*This repository is public*. This
 page is the reasoning and the method.
 
 ## Two obligations, one reader

@@ -5,7 +5,7 @@ the tree rather than listing it.** A rule maintained as a list is a rule that
 silently stops covering things.
 
 The binding form is
-[*Rules learned from the review loop*](../../CLAUDE.md#rules-learned-from-the-review-loop-binding).
+*Rules learned from the review loop*.
 This page is the method for writing a gate that actually holds.
 
 ## The eight rules, and what each one is defending against

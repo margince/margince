@@ -7,11 +7,12 @@ A principle here is broader than a rule and narrower than a philosophy: it is a
 statement about the shape of this codebase that settles a class of arguments
 before they start, plus the method for checking whether the tree still holds it.
 
-These pages explain; they do not enforce. The binding rules live in
-[CLAUDE.md](../../CLAUDE.md) and [AGENTS.md](../../AGENTS.md), and the gates that
-hold them live in tests and in `cli/craft`. When a principle here and a gate
-disagree, the gate is the record of current behaviour — fix one or the other,
-and say which.
+These pages explain; they do not enforce. The binding rules live in `AGENTS.md`
+at the repository root, and the gates that hold them live in tests and in
+`cli/craft`. The rulebook links down to these pages; they do not link back up to
+it, so a heading it renames cannot leave a dead anchor here. When a principle
+here and a gate disagree, the gate is the record of current behaviour — fix one
+or the other, and say which.
 
 | Principle | It settles | Rulebook section it explains |
 |---|---|---|
@@ -25,11 +26,11 @@ and say which.
 The rulebook sections stay where they are. `cli/craft` feeds the **whole**
 nearest `AGENTS.md` into its gate prompt, so a rule moved out of that file stops
 reaching the gate — these pages carry the reasoning and the method, the rulebook
-carries the binding short form. Four of those sections
-(*The write shape*, *Reuse before you build*, *License headers*,
-*Rules learned from the review loop*) must additionally stay byte-identical in
-both rulebooks; `TestSharedRulebookSectionsAreIdenticalInBothDocs` fails when
-they drift.
+carries the binding short form. Every `CLAUDE.md` holds nothing but an
+`@AGENTS.md` import, so no rule has a second copy to drift from. A directory may
+carry its own `AGENTS.md` for rules that bind only inside it — `frontend/` does —
+and those only ADD: a rule binding the whole tree lives in the root rulebook and
+nowhere else.
 
 ## Adding a principle
 

@@ -110,3 +110,17 @@ not architecture**. `internal/modules/ai/` owns it:
 - Where the runner's resume trigger comes from (the `approval.decided` event):
   [write-backbone.md](write-backbone.md).
 - What each module owns (`agents`, `ai`): [reference/modules.md](../reference/modules.md).
+
+## What a passport is worth
+
+Connecting a client is one command and the how-to owns it:
+[connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md). Two consequences
+of that arrangement are worth stating here, because both are easy to assume
+otherwise:
+
+- **A passport is a REST Bearer credential too, governed exactly as it is over
+  MCP** (ADR-0055, superseding the older "read-only on REST" rule). 🟢 mutations
+  auto-execute; 🟡 ones stage for confirm-first approval; both stay capped by the
+  granting human's live seat and RBAC. There is no quieter path to the same data.
+- **Every call re-authenticates**, so revocation binds mid-session rather than at
+  the next login. A passport taken away stops working on the next tool call.

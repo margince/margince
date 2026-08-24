@@ -126,7 +126,7 @@ func TestRetentionAppliedPayload_WithReason(t *testing.T) {
 	}
 }
 
-// fakeTx is the true-DB-boundary fake (T11), mirroring
+// fakeTx is the true-DB-boundary fake (P3), mirroring
 // storekit/emitevent_test.go's fakeTx: it implements only Exec
 // meaningfully and captures the statement + args Emit hands it. Every
 // other pgx.Tx method panics — EmitEventForEntity never calls them, so

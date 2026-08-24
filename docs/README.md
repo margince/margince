@@ -65,7 +65,7 @@ maps the codebase and links everything below.
 - [platform-toolkit.md](reference/platform-toolkit.md) — the reusable `platform/*` + `shared/*` utilities.
 - [configuration.md](reference/configuration.md) — every binary flag and environment variable.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
-- [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and [AGENTS.md](../AGENTS.md).)
+- [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 
 ### Explanation — understand the why
 
@@ -126,4 +126,4 @@ maps the codebase and links everything below.
    grouped **Explanation** map above; *The platform spine* is the group that
    applies to almost every backend change. Working on the SPA instead? Start at
    [frontend-architecture.md](explanation/frontend-architecture.md).
-5. [CONTRIBUTING.md](../CONTRIBUTING.md) + [AGENTS.md](../AGENTS.md) — the PR loop and the binding engineering rules.
+5. [CONTRIBUTING.md](../CONTRIBUTING.md) + `AGENTS.md` — the PR loop and the binding engineering rules.

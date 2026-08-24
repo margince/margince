@@ -88,7 +88,7 @@ type EmbedReindexEstimator struct {
 }
 
 // NewEmbedReindexEstimator wires the estimator over its five reads and an
-// injected clock (no time.Now() in the estimator; T11).
+// injected clock (no time.Now() in the estimator; P3).
 func NewEmbedReindexEstimator(pending PendingReader, rates RateResolver, model EmbedModelResolver,
 	budget BudgetReader, spent SpentReader, clock Clock,
 ) *EmbedReindexEstimator {

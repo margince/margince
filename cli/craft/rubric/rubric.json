@@ -1,12 +1,12 @@
 {
   "version": "1",
-  "source": "AGENTS.md ## Craftsmanship (ADR-0045)",
+  "source": "this file is the standard (ADR-0045); AGENTS.md ## Craftsmanship carries the prose form and any per-directory deltas",
   "binds": [
     "Google Go Style Guide",
     "Google Go Style Decisions",
     "Uber Go Style Guide",
     "Go Code Review Comments",
-    "frontend/CLAUDE.md (project React/TS conventions)"
+    "frontend/AGENTS.md (project React/TS conventions)"
   ],
   "meta_rule": "The addition is indistinguishable in style from a senior human's edit to the surrounding file.",
   "severity_model": {

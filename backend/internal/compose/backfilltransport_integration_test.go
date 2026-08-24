@@ -221,7 +221,7 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 }
 
 // backfillFixedClock pins the estimator's 7-day window so the preview wire test
-// never depends on the wall clock (T11: inject a clock, never read the real one).
+// never depends on the wall clock (P3: inject a clock, never read the real one).
 type backfillFixedClock struct{}
 
 func (backfillFixedClock) Now() time.Time { return time.Date(2026, 7, 21, 12, 0, 0, 0, time.UTC) }

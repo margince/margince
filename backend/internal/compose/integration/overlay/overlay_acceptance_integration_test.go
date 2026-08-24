@@ -627,7 +627,7 @@ func TestAcceptance_OVA_AC_1_TeardownPurges(t *testing.T) {
 	// bug), so the SAME instance queried moments ago would still answer
 	// from that cache here; a fresh instance has no such cache to race
 	// against, without this test needing a real-clock sleep past the TTL
-	// (T11).
+	// (P3).
 	//
 	// The native deals module also gates Search on real object-RBAC
 	// (unlike the overlay mirror's own visibility join adminCtx above was
