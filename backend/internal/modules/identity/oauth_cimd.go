@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/netguard"
+	"github.com/gradionhq/margince/backend/internal/platform/outbound"
 )
 
 // The fetch's bounds. Each is a refusal, not a preference.
@@ -259,6 +260,9 @@ func fetchCIMD(ctx context.Context, clientID string) (cimdDocument, time.Duratio
 		return cimdDocument{}, 0, fmt.Errorf("identity: building the metadata request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	// This GET goes to a URL the CALLER supplied, so it is the one outbound
+	// request whose operator has no other way to learn who is asking.
+	req.Header.Set("User-Agent", outbound.ClientMetadataHeader)
 	//nolint:gosec // G704: see the guards named on the request above
 	resp, err := cimdClient.Do(req)
 	if err != nil {

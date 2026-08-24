@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/platform/outbound"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -276,7 +277,7 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget) outcome {
 		return outcome{failure: "signing delivery: " + err.Error()}
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Margince-Webhooks/1")
+	req.Header.Set("User-Agent", outbound.WebhooksHeader)
 	req.Header.Set(HeaderEvent, t.eventType)
 	req.Header.Set(HeaderWebhookID, t.deliveryID.String())
 	req.Header.Set(HeaderWebhookTimestamp, strconv.FormatInt(ts, 10))
