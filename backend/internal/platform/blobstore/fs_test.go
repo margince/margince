@@ -339,3 +339,75 @@ func TestFilesystemStoreDeletePrefixCountsObjectsNotScratch(t *testing.T) {
 		t.Error("the staging file survived the prefix sweep")
 	}
 }
+
+// failingReader fails after handing over some bytes, which is what a truncated
+// upload or a dropped connection looks like from inside Put.
+type failingReader struct{ read bool }
+
+func (f *failingReader) Read(p []byte) (int, error) {
+	if f.read {
+		return 0, errors.New("the upload stopped")
+	}
+	f.read = true
+	copy(p, "half")
+	return 4, nil
+}
+
+// A failed OVERWRITE must leave the stored object exactly as it was — bytes and
+// content type both. Publishing the metadata first is what keeps a new object
+// from ever being visible untyped, and it is also what makes this case possible:
+// without the restore, the failure would delete the published metadata while the
+// old bytes stayed, so a Put that stored nothing would still have changed the
+// stored object's content type to "".
+func TestFilesystemStoreFailedOverwriteKeepsThePreviousObject(t *testing.T) {
+	store := newFilesystem(t)
+	ctx := t.Context()
+	const key = "ws/attachment/a"
+	if err := store.Put(ctx, key, bytes.NewReader([]byte("the original")), 12, "application/pdf"); err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+
+	if err := store.Put(ctx, key, &failingReader{}, 4, "image/png"); err == nil {
+		t.Fatal("Put with a failing reader succeeded")
+	}
+
+	r, obj, err := store.Get(ctx, key)
+	if err != nil {
+		t.Fatalf("Get after the failed overwrite: %v", err)
+	}
+	defer func() {
+		if cerr := r.Close(); cerr != nil {
+			t.Errorf("Close: %v", cerr)
+		}
+	}()
+	got, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if string(got) != "the original" {
+		t.Errorf("bytes = %q, want the original object", got)
+	}
+	if obj.ContentType != "application/pdf" {
+		t.Errorf("Object.ContentType = %q, want the original application/pdf", obj.ContentType)
+	}
+}
+
+// The same failure on a key that held NOTHING must leave nothing: the metadata
+// published before the bytes is removed rather than restored, so a failed first
+// write does not leave a content type with no object under it.
+func TestFilesystemStoreFailedFirstWriteLeavesNothing(t *testing.T) {
+	root := t.TempDir()
+	store := newFilesystemAt(t, root)
+	ctx := t.Context()
+
+	if err := store.Put(ctx, "ws/attachment/new", &failingReader{}, 4, "image/png"); err == nil {
+		t.Fatal("Put with a failing reader succeeded")
+	}
+
+	if _, statErr := os.Stat(filepath.Join(root, "meta", "ws", "attachment", "new")); statErr == nil {
+		t.Error("the metadata published before the bytes survived their failure")
+	}
+	if _, _, err := store.Get(ctx, "ws/attachment/new"); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Errorf("Get after a failed first write: err = %v, want ErrNotFound", err)
+	}
+}

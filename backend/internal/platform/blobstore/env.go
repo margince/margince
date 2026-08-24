@@ -78,7 +78,7 @@ func ConfigItems() []config.Item {
 	return []config.Item{
 		{
 			Name: EnvEndpoint, Kind: config.KindString, Roles: worker,
-			Doc: "S3/MinIO endpoint for attachment bytes; with both this and MARGINCE_BLOBSTORE_PATH unset there is no object storage and the attachment endpoints answer 501. Set with a path, this wins",
+			Doc: "S3/MinIO endpoint for attachment bytes; with both this and MARGINCE_BLOBSTORE_PATH unset there is no object storage and the attachment endpoints answer 501. When both are set, THIS ENDPOINT WINS and the path is not read",
 		},
 		{
 			Name: EnvAccessKey, Kind: config.KindString, Secret: true, Roles: worker,
@@ -102,7 +102,7 @@ func ConfigItems() []config.Item {
 		},
 		{
 			Name: EnvPath, Kind: config.KindString, Roles: worker,
-			Doc: "directory attachment bytes are written to, for an installation with no object storage service; ignored when an endpoint is set",
+			Doc: "directory attachment bytes are written to, for an installation with no object storage service; IGNORED when MARGINCE_BLOBSTORE_ENDPOINT is set, which wins",
 		},
 	}
 }

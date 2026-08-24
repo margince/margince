@@ -121,27 +121,36 @@ func (f *fsStore) path(tree, key string) (string, error) {
 	return filepath.Join(f.root, tree, local), nil
 }
 
-// Put publishes the object: metadata first, then the bytes.
+// Put publishes the object: metadata first, then the bytes, and puts the
+// previous metadata back if the bytes fail.
 //
-// That order is the whole of what makes the pair consistent. The BLOB is the
-// existence record — Get reports ErrNotFound from it and nothing else — so
-// publishing it last means an object is never visible without the content type
-// that describes it. The reverse order has a window in which a reader sees the
-// new bytes and no metadata, and the object it gets back claims a content type
-// the bytes do not have.
+// The order is what makes the pair consistent. The BLOB is the existence record
+// — Get reports ErrNotFound from it and nothing else — so publishing it last
+// means an object is never VISIBLE without the content type that describes it.
+// The reverse order has a window in which a reader sees new bytes and no
+// metadata, and the object it gets back claims a content type the bytes do not
+// have.
 //
-// Each write is itself atomic (temporary file in the same directory, then
-// rename), so a reader sees a whole generation or the previous one, never a
-// truncated file. If the bytes fail after the metadata landed, the metadata is
-// removed again: a failed Put leaves nothing new behind.
+// The order alone is not enough when the key already holds an object, which is
+// what the restore is for: without it, a failed overwrite would leave the OLD
+// bytes with the new metadata deleted, so a Put that changed nothing would have
+// changed the stored object's content type to "". Reading the previous value
+// first and writing it back costs one small read on a path that is already doing
+// IO, and it means a failed Put leaves the previous generation exactly as it was
+// — or, for a key that had nothing, nothing.
 //
-// What this does NOT give is one atomic publish of both. Overwriting a key that
-// already has an object would briefly pair the new content type with the old
-// bytes. It is left as it is deliberately: no writer in this product overwrites
-// a key — every call site mints a fresh uuidv7 into it (activities/capturedfiles,
-// compose/sitelogo, compose/csvimport) — and the alternative, one file carrying a
-// header, costs the property that makes a local store worth having, that the
-// object on disk IS the file, recoverable with a file browser and nothing else.
+// Each write is itself atomic (temporary file in the same directory, fsync,
+// rename, directory sync), so a reader sees a whole generation, never a
+// truncated file.
+//
+// What this still does not give is ONE atomic publish of both. A reader that
+// arrives between the two renames of an overwrite sees the old bytes with the
+// new content type. Closing that needs a generation manifest or a single file
+// carrying both, and the second costs the property that makes a local store
+// worth having — that the object on disk IS the file, recoverable with a file
+// browser and nothing else. It is left open deliberately, and narrowly: no
+// writer in this product overwrites a key (each mints a fresh uuidv7 into it),
+// so the window has no caller today.
 func (f *fsStore) Put(_ context.Context, key string, r io.Reader, _ int64, contentType string) error {
 	blob, err := f.path(fsBlobDir, key)
 	if err != nil {
@@ -151,23 +160,51 @@ func (f *fsStore) Put(_ context.Context, key string, r io.Reader, _ int64, conte
 	if err != nil {
 		return err
 	}
+	previous, hadPrevious, err := readMeta(meta)
+	if err != nil {
+		return fmt.Errorf("blobstore: read the stored content type for %q: %w", key, err)
+	}
+
 	// An empty content type stores no metadata rather than an empty file: Get
 	// reports "" for a missing one, so the two spellings would mean the same
-	// thing and only one of them costs an inode. A key being overwritten from a
-	// typed object to an untyped one has its old metadata removed FIRST, for the
-	// same reason the write order is what it is.
+	// thing and only one of them costs an inode.
 	if contentType == "" {
-		if rmErr := os.Remove(meta); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
-			return fmt.Errorf("blobstore: clear content type for %q: %w", key, rmErr)
+		if rmErr := removeStaging(meta); rmErr != nil {
+			return fmt.Errorf("blobstore: clear the content type for %q: %w", key, rmErr)
 		}
 	} else if err := writeFileAtomic(meta, strings.NewReader(contentType)); err != nil {
 		return err
 	}
+
 	if err := writeFileAtomic(blob, r); err != nil {
-		if contentType == "" {
-			return err
+		return errors.Join(err, restoreMeta(meta, previous, hadPrevious))
+	}
+	return nil
+}
+
+// readMeta reads a key's stored content type, reporting whether one was there.
+// Absence is not an error: an object stored without a content type has none.
+func readMeta(meta string) (string, bool, error) {
+	data, err := os.ReadFile(meta) //nolint:gosec // the path is bounded to the store root by f.path
+	if err != nil {
+		if isAbsent(err) {
+			return "", false, nil
 		}
-		return errors.Join(err, removeStaging(meta))
+		return "", false, err
+	}
+	return string(data), true, nil
+}
+
+// restoreMeta puts a key's previous content type back after a failed write —
+// or removes the one just published, when the key had none. It is the second
+// half of Put's failure path: the metadata was published before the bytes, so a
+// failure there has to unpublish it without disturbing what was already stored.
+func restoreMeta(meta, previous string, hadPrevious bool) error {
+	if !hadPrevious {
+		return removeStaging(meta)
+	}
+	if err := writeFileAtomic(meta, strings.NewReader(previous)); err != nil {
+		return fmt.Errorf("blobstore: restore the previous content type at %s: %w", meta, err)
 	}
 	return nil
 }
@@ -203,14 +240,11 @@ func (f *fsStore) contentType(key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := os.ReadFile(meta) //nolint:gosec // the path is bounded to the store root by f.path
+	value, _, err := readMeta(meta)
 	if err != nil {
-		if isAbsent(err) {
-			return "", nil
-		}
 		return "", fmt.Errorf("blobstore: read content type for %q: %w", key, err)
 	}
-	return string(data), nil
+	return value, nil
 }
 
 // isAbsent reports whether an error means "there is nothing at this path".
