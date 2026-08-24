@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // ErrInvalidKey reports a key that cannot become a path under the store's root:
@@ -86,8 +87,21 @@ func NewFilesystem(root string) (Store, error) {
 
 // path turns a key into a path under one of the store's trees, refusing any key
 // that would not stay inside it.
+//
+// Three refusals, and the third is the one that is easy to miss. A key is always
+// "/"-separated (WorkspaceKey builds it), so a BACKSLASH in one is never
+// legitimate — and on Windows it is a separator, which means `ws-a\..\ws-b\x`
+// passes a "/"-only element scan untouched and then Join+Clean walks it out of
+// the tree. Rejecting the character outright rather than only on Windows keeps
+// the refusal identical on both platforms: a key this store accepts on one host
+// is a key it accepts on the other.
+//
+// filepath.IsLocal is the last word — it answers "does this stay inside the
+// directory it is joined to" for the host's own rules, including a volume-
+// qualified path ("C:x") and a reserved device name that no explicit list here
+// would keep up with.
 func (f *fsStore) path(tree, key string) (string, error) {
-	if key == "" || strings.HasPrefix(key, "/") {
+	if key == "" || strings.HasPrefix(key, "/") || strings.ContainsRune(key, '\\') {
 		return "", fmt.Errorf("%w: %q", ErrInvalidKey, key)
 	}
 	for _, element := range strings.Split(key, "/") {
@@ -95,38 +109,62 @@ func (f *fsStore) path(tree, key string) (string, error) {
 			return "", fmt.Errorf("%w: %q", ErrInvalidKey, key)
 		}
 	}
-	// FromSlash, not Join alone: keys are always "/"-separated, and on a
-	// platform whose separator differs a key element must not be read as a path
-	// element boundary by accident.
-	return filepath.Join(f.root, tree, filepath.FromSlash(key)), nil
+	local := filepath.FromSlash(key)
+	if !filepath.IsLocal(local) {
+		return "", fmt.Errorf("%w: %q", ErrInvalidKey, key)
+	}
+	return filepath.Join(f.root, tree, local), nil
 }
 
-// Put writes the object atomically: bytes land in a temporary file beside the
-// destination and are renamed into place, so a reader sees the whole previous
-// object or the whole new one. A crash mid-upload leaves a temporary file, never
-// a truncated attachment that the row still points at.
+// Put publishes the object: metadata first, then the bytes.
+//
+// That order is the whole of what makes the pair consistent. The BLOB is the
+// existence record — Get reports ErrNotFound from it and nothing else — so
+// publishing it last means an object is never visible without the content type
+// that describes it. The reverse order has a window in which a reader sees the
+// new bytes and no metadata, and the object it gets back claims a content type
+// the bytes do not have.
+//
+// Each write is itself atomic (temporary file in the same directory, then
+// rename), so a reader sees a whole generation or the previous one, never a
+// truncated file. If the bytes fail after the metadata landed, the metadata is
+// removed again: a failed Put leaves nothing new behind.
+//
+// What this does NOT give is one atomic publish of both. Overwriting a key that
+// already has an object would briefly pair the new content type with the old
+// bytes. It is left as it is deliberately: no writer in this product overwrites
+// a key — every call site mints a fresh uuidv7 into it (activities/capturedfiles,
+// compose/sitelogo, compose/csvimport) — and the alternative, one file carrying a
+// header, costs the property that makes a local store worth having, that the
+// object on disk IS the file, recoverable with a file browser and nothing else.
 func (f *fsStore) Put(_ context.Context, key string, r io.Reader, _ int64, contentType string) error {
 	blob, err := f.path(fsBlobDir, key)
 	if err != nil {
-		return err
-	}
-	if err := writeFileAtomic(blob, r); err != nil {
 		return err
 	}
 	meta, err := f.path(fsMetaDir, key)
 	if err != nil {
 		return err
 	}
-	// An empty content type writes no metadata rather than an empty file: Get
+	// An empty content type stores no metadata rather than an empty file: Get
 	// reports "" for a missing one, so the two spellings would mean the same
-	// thing and only one of them costs an inode.
+	// thing and only one of them costs an inode. A key being overwritten from a
+	// typed object to an untyped one has its old metadata removed FIRST, for the
+	// same reason the write order is what it is.
 	if contentType == "" {
-		if err := os.Remove(meta); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("blobstore: clear content type for %q: %w", key, err)
+		if rmErr := os.Remove(meta); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
+			return fmt.Errorf("blobstore: clear content type for %q: %w", key, rmErr)
 		}
-		return nil
+	} else if err := writeFileAtomic(meta, strings.NewReader(contentType)); err != nil {
+		return err
 	}
-	return writeFileAtomic(meta, strings.NewReader(contentType))
+	if err := writeFileAtomic(blob, r); err != nil {
+		if contentType == "" {
+			return err
+		}
+		return errors.Join(err, removeStaging(meta))
+	}
+	return nil
 }
 
 func (f *fsStore) Get(_ context.Context, key string) (io.ReadCloser, Object, error) {
@@ -136,7 +174,7 @@ func (f *fsStore) Get(_ context.Context, key string) (io.ReadCloser, Object, err
 	}
 	file, err := os.Open(blob) //nolint:gosec // the path is bounded to the store root by f.path
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if isAbsent(err) {
 			return nil, Object{}, ErrNotFound
 		}
 		return nil, Object{}, fmt.Errorf("blobstore: open %q: %w", key, err)
@@ -162,12 +200,24 @@ func (f *fsStore) contentType(key string) (string, error) {
 	}
 	data, err := os.ReadFile(meta) //nolint:gosec // the path is bounded to the store root by f.path
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if isAbsent(err) {
 			return "", nil
 		}
 		return "", fmt.Errorf("blobstore: read content type for %q: %w", key, err)
 	}
 	return string(data), nil
+}
+
+// isAbsent reports whether an error means "there is nothing at this path".
+//
+// ErrNotExist is the ordinary answer. ENOTDIR is the other one: a key whose
+// PARENT is an object rather than a directory ("ws/a/b" where "ws/a" holds
+// bytes) cannot have an object either, and the filesystem says so with a
+// different errno. Both are absence, and a caller must read them the same way —
+// otherwise a missing object answers 500 instead of 404 on the one shape of key
+// that is easiest to construct by accident.
+func isAbsent(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTDIR)
 }
 
 // Delete removes the object and its metadata. Idempotent, as the seam requires:
@@ -216,26 +266,39 @@ func (f *fsStore) DeletePrefix(_ context.Context, prefix string) (int, error) {
 	return deleted, nil
 }
 
-// Health reports whether the root is still a directory this process can write
-// to. It writes and removes a probe file rather than only stat-ing, because a
-// root that has become read-only — an unmounted volume, a permission change —
-// stats perfectly and fails every upload.
+// Health reports whether the store's trees are still directories this process
+// can write to.
+//
+// BOTH trees, because a Put needs both: with meta unwritable, readiness would
+// pass while every typed upload failed — after the metadata write, so the blob
+// would not even be attempted. It writes and removes a probe file rather than
+// only stat-ing, because a tree that has become read-only — an unmounted volume,
+// a permission change — stats perfectly and fails every write.
 func (f *fsStore) Health(_ context.Context) error {
-	blob := filepath.Join(f.root, fsBlobDir)
-	info, err := os.Stat(blob)
+	for _, tree := range []string{fsMetaDir, fsBlobDir} {
+		if err := probeWritable(filepath.Join(f.root, tree)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// probeWritable is the per-tree half of Health.
+func probeWritable(dir string) error {
+	info, err := os.Stat(dir)
 	if err != nil {
-		return fmt.Errorf("blobstore: reach %s: %w", blob, err)
+		return fmt.Errorf("blobstore: reach %s: %w", dir, err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("blobstore: %s is not a directory", blob)
+		return fmt.Errorf("blobstore: %s is not a directory", dir)
 	}
-	probe, err := os.CreateTemp(blob, ".health-*")
+	probe, err := os.CreateTemp(dir, ".health-*")
 	if err != nil {
-		return fmt.Errorf("blobstore: write to %s: %w", blob, err)
+		return fmt.Errorf("blobstore: write to %s: %w", dir, err)
 	}
 	name := probe.Name()
 	if err := probe.Close(); err != nil {
-		return fmt.Errorf("blobstore: write to %s: %w", blob, err)
+		return errors.Join(fmt.Errorf("blobstore: write to %s: %w", dir, err), removeStaging(name))
 	}
 	if err := os.Remove(name); err != nil {
 		return fmt.Errorf("blobstore: clean up %s: %w", name, err)

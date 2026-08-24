@@ -185,6 +185,73 @@ func TestFilesystemStoreRefusesAKeyThatEscapesTheRoot(t *testing.T) {
 	}
 }
 
+// A backslash is never legitimate in a key — WorkspaceKey builds "/"-separated
+// keys — and on Windows it IS a separator, so `ws-a\..\ws-b\x` walks out of
+// the tenant prefix past a "/"-only element scan. The refusal is the same on
+// every platform on purpose: a key one host accepts is a key the other accepts.
+func TestFilesystemStoreRefusesAKeyWithWindowsSeparators(t *testing.T) {
+	store := newFilesystem(t)
+	ctx := t.Context()
+
+	for _, key := range []string{
+		`ws-a\..\ws-b\attachment\x`,
+		`ws-a\attachment\x`,
+		`C:\ws-a\attachment\x`,
+	} {
+		if err := store.Put(ctx, key, bytes.NewReader([]byte("x")), 1, ""); !errors.Is(err, blobstore.ErrInvalidKey) {
+			t.Errorf("Put(%q): err = %v, want ErrInvalidKey", key, err)
+		}
+		if _, _, err := store.Get(ctx, key); !errors.Is(err, blobstore.ErrInvalidKey) {
+			t.Errorf("Get(%q): err = %v, want ErrInvalidKey", key, err)
+		}
+	}
+}
+
+// The metadata is published BEFORE the bytes, so the blob stays the existence
+// record and no object is ever visible without the content type describing it.
+// The cost of that order is a metadata file with no object behind it when the
+// bytes fail, so the failure path removes it again.
+//
+// The failure is forced the way it can actually happen: a key that shadows an
+// existing object's path. "ws/a" is a FILE, so creating the directory "ws/a"
+// that "ws/a/b" needs cannot succeed.
+func TestFilesystemStorePutLeavesNoMetadataWhenTheBytesFail(t *testing.T) {
+	root := t.TempDir()
+	store := newFilesystemAt(t, root)
+	ctx := t.Context()
+	put(ctx, t, store, "ws/a", "the object in the way")
+
+	err := store.Put(ctx, "ws/a/b", bytes.NewReader([]byte("x")), 1, "text/plain")
+	if err == nil {
+		t.Fatal("Put under a key shadowed by an existing object succeeded")
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "meta", "ws", "a", "b")); statErr == nil {
+		t.Error("the metadata written before the bytes survived their failure")
+	}
+	if _, _, getErr := store.Get(ctx, "ws/a/b"); !errors.Is(getErr, blobstore.ErrNotFound) {
+		t.Errorf("Get after a failed Put: err = %v, want ErrNotFound", getErr)
+	}
+}
+
+// Health has to answer for both trees: a Put writes metadata first, so a
+// read-only meta tree fails every typed upload before the blob is attempted —
+// and a readiness probe that only checked blob would report the store healthy
+// the whole time.
+func TestFilesystemStoreHealthReportsAnUnwritableMetaTree(t *testing.T) {
+	root := t.TempDir()
+	store := newFilesystemAt(t, root)
+	if err := store.Health(t.Context()); err != nil {
+		t.Fatalf("Health on a writable store: %v", err)
+	}
+
+	if err := os.RemoveAll(filepath.Join(root, "meta")); err != nil {
+		t.Fatalf("RemoveAll: %v", err)
+	}
+	if err := store.Health(t.Context()); err == nil {
+		t.Error("Health with the meta tree gone: err = nil, want a failure")
+	}
+}
+
 func TestFilesystemStoreHealthReportsAnUnwritableRoot(t *testing.T) {
 	root := t.TempDir()
 	store := newFilesystemAt(t, root)

@@ -384,8 +384,10 @@ this properly and is not something the stdlib does; see the known limits.
   localhost so that server can write to local disk is a hop the seam does not
   need. What the folder therefore does not have is what a distributed store
   gives: no replication, no versioning, no signed URLs, and no way for a
-  second api replica to see the same bytes. `MARGINCE_BLOBSTORE_ENDPOINT`
-  still takes precedence for an installation that has a real store.
+  second api replica to see the same bytes — so the bundle's storage is the
+  bundle's own, which is what a single-user installation is anyway.
+  `MARGINCE_BLOBSTORE_ENDPOINT` still takes precedence for an installation that
+  has a real store.
 - **The api starts quietly about everything it cannot do.** Connectors and
   webhooks being unconfigured produce no startup warning, so a user who never
   opens `margince.env` gets no signal.

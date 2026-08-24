@@ -156,8 +156,10 @@ const envTemplate = `# Margince settings.
 # Already working: attachments and company logos are kept in data/blobs inside
 # this folder, so nothing here needs setting. Point MARGINCE_BLOBSTORE_PATH
 # somewhere else to move them (an external disk, say), or set the endpoint
-# below to use an S3-compatible service instead — the endpoint wins over the
-# path when both are set.
+# below to keep them in an S3-compatible service instead — the endpoint wins
+# over the path when both are set. A local store holds bytes for THIS machine
+# only: no replication, no signed URLs, and a second api replica cannot read a
+# directory it does not mount.
 # ---------------------------------------------------------------------------
 # MARGINCE_BLOBSTORE_PATH=
 # MARGINCE_BLOBSTORE_ENDPOINT=

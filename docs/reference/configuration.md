@@ -460,7 +460,9 @@ attachments had vanished.
 The path provider is for an installation that has local disk and no object
 storage service to point at — a single-machine deployment, and the desktop
 bundle, whose launcher defaults it to `data/blobs` inside the installation
-folder. It is not a distributed store: no replication, no versioning, no signed
+folder. Everything that rides the store rides both providers: attachments,
+company logos and CSV import bodies all go through the same `Store` seam, so
+none of them is endpoint-only. It is not a distributed store: no replication, no versioning, no signed
 URLs, and it holds bytes only for the machine it runs on. An installation with
 more than one api replica needs the endpoint provider, because two machines
 cannot share a directory they do not both mount.

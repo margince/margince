@@ -218,6 +218,11 @@ them elsewhere, or `MARGINCE_BLOBSTORE_ENDPOINT` to keep them in an
 S3-compatible service instead — the endpoint takes precedence when both are
 set. No S3 server is bundled and none is needed.
 
+What a local store does not give is what a service would: no replication, no
+versioning, no signed URLs, and nothing a second machine can read. For one
+person's installation that is the whole requirement; for anything more, set the
+endpoint.
+
 ```
 # margince.env
 ANTHROPIC_API_KEY=sk-ant-...

@@ -78,7 +78,7 @@ func ConfigItems() []config.Item {
 	return []config.Item{
 		{
 			Name: EnvEndpoint, Kind: config.KindString, Roles: worker,
-			Doc: "S3/MinIO endpoint for attachment bytes; unset disables object storage and the attachment endpoints answer 501",
+			Doc: "S3/MinIO endpoint for attachment bytes; with both this and MARGINCE_BLOBSTORE_PATH unset there is no object storage and the attachment endpoints answer 501. Set with a path, this wins",
 		},
 		{
 			Name: EnvAccessKey, Kind: config.KindString, Secret: true, Roles: worker,
