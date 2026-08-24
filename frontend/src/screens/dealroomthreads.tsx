@@ -24,6 +24,12 @@ import "./dealroomthreads.css";
 // are the caller's decisions, and the only things that differ between the
 // two screens.
 
+// The one element carrying "why you may not write here". The room panel's
+// composer prints it; every refused document button points at it with
+// `aria-describedby` rather than repeating it. Both live in this file and the
+// room panel is unconditional, so the reference cannot dangle.
+const REFUSAL_ID = "deal-room-write-refusal";
+
 export type DealRoomThread = components["schemas"]["DealRoomThread"];
 
 export type ThreadVerbs = Readonly<{
@@ -340,10 +346,40 @@ function ThreadComposer({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!verbs.open) {
-    // The refusal is said once, on the room panel, not under every document.
-    return !collapsible && verbs.refusal ? (
-      <p className="t-small">{verbs.refusal}</p>
-    ) : null;
+    // A reader who may not write still sees WHERE writing would happen: the
+    // button in its disabled state, carrying the reason. Rendering nothing
+    // here made a preview show a room with no reply affordance at all, so a
+    // rep checking what their buyer sees could not tell a commenting seat
+    // from a read-only one — the two drew the same page.
+    //
+    // The room composer states the sentence and draws its own button; a
+    // document card draws the button alone and points at that sentence. Both
+    // draw one, because a room with NO documents has no card to carry it —
+    // and an empty room shown to a preview is exactly where a rep most needs
+    // to see that a buyer would have somewhere to write.
+    if (!verbs.refusal) {
+      return null;
+    }
+    return (
+      <>
+        {collapsible ? null : (
+          <p className="t-small t-danger" id={REFUSAL_ID}>
+            {verbs.refusal}
+          </p>
+        )}
+        <div className="card-actions">
+          {/* `reasonId`, not `reason`: every control on the board is refused
+              by the ONE fact the room panel states, and printing that sentence
+              under each of them says it as many times as there are files.
+              Naming it once and pointing each control at it says it once and
+              still reaches a screen reader from every one of them. */}
+          <Button small variant="ghost" reasonId={REFUSAL_ID}>
+            <MessageSquare aria-hidden />
+            {label}
+          </Button>
+        </div>
+      </>
+    );
   }
   const open = verbs.open;
   if (!openForm) {
