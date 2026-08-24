@@ -21,52 +21,128 @@ func TestQuarterBounds(t *testing.T) {
 	}
 
 	cases := []struct {
-		name      string
-		now       time.Time
-		loc       *time.Location
-		wantStart time.Time
-		wantEnd   time.Time
+		name string
+		now  time.Time
+		loc  *time.Location
+		// The month the installation's business year begins. Every case below
+		// that names January is asserting the CALENDAR behaviour, which the
+		// fiscal cut must reproduce exactly for the default nobody changes.
+		fiscalStart int
+		wantStart   time.Time
+		wantEnd     time.Time
 	}{
 		{
-			name:      "mid-quarter",
-			now:       time.Date(2026, time.May, 15, 10, 30, 0, 0, time.UTC),
-			loc:       time.UTC,
-			wantStart: time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC),
-			wantEnd:   time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
+			name:        "mid-quarter",
+			now:         time.Date(2026, time.May, 15, 10, 30, 0, 0, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.January),
+			wantStart:   time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			// The instant exactly on a quarter boundary belongs to the
 			// quarter it opens, never the one it closes.
-			name:      "quarter boundary instant",
-			now:       time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
-			loc:       time.UTC,
-			wantStart: time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
-			wantEnd:   time.Date(2026, time.October, 1, 0, 0, 0, 0, time.UTC),
+			name:        "quarter boundary instant",
+			now:         time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.January),
+			wantStart:   time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.October, 1, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			// One nanosecond before the boundary must still resolve to
 			// the closing quarter, proving the end bound is exclusive.
-			name:      "instant before quarter boundary stays in prior quarter",
-			now:       time.Date(2026, time.June, 30, 23, 59, 59, 999999999, time.UTC),
-			loc:       time.UTC,
-			wantStart: time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC),
-			wantEnd:   time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
+			name:        "instant before quarter boundary stays in prior quarter",
+			now:         time.Date(2026, time.June, 30, 23, 59, 59, 999999999, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.January),
+			wantStart:   time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			// UTC instant lands early morning Jan 1, but Los Angeles is
 			// still Dec 31 the prior year — the workspace timezone must
 			// shift which quarter (and year) this resolves to, not UTC.
-			name:      "timezone shifts the calendar date across a year boundary",
-			now:       time.Date(2026, time.January, 1, 4, 0, 0, 0, time.UTC),
-			loc:       losAngeles,
-			wantStart: time.Date(2025, time.October, 1, 0, 0, 0, 0, losAngeles),
-			wantEnd:   time.Date(2026, time.January, 1, 0, 0, 0, 0, losAngeles),
+			name:        "timezone shifts the calendar date across a year boundary",
+			now:         time.Date(2026, time.January, 1, 4, 0, 0, 0, time.UTC),
+			loc:         losAngeles,
+			fiscalStart: int(time.January),
+			wantStart:   time.Date(2025, time.October, 1, 0, 0, 0, 0, losAngeles),
+			wantEnd:     time.Date(2026, time.January, 1, 0, 0, 0, 0, losAngeles),
+		},
+		// The fiscal cases below all use a start month that is NOT itself a
+		// calendar-quarter boundary, and that is deliberate.
+		//
+		// April, July and October are the obvious fiscal starts to reach for,
+		// and every one of them is useless as a test: April–June is the second
+		// calendar quarter as well as the first fiscal one, so a cut that
+		// ignored the setting entirely returns the same bounds and the case
+		// passes. Four such cases were written here first and the whole set
+		// still passed with the fiscal arithmetic deleted.
+		//
+		// A February start shares no boundary with the calendar in any month of
+		// the year, so each case below fails the moment the setting stops being
+		// read.
+		{
+			// February–April is the FIRST quarter of a February-starting year.
+			// A calendar cut puts March in the quarter beginning in January.
+			name:        "february fiscal year, first quarter",
+			now:         time.Date(2026, time.March, 15, 10, 30, 0, 0, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.February),
+			wantStart:   time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.May, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			// The quarter that begins BEFORE the calendar year it ends in.
+			// January 2026 sits in the fourth quarter of the year that began in
+			// February 2025, so the bounds run back into the previous year —
+			// the case that proves the anchor is pulled back rather than
+			// clamped to `local.Year()`.
+			name:        "february fiscal year, the quarter that reaches back a year",
+			now:         time.Date(2026, time.January, 10, 0, 0, 0, 0, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.February),
+			wantStart:   time.Date(2025, time.November, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			// The last instant of a February-starting fiscal year: it belongs
+			// to the quarter ENDING on 1 February, not the one starting there.
+			// The half-open boundary, on a fiscal cut.
+			name:        "february fiscal year, its final instant",
+			now:         time.Date(2026, time.January, 31, 23, 59, 59, 999999999, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.February),
+			wantStart:   time.Date(2025, time.November, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			// And its first instant, which must open the new year's Q1 rather
+			// than close the old year's Q4.
+			name:        "february fiscal year, its first instant",
+			now:         time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.February),
+			wantStart:   time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2026, time.May, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			// A late start month, so the quarter runs forward across the
+			// calendar boundary instead of back: November–January under a
+			// November start.
+			name:        "november fiscal year, quarter crossing into the next year",
+			now:         time.Date(2026, time.December, 20, 12, 0, 0, 0, time.UTC),
+			loc:         time.UTC,
+			fiscalStart: int(time.November),
+			wantStart:   time.Date(2026, time.November, 1, 0, 0, 0, 0, time.UTC),
+			wantEnd:     time.Date(2027, time.February, 1, 0, 0, 0, 0, time.UTC),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			start, end := currentQuarterBounds(tc.now, tc.loc)
+			start, end := currentQuarterBounds(tc.now, tc.loc, tc.fiscalStart)
 			if !start.Equal(tc.wantStart) {
 				t.Errorf("start = %v, want %v", start, tc.wantStart)
 			}

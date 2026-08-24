@@ -184,6 +184,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The zone picker's option list — IANA names as DATA the control lists, not a zone anything is formatted in.",
   },
   {
+    file: "format/format.ts",
+    why: "monthName reads a UTC-minted date back in UTC to name a month. The zone is not a rendering choice: the instant is midnight on the 1st, so any reader's clock behind UTC lands on the previous month, and this returned December for January in America/New_York.",
+  },
+  {
+    file: "format/fiscalyear.test.ts",
+    why: "Proves that trap is real before proving monthName avoids it — reading the same UTC instant on a named western clock, which is the only way to show it lands in the previous month.",
+  },
+  {
     file: "format/calendarday.test.ts",
     why: "middayInstant and calendarDay take a zone and are proven by naming two of them; a machine-dependent zone would make the expectations unwritable.",
   },

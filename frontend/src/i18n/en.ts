@@ -5326,6 +5326,9 @@ export const en = {
   "installationSettings.timezone": "Reporting timezone",
   "installationSettings.timezoneHint":
     "IANA zone name (for example Europe/Berlin). Your organization's own clock: report period boundaries are computed in it, and every record date — close dates, invoice days, timeline headings — is shown in it, so a date reads the same for the whole team. Separate from your own display timezone.",
+  "installationSettings.fiscalYearStart": "Financial year starts",
+  "installationSettings.fiscalYearStartHint":
+    "The month your business year begins. Reports group by this year and quarter — a year that does not start in January is labelled with both calendar years it spans, like FY2026/27. Changing it re-labels every report at once, and a saved report view filtered on a period will then ask for different months.",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
     "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",

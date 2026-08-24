@@ -264,6 +264,11 @@ const (
 	// reportBaseCurrencyToken stands in for the installation base currency's
 	// bind position.
 	reportBaseCurrencyToken = "<<installation-base-currency>>"
+	// reportFiscalStartMonthToken stands in for the month the installation's
+	// business year begins — the value that decides whether a period bucket
+	// reads as a calendar year or a fiscal one, and by how much the anchor
+	// shifts when it is the latter.
+	reportFiscalStartMonthToken = "<<installation-fiscal-start-month>>"
 	// reportDealScopeToken stands in for the caller's deal row-scope clause
 	// over a deal subquery aliased d — what keeps a per-project money total
 	// from disclosing a deal the same caller's deal list would withhold.
@@ -290,7 +295,11 @@ func bindReportTokens(
 ) (string, []any, error) {
 	args = slices.Clone(args)
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	bindValue := func(token string, resolve func() (string, error)) error {
+	// `any` rather than `string`, because the fiscal start month is a number
+	// the statement both compares (= 1) and does arithmetic with. Rendering it
+	// as text and letting Postgres infer the type back is the kind of shortcut
+	// that works until a comparison silently becomes a text one.
+	bindValue := func(token string, resolve func() (any, error)) error {
 		if !strings.Contains(sql, token) {
 			return nil
 		}
@@ -301,10 +310,15 @@ func bindReportTokens(
 		sql = strings.ReplaceAll(sql, token, fmt.Sprintf("$%d", arg(value)))
 		return nil
 	}
-	if err := bindValue(reportZoneToken, func() (string, error) { return identity.TimezoneOf(ctx, tx) }); err != nil {
+	if err := bindValue(reportZoneToken, func() (any, error) { return identity.TimezoneOf(ctx, tx) }); err != nil {
 		return "", nil, err
 	}
-	if err := bindValue(reportBaseCurrencyToken, func() (string, error) { return identity.BaseCurrencyOf(ctx, tx) }); err != nil {
+	if err := bindValue(reportBaseCurrencyToken, func() (any, error) { return identity.BaseCurrencyOf(ctx, tx) }); err != nil {
+		return "", nil, err
+	}
+	if err := bindValue(reportFiscalStartMonthToken, func() (any, error) {
+		return identity.FiscalYearStartMonthOf(ctx, tx)
+	}); err != nil {
 		return "", nil, err
 	}
 	bindScope := func(token string, resolve func() (string, error)) error {

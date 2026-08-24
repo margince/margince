@@ -10207,6 +10207,19 @@ export interface components {
              */
             base_language: "en" | "de" | "vi";
             /**
+             * @description The month the installation's business year begins, 1..12. January (1) is the
+             *     default, which is the calendar year every installation reported by before this
+             *     setting existed.
+             *
+             *     It buckets period reports on READ and stores nothing, so changing it re-labels
+             *     every report immediately and re-means no stored row.
+             *
+             *     The label spells both calendar years a non-January year spans — `FY2026/27` — so
+             *     a reader can tell which twelve months a bucket covers without knowing the
+             *     convention. A January year is not a span and keeps the plain `2026`.
+             */
+            fiscal_year_start_month: number;
+            /**
              * @description True once a conversion rate has been frozen against the base currency — by a closed
              *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
              *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
@@ -10247,6 +10260,12 @@ export interface components {
              * @enum {string}
              */
             base_language?: "en" | "de" | "vi";
+            /**
+             * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
+             *     reports on read and stores nothing, so moving it re-labels every period report at
+             *     once and re-means no stored row.
+             */
+            fiscal_year_start_month?: number;
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];

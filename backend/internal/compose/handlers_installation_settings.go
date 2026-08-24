@@ -77,6 +77,14 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		lang := string(*req.BaseLanguage)
 		patch.BaseLanguage = &lang
 	}
+	// No range check here, unlike BaseLanguage above. That one exists because
+	// the generated enum type carries a Valid() method worth calling; this
+	// field has no such type, and the entry's own refusal is already the better
+	// answer — settings.InvalidValue implements apperrors.FieldFault, so an
+	// out-of-range month comes back as a 422 naming the setting and carrying
+	// identity's own sentence, which quotes the value that was refused. A
+	// second check here would name a different field and say less.
+	patch.FiscalYearStartMonth = req.FiscalYearStartMonth
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -94,12 +102,13 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // changeable: an empty string would render as a reason that says nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
-		Name:               s.Name,
-		Timezone:           s.Timezone,
-		BaseCurrency:       s.BaseCurrency,
-		BaseLanguage:       crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
-		BaseCurrencyLocked: s.BaseCurrencyLocked,
-		MaxUploadBytes:     h.maxUploadBytes,
+		Name:                 s.Name,
+		Timezone:             s.Timezone,
+		BaseCurrency:         s.BaseCurrency,
+		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
+		FiscalYearStartMonth: s.FiscalYearStartMonth,
+		BaseCurrencyLocked:   s.BaseCurrencyLocked,
+		MaxUploadBytes:       h.maxUploadBytes,
 	}
 	if s.BaseCurrencyLockedReason != "" {
 		reason := s.BaseCurrencyLockedReason

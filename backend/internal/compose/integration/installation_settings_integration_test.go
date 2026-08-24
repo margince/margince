@@ -27,6 +27,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -165,6 +166,83 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 	}
 	if !strings.Contains(message, "ISO-4217") {
 		t.Errorf("refusal message %q does not say what a base currency is", message)
+	}
+
+	// The fiscal start is the one field of this patch that is not a string, so
+	// it is the one whose encoding could be wrong in a way the others cannot
+	// show. A month outside 1..12 must be refused by the entry, not stored.
+	thirteen := 13
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{FiscalYearStartMonth: &thirteen})
+	if err == nil {
+		t.Fatal("a thirteenth month was accepted as a fiscal year start")
+	}
+	if !errors.As(err, &fault) {
+		t.Fatalf("the fiscal-start refusal does not classify as a field fault: %v", err)
+	}
+	field, _, message = fault.FieldFault()
+	if field != "installation.fiscal_year_start_month" {
+		t.Errorf("the fiscal-start refusal names field %q, want the setting key", field)
+	}
+	// The value that was refused, quoted back. Without it the caller is told a
+	// range and left to work out which of their fields was out of it.
+	if !strings.Contains(message, "13") {
+		t.Errorf("the fiscal-start refusal %q does not quote the month it refused", message)
+	}
+}
+
+// The fiscal start travels the REAL write path — patch, encode, validate,
+// store, read back.
+//
+// It earns its own test because every other test of this setting writes the
+// `setting` row with raw SQL, so `UpdateInstallation` could be broken for this
+// field alone and the report tests would stay green: they would be asserting
+// against a row they had written themselves. It is also the only non-string
+// field on the patch, so it is the one that proves the encoding is per-type
+// rather than accidentally string-shaped.
+func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
+
+	before, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatalf("reading the installation settings: %v", err)
+	}
+	if before.FiscalYearStartMonth != int(time.January) {
+		t.Fatalf("a fresh installation starts its year in month %d, want January — "+
+			"every installation predating this setting reports by the calendar year",
+			before.FiscalYearStartMonth)
+	}
+
+	april := int(time.April)
+	written, err := store.UpdateInstallation(admin, identity.InstallationPatch{FiscalYearStartMonth: &april})
+	if err != nil {
+		t.Fatalf("setting the fiscal year start to April: %v", err)
+	}
+	if written.FiscalYearStartMonth != april {
+		t.Errorf("the write returned month %d, want %d", written.FiscalYearStartMonth, april)
+	}
+
+	reread, err := store.GetInstallation(admin)
+	if err != nil {
+		t.Fatalf("re-reading the installation settings: %v", err)
+	}
+	if reread.FiscalYearStartMonth != april {
+		t.Errorf("re-read month %d, want %d — the write did not reach the row", reread.FiscalYearStartMonth, april)
+	}
+
+	// A patch that names OTHER fields leaves this one alone. The sparse write
+	// is the whole contract of this endpoint, and an encoding that treated an
+	// absent field as a zero would set the month to 0 here rather than fail
+	// loudly — 0 is not a month, but nothing on the read path would say so.
+	renamed := "Renamed, fiscal untouched"
+	after, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &renamed})
+	if err != nil {
+		t.Fatalf("renaming the organization: %v", err)
+	}
+	if after.FiscalYearStartMonth != april {
+		t.Errorf("a patch naming only the name moved the fiscal start to %d, want %d",
+			after.FiscalYearStartMonth, april)
 	}
 }
 

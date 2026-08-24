@@ -5240,6 +5240,9 @@ export const vi = {
   "installationSettings.timezone": "Múi giờ báo cáo",
   "installationSettings.timezoneHint":
     "Tên múi giờ IANA (ví dụ Europe/Berlin). Đồng hồ riêng của tổ chức bạn: ranh giới kỳ của mọi báo cáo được tính theo múi giờ này, và mọi ngày tháng của bản ghi — ngày chốt, ngày hoá đơn, tiêu đề dòng thời gian — đều hiển thị theo nó, để một ngày đọc giống nhau với cả nhóm. Tách biệt với múi giờ hiển thị của riêng bạn.",
+  "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
+  "installationSettings.fiscalYearStartHint":
+    "Tháng bắt đầu năm tài chính của bạn. Báo cáo nhóm theo năm và quý này — năm không bắt đầu từ tháng 1 được đặt tên theo cả hai năm dương lịch mà nó trải qua, ví dụ FY2026/27. Thay đổi sẽ đặt lại tên mọi báo cáo ngay lập tức, và một khung nhìn đã lưu có lọc theo kỳ sẽ hỏi những tháng khác.",
   "installationSettings.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
     "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi số tiền đầu tiên được quy đổi theo nó.",
