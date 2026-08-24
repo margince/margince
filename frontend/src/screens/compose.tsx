@@ -1420,24 +1420,27 @@ function useProjectFiling(input: {
   const projectId = offered ? chosen : "";
   const { project } = useProjectRecord(projectId || undefined);
   const tag = subjectTag(project);
-  const applied = useRef<string>("");
-  const subjectRef = useRef(input.subject);
-  subjectRef.current = input.subject;
+  // Keeping the tag in the subject is a rule about the FIELD, not an action
+  // taken once when the picker moves. A subject is replaced wholesale — by a
+  // draft arriving, or by a rep selecting all and retyping — and a tag written
+  // only at the moment of choosing is gone the first time either happens.
+  //
+  // So the tag is kept at the front of the subject for as long as a project is
+  // chosen. Taking it off is done through the picker (choose No project), which
+  // is the control that means it; there is no way to half-choose a project by
+  // editing the text, because that state is not one the send could honour.
   const setSubject = input.setSubject;
-  // In an effect, not during render: setting the subject inline would be a
-  // state write inside another component's render pass, the shape that drives
-  // React into an update loop.
+  const subject = input.subject;
+  const previousTag = useRef("");
   useEffect(() => {
-    if (applied.current === tag) {
-      return;
+    const priorTag = previousTag.current;
+    previousTag.current = tag;
+    const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
+    const wanted = tag ? withSubjectTag(withoutOld, tag) : withoutOld;
+    if (wanted !== subject) {
+      setSubject(wanted);
     }
-    const previous = applied.current;
-    applied.current = tag;
-    const bare = previous
-      ? stripSubjectTag(subjectRef.current, previous)
-      : subjectRef.current;
-    setSubject(tag ? withSubjectTag(bare, tag) : bare);
-  }, [tag, setSubject]);
+  }, [tag, subject, setSubject]);
   return { projectId, setProjectId: setPicked };
 }
 

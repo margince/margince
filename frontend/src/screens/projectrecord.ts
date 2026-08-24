@@ -97,15 +97,18 @@ export function withSubjectTag(subject: string, tag: string): string {
  * Only key-SHAPED groups go. `[FYI]` is prose to the matcher and prose here.
  */
 export function stripEveryKeyTag(subject: string): string {
-  return (
-    subject
-      .replace(/\[[^\]]*\]/g, (group) =>
-        keyShaped(group.slice(1, -1)) ? "" : group,
-      )
-      // Removing a tag from mid-line leaves the spaces that surrounded it, and a
-      // subject reading "Re:  Hallo" is a tell that something was cut out of it.
-      .replace(/\s{2,}/g, " ")
+  const without = subject.replace(/\[[^\]]*\]/g, (group) =>
+    keyShaped(group.slice(1, -1)) ? "" : group,
   );
+  if (without === subject) {
+    // Nothing was cut, so nothing is tidied. This runs over a subject the rep
+    // is TYPING, and collapsing runs of spaces there would eat the space they
+    // just pressed before they can type the next word.
+    return subject;
+  }
+  // Removing a tag from mid-line leaves the spaces that surrounded it, and a
+  // subject reading "Re:  Hallo" is a tell that something was cut out of it.
+  return without.replace(/\s{2,}/g, " ");
 }
 
 /** `subject` with a leading `tag` removed, if it carries one. */
@@ -121,7 +124,10 @@ export function stripSubjectTag(subject: string, tag: string): string {
 
 /** `body` behind `tag`, with one space and no leading blank. */
 function prefixed(body: string, tag: string): string {
-  const rest = body.trim();
+  // Only the LEADING space is dropped, and only to avoid "[KEY]  Re:". A
+  // trailing one is the space the rep just typed before the next word, and
+  // trimming it here takes it back out from under their cursor.
+  const rest = body.replace(/^\s+/, "");
   return rest ? `${tag} ${rest}` : tag;
 }
 
