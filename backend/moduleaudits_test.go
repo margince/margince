@@ -66,6 +66,36 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/compose/dealstatus":  "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
 	"internal/compose/orgdossier":  "org_dossier and org_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 
+	// The installation's ciphertext store. vault_secret is a ref -> ciphertext
+	// row carrying NO workspace_id — it is installation configuration, not a
+	// tenant record, so there is no record history for it to join.
+	//
+	// The waiver rests on WHERE the row is written from, not on a list of
+	// writers. keyvault is a platform seam: every caller receives its Vault from
+	// compose and performs the domain act in its own module, which is where that
+	// act's history belongs — capture connecting a channel, integrations
+	// connecting an API key, overlay sealing a token, compose sealing a
+	// deployment or provider secret. Filing the vault row as well would record
+	// one change twice, the second time under an entity type that is a secret's
+	// reference.
+	//
+	// An invariant rather than a list: no test holds a count, so a number here is
+	// a claim that rots. The count itself lives in vaultwriters_test.go, where a
+	// gate keeps it true.
+	//
+	// ONE writer records nothing, and it is named rather than covered:
+	// capture/credentialbackfill.go relocates a legacy credential into the vault
+	// on every worker boot with no audit row, no system log and no event. That is
+	// https://github.com/margince/margince/issues/2552, filed rather than waived
+	// here, because whether a raw relocation should log at all is capture's
+	// posture to decide and not something this waiver gets to assume.
+	//
+	// This waiver is MODULE-WIDE, so on its own it would also absorb a writer
+	// added tomorrow that records nothing. vaultwriters_test.go holds the census
+	// that stops it: every caller of vault.Put is enumerated with the ledger its
+	// act lands in, and a new one fails until somebody gives it a verdict.
+	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; keyvault is a seam whose callers each audit their own act in their own module, and the vault row is that act's storage rather than a second fact — except capture's boot-time credential relocation, which records nothing (#2552)",
+
 	// Operational state whose DOMAIN writes are audited elsewhere.
 	"internal/modules/agents": "agent_run and runner_job are runner lifecycle bookkeeping. The domain writes a run performs happen inside the TOOLS it calls, and those carry the full audit and outbox shape — auditing the run row as well would file the same change twice under two entity types",
 	"internal/modules/comms":  "comms_outbound is delivery machinery, not the message. The user-visible fact of an outbound email is the ACTIVITY row, which activities owns and audits; StageTx runs inside that same transaction, so the send already has its history. comms does write a ledger row for the one thing activities cannot describe — a reconcile failure — through storekit.LogSystem, which is system_log and deliberately not counted here",

@@ -9,7 +9,7 @@ package migrations_test
 // Postgres 16 — apply/reverse/re-apply, the version bump (data-model §1.3a),
 // audit_log append-only (§11), and the signal-visibility backfill. §1.3's
 // ∅-query and GUC-unset-deny gates were the RLS mechanism's own proof and
-// went with it in core 0217 (ADR-0091 §8); what stands in their place is
+// went with it when core retired RLS (ADR-0091 §8); what stands in their place is
 // rbacgate_test.go over platform/auth. Fails loudly when the database is
 // missing rather than skipping (a skipped security gate looks exactly like
 // a passing one).
