@@ -66,22 +66,38 @@ function rules(css: string): Rule[] {
  */
 function cardChrome(): readonly string[] {
   const atoms = readFileSync(join(designSystem, "atoms.css"), "utf8");
-  const card = rules(withoutComments(atoms)).find(
+  const declared = rules(withoutComments(atoms)).filter(
     (r) => r.selector === ".card",
   );
-  if (card === undefined) {
+  // EXACTLY one, not the first. `.find()` silently adopts whichever comes
+  // first, so a second `.card { … }` anywhere in the file — a media query
+  // override, a leftover — becomes the subject and the gate goes looking for
+  // the wrong declarations. It failed loudly when I planted one; that was luck,
+  // and with a rarer declaration in the first rule it degrades to green while
+  // blind.
+  if (declared.length !== 1) {
     throw new Error(
-      "no `.card` rule in atoms.css — this gate has lost its subject",
+      `atoms.css declares .card ${declared.length} times; this gate needs exactly one to read its subject from`,
     );
   }
-  return declarations(card.body);
+  return declarations(declared[0].body);
 }
 
 /** The `property: value` pairs in a rule body, normalised for whitespace. */
 function declarations(body: string): readonly string[] {
   return body
     .split(";")
-    .map((part) => part.trim().replace(/\s+/g, " "))
+    .map((part) =>
+      part
+        .trim()
+        .replace(/\s+/g, " ")
+        // Around the colon too. Collapsing only runs of whitespace left
+        // `background:var(--bgElevated)` unequal to `background: var(...)`, so
+        // the same card written without a space escaped entirely — not a
+        // variant, the identical card, defeated by a spelling a formatter would
+        // erase. This gate exists for the hand that does not run the formatter.
+        .replace(/\s*:\s*/g, ": "),
+    )
     .filter((part) => part.length > 0);
 }
 
@@ -93,8 +109,14 @@ describe("one card surface", () => {
   it("finds stylesheets to judge", () => {
     // A census that read nothing certifies nothing, and this one is a census of
     // zero once the tree is clean — it reads the same over a clean tree and a
-    // broken walk.
-    expect(outside.length).toBeGreaterThan(5);
+    // broken walk. The floor was 5 against a real 80, which a walk reaching only
+    // the top level and `src/app/` clears with every screen unvisited, so it
+    // also names a file it must have reached.
+    expect(outside.length).toBeGreaterThan(40);
+    expect(
+      outside.some((path) => path.endsWith("screens/onboarding.css")),
+      "the walk did not reach src/screens/, where every card this gate was written for lived",
+    ).toBe(true);
   });
 
   it("is drawn only by the design system", () => {
