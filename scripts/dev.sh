@@ -77,113 +77,227 @@ REDIS_PORT="${REDIS_PORT:-16379}"
 # production secret.
 MINIO_PORT="${MINIO_PORT:-29000}"
 
-# Bare `make dev` runs the shared `margince` database on the base ports, so it
-# stays coherent with `make migrate` / `seed-dev` / `verify-boot`. A DEV_SLUG
-# gives an isolated database on deterministically derived ports (same slug →
-# same db + ports, so a resume reuses whatever that database already holds).
+# A slug reaches three places that each refuse different characters: a
+# filesystem path, a CREATE DATABASE identifier, and (via bucket_for_slug) an S3
+# bucket name. Fold to the narrowest of the three rather than validating in
+# three places — a branch or directory name is the usual source, and
+# `feat/ai-keys` is an ordinary one.
+sanitize_slug() { # name → a slug matching ^[a-z0-9_-]+$
+  printf '%s' "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9_-]/-/g; s/--*/-/g; s/^-//; s/-*$//'
+}
+
+# The bucket holding attachment and transcript bytes. It was one name for every
+# stack, so two worktrees wrote each other's object bytes into one place — the
+# same class of defect as a shared Redis database, and invisible for the same
+# reason.
+#
+# S3 bucket names admit no underscore and the slug charset does, so the two
+# names are not interchangeable. blobstore.New creates a missing bucket, so a
+# new name needs no infra change.
+bucket_for_slug() { # slug → an S3-legal bucket name
+  local slug="$1"
+  if [[ -z "$slug" ]]; then
+    printf 'margince-dev'
+    return 0
+  fi
+  printf 'margince-dev-%s' "$(printf '%s' "$slug" | tr '_' '-')"
+}
+
+# The PRIMARY worktree keeps the shared stack — database `margince` on :8080,
+# Redis db 0 — because `make migrate`, `make seed-dev` and `make verify-boot`
+# all target that database by name, and an auto-slug here would silently
+# decouple them from the stack the developer is looking at.
+#
+# A LINKED worktree gets its own everything, named after itself, with no flag to
+# remember. That is the point: an engineer runs several agent sessions, one
+# worktree each, and none of them should have to know DEV_SLUG exists.
+#
+# The primary/linked test is the git directory, not the path: in a linked
+# worktree --absolute-git-dir is <common>/worktrees/<name> and differs from
+# --git-common-dir. The latter can print a relative path, so it is resolved
+# before the comparison.
+derive_slug() { # → "" in the primary worktree, this worktree's name in a linked one
+  local gitdir commondir
+  gitdir=$(git rev-parse --absolute-git-dir)
+  commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
+  [[ "$gitdir" == "$commondir" ]] && return 0
+  sanitize_slug "$(basename "$(git rev-parse --show-toplevel)")"
+}
+
+# An explicit DEV_SLUG always wins; otherwise the worktree decides. A supplied
+# slug is validated rather than sanitised: silently rewriting what somebody
+# typed would point them at a database they did not name.
+if [[ -z "$slug" ]]; then
+  slug="$(derive_slug)"
+elif ! [[ "$slug" =~ ^[a-z0-9_-]+$ ]]; then
+  echo "FAIL: DEV_SLUG must match ^[a-z0-9_-]+$ (got '$slug')" >&2
+  exit 1
+fi
 if [[ -z "$slug" ]]; then
   label="dev"
   db="margince"
-  hash=0
 else
-  # The slug flows into a filesystem path and a CREATE DATABASE identifier —
-  # keep it to a safe charset so it can neither traverse paths nor break SQL.
-  if ! [[ "$slug" =~ ^[a-z0-9_-]+$ ]]; then
-    echo "FAIL: DEV_SLUG must match ^[a-z0-9_-]+$ (got '$slug')" >&2
-    exit 1
-  fi
   label="dev '$slug'"
   db="margince_dev_${slug}"
-  hash=$(printf '%s' "$slug" | cksum | awk '{print $1 % 1000}')
 fi
-# :8080 is THE port — the app, the thing a human opens, always and only.
-# The api sits behind it on 18080 and the app's dev server proxies /v1 and
-# the probes through, so `curl localhost:8080/v1/...` still answers and
-# nobody has to remember which of two ports serves what. The two ranges
-# (8080.. and 18080..) cannot collide however the slug hashes.
-fe_port=$(( 8080 + hash ))
-api_port=$(( 18080 + hash ))
+blob_bucket="$(bucket_for_slug "$slug")"
+# :8080 is THE port — the app, the thing a human opens, always and only. The api
+# sits behind it at fe+10000 and the app's dev server proxies /v1 and the probes
+# through, so `curl localhost:8080/v1/...` still answers and nobody has to
+# remember which of two ports serves what.
+#
+# The primary worktree's stack is FIXED at 8080/18080 rather than claimed, and
+# the claim range starts above it, so :8080 always means the same thing.
+DEV_FE_PORT_MIN=8081
+DEV_FE_PORT_MAX=8179
+DEV_API_PORT_OFFSET=10000
 
-# The Redis LOGICAL DATABASE this stack uses.
+# port_listeners names only the processes SERVING a port. Plain
+# `lsof -ti tcp:8080` also lists everything CONNECTED to it — the
+# developer's browser among them — and this sweep kills what it is given.
+port_listeners() { # port
+  lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
+}
+
+# Where a stack's claim is recorded. ONE directory per machine, deliberately
+# outside the repository.
 #
-# One Redis serves every stack on the machine, and the stream names and
-# consumer groups are constants (`gw:events:crm:*`, `cg:*`). Two stacks on the
-# same index therefore share ONE consumer group: whichever worker reads an
-# entry first consumes it, resolves it against its OWN Postgres database, finds
-# nothing, and acks. The other stack's event is gone, and the symptom — a
-# projection or an accrual that never runs — is indistinguishable from a broken
-# feature. That cost a day and a wrongly-filed critical bug once.
+# It used to be <worktree>/.tmp/dev/, and that is the defect this whole file is
+# being changed for: a second worktree read an EMPTY registry and claimed Redis
+# database 64 for the second time. The guarantee the old comment made — "a
+# running stack's db is never handed out twice" — held only within one checkout,
+# which is the one case that never needed it. Two stacks then shared one
+# consumer group: whichever worker read an entry first resolved it against its
+# own database, found nothing, and acked it, so the other stack's event was
+# simply gone.
 #
-# The instance serves 80 databases in three blocks that must not overlap
-# (infra/docker-compose.dev.yml says the same): db 0 is bare `make dev`, 1..63
-# belong to the parallel integration lane one per package, and 64..79 are
-# these slugged stacks. A slug landing in the test range would have its streams
-# FLUSHDB'd mid-run by a suite that believes it owns the db.
-#
-# The index is NOT the port hash. Two hashes differing by a multiple of the
-# block size would take different ports and the same db — a collision the port
-# check cannot see, which is the failure this whole change is about. It is
-# instead the lowest free index, claimed under a lock and recorded beside the
-# stack's other state, so a running stack's db is never handed out twice and a
-# resumed slug reclaims its own.
+# MARGINCE_DEV_STATE_DIR exists so the tests can point this somewhere
+# disposable. Nothing else should set it.
+dev_state_root() {
+  printf '%s' "${MARGINCE_DEV_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/margince/dev}"
+}
+
+# The Redis instance serves 80 logical databases in three blocks that must not
+# overlap (infra/docker-compose.dev.yml says the same): 0 is the primary
+# worktree's stack, 1..63 belong to the parallel integration lane one per
+# package, and 64..79 are these per-worktree stacks. A stack landing in the test
+# range would have its streams FLUSHDB'd mid-run by a suite that believes it
+# owns the database.
 DEV_REDIS_DB_MIN=64
 DEV_REDIS_DB_MAX=79
 
-# claim_redis_db SLUG — the logical database this slug owns, on stdout.
+# read_registry SLUG — what every OTHER recorded stack holds, and what this slug
+# already holds itself. Sets TAKEN_DBS / TAKEN_PORTS (space-separated) and
+# MINE_DB / MINE_PORT.
 #
-# Same slug wins the same index back, so restarting a stack keeps whatever its
-# streams already hold. A NEW slug takes the lowest index no other recorded
-# stack is using; two starting at once are serialised by a lock directory, so
-# they cannot both read "64 is free" and both take it.
+# Globals rather than stdout because there are four answers, and a caller that
+# had to parse one string is the place the four would drift apart.
+read_registry() { # slug
+  local want="$1" root state_file other REDIS_DB FE_PORT
+  root="$(dev_state_root)"
+  TAKEN_DBS=''; TAKEN_PORTS=''; MINE_DB=''; MINE_PORT=''
+  for state_file in "$root"/*/env; do
+    [[ -f "$state_file" ]] || continue
+    other="$(basename "$(dirname "$state_file")")"
+    REDIS_DB=''; FE_PORT=''
+    # shellcheck disable=SC1090
+    . "$state_file"
+    if [[ "$other" == "$want" ]]; then
+      MINE_DB="$REDIS_DB"; MINE_PORT="$FE_PORT"
+      continue
+    fi
+    [[ -n "$REDIS_DB" ]] && TAKEN_DBS="${TAKEN_DBS}${TAKEN_DBS:+ }${REDIS_DB}"
+    [[ -n "$FE_PORT" ]] && TAKEN_PORTS="${TAKEN_PORTS}${TAKEN_PORTS:+ }${FE_PORT}"
+  done
+  return 0
+}
+
+# The lowest Redis database no recorded stack holds. Refuses rather than
+# wrapping: a 17th concurrent stack is a situation to notice, not to paper over,
+# and doubling up is the silent failure this mechanism exists to prevent.
+pick_free_db() { # → a free Redis logical database, or non-zero
+  local db t used
+  for (( db = DEV_REDIS_DB_MIN; db <= DEV_REDIS_DB_MAX; db++ )); do
+    used=0
+    for t in $TAKEN_DBS; do [[ "$t" == "$db" ]] && { used=1; break; }; done
+    (( used )) || { printf '%s' "$db"; return 0; }
+  done
+  return 1
+}
+
+# A port is free when no recorded stack claims it AND nothing is listening on
+# either half of the pair. The listener check is not redundant: the registry
+# knows only about OUR stacks, so a foreign process on a port would otherwise be
+# handed out, bind would fail, and wait_ready would then poll that foreign
+# server and report this stack ready.
+pick_free_port() { # → a free frontend port, or non-zero
+  local port t used
+  for (( port = DEV_FE_PORT_MIN; port <= DEV_FE_PORT_MAX; port++ )); do
+    used=0
+    for t in $TAKEN_PORTS; do [[ "$t" == "$port" ]] && { used=1; break; }; done
+    (( used )) && continue
+    [[ -n "$(port_listeners "$port")" ]] && continue
+    [[ -n "$(port_listeners "$(( port + DEV_API_PORT_OFFSET ))")" ]] && continue
+    printf '%s' "$port"
+    return 0
+  done
+  return 1
+}
+
+# claim_stack SLUG — reserve this slug's Redis database and port pair, and
+# RECORD the reservation before anything binds.
 #
-# Reading the recorded stacks rather than hashing is what makes the guarantee
-# real: a hash gives distinct ports and a shared db whenever two hashes differ
-# by a multiple of the block size, which the port check cannot see and which is
-# exactly the collision this change exists to remove.
-claim_redis_db() { # slug
-  local want="$1" lock=".tmp/dev/.redis-db.lock" taken=() db
-  mkdir -p .tmp/dev
-  # A stale lock from a killed run would wedge every later start, so it is
-  # cleared on exit AND bounded: mkdir is the atomic primitive here.
-  local waited=0
+# Recording inside the lock is the load-bearing part. The old code wrote its
+# state file only once the servers were up, so two `make dev` runs a second
+# apart both read "nothing is taken" and both picked the same database. A claim
+# that is invisible until the stack is running is not a claim.
+claim_stack() { # slug → "<redis_db> <fe_port>"
+  local want="$1" root lock waited=0 db port
+  root="$(dev_state_root)"
+  lock="${root}/.claim.lock"
+  mkdir -p "$root"
+  # mkdir is the atomic primitive here. A stale lock from a killed run would
+  # wedge every later start, so the wait is bounded and then breaks it.
   until mkdir "$lock" 2>/dev/null; do
     (( waited++ >= 50 )) && { rm -rf "$lock"; continue; }
     sleep 0.1
   done
   trap 'rm -rf "'"$lock"'"' RETURN
 
-  local state_file other_slug REDIS_DB
-  for state_file in .tmp/dev/*/env; do
-    [[ -f "$state_file" ]] || continue
-    other_slug="$(basename "$(dirname "$state_file")")"
-    REDIS_DB=''
-    # shellcheck disable=SC1090
-    . "$state_file"
-    [[ -z "$REDIS_DB" ]] && continue
-    # This slug's own recorded index is the one it reclaims.
-    if [[ "$other_slug" == "$want" ]]; then
-      printf '%s' "$REDIS_DB"
-      return 0
-    fi
-    taken+=("$REDIS_DB")
-  done
-
-  for (( db = DEV_REDIS_DB_MIN; db <= DEV_REDIS_DB_MAX; db++ )); do
-    local used=0 t
-    for t in "${taken[@]:-}"; do [[ "$t" == "$db" ]] && { used=1; break; }; done
-    (( used )) || { printf '%s' "$db"; return 0; }
-  done
-
-  # Every index in the block is spoken for. Refuse rather than double up: a
-  # shared bus is the silent failure this whole mechanism prevents, and a
-  # 17th concurrent stack is a situation to notice, not to paper over.
-  echo "FAIL: all ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX} Redis databases are claimed by other dev stacks." >&2
-  echo "  Stop one (make dev-stop DEV_SLUG=<slug>), or a bare 'make dev' to sweep them all." >&2
-  exit 1
+  read_registry "$want"
+  db="$MINE_DB"; port="$MINE_PORT"
+  if [[ -z "$db" ]]; then
+    db="$(pick_free_db)" || {
+      echo "FAIL: every Redis database ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX} is claimed by another dev stack." >&2
+      echo "  Stop one (make dev-stop DEV_SLUG=<slug>), or clear them all with 'make dev-sweep'." >&2
+      return 1
+    }
+  fi
+  if [[ -z "$port" ]]; then
+    port="$(pick_free_port)" || {
+      echo "FAIL: no free port pair in ${DEV_FE_PORT_MIN}..${DEV_FE_PORT_MAX}." >&2
+      echo "  Stop a stack (make dev-stop DEV_SLUG=<slug>), or clear them all with 'make dev-sweep'." >&2
+      return 1
+    }
+  fi
+  mkdir -p "${root}/${want}"
+  printf 'SLUG=%s\nFE_PORT=%s\nAPI_PORT=%s\nREDIS_DB=%s\n' \
+    "$want" "$port" "$(( port + DEV_API_PORT_OFFSET ))" "$db" \
+    >"${root}/${want}/env"
+  printf '%s %s' "$db" "$port"
 }
-redis_db=0
-if [[ -n "$slug" ]]; then
-  redis_db=$(claim_redis_db "$slug")
+
+if [[ -z "$slug" ]]; then
+  # Fixed, not claimed: :8080 and Redis db 0 belong to the primary worktree by
+  # construction, and both claim ranges start above them.
+  fe_port=8080
+  api_port=18080
+  redis_db=0
+else
+  read -r redis_db fe_port <<<"$(claim_stack "$slug")"
+  api_port=$(( fe_port + DEV_API_PORT_OFFSET ))
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
@@ -345,13 +459,6 @@ vite_pids() {
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
     [[ "$cmd" == *"$repo_root"* ]] && echo "$pid"
   done
-}
-
-# port_listeners names only the processes SERVING a port. Plain
-# `lsof -ti tcp:8080` also lists everything CONNECTED to it — the
-# developer's browser among them — and this sweep kills what it is given.
-port_listeners() { # port
-  lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
 }
 
 # still_ours answers whether a pid recorded in an old state file is still a
@@ -693,7 +800,7 @@ up)
     MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
     MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET=margince-dev \
+    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
     --redis "${REDIS_ADDR}" \
@@ -747,7 +854,7 @@ up)
     MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
     MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET=margince-dev \
+    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
