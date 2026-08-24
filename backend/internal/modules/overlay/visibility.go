@@ -209,7 +209,7 @@ func (s *MirrorStore) RecomputeForOwner(ctx context.Context, incumbentUserID str
 // workspace's mirror_visibility projection — the mapping upsert+recompute
 // (UpsertUserMap), the owner-reassignment projection (Ingest), the periodic
 // revalidation (RevalidateEmailMappings), and the ambiguity revoke
-// (revokeEmailMappingsForOwners). ONE per-workspace advisory lock,
+// (revokeEmailMappingsForOwners). ONE advisory lock on a constant key,
 // transaction-scoped (auto-released at commit/rollback), is the whole
 // serialization: because every visibility mutator acquires the SAME key
 // FIRST, no two interleave their read-decide-clear-then-grant sequences —
@@ -220,20 +220,22 @@ func (s *MirrorStore) RecomputeForOwner(ctx context.Context, incumbentUserID str
 // transaction, so a caller that already holds it may acquire it again
 // harmlessly. Overlay visibility mutations are low-frequency (a single
 // leader-elected poller plus occasional manual remaps), so serializing them
-// per workspace costs effectively nothing.
+// installation-wide costs effectively nothing.
 func lockWorkspaceVisibility(ctx context.Context, tx pgx.Tx) error {
-	// current_setting WITHOUT missing_ok: an unset app.workspace_id must
-	// RAISE, never resolve to NULL. hashtext and pg_advisory_xact_lock are
-	// STRICT, so a NULL workspace id would turn this into a no-op SELECT
-	// that acquires NO lock — silently bypassing the serialization every
-	// caller relies on. Failing closed on an unset GUC (this is only ever
-	// called inside the store's bound transaction, which sets it) matches how the
-	// RLS policies fail closed on the same condition.
+	// A constant key: one installation is one organization (ADR-0061), so the
+	// workspace this used to carry distinguished nothing. It needs no GUC and
+	// so cannot be silently skipped by an unbound transaction, which is what
+	// the workspace-qualified form risked.
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility')::bigint)`); err != nil {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock: %w", err)
 	}
-	// Plus the legacy workspace-qualified key (storekit.LockWriteIdentity).
+	// Plus the legacy workspace-qualified key, for the rolling-deploy window
+	// storekit.LockWriteIdentity explains. coalesce, because
+	// pg_advisory_xact_lock is STRICT: an unset GUC would make the whole
+	// argument NULL, take NO lock, and say nothing about having done so. It
+	// reproduces the previous release's key exactly whenever the GUC IS set,
+	// which is the only case in which the two builds have to meet.
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`); err != nil {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock (legacy key): %w", err)

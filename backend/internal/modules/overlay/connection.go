@@ -396,7 +396,11 @@ func incumbentConnectedPayload(incumbent, region string, scopes []string, status
 // the audit action is "create" and before is nil.
 func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string) (Connection, error) {
 	var out Connection
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	ws, err := s.boundWorkspace(ctx)
+	if err != nil {
+		return Connection{}, err
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var id ids.UUID
 		var connectedAt time.Time
 		// NULLIF($5,'') stores a blank account id (the portal fetch failed or the
@@ -413,7 +417,7 @@ func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref key
 			return scanErr
 		}
 
-		activated, actErr := activateConnection(ctx, tx, id, in, connectedAt, "create", nil)
+		activated, actErr := activateConnection(ctx, tx, id, in, ws, connectedAt, "create", nil)
 		if actErr != nil {
 			return actErr
 		}

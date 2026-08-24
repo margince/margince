@@ -96,7 +96,9 @@ func (s *store) refFor(ctx context.Context, tx pgx.Tx, user *ids.UserID, key str
 // this store exists to prevent, so it is closed rather than documented.
 //
 // An advisory lock covers the absent row because it is keyed on the NAME,
-// not on a tuple. Under READ COMMITTED the loser takes a fresh snapshot for
+// not on a tuple. (Two keys, for now: the second is the workspace-qualified
+// one the previous release took, held through the rolling-deploy window
+// storekit.LockWriteIdentity explains.) Under READ COMMITTED the loser takes a fresh snapshot for
 // its next statement, so once it acquires the lock its own lookup sees the
 // winner's committed row and supersedes it correctly. Same idiom, same
 // reason, as the boot inventory's check-and-insert guard
@@ -121,15 +123,20 @@ func (s *store) lockKey(ctx context.Context, tx pgx.Tx, user *ids.UserID, key st
 		SELECT pg_advisory_xact_lock(hashtext(
 			'margince:extsecrets:' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
 		s.unit, scope, holder, key); err != nil {
-		return err
+		return fmt.Errorf("extsecrets: serializing the store of %q: %w", key, err)
 	}
-	// Plus the legacy workspace-qualified key (storekit.LockWriteIdentity).
-	_, err := tx.Exec(ctx, `
+	// The legacy workspace-qualified key. coalesce because
+	// pg_advisory_xact_lock is STRICT and the previous release's own key did
+	// without it: an unset GUC made the whole argument NULL and took no lock
+	// at all.
+	if _, err := tx.Exec(ctx, `
 		SELECT pg_advisory_xact_lock(hashtext(
 			'margince:extsecrets:' || coalesce(current_setting('app.workspace_id', true), '') ||
 			':' || $1 || ':' || $2 || ':' || $3 || ':' || $4)::bigint)`,
-		s.unit, scope, holder, key)
-	return err
+		s.unit, scope, holder, key); err != nil {
+		return fmt.Errorf("extsecrets: serializing the store of %q (legacy key): %w", key, err)
+	}
+	return nil
 }
 
 // upsert re-points (or creates) the mapping row. ON CONFLICT rather than the

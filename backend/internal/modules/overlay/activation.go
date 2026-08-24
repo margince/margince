@@ -13,7 +13,6 @@ package overlay
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // activateConnection finishes Connect's write-shape transaction for
@@ -33,7 +31,14 @@ import (
 // no prior state to capture) or the revoked row's previous
 // incumbent/region/status for a reconnect, since only the caller that just
 // read that row FOR UPDATE knows it.
-func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectInput, connectedAt time.Time, action string, before map[string]any) (Connection, error) {
+//
+// ws is the workspace the CALLER's transaction is bound to, passed rather
+// than re-read here: the mode flip must write the row this transaction runs
+// against, and Connect already resolved that binding to open the
+// transaction. Resolving it a second time would be a second source for one
+// fact, and the two answer differently on a handle pinned to a workspace the
+// request context does not name.
+func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectInput, ws ids.UUID, connectedAt time.Time, action string, before map[string]any) (Connection, error) {
 	after := map[string]any{
 		auditFieldIncumbent: in.Incumbent,
 		auditFieldRegion:    in.Region,
@@ -47,10 +52,6 @@ func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectI
 	if emitErr := storekit.EmitEvent(ctx, tx, auditID, id,
 		incumbentConnectedPayload(in.Incumbent, in.Region, leastPrivilegeHubSpotScopes, statusActive)); emitErr != nil {
 		return Connection{}, fmt.Errorf("overlay: emitting incumbent.connected: %w", emitErr)
-	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return Connection{}, errors.New("overlay: activation called outside a workspace context")
 	}
 	if _, updErr := tx.Exec(ctx, `
 		UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = $1

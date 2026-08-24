@@ -58,9 +58,15 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 // without it each transaction reads the same previous observation and every one
 // of them writes the change.
 //
-// ONE statement for both facts, parameterized by the fact's name. The key is the
-// fact name alone since ADR-0091 §5: an installation serves one organization
-// (ADR-0061), so the workspace this key used to carry distinguished nothing.
+// ONE statement for both facts, parameterized by the fact's name. The workspace
+// this key used to carry went with ADR-0091 §5: an installation serves one
+// organization (ADR-0061), so it distinguished nothing.
+//
+// It keeps a NAMESPACE prefix rather than hashing the bare fact name, because
+// the workspace suffix was doing that job too. hashtext over an unqualified
+// caller-chosen string shares one key space with every other such lock in this
+// tree, and a collision there serializes two unrelated boot paths for the
+// length of a transaction.
 //
 // The COALESCE that used to guard it moved to bootLedgerLockLegacy below, where
 // it is still load-bearing: pg_advisory_xact_lock is STRICT, so a NULL argument
@@ -68,7 +74,7 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 // leave the serialization silently absent — a guard reporting success while
 // holding nothing.
 const bootLedgerLock = `
-	SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`
+	SELECT pg_advisory_xact_lock(hashtext('margince:boot-ledger:' || $1)::bigint)`
 
 // bootLedgerLockLegacy is the workspace-qualified key the previous release took,
 // held alongside the one above for the rolling-deploy window that

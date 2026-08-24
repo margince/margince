@@ -141,7 +141,7 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 	// things, one of which this call is about to overwrite.
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, bootLedgerLock, releaseLedgerFact); err != nil {
-			return err
+			return fmt.Errorf("compose: serializing the release observation: %w", err)
 		}
 
 		// Plus the legacy workspace-qualified key, for the rolling-deploy

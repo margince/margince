@@ -72,16 +72,18 @@ func capRefusesNewQuestion(ctx context.Context, tx pgx.Tx, email, domain string)
 	return "", nil
 }
 
-// lockWorkspaceDeferrals serializes the count-then-insert of new deferrals
-// within one workspace. Advisory and transaction-scoped, the same shape the
-// last-active-admin guard uses: the ceiling is a count of rows nobody has
-// inserted yet, which no row lock can express.
+// lockWorkspaceDeferrals serializes the count-then-insert of new deferrals.
+// Advisory and transaction-scoped, the same shape the last-active-admin guard
+// uses: the ceiling is a count of rows nobody has inserted yet, which no row
+// lock can express. Keyed on a constant since ADR-0091 §5 — one installation,
+// one organization (ADR-0061) — so the key names the only workspace there is.
 func lockWorkspaceDeferrals(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:capture-deferrals')::bigint)`); err != nil {
 		return fmt.Errorf("capture: serializing the deferral ceiling: %w", err)
 	}
-	// Plus the legacy workspace-qualified key (storekit.LockWriteIdentity).
+	// Plus the legacy workspace-qualified key, for the rolling-deploy window
+	// storekit.LockWriteIdentity explains.
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:capture-deferrals:' || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`); err != nil {
 		return fmt.Errorf("capture: serializing the deferral ceiling (legacy key): %w", err)

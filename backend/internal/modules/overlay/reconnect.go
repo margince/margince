@@ -42,7 +42,11 @@ import (
 func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string) (Connection, error) {
 	var out Connection
 	var supersededRef string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	ws, err := s.boundWorkspace(ctx)
+	if err != nil {
+		return Connection{}, err
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var id ids.UUID
 		var previousIncumbent, previousRegion string
 		// The pre-read is FOR UPDATE so a concurrent reconnect serializes behind
@@ -76,7 +80,7 @@ func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref 
 			auditFieldRegion:    previousRegion,
 			auditFieldStatus:    statusRevoked,
 		}
-		activated, actErr := activateConnection(ctx, tx, id, in, connectedAt, "update", before)
+		activated, actErr := activateConnection(ctx, tx, id, in, ws, connectedAt, "update", before)
 		if actErr != nil {
 			return actErr
 		}

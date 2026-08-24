@@ -332,11 +332,11 @@ func (s *Service) CompleteFlip(ctx context.Context, runID ids.UUID, mode string)
 	if err := auth.Require(ctx, overlayConnectionObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("overlay: flip completion called outside a workspace context")
+	ws, err := s.boundWorkspace(ctx)
+	if err != nil {
+		return err
 	}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
 			WHERE id = $1 AND x_sor_mode = 'overlay'`, ws)

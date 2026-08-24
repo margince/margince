@@ -51,12 +51,44 @@ func (e *dedupeEnv) holdOrgNameLock(ctx context.Context, t *testing.T) (pgx.Tx, 
 	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 		t.Fatalf("reading the lock holder's backend pid: %v", err)
 	}
+	// Nothing above may have taken an advisory lock, and this is where that is
+	// established rather than assumed. assertParkedBeforeTheOrganizationRow
+	// finds the waiter by joining through ANY advisory lock this transaction
+	// holds, which is sound only while every one of them belongs to the name
+	// lock. Reading zero here and taking the name lock as the very next
+	// statement is what makes that true — and it stays true however many keys
+	// the name lock is currently spelled with, so neither this nor the
+	// assertion needs editing when ADR-0091 §5's legacy key comes out (#2528).
+	if held := grantedAdvisoryLocks(ctx, t, tx, pid); held != 0 {
+		t.Fatalf("the lock holder's transaction already holds %d advisory lock(s) before taking the name lock; "+
+			"the waiter lookup joins through any advisory lock it holds, so it could report a backend queued "+
+			"on an unrelated key as parked on the name lock", held)
+	}
 	// Through the production helper, so a change to the key can never leave
 	// this transaction holding something no writer waits on.
 	if err := lockOrgNameWrites(ctx, tx); err != nil {
 		t.Fatalf("taking the organization-name write identity: %v", err)
 	}
 	return tx, pid
+}
+
+// grantedAdvisoryLocks counts the advisory locks one backend has been granted.
+//
+// The database predicate is not decoration: pg_locks is CLUSTER-wide, and the
+// parallel lane runs a clone per package on one server. It is scoped by pid
+// here, which is already per-backend, but the same query shape is used against
+// waiters below where the distinction bites.
+func grantedAdvisoryLocks(ctx context.Context, t *testing.T, tx pgx.Tx, pid int) int {
+	t.Helper()
+	var n int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM pg_locks
+		 WHERE pid = $1 AND locktype = 'advisory' AND granted
+		   AND database = (SELECT oid FROM pg_database WHERE datname = current_database())`,
+		pid).Scan(&n); err != nil {
+		t.Fatalf("counting a backend's advisory locks: %v", err)
+	}
+	return n
 }
 
 // An apply that carries a legal name owes the name lock BEFORE it touches the
@@ -215,25 +247,21 @@ func assertParkedBeforeTheOrganizationRow(ctx context.Context, t *testing.T, hol
 	// backend. A false green on the exact ordering this exists to catch.
 	// The join below matches a waiter through any advisory lock this holder has
 	// been granted, so it is unambiguous only while every lock the holder holds
-	// is the SAME logical one. It holds two: ADR-0091 §5 dropped the workspace
-	// from the name lock's key, and the transition takes the new key and the
-	// legacy workspace-qualified one together for one release
-	// (storekit.LockWriteIdentity). Both are the name lock, so a waiter parked
-	// on either is parked on the thing this test is about.
+	// belongs to the name lock. holdOrgNameLock establishes that at the source:
+	// it reads zero advisory locks and then takes the name lock as its next
+	// statement, so whatever is held here came from that one call. The name
+	// lock is currently TWO keys — ADR-0091 §5 dropped the workspace from its
+	// identity, and the transition holds the new key and the legacy
+	// workspace-qualified one together for one release
+	// (storekit.LockWriteIdentity) — and asserting provenance rather than a
+	// count is what keeps this indifferent to that.
 	//
-	// The count is still asserted, and that is the point: a THIRD lock would be
-	// a genuinely different one, and would silently let a waiter on an unrelated
-	// key answer here. When the legacy half comes out, this goes back to 1.
-	var advisoryHeld int
-	if err := holder.QueryRow(ctx, `
-		SELECT count(*) FROM pg_locks
-		 WHERE pid = $1 AND locktype = 'advisory' AND granted`, holderPID).Scan(&advisoryHeld); err != nil {
-		t.Fatalf("counting the holder's advisory locks: %v", err)
-	}
-	if advisoryHeld != 2 {
-		t.Fatalf("the lock holder holds %d advisory locks, want exactly 2 (the name lock's new key and its legacy twin) — with any other, "+
-			"the waiter lookup below cannot tell which key a backend is queued on, and could report "+
-			"a waiter on the wrong lock as parked on the name lock", advisoryHeld)
+	// A count is still read, for the one thing provenance does not cover: zero
+	// means the holder took no lock at all, and the join would then match
+	// nothing and report the ordering defect that is not there.
+	if held := grantedAdvisoryLocks(ctx, t, holder, holderPID); held == 0 {
+		t.Fatal("the lock holder holds no advisory lock, so there is nothing for the apply to be parked on — " +
+			"the name lock was not taken, and any verdict below would be about the wrong thing")
 	}
 
 	var waiter int
