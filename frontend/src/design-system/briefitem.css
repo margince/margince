@@ -35,6 +35,22 @@
     var(--textSecondary) 55%,
     var(--bgCard)
   );
+  /* What a FACTOR's fill takes, against the composite's full-strength accent.
+     Three cards on one screen carry eighteen bars, and at one fill weight the
+     whole column reads as a block of green with no first row — the ink
+     hierarchy the labels already state, said in the fill as well. Derived from
+     the same accent so it stays the same measurement said more softly, and it
+     follows the theme rather than being a second colour.
+
+     45% of the accent measures 1.9:1 against the track and 55% measures 2.2:1,
+     neither of which clears the 3:1 a graphical object has to — and the mix
+     that does clear it is indistinguishable from the composite, which is the
+     whole reason this value exists. It is the same call `--brief-bar-quiet`
+     above already makes at 2.1:1, and it rests on the same fact: every bar
+     states its value as a FIGURE beside it and `Meter` carries it in the
+     accessible name, so the fill is a second reading of a number that is
+     already written down. A bar nobody can read is still a row a reader can. */
+  --brief-bar-factor: color-mix(in oklab, var(--accent) 55%, var(--bgCard));
 }
 
 /* ----- head: rank, the deal, its money ----- */
@@ -143,13 +159,19 @@
   text-align: right;
 }
 
-/* The composite outranks its own factors by INK, not by geometry: the track is
-   the same height and sits in the same column, so the first row still reads as
-   part of the comparison rather than as a second chart above it. */
+/* The composite outranks its own factors by INK, never by geometry: every track
+   is the same height and sits in the same column, so the first row still reads
+   as part of the comparison rather than as a second chart above it. The ink is
+   the label, the figure AND the fill — a full-strength composite over softer
+   factors is the same axis with a first row on it. */
 .brief-item-bar-headline .brief-item-bar-label,
 .brief-item-bar-headline .brief-item-bar-value {
   color: var(--textPrimary);
   font-weight: var(--fw-semibold);
+}
+
+.brief-item-bar:not(.brief-item-bar-headline) .meterbar > span {
+  background: var(--brief-bar-factor);
 }
 
 .brief-item-bar-headline .brief-item-bar-value {
@@ -234,6 +256,15 @@
    wants the same reading, said more softly. A `quiet` tone on `Meter` is the
    cleaner home for this the moment a second surface needs it. */
 .brief-item-quiet .brief-item-bars .meterbar > span {
+  background: var(--brief-bar-quiet);
+}
+
+/* One class deeper than the factor rule above, so a settled card's factors go
+   quiet with the rest of it rather than keeping the live accent. */
+.brief-item-quiet
+  .brief-item-bar:not(.brief-item-bar-headline)
+  .meterbar
+  > span {
   background: var(--brief-bar-quiet);
 }
 

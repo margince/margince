@@ -91,10 +91,14 @@
 }
 
 /* Each half of the proposal names itself, because "Subject" over a line of text
-   is the difference between a card a reader scans and one they have to parse. */
+   is the difference between a card a reader scans and one they have to parse.
+   The type is `.t-eyebrow` in the markup — the one spelling of uppercase
+   micro-type — so a kicker on this card reads in the same register as the
+   labels on the readings strip beside it. What is declared here is only the
+   block, and the space a kicker keeps from the line above it. */
 .dcard-draft-label {
   display: block;
-  color: var(--textMeta);
+  margin-bottom: var(--space-1);
 }
 
 /* The "Subject" kicker sits directly over the headline it names, so the pair
@@ -200,12 +204,28 @@
     linear-gradient(var(--aiLight), var(--aiLight)), var(--bgElevated);
 }
 
+/*
+ * The proposal's own MEASURE. A deck card is as wide as the work column, and on
+ * a desktop that is 1200px of drafted email on one line — a length nobody reads
+ * a sentence at. The cap is on the content, not on the card: the chips line, the
+ * verbs and the urgency band still span the full card, so what narrows is the
+ * prose and nothing else.
+ */
+.dcard[data-layout="deck"] .dcard-body,
+.dcard[data-layout="deck"] .approval-headline,
+.dcard[data-layout="deck"] .approval-why {
+  max-inline-size: 72ch;
+}
+
 /* The verbs go to the FOOT of the deck card, not under the last line of
    content: one card at a time means the reader's hand returns to the same place
-   for every decision. */
+   for every decision. The rule above them separates reading from answering —
+   in the AI edge colour, because it is a line inside a staged card rather than
+   a page-level divider. */
 .dcard[data-layout="deck"] .dcard-verbs {
   margin-top: auto;
   padding-top: var(--space-4);
+  border-top: 1px solid var(--aiMed);
 }
 
 /* The row layout: the compact form a queue is a list of. It takes its padding

@@ -295,13 +295,15 @@ function DecisionContent({
     <>
       {draft.body && (
         <div className="dcard-draft">
-          <span className="t-label dcard-draft-label">{labels.draftBody}</span>
+          <span className="t-eyebrow dcard-draft-label">
+            {labels.draftBody}
+          </span>
           <DraftBody body={draft.body} labels={labels} />
         </div>
       )}
       {diffs.map((diff) => (
         <div className="dcard-diff" key={diff.field}>
-          <span className="t-label dcard-draft-label">
+          <span className="t-eyebrow dcard-draft-label">
             {diff.field.replaceAll("_", " ")}
           </span>
           <FieldDiff oldValue={diff.from} newValue={diff.to} />
@@ -476,7 +478,7 @@ function DecisionHead({
           the subject printed twice on one card reads as two facts, and the
           reader then has to work out that they are the same string. */}
       {draft.subject && (
-        <span className="t-label dcard-draft-label dcard-subject-label">
+        <span className="t-eyebrow dcard-draft-label dcard-subject-label">
           {labels.draftSubject}
         </span>
       )}

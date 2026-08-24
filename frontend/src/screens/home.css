@@ -20,11 +20,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-4) 0 var(--space-5);
+  padding: var(--space-6) 0 var(--space-5);
 }
 
+/* One step above the app's 22px display type and no further. This is the page a
+ * day opens on, so it may be the largest heading in the product; a display-size
+ * greeting would instead be the largest thing on the SCREEN, out-shouting the
+ * six counts it exists to introduce. */
 .glance-greeting {
   margin: 0;
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
 }
 
 .glance-intro {
@@ -35,17 +41,18 @@
 .glance-lines {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-3);
+  gap: var(--space-2);
+  margin-top: var(--space-4);
 }
 
 .glance-line {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin: 0;
   font-size: var(--fs-lead);
+  line-height: var(--lh-snug);
   color: var(--textPrimary);
 }
 
@@ -55,7 +62,14 @@
   color: var(--textSecondary);
 }
 
+/* The sentence takes whatever the chip leaves and wraps INSIDE itself. Without
+ * the shrink it is one unbreakable flex item, so a clause too long for the rest
+ * of a phone's line pushed the whole sentence below its own numeral — a chip
+ * alone on one row and its words on the next, which reads as two broken lines
+ * rather than one. */
 .glance-clause {
+  flex: 1;
+  min-width: 0;
   color: var(--textSecondary);
 }
 
@@ -64,13 +78,22 @@
 }
 
 /* The numeral IS the control: every one of these goes somewhere, and a figure
- * that looks pressable and is not is worse than a plain one. Mono so a column
- * of them lines up as the day's counts rather than shifting per digit. */
+ * that looks pressable and is not is worse than a plain one.
+ *
+ * One WIDTH for all of them, and tabular figures inside it, so the sentences
+ * start on a single x — five chips sized to their own digits left the briefing
+ * with a ragged left edge, which is the whole block reading as unaligned rather
+ * than as one list. The floor is the width of the widest count this page can
+ * show (three digits and the arrow); a longer one still grows the chip rather
+ * than being clipped. */
 .glance-count {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
+  min-inline-size: calc(var(--space-12) + var(--space-2));
   padding: 0 var(--space-2);
+  font-variant-numeric: tabular-nums;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   background: var(--accentLight);
@@ -99,20 +122,25 @@
 
 /* ── The readings plate ────────────────────────────────────────────────────
  * `StatStrip` owns the plate; this only places it. It sits between the
- * briefing and the work, which is the reading order the sentences promise. */
+ * briefing and the work, which is the reading order the sentences promise.
+ *
+ * The gap under it is a register change — briefing to work — so it is one rung
+ * wider than any gap INSIDE either register. */
 
 .home-readings {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 /* ── The work column ───────────────────────────────────────────────────────
  * Two panels, in the order the day decides (see `home.tsx`): the deck first
  * while decisions are waiting, the ranked queue first once the deck is clear. */
 
+/* The gap between the two blocks of work is wider than the gap between the
+ * cards inside either of them, which is what makes them read as two blocks. */
 .home-main {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 
 .home-today-list {
@@ -218,11 +246,15 @@
 
 @media (max-width: 720px) {
   .glance {
-    padding: var(--space-3) 0 var(--space-4);
+    padding: var(--space-4) 0 var(--space-4);
   }
 
   .glance-greeting {
     font-size: var(--fs-h2);
+  }
+
+  .glance-lines {
+    margin-top: var(--space-3);
   }
 
   .glance-line {
