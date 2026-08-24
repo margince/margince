@@ -28,6 +28,16 @@
   justify-content: flex-end;
 }
 
+/* The titled head. `SectionHeader` carries its own 24px top margin, which is
+   right where it introduces a section on a page and wrong here: this header IS
+   the deck's first row, so the gap above it belongs to whatever laid the deck
+   out. The toggle centres on the title rather than topping out against it — one
+   line of heading beside one control is a row, not a stack. */
+.ddeck > .section-header {
+  margin: 0;
+  align-items: center;
+}
+
 /*
  * The stack: the plate, then the count of what is behind and the keyboard
  * legend. Deliberately NOT a positioning context — the peeked layers belong to

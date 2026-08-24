@@ -10,7 +10,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, Disclosure, EmptyState, SegmentedControl } from "./atoms";
+import {
+  Button,
+  Disclosure,
+  EmptyState,
+  SectionHeader,
+  SegmentedControl,
+} from "./atoms";
 import {
   type DecisionApproval,
   DecisionCard,
@@ -235,6 +241,14 @@ export type DecisionDeckProps = Readonly<{
    */
   now: number;
   labels: DecisionDeckLabels;
+  /**
+   * The deck's own heading, drawn on the same row as the Deck/List toggle. A
+   * prop rather than a caller-side `SectionHeader` because a title above the
+   * deck and a toggle inside it are two rows saying one thing, and the row the
+   * toggle belongs to is the one that names what it switches. Omitted, the deck
+   * carries no heading and the toggle keeps the row to itself.
+   */
+  title?: string;
   /** Fired ONCE, on the explicit commit, with exactly what is in the tray. */
   onCommit: (staged: readonly StagedDecision[]) => void;
   /** Told when a verdict enters or leaves the tray, for a caller keeping a count
@@ -265,6 +279,7 @@ export function DecisionDeck({
   items,
   now,
   labels,
+  title,
   onCommit,
   onStage,
   onUnstage,
@@ -413,22 +428,30 @@ export function DecisionDeck({
   const cleared = waiting.length === 0 && (tally?.count ?? 0) > 0;
   const resolved = bodyState(state, waiting.length > 0, cleared);
 
+  // The toggle asks HOW to show what is waiting, so it exists only while
+  // something is. Over a cleared plate or an empty queue it is a control with
+  // nothing to switch between — noise on the one screen whose whole point is
+  // that there is nothing left to do.
+  const toggle =
+    waiting.length > 0 ? (
+      <SegmentedControl
+        options={["deck", "list"] as const}
+        value={view}
+        onChange={setView}
+        label={labels.viewLabel}
+        labels={{ deck: labels.viewDeck, list: labels.viewList }}
+      />
+    ) : null;
+
   return (
     <section className="ddeck" aria-label={labels.deckLabel}>
-      {/* The toggle asks HOW to show what is waiting, so it appears only while
-          something is. Over a cleared plate or an empty queue it is a control
-          with nothing to switch between — noise on the one screen whose whole
-          point is that there is nothing left to do. */}
-      {waiting.length > 0 && (
-        <div className="ddeck-head">
-          <SegmentedControl
-            options={["deck", "list"] as const}
-            value={view}
-            onChange={setView}
-            label={labels.viewLabel}
-            labels={{ deck: labels.viewDeck, list: labels.viewList }}
-          />
-        </div>
+      {/* Titled, the heading and the toggle are ONE row: `SectionHeader` already
+          lays a title against its own controls, so the deck reuses it rather
+          than growing a second header that would have to agree with it. */}
+      {title ? (
+        <SectionHeader level={2} title={title} actions={toggle} />
+      ) : (
+        toggle && <div className="ddeck-head">{toggle}</div>
       )}
       <SurfaceState
         state={resolved}

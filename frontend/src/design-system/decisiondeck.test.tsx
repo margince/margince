@@ -387,3 +387,36 @@ describe("DecisionDeck — the states it can honestly be in", () => {
     expect(screen.queryByText("2 more behind")).not.toBeInTheDocument();
   });
 });
+
+describe("DecisionDeck — the head", () => {
+  it("puts the title and the view toggle on one row", () => {
+    render(deck({ title: "Waiting on you" }));
+    const heading = screen.getByRole("heading", { name: "Waiting on you" });
+    const row = heading.closest(".section-header");
+    expect(row).not.toBeNull();
+    // The toggle is INSIDE the header the title is in, which is the whole
+    // point: a title above the deck and a control inside it are two rows
+    // saying one thing.
+    expect(row?.contains(screen.getByRole("button", { name: "Deck" }))).toBe(
+      true,
+    );
+  });
+
+  it("draws no heading at all without a title", () => {
+    render(deck());
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Deck" })).toBeInTheDocument();
+  });
+
+  // The toggle asks HOW to draw what is waiting, so a cleared plate keeps the
+  // title and loses the control — there is nothing left to switch between.
+  it("keeps the title but drops the toggle once nothing is waiting", () => {
+    render(deck({ items: [], title: "Waiting on you" }));
+    expect(
+      screen.getByRole("heading", { name: "Waiting on you" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Deck" }),
+    ).not.toBeInTheDocument();
+  });
+});

@@ -6,7 +6,6 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
 import { navigate } from "../app/router";
-import { SectionHeader } from "../design-system/atoms";
 import type { DecisionCardLabels } from "../design-system/decisioncard";
 import {
   decisionExpiryMs,
@@ -286,14 +285,13 @@ export function DecisionsSection({
 
   return (
     <section id="home-decisions" aria-label={t("home.panel.decisions")}>
-      {/* The deck draws its own chrome but no title, and the column's first
-          block cannot be the one thing on the page with no name — the ranked
-          queue beside it is a titled Panel, and two blocks of work read as one
-          list when only one of them says what it is. */}
-      <SectionHeader level={2} title={t("home.panel.decisions")} />
+      {/* The title goes THROUGH the deck: it shares the row the Deck/List
+          toggle is on, so the column's first block says what it is on the same
+          line that says how it is drawn. */}
       <DecisionDeck
         items={items}
         now={nowMs}
+        title={t("home.panel.decisions")}
         labels={deckLabels(t, locale)}
         state={state}
         loadingLabel={t("home.panel.decisions")}

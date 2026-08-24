@@ -180,6 +180,14 @@ export const ManyWaiting: Story = {
   args: { ...BASE, items: MANY },
 };
 
+// Titled. The heading and the Deck/List toggle share one row — the deck draws
+// its own header rather than a caller stacking a `SectionHeader` above it, which
+// is two rows saying one thing. Untitled (every other story here) the toggle
+// keeps the row to itself.
+export const Titled: Story = {
+  args: { ...BASE, items: MANY, title: "Waiting on you" },
+};
+
 // The last one. The peeked edges are gone and the count reads zero, so the
 // reader can see the end coming rather than being surprised by it.
 export const OneLeft: Story = {
