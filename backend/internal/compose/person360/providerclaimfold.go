@@ -68,6 +68,30 @@ func (s *Service) foldClaims(ctx context.Context, tx pgx.Tx, personID ids.Person
 	return nil
 }
 
+// statableConfidence reports whether a score is one this contract can carry: a
+// proportion, zero through one.
+//
+// HERE rather than at each provider, because this is the one place a bounded
+// contract field is written and it is reached by every claim source. The value
+// arrives through `value_json`, which carries no CHECK — the column beside it
+// does, and that column is not where this number comes from. So between a
+// vendor and a reader there was nothing: a vendor scoring out of 100, which is
+// a normal thing for a vendor to do, would put 87 on a field the contract
+// declares `maximum: 1`, and a page rendering it as a percentage would say
+// 8700%.
+//
+// An unstatable score drops the CONFIDENCE, never the value beside it. The
+// phone number is what the row was bought for and is unaffected by how a vendor
+// scales its certainty; the confidence is optional in the contract precisely so
+// it can be absent. Saying nothing about how sure we are beats saying something
+// the contract cannot express.
+//
+// NaN and the infinities fall out of the comparison rather than needing a test
+// of their own — neither is >= 0.
+func statableConfidence(score float64) bool {
+	return score >= 0 && score <= 1
+}
+
 // foldOne decodes one claim onto the profile. An unreadable value is an error
 // rather than a silent omission: the row was paid for, and a page that quietly
 // dropped it would tell the reader the provider returned nothing.
@@ -154,7 +178,7 @@ func foldPhones(c storedClaim, out *crmcontracts.PersonProviderProfile) error {
 			confidence = c.confidence
 		}
 		phone := crmcontracts.PersonProviderPhone{Value: p.Value}
-		if confidence != nil {
+		if confidence != nil && statableConfidence(*confidence) {
 			// The contract carries a float32 because a confidence is a band,
 			// not a measurement; the extra precision would imply one.
 			phone.Confidence = providerPtr(float32(*confidence))
