@@ -134,6 +134,64 @@ function instantInZone(
   return utcMs;
 }
 
+// The calendar day `zone`'s wall clock reads at `utcMs`, as `yyyy-mm-dd`.
+// Derived through Intl rather than by arithmetic on the offset, because the
+// offset is what is in question at the moments this is asked about.
+function dayInZone(utcMs: number, zone: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(new Date(utcMs))
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/**
+ * The first instant of `dateOnly` in `zone` — the day's true beginning, even
+ * when its midnight does not exist.
+ *
+ * A spring-forward transition can REMOVE a wall-clock hour, and some zones put
+ * that transition at midnight: Santiago goes from 23:00 on 5 September 2026
+ * straight to 01:00 on the 6th, so `2026-09-06T00:00` is a time that never
+ * happens there. Asked for it, `instantInZone` converges on the instant one
+ * hour before the jump, whose local reading is still 23:00 on the FIFTH — a
+ * "from 6 September" filter then pulls in an hour of the fifth, and an
+ * exclusive "to the fifth" end drops that hour instead.
+ *
+ * So the resolved instant is checked against the day it was supposed to land
+ * on. When it falls short, the day's first instant is the transition itself,
+ * found by stepping forward a minute at a time — a removed span is a whole
+ * number of minutes in every zone tzdata describes, and the largest is
+ * Lord Howe's 30, so the walk is bounded and short. Stepping BACK is never
+ * needed: the resolved instant is never later than the day's start, because a
+ * removed hour only ever moves the clock forward.
+ */
+function startOfDayInstant(dateOnly: string, zone: string): number {
+  const resolved = instantInZone(dateOnly, zone, 0, 0, 0);
+  if (dayInZone(resolved, zone) === dateOnly) {
+    return resolved;
+  }
+  const minute = 60_000;
+  // Two hours covers every transition tzdata records; the loop exits at the
+  // first minute that reads as the wanted day.
+  for (let step = 1; step <= 120; step += 1) {
+    const candidate = resolved + step * minute;
+    if (dayInZone(candidate, zone) === dateOnly) {
+      return candidate;
+    }
+  }
+  // No minute in two hours reads as the wanted day. That is not a zone rule
+  // this code knows how to interpret, and guessing would silently file records
+  // under a day nobody picked — so the honest answer is the unadjusted one,
+  // which is what every caller got before this correction existed.
+  return resolved;
+}
+
 /**
  * A calendar day, picked as a date-only string, read as a day in `zone`.
  * Minting it as `new Date(dateOnly).toISOString()` reads the string as UTC
@@ -141,10 +199,11 @@ function instantInZone(
  * forward for evening messages east of it: the picker and the rendered row
  * would then disagree about which day was meant.
  *
- * `startOfDayInZone` is the day's first instant; `daysLater` shifts by whole
- * calendar days, which is how an EXCLUSIVE range end is spelled from an
- * inclusive "to" day — the next day's start — without an arithmetic step
- * across a DST change.
+ * `startOfDayInZone` is the day's first instant — which is not always its
+ * midnight, since a spring-forward transition can remove one (see
+ * `startOfDayInstant`). `daysLater` shifts by whole calendar days, which is how
+ * an EXCLUSIVE range end is spelled from an inclusive "to" day — the next day's
+ * start — without an arithmetic step across a DST change.
  */
 export function startOfDayInZone(
   dateOnly: string,
@@ -155,7 +214,7 @@ export function startOfDayInZone(
   const shifted = new Date(Date.UTC(year, month - 1, day + daysLater))
     .toISOString()
     .slice(0, 10);
-  return new Date(instantInZone(shifted, zone, 0, 0, 0)).toISOString();
+  return new Date(startOfDayInstant(shifted, zone)).toISOString();
 }
 
 /** The day's last instant, 23:59:59.999 on `zone`'s wall clock. */

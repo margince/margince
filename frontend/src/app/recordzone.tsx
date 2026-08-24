@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { isRenderableZone } from "../format/format";
 import { FALLBACK_RECORD_ZONE } from "../format/timezone";
 import { logUnexpectedError } from "../screens/common";
@@ -124,6 +124,25 @@ export function useConfiguredRecordZone(enabled: boolean): {
   pending: boolean;
 } {
   const query = useInstallationSettings(enabled);
+  // A settled read that carries no timezone is NOT the same state as one still
+  // in flight, though `data?.timezone` spells both `undefined`. The contract
+  // makes the field required, so a 200 without it is a server older or newer
+  // than this bundle — and treated as "not yet", it would silently render every
+  // record date on the fallback clock with nothing anywhere saying why.
+  const settledWithoutZone =
+    query.isSuccess && query.data?.timezone === undefined;
+  // In an effect rather than the render body: a render can run many times for
+  // one answer, and a console filling with the same line says less than one
+  // line does.
+  useEffect(() => {
+    if (settledWithoutZone) {
+      logUnexpectedError(
+        new Error(
+          `the installation settings carry no timezone; record dates are falling back to ${FALLBACK_RECORD_ZONE}`,
+        ),
+      );
+    }
+  }, [settledWithoutZone]);
   return {
     zone: renderableRecordZone(query.data?.timezone),
     // A DISABLED query is `isPending` forever — it is waiting for permission

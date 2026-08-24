@@ -91,4 +91,40 @@ describe("startOfDayInZone", () => {
       "2026-08-01T04:00:00.000Z",
     );
   });
+
+  // A day whose midnight does not exist. Santiago springs forward AT midnight
+  // on 2026-09-06: its clock reads 23:00 on the 5th and then 01:00 on the 6th,
+  // so `2026-09-06T00:00` is a wall-clock time that never happens there.
+  //
+  // Resolving it by offset arithmetic alone lands one hour before the jump —
+  // an instant that still reads as the FIFTH. A "from 6 September" timeline
+  // filter built on that pulls in an hour of the fifth, and the exclusive end
+  // of a "to 5 September" range drops that same hour. Both are silent: the
+  // rows are plausible, just off by an hour at one edge, once a year, in a
+  // zone whoever wrote the filter probably does not live in.
+  //
+  // Reachable because the record zone is now the INSTALLATION's, not a
+  // hardcoded Europe/Berlin — Berlin transitions at 02:00 and never removes
+  // its own midnight.
+  it("returns the day's first REAL instant when its midnight does not exist", () => {
+    // 04:00Z is the transition itself — Santiago's clock jumps from 23:00 on
+    // the 5th to 01:00 on the 6th at that instant, so it is the first moment
+    // the zone reads as the 6th at all. 03:00Z, what offset arithmetic alone
+    // resolves to, is still 23:00 on the 5th there.
+    expect(startOfDayInZone("2026-09-06", "America/Santiago")).toBe(
+      "2026-09-06T04:00:00.000Z",
+    );
+  });
+
+  // The other side of the same zone's year, and what keeps the correction from
+  // firing where it is not wanted: on a day whose midnight exists normally, the
+  // resolved instant already reads as that day, so nothing is stepped forward.
+  // Santiago is back on UTC-4 here, four hours from the spring-forward case
+  // above, so a correction that ran unconditionally would show up as an offset
+  // that is wrong by the transition's width rather than as a missing hour.
+  it("leaves a day alone when its midnight exists", () => {
+    expect(startOfDayInZone("2026-04-04", "America/Santiago")).toBe(
+      "2026-04-04T03:00:00.000Z",
+    );
+  });
 });
