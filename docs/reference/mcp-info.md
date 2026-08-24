@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 8 |
-| Tool catalog | 152.4 KB |
+| Tool catalog | 152.7 KB |
 | Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39798 |
+| Approx. wire tokens | 39867 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.9 KB | 22% | Yes, every step |
-| Input schemas | 33.7 KB | 22% | Yes, every step |
+| Input schemas | 34.0 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **68.6 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **68.9 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -85,7 +85,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.1 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 2.9 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 3.2 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
@@ -4687,7 +4687,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "What it is about; unlinked, it appears on no timeline.",
+      "description": "EVERY record this was about, named in this one call — a meeting is with a person and also concerns their company and the deal it is for, so name all of them here. Attaching one afterwards is relink_activity, which changes what a recorded event is about and may need a person to approve it. Unlinked, it appears on no timeline.",
       "items": {
         "additionalProperties": false,
         "properties": {
