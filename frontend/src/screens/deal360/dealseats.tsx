@@ -17,9 +17,10 @@
 
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { OverlayUnavailable } from "../common";
 import { dealRoleLabel, RailPanel } from "../record360";
 import "../network.css";
 
@@ -36,12 +37,28 @@ export function DealSeats({
   coverage,
   withheld,
   pending,
+  overlay = false,
 }: Readonly<{
   coverage?: DealCoverage;
   withheld: boolean;
   pending: boolean;
+  overlay?: boolean;
 }>) {
   const t = useT();
+  // The seats are a native relationship read the mirror does not serve. The
+  // panel still appears and says so, because a section that simply vanishes in
+  // overlay is indistinguishable from a deal nobody is on — which is the whole
+  // reason every other 360 panel spells this state rather than rendering
+  // nothing. It moved here from the coverage card, and that card said it too.
+  if (overlay) {
+    return (
+      <Panel title={t("deal.seats.title")}>
+        <PanelBody>
+          <OverlayUnavailable />
+        </PanelBody>
+      </Panel>
+    );
+  }
   const seats = coverage?.stakeholders ?? [];
   const ours = coverage?.our_side ?? [];
   const state = sectionState(

@@ -3505,7 +3505,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 t,
               )}
               aside={
-                overlay ? undefined : (
+                overlay ? (
+                  // The room and the mail asides are genuinely absent under a
+                  // mirror. The seats are not: they are a native read the
+                  // mirror does not serve, and saying so is the panel's job.
+                  <DealSeats overlay withheld={false} pending={false} />
+                ) : (
                   <>
                     {/* Context first: who these people are, before the verbs
                         that act on them. The seats moved out of the main
