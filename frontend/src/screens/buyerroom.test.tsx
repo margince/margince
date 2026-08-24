@@ -354,3 +354,44 @@ describe("a preview never gets a working composer", () => {
     expect(await screen.findByLabelText("New thread")).toBeTruthy();
   });
 });
+
+// `BuyerRoomAccess` is a plain string on the wire, not a union, so the
+// compiler cannot enumerate the states and a server that grows a fifth one
+// reaches this build untouched. A write gate that lists the states it refuses
+// hands that state a working composer; one that names the single state it
+// admits refuses it. This test supplies a state no build has heard of, which
+// is the only way to check the DEFAULT rather than the four known branches.
+describe("an access state this build does not know", () => {
+  it("cannot write", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, access: "quarantined" }),
+      "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
+      "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    const start = await screen.findByRole("button", { name: "New thread" });
+    expect(start).toBeDisabled();
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+  });
+
+  it("is not told the room is closed, because that would be a guess", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, access: "quarantined" }),
+      "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
+      "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    expect(await screen.findByText("This room is now read-only.")).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "This room is closed; what it shared is a record now.",
+      ),
+    ).toBeNull();
+  });
+});
