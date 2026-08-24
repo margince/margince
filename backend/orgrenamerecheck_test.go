@@ -71,7 +71,7 @@ var assemblesAnOrganizationUpdate = regexp.MustCompile(`(?is)UPDATE\s+organizati
 func withoutSQLNoise(statement string) string {
 	statement = sqlDollarQuoted.ReplaceAllString(statement, "$$$$")
 	statement = sqlQuoted.ReplaceAllString(statement, "''")
-	statement = sqlBlockComment.ReplaceAllString(statement, " ")
+	statement = withoutBlockComments(statement)
 	return sqlLineComment.ReplaceAllString(statement, "")
 }
 
@@ -83,9 +83,36 @@ func withoutSQLNoise(statement string) string {
 // The line-comment half is versionguard_test.go's sqlLineComment, which already
 // strips `-- …` for the same reason and is in this package — a second spelling
 // of it here would be two answers to one question.
+// withoutBlockComments removes `/* … */`, counting NESTING.
+//
+// Postgres nests them, unlike C, and a regex cannot: a non-greedy `.*?` stops at
+// the FIRST `*/`, so `/* outer /* inner */ still comment */` leaves
+// `still comment */` in the stream to be read as SQL. A depth counter is the
+// whole fix, and it is the same lesson as the semicolon — a splitter that trusts
+// punctuation is trusting a lexer it did not write.
+func withoutBlockComments(statement string) string {
+	var out strings.Builder
+	depth := 0
+	for i := 0; i < len(statement); i++ {
+		switch {
+		case strings.HasPrefix(statement[i:], "/*"):
+			depth++
+			i++
+		case depth > 0 && strings.HasPrefix(statement[i:], "*/"):
+			depth--
+			i++
+			// A comment is whitespace to the parser, so what surrounded it must
+			// not fuse: `SET/* x */legal_name` is two tokens, not one.
+			out.WriteByte(' ')
+		case depth == 0:
+			out.WriteByte(statement[i])
+		}
+	}
+	return out.String()
+}
+
 var (
 	sqlQuoted       = regexp.MustCompile(`'[^']*'`)
-	sqlBlockComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
 	sqlDollarQuoted = regexp.MustCompile(`(?s)\$([A-Za-z_]\w*)?\$.*?\$([A-Za-z_]\w*)?\$`)
 )
 
@@ -209,6 +236,14 @@ func TestTheRenameDetectorReadsSQLAndNotProse(t *testing.T) {
 		{
 			"a column named only inside a string", "UPDATE organization SET description = 'legal_name = x'", false,
 			"same, inside a literal the database stores rather than executes",
+		},
+		{
+			"a nested block comment", "UPDATE organization /* outer /* inner */ still comment */ SET legal_name = $1", true,
+			"Postgres nests block comments and a non-greedy regex does not; the tail was read as SQL",
+		},
+		{
+			"a nested block comment hiding a column", "UPDATE organization SET description = $1 /* a /* b */ legal_name = */", false,
+			"everything between the outer pair is comment, however many pairs are inside it",
 		},
 		{
 			"the column assembled by the caller", "UPDATE organization SET ", true,
