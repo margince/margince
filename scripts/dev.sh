@@ -81,64 +81,13 @@ REDIS_PORT="${REDIS_PORT:-16379}"
 # production secret.
 MINIO_PORT="${MINIO_PORT:-29000}"
 
-# A slug reaches three places that each refuse different characters: a
-# filesystem path, a CREATE DATABASE identifier, and (via bucket_for_slug) an S3
-# bucket name. Fold to the narrowest of the three rather than validating in
-# three places — a branch or directory name is the usual source, and
-# `feat/ai-keys` is an ordinary one.
-sanitize_slug() { # name → a slug matching ^[a-z0-9_-]+$
-  printf '%s' "$1" \
-    | tr '[:upper:]' '[:lower:]' \
-    | sed 's/[^a-z0-9_-]/-/g; s/--*/-/g; s/^-//; s/-*$//'
-}
+# Slug, state root and bucket come from the shared helper — three scripts need
+# the same answers and dev.sh knowing them alone is how `make dev-logs` came to
+# look for a file `make dev` no longer wrote.
+# shellcheck source=scripts/lib-devstate.sh
+. "${repo_root}/scripts/lib-devstate.sh"
 
-# The bucket holding attachment and transcript bytes. It was one name for every
-# stack, so two worktrees wrote each other's object bytes into one place — the
-# same class of defect as a shared Redis database, and invisible for the same
-# reason.
-#
-# S3 bucket names admit no underscore and the slug charset does, so the two
-# names are not interchangeable. blobstore.New creates a missing bucket, so a
-# new name needs no infra change.
-bucket_for_slug() { # slug → an S3-legal bucket name
-  local slug="$1"
-  if [[ -z "$slug" ]]; then
-    printf 'margince-dev'
-    return 0
-  fi
-  printf 'margince-dev-%s' "$(printf '%s' "$slug" | tr '_' '-')"
-}
-
-# The PRIMARY worktree keeps the shared stack — database `margince` on :8080,
-# Redis db 0 — because `make migrate`, `make seed-dev` and `make verify-boot`
-# all target that database by name, and an auto-slug here would silently
-# decouple them from the stack the developer is looking at.
-#
-# A LINKED worktree gets its own everything, named after itself, with no flag to
-# remember. That is the point: an engineer runs several agent sessions, one
-# worktree each, and none of them should have to know DEV_SLUG exists.
-#
-# The primary/linked test is the git directory, not the path: in a linked
-# worktree --absolute-git-dir is <common>/worktrees/<name> and differs from
-# --git-common-dir. The latter can print a relative path, so it is resolved
-# before the comparison.
-derive_slug() { # → "" in the primary worktree, this worktree's name in a linked one
-  local gitdir commondir
-  gitdir=$(git rev-parse --absolute-git-dir)
-  commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
-  [[ "$gitdir" == "$commondir" ]] && return 0
-  sanitize_slug "$(basename "$(git rev-parse --show-toplevel)")"
-}
-
-# An explicit DEV_SLUG always wins; otherwise the worktree decides. A supplied
-# slug is validated rather than sanitised: silently rewriting what somebody
-# typed would point them at a database they did not name.
-if [[ -z "$slug" ]]; then
-  slug="$(derive_slug)"
-elif ! [[ "$slug" =~ ^[a-z0-9_-]+$ ]]; then
-  echo "FAIL: DEV_SLUG must match ^[a-z0-9_-]+$ (got '$slug')" >&2
-  exit 1
-fi
+slug="$(dev_resolve_slug "$slug")" || exit 1
 if [[ -z "$slug" ]]; then
   label="dev"
   db="margince"
@@ -146,7 +95,7 @@ else
   label="dev '$slug'"
   db="margince_dev_${slug}"
 fi
-blob_bucket="$(bucket_for_slug "$slug")"
+blob_bucket="$(dev_bucket_for_slug "$slug")"
 # :8080 is THE port — the app, the thing a human opens, always and only. The api
 # sits behind it at fe+10000 and the app's dev server proxies /v1 and the probes
 # through, so `curl localhost:8080/v1/...` still answers and nobody has to
@@ -163,24 +112,6 @@ DEV_API_PORT_OFFSET=10000
 # developer's browser among them — and this sweep kills what it is given.
 port_listeners() { # port
   lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
-}
-
-# Where a stack's claim is recorded. ONE directory per machine, deliberately
-# outside the repository.
-#
-# It used to be <worktree>/.tmp/dev/, and that is the defect this whole file is
-# being changed for: a second worktree read an EMPTY registry and claimed Redis
-# database 64 for the second time. The guarantee the old comment made — "a
-# running stack's db is never handed out twice" — held only within one checkout,
-# which is the one case that never needed it. Two stacks then shared one
-# consumer group: whichever worker read an entry first resolved it against its
-# own database, found nothing, and acked it, so the other stack's event was
-# simply gone.
-#
-# MARGINCE_DEV_STATE_DIR exists so the tests can point this somewhere
-# disposable. Nothing else should set it.
-dev_state_root() {
-  printf '%s' "${MARGINCE_DEV_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/margince/dev}"
 }
 
 # The Redis instance serves 80 logical databases in three blocks that must not
@@ -299,9 +230,28 @@ if [[ -z "$slug" ]]; then
   fe_port=8080
   api_port=18080
   redis_db=0
-else
-  read -r redis_db fe_port <<<"$(claim_stack "$slug")"
+elif [[ "$cmd" == "up" ]]; then
+  # Assign first, THEN read: `read … <<<"$(claim_stack)"` reports read's status,
+  # not the claim's, so a refused claim printed its FAIL and the stack carried on
+  # with an empty port and an api listening on :10000.
+  claimed="$(claim_stack "$slug")" || exit 1
+  read -r redis_db fe_port <<<"$claimed"
   api_port=$(( fe_port + DEV_API_PORT_OFFSET ))
+  # A reservation that outlives a failed boot holds its port and Redis database
+  # against every later stack until somebody sweeps by hand, and nothing says so
+  # — the next `make dev` in a fresh worktree just gets a higher number, and the
+  # block runs out sixteen stacks early. Released on any exit before the final
+  # state write, which is the point the stack is actually running.
+  stack_recorded=0
+  trap 'if [[ "$stack_recorded" == "0" ]]; then rm -rf "$(dev_state_dir "$slug")"; fi' EXIT
+else
+  # stop and sweep READ; only `up` claims. Claiming here would mint a reservation
+  # for a stack nobody asked to start, and then the caller would tear it down
+  # again — a write on the path whose whole job is to clean up.
+  read_registry "$slug"
+  redis_db="${MINE_DB:-0}"
+  fe_port="${MINE_PORT:-0}"
+  api_port=$(( fe_port == 0 ? 0 : fe_port + DEV_API_PORT_OFFSET ))
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
@@ -366,7 +316,7 @@ psql_owner() { # db [psql args…] — SQL via args or stdin
 # reserved, so a sweep from any worktree can see this stack; while these were two
 # different files the reservation carried ports and no pids, and the sweep read a
 # directory only this worktree could see.
-rundir="$(dev_state_root)/${slug:-_base}"
+rundir="$(dev_state_dir "$slug")"
 log="${rundir}/dev.log"
 state="${rundir}/env"
 
@@ -462,11 +412,17 @@ margince_server_pids() {
 # the worktree path — that is what distinguishes our dev server from any other
 # Vite project the developer happens to be running.
 vite_pids() {
-  local pid cmd
+  local pid cmd common
+  # The git COMMON directory, not this worktree's root: every worktree of this
+  # repository resolves vite out of its own node_modules, so matching on
+  # $repo_root found only our own. `make dev-sweep` promises to clear the
+  # machine, and an orphaned vite from a sibling worktree — the exact process
+  # this whole change makes more likely — survived it.
+  common=$(cd "$(git rev-parse --git-common-dir)" && cd .. && pwd -P)
   for pid in $(pgrep -f 'vite' 2>/dev/null || true); do
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"$repo_root"* ]] && echo "$pid"
+    [[ "$cmd" == *"$common"* ]] && echo "$pid"
   done
 }
 
@@ -875,6 +831,7 @@ up)
   # index is spoken for.
   printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nREDIS_DB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
     "$slug" "$api_port" "$fe_port" "$db" "$redis_db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
+  stack_recorded=1
 
   if wait_ready "http://localhost:${fe_port}/" 90; then
     echo "$label ready"
@@ -922,11 +879,10 @@ stop)
     rm -rf "$rundir"
     echo "stopped $label (freed :${API_PORT:-?} :${FE_PORT:-?})"
   else
-    for p in "$api_port" "$fe_port"; do
-      pids=$(lsof -ti "tcp:${p}" 2>/dev/null || true)
-      [[ -n "$pids" ]] && kill $pids 2>/dev/null || true
-    done
-    echo "no recorded env for $label (freed derived ports :$api_port :$fe_port if bound)"
+    # Ports are CLAIMED now, not derived from the slug, so there is nothing to
+    # guess at for a stack that was never recorded: naming a port here would
+    # print `:0`. Say what is true instead.
+    echo "no recorded stack for $label — nothing to stop"
   fi
   if [[ "$drop" == "1" ]]; then
     if [[ -z "$slug" ]]; then

@@ -174,13 +174,35 @@ declare_lane_budget() {
 # a container that copied the files in) has no worktrees to collide over, so
 # falling back to the shared name is correct rather than merely quiet.
 _testdb_worktree_slug() {
-  local gitdir commondir
+  local gitdir commondir raw name
   gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || return 0
   commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || return 0
   [[ "$gitdir" == "$commondir" ]] && return 0
-  basename "$(git rev-parse --show-toplevel)" \
+
+  # The full path, not the basename, is what identifies a worktree: two
+  # checkouts can both hold `.../worktrees/feature`, and a basename would give
+  # them one template to rebuild under each other.
+  raw="$(git rev-parse --show-toplevel)"
+  name="$(basename "$raw" \
     | tr '[:upper:]' '[:lower:]' \
-    | sed 's/[^a-z0-9_]/_/g; s/__*/_/g; s/^_//; s/_*$//'
+    | sed 's/[^a-z0-9_]/_/g; s/__*/_/g; s/^_//; s/_*$//')"
+
+  # `margince_test_` + this must fit Postgres's 63-byte identifier limit, so the
+  # budget here is 49. Over it — or when the name sanitises away to nothing, which
+  # a directory of pure punctuation does — the answer carries a digest of the full
+  # PATH instead of the name alone. Truncating without one would map every name
+  # sharing its first 49 characters onto a single template.
+  local digest
+  digest="$(printf '%s' "$raw" | shasum | cut -c1-8)"
+  if (( ${#name} == 0 )); then
+    printf 'wt_%s' "$digest"
+    return 0
+  fi
+  if (( ${#name} > 49 )); then
+    printf '%s_%s' "${name:0:40}" "$digest"
+    return 0
+  fi
+  printf '%s' "$name"
 }
 _testdb_slug="$(_testdb_worktree_slug)"
 export TEMPLATE_NAME="${TEMPLATE_NAME:-margince_test${_testdb_slug:+_${_testdb_slug}}}"

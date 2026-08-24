@@ -3,7 +3,13 @@
 GO        ?= go
 PG_PORT   ?= 15432
 REDIS_PORT?= 16379
-DB_NAME   ?= margince
+# The database THIS worktree's stack runs against, resolved by the same code
+# scripts/dev.sh uses. It was the literal `margince`, which is still the answer in
+# the primary worktree and in CI; from a linked worktree it is margince_dev_<slug>,
+# and the SQL half of a seed used to land in a different database from the API
+# half. Lazy (`?=` makes a recursively expanded variable), so the git calls only
+# happen for a target that actually reads it.
+DB_NAME   ?= $(shell bash -c '. "$(CURDIR)/../scripts/lib-devstate.sh" && dev_database_name' 2>/dev/null || echo margince)
 # An ambient MARGINCE_OWNER_DSN redirects every migrate target here, because it is
 # the same variable cmd/migrate reads when no --dsn is given — the two can never
 # name different databases. That also means a staging or production owner DSN

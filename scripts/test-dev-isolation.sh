@@ -9,9 +9,8 @@
 # stack's event was gone — and a projection that never runs is indistinguishable
 # from a broken feature.
 #
-# Every function under test is LIFTED from scripts/dev.sh rather than
-# reimplemented here, the way test-dev-dsn.sh does it: a copy would prove
-# nothing about production.
+# Every function under test is LIFTED from the scripts, or sourced from them,
+# rather than reimplemented here: a copy would prove nothing about production.
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
@@ -45,21 +44,6 @@ lift() { # function name
     ' "$dev")"
 }
 
-lift sanitize_slug
-
-echo "dev.sh: a slug is safe for a path and for CREATE DATABASE"
-
-check "cfg-retire" "$(sanitize_slug "cfg-retire")" \
-      "an already-legal name is unchanged"
-check "feat-ai-keys" "$(sanitize_slug "feat/ai-keys")" \
-      "a slash becomes a hyphen — a slug reaches the filesystem"
-check "abc" "$(sanitize_slug "ABC")" \
-      "uppercase is folded — Postgres would fold it anyway"
-check "a-b" "$(sanitize_slug "a...b")" \
-      "a run of illegal characters collapses to one hyphen"
-check "ab" "$(sanitize_slug "-ab-")" \
-      "no leading or trailing hyphen"
-
 # lift_const NAME — eval one top-level assignment out of dev.sh.
 #
 # The block bounds are READ from production rather than restated here. A test
@@ -71,21 +55,87 @@ lift_const() { # name
     eval "$(grep -m1 "^$1=" "$dev")"
 }
 
-lift bucket_for_slug
+# The identity helper is SOURCED, not lifted: it is a library, and sourcing it is
+# what production does.
+# shellcheck source=scripts/lib-devstate.sh
+. "$root/scripts/lib-devstate.sh"
 
-echo "dev.sh: attachment bytes are not shared between stacks"
+echo "lib-devstate.sh: a slug is safe for a path, a database, and a bucket"
 
-check "margince-dev" "$(bucket_for_slug "")" \
+check "cfg-retire" "$(dev_sanitize_slug "cfg-retire")" \
+      "an already-legal name is unchanged"
+check "feat-ai-keys" "$(dev_sanitize_slug "feat/ai-keys")" \
+      "a slash becomes a hyphen — a slug reaches the filesystem"
+check "abc" "$(dev_sanitize_slug "ABC")" \
+      "uppercase is folded — Postgres would fold it anyway"
+check "a-b" "$(dev_sanitize_slug "a...b")" \
+      "a run of illegal characters collapses to one hyphen"
+check "ab" "$(dev_sanitize_slug "-ab-")" \
+      "no leading or trailing hyphen"
+check "a-b" "$(dev_sanitize_slug "a_b")" \
+      "an underscore folds to a hyphen, so the slug alphabet is already S3-legal"
+
+echo "lib-devstate.sh: attachment bytes are not shared between stacks"
+
+check "margince-dev" "$(dev_bucket_for_slug "")" \
       "the primary worktree keeps the bucket it already has"
-check "margince-dev-cfg-retire" "$(bucket_for_slug "cfg-retire")" \
+check "margince-dev-cfg-retire" "$(dev_bucket_for_slug "cfg-retire")" \
       "a linked worktree gets its own"
-check "margince-dev-a-b" "$(bucket_for_slug "a_b")" \
-      "an underscore becomes a hyphen — S3 bucket names admit no underscore, slugs do"
 
-lift dev_state_root
+# Injectivity is the property, not the spelling. While `_` was legal in a slug
+# and illegal in a bucket, `a_b` and `a-b` were two worktrees sharing one bucket
+# — the shared-Redis defect again, in the store holding attachment bytes.
+same=0
+for a in a-b a_b; do
+    for b in a-b a_b; do
+        [[ "$a" == "$b" ]] && continue
+        [[ "$(dev_bucket_for_slug "$(dev_sanitize_slug "$a")")" \
+           == "$(dev_bucket_for_slug "$(dev_sanitize_slug "$b")")" ]] && same=1
+    done
+done
+check "1" "$same" \
+      "two directory names differing only by _ vs - fold to ONE slug, so they cannot take two buckets that collide"
+
+echo "lib-devstate.sh: the primary stack's directory is reserved"
+
+check "1" "$(dev_resolve_slug "$DEV_BASE_SLUG_DIR" >/dev/null 2>&1; echo $?)" \
+      "DEV_SLUG=_base is refused — it is the primary worktree's own state directory"
+check "1" "$(dev_resolve_slug "Not A Slug" >/dev/null 2>&1; echo $?)" \
+      "an illegal DEV_SLUG is refused rather than silently rewritten"
+check "1" "$(dev_resolve_slug "has_underscore" >/dev/null 2>&1; echo $?)" \
+      "an underscore in an explicit DEV_SLUG is refused — the same name has to work as a bucket"
+check "mine" "$(dev_resolve_slug "mine")" \
+      "a legal DEV_SLUG is returned unchanged"
+
+echo "lib-devstate.sh: every half of a seed resolves the SAME stack"
+
+# `make seed-dev` has two halves — API calls against a base URL, and psql against
+# a database name — and they were resolved independently. Once a linked worktree
+# stopped using :8080 and `margince`, the API records went to the worktree's
+# database and the SQL fixture to the primary's. It surfaced as a NOT NULL
+# violation on app_user.workspace_id, which reads as a broken fixture rather than
+# as two halves pointing at two databases.
+probe_state="$(mktemp -d)"
+MARGINCE_DEV_STATE_DIR="$probe_state" DEV_SLUG=alpha \
+    bash -c '. "'"$root"'/scripts/lib-devstate.sh"; printf "%s %s" "$(dev_app_base_url)" "$(dev_database_name)"' \
+    > "$probe_state/answer"
+check "http://localhost:8080 margince_dev_alpha" "$(cat "$probe_state/answer")" \
+      "with no recorded stack the URL falls back to :8080 but the database is still the slug's own"
+
+mkdir -p "$probe_state/alpha"
+printf 'SLUG=alpha\nFE_PORT=8093\nAPI_PORT=18093\nREDIS_DB=70\n' >"$probe_state/alpha/env"
+MARGINCE_DEV_STATE_DIR="$probe_state" DEV_SLUG=alpha \
+    bash -c '. "'"$root"'/scripts/lib-devstate.sh"; printf "%s %s" "$(dev_app_base_url)" "$(dev_database_name)"' \
+    > "$probe_state/answer2"
+check "http://localhost:8093 margince_dev_alpha" "$(cat "$probe_state/answer2")" \
+      "once the stack is recorded both halves name it — the API base takes the claimed port"
+rm -rf "$probe_state"
+
+lift port_listeners
 lift read_registry
 lift pick_free_db
 lift pick_free_port
+lift claim_stack
 lift_const DEV_REDIS_DB_MIN
 lift_const DEV_REDIS_DB_MAX
 lift_const DEV_FE_PORT_MIN
@@ -109,14 +159,13 @@ echo "dev.sh: the registry is machine-global, so a second worktree sees the firs
 # below points the root at a temp directory, so without this one the whole file
 # would keep passing after somebody moved the default back under the worktree —
 # and a per-worktree default is the entire defect. What matters is not the exact
-# path but that it is not INSIDE this checkout, because a path inside it is
-# per-worktree by construction however it is spelled.
+# path but that it is one absolute path per machine.
 default_root="$(dev_state_root)"
 default_verdict=shared
 case "$default_root" in
     # Inside the checkout: per-worktree by construction.
     "$root"/*) default_verdict="inside the checkout ($default_root)" ;;
-    # RELATIVE: dev.sh cds to the worktree top before using it, so a relative
+    # RELATIVE: the scripts cd to the worktree top before using it, so a relative
     # path is per-worktree too — and it is the spelling the old code used
     # (`.tmp/dev`). Checking only for "not under $root" would call that clean,
     # which is how this very assertion first passed over the defect it exists
@@ -159,8 +208,34 @@ check "8083" "$(pick_free_port)" \
       "a port with a foreign listener is skipped even though no stack claims it"
 listener_on=''
 
+echo "dev.sh: claim_stack reserves before anything binds, and refuses rather than doubling up"
+
+# The whole allocation path, not its parts. The unit checks above can all pass
+# while the function that calls them is wired wrong — which is what happened: the
+# reservation went to the machine-global registry while the run directory still
+# pointed inside the worktree, so the two were different files.
+rm -rf "$tmp_root"/*
+claimed="$(claim_stack "alpha")"
+read -r alpha_db alpha_port <<<"$claimed"
+check "64" "$alpha_db" "the first stack claims the bottom of the Redis block"
+check "8081" "$alpha_port" "and the bottom of the port range"
+check "1" "$([ -f "$tmp_root/alpha/env" ] && echo 1 || echo 0)" \
+      "the reservation is on disk BEFORE anything binds — a claim visible only once the stack is up is not a claim"
+
+claimed="$(claim_stack "beta")"
+read -r beta_db beta_port <<<"$claimed"
+check "65" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
+check "8082" "$beta_port" "nor its port"
+
+claimed="$(claim_stack "alpha")"
+read -r again_db again_port <<<"$claimed"
+check "$alpha_db $alpha_port" "$again_db $again_port" \
+      "the same slug reclaims exactly what it had, so a restart keeps its URL and its streams"
+
 # The blocks are finite. Running out must refuse rather than double up: a shared
-# bus is the silent failure this whole mechanism exists to prevent.
+# bus is the silent failure this whole mechanism exists to prevent. And the
+# refusal must be a non-zero STATUS, because dev.sh's caller acts on that — a
+# printed FAIL with a zero status let the stack start with no port at all.
 rm -rf "$tmp_root"/*
 for i in $(seq "$DEV_REDIS_DB_MIN" "$DEV_REDIS_DB_MAX"); do
     mkdir -p "$tmp_root/s$i"
@@ -171,33 +246,33 @@ check "" "$(pick_free_db || true)" \
       "every Redis database claimed → pick_free_db yields nothing rather than reusing one"
 check "1" "$(pick_free_db >/dev/null 2>&1; echo $?)" \
       "and it reports failure rather than returning success with an empty answer"
+check "1" "$(claim_stack newcomer >/dev/null 2>&1; echo $?)" \
+      "claim_stack propagates that refusal as a non-zero status, which is what stops the boot"
 
-echo "dev.sh: the state home is spelled once"
+unset MARGINCE_DEV_STATE_DIR
 
-# Every path under the state home must be composed from dev_state_root. This is
-# here because the lifted-function checks above structurally cannot see it: they
-# exercise pure functions, and the run directory is assigned at the top level.
+echo "the state home is spelled once, across every script that composes it"
+
+# Every script that needs the state home must get it from lib-devstate.sh. This
+# is here because the lifted checks above structurally cannot see it, and because
+# a one-file version of this check already missed the real defect: it greppped
+# dev.sh alone, so dev-logs.sh kept composing `.tmp/dev/<slug>/dev.log` and
+# `make dev-logs` looked for a file `make dev` no longer wrote — with a message
+# that named the wrong reason ("is the stack up?").
 #
-# The defect it catches is not hypothetical — it is what shipped in the first
-# draft of this change. claim_stack wrote its reservation to the machine-global
-# registry while `rundir` still pointed at the worktree's own .tmp/dev/, so the
-# two were different files: the reservation carried ports and never the pids, and
-# the sweep read a directory only its own worktree could see. Both halves looked
-# right in isolation and the whole was worktree-blind, which is the defect this
-# change exists to remove.
-#
-# Comment lines are stripped first: the file explains the old location on
-# purpose, and that prose must stay.
-stray_state_paths=$(grep -vE '^[[:space:]]*#' "$dev" | grep -c '\.tmp/dev' || true)
-check "0" "$stray_state_paths" \
-      "no code line in dev.sh names .tmp/dev — the state home comes from dev_state_root"
+# The corpus is every script in the tree, derived rather than listed, for the
+# reason the rulebook gives: a list of two paths stops describing the tree the
+# first time a third script needs the state home.
+stray=$(grep -rlE '^[^#]*\.tmp/dev' "$root/scripts" 2>/dev/null \
+        | grep -v 'test-dev-isolation.sh' | sort || true)
+check "" "$stray" \
+      "no script composes .tmp/dev itself — the state home comes from lib-devstate.sh"
 
 echo "lib-testdb.sh: the integration lane's template is per worktree"
 
-# Lifted from lib-testdb.sh for the same reason everything above is lifted from
-# dev.sh. Exercised inside a THROWAWAY repository rather than this one, because
-# the answer depends on whether the caller sits in a primary worktree or a
-# linked one, and this checkout can only ever be one of the two.
+# Lifted from lib-testdb.sh and exercised inside THROWAWAY repositories, because
+# the answer depends on whether the caller sits in a primary worktree or a linked
+# one, and this checkout can only ever be one of the two.
 testdb="$root/scripts/lib-testdb.sh"
 eval "$(awk '
     index($0, "_testdb_worktree_slug() ") == 1 { inside = 1 }
@@ -211,12 +286,23 @@ git init -q "$probe/primary"
     cd "$probe/primary"
     git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
     git worktree add -q "$probe/linked" --detach
+    # A name long enough that margince_test_<slug> would cross Postgres's 63-byte
+    # identifier limit, and a second one sharing its first 49 characters.
+    git worktree add -q "$probe/$(printf 'w%.0s' $(seq 1 60))-one" --detach
+    git worktree add -q "$probe/$(printf 'w%.0s' $(seq 1 60))-two" --detach
 )
 
 check "" "$(cd "$probe/primary" && _testdb_worktree_slug)" \
       "a primary worktree yields no slug, so CI and the main checkout keep margince_test"
 check "linked" "$(cd "$probe/linked" && _testdb_worktree_slug)" \
       "a linked worktree yields its own name, so a parallel branch cannot rebuild your template"
+
+long_one="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && _testdb_worktree_slug)"
+long_two="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-two" && _testdb_worktree_slug)"
+check "1" "$([ "${#long_one}" -le 63 ] && echo 1 || echo 0)" \
+      "a long worktree name still yields a template name inside Postgres's 63-byte identifier limit"
+check "1" "$([ "$long_one" != "$long_two" ] && echo 1 || echo 0)" \
+      "two long names sharing a prefix still get different templates, so neither rebuilds the other's schema"
 rm -rf "$probe"
 
 if [ "$failures" -gt 0 ]; then

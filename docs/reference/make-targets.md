@@ -16,7 +16,7 @@ enforces — so a command copied out of here works from either directory.
 | `dev-fresh` | `make dev-fresh [DEV_SLUG=<slug>]` — `dev` onto a **rebuilt** database: drops it, re-migrates, and boots the installation a first customer gets. Plain `dev` keeps whatever data is there, so a restart for a backend change never costs you a half-finished record |
 | `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]` — stops **this worktree's** stack and frees its ports. `DROP=1` also drops its per-slug `margince_dev_*` database — never the shared `margince` |
 | `dev-sweep` | `make dev-sweep [DROP=1]` — clears **every** margince dev stack on the machine: every api/worker/vite, recorded, orphaned, or from another worktree, and their claims. `DROP=1` also drops every per-slug `margince_dev_*` database. This is the old bare-`make dev` behaviour, now explicit |
-| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow the stack's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`) coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
+| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow this worktree's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`, or `_base/` for the primary worktree) coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
 | `db-up` / `infra-up` | Start the dev Postgres 16 (pgvector, port 15432) and Redis 7 (port 16379) containers, create the app role (`infra-up` is an alias) |
 | `db-init` | (Re)apply `scripts/db-init.sql` to the running Postgres |
 | `migrate` | Apply core + custom migrations with the owner DSN |
@@ -194,9 +194,16 @@ database, Redis db 0 and the app on the base `:8080`, because `make migrate`,
 one worktree.
 
 Logs, pids and claims live under `$XDG_STATE_HOME/margince/dev/<slug>/`
-(`~/.local/state/...` by default) — **one directory per machine, not per
-worktree**. That is load-bearing rather than tidy: the registry below is only a
-registry if every worktree reads the same one.
+(`~/.local/state/...` by default), and the primary worktree's stack — which has
+no slug — uses `_base/` there. **One directory per machine, not per worktree**:
+that is load-bearing rather than tidy, because the registry below is only a
+registry if every worktree reads the same one. `DEV_SLUG=_base` is refused for
+the same reason, since it would land a second stack on the primary's own state.
+
+Every script that needs those paths gets them from `scripts/lib-devstate.sh`
+rather than composing them — `make dev-logs` spent one revision of this change
+looking for a file `make dev` no longer wrote, and reporting it as "is the stack
+up?".
 
 **The Redis index is isolation, not tidiness.** The stream names and consumer
 groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
