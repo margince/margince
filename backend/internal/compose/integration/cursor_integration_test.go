@@ -16,11 +16,15 @@ package integration
 // recognise them — yet all three are 4xx, and a test that asked only for a 4xx
 // passed over every one of them.
 //
-// The endpoint set enumerates the contract's Cursor-parameter operations whose
-// implementations parse the token (crm.yaml components.parameters.Cursor refs);
-// /approvals also declares the parameter but its implementation does not
-// paginate yet, so a garbage token there is ignored rather than parsed and has
-// nothing to misclassify.
+// The endpoint set is a SAMPLE, not a census: it carries every implementation
+// that decodes the token itself, plus several that delegate to
+// storekit.DecodeCursor. The contract declares the Cursor parameter on far more
+// operations than are listed here, and what covers those is the static gate in
+// backend/cursorrefusal_test.go — it reads every refusal in the tree, where this
+// suite reads the wire for the ones that got it wrong.
+//
+// Saying which is which matters: a list that claimed to enumerate the contract
+// would stop the next author looking when an endpoint left the list.
 
 import (
 	"net/http"
@@ -57,6 +61,7 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 		"/v1/search?q=probe&" + garbage,
 		"/v1/dedupe/candidates?" + garbage,
 		"/v1/data-subject-requests?" + garbage,
+		"/v1/approvals?" + garbage,
 	}
 	for _, path := range endpoints {
 		var problem cursorProblem

@@ -80,7 +80,6 @@ const (
 	// sqlAlwaysVisible is the no-op arm of the pair-visibility predicate:
 	// the caller's scope leaves that record type unbounded.
 	sqlAlwaysVisible = "true"
-	fieldCursor      = "cursor"
 )
 
 // dedupeCursor is the queue's keyset: confidence-descending with the id
