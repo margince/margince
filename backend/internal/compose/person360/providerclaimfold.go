@@ -68,6 +68,48 @@ func (s *Service) foldClaims(ctx context.Context, tx pgx.Tx, personID ids.Person
 	return nil
 }
 
+// statableConfidence reports whether a score is one this contract can carry: a
+// proportion, zero through one.
+//
+// HERE rather than at each provider, because this is the one place a PROVIDER
+// CLAIM's confidence reaches the contract, and every claim source passes
+// through it. A check at each provider would be one per provider, and the next
+// one added would not have it.
+//
+// The value arrives through `value_json`, which carries no CHECK. The
+// `confidence` COLUMN beside it does — and is not where this number comes from,
+// which is what made the path look guarded while carrying none of the traffic.
+// A vendor scoring out of 100 would put 87 on a field the contract declares
+// `maximum: 1`, and the page renders a confidence as a percentage.
+//
+// This is HARDENING, not a live defect: every Surfe score in this tree is a
+// proportion. The number is vendor-controlled and nothing validated it, which
+// is reason enough.
+//
+// `compose/enrichextract.go` guards the same invariant for extracted fields and
+// answers it differently — it drops the whole field and treats zero as invalid.
+// Both are right for their own input: an extracted value is model-fabricated
+// and worth nothing without a confidence, where a phone number was paid for and
+// stands on its own. Named here so the difference reads as a choice.
+//
+// An unstatable score drops the CONFIDENCE, never the value beside it. The
+// phone number is what the row was bought for and is unaffected by how a vendor
+// scales its certainty; the confidence is optional in the contract precisely so
+// it can be absent. Saying nothing about how sure we are beats saying something
+// the contract cannot express — and clamping would assert maximal certainty
+// while normalising would guess a scale the vendor never declared.
+//
+// Guarded at READ rather than at write, so `value_json` keeps what the vendor
+// actually asserted: a scale corrected later restores every confidence, and the
+// Art. 15 export still shows what was received.
+//
+// NaN fails `>= 0`; the infinities fail one bound each — `+Inf >= 0` is TRUE
+// and only the upper bound stops it. Neither needs a test of its own, but the
+// reason they are excluded is not the same reason.
+func statableConfidence(score float64) bool {
+	return score >= 0 && score <= 1
+}
+
 // foldOne decodes one claim onto the profile. An unreadable value is an error
 // rather than a silent omission: the row was paid for, and a page that quietly
 // dropped it would tell the reader the provider returned nothing.
@@ -154,7 +196,7 @@ func foldPhones(c storedClaim, out *crmcontracts.PersonProviderProfile) error {
 			confidence = c.confidence
 		}
 		phone := crmcontracts.PersonProviderPhone{Value: p.Value}
-		if confidence != nil {
+		if confidence != nil && statableConfidence(*confidence) {
 			// The contract carries a float32 because a confidence is a band,
 			// not a measurement; the extra precision would imply one.
 			phone.Confidence = providerPtr(float32(*confidence))
