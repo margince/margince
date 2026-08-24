@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -64,6 +65,38 @@ func newOfferDrafterFixture(t *testing.T, e *integration.Env, brain *ai.FakeClie
 		// call rather than failing an assertion, which read as a nil RESULT and
 		// sent the report looking at the wrong line entirely.
 		pool: e.Pool,
+	}
+}
+
+// No field of the fixture is left zero. That is deliberately a WEAKER claim
+// than "the fixture matches WithOfferDraft", and the weaker one is the whole
+// of what a test can hold here: brain and context are interface fields over
+// funcs, which compare equal to nothing but nil, so parity with a
+// production-built drafter is not expressible.
+//
+// It is still the claim worth holding, because zero is the value that
+// panics. A field wired to the wrong store gives a wrong answer some test
+// can see; a field left nil dereferences inside the call, which is why the
+// missing pool read as a nil RESULT and sent a report at the wrong line.
+//
+// The cost of the weak form is a field WithOfferDraft may one day leave nil
+// on purpose. That field fails here and the fixture is fine — read this
+// comment, and give the field a value or exclude it by name.
+//
+// Reflection rather than a written list of fields: the list would have to be
+// extended by whoever adds the next field, who is by definition the author
+// who does not know this fixture exists.
+func TestTheOfferDraftFixtureLeavesNoFieldZero(t *testing.T) {
+	e := integration.Setup(t)
+	drafter := newOfferDrafterFixture(t, e, ai.NewFakeClient())
+
+	v := reflect.ValueOf(drafter)
+	for i := range v.NumField() {
+		if v.Field(i).IsZero() {
+			t.Errorf("offerDrafter.%s is zero in the fixture — a path that reads it panics "+
+				"instead of failing. Give it a value; if WithOfferDraft leaves it nil on "+
+				"purpose, exclude it by name here and say why", v.Type().Field(i).Name)
+		}
 	}
 }
 
