@@ -4377,11 +4377,9 @@ export const en = {
   "threads.open": "Post",
   "threads.readOnly": "Your access is read-only.",
   "deal360.title": "Deal360",
-  "deal360.sub":
-    "What has happened, what is holding it up, and what to say next.",
+  "deal360.sub": "Where this deal stands, and what I would do next.",
   "deal360.blocker": "What is holding this up",
   "deal360.buyer": "What the buyer wants",
-  "deal360.verdict": "Where this stands",
   "deal360.verdict.live": "Live",
   "deal360.verdict.drifting": "Drifting",
   "deal360.verdict.blocked": "Blocked",
@@ -4393,6 +4391,7 @@ export const en = {
   "dealmail.reply": "Draft the reply",
   "dealmail.send": "Send an email",
   "deal360.rewrite": "Write it again",
+  "deal360.readFull": "Read the full briefing",
   "deal360.createTask": "Add this task",
   "deal360.openBrief": "Open the meeting brief",
   "deal360.unreadable":

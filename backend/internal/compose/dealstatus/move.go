@@ -24,6 +24,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // The verbs the client performs on click. Unchanged from the card this
@@ -191,18 +192,14 @@ func until(now, then time.Time) string {
 	}
 }
 
-// calendarDaysBetween counts whole days between two moments by the CALENDAR,
-// not by elapsed hours.
+// calendarDaysBetween counts whole days between two moments by the CALENDAR.
 //
-// It has to, because the cache is keyed on the UTC day. Counting elapsed hours
-// would flip "today" to "yesterday" 24 hours after the contact — mid-afternoon,
-// say — while the fingerprint waits for midnight, and the card would spend the
-// gap saying the wrong thing with nothing to notice. Counting the same way the
-// key does means the wording can only change when the key does.
+// The arithmetic is shared/kernel/elapsed's: the coverage chips beside this
+// card count the same silence, and the two used to disagree on screen because
+// each carried its own spelling. See that package for why the calendar and not
+// the clock.
 func calendarDaysBetween(from, to time.Time) int {
-	fromDay := from.UTC().Truncate(24 * time.Hour)
-	toDay := to.UTC().Truncate(24 * time.Hour)
-	return int(toDay.Sub(fromDay).Hours() / 24)
+	return elapsed.Days(from, to)
 }
 
 func spell(days int) string {

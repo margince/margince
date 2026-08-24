@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -217,7 +218,7 @@ func (a *assembly) readHealth() error {
 	health := crmcontracts.Organization360Health{}
 
 	if inbound := a.out.LastInboundAt; inbound != nil {
-		days := int(a.now.Sub(*inbound).Hours() / 24)
+		days := elapsed.Days(*inbound, a.now)
 		health.DaysSinceLastInbound = &days
 	}
 

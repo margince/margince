@@ -171,6 +171,41 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 	}
 }
 
+func TestGoingColdCountsTheCalendarSoTheChipAndTheCardAgree(t *testing.T) {
+	// The window is counted in CALENDAR days, and this is the case that says
+	// which counting is in force. The tests above cannot: their fixture builds
+	// every timestamp with AddDate from a NOON clock, where the calendar count
+	// and the elapsed-hours count give the same integer, so they pass under
+	// either reading and pin neither.
+	//
+	// A touch late in the evening is where the two part. 23:00 on 16 May to
+	// noon on 15 June is 29 whole 24-hour spans and 30 calendar days, so the
+	// old elapsed-hours count said 29 and did not flag, while this one says 30
+	// and does.
+	//
+	// The calendar is correct, and not by preference. The deal card's own move
+	// counts days this way because the card is cached on the UTC day, and the
+	// coverage chip renders BESIDE that move: while the two disagreed, one card
+	// printed "96 days ago" over a chip reading "95 days" about the same mail.
+	// Whoever changes this back reintroduces that.
+	lateEvening := time.Date(2026, 5, 16, 23, 0, 0, 0, time.UTC)
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: lateEvening,
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+	risks := foldRisks(cover, testNow)
+	if !kinds(risks)[RiskGoingCold] {
+		t.Fatalf("a deal last touched at 23:00 thirty calendar days ago is not flagged going cold; "+
+			"the window is counted by the calendar, and %d whole days have passed by it", goingColdDays)
+	}
+	for _, r := range risks {
+		if r.Kind == RiskGoingCold && r.DaysSinceTouch != goingColdDays {
+			t.Errorf("going-cold reports %d days since that touch, want %d — an elapsed-hours count "+
+				"would say %d and disagree with the deal card beside it", r.DaysSinceTouch, goingColdDays, goingColdDays-1)
+		}
+	}
+}
+
 func TestGoingColdSaysNothingAboutADealWhoseTouchWasNeverGathered(t *testing.T) {
 	// A zero LastTouchAt means the gather did not run, not that nobody has
 	// spoken since the epoch. Reading it as the second would flag every deal in

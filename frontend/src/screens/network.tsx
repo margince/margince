@@ -15,7 +15,7 @@ import {
   throwProblem,
   useSorMode,
 } from "./common";
-import { dealRoleLabel } from "./company360";
+import { dealRoleLabel } from "./record360";
 
 // The two relationship-graph cards (ADR-0078).
 //

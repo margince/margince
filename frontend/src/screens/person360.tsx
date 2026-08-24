@@ -16,9 +16,9 @@ import type { ConfidenceLevel } from "../design-system/trust";
 import { formatDate } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { provenanceOf, throwProblem } from "./common";
-import { dealRoleLabel } from "./company360";
 import { currentEmployer, formerEmployers } from "./employmentcurrency";
 import { EntityRef } from "./entityref";
+import { dealRoleLabel } from "./record360";
 
 export type Person360 = components["schemas"]["Person360"];
 type ProfileField = components["schemas"]["PersonProfileField"];

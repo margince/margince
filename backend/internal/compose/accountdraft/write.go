@@ -157,6 +157,8 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, correction st
 // The caller's intent is the one input outside the fence, and it is outside
 // because the caller typed it: fencing a person's own instruction would tell
 // the model to treat the reader as an attacker.
+//
+//promptvoice:exempt the reply is an email the salesperson sends under their OWN name. Margince's personality inside a customer-facing draft would be Margince signing somebody else's mail; compose/draftrules carries the user's own voice instead.
 func groundedRequest(in Input) (model.Request, error) {
 	fence := promptfence.New()
 	payload, err := json.Marshal(fencedInput(in))

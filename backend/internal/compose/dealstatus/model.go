@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -68,15 +69,15 @@ Ground every word in the summary. Never invent a person, a company, a date, a nu
 Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
 "health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
 Never write the same fact in two sections. Each one answers a different question.
-
-Voice: a capable colleague briefing you in the corridor, in plain words. Say "she asked for times and nobody sent them", not "follow-up communication remains outstanding". Short sentences. No corporate register, no hedging, no "it appears that", no greetings, no praise, no exclamation marks, no restating the deal's name.`
+`
 
 // statusSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 // The card is filed on the deal and read by whoever opens it, so it takes the
 // installation's shared language rather than the language the buyer's mail
 // happened to be in — which is what an unruled prompt would have followed.
 func statusSystemFor(fence promptfence.Fence, lang string) string {
-	return statusSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("deal timeline and buyer conversation")
+	return statusSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("deal timeline and buyer conversation")
 }
 
 // The reply's bounds. A card past these is a document, and the page already

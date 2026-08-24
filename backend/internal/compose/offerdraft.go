@@ -284,6 +284,8 @@ func (d offerDrafter) gatherDealContext(ctx context.Context, dealID ids.DealID) 
 // It is a function of what it is handed, so the prompt this site sends
 // can be built — and certified — from either read's own data, while the
 // reads themselves stay where the orchestrator makes every other read.
+//
+//promptvoice:exempt returns offer LINE ITEMS — a description, a quantity and a price each carrying the snippet they came from. The description is the customer's own wording for what they asked for, not ours to rephrase.
 func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Product, lang string) model.Request {
 	// The deal context is captured counterparty text — the customer wrote it —
 	// so the span it sits in has to be one the customer cannot close. Both

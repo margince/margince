@@ -20,6 +20,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
@@ -113,7 +114,8 @@ If the summary names sections_omitted, say nothing about those subjects at all â
 // access get different facts â€” not about preference. Language is not a
 // permission, so it does not follow the reader.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("account summary")
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("account summary")
 }
 
 // Write produces the brief. lane may be nil, which is not an error state:

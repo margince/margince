@@ -26,6 +26,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/claims"
 	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // The citable record types. A brief may only point at things the reader can
@@ -176,7 +177,7 @@ func lastTouchLine(in Input) string {
 	if in.LastTouchAt == nil {
 		return "Nothing has been captured with anyone in this room before."
 	}
-	days := int(in.Now.Sub(*in.LastTouchAt).Hours() / 24)
+	days := elapsed.Days(*in.LastTouchAt, in.Now)
 	switch {
 	case days <= 0:
 		return "Last touch was today."
@@ -267,7 +268,7 @@ func attendeeLine(attendee AttendeeIn, now time.Time) string {
 	if attendee.FirstTime {
 		return line + " — first time you are meeting them."
 	}
-	days := int(now.Sub(*attendee.LastTouch).Hours() / 24)
+	days := elapsed.Days(*attendee.LastTouch, now)
 	if days <= 0 {
 		return line + " — last spoke today."
 	}

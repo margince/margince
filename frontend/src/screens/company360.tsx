@@ -8,7 +8,6 @@ import {
   Avatar,
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   Modal,
@@ -31,8 +30,6 @@ import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import {
   omitted,
-  type SectionDetail,
-  type SectionState,
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
@@ -75,6 +72,14 @@ import {
 } from "./coverage";
 import { CoverageExplorer } from "./coverageexplorer";
 import { EntityRef } from "./entityref";
+import {
+  Citations,
+  dealRoleLabel,
+  incompleteGraph,
+  RailPanel,
+  SentenceList,
+  WrittenBy,
+} from "./record360";
 import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 
 // The company view's data layer and its right-rail cards.
@@ -89,89 +94,6 @@ type Organization360 = components["schemas"]["Organization360"];
 type Contact = components["schemas"]["Organization360Contact"];
 type Deal360 = components["schemas"]["Organization360Deal"];
 type NextStep = components["schemas"]["Organization360NextStep"];
-
-// What each signal kind is, in words. The badge rendered the stored enum, so
-// a German reader met `buying_intent` and an English one met an identifier.
-// Typed against the schema union: a kind added upstream fails the build here.
-// Keyed by plain string, matching how the value arrives: the strip's signal
-// kind is an open wire string, so a producer added upstream must be able to
-// reach signalKindLabel's fallback rather than failing the index.
-const SIGNAL_KIND_LABELS: Record<string, MessageKey> = {
-  stalled_deal: "signal.kind.stalled_deal",
-  champion_left: "signal.kind.champion_left",
-  reengagement: "signal.kind.reengagement",
-  buying_intent: "signal.kind.buying_intent",
-  risk: "signal.kind.risk",
-  other: "signal.kind.other",
-  contract_ended: "signal.kind.contract_ended",
-  new_opportunity: "signal.kind.new_opportunity",
-  commitment_made: "signal.kind.commitment_made",
-  ghosted_thread: "signal.kind.ghosted_thread",
-  project_gone_quiet: "signal.kind.project_gone_quiet",
-};
-
-// The strip's signal kind is an open string on the wire, on purpose: the strip
-// states whatever a producer raised, and a producer added upstream must not
-// make the tile disappear. An unmapped kind renders as its own words rather
-// than as an identifier — the same degradation an unmapped approval kind gets.
-export function signalKindLabel(
-  kind: string,
-  t: (key: MessageKey) => string,
-): string {
-  // Own-property only, as dealRoleLabel does below: a wire value named
-  // `toString` would otherwise find something on Object's prototype and pass
-  // the truthy check instead of degrading to its own words.
-  const key = Object.hasOwn(SIGNAL_KIND_LABELS, kind)
-    ? SIGNAL_KIND_LABELS[kind]
-    : undefined;
-  return key ? t(key) : kind.replaceAll("_", " ");
-}
-
-// How serious a signal is, in the strip's own vocabulary of tones. `info` is
-// deliberately untoned: the strip leads with the WORST open signal, and an
-// account whose worst news is a commitment somebody made is an account with no
-// bad news — colouring that would cry wolf on every healthy record.
-const SIGNAL_TONE: Record<string, "warn" | "danger" | undefined> = {
-  info: undefined,
-  warn: "warn",
-  urgent: "danger",
-};
-
-// Severity is a closed enum on the wire, but it arrives as a string like every
-// other wire value: an own-property check keeps a value named `toString` from
-// finding something on Object's prototype and typing as a tone. Exported so
-// the daily brief's risk reading (companytoday.tsx) colours its tile the same
-// way the strip used to, rather than a second mapping that could drift.
-export function signalTone(severity: string): "warn" | "danger" | undefined {
-  return Object.hasOwn(SIGNAL_TONE, severity)
-    ? SIGNAL_TONE[severity]
-    : undefined;
-}
-
-// The deal-stakeholder roles worth a word. `role` is free text on the wire
-// (the enum is an unminted contract extension, DEAL-EXT-5), so an unknown
-// value renders as itself rather than being hidden — a role somebody typed is
-// still a fact about this contact.
-const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
-  champion: "co.role.champion",
-  economic_buyer: "co.role.economic_buyer",
-  blocker: "co.role.blocker",
-  influencer: "co.role.influencer",
-  user: "co.role.user",
-};
-
-export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
-  // Own-property only: `role` is free text off the wire, and a value named
-  // `toString` or `constructor` would otherwise find something on Object's
-  // prototype, pass the truthy check, and render as an empty badge.
-  const key = Object.hasOwn(DEAL_ROLE_LABELS, role)
-    ? DEAL_ROLE_LABELS[role]
-    : undefined;
-  return key ? t(key) : role.replace(/_/g, " ");
-}
-// OVERLAY_REFUSAL is the validation code the 360 answers for a workspace
-// reading from an incumbent mirror. It is a refusal to assemble, not a
-// failure, so the screen falls back instead of showing an error.
 const OVERLAY_REFUSAL = "unsupported_in_overlay_mode";
 
 export type Org360Result =
@@ -326,121 +248,12 @@ function CoverageSummary({
 }
 
 /**
- * SectionCard is the one shape a single-section rail card takes.
- *
- * `footer` carries figures that belong to the SECTION rather than to its
- * rows — an account's lifetime won total is true whether or not it has an
- * open deal today — so it renders whenever the section came back at all,
- * not only when the list has rows.
- */
-export function SectionCard({
-  title,
-  state,
-  emptyLabel,
-  detail,
-  footer,
-  actions,
-  children,
-}: Readonly<{
-  title: string;
-  state: SectionState;
-  emptyLabel: string;
-  detail?: SectionDetail;
-  footer?: ReactNode;
-  // Verbs that CHANGE this section, under everything that describes it.
-  //
-  // They render whenever the section is present — including when it is empty,
-  // which is the state a create verb most belongs to. They do NOT render on a
-  // withheld or unavailable section: a caller who may not read the deals has
-  // no business being offered a button to add one, and a section that failed
-  // to load cannot say whether the write would even make sense.
-  actions?: ReactNode;
-  children: ReactNode;
-}>) {
-  // `stale` and `partial` both carry real rows, so the footer figures and the
-  // verbs that change the section belong with them — a truncated deal list is
-  // still a deal list you can add to.
-  const present =
-    state === "ready" ||
-    state === "empty" ||
-    state === "stale" ||
-    state === "partial";
-  return (
-    <Card className="co-card" title={title}>
-      <SurfaceState state={state} emptyLabel={emptyLabel} detail={detail}>
-        {children}
-      </SurfaceState>
-      {present && footer}
-      {present && actions && <div className="co-card-actions">{actions}</div>}
-    </Card>
-  );
-}
-
-/**
- * RailPanel is SectionCard's four-state discipline rendered through Panel's
- * chrome — a fixed-height header and full-bleed rows — instead of the
- * negative-margin CSS breakout that shape used to need. The message states
- * (empty, withheld, unavailable, loading, failed) reuse SurfaceState verbatim,
- * padded in a PanelBody; `ready` is left to the caller, so rows passed as
- * children run edge to edge the way Panel is built to take them.
- *
- * Scoped to the rail's own cards — SectionCard itself is untouched, because
- * its other callers (the grid, the other tabs) are not this card's chrome.
- */
-export function RailPanel({
-  title,
-  state,
-  emptyLabel,
-  detail,
-  footer,
-  children,
-}: Readonly<{
-  title: string;
-  state: SectionState;
-  emptyLabel: string;
-  detail?: SectionDetail;
-  // A figure belonging to the whole card rather than to one row. Shown only
-  // on `ready`/`empty` — the states RailPanel's callers ever reach — because a
-  // withheld or unavailable section has no figure to report either.
-  footer?: ReactNode;
-  children: ReactNode;
-}>) {
-  const present = state === "ready" || state === "empty";
-  return (
-    <Panel title={title} footer={present ? footer : undefined}>
-      {state === "ready" ? (
-        children
-      ) : (
-        <PanelBody>
-          <SurfaceState state={state} emptyLabel={emptyLabel} detail={detail}>
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      )}
-    </Panel>
-  );
-}
-
-/**
  * PeopleCard lists the account's contacts with their relationship strength,
  * their role on the open deals, and whether they may be contacted.
  *
  * The two callouts are the ones a rep acts on: an account carried by a
  * single contact, and open deals with nobody named as champion.
  */
-// incompleteGraph says the connection graph this page read is not the whole
-// one: it capped its contact ring, or it withheld groups the caller may not
-// read. Either way the routes below it are a subset, and both the empty answer
-// and the found-someone answer have to say so.
-export function incompleteGraph(graph: {
-  groups_omitted?: unknown[];
-  dropped_count?: number;
-}): boolean {
-  return (
-    (graph.groups_omitted?.length ?? 0) > 0 || (graph.dropped_count ?? 0) > 0
-  );
-}
-
 export function PeopleCard({
   view,
   // Whether this account takes writes at all. An archived record is read-only
@@ -1493,298 +1306,11 @@ export function NextSteps({
   );
 }
 
-type Cited = BriefSentence["evidence"][number];
-type CitedKind = Cited["entity_type"];
-
-/**
- * A citation chip as it is rendered: either one (or a counted GROUP of) an
- * openable record, or the count of records of one kind that have nowhere to
- * open.
- */
-export type CitationChip =
-  | {
-      openable: true;
-      entityType: CitedKind;
-      entityId: string;
-      count: number;
-      // The record's own name, when the citation carried one — a deal's
-      // name, an activity's subject. Absent on a grouped chip: a count
-      // already speaks for several records, and one of their names would
-      // read as though it spoke for the rest.
-      name?: string;
-    }
-  | { openable: false; entityType: CitedKind; count: number };
-
-/**
- * citationChips turns a sentence's raw evidence into what a reader should see.
- *
- * Three reductions, all of which the raw list gets wrong on its own. The same
- * record cited twice is one source, not two. Several records of a kind the app
- * cannot open are one statement about that kind — rendered one by one they
- * became a run of identical unopenable labels ("activity activity activity"),
- * which says nothing the count does not say better. And several RECEIPT
- * citations of the same kind (`groupable`) are one counted chip too, opening
- * the first and stepping through the rest — rendered one per record they
- * became the same run under a different reason: a receipt has no name of its
- * own, so ten profile fields all read "profile field", ten times, with nothing
- * to tell them apart. `deal`/`person` stay one chip per record: each opens its
- * OWN screen rather than a shared stepper, so collapsing them would silently
- * drop every record after the first.
- *
- * Order is first-seen, so the chips follow the sentence's own reasoning.
- */
-export function citationChips(
-  evidence: readonly Cited[],
-  openable: (entityType: CitedKind) => boolean,
-  groupable: (entityType: CitedKind) => boolean = () => false,
-): CitationChip[] {
-  const chips: CitationChip[] = [];
-  const seen = new Set<string>();
-  const groupAt = new Map<CitedKind, number>();
-  for (const cited of evidence) {
-    const identity = `${cited.entity_type}:${cited.entity_id}`;
-    if (seen.has(identity)) {
-      continue;
-    }
-    seen.add(identity);
-    const isOpenable = openable(cited.entity_type);
-    if (isOpenable && !groupable(cited.entity_type)) {
-      chips.push({
-        openable: true,
-        entityType: cited.entity_type,
-        entityId: cited.entity_id,
-        count: 1,
-        name: cited.name,
-      });
-      continue;
-    }
-    const at = groupAt.get(cited.entity_type);
-    if (at === undefined) {
-      groupAt.set(cited.entity_type, chips.length);
-      chips.push(
-        isOpenable
-          ? {
-              openable: true,
-              entityType: cited.entity_type,
-              entityId: cited.entity_id,
-              count: 1,
-            }
-          : { openable: false, entityType: cited.entity_type, count: 1 },
-      );
-      continue;
-    }
-    chips[at].count += 1;
-  }
-  return chips;
-}
-
-/**
- * Citations renders the chips for one sentence.
- *
- * A citation the app cannot open is rendered as a label, not as a button: a
- * clickable element that does nothing teaches the reader that citations do not
- * work, which costs more than the click it saves.
- */
-// The citation kinds that open a RECEIPT rather than a record page. Only these
-// can be stepped through, because only these render in the drawer.
-const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
-
-// One steppable citation, in the receipt's own shape.
-export type CitedSibling = {
-  entityType: "fact" | "profile_field";
-  entityId: string;
-};
-
-// The sentence's receipt-bearing citations, once each, in the order it cites
-// them. Mapped here at the one place that knows both shapes: the wire is
-// snake_case and the drawer's CitedRecord is not.
-function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
-  const seen = new Set<string>();
-  const out: CitedSibling[] = [];
-  for (const each of evidence) {
-    const key = `${each.entity_type}:${each.entity_id}`;
-    if (!RECEIPT_CITATIONS.has(each.entity_type) || seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    out.push({
-      entityType: each.entity_type as "fact" | "profile_field",
-      entityId: each.entity_id,
-    });
-  }
-  return out;
-}
-
-function Citations({
-  evidence,
-  onOpenRecord,
-}: Readonly<{
-  evidence: readonly Cited[];
-  onOpenRecord?: (
-    entityType: string,
-    entityId: string,
-    siblings?: readonly CitedSibling[],
-  ) => void;
-}>) {
-  const t = useT();
-  const chips = citationChips(
-    evidence,
-    (entityType) => Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(entityType),
-    (entityType) => RECEIPT_CITATIONS.has(entityType),
-  );
-  // THIS sentence's citations, in the order it cites them, so the receipt's
-  // prev/next walks the sentence the reader is actually looking at. The order
-  // belongs to the sentence, which is why it is passed from here rather than
-  // rebuilt in the drawer.
-  // Mapped to the receipt's own shape here, at the one place that knows both:
-  // the wire is snake_case and the drawer's CitedRecord is not.
-  // Deduplicated, because the stepper finds its position by id: a sentence
-  // citing the same fact twice would leave `findIndex` returning the first
-  // occurrence forever, and Next would never move past it.
-  const siblings = dedupeCited(evidence);
-  if (chips.length === 0) {
-    return null;
-  }
-  return (
-    <span className="co-brief-cites">
-      {chips.map((chip) =>
-        chip.openable ? (
-          <button
-            key={`${chip.entityType}:${chip.entityId}`}
-            type="button"
-            className="co-brief-cite"
-            onClick={() =>
-              onOpenRecord?.(chip.entityType, chip.entityId, siblings)
-            }
-          >
-            {/* A grouped chip (fact/profile_field, several of the same kind
-                in one prose block) opens the FIRST and names the count; the
-                drawer's own stepper reaches the rest, which is the receipt
-                kind's whole reason for having one. A single deal or person
-                names ITSELF rather than its kind — "deal" told a reader
-                nothing they could not already see; the deal's own name tells
-                them which one. */}
-            {chip.count === 1 && chip.name
-              ? chip.name
-              : chip.count === 1
-                ? t(`co.brief.cite.${chip.entityType}`)
-                : t(`co.brief.cite.${chip.entityType}.many`, {
-                    count: chip.count,
-                  })}
-          </button>
-        ) : (
-          <span key={chip.entityType} className="co-brief-cite-flat">
-            {chip.count === 1
-              ? t(`co.brief.cite.${chip.entityType}`)
-              : t(`co.brief.cite.${chip.entityType}.many`, {
-                  count: chip.count,
-                })}
-          </span>
-        ),
-      )}
-    </span>
-  );
-}
-
-// The citation kinds a reader can open something for. `deal` and `person` route
-// to their own screens; `fact` and `profile_field` open their receipt instead —
-// where the value came from, when it was read, and what could not be recorded.
-//
-// An activity has no detail route of its own (it lives in a timeline) and no
-// receipt either, and the organization citation is the page the reader is
-// already on. Both stay flat: a clickable element that does nothing teaches the
-// reader that citations do not work, which costs more than the click it saves.
-const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
-
-/** OverlayFallback replaces the page when the workspace reads elsewhere. */
-export function OverlayFallback() {
-  const t = useT();
-  return <EmptyState>{t("co.overlayFallback")}</EmptyState>;
-}
-
 type Brief = components["schemas"]["OrganizationBrief"];
-type Answer = components["schemas"]["OrganizationAnswer"];
 type Question = components["schemas"]["OrganizationQuestion"];
 type Suggestion = components["schemas"]["Organization360Suggestion"];
-
-/**
- * SentenceList renders grounded prose — the standing brief and the answers to
- * the prepared questions read identically, because they are the same thing
- * written from the same records with the same citations. One component, so a
- * citation can never be clickable in one place and flat in the other.
- */
-export function SentenceList({
-  sentences,
-  onOpenRecord,
-  citations = "per-sentence",
-}: Readonly<{
-  sentences: BriefSentence[];
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  // WHERE the receipts go, which is a reading decision rather than a styling
-  // one.
-  //
-  // "per-sentence" is the brief's: each line is a separate claim a reader
-  // checks on its own, so its chips belong beside it.
-  //
-  // "collected" is the dossier's: it is one continuous description of a
-  // company, and a chip after every clause turned three sentences into a wall
-  // of "fact fact fact". The sources are the same, gathered once underneath —
-  // every claim stays checkable, and the prose stays readable.
-  citations?: "per-sentence" | "collected";
-}>) {
-  const t = useT();
-  return (
-    <ul className="co-brief-lines">
-      {sentences.map((sentence, index) => (
-        // Indexed because two sentences may legitimately read the same;
-        // keying on the text collapses them into one row.
-        // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
-        <li key={index}>
-          {/* What KIND of claim this is, marked where it is made. A judgment
-              that looked like a stored fact would be the one thing a reader
-              could not check — and the brief is allowed to judge now. */}
-          {sentence.nature && sentence.nature !== "fact" && (
-            <Badge
-              tone={sentence.nature === "recommendation" ? "accent" : undefined}
-            >
-              {t(NATURE_LABELS[sentence.nature])}
-            </Badge>
-          )}{" "}
-          {sentence.text}
-          {citations === "per-sentence" && (
-            <Citations
-              evidence={sentence.evidence}
-              onOpenRecord={onOpenRecord}
-            />
-          )}
-        </li>
-      ))}
-      {citations === "collected" && (
-        <li className="co-brief-sources">
-          <Citations
-            evidence={sentences.flatMap((sentence) => sentence.evidence)}
-            onOpenRecord={onOpenRecord}
-          />
-        </li>
-      )}
-    </ul>
-  );
-}
-
-export type BriefSentence = NonNullable<
-  Brief["sections"]
->[number]["sentences"][number];
 type BriefSectionKind = NonNullable<Brief["sections"]>[number]["kind"];
-
-const NATURE_LABELS: Record<
-  NonNullable<BriefSentence["nature"]>,
-  MessageKey
-> = {
-  fact: "co.brief.nature.fact",
-  assessment: "co.brief.nature.assessment",
-  recommendation: "co.brief.nature.recommendation",
-};
-
+type Answer = components["schemas"]["OrganizationAnswer"];
 const SECTION_LABELS: Record<BriefSectionKind, MessageKey> = {
   snapshot: "co.brief.section.snapshot",
   fit: "co.brief.section.fit",
@@ -1821,20 +1347,6 @@ function BriefSections({
         </div>
       ))}
     </>
-  );
-}
-
-/**
- * WrittenBy names which writer produced a piece of prose. Always shown: a
- * reader weighing a sentence needs to know whether a model or the
- * deterministic fallback wrote it, and the two are not interchangeable.
- */
-export function WrittenBy({ by }: Readonly<{ by: Brief["generated_by"] }>) {
-  const t = useT();
-  return (
-    <Badge tone={by === "model" ? "ai" : undefined}>
-      {t(`co.brief.by.${by}`)}
-    </Badge>
   );
 }
 

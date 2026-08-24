@@ -13,6 +13,7 @@ package compose
 import (
 	"encoding/json"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
@@ -49,7 +50,8 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 	messages = append(messages, history...)
 	messages = append(messages, model.Message{Role: chatRoleUser, Content: message})
 	return model.Request{
-		System:    companyReadMessageSystem + "\n" + fence.Rule("dossier evidence and application state"),
+		System: companyReadMessageSystem + "\n" + promptvoice.Rule + "\n" +
+			fence.Rule("dossier evidence and application state"),
 		Messages:  messages,
 		MaxTokens: ai.ReasoningOutputMaxTokens, ResponseSchema: companyReadMessageSchema,
 		SecretStripper: ai.NewSecretStripper(),

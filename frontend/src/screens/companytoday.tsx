@@ -11,9 +11,9 @@ import {
   ENGAGEMENT_TONE,
   nextCommitmentLine,
   type SuggestionAction,
-  signalKindLabel,
   useSuggestionsBody,
 } from "./company360";
+import { signalKindLabel } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
 // the page that answers *what do I do now*. It replaces two earlier cards

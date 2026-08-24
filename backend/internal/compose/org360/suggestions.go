@@ -35,6 +35,7 @@ import (
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -258,6 +259,12 @@ func staleThread(
 		return nil
 	}
 	waited := now.Sub(newest.At)
+	// The THRESHOLD stays a duration — it asks whether enough time has passed,
+	// which is a question about elapsed time. The figure PRINTED below is a
+	// day count a reader compares against dates on their screen, so it is
+	// counted the way they count: shared/kernel/elapsed, same as every other
+	// day count a person reads.
+	waitedDays := elapsed.Days(newest.At, now)
 	if waited < noReplyDays*24*time.Hour {
 		return nil
 	}
@@ -269,13 +276,13 @@ func staleThread(
 		Kind: suggestNoReply,
 		// Channel-neutral wording: the newest exchange may have been a call or a
 		// meeting, and "you wrote" would be a small false statement about it.
-		Reason:      fmt.Sprintf("You reached out %d days ago and nobody has come back.", int(waited.Hours()/24)),
+		Reason:      fmt.Sprintf("You reached out %d days ago and nobody has come back.", waitedDays),
 		Fingerprint: fingerprint(string(suggestNoReply), orgID.String(), evidence),
 		Evidence:    evidence,
 	}
 	// The rule's own words, and the date the EVIDENCE carries — when the thread
 	// went quiet. Neither reaches the fingerprint above (PO-AC-N-14).
-	out.Title = ptrString(fmt.Sprintf("Follow up: no reply in %d days", int(waited.Hours()/24)))
+	out.Title = ptrString(fmt.Sprintf("Follow up: no reply in %d days", waitedDays))
 	out.DueAt = ptrTime(newest.At)
 	setDraftReply(out, newest.ID)
 	return out

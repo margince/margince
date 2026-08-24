@@ -322,6 +322,7 @@ func (x evidenceExtractor) extractPageFacts(ctx context.Context, page crawlPage)
 // a site's own writing.
 //
 //promptlang:exempt the reply is field values printed on the page — emails, urls, counts — and gatePageFactList refuses one the page does not print verbatim, so a translated value is a dropped value.
+//promptvoice:exempt the reply is field values printed on the page — emails, urls, counts — refused unless the page prints them verbatim.
 func pageFactsRequest(menu pageMenu, idx snippetIndex) model.Request {
 	fence := promptfence.New()
 	return model.Request{

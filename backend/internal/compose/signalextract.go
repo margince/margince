@@ -305,6 +305,8 @@ func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extr
 // span. Nothing a correspondent wrote can close the span it is in, so no
 // sender can reach the instructions, and none can reach another sender's mail
 // in the same thread to put words in their mouth.
+//
+//promptvoice:exempt reports material events as structured rows keyed to the mail that carried them; the surfaces that RENDER those events carry the voice.
 func extractRequest(thread settledThread, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
