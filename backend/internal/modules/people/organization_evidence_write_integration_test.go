@@ -406,3 +406,69 @@ func TestCorrectingTheDisplayNameIsTreatedAsAHumanRename(t *testing.T) {
 		t.Errorf("name_source = %q, want human — an unstamped correction is overwritten by the next enrichment run", got)
 	}
 }
+
+// Correcting the LEGAL name is not authoring the DISPLAY name, and the two do
+// not share a provenance stamp. name_source records where display_name came
+// from: stamping it 'human' for a legal-name correction claims a human named
+// the company, and PromoteOrgNameTx — which promotes only while it still reads
+// 'domain' — then refuses that company its own name for good, with nothing
+// reporting it.
+//
+// The scenario is the one renamerecheck.go's header narrates: a company sits
+// under a provisional name derived from its mail domain while somebody
+// corrects the legal name the site states.
+func TestCorrectingTheLegalNameLeavesTheDisplayNamePromotable(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := evidenceOrg(ctx, t, e)
+
+	// The state a captured company sits in before its real name arrives: a
+	// provisional display name, and a legal-name receipt to correct.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE organization SET name_source = 'domain' WHERE id = $1`, orgID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO organization_profile_field (organization_id, field, value, evidence_snippet, source_url, confidence, source, captured_by, retrieved_at)
+			VALUES ($1,'legal_name','Voltaq Systems','"Voltaq Systems"','https://voltaq.test/impressum',0.8,'site_read','agent:deepread',now())`,
+			orgID)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the provisional name and its legal-name receipt: %v", err)
+	}
+
+	corrected := "Voltaq Systems GmbH"
+	if _, err := e.store.UpdateOrganizationProfileField(ctx, orgID, "legal_name",
+		ProfileFieldWriteInput{Value: &corrected}); err != nil {
+		t.Fatalf("correct legal_name: %v", err)
+	}
+	if got := orgColumn(ctx, t, e, orgID, "legal_name"); got != corrected {
+		t.Errorf("legal_name = %q, want %q — the correction still owes the column its value", got, corrected)
+	}
+	// Errorf, not Fatalf: the stamp is the cause and the refused promotion below
+	// is the harm, and a regression should report both rather than stopping at
+	// the column and leaving the consequence to be inferred.
+	if got := orgColumn(ctx, t, e, orgID, "name_source"); got != "domain" {
+		t.Errorf("name_source = %q, want domain — correcting the legal name stamped provenance "+
+			"on a display name nobody touched", got)
+	}
+
+	// The consequence, asserted as the behaviour rather than the column: the
+	// signature sweep can still give the company the name its own people sign
+	// with.
+	var promoted bool
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		promoted, err = e.store.PromoteOrgNameTx(ctx, tx, orgID, "Voltaq Energietechnik GmbH", "two employees")
+		return err
+	}); err != nil {
+		t.Fatalf("promote org name: %v", err)
+	}
+	if !promoted {
+		t.Fatal("the name promotion was refused — correcting a legal name froze the display name for good")
+	}
+	if got := orgColumn(ctx, t, e, orgID, "display_name"); got != "Voltaq Energietechnik GmbH" {
+		t.Errorf("display_name = %q, want the promoted name", got)
+	}
+}

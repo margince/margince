@@ -174,16 +174,31 @@ func (s *Store) writeProfileField(
 //   - THE VERSION MOVES, so another editor holding the organization's If-Match
 //     is told the row changed under them. trg_organization_updated does that
 //     for any UPDATE on the row, which is why nothing here sets it.
-//   - name_source = 'human'. A human naming the company is the top of the
-//     provenance lattice (ADR-0072/A118). Left unstamped, the next enrichment
-//     run overwrites the correction as though no one had made it.
+//   - name_source = 'human', FOR A DISPLAY-NAME CORRECTION ONLY. A human naming
+//     the company is the top of the provenance lattice (ADR-0072/A118), and
+//     left unstamped the next enrichment run overwrites the correction as
+//     though no one had made it. The column describes display_name's
+//     provenance and nothing else, so a legal-name correction must not stamp
+//     it: that would claim a human authored a display name nobody touched, and
+//     PromoteOrgNameTx (which promotes only while it still reads 'domain')
+//     would refuse that company its real name forever. The rule is not local
+//     to this writer: UpdateOrganization stamps 'human' only when display_name
+//     actually moved, and the cold-start create declines the value outright,
+//     reserving it in its own comment for a human's naming.
 //   - THE RENAME RECHECK RUNS. A new name can collide with an existing company,
-//     and the duplicate queue only learns about it if this asks.
+//     and the duplicate queue only learns about it if this asks. Either name
+//     can collide, so either name pays for it.
 func writeCanonicalOrgColumn(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string,
 ) error {
-	renamed := column == fieldDisplayName || column == fieldLegalName
-	if renamed {
+	// Two questions, and they are not one: which corrections write a NAME (both
+	// of them, and each owes the lock and the re-check), and which correction
+	// authors the name whose provenance name_source records (display_name
+	// alone). One flag cannot answer both without stamping a provenance onto a
+	// display name nobody touched.
+	nameWrite := column == fieldDisplayName || column == fieldLegalName
+	authoredDisplayName := column == fieldDisplayName
+	if nameWrite {
 		// Workspace-wide, and taken before the row write for the ordering rule
 		// on lockOrgNameWrites. Only a rename pays for it.
 		if err := lockOrgNameWrites(ctx, tx); err != nil {
@@ -195,7 +210,7 @@ func writeCanonicalOrgColumn(
 	// name_source rides the same statement rather than a second UPDATE: one
 	// write, so the value and its provenance cannot land apart.
 	nameSource := ""
-	if renamed {
+	if authoredDisplayName {
 		nameSource = ", name_source = 'human'"
 	}
 	tag, err := tx.Exec(ctx,
@@ -207,7 +222,7 @@ func writeCanonicalOrgColumn(
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrNotFound
 	}
-	if !renamed {
+	if !nameWrite {
 		return nil
 	}
 	editor, err := storekit.CapturedBy(ctx)
