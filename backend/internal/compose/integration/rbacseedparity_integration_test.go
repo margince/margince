@@ -578,7 +578,13 @@ var (
 	anyObjectPath = regexp.MustCompile(`'\{objects,([^}]*)\}'`)
 	// Every array-form objects path, whatever is inside, counted against the
 	// strict one for the same reason: a name that class cannot read must be loud.
-	anyObjectArrayPath = regexp.MustCompile(`(?i)ARRAY\[\s*'objects'\s*,\s*'([^']*)'`)
+	// The whole tail, not just the next element: the brace form tells a deeper
+	// path from a plain one by the comma inside its capture, and an array pattern
+	// that stopped at the second element produced a comma-free name for
+	// ARRAY['objects','deal','delete'] — which then failed as an unreadable name
+	// instead of being logged as out of rewind scope. Both spellings have to
+	// reach the same judgement or the asymmetry IS the defect.
+	anyObjectArrayPath = regexp.MustCompile(`(?i)ARRAY\[\s*'objects'\s*,\s*([^\]]*)\]`)
 )
 
 // rolePermissionMigrations reads the EMBEDDED core namespace — the same bytes
@@ -624,7 +630,7 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 		// assertPreStateIsNotAlreadyTheAnswer calls the likelier next one.
 		declared := dedupe(append(
 			anyObjectPath.FindAllStringSubmatch(body, -1),
-			anyObjectArrayPath.FindAllStringSubmatch(body, -1)...))
+			normalizeArrayPaths(anyObjectArrayPath.FindAllStringSubmatch(body, -1))...))
 		for _, m := range declared {
 			if slices.Contains(objects, m) {
 				continue
@@ -648,6 +654,18 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 	// (178744982 beside 1787449829) the two orders invert, and mixed version
 	// widths are exactly what this namespace ships. One invariant, one writer.
 	return found
+}
+
+// normalizeArrayPaths rewrites an array-form path tail into the shape a brace
+// capture has — `'deal', 'delete'` becomes `deal,delete` — so one comma test
+// answers "is this a deeper path" for both spellings.
+func normalizeArrayPaths(matches [][]string) [][]string {
+	out := make([][]string, 0, len(matches))
+	for _, m := range matches {
+		tail := strings.NewReplacer("'", "", " ", "", "\t", "", "\n", "").Replace(m[1])
+		out = append(out, []string{m[0], tail})
+	}
+	return out
 }
 
 // onlyDeclaresPermissions reports whether every statement in this migration that

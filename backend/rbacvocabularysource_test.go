@@ -8,12 +8,8 @@ package backendarch
 // (a settings entry may only govern a declared object). Both read the WORKING
 // TREE only.
 //
-// It used to carry a second rationale — that it lives untagged so a git-history
-// consumer in the unit lane could be excluded without taking this with it. That
-// consumer was the legacy-cohort gate, which is deleted, and the gate that
-// replaced it reads the seeded-matrix JSON out of history directly and never
-// calls this parser. Renaming the old claim to the new gate made it false; both
-// real consumers are named instead.
+// Untagged because both consumers are, and for no other reason: nothing here
+// reads git history, so no lane has to be excluded from it.
 //
 // It deliberately does NOT read identity/internal/policy as a package: that
 // package is import-fenced to internal/modules/identity/**, so this parses the
