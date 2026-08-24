@@ -85,7 +85,7 @@ func seedPipeline(c *client, seats *sessions, cfg demoConfig, companies []compan
 	if err != nil {
 		return err
 	}
-	activities, err := seedActivities(c, seats, cfg, refs, mode)
+	projects, activities, err := seedDeliveryAndItsRecord(c, seats, cfg, &refs, plan, mode)
 	if err != nil {
 		return err
 	}
@@ -124,6 +124,7 @@ func seedPipeline(c *client, seats *sessions, cfg demoConfig, companies []compan
 		products: catalogue.products, offers: catalogue.offers,
 		documents: paper.documents, looseDocs: paper.looseDocs,
 		consents: consents, lifecycles: lifecycles, surfaces: catalogue.surfaces, fxRates: fxRates,
+		projects:     projects,
 		partnerEdges: catalogue.partnerEdges, relTypes: standing.relTypes,
 		dualPartners: standing.dualPartners, inventedPeople: inventedPeople, inventedLinks: inventedLinks,
 		ownedOrgs: ownedOrgs, ownedPeople: ownedPeople,
@@ -174,6 +175,7 @@ type pipelineCounts struct {
 	documents, looseDocs          int
 	consents, lifecycles          int
 	surfaces, fxRates             int
+	projects                      int
 	partnerEdges, relTypes        int
 	dualPartners                  int
 	inventedPeople, inventedLinks int
@@ -190,7 +192,8 @@ func reportPipeline(n pipelineCounts) {
 	fmt.Printf("offers:        %d new\n", n.offers)
 	fmt.Printf("documents:     %d uploaded (%d contract PDFs, %d account documents)\n", n.documents+n.looseDocs, n.documents, n.looseDocs)
 	fmt.Printf("fx rates:      %d loaded\n", n.fxRates)
-	fmt.Printf("surfaces:      %d new (tags, lists, custom fields, projects, quotas)\n", n.surfaces)
+	fmt.Printf("projects:      %d new\n", n.projects)
+	fmt.Printf("surfaces:      %d new (tags, lists, project staffing, quotas)\n", n.surfaces)
 	fmt.Printf("partner edges: %d new (referrals, co-sells, served accounts)\n", n.partnerEdges)
 	fmt.Printf("rel. types:    %d set (what each company IS to us)\n", n.relTypes)
 	fmt.Printf("dual partners: %d customer(s) also promoted to partner\n", n.dualPartners)

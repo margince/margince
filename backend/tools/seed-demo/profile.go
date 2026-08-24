@@ -272,6 +272,9 @@ func pinnedDomains(cfg demoConfig) map[string]string {
 	for _, act := range cfg.Activities {
 		note(act.Company)
 	}
+	for _, proj := range cfg.Projects {
+		note(proj.Company)
+	}
 	for _, domain := range cfg.FinanceCustomers {
 		note(domain)
 	}

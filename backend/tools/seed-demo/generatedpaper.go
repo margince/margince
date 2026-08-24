@@ -51,7 +51,11 @@ func seedGeneratedContracts(c *client, refs pipelineRefs, plan map[string]profil
 			if isGeneratedSuccessor(contracts, contract.Ref) {
 				continue
 			}
-			id, isNew, err := ensureContract(c, contract, local, mode)
+			// An empty config, deliberately: a generated contract never names a
+			// deal ref, so there is no dataset for ensureContract to resolve
+			// one against, and handing it the real one would only invite a
+			// lookup that cannot fire.
+			id, isNew, err := ensureContract(c, demoConfig{}, contract, local, mode)
 			if err != nil {
 				return created, err
 			}

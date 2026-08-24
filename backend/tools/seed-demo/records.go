@@ -161,7 +161,51 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 		links = append(links, jsonBody{"entity_type": "deal", "entity_id": deal})
 		break // one deal: an account with two is ambiguous, and guessing wrong is worse than not guessing
 	}
+	// And the delivery work, so a project has a timeline rather than a start
+	// date and nothing else. One project per activity is not a style choice
+	// here: uq_activity_link_project makes it a database constraint.
+	if project := projectForActivity(refs, act); project != "" {
+		links = append(links, jsonBody{"entity_type": "project", "entity_id": project})
+	}
 	return links, nil
+}
+
+// projectForActivity picks which of a company's projects a mail, call or
+// meeting belongs to: the LATEST one that had already started when it
+// happened.
+//
+// The company's projects arrive oldest first, so this walks forward and keeps
+// the last one still in the past. Simply taking the first project a company
+// had put all nine of valantic's mails about the Shopsystem migration onto
+// "Zweiter Mandant im Shopsystem", which starts nine months after the last of
+// them — a timeline that could not have happened.
+//
+// An activity older than every project links to none. That is the honest
+// answer: correspondence from before any delivery work began was not about
+// delivery work.
+func projectForActivity(refs pipelineRefs, act demoActivity) string {
+	projects := refs.projectsByCompany[strings.ToLower(act.Company)]
+	if len(projects) == 0 {
+		return ""
+	}
+	// The same offset seedActivities computes, as a date, so it compares
+	// against started_at on its own terms.
+	occurred := -act.DaysAgo
+	if act.DaysIn > 0 {
+		occurred = act.DaysIn
+	}
+	when := refs.date(occurred)
+
+	chosen := ""
+	for _, proj := range projects {
+		// A project with no start date cannot be dated against, and sorts
+		// last; it is only reached when nothing better has been found.
+		if proj.StartedAt == "" || proj.StartedAt > when {
+			continue
+		}
+		chosen = proj.ID
+	}
+	return chosen
 }
 
 // loadActivitySourceIDs reads the source_id of every activity ONCE.
