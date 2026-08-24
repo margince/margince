@@ -132,7 +132,8 @@ check "1" "$(MARGINCE_DEV_STATE_DIR="$probe_state" DEV_SLUG=alpha \
 primary_probe="$(mktemp -d)"
 git init -q "$primary_probe/repo"
 check "http://localhost:8080" "$(cd "$primary_probe/repo" && \
-    MARGINCE_DEV_STATE_DIR="$probe_state" bash -c '. "'"$root"'/scripts/lib-devstate.sh"; dev_app_base_url')" \
+    MARGINCE_DEV_STATE_DIR="$probe_state" DEV_SLUG='' \
+    bash -c '. "'"$root"'/scripts/lib-devstate.sh"; dev_app_base_url')" \
       "the primary worktree still answers :8080 with nothing recorded"
 rm -rf "$primary_probe"
 
@@ -229,12 +230,18 @@ echo "dev.sh: claim_stack reserves before anything binds, and refuses rather tha
 # reservation went to the machine-global registry while the run directory still
 # pointed inside the worktree, so the two were different files.
 rm -rf "$tmp_root"/*
+# dev.sh sets this in the shell that calls claim_stack — the reservation records
+# who is starting the stack, so a run that loses the port race cannot delete a
+# claim another run is still booting against.
+export STACK_STARTER_PID=$$
 claimed="$(claim_stack "alpha")"
 read -r alpha_db alpha_port <<<"$claimed"
 check "64" "$alpha_db" "the first stack claims the bottom of the Redis block"
 check "8081" "$alpha_port" "and the bottom of the port range"
 check "1" "$([ -f "$tmp_root/alpha/env" ] && echo 1 || echo 0)" \
       "the reservation is on disk BEFORE anything binds — a claim visible only once the stack is up is not a claim"
+check "1" "$(grep -c "^STARTER_PID=$$\$" "$tmp_root/alpha/env")" \
+      "and it records who is starting it, which is what stops a losing run deleting a winner's claim"
 
 claimed="$(claim_stack "beta")"
 read -r beta_db beta_port <<<"$claimed"
@@ -329,6 +336,24 @@ git -C "$probe/primary" worktree add -q "$probe/a/dup" --detach
 git -C "$probe/primary" worktree add -q "$probe/b/dup" --detach
 check "1" "$([ "$(cd "$probe/a/dup" && dev_derive_slug)" != "$(cd "$probe/b/dup" && dev_derive_slug)" ] && echo 1 || echo 0)" \
       "two worktrees with the SAME basename get different slugs, so they cannot share a database"
+
+# A slug must be STABLE for as long as a stack runs. An earlier version appended
+# the digest only when a twin existed, so creating a second worktree of the same
+# name RENAMED a running stack — and dev-stop then resolved a slug with no record
+# and could not stop it. The slug must not depend on what else exists.
+slug_before="$(cd "$probe/linked" && dev_derive_slug)"
+git -C "$probe/primary" worktree add -q "$probe/c/linked" --detach
+check "$slug_before" "$(cd "$probe/linked" && dev_derive_slug)" \
+      "adding a same-named worktree does NOT rename an existing one — a running stack stays stoppable"
+
+# The slug becomes margince_dev_<slug> (Postgres caps an identifier at 63 bytes)
+# and margince-dev-<slug> (S3 caps a bucket name at 63), so it has to leave room
+# for both prefixes however long the directory name is.
+long_slug="$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && dev_derive_slug)"
+check "1" "$([ "${#long_slug}" -le 40 ] && echo 1 || echo 0)" \
+      "a long directory name still yields a slug short enough for the database and bucket names built from it"
+check "1" "$([ "${#long_slug}" -gt 8 ] && echo 1 || echo 0)" \
+      "and it keeps enough of the name to be recognisable, not just the digest"
 
 long_one="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && _testdb_worktree_slug)"
 long_two="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-two" && _testdb_worktree_slug)"

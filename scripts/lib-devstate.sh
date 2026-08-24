@@ -72,39 +72,40 @@ dev_bucket_for_slug() { # slug → an S3-legal bucket name
 # --git-common-dir. The latter can print a relative path, so it is resolved
 # before the comparison.
 dev_derive_slug() { # → "" in the primary worktree, this worktree's name in a linked one
-  local gitdir commondir top name digest twin
+  local gitdir commondir top name digest
   gitdir=$(git rev-parse --absolute-git-dir) || return 1
   commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || return 1
   [[ "$gitdir" == "$commondir" ]] && return 0
 
   top="$(git rev-parse --show-toplevel)"
   name="$(dev_sanitize_slug "$(basename "$top")")"
-  # A digest of the FULL PATH, because the basename does not identify a worktree:
-  # two of them can both be called `feature`, and giving both the same slug hands
-  # them one database, one Redis logical database and one bucket — the collision
-  # this whole mechanism exists to remove, arrived at from the other end.
+
+  # The digest is of the FULL PATH and is ALWAYS appended. Two things force that,
+  # and the second is the one that matters:
+  #
+  #   - a basename does not identify a worktree. Two can both be called `feature`,
+  #     and one slug between them is one database, one Redis logical database and
+  #     one bucket shared by two stacks.
+  #   - a slug must be STABLE for as long as a stack runs. An earlier version
+  #     appended the digest only when a twin existed, so creating a second
+  #     `feature` worktree renamed a RUNNING stack from `feature` to
+  #     `feature-<digest>` — after which dev-stop resolved a slug with no record
+  #     and could not stop it.
+  #
+  # So the name is noisier than it could be, and reliably its own.
   digest="$(printf '%s' "$top" | shasum -a 256 | cut -c1-8)"
 
-  # An empty answer means the PRIMARY worktree, so a name that sanitises away to
-  # nothing (a directory of pure punctuation) must not produce one: it would put a
-  # linked worktree on the shared `margince` database and :8080.
+  # Bounded so the names built from it fit their own limits: this slug becomes
+  # `margince_dev_<slug>` (Postgres caps an identifier at 63 bytes) and
+  # `margince-dev-<slug>` (S3 caps a bucket name at 63). 24 + 1 + 8 = 33 leaves
+  # both prefixes room. A name that sanitises away to nothing — a directory of
+  # pure punctuation — must not yield the empty answer that means PRIMARY, so it
+  # gets the digest alone.
   if [[ -z "$name" ]]; then
     printf 'wt-%s' "$digest"
     return 0
   fi
-
-  # Disambiguate only when another worktree really shares this basename, so the
-  # common case stays a name a human recognises.
-  twin=0
-  while IFS= read -r other; do
-    [[ -z "$other" || "$other" == "$top" ]] && continue
-    [[ "$(dev_sanitize_slug "$(basename "$other")")" == "$name" ]] && twin=1
-  done < <(git worktree list --porcelain | awk '/^worktree /{print substr($0, 10)}')
-  if (( twin )); then
-    printf '%s-%s' "$name" "$digest"
-    return 0
-  fi
-  printf '%s' "$name"
+  printf '%s-%s' "${name:0:24}" "$digest"
 }
 
 # dev_resolve_slug [supplied] — the slug this invocation runs under.

@@ -87,6 +87,69 @@ MINIO_PORT="${MINIO_PORT:-29000}"
 # shellcheck source=scripts/lib-devstate.sh
 . "${repo_root}/scripts/lib-devstate.sh"
 
+# Process helpers, defined HERE rather than beside the sweep that used to be their
+# only caller: the EXIT trap below names release_unconfirmed_stack, and a trap
+# installed above the definition calls a function that does not exist yet. Any
+# exit between the two — a DSN that will not resolve, for instance — printed
+# `command not found` and left the claim behind.
+
+kill_pids() { # pid… — TERM, then KILL whatever is still standing
+  local pids=("$@") alive=()
+  [[ ${#pids[@]} -gt 0 ]] || return 0
+  kill "${pids[@]}" 2>/dev/null || true
+  for _ in $(seq 1 10); do
+    alive=()
+    for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive+=("$p"); done
+    [[ ${#alive[@]} -eq 0 ]] && return 0
+    sleep 0.5
+  done
+  kill -9 "${alive[@]}" 2>/dev/null || true
+}
+# still_ours answers whether a pid recorded in an old state file is still a
+# process of ours. PIDs are recycled: a stack killed by a crash or a machine
+# sleep leaves its file behind, and by the time the next `make dev` reads it
+# that number can belong to anything. The pgrep paths already re-check the
+# live command line before killing — a recorded pid gets the same proof.
+still_ours() { # pid
+  local cmd
+  cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
+  [[ -n "$cmd" ]] || return 1
+  [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
+}
+# release_unconfirmed_stack — give back this run's claim, and take down whatever
+# it started. Called from the EXIT trap while stack_recorded is 0, which is every
+# path that does not reach a stack answering its own readiness probe.
+release_unconfirmed_stack() {
+  [[ "${stack_recorded:-1}" == "0" ]] || return 0
+  # Never release a claim this run did not create: it belongs to a stack that was
+  # already up, and taking its record away would leave it running with nothing
+  # able to stop it.
+  [[ "${STACK_CLAIM_PREEXISTING:-0}" == "1" ]] && return 0
+  # Nor one another `make dev` is mid-way through starting. Two runs for the same
+  # slug both see a pid-less reservation, and without this the one that loses the
+  # port race deletes the claim the winner is still booting against.
+  local owner=''
+  # shellcheck disable=SC1090
+  [[ -f "$(dev_state_dir "$slug")/env" ]] && owner=$(
+    STARTER_PID=''
+    . "$(dev_state_dir "$slug")/env"
+    printf '%s' "${STARTER_PID:-}"
+  )
+  [[ -n "$owner" && "$owner" != "$$" ]] && return 0
+  # TERM then KILL, through the helper the sweep uses: a bare TERM can leave a
+  # server standing after its claim is gone, which is the orphan this is for.
+  local pids=()
+  local p
+  for p in "${be_pid:-}" "${fe_pid:-}" "${worker_pid:-}"; do
+    [[ -n "$p" ]] && pids+=("$p")
+  done
+  [[ ${#pids[@]} -gt 0 ]] && kill_pids "${pids[@]}"
+  # The CLAIM goes; the LOG stays. Removing the directory took the log with it,
+  # so a failed boot deleted the one file that said why it failed — which cost a
+  # debugging cycle here before it could cost anyone else one.
+  rm -f "$(dev_state_dir "$slug")/env"
+}
+
 slug="$(dev_resolve_slug "$slug")" || exit 1
 if [[ -z "$slug" ]]; then
   label="dev"
@@ -231,8 +294,11 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
   fi
 
   mkdir -p "${root}/${want}"
-  printf 'SLUG=%s\nFE_PORT=%s\nAPI_PORT=%s\nREDIS_DB=%s\n' \
-    "$want" "$port" "$(( port + DEV_API_PORT_OFFSET ))" "$db" \
+  # STARTER_PID is who is booting this stack. release_unconfirmed_stack reads it
+  # so a run that loses the port race cannot delete a claim another run is still
+  # starting against. It is overwritten by the final state write.
+  printf 'SLUG=%s\nFE_PORT=%s\nAPI_PORT=%s\nREDIS_DB=%s\nSTARTER_PID=%s\n' \
+    "$want" "$port" "$(( port + DEV_API_PORT_OFFSET ))" "$db" "$STACK_STARTER_PID" \
     >"${root}/${want}/env"
   printf '%s %s' "$db" "$port"
 }
@@ -253,9 +319,19 @@ elif [[ "$cmd" == "up" ]]; then
   # stack that was still running. Same subshell trap as the swallowed claim status
   # above, one line apart.
   STACK_CLAIM_PREEXISTING=0
-  if grep -q '^BACKEND_PID=[0-9]' "$(dev_state_dir "$slug")/env" 2>/dev/null; then
+  recorded_be=$(
+    BACKEND_PID=''
+    # shellcheck disable=SC1090
+    [[ -f "$(dev_state_dir "$slug")/env" ]] && . "$(dev_state_dir "$slug")/env"
+    printf '%s' "${BACKEND_PID:-}"
+  )
+  # ALIVE, not merely recorded. A crashed stack leaves its pids in the file, and
+  # treating that as a live claim would disable the release for every later failed
+  # boot — the stale reservation then holds a port and a Redis database forever.
+  if [[ -n "$recorded_be" ]] && still_ours "$recorded_be"; then
     STACK_CLAIM_PREEXISTING=1
   fi
+  export STACK_STARTER_PID=$$
   claimed="$(claim_stack "$slug")" || exit 1
   read -r redis_db fe_port <<<"$claimed"
   api_port=$(( fe_port + DEV_API_PORT_OFFSET ))
@@ -408,18 +484,6 @@ wait_ready() { # url timeout_s — only a 2xx counts as ready (a 401/500/503 is 
 # :8080 against `margince`. `DEV_SLUG` keeps its escape hatch (it sweeps
 # nothing, so an isolated env survives until the next bare `make dev`).
 
-kill_pids() { # pid… — TERM, then KILL whatever is still standing
-  local pids=("$@") alive=()
-  [[ ${#pids[@]} -gt 0 ]] || return 0
-  kill "${pids[@]}" 2>/dev/null || true
-  for _ in $(seq 1 10); do
-    alive=()
-    for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive+=("$p"); done
-    [[ ${#alive[@]} -eq 0 ]] && return 0
-    sleep 0.5
-  done
-  kill -9 "${alive[@]}" 2>/dev/null || true
-}
 
 # Margince server processes anywhere on this machine, not just this checkout: a
 # second worktree's api on :8081 owns a different database and is exactly the
@@ -451,7 +515,9 @@ vite_pids() {
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
     for root in "${roots[@]}"; do
-      if [[ "$cmd" == *"$root"* ]]; then
+      # "$root/" — with the separator. A bare substring match sweeps an unrelated
+      # project living at <root>-scratch, whose path merely starts with ours.
+      if [[ "$cmd" == *"$root/"* ]]; then
         echo "$pid"
         break
       fi
@@ -459,36 +525,7 @@ vite_pids() {
   done
 }
 
-# still_ours answers whether a pid recorded in an old state file is still a
-# process of ours. PIDs are recycled: a stack killed by a crash or a machine
-# sleep leaves its file behind, and by the time the next `make dev` reads it
-# that number can belong to anything. The pgrep paths already re-check the
-# live command line before killing — a recorded pid gets the same proof.
-still_ours() { # pid
-  local cmd
-  cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
-  [[ -n "$cmd" ]] || return 1
-  [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
-}
 
-# release_unconfirmed_stack — give back this run's claim, and take down whatever
-# it started. Called from the EXIT trap while stack_recorded is 0, which is every
-# path that does not reach a stack answering its own readiness probe.
-release_unconfirmed_stack() {
-  [[ "${stack_recorded:-1}" == "0" ]] || return 0
-  # Never release a claim this run did not create: it belongs to a stack that was
-  # already up, and taking its record away would leave it running with nothing
-  # able to stop it.
-  [[ "${STACK_CLAIM_PREEXISTING:-0}" == "1" ]] && return 0
-  local p
-  for p in "${be_pid:-}" "${fe_pid:-}" "${worker_pid:-}"; do
-    [[ -n "$p" ]] && kill "$p" 2>/dev/null || true
-  done
-  # The CLAIM goes; the LOG stays. Removing the directory took the log with it,
-  # so a failed boot deleted the one file that said why it failed — which cost a
-  # debugging cycle here before it could cost anyone else one.
-  rm -f "$(dev_state_dir "$slug")/env"
-}
 
 sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
   local victims=() pids p port state_file

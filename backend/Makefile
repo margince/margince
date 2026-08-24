@@ -17,7 +17,7 @@ DB_NAME   ?= margince
 # for, and defaulting to the shared database there would point a linked worktree's
 # psql at the primary's data — silently, which is the failure this exists to
 # prevent. An empty name makes psql fail loudly instead.
-DEV_DB_NAME ?= $(shell bash -c '. "$(CURDIR)/../scripts/lib-devstate.sh" && dev_database_name')
+DEV_DB_NAME ?= $(shell bash -c '. "$$1" && dev_database_name' -- '$(CURDIR)/../scripts/lib-devstate.sh')
 # An ambient MARGINCE_OWNER_DSN redirects every migrate target here, because it is
 # the same variable cmd/migrate reads when no --dsn is given — the two can never
 # name different databases. That also means a staging or production owner DSN
@@ -620,7 +620,7 @@ run: composition ## Run the api on :8080 (no db-up/migrate) — go run ./cmd/api
 	$(GOWORK_COMPOSED) $(GO) run ./cmd/api --dsn "$(APP_DSN)"
 
 psql: ## Open a psql shell on the dev database (owner role)
-	$(COMPOSE) exec postgres psql -U margince_owner -d $(DB_NAME)
+	$(COMPOSE) exec postgres psql -U margince_owner -d $(DEV_DB_NAME)
 
 redis-cli: ## Open a redis-cli shell on the dev Redis
 	$(COMPOSE) exec redis redis-cli
