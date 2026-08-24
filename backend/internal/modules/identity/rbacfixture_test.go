@@ -3,15 +3,15 @@
 
 package identity
 
-// The migration replay gate (backend/migrations) proves that an installation
-// predating every backfill, upgraded to head, holds exactly the matrix the
-// server seeds today. It cannot ask policy for that matrix directly: the
-// package sits behind identity/internal/, so Go's own import fence rejects it,
-// and .go-arch-lint.yml independently lets `migrations` depend on `platform`
-// alone. Widening either to serve a test would grant a production edge.
+// The RBAC parity gate (compose/integration/rbacseedparity_integration_test.go)
+// proves that what a real bootstrap writes, and what every backfill migration
+// converges an existing installation on, is the matrix the server seeds. It
+// cannot ask policy for that matrix directly: the package sits behind
+// identity/internal/, so Go's own import fence rejects it. Widening the fence to
+// serve a test would grant a production edge.
 //
 // This test is the bridge. It lives inside the fence, renders the seeded
-// documents, and pins them to a fixture the replay reads. The fixture cannot
+// documents, and pins them to the fixture that gate reads. The fixture cannot
 // drift away from the live values, because this comparison runs on every unit
 // pass — which is the same two-lane shape the legacy-install fixture uses, for
 // the same reason.

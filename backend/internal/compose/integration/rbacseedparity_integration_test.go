@@ -1,0 +1,518 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// An RBAC object must reach an EXISTING installation, not just a fresh one.
+//
+// identity.seedSystemRoles writes each role's permissions document ONCE, at
+// workspace creation, and never re-syncs. So an object added to the policy after
+// an installation bootstrapped reaches it only through a backfill migration, and
+// a backfill that grants the wrong verb, targets the wrong roles, or matches no
+// rows is indistinguishable from a correct one until somebody gets a 403.
+//
+// It compares against migrations/testdata/rbac_seeded_defaults.json rather than
+// against policy, and that is not a shortcut: policy sits behind
+// identity/internal/, so Go's own import fence rejects reading it from here.
+// identity/rbacfixture_test.go is the bridge built for exactly this — it lives
+// inside the fence, renders the documents from policy.MustDefaultJSON, and pins
+// them to that fixture on every unit pass, so the fixture IS policy's value.
+//
+// WHAT THIS DOES NOT PROVE, stated because the gap is real and filed (#2377):
+// each write is replayed against today's matrix minus its OWN objects, so two
+// backfills are never composed and an installation older than both is not
+// modelled. The cohort that would model it is
+// migrations/testdata/rbac_legacy_installs.json, which the deleted replay seeded
+// and nothing reads today.
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/compose"
+	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/gradionhq/margince/backend/migrations"
+)
+
+// seededDefaults is the matrix identity seeds, as identity itself renders it.
+const seededDefaults = "../../../migrations/testdata/rbac_seeded_defaults.json"
+
+// controlRole is a role the seeded matrix does not name, carrying a document of
+// its own, present for every replay below.
+//
+// It is the missing-predicate detector. A backfill is meant to name the roles it
+// grants and to say `is_system`; one that says neither — the easiest hand-written
+// mistake there is — reaches every role row in the installation. Every role the
+// fixture names is a role that SHOULD receive the grant, so without a row that
+// should not, an unscoped UPDATE looks exactly like a correct one.
+const controlRole = "custom_scoped_role"
+
+var controlDocument = []byte(`{"objects": {}, "row_scope": "own"}`)
+
+// roleDocument is one role's permissions document. Grants stay RawMessage: this
+// file owns whether the two paths AGREE, never what a grant should be — the
+// second opinion on that is policy's own test, and transcribing it here would
+// only add something to drift.
+type roleDocument struct {
+	Objects  map[string]json.RawMessage `json:"objects"`
+	RowScope string                     `json:"row_scope"`
+}
+
+func readSeededDefaults(t *testing.T) map[string]roleDocument {
+	t.Helper()
+	raw, err := os.ReadFile(seededDefaults)
+	if err != nil {
+		t.Fatalf("reading %s: %v — identity/rbacfixture_test.go writes it with -update", seededDefaults, err)
+	}
+	var seeded map[string]roleDocument
+	if err := json.Unmarshal(raw, &seeded); err != nil {
+		t.Fatalf("decoding %s: %v", seededDefaults, err)
+	}
+	if len(seeded) == 0 {
+		t.Fatalf("%s holds no roles — an empty matrix would make every comparison below pass", seededDefaults)
+	}
+	return seeded
+}
+
+// A fresh installation's role documents are the ones the fixture records.
+//
+// This half needs no backfill to exist, and it is the half nothing was checking:
+// the fixture had exactly one reader — the identity test that WRITES it — so it
+// was a one-ended pin. A migration that touches `role`, or a seed that stops
+// running, makes the code and the database disagree with nothing to report it.
+func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
+	seeded := readSeededDefaults(t)
+	e := apptest.SetupApp(t)
+	ctx := context.Background()
+
+	bootstrapInstallation(t, e)
+
+	live := liveRoleDocuments(ctx, t, e.Owner)
+	if len(live) == 0 {
+		t.Fatal("the bootstrap wrote no system roles at all")
+	}
+	assertSameMatrix(t, seeded, live, "the real bootstrap")
+}
+
+// Every write a migration makes to role.permissions leaves an installation on
+// the seeded matrix.
+//
+// EXECUTED, not scanned. A static check on the JSON payload would pass a
+// migration whose WHERE clause targeted the wrong roles, omitted is_system, or
+// wrote the wrong jsonb path — the payload is the part least likely to be wrong.
+//
+// Two shapes, because a permission write is not always a grant:
+//
+//   - it names `{objects,X}` paths — an installation predating it held today's
+//     matrix minus X, so that state is derivable, and the replay must CONVERGE
+//     it back onto the matrix.
+//   - it writes some other path (`{row_scope}`, say) — the prior value is
+//     knowable only by reading the migration's own predicate, which this gate
+//     does not do. The weaker claim it can still make is that replaying against
+//     an already-correct installation moves nothing, which catches a write that
+//     fires unconditionally.
+func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
+	seeded := readSeededDefaults(t)
+	writes := rolePermissionMigrations(t)
+
+	// NOT a tolerated zero. core carries a live backfill today, so an empty set
+	// means the detection below stopped seeing it — and the previous gate for
+	// this obligation was lost exactly that way, to a consolidation that folded
+	// the migrations it read into a baseline.
+	if len(writes) == 0 {
+		t.Fatal("no migration writes role.permissions, but core carries at least one — " +
+			"the detection in rolePermissionMigrations has gone blind, or a consolidation " +
+			"folded the backfills into the baseline and this gate now proves nothing")
+	}
+
+	e := apptest.SetupApp(t)
+	ctx := context.Background()
+	bootstrapInstallation(t, e)
+
+	for _, write := range writes {
+		t.Run(write.name, func(t *testing.T) {
+			rewindTo(ctx, t, e, write.objects)
+			for _, statement := range write.statements {
+				if _, err := e.Owner.Exec(ctx, statement); err != nil {
+					t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
+						write.name, err, statement)
+				}
+			}
+			assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), write.name)
+			assertControlRoleUntouched(ctx, t, e.Owner, write.name)
+		})
+	}
+}
+
+// assertSameMatrix compares two role matrices and names every disagreement.
+//
+// Both directions: a role the database holds and the fixture does not is as much
+// a divergence as the reverse, and reporting only one of them is how half a
+// defect goes unnoticed.
+func assertSameMatrix(t *testing.T, want, got map[string]roleDocument, via string) {
+	t.Helper()
+	for _, role := range sortedKeys(want) {
+		live, ok := got[role]
+		if !ok {
+			t.Errorf("%s: role %q is missing from the database; every route it grants answers 403", via, role)
+			continue
+		}
+		assertSameDocument(t, role, want[role], live, via)
+	}
+	for _, role := range sortedKeys(got) {
+		if _, ok := want[role]; !ok {
+			t.Errorf("%s: the database holds system role %q, which the seeded matrix does not — "+
+				"either the fixture is stale or something granted a role nobody declared", via, role)
+		}
+	}
+}
+
+func assertSameDocument(t *testing.T, role string, want, got roleDocument, via string) {
+	t.Helper()
+	if want.RowScope != got.RowScope {
+		t.Errorf("%s: role %q has row_scope %q, want %q — the scope decides which ROWS the role sees, "+
+			"so a wrong one is a disclosure or a blackout rather than a missing button",
+			via, role, got.RowScope, want.RowScope)
+	}
+	for _, object := range sortedKeys(want.Objects) {
+		live, ok := got.Objects[object]
+		if !ok {
+			t.Errorf("%s: role %q holds no grant on %q, so every %s route answers 403 for it — "+
+				"permanently, on any installation that took this path", via, role, object, object)
+			continue
+		}
+		if !sameJSON(t, want.Objects[object], live) {
+			t.Errorf("%s: role %q on %q has %s, want %s", via, role, object, live, want.Objects[object])
+		}
+	}
+	for _, object := range sortedKeys(got.Objects) {
+		if _, ok := want.Objects[object]; !ok {
+			t.Errorf("%s: role %q holds a grant on %q that the seeded matrix does not give it: %s.\n"+
+				"A backfill that grants MORE than the policy declares is the mirror of a missing one, "+
+				"and it is the direction nobody notices.", via, role, object, got.Objects[object])
+		}
+	}
+}
+
+// assertControlRoleUntouched is the missing-predicate detector: a write that
+// names no roles, or omits is_system, reaches this row too.
+func assertControlRoleUntouched(ctx context.Context, t *testing.T, conn *pgx.Conn, via string) {
+	t.Helper()
+	var live json.RawMessage
+	if err := conn.QueryRow(ctx,
+		`SELECT permissions FROM role WHERE key = $1`, controlRole).Scan(&live); err != nil {
+		t.Fatalf("%s: reading the control role back: %v", via, err)
+	}
+	if !sameJSON(t, controlDocument, live) {
+		t.Errorf("%s: the write reached %q, a role the seeded matrix does not name and no backfill "+
+			"should touch: %s, want %s.\nA statement that names no roles, or omits is_system, "+
+			"grants the object to every role row in the installation.",
+			via, controlRole, live, controlDocument)
+	}
+}
+
+// sameJSON compares two grants as decoded values, so key order and whitespace do
+// not read as a difference.
+//
+// reflect.DeepEqual and not a formatted comparison: `%v` erases JSON types, so
+// `{"read": true}` and `{"read": "true"}` both render as `map[read:true]` and a
+// backfill that wrote a verb as a string would pass. That is the defect class
+// this file exists to catch, so the comparison has to keep the distinction while
+// staying blind to key order — which DeepEqual does and formatting does not.
+func sameJSON(t *testing.T, want, got json.RawMessage) bool {
+	t.Helper()
+	var a, b any
+	if err := json.Unmarshal(want, &a); err != nil {
+		t.Fatalf("decoding the expected grant %s: %v", want, err)
+	}
+	if err := json.Unmarshal(got, &b); err != nil {
+		t.Fatalf("decoding the live grant %s: %v", got, err)
+	}
+	return reflect.DeepEqual(a, b)
+}
+
+func liveRoleDocuments(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]roleDocument {
+	t.Helper()
+	rows, err := conn.Query(ctx, `SELECT key, permissions FROM role WHERE is_system ORDER BY key`)
+	if err != nil {
+		t.Fatalf("reading the system roles: %v", err)
+	}
+	defer rows.Close()
+
+	live := map[string]roleDocument{}
+	for rows.Next() {
+		var key string
+		var document roleDocument
+		if err := rows.Scan(&key, &document); err != nil {
+			t.Fatalf("decoding a role document: %v", err)
+		}
+		live[key] = document
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("reading the system roles: %v", err)
+	}
+	return live
+}
+
+// rewindTo puts the bootstrapped installation back to the state one predating
+// this write was in: its own documents, minus the objects the write grants.
+//
+// A rewind of the REAL rows rather than hand-inserted ones. The seeder writes
+// names the keys do not imply (`manager` is "Team Lead") and an admin
+// role_assignment beside them, so rows built here would be a state no
+// installation was ever in — and a column a future seeder adds would be missing
+// from them silently. Removing a key from what bootstrap wrote keeps all of it.
+func rewindTo(ctx context.Context, t *testing.T, e *apptest.AppEnv, objects []string) {
+	t.Helper()
+	for _, object := range objects {
+		if _, err := e.Owner.Exec(ctx,
+			`UPDATE role SET permissions = permissions #- ARRAY['objects', $1] WHERE is_system`,
+			object); err != nil {
+			t.Fatalf("rewinding %q out of the seeded documents: %v", object, err)
+		}
+	}
+	if _, err := e.Owner.Exec(ctx,
+		`INSERT INTO role (key, name, is_system, permissions) VALUES ($1, $1, false, $2)
+		 ON CONFLICT (key) DO UPDATE SET permissions = EXCLUDED.permissions`,
+		controlRole, controlDocument); err != nil {
+		t.Fatalf("seeding the control role: %v", err)
+	}
+}
+
+// permissionWrite is one migration's writes to role.permissions.
+//
+// `statements`, not the whole file: a backfill rides along with the migration
+// that introduces its object, so the same file also CREATEs its tables. Replaying
+// the file against a database already at head fails on the CREATE and says
+// nothing about the grant. The schema half is the head-catalog gate's job.
+type permissionWrite struct {
+	name       string
+	statements []string
+	objects    []string
+}
+
+var (
+	// A candidate migration: one that mentions the table and the column at all.
+	// DELIBERATELY WEAK — a filter, not the judgement. The strict pattern below
+	// decides, and a candidate the strict pattern cannot read is a hard failure
+	// rather than a skip, so a spelling nobody anticipated (`UPDATE role AS r`,
+	// `UPDATE ONLY role`, an upsert) stops the gate instead of vanishing from it.
+	mentionsRolePermissions = regexp.MustCompile(`(?is)\brole\b[\s\S]{0,400}?\bpermissions\b`)
+	// A statement that writes the column, however the write is spelled.
+	rolePermissionWrite = regexp.MustCompile(
+		`(?is)\b(?:UPDATE|INSERT\s+INTO)\s+(?:ONLY\s+)?(?:public\.)?"?role"?\b[\s\S]*?\bpermissions\b`)
+	// The object a write grants, as the jsonb path names it.
+	objectPath = regexp.MustCompile(`'\{objects,([a-z_0-9]+)\}'`)
+	// Every objects-path literal, whatever the name inside. Its DISTINCT names are
+	// counted against objectPath's so a name that class misses is loud rather
+	// than dropped — distinct on both sides, because one object is normally
+	// granted by several statements in the same migration.
+	anyObjectPath = regexp.MustCompile(`'\{objects,([^}]*)\}'`)
+)
+
+// rolePermissionMigrations reads the EMBEDDED core namespace — the same bytes
+// dbmigrate applies — rather than walking the directory, so a moved package or a
+// renamed suffix cannot quietly narrow what this gate examines.
+func rolePermissionMigrations(t *testing.T) []permissionWrite {
+	t.Helper()
+	core, err := migrations.Core()
+	if err != nil {
+		t.Fatalf("loading the core migrations: %v", err)
+	}
+	var found []permissionWrite
+	for _, migration := range core.Migrations {
+		if !mentionsRolePermissions.MatchString(migration.UpSQL) {
+			continue
+		}
+		name := migration.Version + "_" + migration.Name
+		statements := rolePermissionStatements(migration.UpSQL)
+		if len(statements) == 0 {
+			// The baseline declares the table and seeds nothing into it, which is
+			// the one candidate that legitimately carries no write.
+			if strings.Contains(migration.UpSQL, "CREATE TABLE role (") {
+				continue
+			}
+			t.Fatalf("%s mentions role permissions but no statement matched the write pattern.\n"+
+				"Teach the pattern the spelling it uses — do NOT let the gate go quiet, because a "+
+				"write it cannot see is a grant nobody checks.", name)
+		}
+		body := strings.Join(statements, "\n")
+		objects := dedupe(objectPath.FindAllStringSubmatch(body, -1))
+		if declared := dedupe(anyObjectPath.FindAllStringSubmatch(body, -1)); len(declared) > len(objects) {
+			t.Fatalf("%s names objects %v but only %v could be read; an object whose name the "+
+				"pattern misses is left in place by the rewind, which makes the write a no-op and "+
+				"the comparison pass for the wrong reason", name, declared, objects)
+		}
+		found = append(found, permissionWrite{name: name, statements: statements, objects: objects})
+	}
+	sort.Slice(found, func(i, j int) bool { return found[i].name < found[j].name })
+	return found
+}
+
+// rolePermissionStatements returns the statements in one migration that write
+// role.permissions, and nothing else it does.
+func rolePermissionStatements(sql string) []string {
+	var out []string
+	for _, statement := range splitStatements(sql) {
+		if rolePermissionWrite.MatchString(statement) {
+			out = append(out, statement)
+		}
+	}
+	return out
+}
+
+// splitStatements cuts SQL on top-level semicolons.
+//
+// Quote-, dollar-quote- and block-comment aware, because a semicolon inside any
+// of them is not a statement boundary. That matters more than it looks: pgx runs
+// an argument-less Exec through the simple query protocol, which accepts several
+// statements at once, so a wrong split can EXECUTE and leave this gate reporting
+// green over a boundary it got wrong rather than failing loudly.
+func splitStatements(sql string) []string {
+	var out []string
+	var current strings.Builder
+	var quoted bool
+	var tag string // the active $tag$ delimiter, empty when not dollar-quoted
+	var block int  // /* */ nesting depth; Postgres allows nesting
+
+	for i := 0; i < len(sql); i++ {
+		rest := sql[i:]
+		switch {
+		case tag != "":
+			if strings.HasPrefix(rest, tag) {
+				current.WriteString(tag)
+				i += len(tag) - 1
+				tag = ""
+				continue
+			}
+		case block > 0:
+			if strings.HasPrefix(rest, "*/") {
+				block--
+				current.WriteString("*/")
+				i++
+				continue
+			}
+			if strings.HasPrefix(rest, "/*") {
+				block++
+				current.WriteString("/*")
+				i++
+				continue
+			}
+		case quoted:
+			switch {
+			case sql[i] == '\\' && i+1 < len(sql):
+				// E'…\'…': the backslash escapes the next byte, and consuming it
+				// here is what stops a quote-parity flip.
+				current.WriteString(sql[i : i+2])
+				i++
+				continue
+			case sql[i] == '\'':
+				if i+1 < len(sql) && sql[i+1] == '\'' {
+					current.WriteString("''")
+					i++
+					continue
+				}
+				quoted = false
+			}
+		case sql[i] == '\'':
+			quoted = true
+		case strings.HasPrefix(rest, "/*"):
+			block++
+			current.WriteString("/*")
+			i++
+			continue
+		case strings.HasPrefix(rest, "--"):
+			end := strings.IndexByte(rest, '\n')
+			if end < 0 {
+				i = len(sql)
+				continue
+			}
+			i += end
+			current.WriteByte('\n')
+			continue
+		case sql[i] == '$':
+			if open := dollarTag.FindString(rest); open != "" {
+				tag = open
+				current.WriteString(open)
+				i += len(open) - 1
+				continue
+			}
+		case sql[i] == ';':
+			if trimmed := strings.TrimSpace(current.String()); trimmed != "" {
+				out = append(out, trimmed+";")
+			}
+			current.Reset()
+			continue
+		}
+		current.WriteByte(sql[i])
+	}
+	if trimmed := strings.TrimSpace(current.String()); trimmed != "" {
+		out = append(out, trimmed)
+	}
+	return out
+}
+
+// dollarTag matches an opening $$ or $name$ delimiter at the cursor.
+var dollarTag = regexp.MustCompile(`^\$[a-zA-Z_0-9]*\$`)
+
+// bootstrapInstallation provisions the installation these tests read.
+//
+// apptest.SetupApp resets the database and provisions nothing — `role`,
+// `role_assignment` and `workspace` are all emptied by testdb.Reset — so this is
+// the only thing that puts a seeded matrix in front of the assertions.
+func bootstrapInstallation(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	ctx := context.Background()
+	pwFile := filepath.Join(t.TempDir(), "admin-password")
+	if err := os.WriteFile(pwFile, []byte("a-long-enough-password"), 0o600); err != nil {
+		t.Fatalf("writing the bootstrap password: %v", err)
+	}
+	cfg, err := deployconfig.Parse([]byte(`version: 1
+organization:
+  name: RBAC Seed Parity
+bootstrap_admin:
+  email: admin@rbacparity.test
+  display_name: Parity Admin
+  password_file: ` + pwFile + `
+`))
+	if err != nil {
+		t.Fatalf("parsing the deployment file: %v", err)
+	}
+	if err := compose.EnsureInstallation(ctx, e.Pool, slog.New(slog.DiscardHandler), cfg); err != nil {
+		t.Fatalf("bootstrapping: %v", err)
+	}
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func dedupe(matches [][]string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, m := range matches {
+		if !seen[m[1]] {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	return out
+}
