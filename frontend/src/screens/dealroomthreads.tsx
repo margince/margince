@@ -352,27 +352,33 @@ function ThreadComposer({
     // rep checking what their buyer sees could not tell a commenting seat
     // from a read-only one — the two drew the same page.
     //
-    // The room panel keeps the sentence in prose; a document card would
-    // repeat it under every file, so there the reason rides the control.
+    // The room composer states the sentence and draws its own button; a
+    // document card draws the button alone and points at that sentence. Both
+    // draw one, because a room with NO documents has no card to carry it —
+    // and an empty room shown to a preview is exactly where a rep most needs
+    // to see that a buyer would have somewhere to write.
     if (!verbs.refusal) {
       return null;
     }
-    return collapsible ? (
-      <div className="card-actions">
-        {/* `reasonId`, not `reason`: every document on the board is refused by
-            the ONE fact the room panel already states, and printing that
-            sentence under each file says it as many times as there are files.
-            Naming it once and pointing each control at it says it once and
-            still reaches a screen reader from every one of them. */}
-        <Button small variant="ghost" reasonId={REFUSAL_ID}>
-          <MessageSquare aria-hidden />
-          {label}
-        </Button>
-      </div>
-    ) : (
-      <p className="t-small t-danger" id={REFUSAL_ID}>
-        {verbs.refusal}
-      </p>
+    return (
+      <>
+        {collapsible ? null : (
+          <p className="t-small t-danger" id={REFUSAL_ID}>
+            {verbs.refusal}
+          </p>
+        )}
+        <div className="card-actions">
+          {/* `reasonId`, not `reason`: every control on the board is refused
+              by the ONE fact the room panel states, and printing that sentence
+              under each of them says it as many times as there are files.
+              Naming it once and pointing each control at it says it once and
+              still reaches a screen reader from every one of them. */}
+          <Button small variant="ghost" reasonId={REFUSAL_ID}>
+            <MessageSquare aria-hidden />
+            {label}
+          </Button>
+        </div>
+      </>
     );
   }
   const open = verbs.open;
