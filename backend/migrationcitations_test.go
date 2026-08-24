@@ -9,10 +9,9 @@ package backendarch
 //
 // The citations were doing real work: `core 0217 retired row-level security`
 // told a reader WHERE to go and see why a per-statement predicate replaced a
-// policy. The baseline consolidation deleted those files, and sixty-nine of
-// these references survived it — each one now sending a reader to look for
-// something that is not there, which is worse than no citation at all because
-// it reads like a lead.
+// policy. The baseline consolidation deleted those files and the references
+// survived it — each one now sending a reader to look for something that is not
+// there, which is worse than no citation at all because it reads like a lead.
 //
 // WHY A GATE AND NOT A SWEEP. The sweep is the easy half and it rots: the next
 // consolidation, or any renumber, breaks every citation written since. This
@@ -21,8 +20,7 @@ package backendarch
 // day somebody remembers to look.
 //
 // IT PINS A COUNT RATHER THAN DEMANDING ZERO, and the reason is a judgement
-// worth stating. The consolidation left 189 of these across 133 files, almost
-// all comment prose. Rewriting them mechanically would cost more than it bought
+// worth stating. The tree carries 211 of these, almost all comment prose. Rewriting them mechanically would cost more than it bought
 // — a citation is usually the only thing in a sentence saying WHERE the
 // reasoning lives — and they are not unfollowable: the deleted migrations are
 // still in git, so `core 0217` resolves through history even though no file in
@@ -49,11 +47,21 @@ import (
 // citation matches the shapes this tree uses to name a migration: `core 0217`,
 // `core/0063`, `migration 0099`, `migration ` + "`0105`" + `, `custom/20260716120000`.
 //
-// Four digits or fourteen, never ten: a ten-digit unix-second stamp is the
-// current naming and citing one is normal. What goes stale is a citation of the
-// closed four-digit range, and of a custom stamp.
+// EVERY width the tree uses — four, ten and fourteen. Ten was excluded here at
+// first, on the reasoning that a ten-digit unix-second stamp is the current
+// naming so citing one is normal. That conflated two different things: the
+// FORMAT being current says nothing about whether the citation RESOLVES, and
+// ten-digit migrations are deleted and renumbered like any other. The tree
+// carries 21 dangling ten-digit citations today, so the exclusion was not a
+// scope decision but a blind spot in the dominant format — the one shape of this
+// defect the gate could not see.
+//
+// The namespace is CAPTURED, not discarded. `core 0001` must be checked against
+// core's versions: with the two namespaces merged into one set it passed because
+// custom happens to carry a 0001 too, which is a false negative in the exact
+// case the citation is most specific about.
 var citation = regexp.MustCompile(
-	"(?i)\\b(?:core|custom|migration)s?[ /`]+([0-9]{4}|[0-9]{14})\\b")
+	"(?i)\\b(core|custom|migration)s?[ /`]+([0-9]{4}|[0-9]{10}|[0-9]{14})\\b")
 
 // genWritten reports a file that `make gen` writes. A citation inside one is a
 // citation in the SOURCE it was rendered from, and that source is scanned —
@@ -121,7 +129,7 @@ func TestEveryCitedMigrationExists(t *testing.T) {
 //
 // Both directions fail on purpose. A number left above the tree is a gate with
 // slack in it, and slack is how the next one rides in.
-const danglingCitationBacklog = 189
+const danglingCitationBacklog = 211
 
 // citationScanned are the extensions worth reading. Migration SQL is included:
 // a migration may legitimately cite an earlier one, and that citation goes stale
@@ -133,7 +141,7 @@ var citationScanned = map[string]bool{
 
 // danglingCitations returns one line per citation in rel naming a version no
 // namespace carries.
-func danglingCitations(t *testing.T, rel string, known map[string]bool) []string {
+func danglingCitations(t *testing.T, rel string, known map[string]map[string]bool) []string {
 	t.Helper()
 	// The working copy, not the committed blob: a stale citation must fail
 	// before it is committed.
@@ -148,14 +156,34 @@ func danglingCitations(t *testing.T, rel string, known map[string]bool) []string
 	var found []string
 	for i, line := range strings.Split(string(body), "\n") {
 		for _, m := range citation.FindAllStringSubmatch(line, -1) {
-			if known[m[1]] {
+			namespace, version := m[1], m[2]
+			if carries(known, namespace, version) {
 				continue
 			}
-			found = append(found, fmt.Sprintf("%s:%d cites migration %s: %s",
-				rel, i+1, m[1], strings.TrimSpace(line)))
+			// Which pool was consulted, said as the negative that it is. A
+			// qualified citation was checked against ITS namespace; an
+			// unqualified one against the union.
+			pool := "no namespace carries it"
+			if _, qualified := known[strings.ToLower(namespace)]; qualified {
+				pool = strings.ToLower(namespace) + " does not carry it"
+			}
+			found = append(found, fmt.Sprintf("%s:%d cites %s %s — %s: %s",
+				rel, i+1, strings.ToLower(namespace), version, pool, excerpt(line)))
 		}
 	}
 	return found
+}
+
+// excerpt trims a cited line to something readable. STATUS.md holds
+// single-line paragraphs thousands of characters long, and one per finding
+// buries the very list this output exists to be read as.
+func excerpt(line string) string {
+	const width = 120
+	trimmed := strings.TrimSpace(line)
+	if len(trimmed) <= width {
+		return trimmed
+	}
+	return trimmed[:width] + "…"
 }
 
 // knownMigrationVersions collects the versions every namespace carries, read as
@@ -167,13 +195,13 @@ func danglingCitations(t *testing.T, rel string, known map[string]bool) []string
 //
 // The namespace list is the directory listing, so a third namespace is covered
 // the day it appears rather than when somebody remembers this file.
-func knownMigrationVersions(t *testing.T) map[string]bool {
+func knownMigrationVersions(t *testing.T) map[string]map[string]bool {
 	t.Helper()
 	namespaces, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", migrationsDir, err)
 	}
-	known := map[string]bool{}
+	known := map[string]map[string]bool{}
 	for _, ns := range namespaces {
 		if !ns.IsDir() {
 			continue
@@ -182,6 +210,7 @@ func knownMigrationVersions(t *testing.T) map[string]bool {
 		if err != nil {
 			t.Fatalf("reading %s/%s: %v", migrationsDir, ns.Name(), err)
 		}
+		versions := map[string]bool{}
 		for _, e := range entries {
 			if !strings.HasSuffix(e.Name(), ".up.sql") {
 				continue
@@ -190,10 +219,29 @@ func knownMigrationVersions(t *testing.T) map[string]bool {
 			if !ok {
 				t.Fatalf("%s/%s/%s: want <version>_<name>.up.sql", migrationsDir, ns.Name(), e.Name())
 			}
-			known[version] = true
+			versions[version] = true
+		}
+		if len(versions) > 0 {
+			known[ns.Name()] = versions
 		}
 	}
 	return known
+}
+
+// carries reports whether the cited version exists in the namespace the citation
+// named. An UNQUALIFIED citation ("migration 0099") names no namespace, so the
+// union is the honest pool for it — narrowing that to one namespace would invent
+// a claim the text never made.
+func carries(known map[string]map[string]bool, namespace, version string) bool {
+	if versions, ok := known[strings.ToLower(namespace)]; ok {
+		return versions[version]
+	}
+	for _, versions := range known {
+		if versions[version] {
+			return true
+		}
+	}
+	return false
 }
 
 // migrationsDir is relative to this package, which sits at backend/.

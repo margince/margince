@@ -68,13 +68,23 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 
 	// The installation's ciphertext store. vault_secret is a ref -> ciphertext
 	// row carrying NO workspace_id — it is installation configuration, not a
-	// tenant record, so there is no record history for it to join. The event
-	// that seals or drops a credential is the DOMAIN act around it (capture's
-	// connect/disconnect on a channel connection, which writes its own audit row
-	// under those verbs), and auditing the vault row as well would file one
-	// change twice — the second time under an entity type that is a secret's
-	// reference.
-	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; the connect/disconnect that seals or drops a credential carries the audit row, and the vault row is that act's storage rather than a second fact",
+	// tenant record, so there is no record history for it to join.
+	//
+	// TWO domain acts reach it, and both carry their own audit row, which is why
+	// the vault row is that act's storage rather than a second fact:
+	//
+	//   - capture's connect/disconnect on a channel connection, audited under
+	//     those verbs.
+	//   - the deployment-secret seal at boot (compose/deploymentsecretseal.go
+	//     puts the SMTP password and the license token), whose SETTINGS write
+	//     carries the audit row and stamps secretSealActor so it is
+	//     distinguishable from the routing seed.
+	//
+	// Naming only the first was the original form of this waiver, and an
+	// incomplete rationale is the failure mode here rather than a wrong one: the
+	// next reader checks the act that is named, finds it audited, and never
+	// learns there was a second path to check at all.
+	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; both acts that reach it — capture's connect/disconnect and the boot-time deployment-secret seal — carry their own audit row, and the vault row is that act's storage rather than a second fact",
 
 	// Operational state whose DOMAIN writes are audited elsewhere.
 	"internal/modules/agents": "agent_run and runner_job are runner lifecycle bookkeeping. The domain writes a run performs happen inside the TOOLS it calls, and those carry the full audit and outbox shape — auditing the run row as well would file the same change twice under two entity types",

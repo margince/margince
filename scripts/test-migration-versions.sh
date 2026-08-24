@@ -56,14 +56,37 @@ fixture() {
 # removed, CI says so on the next push.
 unset MIGRATION_VERSIONS_BASELINE_RESET
 
-# expect <name> <want-exit> <declared-reset> <mutation-fn>
+# expect <name> <want-exit> <declared-reset> <mutation-fn> <want-diagnostic>
+#
+# The DIAGNOSTIC is required, not decoration. An exit code alone makes every
+# negative case satisfied by any failure at all: a gate broken so that it dies on
+# an unset variable exits 1 for all six of them, and this harness would report
+# ten green cases while checking nothing. So each case also names a string the
+# gate's own output must contain, which ties the verdict to the defect the case
+# planted rather than to the fact that something went wrong.
 expect() {
-  local name="$1" want="$2" declared="$3" mutate="$4"
+  local name="$1" want="$2" declared="$3" mutate="$4" diagnostic="$5"
   ran=$((ran + 1))
   local dir
   dir="$(mktemp -d)"
-  fixture "$dir"
-  "$mutate" "$dir"
+
+  # Setup and mutation failures are FAILURES, not silence. Unchecked, a fixture
+  # that failed to build or a mutation that planted nothing leaves a clean tree
+  # behind — and a clean tree passes, so an expect-0 case would go green having
+  # exercised none of what it names.
+  if ! fixture "$dir" >/dev/null 2>&1; then
+    printf 'FAIL  %s\n      building the fixture failed, so nothing was tested\n' "$name" >&2
+    rm -rf "$dir"
+    fails=$((fails + 1))
+    return
+  fi
+  if ! "$mutate" "$dir" >/dev/null 2>&1; then
+    printf 'FAIL  %s\n      the mutation %s failed, so the planted defect is not there\n' \
+      "$name" "$mutate" >&2
+    rm -rf "$dir"
+    fails=$((fails + 1))
+    return
+  fi
 
   local out rc=0
   if [ "$declared" = "declared" ]; then
@@ -75,6 +98,14 @@ expect() {
 
   if [ "$rc" -ne "$want" ]; then
     printf 'FAIL  %s\n      exit %s, want %s\n' "$name" "$rc" "$want" >&2
+    printf '%s\n' "$out" | sed 's/^/      | /' >&2
+    fails=$((fails + 1))
+    return
+  fi
+  if ! printf '%s' "$out" | grep -qF -- "$diagnostic"; then
+    printf 'FAIL  %s\n      exit %s was right, but the gate never said %s —\n' \
+      "$name" "$rc" "'$diagnostic'" >&2
+    printf '      so this case was satisfied by some OTHER outcome than the one it planted\n' >&2
     printf '%s\n' "$out" | sed 's/^/      | /' >&2
     fails=$((fails + 1))
     return
@@ -150,27 +181,59 @@ duplicates_in_tree() {
 
 # ---- the cases -----------------------------------------------------------
 
-expect "an untouched tree passes"                        0 plain    untouched
-expect "a migration stamped above the base passes"       0 plain    adds_above
-expect "two migrations at one version fail"              1 plain    collides
-expect "a migration sorting below the base fails"        1 plain    sorts_below
-expect "one version claimed twice in the tree fails"     1 plain    duplicates_in_tree
-expect "a consolidation fails when NOT declared"         1 plain    consolidates
+expect "an untouched tree passes" \
+  0 plain    untouched            "OK: check-migration-versions"
+expect "a migration stamped above the base passes" \
+  0 plain    adds_above           "OK: check-migration-versions"
+expect "two migrations at one version fail" \
+  1 plain    collides             "is claimed by two different migrations"
+expect "a migration sorting below the base fails" \
+  1 plain    sorts_below          "sorts at or below"
+expect "one version claimed twice in the tree fails" \
+  1 plain    duplicates_in_tree   "declares one version twice"
+expect "a consolidation fails when NOT declared" \
+  1 plain    consolidates         "is claimed by two different migrations"
 
 # The four that decide whether the escape hatch is a gate or a hole.
-expect "a declared consolidation is admitted"            0 declared consolidates
-expect "a declared reset with a survivor is refused"     1 declared partial_rewrite
-expect "a declared rename that does not collapse is refused" 1 declared renames_without_collapsing
-expect "a declared reset does not excuse a real collision in an untouched namespace" \
-                                                         0 declared untouched
+expect "a declared consolidation is admitted" \
+  0 declared consolidates         "a baseline reset was declared, and admitted"
+expect "a declared reset with a survivor is refused" \
+  1 declared partial_rewrite      "at the version AND name the base has"
+expect "a declared rename that does not collapse is refused" \
+  1 declared renames_without_collapsing "does not collapse"
+# A REAL collision, declared. The previous version of this case ran the
+# `untouched` mutation, so there was no collision in it to excuse and no finding
+# either way: it asserted exit 0 against a tree byte-identical to the base and
+# proved nothing about the escape hatch at all. `collides` leaves core sharing
+# versions with the base, so the declaration is refused and the collision is
+# enforced — which is the claim the name has always made.
+expect "a declared reset does not excuse a real collision" \
+  1 declared collides             "is claimed by two different migrations"
 
 # ---- census --------------------------------------------------------------
-# The number of cases is pinned, so a case deleted or an `expect` line that
-# stops running reports here rather than as a smaller green run.
+# TWO guards, because one of them cannot see the other's defect.
+#
+# The derived comparison catches an `expect` line that is present but does not
+# RUN — guarded away, unreachable, or lost to an early return. It cannot catch a
+# case being DELETED: the deletion lowers `ran` and the grep count together, so
+# they still agree and the suite reports a smaller green run. The first version
+# of this census claimed to catch exactly that, which was simply untrue.
+#
+# So the total is also pinned. A literal here is not duplication of the case
+# list: it is the one fact the case list cannot state about itself, which is how
+# many of it there should be.
+expected_cases=10
+
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [ "$ran" -ne "$declared_cases" ]; then
   printf 'FAIL  ran %s case(s) but %s are declared — a case stopped running\n' \
     "$ran" "$declared_cases" >&2
+  fails=$((fails + 1))
+fi
+if [ "$declared_cases" -ne "$expected_cases" ]; then
+  printf 'FAIL  %s case(s) declared, %s expected — a case was added or removed.\n' \
+    "$declared_cases" "$expected_cases" >&2
+  printf '      Update expected_cases in the same change, so a deletion cannot pass as a smaller green run.\n' >&2
   fails=$((fails + 1))
 fi
 
