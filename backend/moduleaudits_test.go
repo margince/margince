@@ -66,6 +66,16 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/compose/dealstatus":  "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
 	"internal/compose/orgdossier":  "org_dossier and org_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 
+	// The installation's ciphertext store. vault_secret is a ref -> ciphertext
+	// row carrying NO workspace_id — it is installation configuration, not a
+	// tenant record, so there is no record history for it to join. The event
+	// that seals or drops a credential is the DOMAIN act around it (capture's
+	// connect/disconnect on a channel connection, which writes its own audit row
+	// under those verbs), and auditing the vault row as well would file one
+	// change twice — the second time under an entity type that is a secret's
+	// reference.
+	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; the connect/disconnect that seals or drops a credential carries the audit row, and the vault row is that act's storage rather than a second fact",
+
 	// Operational state whose DOMAIN writes are audited elsewhere.
 	"internal/modules/agents": "agent_run and runner_job are runner lifecycle bookkeeping. The domain writes a run performs happen inside the TOOLS it calls, and those carry the full audit and outbox shape — auditing the run row as well would file the same change twice under two entity types",
 	"internal/modules/comms":  "comms_outbound is delivery machinery, not the message. The user-visible fact of an outbound email is the ACTIVITY row, which activities owns and audits; StageTx runs inside that same transaction, so the send already has its history. comms does write a ledger row for the one thing activities cannot describe — a reconcile failure — through storekit.LogSystem, which is system_log and deliberately not counted here",

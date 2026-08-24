@@ -57,6 +57,18 @@ const storekitOwned = "internal/platform/database/storekit"
 // judged.
 const extSecretsStoreDir = "internal/platform/extsecrets"
 
+// keyVaultStoreDir is the third, for the same reason and found the same way: the
+// local key-vault provider owns vault_secret, and until this gate walked it the
+// table had no owner entry at all — so neither its INSERT nor its DELETE was
+// compared against anything, and a second writer of the installation's
+// ciphertext store would have landed unnoticed.
+//
+// It is named rather than reached by widening to internal/platform, which would
+// sweep in files this gate has not judged. That the list has grown to three is
+// the argument for deriving it — "every platform package that writes rows" —
+// rather than naming a fourth next time.
+const keyVaultStoreDir = "internal/platform/keyvault"
+
 // tableOwners maps every core-migration table to the ONE module whose store
 // owns its writes (module doc.go "Tables owned" declarations, kept in sync).
 // This map is the hand-maintained artifact: a new table gets an owner here
@@ -383,6 +395,9 @@ var tableOwners = map[string]string{
 	// shared field-provenance layer (B-E02.12) is spelled once next to it.
 	// system_log is the non-entity operational ledger written through
 	// storekit.LogSystem, the same storekit-owned posture as audit_log.
+	// The local provider's ciphertext store. No workspace_id: a deployment
+	// credential belongs to the installation, not a tenant.
+	"vault_secret":     keyVaultStoreDir,
 	"audit_log":        storekitOwned,
 	"event_outbox":     storekitOwned,
 	"field_provenance": storekitOwned,
@@ -697,7 +712,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 	// versioned writes in it. The floor is what tells those two apart.
 	storekitWrites := 0
 	fset := token.NewFileSet()
-	roots := []string{"internal/modules", "internal/compose", settingsStoreDir, extSecretsStoreDir}
+	roots := []string{"internal/modules", "internal/compose", settingsStoreDir, extSecretsStoreDir, keyVaultStoreDir}
 	consts := stringConstsByPackage(t, fset, roots)
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
