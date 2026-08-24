@@ -75,11 +75,6 @@ belongs in an advisory** — a cross-tenant read, a row-scope or RBAC escape, an
 agent-governance bypass, a forged or still-binding revoked credential, a
 mutation that skips the audit or outbox row, injection, SSRF.
 
-Before filing, check whether a **parent tracker** already covers the finding
-(`gh issue list --label "area: <x>"`); if one does, attach yours as a sub-issue
-rather than adding a sibling to the pile. A tracker carries the highest priority
-among its children.
-
 ## Before you file: check for a parent
 
 Run `gh issue list --label "area: <x>"` and look for a tracker that already
