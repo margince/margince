@@ -4463,6 +4463,9 @@ export const de = {
   "network.bucket.moderate": "Mittel",
   "network.bucket.strong": "Stark",
   "coverage.title": "Abdeckung",
+  "coverage.engaged": "Im Austausch",
+  "coverage.quiet": "Kein beidseitiger Kontakt",
+  "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
   "coverage.clear":
     "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",
   "coverage.withheld":

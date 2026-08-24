@@ -15527,7 +15527,10 @@ type DealCoverageSeat struct {
 	// Engaged A two-way exchange in the window — both directions, not just our sends.
 	Engaged  bool               `json:"engaged"`
 	PersonId openapi_types.UUID `json:"person_id"`
-	Role     string             `json:"role"`
+
+	// PersonName The person's display name. Null when the caller may not read that person — the seat still counts toward coverage, because how many people carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous.
+	PersonName *string `json:"person_name,omitempty"`
+	Role       string  `json:"role"`
 }
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this

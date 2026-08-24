@@ -14071,6 +14071,8 @@ export interface components {
         DealCoverageSeat: {
             /** Format: uuid */
             person_id: string;
+            /** @description The person's display name. Null when the caller may not read that person — the seat still counts toward coverage, because how many people carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous. */
+            person_name?: string | null;
             role: string;
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;

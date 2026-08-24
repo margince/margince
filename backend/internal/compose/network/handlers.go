@@ -7,6 +7,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -122,7 +123,11 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if err != nil {
 			return err
 		}
-		out = wireCoverage(coverage, names)
+		people, err := coverageSeatNames(ctx, tx, coverage)
+		if err != nil {
+			return err
+		}
+		out = wireCoverage(coverage, names, people)
 		return nil
 	})
 	if err != nil {
@@ -167,7 +172,9 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 	return out
 }
 
-func wireCoverage(c DealCoverage, names map[ids.UUID]string) crmcontracts.DealCoverage {
+func wireCoverage(
+	c DealCoverage, names map[ids.UUID]string, people map[ids.UUID]string,
+) crmcontracts.DealCoverage {
 	out := crmcontracts.DealCoverage{
 		DealId:       openapi_types.UUID(c.DealID),
 		Stakeholders: []crmcontracts.DealCoverageSeat{},
@@ -184,9 +191,16 @@ func wireCoverage(c DealCoverage, names map[ids.UUID]string) crmcontracts.DealCo
 			crmcontracts.DealCoverageSectionsOmitted(section))
 	}
 	for _, s := range c.Stakeholders {
-		out.Stakeholders = append(out.Stakeholders, crmcontracts.DealCoverageSeat{
+		seat := crmcontracts.DealCoverageSeat{
 			PersonId: openapi_types.UUID(s.PersonID), Role: s.Role, Engaged: s.Engaged,
-		})
+		}
+		// Absent rather than empty when the caller may not read the person:
+		// the seat still counts toward coverage, and a "" would render as a
+		// nameless row that looks like a data fault rather than a boundary.
+		if name, ok := people[s.PersonID]; ok {
+			seat.PersonName = &name
+		}
+		out.Stakeholders = append(out.Stakeholders, seat)
 	}
 	for _, e := range c.OurSide {
 		colleague := crmcontracts.PersonNetworkColleague{
@@ -246,6 +260,52 @@ func coverageUsers(c DealCoverage) []ids.UUID {
 		out = append(out, e.UserID)
 	}
 	return out
+}
+
+// coverageSeatNames resolves the stakeholders' display names in one read,
+// under the caller's row scope.
+//
+// Scoped, where UserNames below is not, because the two answer different
+// questions. The colleague roster is readable by any authenticated member; a
+// PERSON is a customer record, and who sits on a deal is exactly the thing row
+// scope decides. A seat whose person the caller may not read is absent from
+// this map and its name goes null on the wire — the seat itself still ships,
+// because how many people carry a deal is not the secret.
+func coverageSeatNames(ctx context.Context, tx pgx.Tx, c DealCoverage) (map[ids.UUID]string, error) {
+	out := map[ids.UUID]string{}
+	if len(c.Stakeholders) == 0 {
+		return out, nil
+	}
+	people := make([]ids.UUID, 0, len(c.Stakeholders))
+	for _, s := range c.Stakeholders {
+		people = append(people, s.PersonID)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(people)
+	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
+	if err != nil {
+		return nil, err
+	}
+	if scope == "" {
+		scope = narrowsNothing
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(
+		`SELECT p.id, p.full_name FROM person p
+		  WHERE p.id = ANY($%d) AND p.archived_at IS NULL AND %s`, idsPos, scope), args...)
+	if err != nil {
+		return nil, fmt.Errorf("read the deal's stakeholder names: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("scan a stakeholder name: %w", err)
+		}
+		out[id] = name
+	}
+	return out, rows.Err()
 }
 
 // userNames resolves the colleagues' display names in one read. The roster is

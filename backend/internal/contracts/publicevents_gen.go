@@ -687,11 +687,18 @@ type PublicEventDealRoomClosed struct {
 // comment's text is deliberately absent: a subscriber reads it through the
 // room, under the room's own authority, not off the bus.
 type PublicEventDealRoomCommentPosted struct {
-	CommentId openapi_types.UUID `json:"comment_id"`
-	DealId    openapi_types.UUID `json:"deal_id"`
+	// AuthorName Who spoke, by name, as the room recorded them at that moment. Additive and optional: an event minted before this field existed carries none.
+	// The comment's TEXT stays off the bus for the reason above, and a name is a different thing from the text — it is who acted, which is what any record of an act has to say. A timeline entry reading "the buyer said something" names no buyer and is not worth the row it occupies.
+	AuthorName *string            `json:"author_name,omitempty"`
+	CommentId  openapi_types.UUID `json:"comment_id"`
+	DealId     openapi_types.UUID `json:"deal_id"`
 
 	// DocumentId The room document the thread is about; null for a room-level exchange.
 	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
+
+	// DocumentTitle The document the thread is about, titled as it stood at that moment. Absent for a room-level exchange, and absent on an event minted before this field existed.
+	// Carried rather than resolved later, for the reason every other field here is: a document can be retitled or removed afterwards, and a timeline entry means what was true when it happened.
+	DocumentTitle *string `json:"document_title,omitempty"`
 
 	// OpensThread True when this comment is the thread's first — a new question, not a reply.
 	OpensThread bool `json:"opens_thread"`

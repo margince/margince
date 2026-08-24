@@ -4515,6 +4515,9 @@ export const en = {
   "network.bucket.moderate": "Moderate",
   "network.bucket.strong": "Strong",
   "coverage.title": "Coverage",
+  "coverage.engaged": "Engaged",
+  "coverage.quiet": "No two-way contact",
+  "coverage.seatWithheld": "A contact you cannot read",
   "coverage.clear": "Nothing flagged — this deal passes every coverage check.",
   "coverage.withheld":
     "Coverage was withheld — you cannot read this deal’s relationships, so no check was run.",

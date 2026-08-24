@@ -4421,6 +4421,9 @@ export const vi = {
   "network.bucket.moderate": "Vừa",
   "network.bucket.strong": "Mạnh",
   "coverage.title": "Độ phủ",
+  "coverage.engaged": "Đang trao đổi",
+  "coverage.quiet": "Chưa có trao đổi hai chiều",
+  "coverage.seatWithheld": "Một liên hệ bạn không thể xem",
   "coverage.clear":
     "Không có gì đáng lưu ý — deal này qua mọi kiểm tra độ phủ.",
   "coverage.withheld":
