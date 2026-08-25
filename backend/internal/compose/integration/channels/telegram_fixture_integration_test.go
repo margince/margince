@@ -436,6 +436,13 @@ func (c *telegramEnv) pollNow(t *testing.T, sub <-chan *river.Event, wantOffset 
 	// and the wait still ends the moment the cursor moves.
 	pace := time.NewTicker(25 * time.Millisecond)
 	defer pace.Stop()
+	// A CLOSED subscription is ready forever, and a ready case wins over a
+	// ticker that is not — so leaving it in the select would switch the pacing
+	// off at exactly the moment the hint stops coming, and spin this loop
+	// through one database read per iteration for the rest of the deadline.
+	// Dropping the channel leaves the ticker as the only wake-up, which is the
+	// state the loop is already written to survive.
+	events := sub
 	for {
 		if c.pollCursor(t) >= wantOffset {
 			return
@@ -444,7 +451,11 @@ func (c *telegramEnv) pollNow(t *testing.T, sub <-chan *river.Event, wantOffset 
 		case <-ctx.Done():
 			t.Fatalf("timed out waiting for poll cursor to reach %d: %v", wantOffset, ctx.Err())
 		case <-pace.C:
-		case ev := <-sub:
+		case ev, open := <-events:
+			if !open {
+				events = nil
+				continue
+			}
 			if ev == nil || ev.Job == nil || ev.Job.Kind != (compose.TelegramPollArgs{}).Kind() {
 				continue
 			}
