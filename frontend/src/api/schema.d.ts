@@ -13151,7 +13151,7 @@ export interface components {
             /** @description The owner's display name; null when the project has no owner or the owner is no longer an active member. */
             owner_name?: string | null;
             /** @description Nothing has been filed against this project for the module's quiet window, counted from its last activity or, when it has none, from the day it was opened. Computed server-side because the payload carries no created_at and the window is one number the product spells in one place. */
-            quiet?: boolean;
+            quiet: boolean;
             /** @description Present on the company record page, which decorates the row from the account's own tasks and captured commitments. The person page carries the same project row without it — the question "why does this need a person" is asked of an account, not of a contact. */
             attention?: components["schemas"]["Organization360WorkAttention"];
         };

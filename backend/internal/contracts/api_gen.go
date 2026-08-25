@@ -18708,7 +18708,7 @@ type Organization360Project struct {
 	ProjectId openapi_types.UUID          `json:"project_id"`
 
 	// Quiet Nothing has been filed against this project for the module's quiet window, counted from its last activity or, when it has none, from the day it was opened. Computed server-side because the payload carries no created_at and the window is one number the product spells in one place.
-	Quiet         *bool               `json:"quiet,omitempty"`
+	Quiet         bool                `json:"quiet"`
 	TargetEndDate *openapi_types.Date `json:"target_end_date,omitempty"`
 }
 

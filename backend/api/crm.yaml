@@ -19139,7 +19139,7 @@ components:
         One body of work on the record page: enough to name it, say where it stands and who
         holds it. The full row is `GET /projects/{id}`. Shared by the company page and the
         person page, so a project reads the same on both.
-      required: [project_id, name, phase]
+      required: [project_id, name, phase, quiet]
       properties:
         project_id: { type: string, format: uuid }
         name: { type: string }
