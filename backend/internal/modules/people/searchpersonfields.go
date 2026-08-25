@@ -107,24 +107,16 @@ func fillDiscoveredFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		if value == "" || snippet == "" {
 			continue
 		}
-		// The subject's liveness rides the INSERT itself, not only the probe
-		// the entry point ran. person_profile_field is a declared PII table and
-		// Art. 17 erasure DELETES its rows while stamping the person archived —
-		// so a discovery approved before that commit and applied after it would
-		// otherwise put the erased subject's details straight back, in the
-		// window between two statements rather than over the hours the entry
-		// gate closes. A SELECT source rather than VALUES is what lets the
-		// predicate travel with the row.
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO person_profile_field (person_id, field, value, evidence_snippet, source_ref, source, captured_by)
-			SELECT $1, $2, $3, $4, $5, $6, $7
-			 WHERE EXISTS (SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)
-			ON CONFLICT (person_id, field) DO NOTHING`,
-			personID, f.Field, value, snippet, f.SourceRef, searchFieldSource, by)
+		// A machine fill: a search result claims a field nobody has answered
+		// and never replaces one.
+		landed, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+			Field: f.Field, Value: value, EvidenceSnippet: snippet, SourceRef: f.SourceRef,
+			Source: searchFieldSource, CapturedBy: by,
+		}, claimUnanswered)
 		if err != nil {
-			return nil, fmt.Errorf("people: discovered field evidence row (%s): %w", f.Field, err)
+			return nil, err
 		}
-		if tag.RowsAffected() == 0 {
+		if !landed {
 			continue
 		}
 		if err := storekit.StampFields(ctx, tx, entityPerson, personID.UUID, f.SourceRef, by,

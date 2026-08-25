@@ -47,7 +47,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (35)
+## Census (36)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -77,6 +77,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `profilefieldreaders_test.go` | H2 | person\_profile\_field holds what a machine ASSERTED about a person, and ai\_feedback holds what a human then decided about that assertion. |
+| `profilefieldwriter_test.go` | H2 | people.writeProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |

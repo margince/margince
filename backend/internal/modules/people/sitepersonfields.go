@@ -219,18 +219,16 @@ func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		if value == "" {
 			return nil
 		}
-		// The evidence row is the admission ticket, first verdict wins — the
-		// same rule the signature pass writes under, so a site read can never
-		// overwrite what a signature (or a human) already answered.
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO person_profile_field (person_id, field, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			ON CONFLICT (person_id, field) DO NOTHING`,
-			personID, field, value, in.EvidenceSnippet, sourceRef, siteFieldSource, by)
+		// A machine fill: what a page published claims a field nobody has
+		// answered and never replaces one.
+		landed, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+			Field: field, Value: value, EvidenceSnippet: in.EvidenceSnippet, SourceRef: sourceRef,
+			Source: siteFieldSource, CapturedBy: by,
+		}, claimUnanswered)
 		if err != nil {
-			return fmt.Errorf("people: site person evidence row (%s): %w", field, err)
+			return err
 		}
-		if tag.RowsAffected() == 0 {
+		if !landed {
 			return nil
 		}
 		if err := storekit.StampFields(ctx, tx, entityPerson, personID.UUID, sourceRef, by,

@@ -131,18 +131,14 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		return false, nil
 	}
 
-	// The evidence row is the admission ticket: one row per (person, field),
-	// first verdict wins — a later pass can never overwrite it.
-	tag, err := tx.Exec(ctx, `
-		INSERT INTO person_profile_field (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (person_id, field) DO NOTHING`,
-		personID, f.Name, value, f.Evidence, sourceRef, f.Confidence, enrichSource, enrichCapturedBy)
-	if err != nil {
-		return false, fmt.Errorf("people: signature evidence row (%s): %w", f.Name, err)
-	}
-	if tag.RowsAffected() == 0 {
-		return false, nil
+	// A machine fill: the signature claims a field nobody has answered and
+	// never replaces one — writeProfileField carries that rule.
+	landed, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+		Field: f.Name, Value: value, EvidenceSnippet: f.Evidence, SourceRef: sourceRef,
+		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
+	}, claimUnanswered)
+	if err != nil || !landed {
+		return false, err
 	}
 
 	switch f.Name {
