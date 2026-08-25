@@ -329,3 +329,66 @@ func assertVaultRefGone(ctx context.Context, t *testing.T, e *SearchEnv, ref, wh
 			"a different failure hides whether the secret was destroyed", what, err)
 	}
 }
+
+// Credentials is the resolve-for-USE path — what the connect transport calls to
+// exchange an authorization code. Separate from Read because the two answer
+// different questions: Read tells a person what is configured, this unseals the
+// secret and hands the server what it needs to talk to Google.
+func TestGoogleAppCredentialsResolveTheSealedSecret(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := e.captureAdmin()
+	store := googleAppStore(t, e)
+
+	// An installation with no app is not an error: the connect surface says so
+	// rather than failing, so ok=false must come back with a nil error.
+	if _, _, ok, err := store.Credentials(ctx); err != nil || ok {
+		t.Fatalf("Credentials on an unconfigured installation = (ok=%v, err=%v), want (false, nil)", ok, err)
+	}
+
+	if err := store.Set(ctx, testClientID, "GOCSPX-resolve-me"); err != nil {
+		t.Fatalf("storing: %v", err)
+	}
+	id, secret, ok, err := store.Credentials(ctx)
+	if err != nil || !ok {
+		t.Fatalf("Credentials after storing = (ok=%v, err=%v), want (true, nil)", ok, err)
+	}
+	if id != testClientID || secret != "GOCSPX-resolve-me" {
+		t.Fatalf("Credentials resolved (%q, %q), want the stored pair", id, secret)
+	}
+
+	// Removed, it stops resolving — the transport must not keep serving an app
+	// the operator has taken away.
+	if err := store.Remove(ctx); err != nil {
+		t.Fatalf("removing: %v", err)
+	}
+	if _, _, ok, err := store.Credentials(ctx); err != nil || ok {
+		t.Fatalf("Credentials after removal = (ok=%v, err=%v), want (false, nil)", ok, err)
+	}
+}
+
+// The ceiling exists so a caller cannot seal a megabyte and have it read back on
+// every request. The contract declares maxLength on both halves and nothing
+// generated enforces it: oapi-codegen emits no validation, and the decoder caps
+// only the whole body.
+func TestGoogleAppRefusesAnOversizedHalfWithoutSealingIt(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := e.captureAdmin()
+	store := googleAppStore(t, e)
+
+	oversized := strings.Repeat("x", 513)
+	if err := store.Set(ctx, testClientID, oversized); err == nil {
+		t.Fatal("an oversized client secret was accepted")
+	}
+	if err := store.Set(ctx, oversized+".apps.googleusercontent.com", "GOCSPX-fine"); err == nil {
+		t.Fatal("an oversized client id was accepted")
+	}
+	// Refused BEFORE anything was sealed: the app still reads as empty, so no
+	// blob was written that would then need retiring.
+	status, err := store.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Configured {
+		t.Fatalf("a refused oversized write left the app reading %+v, want empty", status)
+	}
+}
