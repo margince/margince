@@ -11,25 +11,63 @@ declare global {
 }
 
 /**
- * Wait for every FINITE animation to finish before measuring the page.
+ * Settle the page's motion before measuring the colours it paints.
  *
  * A contrast check reads the colours that are painted, and an element mid-fade
  * paints a blend: the login screen's staggered entry made axe see the runtime
  * line at #bfc3c1 on #fafbfa (1.71:1) instead of its settled #36433d on #eef1f0
  * (8.9:1), so the sweep failed or passed depending on how fast the machine got
- * to `networkidle`. Infinite animations are excluded because the Core breathes
- * forever — waiting on those would hang rather than settle.
+ * to `networkidle`.
+ *
+ * WAITING for `getAnimations()` to report every finite animation finished
+ * cannot settle a page. That set is empty both BEFORE the first entrance starts
+ * and AFTER the last one ends, and `[].every()` is true of an empty set, so the
+ * wait returns on a page whose content has not begun arriving. On a loaded
+ * runner that is the ordinary outcome rather than a rare one: `.wrap > *` holds
+ * each block back by up to five steps of `--stagger-enter` before fading it in
+ * over `--dur-enter`, and a whole screen of half-painted text is what such a
+ * wait hands to axe.
+ *
+ * Reduced motion settles it instead. The design system answers that with
+ * `animation: none` on every arrival, which lands the content already mounted
+ * AND the content still to mount at its resting colour, leaving no window to
+ * race. The assertions are the half that cannot pass vacuously: an arrival that
+ * outlives the guard fails here, naming itself, rather than being measured
+ * mid-flight.
  */
-async function animationsSettled(page: Page) {
-  await page.waitForFunction(() =>
-    document
-      .getAnimations()
-      .filter(
-        (animation) =>
-          animation.effect?.getTiming().iterations !== Number.POSITIVE_INFINITY,
-      )
-      .every((animation) => animation.playState === "finished"),
-  );
+async function settleAnimations(page: Page) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const motion = await page.evaluate(() => {
+    const describe = (element: Element) =>
+      `${element.tagName.toLowerCase()}.${element.className}`;
+    return {
+      running: document
+        .getAnimations()
+        .filter((animation) => animation.playState === "running")
+        .map((animation) => {
+          const effect = animation.effect;
+          return effect instanceof KeyframeEffect &&
+            effect.target instanceof Element
+            ? describe(effect.target)
+            : "an element the effect does not name";
+        }),
+      // The guard itself, read off the cascade rather than off the clock: an
+      // arrival that still names an animation here will fade whenever it
+      // mounts, including after this check has run. Timing cannot see that one;
+      // the computed style can.
+      stillArriving: [...document.querySelectorAll(".arrive, .wrap > *")]
+        .filter((element) => getComputedStyle(element).animationName !== "none")
+        .map(describe),
+    };
+  });
+  expect(
+    motion.stillArriving,
+    "an arrival outlived the reduced-motion guard in enter.css, so content fades in whenever it mounts and axe reads the blend rather than the colours a reader sees",
+  ).toEqual([]);
+  expect(
+    motion.running,
+    "an animation kept running under prefers-reduced-motion, so axe would read a frame mid-flight",
+  ).toEqual([]);
 }
 
 // B-EP09.22a/b: the AC-<screen>-N criteria as named tests — a failing test
@@ -1191,7 +1229,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       // sweep. #/settings/maintenance scored zero violations while showing the
       // app error boundary.
       await expectShellRendered(page);
-      await animationsSettled(page);
+      await settleAnimations(page);
       await expectNoAaViolations(page, screen);
     });
   }
@@ -1219,7 +1257,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     // The sweep is only meaningful once the record chrome is on screen: axe
     // finds nothing to complain about in an empty shell.
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await animationsSettled(page);
+    await settleAnimations(page);
     await expectShellRendered(page);
     await expectNoAaViolations(page, "companies/o-brandt");
   });
@@ -1471,7 +1509,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     // would never see it. Run it here too rather than leave the one part of the
     // surface a user of an SSO installation actually clicks unmeasured.
     await page.waitForLoadState("networkidle");
-    await animationsSettled(page);
+    await settleAnimations(page);
     await expectNoAaViolations(page, "login (with SSO providers)");
   });
 
@@ -1483,7 +1521,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
     ).toBeVisible();
-    await animationsSettled(page);
+    await settleAnimations(page);
     await expectNoAaViolations(page, "login");
   });
 });
