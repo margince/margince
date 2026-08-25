@@ -421,17 +421,29 @@ func (c *telegramEnv) pollNow(t *testing.T, sub <-chan *river.Event, wantOffset 
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
+	// The cursor is the durable evidence and the event is only a hint to look
+	// again, which is why a hint that never arrives must not be able to hold
+	// this open. The enqueue above dedupes into any poll already in flight
+	// (per-bot uniqueness), and THAT poll's completion event may have been
+	// consumed by an earlier await — so the run where no further event is
+	// published is not an edge case, it is the ordinary outcome of the dedupe
+	// working. Checking once before blocking covers the poll that finished
+	// before this call; it does nothing for the poll that finishes after it,
+	// and blocking on `sub` alone then waits out the whole deadline.
+	//
+	// So the read is paced as well as woken. The ticker is not a delay: every
+	// tick re-reads the same committed row the event would have sent us to,
+	// and the wait still ends the moment the cursor moves.
+	pace := time.NewTicker(25 * time.Millisecond)
+	defer pace.Stop()
 	for {
-		// Checked before blocking: the enqueue above dedupes into any poll already
-		// in flight (per-bot uniqueness), and that poll's completion event may have
-		// been consumed by an earlier await — the cursor itself is the durable
-		// evidence, the event only says when to look again.
 		if c.pollCursor(t) >= wantOffset {
 			return
 		}
 		select {
 		case <-ctx.Done():
 			t.Fatalf("timed out waiting for poll cursor to reach %d: %v", wantOffset, ctx.Err())
+		case <-pace.C:
 		case ev := <-sub:
 			if ev == nil || ev.Job == nil || ev.Job.Kind != (compose.TelegramPollArgs{}).Kind() {
 				continue
