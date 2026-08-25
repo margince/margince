@@ -1,12 +1,11 @@
-import { Layers, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settings";
 import { AccountMenu } from "./account";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { NAV, type NavCounts, type NavSection } from "./nav";
+import { NAV, type NavSection } from "./nav";
 import {
   OFF_RAIL_TITLE_KEYS,
   resolveTitle,
@@ -137,62 +136,15 @@ function TopBarSearch({
   );
 }
 
-/**
- * What is waiting on this person, wherever they are.
- *
- * Decisions are the product's one queue that BLOCKS somebody else — nothing an
- * agent staged runs until a human answers it — so the count belongs in the strip
- * that is on screen on every route, not only on the sidebar row a collapsed rail
- * draws as an icon. It is a link rather than a menu: what to do about the count
- * is the Decisions surface, and a popover restating it would be a second copy
- * of that queue.
- *
- * Silent at zero. A mark that is always on screen with nothing behind it teaches
- * a reader to stop looking at it, which is the one thing a queue cannot afford.
- *
- * A stack of layers rather than a bell: what waits here is a pile of decisions
- * nobody has taken, not a notification somebody can read and be done with — and
- * this product has no notification system for a bell to stand for. The same mark
- * the sidebar row carries, because two glyphs for one queue read as two queues.
- */
-function DecisionsMark({ waiting }: Readonly<{ waiting?: number }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const count = waiting ?? 0;
-  return (
-    <a
-      className="topbar-decisions"
-      href={routeHash({ screen: "inbox" })}
-      aria-label={
-        count > 0
-          ? t("shell.approvalsWaiting", { count: formatNumber(count, locale) })
-          : t("shell.approvals")
-      }
-    >
-      <Layers size={17} strokeWidth={1.8} aria-hidden />
-      {/* The number is in the name above, so the chip is decoration: read out it
-          would say the count twice, and the second time without the word for
-          what is counted. */}
-      {count > 0 && (
-        <span className="topbar-decisioncount" aria-hidden>
-          {count}
-        </span>
-      )}
-    </a>
-  );
-}
-
 export function TopBar({
   route,
   section,
-  counts,
   collapsed,
   onToggle,
   onOpenSearch,
 }: Readonly<{
   route: Route;
   section?: NavSection;
-  counts?: NavCounts;
   collapsed: boolean;
   onToggle?: () => void;
   onOpenSearch: () => void;
@@ -227,7 +179,6 @@ export function TopBar({
       <TopBarSearch onOpenSearch={onOpenSearch} />
       <div className="topbar-trail">
         <SorModeChip />
-        <DecisionsMark waiting={counts?.inbox} />
         <AccountMenu />
       </div>
     </header>

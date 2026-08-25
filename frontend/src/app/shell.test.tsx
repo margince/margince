@@ -137,14 +137,14 @@ describe("PageTitle", () => {
   // own subtitle had to print its own title above it to hang it on, and the
   // shell was already printing that title.
   it("prints the page's subtitle under the heading", () => {
-    const { container } = render(<PageTitle route={{ screen: "inbox" }} />);
+    const { container } = render(<PageTitle route={{ screen: "ai" }} />);
     const heading = screen.getByRole("heading", {
       level: 1,
-      name: "Decisions",
+      name: "Ask Margince",
     });
     const sub = container.querySelector(".pagesub");
     expect(sub?.textContent).toBe(
-      "everything staged, waiting on your call — nothing runs without it",
+      "bring your own agent — governed by the two-tier contract",
     );
     // Directly under the name it explains, inside the title's own text column —
     // not beside the actions, where it would read as product chrome.
@@ -169,9 +169,9 @@ describe("PageTitle", () => {
   // at all — or the document would offer two page titles for the same record.
   // Where the reader came from is the top bar's trail (topbar.test.tsx).
   //
-  // No record screen carries a subtitle key today (the map names `inbox`, `ai`
-  // and `dedupe`, and none has a record segment), so what the subtitle half pins
-  // is the structure. Give a record screen a subtitle and this is the case that
+  // No record screen carries a subtitle key today (the map names `ai`, `filters`
+  // and `scheduled`, and none has a record segment), so what the subtitle half
+  // pins is the structure. Give a record screen a subtitle and this is the case that
   // says where it may not appear.
   it("renders nothing at all on a record route", () => {
     const client = newClient();
@@ -637,21 +637,17 @@ describe("Shell", () => {
   // lets it be absent rather than zero while a read has not answered
   // (agentrail.test.tsx), and a prop handed down from here would take that back:
   // the shell's number is always present, so the section would print one before
-  // anybody had counted. Handing the shell counts must therefore put no number
-  // in the agent at all, however loudly the rail badges them.
+  // anybody had counted. Counts handed to the shell must therefore put no number
+  // in the agent at all, whatever the rail does with them.
   it("hands the agent no counts, so it reports only what it read itself", () => {
     window.location.hash = "#/contacts";
     const { container } = render(
-      <Shell counts={{ tasks: 9, inbox: 7 }} onOpenSearch={ignoreSearch}>
+      <Shell counts={{ today: 9, contacts: 7 }} onOpenSearch={ignoreSearch}>
         {null}
       </Shell>,
     );
-    expect(
-      Array.from(container.querySelectorAll(".rail .count")).map(
-        (badge) => badge.textContent,
-      ),
-    ).toEqual(["9", "7"]);
     const agent = container.querySelector(".arblock");
+    expect(agent).toBeTruthy();
     expect(agent?.textContent).not.toContain("7");
     expect(agent?.textContent).not.toContain("9");
   });

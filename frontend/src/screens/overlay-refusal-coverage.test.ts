@@ -23,12 +23,9 @@ import { describe, expect, it } from "vitest";
 // only in a stale-cache bug report. The swept set (11 ops per
 // overlaywrite.go, minus DELETE /activities/{id}, which no SPA screen
 // calls):
-//   create person/org/deal/lead, log-activity (POST /activities, both its
-//   logactivity.tsx and tasks.tsx callers), advance-deal (both its board
-//   and reopen callers), merge-person, merge-org, promote-lead,
-//   disqualify-lead — plus tasks.tsx's GET /activities?kind=task read,
-//   which hits the READ-side unsupported_in_overlay_mode this same fitness
-//   check would otherwise miss.
+//   create person/org/deal/lead, log-activity (POST /activities from
+//   logactivity.tsx), advance-deal (both its board and reopen callers),
+//   merge-person, merge-org, promote-lead, disqualify-lead.
 const dir = dirname(fileURLToPath(import.meta.url));
 
 function source(file: string): string {
@@ -236,22 +233,6 @@ describe("overlay refusal copy — translator coverage", () => {
       "logactivity.tsx",
       'api.POST("/activities", {',
       "log-activity (logactivity.tsx)",
-    );
-  });
-
-  it("log-activity from the Tasks screen's create (POST /activities)", () => {
-    assertTranslatedRefusal(
-      "tasks.tsx",
-      'api.POST("/activities", {',
-      "log-activity (tasks.tsx create)",
-    );
-  });
-
-  it("the Tasks screen's kind=task read (GET /activities) — the READ-side refusal", () => {
-    assertTranslatedRefusal(
-      "tasks.tsx",
-      'api.GET("/activities", {',
-      "tasks list read",
     );
   });
 });

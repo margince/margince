@@ -71,8 +71,6 @@ export const en = {
   "nav.companies": "Companies",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
-  "nav.tasks": "Tasks",
-  "nav.inbox": "Decisions",
   "nav.today": "Today",
   "day.title": "Today",
   "day.loading": "Reading your day…",
@@ -92,15 +90,40 @@ export const en = {
   "day.overdue": "Overdue",
   "day.complete": "Done",
   "day.snooze": "Tomorrow",
-  "day.decide": "Decide",
-  "day.merge": "Review",
-  "day.open": "View",
   "day.match": "{percent}% match",
   "day.item.untitled": "Waiting on you",
   "day.duplicate.person": "Two contacts look like the same person",
   "day.duplicate.org": "Two companies look like the same one",
   "day.duplicate.lead": "Two leads look like the same one",
   "day.duplicatesOpen": "{count} duplicate pairs open in all",
+  // The decision lane, one at a time: how far through the reader is, and the
+  // cleared plate the whole surface is built to reach.
+  "day.focus.progress": "Decision {position} of {total}",
+  "day.focus.clear": "Nothing left to decide.",
+  "day.focus.clearedCount": "{count} decided today.",
+  "day.focus.later": "Later",
+  // The merge decision. Both values survive a merge — choosing a side decides
+  // which record stands and which value is shown first — so the copy never says
+  // "delete", because nothing is deleted.
+  "day.merge.question": "Are these the same?",
+  "day.merge.carries": "carries {count} related records",
+  "day.merge.blank": "empty",
+  "day.merge.withheld":
+    "One of these records is hidden from your account, so this pair cannot be decided here.",
+  "day.merge.refused": "That decision could not be saved.",
+  "day.merge.pickFirst": "Choose which record stands first.",
+  "day.merge.cta": "Merge them",
+  "day.merge.keepBoth": "Different records",
+  "day.merge.fieldDisplayName": "Company name",
+  "day.merge.fieldLegalName": "Legal name",
+  "day.merge.fieldName": "Name",
+  "day.merge.fieldEmail": "Email",
+  "day.merge.fieldPhone": "Phone",
+  "day.merge.fieldMatchedLane": "Matched on",
+  "day.merge.fieldChannel": "Channel identity",
+  "day.merge.signalAgree": "agree",
+  "day.merge.signalCollide": "conflict",
+  "day.merge.signalOneSided": "one side only",
   "nav.reports": "Reports",
   "nav.ai": "Ask Margince",
   "nav.settings": "Settings",
@@ -108,7 +131,6 @@ export const en = {
   "nav.group.records": "Records",
   "nav.group.work": "Work",
   "nav.group.intelligence": "Intelligence",
-  "nav.dedupe": "Duplicates",
   "nav.offers": "Offer",
   "nav.share": "Sharing",
   "nav.search": "Search results",
@@ -118,10 +140,8 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
-  "shell.approvals": "Decisions",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
-  "shell.approvalsWaiting": "Decisions — {count} waiting",
   "shell.signOutAria": "Sign out",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
@@ -1951,13 +1971,9 @@ export const en = {
   "offer.viewPdf": "View PDF",
   "offer.pdfUnavailable": "PDF rendering not available on this deployment.",
 
-  "inbox.sub":
-    "everything staged, waiting on your call — nothing runs without it",
   "inbox.viaTool": "via {verb}",
   "inbox.approveEdited": "Approve edited",
   "inbox.reject": "Reject",
-  "inbox.tab.pending": "Pending",
-  "inbox.tab.decided": "Decided",
   "inbox.rejectReason": "Reason",
   "inbox.draftSubject": "Subject",
   "inbox.draftBody": "Message",
@@ -1973,36 +1989,6 @@ export const en = {
   "inbox.status.approved": "Approved",
   "inbox.status.rejected": "Rejected",
   "inbox.status.expired": "Expired",
-
-  // One act's proposals, read as one question (a site read publishes the
-  // company's facts plus a lead per person on the team page). The count is
-  // always two or more — a bundle of one is drawn as an ordinary row — so these
-  // sentences need no singular form; the per-member report does, because any
-  // one of its outcomes can hold a single proposal.
-  "inbox.bundle.why":
-    "One action staged these {count} proposals together. Answer them all at once, or open them and decide one at a time.",
-  "inbox.bundle.members": "The {count} proposals",
-  "inbox.bundle.approveAll": "Approve all {count}",
-  "inbox.bundle.rejectAll": "Reject all {count}",
-  "inbox.bundle.approveAllConfirm":
-    "Every proposal is still decided on its own: one that has lapsed, or that somebody has already answered, is reported back rather than overwritten, and the rest go through.",
-  "inbox.bundle.rejectReasonHint":
-    "Recorded on every proposal this rejects, and shared with the people they were staged for.",
-  "inbox.bundle.expiresIn": "first expires in {countdown}",
-  "inbox.bundle.result.approved": "{count} approved",
-  "inbox.bundle.result.rejected": "{count} rejected",
-  "inbox.bundle.result.alreadyDecided.one":
-    "{count} already carried a verdict, which stands as it was.",
-  "inbox.bundle.result.alreadyDecided.other":
-    "{count} already carried verdicts, which stand as they were.",
-  "inbox.bundle.result.expired.one":
-    "{count} had already lapsed — propose it again to decide it.",
-  "inbox.bundle.result.expired.other":
-    "{count} had already lapsed — propose them again to decide them.",
-  "inbox.bundle.result.effectFailed.one":
-    "{count} was approved, but its change did not land — that record is unchanged.",
-  "inbox.bundle.result.effectFailed.other":
-    "{count} were approved, but their changes did not land — those records are unchanged.",
 
   "home.pipelineWeighted": "{amount} weighted",
   "home.pipelineCount.one": "{count} open deal",
@@ -2125,7 +2111,7 @@ export const en = {
   "home.snooze": "Snooze",
   "home.snoozedState": "snoozed",
 
-  "enrich.toInbox": "Open inbox",
+  "enrich.toInbox": "Open Today",
 
   "deepread.title": "Read the full site",
   "deepread.sub":
@@ -2540,30 +2526,11 @@ export const en = {
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
-  "tasks.overdue": "Overdue",
-  "tasks.today": "Today",
-  "tasks.upcoming": "Upcoming",
-  "tasks.undated": "No due date",
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
   "tasks.detail": "Task",
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
-  "tasks.new": "New task",
-  "tasks.subject": "Subject",
-  "tasks.dueDate": "Due date",
-  "tasks.remindAt": "Remind me at",
-  "tasks.remind": "Remind me",
-  "tasks.reminder": "Reminder",
-  "tasks.setReminder": "Set reminder",
-  "tasks.clearReminder": "Clear reminder",
-  // The scheduled-send queue's front door, offered here because a message the
-  // rep told the product to send later is work of theirs that has not happened
-  // yet. "Waiting to send" covers a message that is queued AND one a gate
-  // stopped: both are waiting, and only the page can say which.
-  "tasks.scheduledWaiting.one": "One message is waiting to send.",
-  "tasks.scheduledWaiting.other": "{count} messages are waiting to send.",
-  "tasks.scheduledOpen": "Scheduled messages",
 
   "reports.sub": "deals by stage — unweighted next to weighted",
   "reports.currency": "Currency",
@@ -3364,36 +3331,6 @@ export const en = {
     "Reads your mail, and sends only what you approve. You grant it on Google's own screen, and can disconnect any time.",
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, choose Advanced → Continue. Nothing sends without your approval.",
-  "dedupe.intro":
-    "Pairs flagged as likely the same person or company. Merging keeps everything from both — every address, number, note and activity moves onto the record you keep. Dismissing tells the system to never ask about this pair again.",
-  "dedupe.loading": "Loading the review queue…",
-  "dedupe.empty": "No duplicates waiting — the queue is clear.",
-  "dedupe.confidence": "Match confidence:",
-  "dedupe.field": "Field",
-  "dedupe.signal": "Signal",
-  "dedupe.evidenceTable": "Field-by-field evidence",
-  "dedupe.keepsBoth":
-    "Both values are kept. Choosing a record decides which one survives and which value is shown first — nothing is deleted.",
-  "dedupe.signalAgree": "agree",
-  "dedupe.signalCollide": "conflict",
-  "dedupe.signalOneSided": "one side only",
-  // "Keep" NOT "Keep left": the radio sits in a column header over per-field
-  // values, and "keep left" there reads as "keep the left VALUE and drop the
-  // right one" — which is the opposite of what a merge does. It picks the
-  // surviving RECORD; every value from both moves onto it. The two labels
-  // stay distinguishable by side, because two identically-named radios in
-  // one group are unusable to a screen reader.
-  "dedupe.left": "Keep the left record",
-  "dedupe.right": "Keep the right record",
-  "dedupe.kindPerson": "Person",
-  "dedupe.kindOrganization": "Company",
-  "dedupe.kindLead": "Lead",
-  "dedupe.mergeCta": "Merge, keeping everything",
-  "dedupe.notDuplicateCta": "Not a duplicate",
-  "dedupe.decided": "Decision saved.",
-  "dedupe.undoCta": "Undo",
-  "dedupe.undone": "Pair re-opened.",
-  "dedupe.dismissNote": "Dismiss",
   "backfill.title": "Import your mail history",
   "backfill.intro":
     "Choose how far back to import. You'll see the scope and estimated cost before anything runs — and you can skip this entirely.",

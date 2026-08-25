@@ -21366,6 +21366,7 @@ export interface components {
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
             confidence?: number;
             subject?: components["schemas"]["AttentionSubject"];
+            pair?: components["schemas"]["AttentionPair"];
             /**
              * Format: date-time
              * @description When this is due (tasks), or when it lapses (approvals).
@@ -21384,6 +21385,67 @@ export interface components {
              *     the read-only fallback for a receipt.
              */
             actions: ("decide" | "merge" | "complete" | "snooze" | "open")[];
+        };
+        /**
+         * @description The two records a duplicate item proposes to merge, with the detection-time
+         *     evidence that raised it. Present so the decision can be MADE where it is
+         *     shown: a card that named neither record could only ask a reader to go and
+         *     look, which is the hand-off this surface exists to remove.
+         *
+         *     Sent only for `source: dedupe_candidate`, and only when the reader may see
+         *     BOTH sides — the queue's own both-sides-visible rule decides that, and an
+         *     item the reader may not fully see is not offered as a decision at all.
+         */
+        AttentionPair: {
+            left: components["schemas"]["AttentionPairSide"];
+            right: components["schemas"]["AttentionPairSide"];
+            /**
+             * @description The per-field snapshot the detector saw, in the order it weighed them.
+             *     `field` is a stable key the client translates, never a column name to
+             *     print: a reader asked to compare `full_name` is being shown the
+             *     database rather than their own records.
+             */
+            evidence: components["schemas"]["AttentionPairEvidence"][];
+        };
+        /** @description One field the detector compared across the two records. */
+        AttentionPairEvidence: {
+            /**
+             * @description Which attribute was compared. Mirrors the detector's own vocabulary, held by a gate that fails in both directions — a field missing here reaches a reader as a database column name, and one listed here that nothing writes is a word the client translates for nothing.
+             * @enum {string}
+             */
+            field: "display_name" | "legal_name" | "full_name" | "email" | "phone" | "matched_lane" | "channel_identity";
+            left_value?: string | null;
+            right_value?: string | null;
+            /**
+             * @description What the detector made of the comparison. Mirrors the detector's own vocabulary, held by a gate that fails in both directions: a signal missing here costs its evidence row the whole card, and one listed here that nothing writes is a phrase every locale carries for a row that never arrives.
+             * @enum {string}
+             */
+            signal: "collide" | "one_sided" | "exact_conflict";
+        };
+        /** @description One side of a proposed merge, named and weighed so a reader can tell which record to keep. */
+        AttentionPairSide: {
+            /** Format: uuid */
+            id: string;
+            /** @description The record's display name, resolved under the reader's own scope. */
+            label: string;
+            /** @description One distinguishing line — a company's domain, a person's email. */
+            detail?: string;
+            /**
+             * Format: date-time
+             * @description Which side is the older record, the usual tiebreak when the evidence is even.
+             */
+            created_at?: string;
+            /**
+             * @description How many records hang off this side, where the record type carries such a
+             *     count under the reader's own scope: contacts on a company. The reader's
+             *     best single signal for which side is the real one, and the thing a merge
+             *     would move.
+             *
+             *     ABSENT rather than zero where no scoped count exists — a person and a lead
+             *     send none today. Zero would claim the side carries nothing, which is a
+             *     different fact from not having asked.
+             */
+            related_count?: number;
         };
         /** @description The record this item is about, named so a reader knows who it concerns before opening anything. */
         AttentionSubject: {

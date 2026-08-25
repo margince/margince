@@ -565,7 +565,7 @@ describe("AgentRail", () => {
 
     await openPanel(user, container);
     const row = screen.getByRole("link", { name: /^Duplicate pairs open/ });
-    expect(row.getAttribute("href")).toBe("#/dedupe");
+    expect(row.getAttribute("href")).toBe("#/today");
     expect(row.textContent).toContain("2");
   });
 

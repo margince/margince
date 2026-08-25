@@ -200,7 +200,6 @@ function BarFrame({
         <TopBar
           route={route}
           section={section}
-          counts={counts}
           collapsed={collapsed}
           onToggle={() => setCollapsed((current) => !current)}
           onOpenSearch={openSearch}

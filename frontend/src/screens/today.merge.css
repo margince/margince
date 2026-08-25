@@ -1,0 +1,144 @@
+/*
+ * The merge decision card.
+ *
+ * Two records side by side, the comparison under them, the verbs last. The
+ * layout IS the argument: a reader decides by comparing two things, so the two
+ * things are drawn as a pair on one line and everything else is subordinate to
+ * them. Every value is a token — the card has no colours of its own.
+ */
+
+.merge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.merge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.merge-question {
+  margin: 0;
+  color: var(--textPrimary);
+}
+
+/* The two sides share one grid so they are the same width whatever they hold.
+ * Two tiles that sized themselves would make the record with the longer name
+ * look like the larger record, which is the one thing this comparison must not
+ * imply. */
+.merge-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.merge-side {
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+  background: var(--bgCard);
+  transition: border-color var(--dur-state) var(--ease-out);
+}
+
+/* The chosen side is marked by its BORDER rather than a fill: the fill would
+ * have to be a colour, and there is no colour here that means "this record
+ * survives" without also meaning good or bad about the other one. */
+.merge-side[data-picked] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.merge-side-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.merge-side-name {
+  color: var(--textPrimary);
+  font-weight: var(--fw-semibold);
+}
+
+.merge-side-detail {
+  color: var(--textMeta);
+}
+
+/* The evidence is a definition list, not a table: it has one column of names
+ * and one of values, and a table would promise a grid the reader can scan
+ * across rows that do not relate to each other. */
+.merge-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  background: var(--bgHover);
+}
+
+.merge-evidence-row {
+  display: grid;
+  grid-template-columns: minmax(0, 6rem) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.merge-evidence-field {
+  color: var(--textMeta);
+}
+
+/* The two values sit either side of the verdict, in the same order as the two
+ * tiles above them, so a reader's eye keeps one mapping for the whole card. */
+.merge-evidence-values {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  color: var(--textPrimary);
+  min-width: 0;
+}
+
+.merge-evidence-values > span {
+  overflow-wrap: anywhere;
+}
+
+.merge-evidence-signal {
+  text-align: center;
+  color: var(--textMeta);
+}
+
+/* A collision is the row that decides the decision — two records that disagree
+ * on a field are the reason a person is being asked at all — so it is the one
+ * row allowed to carry a colour. */
+.merge-evidence-signal[data-signal="collide"] {
+  color: var(--warn);
+}
+
+.merge-verbs {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.merge-withheld {
+  color: var(--textMeta);
+  margin: 0;
+}
+
+/* Below the fold of a phone the two tiles stop being a comparison and become a
+ * list, which is the honest reading at that width: they are still the same two
+ * records, and stacking them keeps each one whole. */
+@media (max-width: 560px) {
+  .merge-sides {
+    grid-template-columns: 1fr;
+  }
+
+  .merge-evidence-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
