@@ -75,11 +75,15 @@ float waves(float along, float t) {
   // waviness is crests PER LENGTH of rim, not how far each one swells. A long
   // wave across a whole side reads as the edge breathing; these put several
   // crests on every side.
-  float w = sin(along * 0.0290 - t * 1.15);
-  w += 0.70 * sin(along * 0.0495 + t * 0.83);
-  w += 0.44 * sin(along * 0.0815 - t * 1.75);
-  w += 0.26 * sin(along * 0.1310 + t * 2.30);
-  return w / 2.4;
+  // The high harmonics carry the roughness, so they are the ones to hold back:
+  // each term above the first is weighted well under the one before it, which is
+  // what keeps the sum a rolling line rather than a busy one. Same number of
+  // crests per side, softer shoulders on each.
+  float w = sin(along * 0.0255 - t * 1.15);
+  w += 0.62 * sin(along * 0.0430 + t * 0.83);
+  w += 0.28 * sin(along * 0.0690 - t * 1.75);
+  w += 0.11 * sin(along * 0.1050 + t * 2.30);
+  return w / 2.01;
 }
 
 /** The hues, cool to warm and back, so the loop closes without a seam. */
@@ -110,7 +114,7 @@ void main() {
   // Amplitude, and it is generous on purpose: the rim nearly doubles at a crest
   // and thins to well under its resting width in a trough, which is what makes
   // the wave legible on something only a few pixels across.
-  float thick = uThick * (1.0 + 0.85 * w) + 1.0;
+  float thick = uThick * (1.0 + 0.78 * w) + 1.0;
 
   // The whole reason this is a shader: one pixel of smoothstep across the
   // boundary, computed per fragment. There is no raster to displace and nothing
