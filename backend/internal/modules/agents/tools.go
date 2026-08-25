@@ -60,10 +60,10 @@ type StageResolver interface {
 // Every verb the contract declares with `x-mcp-tool` is registered by one of
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail) {
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor) {
 	r.Register(searchRecords{p: p})
 	r.Register(readRecord{p: p})
-	r.Register(createRecord{p: p})
+	r.Register(createRecord{p: p, duplicates: duplicates})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
@@ -234,6 +234,12 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 
 type createRecord struct {
 	p datasource.SystemOfRecordProvider
+	// duplicates reports what the create filed for review. Nil where no reader
+	// is bound — an installation whose system of record is an overlay mirror has
+	// no queue of ours to read — and a nil reader reports nothing rather than
+	// failing: silence is what this surface did before, so it is the safe
+	// degradation.
+	duplicates OpenDuplicatesFor
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
@@ -247,7 +253,7 @@ func (t createRecord) Spec() mcp.ToolSpec {
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[wireRecord](),
+		OutputSchema: schemaFor[createdRecord](),
 	}
 }
 
@@ -270,7 +276,14 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err != nil {
 		return nil, err
 	}
-	return readBack(ctx, t.p, ref)
+	rec, err := readBackRecord(ctx, t.p, ref)
+	if err != nil {
+		return nil, err
+	}
+	return marshalResult(createdRecord{
+		wireRecord:          rec,
+		DuplicateCandidates: t.reportDuplicates(ctx, args.RecordType, ref.ID),
+	}, nil)
 }
 
 // StageInfo puts a create the contract tightened to confirm-first in the inbox

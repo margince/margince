@@ -54,7 +54,7 @@ func (p versionedDeal) Read(context.Context, datasource.EntityRef) (datasource.R
 func advanceSpec(t *testing.T, deps restCommandDeps) (*agents.Registry, mcp.ToolSpec) {
 	t.Helper()
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
 	spec, _, ok := operationSpec(agentPolicies["POST /v1/deals/{id}/advance"], reg)
 	if !ok {
 		t.Fatal("the registry serves no advance_deal spec for the REST twin to admit against")
@@ -160,7 +160,7 @@ func TestAWriteWithNoAdmittedPinIsForwardedUnconditioned(t *testing.T) {
 		records: versionedDeal{stageID: stage, version: 12},
 	}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
 	// A create names no record and reads none, so its tool twin is static-tier:
 	// there is nothing for the gate to have proved anything about.
 	pol := agentPolicies["POST /v1/people"]

@@ -101,7 +101,7 @@ func TestAConcurrentCloseSurvivesTheAutoExecutedMoveThatRacedIt(t *testing.T) {
 	// The stage resolver reads pipeline configuration and nothing this race
 	// touches, so it goes straight to the real provider — only the RECORD read
 	// carries the interleaving.
-	agents.RegisterCoreTools(registry, racing, native, nil, fieldOwnership{pool: e.Pool}, nil)
+	agents.RegisterCoreTools(registry, racing, native, nil, fieldOwnership{pool: e.Pool}, nil, nil)
 
 	deal := seedDealForPinRace(human, t, native, e.Rep1, pipeline, open)
 
