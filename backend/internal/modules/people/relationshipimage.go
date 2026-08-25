@@ -32,6 +32,10 @@ import (
 // agent's later patch of a flag nobody typed would stage for a human decision it
 // never used to need. What a create records is its own question, asked of every
 // record type at once, and it is not this one's to answer.
+// relationshipAnchorDeal names the deal anchor, so the switch below and any
+// later reader share one spelling of it.
+const relationshipAnchorDeal = "deal"
+
 func relationshipImage(rel relationshipRow) map[string]any {
 	return map[string]any{
 		relationshipKindField: rel.Kind,
@@ -64,9 +68,9 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 	anchorObject, _ := relationshipAnchor(rel.Kind)
 	var anchorID ids.UUID
 	switch anchorObject {
-	case "person":
+	case entityPerson:
 		anchorID = rel.PersonID.UUID
-	case "deal":
+	case relationshipAnchorDeal:
 		anchorID = rel.DealID.UUID
 	case projectObjectName:
 		anchorID = rel.ProjectID.UUID

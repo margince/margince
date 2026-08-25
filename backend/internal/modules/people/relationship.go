@@ -105,9 +105,11 @@ func scanRelationship(r pgx.Row) (relationshipRow, error) {
 // inserted takes the statement's own answer to which branch of an upsert ran.
 func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relationshipRow, error) {
 	var out relationshipRow
-	targets := []any{&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
+	targets := []any{
+		&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
 		&out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
-		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt}
+		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt,
+	}
 	if prior != nil {
 		targets = append(targets, prior)
 	}

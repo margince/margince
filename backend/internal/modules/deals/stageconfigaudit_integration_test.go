@@ -183,7 +183,7 @@ func TestARenamedStageRecordsTheNameItHadBefore(t *testing.T) {
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
-	stage := e.seedStage(t, ctx, "Discovery", 20)
+	stage := e.seedStage(ctx, t, "Discovery", 20)
 	renamed := "Qualified"
 	if _, err := e.store.UpdateStage(ctx, stage, UpdateStageInput{Name: &renamed}); err != nil {
 		t.Fatalf("renaming the stage: %v", err)
@@ -206,7 +206,7 @@ func TestAWonStageRecordsTheProbabilityTheRowActuallyHolds(t *testing.T) {
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
-	stage := e.seedStage(t, ctx, "Negotiation", 60)
+	stage := e.seedStage(ctx, t, "Negotiation", 60)
 	won, ignored := string(SemanticWon), 42
 	updated, err := e.store.UpdateStage(ctx, stage, UpdateStageInput{Semantic: &won, WinProbability: &ignored})
 	if err != nil {
@@ -229,7 +229,7 @@ func TestAWonStageRecordsTheProbabilityTheRowActuallyHolds(t *testing.T) {
 
 // seedStage writes one open stage on a pipeline of its own, through the real
 // creators, and hands back its id.
-func (e *configEnv) seedStage(t *testing.T, ctx context.Context, name string, probability int) ids.StageID {
+func (e *configEnv) seedStage(ctx context.Context, t *testing.T, name string, probability int) ids.StageID {
 	t.Helper()
 	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + name})
 	if err != nil {

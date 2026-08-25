@@ -215,8 +215,16 @@ type offerTotalsChange struct{ Before, After OfferFigures }
 // offerTotalsImage renders one side of that transition as an audit image,
 // keyed by the column names, so field history reads three money fields moving
 // on the offer rather than a shape only this package understands.
+// The three money columns an offer's totals image carries, named so the image
+// and the statement that writes them spell each one once.
+const (
+	offerKeyNet   = "net_minor"
+	offerKeyTax   = "tax_minor"
+	offerKeyGross = "gross_minor"
+)
+
 func offerTotalsImage(f OfferFigures) map[string]any {
-	return map[string]any{"net_minor": f.NetMinor, "tax_minor": f.TaxMinor, "gross_minor": f.GrossMinor}
+	return map[string]any{offerKeyNet: f.NetMinor, offerKeyTax: f.TaxMinor, offerKeyGross: f.GrossMinor}
 }
 
 // lineFieldEvidence is what a line write contributes as context ABOUT the

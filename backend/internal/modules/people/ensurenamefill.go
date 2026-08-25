@@ -33,6 +33,13 @@ import (
 //
 // Unconfident parses write nothing: `schluepmann` is not evidence of a surname
 // with no given name, it is evidence that the local part did not say.
+// columnFirstName and columnLastName are the split-name columns this fill
+// writes, named once so the statement, the image and the event agree.
+const (
+	columnFirstName = "first_name"
+	columnLastName  = "last_name"
+)
+
 func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, parsed ParsedName, res *EnsureCounterpartyResult) error {
 	if !parsed.Confident {
 		return nil
@@ -94,10 +101,10 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	// The split columns were both empty — the WHERE clause above is that
 	// guarantee, not an assumption — while full_name moved only on the branch
 	// that rewrote it, which is why the images are narrowed rather than asserted.
-	changed := map[string]any{"first_name": parsed.First, "last_name": parsed.Last}
+	changed := map[string]any{columnFirstName: parsed.First, columnLastName: parsed.Last}
 	before, after := storekit.ChangedColumns(
-		map[string]any{"first_name": nil, "last_name": nil, "full_name": previousFullName},
-		map[string]any{"first_name": parsed.First, "last_name": parsed.Last, "full_name": fullName},
+		map[string]any{columnFirstName: nil, columnLastName: nil, fieldFullName: previousFullName},
+		map[string]any{columnFirstName: parsed.First, columnLastName: parsed.Last, fieldFullName: fullName},
 	)
 	auditID, err := storekit.Audit(ctx, tx, "update", entityPerson, personID.UUID, before, after)
 	if err != nil {

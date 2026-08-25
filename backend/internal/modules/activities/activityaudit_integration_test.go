@@ -44,8 +44,9 @@ func auditImagesFor(t *testing.T, e *sendEnv, activityID ids.UUID) (before, afte
 	return before, after
 }
 
-func loggedNote(t *testing.T, e *sendEnv, ctx context.Context, subject, body string) crmcontracts.Activity {
+func loggedNote(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Activity {
 	t.Helper()
+	subject, body := "Kickoff", "the original text"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind: "note", Subject: &subject, Body: &body, Source: "ui",
 	})
@@ -65,7 +66,7 @@ func loggedNote(t *testing.T, e *sendEnv, ctx context.Context, subject, body str
 func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+	activity := loggedNote(ctx, t, e)
 
 	revised := "the revised text"
 	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
@@ -88,7 +89,7 @@ func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
 func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+	activity := loggedNote(ctx, t, e)
 
 	renamed := "Kickoff, revised"
 	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
@@ -186,7 +187,7 @@ func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
 func TestAnAudienceChangeRecordsWhatItNarrowedFrom(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+	activity := loggedNote(ctx, t, e)
 	activityID := ids.From[ids.ActivityKind](ids.UUID(activity.Id))
 
 	if _, err := e.store(nil).SetAudience(ctx, activityID, SetAudienceInput{
@@ -217,7 +218,7 @@ func TestAnAudienceChangeRecordsWhatItNarrowedFrom(t *testing.T) {
 func TestAnUnchangedAudienceStaysOutOfBothImages(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+	activity := loggedNote(ctx, t, e)
 	activityID := ids.From[ids.ActivityKind](ids.UUID(activity.Id))
 
 	for _, members := range [][]AudienceMember{
