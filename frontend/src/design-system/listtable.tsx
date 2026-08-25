@@ -284,6 +284,45 @@ function writeWidths(key: string | undefined, widths: Record<string, number>) {
 /** Placeholder rows while the first page loads: enough to read as a list. */
 const PLACEHOLDER_ROWS = [0, 1, 2, 3, 4];
 
+/**
+ * Everything narrowing a list, as one value two renders can be compared by.
+ *
+ * Exported for the tests that pin it: what it must and must not call a change
+ * is the whole of why the reset below fires when it does.
+ *
+ * A caller that declares `narrowKey` has already answered what its narrowing
+ * is; the rest are read straight off the dials. `chosen`'s keys are sorted
+ * because two objects holding the same filters in a different insertion order
+ * are the same narrowing, and a signature that said otherwise would send the
+ * reader back to page one for nothing.
+ */
+export function narrowingSignature(dials: {
+  search?: string;
+  narrowKey?: string;
+  chosen: Readonly<Record<string, string>>;
+  activeView: number;
+  perPage: number;
+  sort?: string;
+  archived?: boolean;
+  scopeKey: string;
+}): string {
+  const narrowedBy =
+    dials.narrowKey ??
+    Object.keys(dials.chosen)
+      .sort()
+      .map((name) => `${name}=${dials.chosen[name]}`)
+      .join("&");
+  return JSON.stringify([
+    dials.search ?? "",
+    narrowedBy,
+    dials.activeView,
+    dials.perPage,
+    dials.sort ?? "",
+    dials.archived ?? false,
+    dials.scopeKey,
+  ]);
+}
+
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 /** Is this column the one currently sorted, and which way? */
@@ -330,6 +369,7 @@ export function ListTable<Row>({
   onPerPage,
   page: controlledPage,
   onPage,
+  bodyRef,
   pending = false,
   problem,
   widthsKey,
@@ -459,6 +499,18 @@ export function ListTable<Row>({
   /** The rendered page changed, whether by the pager or by a reset. */
   onPage?: (next: number) => void;
   /**
+   * The element the ROWS scroll in, handed back to a caller that has something
+   * to do with it — remembering where the reader was, which only the caller
+   * knows the history entry for.
+   *
+   * A full-height list is the one place the page column never moves: the rows
+   * take the overflow and the column around them is exactly its own height, so
+   * a caller watching the column watches an element that is always at zero.
+   * The table keeps owning the scrolling; this is a second reference to the
+   * same element, not a second scroller.
+   */
+  bodyRef?: React.RefObject<HTMLDivElement | null>;
+  /**
    * The rows are still loading. The surface keeps its header and controls and
    * puts placeholders in the body: the primary action and the dials belong to
    * the screen, not to the response, and a create button that disappears while
@@ -499,9 +551,6 @@ export function ListTable<Row>({
   // owning it everywhere else, so no caller is made to hold a number it has
   // nowhere to keep.
   const [ownPage, setOwnPage] = useState(1);
-  // Whether a narrowing dial has moved since this table mounted. See the reset
-  // effect below: arriving is not narrowing.
-  const narrowed = useRef(false);
   const page = controlledPage ?? ownPage;
   const setPage = (to: number) => {
     setOwnPage(to);
@@ -686,32 +735,48 @@ export function ListTable<Row>({
   // looking at rows they never asked for. Same for widening the set with
   // Show archived.
   //
-  // Not on ARRIVAL, though. An effect with a dependency list runs on the first
-  // render as well as on a change, and a caller whose page comes from the
-  // address is then reset off the page it was addressed with — a reader
-  // following a link to page 2 watched it become page 1 and the URL rewrite
-  // itself. Nothing is being narrowed on arrival: the reset exists for a dial
-  // the reader MOVES.
+  // Not on ARRIVAL, though: a caller whose page comes from the address would be
+  // reset off the page it was addressed with, and a reader following a link to
+  // page 6 would watch it become page 1 and the URL rewrite itself.
   //
-  // These deps are the TRIGGER, not values the body reads — the body only calls
-  // setPage(1). The lint rule cannot see that distinction, and dropping them
-  // would break the reset.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only deps
-  useEffect(() => {
-    if (!narrowed.current) {
-      narrowed.current = true;
-      return;
-    }
-    setPage(1);
-  }, [
-    search?.value,
-    narrowKey ?? chosen,
+  // So the reset compares the narrowing to what it was, rather than counting
+  // effect runs. Counting runs looks equivalent and is not: an effect runs on
+  // arrival, it runs TWICE on arrival under StrictMode, and it runs again for
+  // any dep that settles a tick after mount — three different arrivals a
+  // run-counter reads as a dial the reader moved. Comparing values has no such
+  // gap, because arriving cannot change a value that was read during the same
+  // render.
+  const narrowing = narrowingSignature({
+    search: search?.value,
+    narrowKey,
+    chosen,
     activeView,
     perPage,
-    sort?.value,
-    archived?.checked,
+    sort: sort?.value,
+    archived: archived?.checked,
     scopeKey,
-  ]);
+  });
+  // Seeded during the FIRST render, not in the effect, so arrival is never a
+  // change no matter how many times the effect runs for it.
+  const narrowedBy = useRef(narrowing);
+  // `setPage` is re-made every render and the effect must not re-run for that;
+  // what it does depends only on the signature.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setPage is stable in effect
+  useEffect(() => {
+    if (narrowedBy.current === narrowing) {
+      return;
+    }
+    narrowedBy.current = narrowing;
+    setPage(1);
+    // And to the top of them. Page one of a differently-narrowed list is a
+    // different set of rows, so an offset carried over from the old one puts the
+    // reader in the middle of an answer they have not seen the start of. The
+    // pager does this for its own moves (see `goto`); a narrowing is the other
+    // way the visible page changes underneath them.
+    if (scroller.current) {
+      scroller.current.scrollTop = 0;
+    }
+  }, [narrowing]);
 
   // The overlay needs two numbers CSS cannot work out for itself: where the
   // frozen column ends, which a reader changes by dragging its grip, and how
@@ -876,7 +941,12 @@ export function ListTable<Row>({
       {body ?? (
         <div
           className={`lt-scroll${shifted ? " shifted" : ""}`}
-          ref={scroller}
+          ref={(node) => {
+            scroller.current = node;
+            if (bodyRef) {
+              bodyRef.current = node;
+            }
+          }}
           {...region}
           onScroll={(event) => {
             const next = event.currentTarget.scrollLeft > 0;

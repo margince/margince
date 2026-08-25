@@ -10,7 +10,8 @@ import {
   useState,
 } from "react";
 import { FIRST_PAGE } from "../api/client";
-import { navigate, type Route, routeHash } from "../app/router";
+import { navigate, type Route, routeHash, useHash } from "../app/router";
+import { useScrollMemory } from "../app/scrollmemory";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import {
@@ -551,6 +552,13 @@ export function ListTable<Row>({
   // TABLE owns by default, and a screen that never puts it in the URL keeps the
   // table's own number.
   const [params, setParams] = useUrlParams();
+  // Where the reader was in the ROWS, which the shell cannot remember for them.
+  // A full-height list takes the overflow itself, so the page column the shell
+  // watches is at zero on every one of these screens and Back returned readers
+  // to the top of a list they had scrolled a long way down. Its own lane, so a
+  // record page's column and a list's rows are two separate places to be.
+  const rowsScroller = useRef<HTMLDivElement>(null);
+  useScrollMemory(rowsScroller, useHash(), "rows");
   const [localSearch, setLocalSearch] = useState(query.q);
   // Which view tab is lit is READ from the query rather than remembered: a tab
   // is a claim about what the list is showing, and a reader who then edits a
@@ -793,6 +801,7 @@ export function ListTable<Row>({
       // so on arrival would put a dial in front of a reader who turned nothing.
       page={pageOf(params)}
       onPage={(next) => setParams(withPage(currentParams(), next))}
+      bodyRef={rowsScroller}
       // The unit key names the table for the widths it remembers.
       widthsKey={unit}
       body={body}

@@ -93,10 +93,17 @@ export function currentParams(): UrlParams {
  * entry left behind therefore always describes the list as it stands, which is
  * exactly what makes Back from a record restore it.
  *
- * `location.replace` rather than `history.replaceState` for the same reason
- * `navigateReplacing` uses it: the hash IS this router's state, and
- * `replaceState` leaves no `hashchange` behind, so the store would keep serving
- * the old dials while the address bar showed the new ones.
+ * `history.replaceState` and not `location.replace`: the latter DISCARDS the
+ * entry's state object. Nothing here keeps state in it, but app/scrollmemory.ts
+ * stamps the entry's identity there, so every turn of a dial threw away the name
+ * of the place the reader was standing in and the offset remembered under it
+ * became unreachable. Passing the current state through keeps the entry the same
+ * entry. app/router.tsx's `navigateReplacing` is the same write for the PATH
+ * half, held to the same obligation by app/addressstate.test.ts.
+ *
+ * It costs the `hashchange` that `location.replace` would have fired, which is
+ * why the announcement below is not an optimisation but the thing that makes
+ * this work at all.
  */
 export function replaceParams(params: UrlParams): void {
   const next = hashWithParams(globalThis.location.hash, params);
@@ -105,7 +112,7 @@ export function replaceParams(params: UrlParams): void {
     // search box that has settled back to where it started.
     return;
   }
-  globalThis.location.replace(next);
+  globalThis.history.replaceState(globalThis.history.state, "", next);
   // Told directly rather than waited for: `hashchange` arrives a task later, and
   // in that gap the list would still be reading the dials the reader has just
   // changed — one fetch for the previous query before the one they asked for.

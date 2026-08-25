@@ -191,13 +191,24 @@ export function navigate(route: Route): void {
  * on it, it redirects again, and the reader cannot get out of the loop with the
  * one key that exists for getting out of things.
  *
- * `location.replace` rather than `history.replaceState`, because the hash IS
- * this router's state: `replaceState` leaves no `hashchange` behind, so the
- * store would keep serving the old address while the URL bar showed the new
- * one.
+ * `history.replaceState` and not `location.replace`, which is the obvious
+ * spelling and the wrong one: `location.replace` DISCARDS the entry's state
+ * object. app/scrollmemory.ts stamps the entry's identity in there, so a
+ * redirect — or any of the several screens that normalise their own address on
+ * arrival — wiped the name of the place the reader was standing in, and the
+ * offset remembered under it could never be found again. Carrying the current
+ * state through keeps the entry the same entry.
+ *
+ * It fires no `hashchange`, so the store has to be told; app/urlstate.ts's
+ * `replaceParams` is the same write for the QUERY half and says the same thing.
  */
 export function navigateReplacing(route: Route): void {
-  globalThis.location.replace(routeHash(route));
+  globalThis.history.replaceState(
+    globalThis.history.state,
+    "",
+    routeHash(route),
+  );
+  announce();
 }
 
 // The one-time credentials an address may carry, and why they are taken HERE.

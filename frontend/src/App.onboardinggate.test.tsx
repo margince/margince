@@ -120,11 +120,35 @@ function completedWizardFetch(shape: InstallShape) {
 }
 
 /** Every address the app moved to, in order, so a ping-pong is legible as one. */
+/**
+ * Every address the app MOVES to, by whichever primitive it moves with.
+ *
+ * A `hashchange` listener alone is not enough and stopped seeing anything the
+ * moment redirects began replacing the entry rather than assigning to the hash:
+ * `history.replaceState` fires no `hashchange`, so a loop would have counted
+ * zero moves and passed. What this test is about is how many times the app
+ * decides to go somewhere, so it counts the decisions.
+ */
 function recordHashChanges(): string[] {
   const seen: string[] = [];
+  const at = () => window.location.hash;
   window.addEventListener("hashchange", () => {
-    seen.push(window.location.hash);
+    seen.push(at());
   });
+  for (const write of ["pushState", "replaceState"] as const) {
+    // The prototype's own, not whatever is on `history` right now: binding the
+    // latter binds the PREVIOUS test's spy, and the two then call each other
+    // until the stack runs out.
+    const original = History.prototype[write];
+    vi.spyOn(window.history, write).mockImplementation((...args) => {
+      original.apply(window.history, args);
+      // A stamp on the entry the reader is already on names it; it is not a
+      // move, and it passes no URL.
+      if (args[2] !== undefined && args[2] !== null) {
+        seen.push(at());
+      }
+    });
+  }
   return seen;
 }
 
@@ -158,6 +182,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   window.location.hash = "";
 });
 
