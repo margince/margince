@@ -124,6 +124,39 @@ func queryAnswerOf(result search.QueryResult) agents.QueryAnswer {
 type placeCache struct{ people *people.Store }
 
 func (p placeCache) LookupPlace(ctx context.Context, query string) (search.Point, bool, error) {
+	// THE SCOPED LOOKUP IS ASKED FIRST, and the order is the security property
+	// rather than a preference.
+	//
+	// The exact place cache is installation-wide and unscoped, which is right
+	// for what it was built to hold: a public coordinate for a public place
+	// name, with no subject a grant could be about. But `addressQuery` builds
+	// its key from whatever parts of an address exist, and `locatable` admits a
+	// row carrying ONLY a city — so a company with no street mints a cache
+	// entry under the bare city name. Measured on a real installation: the key
+	// "munich" is in that table today.
+	//
+	// Asking the cache first would then let a caller learn that SOMEBODY is
+	// located in a city, out of a row they may not read, one city name at a
+	// time — the existence oracle the visibility rules exist to close. Asking
+	// the scoped lane first means a hit is already composed from companies this
+	// caller could have listed for themselves, and the cache is consulted only
+	// where they have no company to be told about.
+	//
+	// The cost is that a caller with no visible company in a city falls through
+	// to the cache and may still hit a bare-city key. That is the pre-existing
+	// behaviour of a table that predates this lane; what this ordering
+	// guarantees is that the NEW lane never widens it.
+	city, ok, err := p.people.LookupCity(ctx, query)
+	if err != nil {
+		return search.Point{}, false, err
+	}
+	if ok {
+		return search.Point{Lat: city.Lat, Lon: city.Lon}, true, nil
+	}
+	// The exact key: a full address a caller already holds, or a place this
+	// installation resolved for its own reasons. It answers the street-level
+	// centres the city lane cannot, which is what a caller sending a company's
+	// own address is asking about.
 	found, ok, err := p.people.LookupPlace(ctx, query)
 	if err != nil || !ok {
 		return search.Point{}, false, err

@@ -170,6 +170,13 @@ var composedIntents = map[string]bool{
 	// datasource seam. It is read-only and reaches nothing outside the
 	// workspace, which is what TestComposedIntentsNeverEgress holds it to.
 	"query_workspace": true,
+	// describe_query_vocabulary answers the document margince://schema/query
+	// publishes, for a client that reads TOOLS and not resources. It backs no
+	// REST operation at all: the vocabulary is composed at call time from the
+	// field catalog and the live column catalog, narrowed to what this
+	// principal may already read. Read-only, it returns no records, and it
+	// names nothing a caller could not reach by asking.
+	"describe_query_vocabulary": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are

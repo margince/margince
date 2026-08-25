@@ -143,6 +143,15 @@ func (inertChannelProviderDirectory) ChannelProviders(context.Context) ([]Channe
 	return nil, nil
 }
 
+// inertVocabulary answers a well-formed but empty vocabulary: the walk checks
+// the ENCODING of what a tool answers, and an empty document is still a
+// document.
+type inertVocabulary struct{}
+
+func (inertVocabulary) VocabularyDocument(context.Context) (json.RawMessage, error) {
+	return json.RawMessage(`{"version":"v1","targets":[]}`), nil
+}
+
 type inertRetriever struct{}
 
 func (inertRetriever) Search(context.Context, retrieval.Query) (retrieval.Result, error) {
@@ -195,6 +204,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
 	})
+	RegisterVocabularyTool(r, inertVocabulary{})
 	RegisterContextSearchTool(r, nil, inertRetriever{})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, nil

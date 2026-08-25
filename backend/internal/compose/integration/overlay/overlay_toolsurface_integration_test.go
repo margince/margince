@@ -74,6 +74,12 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// table. The plan only has to be well-formed — the refusal lands
 		// before the vocabulary is resolved, let alone the statement run.
 		"query_workspace": `{"plan":{"version":"v1","target":"deal"}}`,
+		// The vocabulary that plan is written in. It reads no records at all,
+		// which is exactly why it needs the guard: served here it would teach a
+		// caller a field list, and every plan they then wrote would be refused
+		// by the executor. One refusal, not a working description of an
+		// unavailable capability.
+		"describe_query_vocabulary": `{}`,
 		// The ranked sweep: the lexical and vector indexes hold no mirrored
 		// content, so an unguarded call answers an empty page — a believable
 		// "there is nothing like that here" for a workspace full of records.

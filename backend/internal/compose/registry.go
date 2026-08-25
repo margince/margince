@@ -177,6 +177,21 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// the same reason the intent tools' is: the executor queries native tables
 	// an overlay workspace has no rows in.
 	agents.RegisterQueryTool(registry, provider, nativeOnlyQueryRunner(sorMode, queryRunner(pool, embedder)))
+	// The vocabulary that plan is written in, as a TOOL and not only as the
+	// margince://schema/query resource — because a client that reads tools and
+	// not resources could otherwise watch query_workspace refuse a name and
+	// have no way to learn the right one. Same resolver, same document; the
+	// resource stays for the clients that prefer it.
+	//
+	// It takes the SAME outermost overlay guard query_workspace does. A
+	// vocabulary looks answerable anywhere — it describes a grammar rather
+	// than reading rows — but in an overlay workspace the plans it teaches are
+	// refused outright, so serving it there advertises a field list nothing
+	// can execute.
+	agents.RegisterVocabularyTool(registry, nativeOnlyVocabularyReader{
+		mode:  sorMode,
+		inner: search.NewQuerySchemaResource(queryVocabulary(pool)),
+	})
 	// The morning brief. It ranks the rep's own open deals out of the native
 	// tables, which an overlay workspace has no rows in, so it takes the same
 	// outermost guard the other native-only engines do: "not available here"

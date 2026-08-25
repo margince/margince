@@ -156,6 +156,14 @@ var _ datasource.SystemOfRecordProvider = seamProbeProvider{}
 // seamProbeRetriever is the retrieval seam's half of the same probe: both
 // methods answer errSeamReached, so a tool that let malformed arguments through
 // is distinguishable from one that refused them.
+// seamProbeVocabulary reports that the seam was reached, so the walk can prove
+// this tool's arguments are dispatched to it rather than swallowed.
+type seamProbeVocabulary struct{}
+
+func (seamProbeVocabulary) VocabularyDocument(context.Context) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 type seamProbeRetriever struct{}
 
 func (seamProbeRetriever) Search(context.Context, retrieval.Query) (retrieval.Result, error) {
@@ -261,6 +269,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached
 	})
+	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, errSeamReached
