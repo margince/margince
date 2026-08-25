@@ -33,6 +33,12 @@ import {
   relativeDays,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
+// The row shapes this card draws — `co-rowlink`, `co-row-meta` — are the
+// record page's, defined in company360.css. Imported here rather than left to
+// whichever screen happens to mount the card: without it the card renders
+// unstyled anywhere company360.css is not already on the page, which is what
+// Storybook showed — the meta parts ran together with no separator.
+import "./company360.css";
 import "./companywork.css";
 
 type Organization360 = components["schemas"]["Organization360"];

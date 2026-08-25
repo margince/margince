@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { CompanyFacts } from "./companyfacts";
-import { StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
 // The account's standing, in RecordView's `controls` slot: what the open
 // pipeline is worth, how much work is in flight, whose account it is.
@@ -52,7 +57,20 @@ const base = {
   },
 } as unknown as View;
 
+// The owner control is a live editor, so it reads the session for its own
+// write grant and the roster for its options. Every story routes both: without
+// them the stub's fallback reads as a malformed session, which closes every
+// grant and renders a branch none of these stories is named for.
+const roster = [
+  { id: "u-1", display_name: "Mira Voss" },
+  { id: "u-2", display_name: "Sofia Meier" },
+];
+
 function Box({ view }: Readonly<{ view?: View }>) {
+  installFetchStub({
+    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /users": () => jsonResponse({ data: roster, page }),
+  });
   return (
     <StoryProviders>
       {/* Narrow on purpose: the box lives in a record head's right-hand slot,
