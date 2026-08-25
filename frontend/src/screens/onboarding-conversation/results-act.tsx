@@ -135,7 +135,7 @@ export function ResultsAct({
       artifact={
         <div className="mw-review ob-conv-artifact">
           <div className="mw-review-heading">
-            <span>{t("ob.ai.liveArtifact")}</span>
+            <span className="t-eyebrow">{t("ob.ai.liveArtifact")}</span>
             <h2>{t("ob.conv.results.artifactTitle")}</h2>
             <p>{t("ob.conv.results.artifactBody")}</p>
           </div>

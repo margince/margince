@@ -211,7 +211,7 @@ export function OnboardingGate({
       {/* Named BEFORE the reader hands over their website, not after: which
           model is about to read it is part of the decision to let it. */}
       <p className="ob-gate-ai">
-        <span>{t("ob.scan.transparency")}</span>
+        <span className="t-eyebrow">{t("ob.scan.transparency")}</span>
         <b>{configuredModel}</b>
       </p>
     </GateColumn>
@@ -522,7 +522,7 @@ function TheatreTail({
           beneath rather than a column it would have to be squeezed into. */}
       <div className="ob-scan-cost">
         <div className="ob-scan-cost-head">
-          <p className="ob-scan-cost-label">{t("ob.scan.transparency")}</p>
+          <p className="t-eyebrow ob-scan-cost-label">{t("ob.scan.transparency")}</p>
           <p className="ob-scan-cost-line">
             {runtime === undefined ? (
               t("ob.scan.costPending")

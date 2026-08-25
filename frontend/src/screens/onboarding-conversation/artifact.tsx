@@ -154,7 +154,7 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
           the generic dossier heading would be a second voice above it. */}
       {(props.review == null || props.mode !== "dossier") && (
         <div className="mw-review-heading">
-          <span>{t("ob.ai.liveArtifact")}</span>
+          <span className="t-eyebrow">{t("ob.ai.liveArtifact")}</span>
           <h2>{t("ob.ai.companyKnowledge")}</h2>
           <p>
             {t(

@@ -201,7 +201,7 @@ export function ConnectScene({
   return (
     <div className="ob-scene ob-connect">
       <div>
-        <p className="ob-scene-eyebrow">{eyebrow}</p>
+        <p className="t-eyebrow ob-scene-eyebrow">{eyebrow}</p>
         <h2>{t("ob.conv.connect.sceneTitle")}</h2>
         <p className="ob-scene-sub">{t("ob.conv.connect.sceneSub")}</p>
       </div>
@@ -211,7 +211,7 @@ export function ConnectScene({
       <div className="ob-connect-section-head">
         <h3>
           {t("ob.conv.connect.mailboxTitle")}
-          <span className="ob-connect-pill ob-connect-pill-required">
+          <span className="t-eyebrow ob-connect-pill ob-connect-pill-required">
             {t("ob.conv.connect.required")}
           </span>
         </h3>
@@ -261,7 +261,7 @@ export function ConnectScene({
       <div className="ob-connect-section-head">
         <h3>
           {t("ob.conv.connect.networkTitle")}
-          <span className="ob-connect-pill ob-connect-pill-recommended">
+          <span className="t-eyebrow ob-connect-pill ob-connect-pill-recommended">
             {t("ob.conv.connect.recommended")}
           </span>
         </h3>

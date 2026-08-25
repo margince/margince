@@ -116,7 +116,7 @@ export function MarginceWorkbench({
         className="mw-core"
       />
       <div className="mw-identity">
-        <span>{eyebrow}</span>
+        <span className="t-eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
         <p>
           <i data-state={state} aria-hidden /> {status}
@@ -155,7 +155,7 @@ export function MarginceWorkbench({
                   spending — cost is part of who is talking, not a footnote. */}
               <div className="mw-aifooter">
                 {footerLabel !== undefined && (
-                  <span className="mw-aifooter-label">{footerLabel}</span>
+                  <span className="t-eyebrow mw-aifooter-label">{footerLabel}</span>
                 )}
                 <AiRuntimeChip
                   runtime={runtime}
@@ -237,7 +237,7 @@ function StepRail({ steps }: Readonly<{ steps: readonly WorkbenchStep[] }>) {
       {steps.map((step, index) => (
         <li
           key={step.label}
-          className={`mw-step is-${step.state}`}
+          className={`t-eyebrow mw-step is-${step.state}`}
           aria-current={step.state === "now" ? "step" : undefined}
         >
           <b aria-hidden>{index + 1}</b>
@@ -262,7 +262,7 @@ function StepProgress({
   return (
     <div className="mw-progress">
       {label !== undefined && (
-        <span className="mw-progress-label">{label}</span>
+        <span className="t-eyebrow mw-progress-label">{label}</span>
       )}
       <span className="mw-progress-track" aria-hidden>
         {steps.map((step) => (
@@ -445,7 +445,7 @@ function AiRuntimeChip({
             note={runtime?.unpriced_calls ? labels.partial : undefined}
           />
         </dl>
-        <p className="mw-aistat-f">{labels.scope}</p>
+        <p className="t-eyebrow mw-aistat-f">{labels.scope}</p>
       </div>
     </div>
   );

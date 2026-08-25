@@ -196,10 +196,6 @@
   margin-top: 2px;
 }
 .seclabel {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--textSecondary);
 }
 
@@ -431,10 +427,6 @@
 .ob-core-kicker,
 .ob-manual-progress {
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--aiText);
 }
 .ob-core-kicker {
@@ -1137,10 +1129,6 @@
 .mw-review-heading span {
   color: var(--aiText);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 .mw-review-heading h2 {
   margin: var(--space-1) 0 0;

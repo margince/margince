@@ -599,10 +599,6 @@
   margin: 0;
   color: var(--accent);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The header block below owns the distance to the headline above; a margin
@@ -803,10 +799,6 @@
   margin: 0;
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-decision-proof blockquote {
@@ -987,10 +979,6 @@
   margin: var(--space-4) 0 var(--space-2);
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-sources ul {
@@ -1209,10 +1197,6 @@
   margin: 0 0 var(--space-3);
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-result-label svg {
@@ -1249,10 +1233,6 @@
 .ob-voice-sample-field {
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-sample-body {
@@ -1277,10 +1257,6 @@
   flex: none;
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The measured dimensions: a readout per axis the build actually scored —
@@ -1297,10 +1273,6 @@
 .ob-voice-dims-count {
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-dims-meta {
@@ -1552,10 +1524,6 @@
   padding: 2px 6px;
   border-radius: var(--r-sm);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-connect-pill-required {
@@ -1946,10 +1914,6 @@
   border-top: 1px solid var(--borderSubtle);
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-triage-readmore {
@@ -2061,10 +2025,6 @@
 .ob-company-card-facts dt {
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 
 .ob-company-card-facts dd {
@@ -2739,10 +2699,6 @@
 .ob-triage-omitted .ob-triage-omitted-label {
   color: var(--textSecondary);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* Danger red is reserved for the ONE tier that actually stops confirm — the
@@ -2781,10 +2737,6 @@
   flex: none;
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-triage-solid-divider::after {

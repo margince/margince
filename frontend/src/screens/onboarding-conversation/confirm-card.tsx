@@ -247,7 +247,7 @@ function OmissionNotice({
     <div className="ob-triage-omitted">
       <FileQuestion aria-hidden />
       <div className="ob-triage-omitted-body">
-        <p className="ob-triage-omitted-label">
+        <p className="t-eyebrow ob-triage-omitted-label">
           {t("ob.conv.triage.omittedLabel")}
         </p>
         <p>
@@ -839,7 +839,7 @@ function CompanyIdentityCard({
               const { field } = fact;
               return (
                 <div key={fact.label}>
-                  <dt>{fact.label}</dt>
+                  <dt className="t-eyebrow">{fact.label}</dt>
                   <dd>
                     {field === null ? (
                       fact.value
@@ -1153,7 +1153,7 @@ function FieldGroupSection({
               group.workCount > 0 &&
               solidCount > 0 && (
                 <li className="ob-triage-solid-divider" aria-hidden>
-                  <span>
+                  <span className="t-eyebrow">
                     {t("ob.conv.triage.looksSolid", {
                       count: formatNumber(solidCount, locale),
                     })}
@@ -1470,7 +1470,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           under a tail head of its own. */}
       {props.read != null && (
         <div className="ob-triage-readmore">
-          <p className="ob-triage-rest-head">{t("ob.conv.triage.restTitle")}</p>
+          <p className="t-eyebrow ob-triage-rest-head">{t("ob.conv.triage.restTitle")}</p>
           <CoverageCard
             pages={props.read.pages}
             warnings={props.read.warnings}

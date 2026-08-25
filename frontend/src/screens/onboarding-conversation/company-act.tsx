@@ -844,7 +844,7 @@ export function CompanyAct({
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
       <div className="ob-scene">
-        <p className="ob-scene-eyebrow">{stepEyebrow}</p>
+        <p className="t-eyebrow ob-scene-eyebrow">{stepEyebrow}</p>
         <CompanyConfirmCard
           proposal={reviewProposal}
           draft={draft}

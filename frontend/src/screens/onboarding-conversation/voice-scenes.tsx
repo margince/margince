@@ -100,7 +100,7 @@ export function VoiceScene({
     <div className="ob-scene ob-voice-scene">
       <div className="ob-decision-head">
         <div>
-          <p className="ob-scene-eyebrow">{eyebrow}</p>
+          <p className="t-eyebrow ob-scene-eyebrow">{eyebrow}</p>
           <h2>{title}</h2>
           {sub !== undefined && <p className="ob-scene-sub">{sub}</p>}
         </div>
@@ -310,7 +310,7 @@ export function VoiceCollectScene({
 
       {manifest.length > 0 && (
         <section className="ob-voice-sources">
-          <p className="ob-voice-sources-head">
+          <p className="t-eyebrow ob-voice-sources-head">
             <span>{t("ob.conv.voice.sourcesTitle")}</span>
           </p>
           <ul>
@@ -598,7 +598,7 @@ function VoiceSampleCard({
   return (
     <div className="ob-voice-result-card ob-voice-sample">
       <div className="ob-voice-sample-head">
-        <p className="ob-voice-result-label">
+        <p className="t-eyebrow ob-voice-result-label">
           {t("ob.conv.voice.sampleEyebrow")}
         </p>
         {drafts.length > 1 && (
@@ -612,14 +612,14 @@ function VoiceSampleCard({
         )}
       </div>
       <p className="ob-voice-sample-subject">
-        <span className="ob-voice-sample-field">
+        <span className="t-eyebrow ob-voice-sample-field">
           {t("ob.conv.voice.sampleSubjectLabel")}
         </span>
         <b>{sample.subject}</b>
       </p>
       <p className="ob-voice-sample-body">{sample.body}</p>
       <p className="ob-voice-sample-why">
-        <span className="ob-voice-sample-why-tag">
+        <span className="t-eyebrow ob-voice-sample-why-tag">
           {t("ob.conv.voice.sampleWhyTag")}
         </span>
         {why}
@@ -733,10 +733,10 @@ function VoiceDimensionsCard({
   return (
     <div className="ob-voice-result-card">
       <div className="ob-voice-dims-head">
-        <span className="ob-voice-result-label">
+        <span className="t-eyebrow ob-voice-result-label">
           {t("ob.conv.voice.dimensionsTitle")}
         </span>
-        <span className="ob-voice-dims-count">
+        <span className="t-eyebrow ob-voice-dims-count">
           {t("ob.conv.voice.dimensionsCount", {
             count: formatNumber(dimensions.length, locale),
           })}
@@ -778,7 +778,7 @@ function VoiceThinkingCard({
       )}
       {thinking !== null && (
         <>
-          <p className="ob-voice-result-label">
+          <p className="t-eyebrow ob-voice-result-label">
             <Lightbulb aria-hidden /> {t("voice.insights.thinkingLabel")}
           </p>
           <p>{thinking}</p>
@@ -794,7 +794,7 @@ function VoiceMovesCard({
   const t = useT();
   return (
     <div className="ob-voice-result-card">
-      <p className="ob-voice-result-label">{t("voice.insights.movesLabel")}</p>
+      <p className="t-eyebrow ob-voice-result-label">{t("voice.insights.movesLabel")}</p>
       <ul className="ob-voice-moves">
         {moves.map((move) => (
           <li key={move.move}>
@@ -811,7 +811,7 @@ function VoiceAvoidCard({ avoid }: Readonly<{ avoid: readonly string[] }>) {
   const t = useT();
   return (
     <div className="ob-voice-result-card">
-      <p className="ob-voice-result-label">{t("voice.insights.avoidLabel")}</p>
+      <p className="t-eyebrow ob-voice-result-label">{t("voice.insights.avoidLabel")}</p>
       <ul className="ob-voice-avoid">
         {avoid.map((item) => (
           <li key={item}>{item}</li>

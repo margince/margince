@@ -73,7 +73,7 @@ function Shell({ session }: Readonly<{ session: RouteMap[string] }>) {
           artifact={
             <div className="mw-review ob-conv-artifact">
               <div className="mw-review-heading">
-                <span>Live artifact</span>
+                <span className="t-eyebrow">Live artifact</span>
                 <h2>Company profile</h2>
                 <p>
                   The work surface each act fills; here it stands in for one.

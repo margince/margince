@@ -82,10 +82,6 @@
 .ob-live-card-toggle {
   flex: none;
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -132,10 +128,6 @@
 
 .ob-live-coverage-label {
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* Three gaps, three voices. A skipped page is routine and must not shout; a page

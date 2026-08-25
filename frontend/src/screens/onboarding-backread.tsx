@@ -502,7 +502,7 @@ function BackreadTallies({
     <dl className="ob-backread-tallies">
       {present.map((tally) => (
         <div className="ob-backread-tally" key={tally.key}>
-          <dt className="ob-backread-tally-label">{t(tally.label)}</dt>
+          <dt className="t-eyebrow ob-backread-tally-label">{t(tally.label)}</dt>
           <dd className="ob-backread-tally-value">
             {formatNumber(tally.count, locale)}
           </dd>

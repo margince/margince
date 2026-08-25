@@ -57,7 +57,7 @@ export function DossierCard({
         {count !== undefined && (
           <span className="ob-live-card-count">{count}</span>
         )}
-        <span className="ob-live-card-toggle">
+        <span className="t-eyebrow ob-live-card-toggle">
           {t(open ? "ob.live.hide" : "ob.live.review")}
         </span>
         <ChevronDown className="ob-live-card-chev" aria-hidden size={14} />
@@ -200,7 +200,7 @@ export function CoverageCard({
             // beside it says the same thing in words, so the colour it selects
             // is never the only signal.
             <li className="ob-live-coverage" data-kind={row.kind} key={row.id}>
-              <span className="ob-live-coverage-label">{row.label}</span>
+              <span className="t-eyebrow ob-live-coverage-label">{row.label}</span>
               {row.name !== undefined && (
                 <span className="ob-live-coverage-name">{row.name}</span>
               )}

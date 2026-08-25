@@ -178,7 +178,7 @@ export function ManualCompanyInterview({
         advance();
       }}
     >
-      <div className="ob-manual-progress">
+      <div className="t-eyebrow ob-manual-progress">
         <span>{t(question.chapter)}</span>
         <span>
           {questionIndex + 1} / {MANUAL_QUESTIONS.length}

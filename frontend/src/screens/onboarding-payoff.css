@@ -97,10 +97,6 @@
 
 .ob-payoff-label {
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   /* --textMeta is the AA floor role for anything under 13px. */
   color: var(--textMeta);
 }

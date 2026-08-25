@@ -127,7 +127,7 @@ export function PayoffGrid({ counts, locale }: PayoffGridProps) {
             }
             key={cell.name}
           >
-            <dt className="ob-payoff-label">{t(cell.label)}</dt>
+            <dt className="t-eyebrow ob-payoff-label">{t(cell.label)}</dt>
             <dd className="ob-payoff-value">{format(count)}</dd>
           </div>
         );

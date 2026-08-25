@@ -1,7 +1,14 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  declarations as declarationsIn,
+  rules,
+  soleRule,
+  stylesheets,
+  withoutComments,
+} from "./cssrules";
 
 // `Card` is the one card surface, and a hand-rolled one is a second card the
 // moment any of its chrome moves — which is not a warning, it is a description
@@ -34,83 +41,22 @@ const designSystem = join(frontendRoot, "src", "design-system");
 // see, because it sits beside the real one.
 const cardSource = join(designSystem, "atoms.css");
 
-function stylesheets(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : stylesheets(path);
-    }
-    return entry.name.endsWith(".css") ? [path] : [];
-  });
-}
-
-/** One `selector { … }` rule, as written. */
-type Rule = Readonly<{ selector: string; body: string }>;
-
-/** CSS comments are not rules, and one sitting above a rule was being read as
- * its selector. */
-function withoutComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, "");
-}
-
-function rules(css: string): Rule[] {
-  const found: Rule[] = [];
-  // Non-greedy to the first `}`, which is why a nested block (a media query,
-  // `:is()` with braces) is not matched as one rule — the rules INSIDE it are,
-  // which is what this asks about anyway.
-  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    found.push({ selector: match[1].trim(), body: match[2] });
-  }
-  return found;
-}
-
 /**
  * `.card`'s own declarations, read from the design system rather than repeated
  * here — a hardcoded copy of the chrome would be the very thing this forbids,
  * and would stop matching the day somebody restyles the real card.
  */
 function cardChrome(): readonly string[] {
-  const atoms = readFileSync(cardSource, "utf8");
-  const declared = rules(withoutComments(atoms)).filter(
-    (r) => r.selector === ".card",
-  );
-  // EXACTLY one, not the first. `.find()` silently adopts whichever comes
-  // first, so a second `.card { … }` anywhere in the file — a media query
-  // override, a leftover — becomes the subject and the gate goes looking for
-  // the wrong declarations. It failed loudly when I planted one; that was luck,
-  // and with a rarer declaration in the first rule it degrades to green while
-  // blind.
-  if (declared.length !== 1) {
-    throw new Error(
-      `atoms.css declares .card ${declared.length} times; this gate needs exactly one to read its subject from`,
-    );
-  }
-  return declarations(declared[0].body);
+  return declarations(soleRule(cardSource, ".card").body);
 }
 
-/** The `property: value` pairs in a rule body, in one spelling. */
+/**
+ * The rule's declarations, each also expanded into the longhand a retyping
+ * hand would write. The whitespace spellings are erased by the shared reader;
+ * the shorthands below are this gate's own subject and stay here.
+ */
 function declarations(body: string): readonly string[] {
-  return body
-    .split(";")
-    .map((part) =>
-      part
-        .trim()
-        .replace(/\s+/g, " ")
-        // Around the colon too. Collapsing only runs of whitespace left
-        // `background:var(--bgElevated)` unequal to `background: var(...)`, so
-        // the same card written without a space escaped entirely — not a
-        // variant, the identical card, defeated by a spelling a formatter would
-        // erase. This gate exists for the hand that does not run the formatter.
-        .replace(/\s*:\s*/g, ": ")
-        // And inside the parentheses, for the same reason: `var(--bgElevated )`
-        // computes identically and compares unequal.
-        .replace(/\(\s+/g, "(")
-        .replace(/\s+\)/g, ")"),
-    )
-    .filter((part) => part.length > 0)
-    .flatMap(longhand);
+  return declarationsIn(body).flatMap(longhand);
 }
 
 /**

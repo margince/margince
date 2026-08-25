@@ -410,7 +410,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
   return (
     <div className="mw-review">
       <div className="mw-review-heading">
-        <span>{t("ob.ai.liveArtifact")}</span>
+        <span className="t-eyebrow">{t("ob.ai.liveArtifact")}</span>
         <h2>{t("ob.ai.companyKnowledge")}</h2>
         <p>
           {t(

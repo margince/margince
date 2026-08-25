@@ -175,7 +175,7 @@ export function CompanyStep({
               summary states what is selected, which is the only thing a
               human needs unless they want to change it. */}
           <summary>
-            <span className="seclabel">{t("ob.factsTitle")}</span>
+            <span className="t-eyebrow seclabel">{t("ob.factsTitle")}</span>
             <span className="facts-count">
               {t("ob.factsSelected", {
                 selected: formatNumber(selectedFactKeys.length, locale),

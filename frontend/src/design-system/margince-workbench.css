@@ -163,10 +163,6 @@
      everything under 13px, and every label in this chrome is 9-11px. */
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The hairline that makes five stops one rail. Drawn, not marked up: a
@@ -260,10 +256,6 @@
   display: block;
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .mw-identity h1 {
@@ -391,10 +383,6 @@
   margin: 0;
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The popover's subject is the machine, so its header reads the AI family
@@ -557,12 +545,8 @@
 .mw-progress-label {
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -648,10 +632,6 @@
 .mw-shell.is-rail .mw-aifooter-label {
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .mw-shell.is-rail .mw-aistat,

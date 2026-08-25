@@ -72,7 +72,7 @@ export function VoiceActArtifact({
   return (
     <div className="mw-review ob-conv-artifact">
       <div className="mw-review-heading">
-        <span>{t("ob.ai.liveArtifact")}</span>
+        <span className="t-eyebrow">{t("ob.ai.liveArtifact")}</span>
         <h2>{t("ob.conv.voice.artifactTitle")}</h2>
         <p>{t("ob.conv.voice.artifactBody")}</p>
       </div>

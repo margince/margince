@@ -304,10 +304,6 @@
 .ob-gate-ai span {
   color: var(--aiText);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* A routing label names every model the installation can reach, so it can be a
@@ -621,10 +617,6 @@
 .ob-scan-cost-label {
   margin: 0;
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--aiText);
 }
 .ob-scan-cost-line {
