@@ -54,8 +54,9 @@ import (
 // entry is a slice.
 //
 // Held by: TestTheParityTableCoversEveryFileThatComposesTheSharedRules
-// (this file) — "every surface" is a claim about the tree, and the sweep below
-// is what makes it one rather than a description of this table.
+// (internal/compose/draftrulesparity_test.go) — "every surface" is a claim
+// about the tree, and the sweep below is what makes it one rather than a
+// description of this table.
 func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 	return map[string][]string{
 		"replydraftmodel.go": {
