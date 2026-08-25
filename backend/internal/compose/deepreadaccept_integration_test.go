@@ -34,55 +34,45 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestDeepReadOfferingsDedupeOnValueKeyAndAcceptRespectsHumanPrecedence(t *testing.T) {
+// Two rules, and the read now holds both itself: a value_key duplicate is
+// deduped before anything is written, and a fact a human already claimed is
+// never overwritten. The second used to be the ACCEPT's job; the read applies
+// directly now, so the guard has to live where the write does — and the human's
+// row is seeded BEFORE the read for the same reason.
+func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *testing.T) {
 	e := integration.Setup(t)
 	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	done, svc := runServicesDeepRead(t, e, org)
 
-	// The staged payload carries ONE service row — the higher-confidence
-	// spelling of the shared value_key — plus the product.
-	var proposedChange []byte
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT proposed_change FROM approval WHERE id = $1`, done.ProposalIDs[0]).Scan(&proposedChange)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	proposal, err := people.UnmarshalDeepRead(proposedChange)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(proposal.Facts) != 2 {
-		t.Fatalf("staged facts = %+v, want the deduped service + the product", proposal.Facts)
-	}
-	service := proposal.Facts[0]
-	// The citation gate is binary (no model confidence), so a value_key
-	// duplicate keeps its FIRST spelling — deterministic, page-ordered.
-	if service.Field != "service" || service.ValueKey != "crm rollout" || service.Value != "CRM Rollout — implementation projects" {
-		t.Fatalf("staged service = %+v, want the first-seen spelling under value_key 'crm rollout'", service)
-	}
-
-	// A human has since claimed the service fact; the accept must land the
-	// product beside it and leave the human's row untouched.
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	// A human has claimed the service fact. The read must land the product
+	// beside it and leave this row exactly as it is.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO organization_fact (organization_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
 			VALUES ($1, 'offering', 'service', 'CRM Rollout (human curated)', 'crm rollout',
 			        'set by hand', '', 1, 'human', $2)`,
 			org, "human:"+e.Rep1.String())
 		return err
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](done.ProposalIDs[0]), true, nil); err != nil {
-		t.Fatalf("accept: %v", err)
+
+	done, _ := runServicesDeepRead(t, e, org)
+
+	// The citation gate is binary (no model confidence), so a value_key
+	// duplicate keeps its FIRST spelling — deterministic, page-ordered. The
+	// dossier reports what the read evidenced, which is where the dedupe is
+	// observable now that nothing is staged.
+	if len(done.Facts) != 2 {
+		t.Fatalf("read facts = %+v, want the deduped service + the product", done.Facts)
+	}
+	service := done.Facts[0]
+	if service.Field != "service" || service.ValueKey != "crm rollout" || service.Value != "CRM Rollout — implementation projects" {
+		t.Fatalf("read service = %+v, want the first-seen spelling under value_key 'crm rollout'", service)
 	}
 
 	var factRows int
 	var serviceValue, serviceCapturedBy, productValue string
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM organization_fact WHERE organization_id = $1`, org).Scan(&factRows); err != nil {
@@ -97,18 +87,17 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndAcceptRespectsHumanPrecedence(t *te
 		return tx.QueryRow(ctx,
 			`SELECT coalesce(max(value), '') FROM organization_fact
 			 WHERE organization_id = $1 AND field = 'product'`, org).Scan(&productValue)
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if factRows != 2 {
-		t.Fatalf("%d organization_fact rows after accept, want 2 (the human's service + the landed product)", factRows)
+		t.Fatalf("%d organization_fact rows after the read, want 2 (the human's service + the landed product)", factRows)
 	}
 	if serviceValue != "CRM Rollout (human curated)" || serviceCapturedBy != "human:"+e.Rep1.String() {
-		t.Fatalf("service row = %q by %q — the accept overwrote a human-claimed fact", serviceValue, serviceCapturedBy)
+		t.Fatalf("service row = %q by %q — the read overwrote a human-claimed fact", serviceValue, serviceCapturedBy)
 	}
 	if productValue != "Margince — our CRM product" {
-		t.Fatalf("product row = %q, want the staged product landed beside the human's row", productValue)
+		t.Fatalf("product row = %q, want the read's product landed beside the human's row", productValue)
 	}
 }
 
@@ -209,12 +198,17 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}
 }
 
+// A rejection of a proposal staged BEFORE reads began applying directly. The
+// read is not run here: it would land its own findings and there would be
+// nothing left for a rejection to be observed against.
 func TestDeepReadRejectionLandsNothing(t *testing.T) {
 	e := integration.Setup(t)
 	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	done, svc := runServicesDeepRead(t, e, org)
+	_, svc := newDeepReadTestWorker(e, acmeServicesSite(), servicesDeepBrain())
+	read, _ := startDeepRead(t, e, org)
+	proposal := stageLegacyDeepReadProposal(t, e, svc, org, read.ID, nil, servicesOfferings())
 
-	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](done.ProposalIDs[0]), false, nil); err != nil {
+	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](proposal), false, nil); err != nil {
 		t.Fatalf("reject: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM organization_fact`); n != 0 {
@@ -262,4 +256,23 @@ func postDeepRead(t *testing.T, e *integration.Env, engine *deepReadEngine, call
 		}
 	}
 	return rec, started
+}
+
+// servicesOfferings is what the services fixture evidences: one service and
+// one product, already deduped on their value keys.
+func servicesOfferings() []people.DeepReadFact {
+	return []people.DeepReadFact{
+		{
+			Category: "offering", Field: "service",
+			Value: "CRM Rollout — implementation projects", ValueKey: "crm rollout",
+			EvidenceSnippet: "We deliver CRM Rollout projects end to end.",
+			SourceURL:       seedURL + "/services", Confidence: 1,
+		},
+		{
+			Category: "offering", Field: "product",
+			Value: "Margince — our CRM product", ValueKey: "margince",
+			EvidenceSnippet: "Margince is our CRM product.",
+			SourceURL:       seedURL + "/services", Confidence: 1,
+		},
+	}
 }
