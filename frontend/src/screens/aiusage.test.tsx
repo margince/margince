@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { steppedClock } from "../testing/steppedclock";
 import { AiUsageCard } from "./aiusage";
 
 // The reader's zone is an input to this card, so it is injected rather than
@@ -203,21 +204,23 @@ it("withholds the spend from a principal without the automation grant, and asks 
 // for a month the reader has already left. Both are asserted, because the two
 // halves are one rule read twice and only the seed is zoned.
 it("steps back from the month the READER is in, not the one UTC is in", async () => {
-  // shouldAdvanceTime, because react-query's fetch loop is asynchronous and a
-  // frozen clock never lets it resolve. Only the WALL CLOCK is moved here; the
-  // zone is the mocked viewerZone above, and Intl does the real conversion.
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  // A frozen clock, because the wall clock is an INPUT to this card: it decides
+  // which month "now" falls in, so a test that let it run would be asking a
+  // different question on every run. steppedClock is the house way in — it is
+  // what keeps an awaited userEvent from deadlocking against mocked timers, and
+  // the reason is written down where it lives.
+  const user = steppedClock();
   vi.setSystemTime(new Date("2026-08-31T20:00:00Z"));
   viewer.zone = "Asia/Ho_Chi_Minh";
   try {
     const { seen } = mount({ budget, days: [] });
-    // The card opens on the current month, so there is nothing later to show.
-    const next = await screen.findByLabelText("Next month");
-    expect(next.hasAttribute("disabled")).toBe(true);
 
-    await act(async () => {
-      screen.getByLabelText("Previous month").click();
-    });
+    // The card opens on the current month, so there is nothing later to show.
+    expect(
+      (await screen.findByLabelText("Next month")).hasAttribute("disabled"),
+    ).toBe(true);
+
+    await user.click(screen.getByLabelText("Previous month"));
     await waitFor(() =>
       expect(
         seen.some((url) => url.includes("from=2026-08-01&to=2026-08-31")),
@@ -225,14 +228,11 @@ it("steps back from the month the READER is in, not the one UTC is in", async ()
     );
 
     // Having stepped off the reader's month, Next is a real destination again.
-    await waitFor(() =>
-      expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
-        false,
-      ),
+    expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
+      false,
     );
-    await act(async () => {
-      screen.getByLabelText("Next month").click();
-    });
+
+    await user.click(screen.getByLabelText("Next month"));
     await waitFor(() =>
       expect(
         seen.some((url) => url.includes("from=2026-09-01&to=2026-09-30")),
