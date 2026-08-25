@@ -45,15 +45,15 @@ func AuditEventWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType s
 	return writeAuditRow(ctx, tx, action, entityType, entityID, nil, after, evidence)
 }
 
-// writeAuditRow is this package's INSERT into audit_log, and the one every door
-// here reaches: Audit and AuditWithEvidence after they have judged the
-// before-image, AuditEvent without one to judge.
+// writeAuditRow is this package's INSERT into audit_log, which every door here
+// reaches: Audit and AuditWithEvidence after they have judged the before-image,
+// AuditEvent without one to judge.
 //
-// Not the only writer of the table. The approvals module sends its own INSERT
-// for the approval row's own lifecycle — a different subject, with no field
-// images at all — so a rule enforced here binds every caller of these doors and
-// nothing else. auditbeforeimage_test.go sweeps for the direct writers so that
-// stays a fact somebody checked rather than a claim standing in a comment.
+// The table takes writes from elsewhere too — approvals sends its own statement
+// for the approval row's lifecycle, a different subject carrying no field images
+// at all — so a rule enforced here binds callers of these doors and nothing
+// further. auditbeforeimage_test.go censuses the direct writers, which is what
+// keeps that a fact somebody checked rather than a comment nobody can.
 //
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (ids.UUID, error) {

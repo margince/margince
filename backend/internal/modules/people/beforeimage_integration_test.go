@@ -247,6 +247,9 @@ func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
 // site-read pass. The prior answer is written by the real signature writer,
 // because a row this test inserted itself would prove nothing about the guard
 // the two writers actually share.
+//
+// That writer records the field it filled, so the field's history is asserted by
+// WHOSE row stands rather than by there being none: one row, and the signature's.
 func TestASitePersonFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -269,9 +272,11 @@ func TestASitePersonFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 		t.Fatalf("ApplySitePersonFields: %v", err)
 	}
 
-	if n := countAuditRowsHolding(ctx, t, e.store, entityPerson, personID.UUID, "role"); n != 0 {
-		t.Errorf("%d audit rows claim role, want none — it was already answered", n)
+	if n := countAuditRowsHolding(ctx, t, e.store, entityPerson, personID.UUID, "role"); n != 1 {
+		t.Fatalf("%d audit rows claim role, want only the signature's — the site fill declined", n)
 	}
+	_, after := auditImagesHolding(ctx, t, e.store, entityPerson, personID.UUID, "role")
+	wantImage(t, after, "after", "role", "Chief Platform Officer")
 }
 
 // The breach mark is the lead's own column and carries an image; the deadline
@@ -319,4 +324,33 @@ func TestASLABreachSeparatesTheColumnFromTheDeadline(t *testing.T) {
 	if evidence["deadline"] == nil {
 		t.Errorf("evidence = %v, want the deadline the breach missed", evidence)
 	}
+}
+
+// A signature field that lands only in the sidecar is recorded like the same
+// field filled from a site read: an explicit null before, the value after. One
+// field with two histories — a change from one writer and a blank row from
+// another — is what a reader of the field's history cannot reconcile.
+func TestASignatureFillRecordsTheEmptySidecarFields(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
+
+	const profile = "https://linkedin.test/in/mira-halvorsen"
+	res, err := e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+		{Name: "role", Value: "Head of Platform", Evidence: "Mira Halvorsen | Head of Platform", Confidence: 0.9},
+		{Name: "linkedin", Value: profile, Evidence: "linkedin.test/in/mira-halvorsen", Confidence: 0.9},
+	})
+	if err != nil {
+		t.Fatalf("ApplySignatureFields: %v", err)
+	}
+	if res.Applied != 2 {
+		t.Fatalf("result = %+v, want both sidecar fields applied", res)
+	}
+
+	before, after := auditImagesHolding(ctx, t, e.store, entityPerson, personID.UUID, "role")
+	wantImage(t, before, "before", "role", nil)
+	wantImage(t, before, "before", "linkedin", nil)
+	wantImage(t, after, "after", "role", "Head of Platform")
+	wantImage(t, after, "after", "linkedin", profile)
 }

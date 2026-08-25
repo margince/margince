@@ -286,9 +286,9 @@ func resolveString(expr ast.Expr, consts map[string]string) (string, bool) {
 	}
 }
 
-// storekitPath is the package whose doors this gate judges. Named once, because
-// the subject predicate, the qualifier resolution and the direct-INSERT sweep
-// all have to mean the same package.
+// storekitPath is the package whose doors this gate judges. The subject
+// predicate, the qualifier resolution and the direct-INSERT sweep all read it,
+// so they cannot come to mean different packages.
 const storekitPath = "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 
 // fileReachesAnAuditDoor is the Scope subject, asked identically inside the
