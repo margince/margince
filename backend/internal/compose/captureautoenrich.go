@@ -10,10 +10,13 @@ package compose
 // The anchor is excluded; cold start has already read it. Per workspace, when
 // the capture_auto_enrich flag is on, it enqueues a deep read
 // (system:capture_auto_enrich, auto-applied on completion) for each due org —
-// newest first, under an atomically-reserved daily cap. It
-// is the ONE trigger and the self-healing reconciler in one: a missed org is
-// simply picked up next pass. The deep-read worker's auto-apply lane
-// (deepread.go) records the terminal outcome on the sweep's cursor.
+// newest first, under an atomically-reserved daily cap. It is the
+// self-healing reconciler: the prompt trigger is the organization-event
+// consumer (orgautoenrich.go), which queues this same workspace pass the
+// moment a company appears, and anything that slips through — the worker
+// down, an enqueue lost — is simply picked up next daily pass. The
+// deep-read worker's auto-apply lane (deepread.go) records the terminal
+// outcome on the sweep's cursor.
 
 import (
 	"context"

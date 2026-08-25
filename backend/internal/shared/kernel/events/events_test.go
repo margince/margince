@@ -175,6 +175,10 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// resolution is what most unmatched ghosts are waiting on.
 		"cg:linkedin-match":     {"gw:events:crm:organization", "gw:events:crm:person"},
 		"cg:person-auto-enrich": {"gw:events:crm:person"},
+		// The prompt half of captured-organization auto-enrich: an
+		// organization appearing or changing queues the workspace's enrich
+		// pass now rather than on the next daily sweep.
+		"cg:org-auto-enrich": {"gw:events:crm:organization"},
 		// Automatic enrichment from a licensed provider (ADR-0101). Its own
 		// group rather than a second handler on the pass above: that one
 		// reads pages already crawled, this one SPENDS credits, and a
