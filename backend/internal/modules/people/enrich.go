@@ -87,11 +87,24 @@ func (s *Store) ApplyEnrichment(ctx context.Context, orgID ids.OrganizationID, i
 		if err := auth.EnsureWritableLive(ctx, tx, "organization", orgID.UUID); err != nil {
 			return err
 		}
+		before, err := readColdStartColumnImages(ctx, tx, orgID)
+		if err != nil {
+			return err
+		}
 		applied, err := applyEvidenceFields(ctx, tx, wsID, orgID, companySourceSiteRead, by, in.Fields)
 		if err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "organization", orgID.UUID, nil, map[string]any{
+		after, err := readColdStartColumnImages(ctx, tx, orgID)
+		if err != nil {
+			return err
+		}
+		before, after = storekit.ChangedColumns(before, after)
+		// before/after carry the RECORD's own column images and nothing else.
+		// The operation's metadata rides audit_log.evidence, which is the column
+		// for it: anything placed in the images is projected by field history as
+		// a change to a field of that name (storekit.AuditWithEvidence).
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "organization", orgID.UUID, before, after, map[string]any{
 			auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL, auditKeyFields: applied,
 		})
 		if err != nil {

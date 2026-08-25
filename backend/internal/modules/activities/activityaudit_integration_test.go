@@ -178,3 +178,93 @@ func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
 		t.Errorf("after[body] = %v, want the normalized form the row stores", after["body"])
 	}
 }
+
+// An audience write moves two things — the column on the activity row and the
+// member rows that qualify it — and the images have to say what both held.
+// Setting an audience used to record only what it became, so the row could not
+// say who lost sight of the conversation.
+func TestAnAudienceChangeRecordsWhatItNarrowedFrom(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+	activityID := ids.From[ids.ActivityKind](ids.UUID(activity.Id))
+
+	if _, err := e.store(nil).SetAudience(ctx, activityID, SetAudienceInput{
+		Audience: "selected",
+		Members:  []AudienceMember{{SubjectType: "user", SubjectID: e.rep}},
+	}); err != nil {
+		t.Fatalf("SetAudience: %v", err)
+	}
+
+	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
+	if before["audience"] != "workspace" {
+		t.Errorf("before[audience] = %v, want the audience the write replaced", before["audience"])
+	}
+	if after["audience"] != "selected" {
+		t.Errorf("after[audience] = %v, want selected", after["audience"])
+	}
+	if members := imageMembers(t, before); len(members) != 0 {
+		t.Errorf("before[members] = %v, want the empty set a workspace audience holds", members)
+	}
+	if members := imageMembers(t, after); len(members) != 1 || members[0] != "user:"+e.rep.String() {
+		t.Errorf("after[members] = %v, want the one member admitted", members)
+	}
+}
+
+// Widening the member set leaves the audience column alone, and a column that
+// did not move belongs in neither image: field history reads every key in the
+// pair, so carrying it through would publish a narrowing nobody performed.
+func TestAnUnchangedAudienceStaysOutOfBothImages(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+	activityID := ids.From[ids.ActivityKind](ids.UUID(activity.Id))
+
+	for _, members := range [][]AudienceMember{
+		{{SubjectType: "user", SubjectID: e.rep}},
+		{{SubjectType: "user", SubjectID: e.rep}, {SubjectType: "user", SubjectID: e.other}},
+	} {
+		if _, err := e.store(nil).SetAudience(ctx, activityID, SetAudienceInput{
+			Audience: "selected", Members: members,
+		}); err != nil {
+			t.Fatalf("SetAudience: %v", err)
+		}
+	}
+
+	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
+	if _, carried := before["audience"]; carried {
+		t.Errorf("audience reached the before image on a members-only write: %v", before)
+	}
+	if _, carried := after["audience"]; carried {
+		t.Errorf("audience reached the after image on a members-only write: %v", after)
+	}
+	if members := imageMembers(t, before); len(members) != 1 || members[0] != "user:"+e.rep.String() {
+		t.Errorf("before[members] = %v, want the single-member set the write replaced", members)
+	}
+	if members := imageMembers(t, after); len(members) != 2 {
+		t.Errorf("after[members] = %v, want both members", members)
+	}
+}
+
+// imageMembers reads the member set out of one audit image, insisting it is a
+// list of words rather than accepting whatever jsonb happened to hold.
+func imageMembers(t *testing.T, image map[string]any) []string {
+	t.Helper()
+	raw, present := image["members"]
+	if !present {
+		t.Fatalf("the image carries no member set: %v", image)
+	}
+	list, isList := raw.([]any)
+	if !isList {
+		t.Fatalf("members = %v, want a list", raw)
+	}
+	members := make([]string, 0, len(list))
+	for _, entry := range list {
+		word, isWord := entry.(string)
+		if !isWord {
+			t.Fatalf("member %v is not a subject word", entry)
+		}
+		members = append(members, word)
+	}
+	return members
+}

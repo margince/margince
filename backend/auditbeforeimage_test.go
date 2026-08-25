@@ -83,6 +83,15 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 		"copied into audit_log, so the after image carries the fact of the rotation and neither secret.",
 	"internal/modules/webhooks/deliverystore.go:requireReplay": "the subscription is unchanged; the write records that " +
 		"a delivery was re-attempted, and the after image names which one.",
+	"internal/modules/activities/extractionclaim.go:FinishExtractionRead": "the claim proves the reading was running, " +
+		"so a prior state exists — it is a job's own progress rather than a field a person set, and a document is " +
+		"re-read by starting a new attempt, never by putting a finished one back to running.",
+	"internal/modules/activities/transcriptread.go:FinishTranscriptRead": "the compare-and-set proves the reading was " +
+		"running, so this is a run record's outcome, not a record whose fields a user edits: nothing would ever be " +
+		"restored to a reading's earlier progress.",
+	"internal/modules/ai/feedback.go:Record": "the upsert as readily creates the ledger row as replaces one, so the " +
+		"write records that a human decided rather than a field moving; a verdict it superseded was written through " +
+		"this same door and stays readable as that write's own audit row.",
 })
 
 // unresolvableAuditActions: call sites whose action argument this walk cannot
