@@ -268,6 +268,27 @@ type personCandidateRow struct {
 // people sharing a name trigram or the candidate's employer — the
 // formula's own bound, so scoring stays inside the create budget instead
 // of walking the workspace.
+// WHY THE CANDIDATE QUERY HAS THREE ARMS. The trigram arm and the employer arm
+// both narrow a set for a SCORE, and being approximate is fine there: a row they
+// miss was never going to win. The name-collision lane is not a score — it
+// decides on normalizeName equality — so a prefilter that is merely approximate
+// could hide a row that would have been exactly equal, and the employer arm
+// cannot rescue it because a manual create carries no employer at all.
+//
+// The third arm folds BOTH sides with SQL's own functions, exactly as the
+// trigram arm does. Computing one side in Go would move the divergence rather
+// than close it: SQL's lower+unaccent and Go's Unicode full folding are two
+// different normalizations, and the point is to stop relying on either being a
+// superset of the other. btrim because normalizeName trims and SQL does not —
+// "  Lucy Vo  " and "Lucy Vo" are equal in Go and unequal to a bare SQL
+// comparison, which is a real divergence today.
+//
+// NO KNOWN PAIR NEEDS THAT ARM. Every case that could be constructed — case,
+// accents, ß, a trailing space — is already admitted by the trigram arm, and
+// TestEveryNameGoCallsEqualReachesTheNameLane says so by passing without it. It
+// is a GUARANTEE rather than a bug fix: the trigram operator is a similarity
+// threshold, and this lane's correctness should not rest on one approximate
+// predicate happening to cover another normalization's output.
 func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResolution, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.full_name, r.organization_id, od.domain,
@@ -288,7 +309,8 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 		    ON od.organization_id = r.organization_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
-		        OR ($2::uuid IS NOT NULL AND r.organization_id = $2))`,
+		        OR ($2::uuid IS NOT NULL AND r.organization_id = $2)
+		        OR btrim(f_fold_apostrophes(lower(p.full_name))) = btrim(f_fold_apostrophes(lower($1))))`,
 		c.FullName, c.CurrentPrimaryOrgID)
 	if err != nil {
 		return PersonResolution{}, fmt.Errorf("dedupe person candidate set: %w", err)

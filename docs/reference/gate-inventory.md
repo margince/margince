@@ -176,7 +176,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (4)
+## Falsification (5)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -184,3 +184,4 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification, kept beside it: every dispatch shape the tree actually uses, proven accepted, and the shapes it exists to reject — a dispatcher doing a tenant's work, and a fan-out built around the chokepoints — proven rejected. |
 | `jobkindgate_test.go` | H2 | The registration gate's own falsification. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
+| `retainedcolumncases_test.go` | H1 | The retained-column check, driven with SYNTHETIC statements rather than the tree — the same reason extensionsqlscopecases\_test.go gives for its own cases. |

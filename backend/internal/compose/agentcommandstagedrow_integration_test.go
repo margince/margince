@@ -228,7 +228,7 @@ func archiveRegistry(e *integration.Env) *agents.Registry {
 	// than latent — the tool refuses on the terms an unreadable list refuses
 	// on, so an accidental call here would fail loudly instead of deriving a
 	// company from the compiled-in baseline.
-	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil)
+	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil, nil)
 	return reg
 }
 

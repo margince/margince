@@ -1325,6 +1325,51 @@
       "data": {
         "type": "object",
         "properties": {
+          "duplicate_candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "confidence": {
+                  "type": "number"
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "left_value": {
+                        "type": "string"
+                      },
+                      "right_value": {
+                        "type": "string"
+                      },
+                      "score": {
+                        "type": "number"
+                      },
+                      "signal": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  }
+                },
+                "other_record_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "confidence",
+                "evidence",
+                "other_record_id"
+              ]
+            }
+          },
           "fields": {
             "type": "object"
           },

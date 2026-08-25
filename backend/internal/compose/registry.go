@@ -132,7 +132,11 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// whose method IS the uncached read, so no wiring here can hand them the
 	// cached mode. See overlayModeChecker for why that distinction is typed.
 	sorMode := overlayModeChecker(provider)
-	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db))
+	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
+		// A create says what it filed for review. Without this seam it stays
+		// silent, which is what it did before — see tools_dupereport.go for why
+		// silence was the defect.
+		openDuplicatesFor(pool))
 	// list_records reads its rows through the Dispatcher like every other
 	// record verb, and its filter VOCABULARY off the native provider: the
 	// vocabulary is a property of the deployment's own stores, resolved once at

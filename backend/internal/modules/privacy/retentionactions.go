@@ -174,9 +174,24 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // the special-category risk; the record of the meeting stays, its content goes
 // — including any attached recording/transcript file (objects first, so the
 // purge shares the person-erase durability guarantee).
+//
+// `raw` goes with `body`. It is the re-parseable original the schema names, so
+// clearing the parsed copy and leaving the source erases nothing — the content
+// is one parse away. Nothing in this tree populates the column, which is why
+// only a gate will ever notice if this stops: piicoverage_test.go declares the
+// assignments this statement IS.
+//
+// `counterparty_email` and the channel identity (`source_id`, `thread_key`)
+// deliberately stay, and that is where this statement parts company with its
+// two siblings. The retention action's contract is that the RECORD of the
+// meeting survives and its content goes, and who it was with is the record.
+// The difference is declared in piicoverage_test.go's retentionKeeps for
+// `activity`, so reversing it fails the gate rather than passing silently — the
+// data-layer guard `activity_restriction_lift_erases` exists because the same
+// kind of difference was once carried in prose and went short.
 func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx,
-		`UPDATE activity SET body = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
+		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
 		_, err = tx.Exec(ctx,

@@ -291,3 +291,79 @@ func readDedupeCandidate(ctx context.Context, tx pgx.Tx, id ids.UUID) (DedupeCan
 	}
 	return r, nil
 }
+
+// OpenCandidatesNaming answers the open review-queue pairs that name one
+// record, newest-strongest first.
+//
+// IT IS THE NARROW READ BEHIND A WRITE'S OWN ANSWER. ListDedupeCandidates
+// serves the queue a human works — paged, filtered, cursored. This serves one
+// question a create asks about itself immediately after committing: "did I just
+// get filed against something?" A caller reaching for the paged list to answer
+// that would have to walk pages looking for its own id.
+//
+// The permission check and the visibility clause are the LIST's own, called
+// here rather than restated: a pair surfaces only when both sides are visible
+// to the caller, because the evidence snapshot quotes both records, so naming a
+// pair is a read of them. Two spellings of that rule would eventually disagree,
+// and the one that drifted would be the one leaking a record's existence.
+//
+// The bound is deliberate and small. A create that collided with more than a
+// handful of records has told the caller everything it usefully can; the point
+// is "a human was asked", not an exhaustive listing.
+func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id ids.UUID) ([]DedupeCandidateRow, error) {
+	if err := requireDedupeRead(ctx, entityType); err != nil {
+		return nil, err
+	}
+	column, ok := map[string][2]string{
+		entityPerson:       {"left_person_id", "right_person_id"},
+		entityOrganization: {"left_org_id", "right_org_id"},
+		entityLead:         {"left_lead_id", "right_lead_id"},
+	}[entityType]
+	if !ok {
+		// Not an error: most record types have no dedupe queue at all, and a
+		// create of one is entitled to ask and be told nothing was filed.
+		return nil, nil
+	}
+	args := []any{dispositionOpen, id}
+	query := fmt.Sprintf(`
+		SELECT id, entity_type, coalesce(left_person_id, left_org_id, left_lead_id),
+		       coalesce(right_person_id, right_org_id, right_lead_id),
+		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
+		  FROM dedupe_candidate
+		 WHERE disposition = $1 AND archived_at IS NULL
+		   AND (%s = $2 OR %s = $2)`, column[0], column[1])
+	visClause, err := dedupeVisibilityClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return nil, err
+	}
+	if visClause != "" {
+		query += " AND " + visClause
+	}
+	args = append(args, openCandidatesNamingLimit)
+	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", len(args))
+
+	var rows []DedupeCandidateRow
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		res, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+		defer res.Close()
+		for res.Next() {
+			var r DedupeCandidateRow
+			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
+				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt); err != nil {
+				return err
+			}
+			rows = append(rows, r)
+		}
+		return res.Err()
+	}); err != nil {
+		return nil, fmt.Errorf("people: listing the candidates naming %s: %w", id, err)
+	}
+	return rows, nil
+}
+
+// openCandidatesNamingLimit bounds the answer above. A create that met more
+// records than this has already made its point.
+const openCandidatesNamingLimit = 5
