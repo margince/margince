@@ -275,7 +275,7 @@ func nilComparison(cond ast.Expr) (subject ast.Expr, op token.Token, ok bool) {
 }
 
 // writesValueOutside is writesValueNaming over everything in the function
-// EXCEPT the matching branch.
+// EXCEPT the arm the nil check matched.
 //
 // The two halves have to come from opposite sides of the check, or a function
 // that nil-checks the activity and happens to read the creation instant in the
@@ -283,10 +283,16 @@ func nilComparison(cond ast.Expr) (subject ast.Expr, op token.Token, ok bool) {
 // false-POSITIVE direction, and it is the one that gets a gate waived: a
 // finding that is wrong on inspection teaches the next author to stop reading
 // the findings.
+//
+// Only the matched arm is skipped, not the whole `if`. Skipping the statement
+// entire also skipped its `else`, which is where the fallback lives in the
+// most literal spelling of one — so the detector read a smaller tree and
+// reported the clean word over it, which is the direction a census must not
+// fail in.
 func writesValueOutside(body *ast.BlockStmt, branch *ast.IfStmt, column *regexp.Regexp) bool {
 	found := false
 	ast.Inspect(body, func(n ast.Node) bool {
-		if found || n == branch {
+		if found || n == branch.Body {
 			return false
 		}
 		switch n.(type) {
@@ -393,6 +399,12 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 			"func f() { q(`coalesce(` + p + `last_activity_at, ` + p + `created_at)`) }",
 		"the reversed order, which never falls back at all": "" +
 			"func f() { q(`SELECT coalesce(created_at, last_activity_at) FROM deal`) }",
+		"the explicit else form, where the fallback lives in the branch's other arm": "" +
+			"func f() time.Time {\n\tif d.LastActivityAt != nil {\n\t\treturn *d.LastActivityAt\n" +
+			"\t} else {\n\t\treturn d.CreatedAt\n\t}\n}",
+		"the same else, assigning rather than returning": "" +
+			"func f() {\n\tvar base time.Time\n\tif d.LastActivityAt != nil {\n\t\tbase = *d.LastActivityAt\n" +
+			"\t} else {\n\t\tbase = d.CreatedAt\n\t}\n\t_ = base\n}",
 		"an alias passed as a format verb rather than written out": "" +
 			"func f() { q(fmt.Sprintf(`coalesce(%[1]slast_activity_at, %[1]screated_at)`, p)) }",
 		"an argument a writer wrapped in redundant parentheses": "" +
