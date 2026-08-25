@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 )
 
@@ -30,14 +31,11 @@ import (
 // empty page as an empty workspace.
 const CodePlanExceededBudget = "plan_exceeded_time_budget"
 
-// planStatementBudget is how long one plan may hold a connection.
-//
-// It matches the filter preview's ceiling, which is the tree's only other one,
-// and for the same reason: an agent still waiting after five seconds has
-// already lost the turn it asked the question in. An indexed plan with a page
-// limit answers an SMB-sized corpus in milliseconds, so this bounds the plans
-// that cannot be answered at all rather than the ones that are merely large.
-const planStatementBudget = 5 * time.Second
+// planStatementBudget is how long one plan may hold a connection. A plan's
+// predicate is the caller's own, so the ceiling is the one database declares
+// for that: an agent still waiting after five seconds has already lost the turn
+// it asked the question in.
+const planStatementBudget = database.CallerPredicateBudget
 
 // NewQueryExecutorWithBudget is the same executor with an explicit ceiling, for
 // the tests that have to prove the ceiling is really armed on real statements.
