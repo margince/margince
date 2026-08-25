@@ -102,7 +102,13 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	// The split columns were both empty — the WHERE clause above is that
 	// guarantee, not an assumption — while full_name moved only on the branch
 	// that rewrote it, which is why the images are narrowed rather than asserted.
+	// The event's delta and the audit image describe one change, so the name the
+	// CASE rewrote is announced as well as recorded. Reported only when it moved:
+	// the arm leaves full_name alone unless it held one of the two split values.
 	changed := map[string]any{columnFirstName: parsed.First, columnLastName: parsed.Last}
+	if fullName != previousFullName {
+		changed[fieldFullName] = fullName
+	}
 	before, after := storekit.ChangedColumns(
 		map[string]any{columnFirstName: nil, columnLastName: nil, fieldFullName: previousFullName},
 		map[string]any{columnFirstName: parsed.First, columnLastName: parsed.Last, fieldFullName: fullName},

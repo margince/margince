@@ -81,6 +81,11 @@ func (s *VoiceStore) ingestPreparedSource(ctx context.Context, tx pgx.Tx, profil
 	return source, summary, nil
 }
 
+// voiceSourceWriteIdentity names the lock every writer of one corpus source
+// takes: the pair that identifies it, not the profile, so two ingests of
+// different sources under one profile do not serialize against each other.
+const voiceSourceWriteIdentity = "voice_corpus_source"
+
 // priorVoiceSource is the manifest row a re-ingest replaces — the fields the
 // upsert overwrites, carried out of that same statement, so the audit row can
 // say what the replaced source held. exists separates "there was no such
@@ -98,6 +103,14 @@ type priorVoiceSource struct {
 // at the table: a concurrent ingest of the same source_ref committing in between
 // would leave this write recording a create for a row it actually replaced.
 func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, prepared preparedSource, actorID string) (VoiceCorpusSource, priorVoiceSource, error) {
+	// The source's identity, held for the rest of the transaction. The CTE reads
+	// the statement's own snapshot, and under READ COMMITTED the ON CONFLICT
+	// re-check resolves against a row a concurrent ingest committed after it —
+	// so without this, a replacement can report itself as a first ingest. The
+	// domain writers beside this one take the same lock for the same reason.
+	if err := storekit.LockWriteIdentity(ctx, tx, voiceSourceWriteIdentity, profileID.String()+" "+prepared.SourceRef); err != nil {
+		return VoiceCorpusSource{}, priorVoiceSource{}, err
+	}
 	occurredAt := prepared.OccurredAt
 	if occurredAt.IsZero() {
 		occurredAt = s.now().UTC()

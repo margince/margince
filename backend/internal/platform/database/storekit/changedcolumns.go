@@ -55,8 +55,26 @@ func union(before, after map[string]any) []string {
 //
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func sameColumnValue(oldValue, newValue any) bool {
-	if AbsentImage(oldValue) && AbsentImage(newValue) {
+	if emptyColumnValue(oldValue) && emptyColumnValue(newValue) {
 		return true
 	}
 	return reflect.DeepEqual(oldValue, newValue)
+}
+
+// emptyColumnValue reads a column that holds nothing. A nil slice and an empty
+// one are one state to the column and to every reader of the image, and
+// reflect.DeepEqual separates them — which would publish a writer that handed
+// back an empty list where the row held none as a change nobody made.
+//
+//craft:ignore naked-any same column-value contract as ChangedColumns
+func emptyColumnValue(v any) bool {
+	if AbsentImage(v) {
+		return true
+	}
+	switch rv := reflect.ValueOf(v); rv.Kind() {
+	case reflect.Slice, reflect.Map:
+		return rv.Len() == 0
+	default:
+		return false
+	}
 }

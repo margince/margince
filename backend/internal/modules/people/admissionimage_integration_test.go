@@ -124,7 +124,7 @@ func TestALaterAdmissionDecisionRecordsTheOneItReplaced(t *testing.T) {
 	wantImage(t, before, "before", "admission_source", AdmissionSourceHuman)
 }
 
-// admissionBeforeImage returns the raw before column of the nth-newest audit
+// admissionBeforeImage returns the raw before column of the nth-oldest audit
 // row for one disposition, oldest first, so a test can tell an absent image
 // from an empty one.
 func admissionBeforeImage(ctx context.Context, t *testing.T, e *dedupeEnv, dispositionID ids.UUID, nth int) []byte {
