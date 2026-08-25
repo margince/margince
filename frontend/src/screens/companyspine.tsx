@@ -139,7 +139,12 @@ function silenceSince(view: Organization360): string | undefined {
 // does not answer it, and an account whose last word is ours is waiting on
 // them however long ago they last wrote.
 function silence(view: Organization360, ctx: Ctx): Stop | undefined {
-  const since = silenceSince(view);
+  // Our own last message, never the meeting `silenceSince` falls back to. A
+  // gap is time spent WAITING FOR A REPLY, and a meeting is not something a
+  // reply is owed to: an account we met in June and never wrote to is not
+  // ignoring us, and drawing "nobody has written back" over it invents a
+  // slight that did not happen.
+  const since = view.last_outbound_at;
   if (!since || (view.last_inbound_at && view.last_inbound_at > since)) {
     return undefined;
   }

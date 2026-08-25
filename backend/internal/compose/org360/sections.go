@@ -45,6 +45,11 @@ func truncate[T any](rows []T) ([]T, crmcontracts.PageInfo) {
 // that embeds a row-scope clause then needs only one spelling.
 const scopeAll = "TRUE"
 
+// scopeNone admits no row. It is what a section uses when the caller holds no
+// grant over the rows at all, as against a row scope that narrows a set the
+// grant has already opened.
+const scopeNone = "FALSE"
+
 // scopeClause resolves one object's row-scope predicate for the caller,
 // answering scopeAll for an unbounded caller.
 func scopeClause(ctx context.Context, object, alias string, arg func(any) int) (string, error) {

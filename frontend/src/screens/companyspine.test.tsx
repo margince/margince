@@ -313,3 +313,27 @@ describe("what the waiting is measured from", () => {
     expect(screen.queryByText("They have never written back")).toBeNull();
   });
 });
+
+// A meeting is not a message somebody owes a reply to.
+//
+// `silenceSince` falls back to the last meeting so the thread's HEAD still has
+// a date when the timeline is withheld. The gap may not borrow that fallback:
+// an account we met once and never wrote to is not ignoring us, and drawing
+// "they have never written back" over it invents a slight that did not happen.
+describe("an account nobody has written to", () => {
+  it("draws no gap when there is a meeting but no outbound message", () => {
+    draw(
+      view({
+        last_outbound_at: null,
+        last_inbound_at: null,
+        health: { last_meeting_at: "2026-06-26T09:00:00Z" },
+      }),
+    );
+
+    // The head stop still dates the thread from the meeting.
+    expect(screen.getByText("You last spoke")).toBeTruthy();
+    // But nothing is waiting on a reply.
+    expect(screen.queryByText("They have never written back")).toBeNull();
+    expect(screen.queryByText("Silence since then")).toBeNull();
+  });
+});
