@@ -536,7 +536,7 @@
   font-weight: var(--fw-semibold);
 }
 .rail .navitem.active svg {
-  color: var(--accent);
+  color: var(--accentText);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -730,7 +730,7 @@
 .rail .navback:hover svg,
 .rail .navback:focus-visible svg {
   transform: translateX(-2px);
-  color: var(--accent);
+  color: var(--accentText);
 }
 @media (prefers-reduced-motion: reduce) {
   .rail .navback svg {
@@ -977,7 +977,7 @@
   font-weight: var(--fw-semibold);
 }
 .sectionpickgroup a[aria-current="page"] svg {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* ===== ⌘K palette ===== */
@@ -1277,7 +1277,7 @@
   /* A destination inside the More sheet is still the current one; without this
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
-    color: var(--accent);
+    color: var(--accentText);
   }
   .rail .railmore.active {
     background: var(--accentLight);

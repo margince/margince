@@ -55,7 +55,7 @@
 }
 .lt-vtab.on {
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* Pushed to the right of the views, but stays left of the action. */
@@ -106,7 +106,7 @@
 }
 .lt-search:focus-within {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .lt-search-input {
@@ -185,12 +185,12 @@
 .lt-btn.on {
   border-color: var(--accentMed);
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .lt-chip-value {
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* An applied filter's compound row: attribute, condition, value and the "⋮"
@@ -230,7 +230,7 @@
   align-items: center;
   padding: 0 var(--space-3);
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -687,7 +687,7 @@
   color: var(--textPrimary);
 }
 .lt-sort.on {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* The arrow occupies its slot at all times and only becomes visible on the
@@ -720,7 +720,7 @@
   background: transparent;
   padding: 0;
   font: inherit;
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: underline;
   cursor: pointer;
 }

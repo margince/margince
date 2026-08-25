@@ -19,7 +19,7 @@
 .connector-id > svg {
   width: 18px;
   height: 18px;
-  color: var(--accent);
+  color: var(--accentText);
   flex: none;
 }
 .connector-id > span {

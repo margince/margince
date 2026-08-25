@@ -247,7 +247,7 @@
   font-family: var(--f-body);
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  color: var(--accent);
+  color: var(--accentText);
 }
 .ob-gate-link:hover,
 .ob-gate-link:focus-visible {
@@ -573,7 +573,7 @@
 /* One of these three numbers is the payoff and the other two are context, so the
    eye is told which one to follow. It is also the only one that climbs. */
 .ob-scan-counts .ob-scan-found {
-  color: var(--accent);
+  color: var(--accentText);
   font-weight: var(--fw-medium);
 }
 /* A drawn separator rather than a character: a middot in a string would be copy

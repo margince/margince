@@ -47,10 +47,10 @@
 }
 .file-chip:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accentText);
 }
 .file-chip:hover svg {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* The ring. A chip is a link to a document; it had a hover state and nothing for

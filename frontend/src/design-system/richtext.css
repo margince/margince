@@ -109,7 +109,7 @@
 }
 
 .richtext-input a {
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: underline;
 }
 

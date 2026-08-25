@@ -59,7 +59,7 @@
   border: 0;
   background: none;
   font: inherit;
-  color: var(--accent);
+  color: var(--accentText);
   cursor: pointer;
 }
 
@@ -664,7 +664,7 @@
   gap: var(--space-2);
   margin-top: var(--space-3);
   font-size: 13px;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* ---------------------------------------------------------------------------
@@ -837,7 +837,7 @@
   background: var(--accentLight);
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .pe-claim-body {

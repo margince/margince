@@ -153,11 +153,11 @@
 .btn-ghost[aria-pressed="true"] {
   border-color: var(--accentMed);
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
 }
 .btn-ghost[aria-pressed="true"]:hover {
   background: var(--accentMed);
-  color: var(--accent);
+  color: var(--accentText);
 }
 /* federated: the door into another company's sign-in.
  *
@@ -395,7 +395,7 @@
  * a sentence, which is the one that had nobody to draw it. A blanket `a` rule
  * would repaint the chrome instead. */
 a:not([class]) {
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

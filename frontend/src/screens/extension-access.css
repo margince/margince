@@ -36,7 +36,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--accent);
+  color: var(--accentText);
   overflow-wrap: anywhere;
 }
 

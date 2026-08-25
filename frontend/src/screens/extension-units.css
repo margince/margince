@@ -19,7 +19,7 @@
 .extunits-name > svg {
   width: 18px;
   height: 18px;
-  color: var(--accent);
+  color: var(--accentText);
   flex: none;
 }
 
@@ -30,7 +30,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: none;
   white-space: nowrap;
 }

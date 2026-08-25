@@ -48,6 +48,16 @@ export default defineConfig({
     // so the record-clock and viewer-clock surfaces agree here and a test that
     // means to tell them apart has to say so itself.
     timezoneId: "Europe/Berlin",
+    // Pin the PALETTE for the same reason as the locale and the zone above:
+    // tokens.css publishes a light and a dark set behind
+    // `prefers-color-scheme`, so an unpinned scheme measures whichever one the
+    // runner happens to report — and the two do not have the same contrast.
+    // The axe sweep read light here and dark on CI within one hour, which
+    // presented as a flaky lane and was two palettes being sampled at random.
+    // Light is the default the product is built to (§2: "Build light-first");
+    // dark is swept explicitly by its own block in ac.spec.ts, so pinning here
+    // narrows what a test measures rather than what the suite covers.
+    colorScheme: "light",
     // the SW would compete with the network-edge seed mocks
     serviceWorkers: "block",
   },
