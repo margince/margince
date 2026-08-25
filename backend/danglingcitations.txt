@@ -1,0 +1,244 @@
+# THE DANGLING-CITATION REGISTER — a record, not a permission.
+#
+# Every line is a file that cites a migration version no namespace carries, in
+# the form: <path> <namespace> <version>. A namespace of "migration" means the
+# citation named none, so it was checked against every namespace at once.
+#
+# The migrations these name were mostly deleted by the 2026-08 baseline
+# consolidation, and MOST of them still resolve through git history — so they are
+# stale prose rather than defects, and rewriting them mechanically would cost
+# more than it buys: a citation is usually the only thing in a sentence saying
+# where the reasoning lives. Two on this list named versions that never existed
+# on ANY ref, and were repaired in the change that added this file.
+#
+# What the register prevents is the backlog GROWING. A citation written today
+# against a version that never existed is a dead end from birth.
+#
+# Per FILE, not a total, and that is the point: a total let a deletion anywhere
+# fund a new dead citation elsewhere and net to green — STATUS.md alone carries
+# dozens and is edited at the end of every session.
+#
+# Line numbers are deliberately absent: editing a file above a citation is not a
+# new citation, and a register that churned on every edit would be ignored.
+#
+# TO FIX ONE: state the invariant so the sentence stands alone, or say the
+# migration is in git history rather than in the tree — then DELETE its line
+# here. The gate fails on a line whose citation is gone, so the register cannot
+# drift from the tree in either direction.
+#
+# TO REGENERATE: go test ./... -run TestEveryCitedMigrationExists -update-citations
+.github/workflows/_lane-integration.yml migration 0015
+Makefile core 0240
+README.md migration 0019
+backend/api/crm.yaml migration 0099
+backend/api/crm.yaml migration 0114
+backend/api/crm.yaml migration 0287
+backend/auditcoherence_test.go migration 0226
+backend/capturedbytyping_test.go migration 0262
+backend/internal/compose/accountdraft/input.go core 0203
+backend/internal/compose/agentgate_pin_test.go core 0063
+backend/internal/compose/agentgate_pin_test.go custom 20260730120000
+backend/internal/compose/agenttaskretention.go migration 0201
+backend/internal/compose/captureverdict_integration_test.go migration 0137
+backend/internal/compose/captureverdictnoise_integration_test.go migration 0137
+backend/internal/compose/channelprovider_migration_integration_test.go migration 0240
+backend/internal/compose/channelproviderfacts_test.go migration 0247
+backend/internal/compose/commsscheduled.go core 0260
+backend/internal/compose/datareset_integration_test.go migration 1787032690
+backend/internal/compose/datareset_integration_test.go migration 1787226902
+backend/internal/compose/datareset_integration_test.go migration 1787320000
+backend/internal/compose/datasweep.go core 0062
+backend/internal/compose/datasweep.go migration 0289
+backend/internal/compose/embedreindextransport.go migration 0115
+backend/internal/compose/erasurequotations_integration_test.go core 0244
+backend/internal/compose/extruntimetx.go core 0217
+backend/internal/compose/idempotencyretention.go migration 0033
+backend/internal/compose/integration/agentaccess/oauth_lend_integration_test.go migration 0172
+backend/internal/compose/integration/capture/capture_auto_enrich_sweep_integration_test.go migration 0121
+backend/internal/compose/integration/capture/capture_settings_integration_test.go migration 0121
+backend/internal/compose/integration/collections/segmentvocabulary_integration_test.go migration 0131
+backend/internal/compose/integration/dealreferences_integration_test.go migration 1787320003
+backend/internal/compose/integration/embedding_integration_test.go migration 0114
+backend/internal/compose/integration/embedreindex_integration_test.go migration 0115
+backend/internal/compose/integration/growthfit_e2e_integration_test.go migration 0194
+backend/internal/compose/integration/lastactivity_integration_test.go migration 1787032690
+backend/internal/compose/integration/lastactivity_integration_test.go migration 1787044474
+backend/internal/compose/integration/license_entitlement_integration_test.go core 0216
+backend/internal/compose/integration/offerstaged_integration_test.go core 0073
+backend/internal/compose/integration/project_integration_test.go migration 1787320003
+backend/internal/compose/integration/projectlastactivity_integration_test.go migration 1787320000
+backend/internal/compose/integration/queryjoinhop_integration_test.go core 0217
+backend/internal/compose/integration/recordhistoryclient_integration_test.go migration 1787109970
+backend/internal/compose/integration/scheduledsendagent_integration_test.go core 0260
+backend/internal/compose/integration/signalscan_integration_test.go migration 0047
+backend/internal/compose/org360/dismissal.go core 0225
+backend/internal/compose/org360/viewbaseline.go core 0225
+backend/internal/compose/orgbrief/service.go core 0225
+backend/internal/compose/orgdossier/evidence.go migration 0099
+backend/internal/compose/orgrollup_test.go core 0006
+backend/internal/compose/participantbackfilljob.go migration 0157
+backend/internal/compose/person360/handlers.go migration 0184
+backend/internal/compose/person360/sectionstimeline.go core 0225
+backend/internal/compose/personsearchdiscover.go migration 0097
+backend/internal/compose/serverassembly.go core 0235
+backend/internal/compose/signalscan.go migration 0047
+backend/internal/modules/activities/activitylinks.go migration 1787032690
+backend/internal/modules/activities/commitments.go core 0008
+backend/internal/modules/activities/lasttouch.go migration 1787032690
+backend/internal/modules/activities/lifecycle.go migration 1787320003
+backend/internal/modules/activities/participantbackfill.go migration 0157
+backend/internal/modules/activities/scheduledsendfire.go core 0217
+backend/internal/modules/activities/scheduledsendfire.go core 0242
+backend/internal/modules/activities/scheduledsendprovenance.go core 0260
+backend/internal/modules/activities/threadwire_integration_test.go migration 0093
+backend/internal/modules/agents/tools_comms_test.go core 0251
+backend/internal/modules/ai/callstats.go migration 0088
+backend/internal/modules/automation/automations_catalog.go core 0035
+backend/internal/modules/automation/automations_catalog.go core 0078
+backend/internal/modules/automation/automations_runs.go migration 0061
+backend/internal/modules/automation/automations_runs_test.go migration 0061
+backend/internal/modules/automation/catalog_actions.go core 0008
+backend/internal/modules/automation/engine_blocked.go migration 0061
+backend/internal/modules/automation/gate.go migration 0061
+backend/internal/modules/automation/rundetail.go migration 0079
+backend/internal/modules/capture/backfillyields.go core 0217
+backend/internal/modules/capture/channelsend.go core 0217
+backend/internal/modules/capture/pending.go migration 0222
+backend/internal/modules/capture/pendingsweeps.go migration 0137
+backend/internal/modules/capture/projectkeytoken.go migration 0131
+backend/internal/modules/capture/sink.go migration 0137
+backend/internal/modules/collections/vocab_test.go migration 0228
+backend/internal/modules/comms/store_test.go core 0136
+backend/internal/modules/consent/preference.go core 0217
+backend/internal/modules/customfields/candidates_integration_test.go core 0009
+backend/internal/modules/customfields/engine.go core 0063
+backend/internal/modules/customfields/engine.go core 0171
+backend/internal/modules/customfields/fieldobjects_test.go core 0171
+backend/internal/modules/customfields/service.go core 0063
+backend/internal/modules/deals/offer.go core 0217
+backend/internal/modules/identity/roles.go migration 0211
+backend/internal/modules/identity/service.go migration 0268
+backend/internal/modules/overlay/freshness_integration_test.go core 0217
+backend/internal/modules/overlay/teardown.go core 0012
+backend/internal/modules/overlay/teardown_integration_test.go core 0012
+backend/internal/modules/people/emailsignature.go core 0235
+backend/internal/modules/people/geocode.go migration 0217
+backend/internal/modules/people/merge_organization.go migration 1787320003
+backend/internal/modules/people/organization_computed.go core 0217
+backend/internal/modules/people/organization_fact_read.go migration 0099
+backend/internal/modules/people/organizationarchive.go migration 0083
+backend/internal/modules/people/organizationlinkedin_test.go migration 0191
+backend/internal/modules/people/organizationlogo.go core 0217
+backend/internal/modules/people/relationshiperrors.go migration 0007
+backend/internal/modules/people/relationshiperrors.go migration 1787111736
+backend/internal/modules/people/sitereadfinish.go migration 0221
+backend/internal/modules/privacy/erasure_approvals.go core 0244
+backend/internal/modules/privacy/recordhistory.go migration 0287
+backend/internal/modules/privacy/recordhistory.go migration 1787109970
+backend/internal/modules/privacy/retentionpolicystore.go core 0217
+backend/internal/modules/privacy/retentionrestricted.go migration 0291
+backend/internal/modules/privacy/subjectcolumns.go core 0229
+backend/internal/modules/privacy/transcriptreadings.go core 0245
+backend/internal/modules/quotas/attainment.go core 0217
+backend/internal/modules/quotas/quotas.go core 0228
+backend/internal/modules/search/binding.go migration 0114
+backend/internal/modules/search/graph.go core 0038
+backend/internal/modules/search/graphactivity.go core 0038
+backend/internal/modules/search/pending.go migration 0114
+backend/internal/modules/search/queryjoins.go core 0007
+backend/internal/modules/search/queryjoins.go core 0008
+backend/internal/modules/search/queryjoins.go core 0195
+backend/internal/modules/search/queryjoins.go core 0217
+backend/internal/modules/search/queryjoins_test.go core 0007
+backend/internal/modules/search/queryjoins_test.go core 0008
+backend/internal/modules/search/queryjoins_test.go core 0195
+backend/internal/modules/search/querysql_test.go core 0007
+backend/internal/modules/search/querystorage.go migration 0051
+backend/internal/modules/search/store.go migration 0077
+backend/internal/modules/signals/audiencerescope.go migration 0208
+backend/internal/platform/auth/auditgrant_test.go migration 0133
+backend/internal/platform/auth/auditgrant_test.go migration 0287
+backend/internal/platform/auth/captureprivacy_test.go migration 0095
+backend/internal/platform/auth/captureprivacy_test.go migration 1787320003
+backend/internal/platform/auth/rowscope.go migration 0095
+backend/internal/platform/auth/rowscope.go migration 1787320003
+backend/internal/platform/auth/tableclass_test.go migration 1787320003
+backend/internal/platform/database/database.go core 0217
+backend/internal/platform/database/db.go core 0217
+backend/internal/platform/database/storekit/suppression.go core 0217
+backend/internal/platform/database/storekit/suppression.go core 0255
+backend/internal/platform/dbmigrate/dbmigrate_test.go core 0002
+backend/internal/platform/events/bus_integration_test.go core 0015
+backend/internal/platform/events/relay.go migration 0016
+backend/internal/platform/httperr/constraintfault.go migration 0289
+backend/internal/platform/jobs/jobs_integration_test.go core 0015
+backend/internal/platform/testdb/reset.go migration 0240
+backend/internal/platform/testdb/reset_integration_test.go migration 0240
+backend/internal/shared/kernel/pipelinetrace/registry.go migration 0258
+backend/internal/shared/ports/datasource/datasource.go core 0171
+backend/internal/shared/ports/extraction/extraction.go core 0252
+backend/migrations/schema_fitness_integration_test.go core 1787047322
+backend/piicoverage_test.go core 0245
+backend/rbacgate_test.go core 0217
+backend/rlsclaims_test.go core 0217
+backend/rlsclaims_test.go migration 0217
+backend/tableownership_test.go core 0245
+backend/tableownership_test.go migration 0219
+backend/tools/extmigrategate/role.go core 0213
+backend/tools/extmigrategate/role.go migration 0206
+backend/tools/gen-composition/extmigrations.go core 0213
+backend/tools/seed-demo/apiclient.go migration 0273
+backend/tools/seed-demo/comms.go migration 0282
+desktop/build/build-postgres.sh core 0032
+desktop/build/build-postgres.sh core 0052
+docs/deployment.md migration 0015
+docs/explanation/ai-runtime.md migration 0088
+docs/explanation/ai-runtime.md migration 0100
+docs/explanation/ai-runtime.md migration 0102
+docs/explanation/ai-runtime.md migration 0105
+docs/explanation/company-context.md migration 0102
+docs/explanation/company-context.md migration 0103
+docs/explanation/company-context.md migration 0105
+docs/explanation/custom-fields.md core 0063
+docs/explanation/desktop-distribution.md core 0022
+docs/explanation/desktop-distribution.md core 0032
+docs/explanation/desktop-distribution.md core 0052
+docs/explanation/ingress-gate-and-auto-capture.md core 0269
+docs/explanation/outbound-messaging.md migration 0155
+docs/explanation/outbound-webhooks.md core 0113
+docs/explanation/rbac-roles-and-teams.md core 0002
+docs/explanation/relationship-graph.md core 0157
+docs/explanation/relationship-graph.md migration 0158
+docs/explanation/search-and-retrieval.md migration 0004
+docs/explanation/search-and-retrieval.md migration 0022
+docs/explanation/search-and-retrieval.md migration 0052
+docs/explanation/search-and-retrieval.md migration 0077
+docs/explanation/search-and-retrieval.md migration 0114
+docs/explanation/write-backbone.md core 0012
+docs/explanation/write-backbone.md core 0013
+docs/explanation/write-backbone.md core 0015
+docs/how-to/add-an-extension.md migration 0003
+docs/how-to/apply-migrations.md core 0240
+docs/how-to/connect-telegram.md core 0251
+docs/how-to/connect-telegram.md core 0282
+docs/reference/make-targets.md core 0240
+extensions/notes/migrations/0001_note.up.sql core 0213
+frontend/e2e/leads.spec.ts migration 0038
+frontend/e2e/seed.ts migration 0042
+frontend/src/design-system/recordtimeline.ts migration 0038
+frontend/src/screens/companyevidence.stories.tsx migration 0099
+frontend/src/screens/companyrail.test.tsx core 0019
+frontend/src/screens/companyraildetails.tsx core 0203
+frontend/src/screens/embedreindex.stories.tsx migration 0115
+frontend/src/screens/embedreindex.test.tsx migration 0115
+frontend/src/screens/embedreindex.tsx migration 0115
+frontend/src/screens/persondrawers.tsx migration 0188
+frontend/src/screens/relationships.test.tsx migration 0007
+frontend/src/screens/relationships.tsx migration 0007
+frontend/src/screens/settings-nav.test.tsx migration 0261
+scripts/check-rls-store-path.sh core 0217
+scripts/deploy/db-bootstrap.sql migration 0015
+scripts/lib-testdb.sh migration 0015
+scripts/test-migration-versions.sh core 0002
+scripts/test-migration-versions.sh core 0003
+scripts/test-migration-versions.sh core 1799999999
