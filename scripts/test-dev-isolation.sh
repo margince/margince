@@ -177,6 +177,34 @@ planted="$(printf 'seed-demo:\n\tBASE_URL=http://localhost:8080 pnpm e2e\n' \
 check "1" "$planted" \
       "the scan recognises a hardcoded :8080 in a recipe — otherwise the clean result above means nothing"
 
+echo "Makefile: reaching another stack is all three of it or none"
+
+# A stack is an API base, a database and a bucket. Overriding one and letting the
+# other two resolve from this worktree is the same split the scan above exists to
+# catch, arriving by the front door: each half succeeds, so nothing reports it.
+partial="$(make -s -C "$root" verify-demo SEED_DSN=postgres://x@localhost:15432/margince 2>&1 || true)"
+case "$partial" in
+    *"set all three or none"*) refused=1 ;;
+    *)                         refused="accepted a partial override: $partial" ;;
+esac
+check "1" "$refused" \
+      "a DSN on its own is refused, rather than sending records to one stack and rows to another"
+
+# And a COMPLETE override is still honoured, or the refusal above would just be a
+# way of forbidding what the variables exist to do.
+complete="$(make -s -C "$root" verify-demo \
+    SEED_DSN=postgres://x@localhost:15432/other \
+    SEED_API=http://localhost:9 \
+    SEED_BUCKET=other-bucket 2>&1 || true)"
+# Matched on the host it actually CONTACTED rather than on the flag it printed:
+# the flag proves the recipe composed a URL, the dial proves the seeder used it.
+case "$complete" in
+    *"http://localhost:9/v1/"*) honoured=1 ;;
+    *)                          honoured="did not reach the named API: $complete" ;;
+esac
+check "1" "$honoured" \
+      "all three together name the stack they say, so the refusal is about split writes and not about the flags"
+
 lift port_listeners
 lift read_registry
 lift pick_free_db

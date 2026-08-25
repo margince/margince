@@ -201,6 +201,7 @@ const SEGREGATION_NOTE_KEY = "margince.leads.segregationNoteDismissed";
 // The queue's own dial: board or table. Not a wire parameter, because /leads
 // takes neither — it decides how the same rows are drawn.
 const LEAD_VIEW_PARAM = "view";
+const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
 
 function LeadsWorkbench({
   viewerId,
@@ -223,6 +224,11 @@ function LeadsWorkbench({
     initialSort: "",
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
     fetchPage: fetchLeadsPage,
+    // Board or table is this screen's own, so the codec must not read it as a
+    // lead filter: unheld it was spread onto `GET /leads?view=board`, counted
+    // as a narrowing, and cleared by "clear filters" — which flipped the board
+    // back to a table.
+    screenDials: LEAD_SCREEN_DIALS,
   });
   const [noteDismissed, setNoteDismissed] = useState(
     () => window.localStorage.getItem(SEGREGATION_NOTE_KEY) === "1",

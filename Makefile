@@ -23,9 +23,14 @@ GO ?= go
 DATASET_ROOT := $(or $(shell git rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/\.git$$||'),$(CURDIR))
 DATASET ?= $(abspath $(DATASET_ROOT)/../margince-demo-database)
 
-# The dev stack's owner DSN. Empty means THIS worktree's stack, named with the
-# rest of its identity in SEED_STACK below; set it to reach another one.
+# Reaching a stack other than this worktree's. A stack is three things — an API
+# base, a database and an object bucket — so an override is all three or none:
+# SEED_STACK below refuses a partial one rather than sending the API half of a
+# seed to one stack and the SQL half to another, which is the exact defect the
+# resolution underneath it exists to close.
 SEED_DSN ?=
+SEED_API ?=
+SEED_BUCKET ?=
 
 # The dev stack's MinIO port. Same default scripts/dev.sh uses. seed-demo needs
 # it to upload the company logos: without a blobstore the seeder skips them and
@@ -45,14 +50,31 @@ MINIO_PORT ?= 29000
 # that refusal into an empty database name and seed the wrong place anyway. Each
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
+# An override is all three or none, checked BEFORE anything is resolved: naming
+# one of them and letting the other two resolve from this worktree is how one
+# seed lands in two stacks, and it fails silently because each half succeeds.
 SEED_STACK = set -e; . scripts/lib-devstate.sh; \
-  seed_api="$$(dev_app_base_url)"; \
-  seed_slug="$$(dev_resolve_slug "$(DEV_SLUG)")"; \
-  seed_bucket="$$(dev_bucket_for_slug "$$seed_slug")"; \
-  seed_db="$$(dev_database_name)"; \
-  seed_dsn="$(SEED_DSN)"; \
-  [ -n "$$seed_dsn" ] || \
-    seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db";
+  seed_given=0; \
+  for given in "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)"; do \
+    [ -z "$$given" ] || seed_given=$$((seed_given + 1)); \
+  done; \
+  if [ "$$seed_given" -gt 0 ] && [ "$$seed_given" -lt 3 ]; then \
+    echo "FAIL: SEED_DSN, SEED_API and SEED_BUCKET name ONE stack — set all three or none." >&2; \
+    echo "  Given: DSN='$(SEED_DSN)' API='$(SEED_API)' BUCKET='$(SEED_BUCKET)'" >&2; \
+    echo "  A partial override sends this seed's records to one stack and its rows to another." >&2; \
+    exit 1; \
+  fi; \
+  if [ "$$seed_given" -eq 3 ]; then \
+    seed_api="$(SEED_API)"; \
+    seed_bucket="$(SEED_BUCKET)"; \
+    seed_dsn="$(SEED_DSN)"; \
+  else \
+    seed_api="$$(dev_app_base_url)"; \
+    seed_slug="$$(dev_resolve_slug "$(DEV_SLUG)")"; \
+    seed_bucket="$$(dev_bucket_for_slug "$$seed_slug")"; \
+    seed_db="$$(dev_database_name)"; \
+    seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
+  fi;
 
 .PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
@@ -311,6 +333,10 @@ seed-dev:
 ## dataset checkout; SEED_ARGS= passes flags through (-dry-run, -limit N).
 ## It fills THIS worktree's stack; a `-api` in SEED_ARGS lands after the
 ## resolved one and so overrides it, the way the seeder's own flag parsing does.
+# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
+# is /bin/sh — dash on most Linux images, where sourcing it fails before the
+# stack is resolved.
+seed-demo: SHELL := /bin/bash
 seed-demo:
 	@test -f "$(DATASET)/datasets/v1/demo.json" || { \
 	  echo "no demo dataset at $(DATASET) — clone margince-demo-database beside this repo, or pass DATASET=<path>" >&2; \
@@ -337,6 +363,10 @@ seed-demo:
 ## check and refuses a spelling it cannot parse — `$(MAKE) seed-demo
 ## SEED_ARGS="… $(SEED_ARGS)"` is one, and a leg it silently dropped would be
 ## a gate that stopped gating.
+# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
+# is /bin/sh — dash on most Linux images, where sourcing it fails before the
+# stack is resolved.
+verify-demo: SHELL := /bin/bash
 verify-demo:
 	@test -f config/margince-admin-password || { \
 	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
@@ -540,6 +570,10 @@ bench-mobile:
 ## Screenshots land OUTSIDE the repo for eyeball comparison against the PNGs.
 ## Override E2E_ORG_POPULATED / E2E_ORG_SPARSE to aim it at other companies.
 E2E_SHOT_DIR ?= /tmp/e2e-company
+# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
+# is /bin/sh — dash on most Linux images, where sourcing it fails before the
+# stack is resolved.
+e2e-company: SHELL := /bin/bash
 e2e-company:
 	@mkdir -p "$(E2E_SHOT_DIR)"
 	@set -e; . scripts/lib-devstate.sh; \

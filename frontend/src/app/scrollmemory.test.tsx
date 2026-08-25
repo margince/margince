@@ -63,9 +63,19 @@ describe("a history entry's identity", () => {
   it("leaves whatever else the entry's state carries", () => {
     window.history.replaceState({ borrowed: "keep me" }, "");
     historyEntryId();
-    expect((window.history.state as Record<string, unknown>).borrowed).toBe(
-      "keep me",
-    );
+    expect(window.history.state).toMatchObject({ borrowed: "keep me" });
+  });
+
+  it("cannot mint an id an entry from a previous page load already holds", () => {
+    // `history.state` outlives the page it was written on; the offsets do not.
+    // With ids counted from one on every load, the first entry stamped after a
+    // reload answered to a name an older entry still held, and a reader's place
+    // in one list was restored onto another.
+    const before = historyEntryId();
+    // A reload: the module's memory goes, the entry's stamp stays.
+    forgetScrollMemory();
+    window.history.pushState(null, "", "#/deals");
+    expect(historyEntryId()).not.toBe(before);
   });
 
   it("names a new entry separately from the one before it", () => {

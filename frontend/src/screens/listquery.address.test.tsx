@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
+import type { UrlParams } from "../app/urlstate";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -19,10 +20,8 @@ const OPENING: ListQuery = {
   perPage: LIST_PAGE_SIZES[0],
 };
 
-const address = (query: string) =>
-  new Map(
-    [...new URLSearchParams(query)].filter(([, value]) => value !== ""),
-  ) as ReadonlyMap<string, string>;
+const address = (query: string): UrlParams =>
+  new Map([...new URLSearchParams(query)].filter(([, value]) => value !== ""));
 
 /** The list a reader who has already been given an address is looking at. */
 const shown = (query: string) =>

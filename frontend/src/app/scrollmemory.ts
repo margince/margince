@@ -22,25 +22,41 @@ import { useEffect, useRef, useState } from "react";
 // reader into a list that is still arriving.
 
 /**
- * The history entry the reader is on.
+ * The history entry the reader is on: a counter, behind a token for THIS load.
  *
  * The browser gives an entry no identity of its own, so one is stamped into
- * `history.state` the first time each entry is seen. A COUNTER rather than a
- * random id: the offsets below live only as long as this page load, so an id
- * only has to be unique within one — and an id restored from `history.state`
- * after a reload then finds nothing, which is the right answer rather than a
- * collision waiting to happen.
+ * `history.state` the first time each entry is seen. The counter alone is not
+ * enough, because `history.state` OUTLIVES the page it was written on while the
+ * offsets below do not: after a reload the counter restarts at 1 and the entries
+ * visited before it still carry `e1`, `e2` and so on. The first entry stamped
+ * after that reload answers to a name an older entry already holds, and a
+ * reader's place in one list is then restored onto another.
+ *
+ * The token is what an id is unique WITHIN, so it is minted per load and again
+ * whenever the offsets are dropped — the two have the same lifetime, and that is
+ * the whole invariant.
  */
 let stamped = 0;
+let loadToken = newLoadToken();
+
+function newLoadToken(): string {
+  // Only has to differ from the tokens of loads whose entries are still in this
+  // history, so a short random suffix is enough and needs no clock.
+  return Math.random().toString(36).slice(2, 8);
+}
 
 const ENTRY_KEY = "marginceEntry";
 
+/** Narrowed rather than asserted: `history.state` is whatever was put there. */
+function asRecord(state: unknown): Readonly<Record<string, unknown>> | null {
+  return typeof state === "object" && state !== null
+    ? Object.fromEntries(Object.entries(state))
+    : null;
+}
+
 function entryOf(state: unknown): string | undefined {
-  if (typeof state === "object" && state !== null && ENTRY_KEY in state) {
-    const id = (state as Record<string, unknown>)[ENTRY_KEY];
-    return typeof id === "string" ? id : undefined;
-  }
-  return undefined;
+  const carried = asRecord(state)?.[ENTRY_KEY];
+  return typeof carried === "string" ? carried : undefined;
 }
 
 /**
@@ -56,20 +72,23 @@ export function historyEntryId(): string {
     return existing;
   }
   stamped += 1;
-  const id = `e${stamped}`;
-  const state =
-    typeof globalThis.history.state === "object" &&
-    globalThis.history.state !== null
-      ? { ...globalThis.history.state, [ENTRY_KEY]: id }
-      : { [ENTRY_KEY]: id };
+  const id = `${loadToken}-e${stamped}`;
+  const carried = asRecord(globalThis.history.state);
+  const state = carried ? { ...carried, [ENTRY_KEY]: id } : { [ENTRY_KEY]: id };
   globalThis.history.replaceState(state, "");
   return id;
 }
 
-/** Forget every remembered offset. For tests, which share one document. */
+/**
+ * Forget every remembered offset. For tests, which share one document.
+ *
+ * The load token goes with them: dropping the offsets is what a reload does, and
+ * the ids minted after it must not answer to entries stamped before it.
+ */
 export function forgetScrollMemory(): void {
   offsets.clear();
   stamped = 0;
+  loadToken = newLoadToken();
 }
 
 const offsets = new Map<string, number>();

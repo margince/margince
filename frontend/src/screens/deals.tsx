@@ -115,7 +115,9 @@ import {
   type ListState,
   ListTable,
   listQueryFromParams,
+  mergeScreenDials,
   paramsFromListQuery,
+  withoutScreenDials,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
@@ -221,25 +223,11 @@ type DealFilters = {
 const PIPELINE_PARAM = "pipeline_id";
 const VIEW_PARAM = "view";
 
-/** `params` with this screen's own two dials removed, leaving the list's. */
-function withoutDealDials(params: UrlParams): UrlParams {
-  const rest = new Map(params);
-  rest.delete(PIPELINE_PARAM);
-  rest.delete(VIEW_PARAM);
-  return rest;
-}
-
-/** `listDials` with this screen's own two carried over from `carrying`. */
-function mergeDealDials(listDials: UrlParams, carrying: UrlParams): UrlParams {
-  const merged = new Map(listDials);
-  for (const key of [PIPELINE_PARAM, VIEW_PARAM]) {
-    const value = carrying.get(key);
-    if (value) {
-      merged.set(key, value);
-    }
-  }
-  return merged;
-}
+// This screen's own dials, held out of the list's parameter space by the codec's
+// shared pair rather than by copies kept here: the copies were the difference
+// between this screen getting it right and the leads queue sending its drawing
+// choice to the server as a filter.
+const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
 
 /** `params` with one dial set, or removed when the value is empty. */
 function withDialSet(params: UrlParams, key: string, value: string): UrlParams {
@@ -1711,16 +1699,33 @@ export function DealsScreen({
     [],
   );
   const query = useMemo(
-    () => listQueryFromParams(withoutDealDials(params), opening, true),
+    () =>
+      listQueryFromParams(
+        withoutScreenDials(params, DEAL_SCREEN_DIALS),
+        opening,
+        true,
+      ),
     [params, opening],
   );
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
       typeof update === "function"
-        ? update(listQueryFromParams(withoutDealDials(live), opening, true))
+        ? update(
+            listQueryFromParams(
+              withoutScreenDials(live, DEAL_SCREEN_DIALS),
+              opening,
+              true,
+            ),
+          )
         : update;
-    setParams(mergeDealDials(paramsFromListQuery(next, opening), live));
+    setParams(
+      mergeScreenDials(
+        paramsFromListQuery(next, opening),
+        live,
+        DEAL_SCREEN_DIALS,
+      ),
+    );
   };
   const pipelineId = params.get(PIPELINE_PARAM) ?? "";
   const setPipelineId = (next: string) =>

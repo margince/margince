@@ -112,6 +112,10 @@ function withPage(params: UrlParams, page: number): UrlParams {
 }
 
 const PER_PAGE_PARAM = "per";
+
+/** A screen with no drawing dial of its own, which is most of them. */
+const NO_SCREEN_DIALS: readonly string[] = [];
+
 const LIST_OWN_PARAMS: ReadonlySet<string> = new Set([
   "q",
   "sort",
@@ -119,6 +123,55 @@ const LIST_OWN_PARAMS: ReadonlySet<string> = new Set([
   PER_PAGE_PARAM,
   PAGE_PARAM,
 ]);
+
+/**
+ * The address keys a SCREEN owns, held out of the list's parameter space.
+ *
+ * The codec treats every key it does not recognise as a wire filter, which is
+ * the right default — it is how a chip a screen adds becomes addressable with no
+ * code here. A screen's own DRAWING dial is the exception: board or table, which
+ * pipeline's board, decides how the same rows are presented and nothing about
+ * which rows exist. Left in the parameter space it was spread onto the request
+ * (`GET /leads?view=board` really went out), counted as a narrowing, and wiped
+ * by "clear filters" — pressing which flipped the board back to a table.
+ *
+ * ONE pair, because this was two: the deals board grew its own copies of these
+ * two functions, the leads queue did not grow them at all, and that is exactly
+ * the difference between the two screens' defects. A screen names its drawing
+ * dials once and the codec holds them apart.
+ */
+export function withoutScreenDials(
+  params: UrlParams,
+  dials: readonly string[],
+): UrlParams {
+  if (dials.length === 0) {
+    return params;
+  }
+  const rest = new Map(params);
+  for (const dial of dials) {
+    rest.delete(dial);
+  }
+  return rest;
+}
+
+/** `listDials` with the screen's own dials carried over from `carrying`. */
+export function mergeScreenDials(
+  listDials: UrlParams,
+  carrying: UrlParams,
+  dials: readonly string[],
+): UrlParams {
+  if (dials.length === 0) {
+    return listDials;
+  }
+  const merged = new Map(listDials);
+  for (const dial of dials) {
+    const value = carrying.get(dial);
+    if (value) {
+      merged.set(dial, value);
+    }
+  }
+  return merged;
+}
 
 /**
  * The query `params` describes, with `opening` standing where it says nothing.
@@ -301,6 +354,7 @@ export function useListQuery<Row>({
   fetchPage,
   initialSort,
   initialFilters,
+  screenDials = NO_SCREEN_DIALS,
 }: Readonly<{
   key: string;
   fetchPage: (
@@ -310,11 +364,28 @@ export function useListQuery<Row>({
   initialSort?: string;
   /**
    * Filters the list opens on, for a reader who has not narrowed it themselves.
-   * A filter that only becomes known later (the viewer's own id, say) may
-   * arrive on any render: it is what a BARE address means, not a value read
-   * once, so the list picks it up when it turns up.
+   *
+   * Read at ARRIVAL only. The opening state is written into the address once, on
+   * mount, and from then on a bare address means the reader cleared everything
+   * rather than that they have just got here — so a filter that changes after
+   * that seeding does not reach the list. Every caller today passes a value that
+   * is already resolved by the time this mounts (the leads queue takes the
+   * viewer's id from behind a QueryGate); a caller that cannot must gate its own
+   * mount the same way rather than expect a late value to be picked up.
    */
   initialFilters?: Readonly<Record<string, string>>;
+  /**
+   * Address keys this SCREEN owns, which are not dials of the list.
+   *
+   * A drawing choice — board or table — belongs in the address and does not
+   * belong on the wire. Naming it here keeps the codec from reading it as a
+   * filter; see `withoutScreenDials`.
+   *
+   * A STABLE reference — a module-level constant, as the callers pass — because
+   * the query is memoised on it; a fresh array each render would rebuild the
+   * query, and with it the react-query key, on every one.
+   */
+  screenDials?: readonly string[];
 }>) {
   // In overlay mode the incumbent mirror refuses sort/filter dials (422), so
   // list reads must carry neither: an empty sort (ListTable hides the controls
@@ -357,8 +428,14 @@ export function useListQuery<Row>({
   // of a 422 the reader cannot act on.
   const query = useMemo(
     () =>
-      overlay ? opening : listQueryFromParams(params, opening, seeded.current),
-    [overlay, params, opening],
+      overlay
+        ? opening
+        : listQueryFromParams(
+            withoutScreenDials(params, screenDials),
+            opening,
+            seeded.current,
+          ),
+    [overlay, params, opening, screenDials],
   );
 
   // Spell the opening state into the address, once, on arrival.
@@ -398,7 +475,11 @@ export function useListQuery<Row>({
             // handler — pressing a saved view restores four dials — must
             // compose rather than the last one landing alone.
             update(
-              listQueryFromParams(currentParams(), opening, seeded.current),
+              listQueryFromParams(
+                withoutScreenDials(currentParams(), screenDials),
+                opening,
+                seeded.current,
+              ),
             )
           : update;
       // The rendered page is the list's own dial but not one this codec
@@ -406,9 +487,15 @@ export function useListQuery<Row>({
       // the first write of any kind wipes the page out of an address a reader
       // was sent to. A write that really is a NARROWING still resets it — the
       // table's own reset fires straight after and takes it back to one.
-      setParams(withPage(paramsFromListQuery(next, opening), pageOf(live)));
+      setParams(
+        mergeScreenDials(
+          withPage(paramsFromListQuery(next, opening), pageOf(live)),
+          live,
+          screenDials,
+        ),
+      );
     },
-    [overlay, opening, setParams],
+    [overlay, opening, setParams, screenDials],
   );
 
   const infinite = useInfiniteQuery({
