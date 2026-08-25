@@ -1086,6 +1086,40 @@ test.describe("§3.8: 390px mobile", () => {
  * only thing standing behind those today is the token law in tokens.css — meta
  * text takes `--textMeta`, and `--textTertiary` is for marks.
  */
+// What a colour-contrast check carries when it could MEASURE the pair. Axe
+// types `data` as unknown and fills it per check, so a rule that is not
+// colour-contrast carries something else entirely and colour-contrast itself
+// omits these when it could not resolve a background — the "partially overlaps
+// other elements" findings are exactly that shape.
+//
+// All four are required together rather than each defaulting, because a
+// half-filled reading is what this reporting exists to prevent: "#5e6c65 on
+// undefined = undefined:1" reads like a measurement and is not one, and it
+// would be believed. A check that cannot fill them falls back to axe's own
+// sentence, which at least says why.
+type ContrastReading = Readonly<{
+  fgColor: string;
+  bgColor: string;
+  contrastRatio: number;
+  expectedContrastRatio: string;
+}>;
+
+function isContrastReading(data: unknown): data is ContrastReading {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+  return (
+    "fgColor" in data &&
+    typeof data.fgColor === "string" &&
+    "bgColor" in data &&
+    typeof data.bgColor === "string" &&
+    "contrastRatio" in data &&
+    typeof data.contrastRatio === "number" &&
+    "expectedContrastRatio" in data &&
+    typeof data.expectedContrastRatio === "string"
+  );
+}
+
 async function expectNoAaViolations(page: Page, screen: string) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
@@ -1103,13 +1137,48 @@ async function expectNoAaViolations(page: Page, screen: string) {
       `axe could not decide ${undecided.length} finding(s) on #/${screen}; a human has to:\n  ${undecided.join("\n  ")}`,
     );
   }
-  expect(
-    results.violations.flatMap((violation) =>
-      violation.nodes.map(
-        (node) => `${violation.id}: ${node.target.join(" ")}`,
-      ),
-    ),
-  ).toEqual([]);
+  // A violation names the SELECTOR and nothing else, which is unactionable for
+  // the one class of failure this sweep actually produces: a contrast finding
+  // that appears on CI and on no developer's machine. Four runs named four
+  // different screens and every finding was small meta text, and none of them
+  // said what colours were measured — so there was nothing to compare against
+  // the tokens, and the investigation ran on hypotheses instead of readings.
+  //
+  // Axe already computed the pair. Reporting it costs nothing on a green run
+  // and turns a red one into evidence: the resolved theme, the two colours and
+  // the ratio, beside the threshold that rejected them.
+  const failures = results.violations.flatMap((violation) =>
+    violation.nodes.map((node) => {
+      const detail = node.any
+        .map((check) =>
+          isContrastReading(check.data)
+            ? `${check.data.fgColor} on ${check.data.bgColor} = ${check.data.contrastRatio}:1, needs ${check.data.expectedContrastRatio}`
+            : check.message,
+        )
+        .join("; ");
+      return `${violation.id}: ${node.target.join(" ")} — ${detail}`;
+    }),
+  );
+  if (failures.length > 0) {
+    // The document's own theme, not the emulated scheme: a stamped
+    // `data-theme` outranks `prefers-color-scheme`, so the scheme a test asked
+    // for is not proof of the palette it got.
+    const painted = await page.evaluate(() => ({
+      dataTheme: document.documentElement.getAttribute("data-theme"),
+      prefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
+      textMeta: getComputedStyle(document.documentElement)
+        .getPropertyValue("--textMeta")
+        .trim(),
+      bgPage: getComputedStyle(document.documentElement)
+        .getPropertyValue("--bgPage")
+        .trim(),
+    }));
+    throw new Error(
+      `axe found ${failures.length} AA violation(s) on #/${screen}\n` +
+        `  painted as: ${JSON.stringify(painted)}\n  ` +
+        failures.join("\n  "),
+    );
+  }
 }
 
 test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {

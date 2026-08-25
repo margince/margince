@@ -112,7 +112,7 @@ func TestACursorInANamedOnlyStreamIsNotMalformed(t *testing.T) {
 func TestACursorInAnUnservedStreamIsStillMalformed(t *testing.T) {
 	token, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: "nonsense", Inner: "x"})
 	if err != nil {
-		t.Fatalf("minting the cursor: %v", err)
+		t.Fatalf("minting a nonsense-stream cursor: %v", err)
 	}
 	if _, err := resumeStream(token); err == nil {
 		t.Fatal("a cursor naming an unserved stream was accepted")

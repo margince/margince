@@ -89,6 +89,8 @@ type Server struct {
 	ownDomainHandlers
 	installationSettingsHandlers
 	licenseHandlers
+	googleAppHandlers
+	installationSetupHandlers
 	consumerMailDomainHandlers
 	blockedDomainHandlers
 	captureExclusionHandlers
@@ -221,6 +223,15 @@ type Server struct {
 	// a Google app at all. Gmail is the only provider with a field here because
 	// it is the only one comms.SendScopeFor gives a send scope.
 	gmailAppConfigured bool
+	// googleAppResolver resolves the installation's STORED Google app, built by
+	// WithKeyvault and named in every connectorHandlers literal.
+	//
+	// It lives on the Server rather than only inside those handlers because the
+	// struct is REPLACED wholesale in two places, and a field assigned beside a
+	// composite literal is one the next literal drops without a word — which is
+	// exactly how this arrived inert the first time. Kept here, each construction
+	// has to name it, and a reader sees the omission.
+	googleAppResolver func(ctx context.Context) (clientID, clientSecret string, ok bool, err error)
 
 	// schemaPoolReady is the /readyz schema-pool probe, injected only by
 	// WithSchemaPool — a role that never mounted --schema-dsn declares

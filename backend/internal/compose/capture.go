@@ -251,10 +251,25 @@ func (c GmailConfig) canSync() bool { return c.ClientID != "" && c.ClientSecret 
 const minStateKeyLen = 32
 
 // canConnect reports whether the human-facing connect/callback transport can
-// run: it needs the sync creds plus a callback URL and a state key of at least
-// minStateKeyLen bytes (a weak key is refused, not silently accepted).
+// run: it needs the sync creds plus the deployment prerequisites below.
 func (c GmailConfig) canConnect() bool {
-	return c.canSync() && len(c.StateKey) >= minStateKeyLen && c.PublicBaseURL != ""
+	return c.canSync() && c.canSignState()
+}
+
+// canSignState reports the prerequisites that are the DEPLOYMENT's rather than
+// the Google app's: a callback URL, and a state key of at least minStateKeyLen
+// bytes (a weak key is refused, not silently accepted).
+//
+// Split out because the app's credentials may now arrive at RUNTIME, from the
+// stored setting, while these two cannot — nothing sets a signing key through
+// the UI. So the transport mounts on these alone and asks for the app when a
+// request needs one. Gating the mount on the credentials as well is what would
+// leave a stored-app installation with an unbuilt signer: `oauthApp` would
+// answer with the app, the 501 gate would pass, and the flow would HMAC its
+// state with an empty key — silently bypassing the floor this very function
+// exists to enforce.
+func (c GmailConfig) canSignState() bool {
+	return len(c.StateKey) >= minStateKeyLen && c.PublicBaseURL != ""
 }
 
 // Enabled reports whether the connect/callback transport is fully configured —
@@ -327,79 +342,6 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	return reg
 }
 
-// GraphConfig is the composed Microsoft (Graph) OAuth app for a deployment:
-// one app per deployment, supplied by whoever operates it — the Microsoft
-// twin of GmailConfig. ClientID+ClientSecret enable the background sync
-// (token refresh); StateKey+PublicBaseURL additionally enable the
-// connect/callback transport. Tenant narrows the identity endpoint to one
-// Microsoft 365 tenant; empty means "common" (any organization).
-type GraphConfig struct {
-	ClientID     string
-	ClientSecret string
-	Tenant       string
-	StateKey     string
-	// PublicBaseURL is the canonical public/front origin (the SPA): the
-	// post-consent landing, and the default callback base for a same-origin
-	// deployment.
-	PublicBaseURL string
-	// APIBaseURL is the api's externally-reachable base, used only for the
-	// callback redirect_uri. Empty for a same-origin deployment (the callback
-	// rides PublicBaseURL); a split dev stack sets it to the api URL.
-	APIBaseURL string
-}
-
-// canSync reports whether the connector can be registered + polled (token
-// refresh needs the client id/secret).
-func (c GraphConfig) canSync() bool { return c.ClientID != "" && c.ClientSecret != "" }
-
-// canConnect reports whether the human-facing connect/callback transport can
-// run: the sync creds plus a callback URL and a state key of at least
-// minStateKeyLen bytes (a weak key is refused, not silently accepted).
-func (c GraphConfig) canConnect() bool {
-	return c.canSync() && len(c.StateKey) >= minStateKeyLen && c.PublicBaseURL != ""
-}
-
-// Enabled reports whether the connect/callback transport is fully configured —
-// the same condition WithGraphCapture gates on, exported so a caller (cmd) can
-// log accurately rather than guessing from the client id alone.
-func (c GraphConfig) Enabled() bool { return c.canConnect() }
-
-//nolint:ireturn // returns the graph.OAuth seam by design (a fakeable interface)
-func newGraphOAuth(c GraphConfig) graph.OAuth {
-	return graph.NewOAuth(graph.OAuthConfig{
-		ClientID:     c.ClientID,
-		ClientSecret: c.ClientSecret,
-		Tenant:       c.Tenant,
-		Scopes:       graphScopes,
-	})
-}
-
-// WithGraphCapture wires the Microsoft Graph half of the connector OAuth
-// transport (api role): it registers the graph connector on the connect
-// registry — building the registry, signer, and base URLs if WithGmailCapture
-// did not already (a graph-only deployment) — and installs the graph OAuth
-// app the shared connect/callback dispatch resolves by provider. Like
-// WithGmailCapture it requires the vault and a fully-configured app; absent
-// either, the graph provider keeps its declared 501/422 by omission. Order:
-// after WithKeyvault, and after WithGmailCapture when both are configured.
-func WithGraphCapture(c GraphConfig) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
-		if !c.canConnect() || s.vault == nil {
-			return
-		}
-		if s.connectorHandlers.registry == nil {
-			s.connectorHandlers.registry = NewCaptureRegistry(pool, s.vault, s.captureConfig)
-			s.authority = identity.NewService(pool)
-			s.signer = newStateSigner([]byte(c.StateKey))
-			s.publicBaseURL = c.PublicBaseURL
-			s.apiBaseURL = c.APIBaseURL
-		}
-		s.connectorHandlers.registry.Register(graph.New(newGraphOAuth(c), graph.NewAPI(nil, "")))
-		s.graphOAuth = newGraphOAuth(c)
-		s.graphAPI = graph.NewAPI(nil, "")
-	}
-}
-
 // WithGmailCapture wires the Gmail OAuth connect/callback/disconnect/list
 // transport (api role). It requires the vault (so WithKeyvault must precede it
 // in the option list) and a fully-configured app; absent any of those the
@@ -414,22 +356,50 @@ func WithGraphCapture(c GraphConfig) Option {
 func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.gmailAppConfigured = c.canSync() // the send pre-flight's fact, recorded before the gate below
+		// The setup surface reads the same fact. Stamped HERE and only here:
+		// WithGmailCapture requires the vault and so always runs after
+		// WithKeyvault, which means a copy taken there would always read false.
+		s.envGoogleApp = s.gmailAppConfigured
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the
 		// surface its declared 501 instead. (WithKeyvault must precede this.)
-		if !c.canConnect() || s.vault == nil {
+		//
+		// The APP's credentials are deliberately not part of this condition any
+		// more: they may arrive at runtime from the stored setting, and an
+		// installation that has one must not be left with an unbuilt signer. What
+		// stays required is what only a deployment can supply — the state key and
+		// the callback base — so a mounted transport always has a signing key
+		// that clears minStateKeyLen.
+		if !c.canSignState() || s.vault == nil {
 			return
+		}
+		// The env-composed clients exist only where the ENVIRONMENT actually
+		// carries the app. Built unconditionally they are a pair of usable-looking
+		// clients holding an empty client id, and gmailApp's fallback would reach
+		// for them the moment the stored app is not servable — sending a person to
+		// Google's consent screen with `client_id=`, which fails there rather than
+		// here and gives them nothing to act on. Nil is what makes the declared
+		// 501 the answer instead.
+		var (
+			gmailOAuth gmail.OAuth
+			gcalOAuth  gcal.OAuth
+		)
+		if c.canSync() {
+			gmailOAuth, gcalOAuth = newGmailOAuth(c), newGcalOAuth(c)
 		}
 		s.connectorHandlers = connectorHandlers{
 			registry:      NewCaptureRegistryWithGmail(pool, s.vault, c, cfg),
 			authority:     identity.NewService(pool),
-			oauth:         newGmailOAuth(c),
+			oauth:         gmailOAuth,
 			gmailAPI:      gmail.NewAPI(nil, ""),
-			gcalOAuth:     newGcalOAuth(c),
+			gcalOAuth:     gcalOAuth,
 			gcalAPI:       gcal.NewAPI(nil, ""),
 			signer:        newStateSigner([]byte(c.StateKey)),
 			publicBaseURL: c.PublicBaseURL,
 			apiBaseURL:    c.APIBaseURL,
+			// Named here because this literal REPLACES the struct: omitting it is
+			// how the stored app became unreachable while every test still passed.
+			googleCredentials: s.googleAppResolver,
 		}
 		// The send pre-flight reads the registry the connect flow just wrote to
 		// — the same one, not a second construction: a mailbox the user connects

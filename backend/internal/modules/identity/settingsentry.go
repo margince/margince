@@ -33,6 +33,15 @@ import (
 // benefits from knowing which one it is — and write is admin/ops.
 const installationSettingsObject = "installation_settings"
 
+// SettingsObject is the same object, for compose.
+//
+// Exported because the installation-setup surface takes this gate itself: its
+// answer must not depend on which stores happen to be composed, so the check
+// lives in the transport rather than in whichever store answers first. The
+// unexported spelling stays the one this package uses, so there is one value
+// rather than two that happen to agree.
+const SettingsObject = installationSettingsObject
+
 // Name is the organization's display name. Seeded from margince.yaml at
 // bootstrap; the row is authoritative afterwards, so renaming the
 // organization does not require a redeployment.
