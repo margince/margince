@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -276,18 +277,17 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 	return items
 }
 
-// idleSince is the same idle base IsStalled uses (formulas §8.1):
-// last_activity_at when recorded, else created_at. A candidate with
-// neither has no idle claim to make.
+// idleSince is the moment the stalled claim measures from, read
+// through idlebase.Since so it is the instant the stalled rule itself
+// measured from. A candidate the lister gave neither timestamp has no
+// idle claim to make, and the tool drops the flag rather than dating
+// it from zero.
 func idleSince(d SlippingDeal) *time.Time {
-	if d.LastActivityAt != nil {
-		return d.LastActivityAt
+	if d.LastActivityAt == nil && d.CreatedAt.IsZero() {
+		return nil
 	}
-	if !d.CreatedAt.IsZero() {
-		created := d.CreatedAt
-		return &created
-	}
-	return nil
+	since := idlebase.Since(d.CreatedAt, d.LastActivityAt)
+	return &since
 }
 
 func amountOrZero(d SlippingDeal) int64 {

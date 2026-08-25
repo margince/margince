@@ -13,6 +13,8 @@ package deals
 import (
 	"fmt"
 	"time"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
 )
 
 // StalledThresholdDays is the §8 tunable: open deals idle longer than
@@ -26,11 +28,7 @@ func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *ti
 	if DealStatus(status) != DealOpen {
 		return false // closed deals never stall
 	}
-	base := createdAt
-	if lastActivityAt != nil {
-		base = *lastActivityAt
-	}
-	if now.Sub(base) <= StalledThresholdDays*24*time.Hour {
+	if now.Sub(idlebase.Since(createdAt, lastActivityAt)) <= StalledThresholdDays*24*time.Hour {
 		return false
 	}
 	if waitUntil != nil && now.Before(*waitUntil) {
@@ -49,8 +47,9 @@ func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *ti
 // than a second copy that only agrees by accident.
 func StalledSQL(alias string) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
-		AND coalesce(%[1]slast_activity_at, %[1]screated_at) < now() - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= now()))`, columnPrefix(alias), StalledThresholdDays)
+		AND %[3]s < now() - interval '%[2]d days'
+		AND (%[1]swait_until IS NULL OR %[1]swait_until <= now()))`,
+		columnPrefix(alias), StalledThresholdDays, idlebase.SQL(alias))
 }
 
 // PartnerSourcedSQL is the list-filter spelling of "this deal is
