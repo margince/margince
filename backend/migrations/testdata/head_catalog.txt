@@ -1853,6 +1853,7 @@ public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_ex
 public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC)
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
+public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
 public.idx_auth_token_user CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL)

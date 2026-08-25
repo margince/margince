@@ -7,6 +7,7 @@ import {
   type CoreFrame,
   type CoreRenderer,
   createCoreRenderer,
+  readHue,
 } from "./margince-core-gl";
 import {
   asHero,
@@ -62,6 +63,38 @@ type Dials = {
 
 /** Close enough that another frame would not change a pixel. */
 const SETTLED = 1e-4;
+
+/**
+ * The ribbon and body palettes, in the order the shader's uWork and uBody
+ * arrays expect. The AI hue opens the ribbon run, amber sits in the middle as
+ * the one warm note, and the glow tone bookends it on both sides.
+ */
+const WORK_TOKENS = [
+  "--ai",
+  "--orbGlow",
+  "--orbAmber",
+  "--orbGlow",
+  "--orbBright",
+];
+const BODY_TOKENS = ["--orbDeep", "--orbInk"];
+
+type Palette = Readonly<{
+  work: readonly (readonly [number, number, number])[];
+  body: readonly (readonly [number, number, number])[];
+}>;
+
+/**
+ * Reads the orb's palette off the document.
+ *
+ * `getComputedStyle` is a layout read, so this runs on loop start and on a
+ * theme flip, never inside the per-frame draw call.
+ */
+function readPalette(): Palette {
+  return {
+    work: WORK_TOKENS.map(readHue),
+    body: BODY_TOKENS.map(readHue),
+  };
+}
 
 function dialsFrom(behaviour: CoreBehaviour): Dials {
   return {
@@ -142,6 +175,7 @@ export function runCoreLoop(
   const mouse: readonly [number, number] = [0, 0];
   let phase = PHASE_SEED;
   let paper = wanted.current.paper;
+  let palette = readPalette();
   let handle = 0;
   let last = 0;
   let drawnAt = 0;
@@ -180,6 +214,8 @@ export function runCoreLoop(
     tintCol: dials.tintCol,
     mouse,
     paper,
+    work: palette.work,
+    body: palette.body,
   });
 
   const tick = (now: number) => {
@@ -211,6 +247,11 @@ export function runCoreLoop(
   };
 
   const wake = () => {
+    // Read before the early returns below: the loop is almost always already
+    // running (the orb's quietest state still drifts), so a theme flip while
+    // it animates has to land here rather than only on a fresh start, or a
+    // repainted token would sit unread until the object next settled.
+    palette = readPalette();
     if (stopped || handle !== 0 || !isWindowFocused()) {
       return;
     }
@@ -291,11 +332,26 @@ function wants(
 export function useCoreEngine(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   state: MarginceCoreState,
-  options: Readonly<{ paper: boolean; feed: boolean; hero: boolean }>,
+  options: Readonly<{
+    paper: boolean;
+    feed: boolean;
+    hero: boolean;
+    /**
+     * Whether the page the Core sits on is dark right now.
+     *
+     * `paper` alone misses a `surface="dark"` Core (the workspace rail): that
+     * one holds `paper` at a constant 0 regardless of theme, so a flip would
+     * never touch the effect below and the palette would sit unread until the
+     * loop next woke for some other reason. Optional so a caller mid-migration
+     * (or a test driving the hook directly) still compiles without it; the
+     * loop simply re-reads a theme-invariant palette in that case.
+     */
+    dark?: boolean;
+  }>,
 ): boolean {
   const reduced = usePrefersReducedMotion();
   const [live, setLive] = useState(false);
-  const { paper, feed, hero } = options;
+  const { paper, feed, hero, dark } = options;
   const wanted = useRef<Wanted>({
     behaviour: wants(state, reduced, feed, hero),
     paper: paper ? 1 : 0,
@@ -308,11 +364,15 @@ export function useCoreEngine(
   // dependencies are the primitives the target is DERIVED from, not the derived
   // object: a fresh table row every render would rerun this every render.
   const loopRef = useRef<Loop | null>(null);
+  // dark is not read below; it exists only to retrigger this effect on a theme
+  // flip that paper alone would miss (a surface="dark" Core holds paper
+  // constant), and the wake() call inside is what actually re-reads the palette.
+  // biome-ignore lint/correctness/useExhaustiveDependencies(dark): see above.
   useEffect(() => {
     wanted.current.behaviour = wants(state, reduced, feed, hero);
     wanted.current.paper = paper ? 1 : 0;
     loopRef.current?.wake();
-  }, [state, reduced, feed, paper, hero]);
+  }, [state, reduced, feed, paper, hero, dark]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -80,7 +80,8 @@ func (e UnknownScopeError) Error() string {
 func (e UnknownScopeError) FieldFault() (field, code, message string) {
 	return "scope", "unknown_retention_scope", fmt.Sprintf(
 		"%q is not a retention scope this installation can act on — authorable scopes are: %s",
-		e.Scope, strings.Join(AuthorableScopes(), ", "))
+		e.Scope, strings.Join(AuthorableScopes(), ", "),
+	)
 }
 
 // ParseRetentionScope resolves a wire scope against the evaluator's selectors.

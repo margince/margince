@@ -32,9 +32,9 @@ import "./margince-core.css";
  *    stages proposals a human confirms — it never holds a conversation, and a
  *    state naming one would be the product claiming something it does not do.
  *  - **State is MOTION first**, colour second. One behaviour per state, so the
- *    three that share the palette's green — idle, ingest and working — are
- *    still three distinguishable things. Only the two that stop leave the
- *    green: amber for `warning`, red for `error`.
+ *    three that share the palette's indigo (idle, ingest and working) are still
+ *    three distinguishable things. Only the two that stop leave the indigo:
+ *    amber for `warning`, red for `error`.
  *  - **It is `aria-hidden`** (WDS-CORE-4). Every state it shows is also stated
  *    in text by the surface around it, which is what makes it safe to be this
  *    decorative — and why it carries no click: the caller's own button owns
@@ -131,6 +131,10 @@ export function MarginceCoreScene({
     // The hero is the Core as the subject of a page rather than as a light in the
     // chrome, and it wears the same state with more life in it.
     hero: size === "hero",
+    // `paper` alone misses a theme flip on a `surface="dark"` Core, since that
+    // one holds paper constant: this is what lets the engine re-read the
+    // palette when the tokens it draws from could have changed.
+    dark: darkPage,
   });
 
   const classes = [

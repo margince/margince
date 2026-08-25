@@ -17,12 +17,17 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./rates.css";
+import { calendarDay } from "../format/calendarday";
+import { viewerZone } from "../format/timezone";
 
 type FxRate = components["schemas"]["FxRate"];
 type AiModelRate = components["schemas"]["AiModelRate"];
 
+// The reader's own today. These are effective dates a person reads against
+// their own calendar, and an ISO slice answers about UTC's day — which is
+// yesterday for a reader east of UTC in the small hours.
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return calendarDay(new Date(), viewerZone());
 }
 
 // trimDecimal drops trailing zeros (and a bare trailing dot) so a

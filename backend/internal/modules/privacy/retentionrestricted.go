@@ -161,7 +161,7 @@ func (e *Eraser) purgeHeldRecordTraces(ctx context.Context, tx pgx.Tx, id ids.UU
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
-	if err := e.eraseAttachments(ctx, tx, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
+	if err := e.eraseAttachments(ctx, tx, "retention: the held record reached its floor", causeRetention, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
 		return err
 	}
 	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedName)
