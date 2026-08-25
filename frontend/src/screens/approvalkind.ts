@@ -7,11 +7,13 @@ import type { MessageKey } from "../i18n/en";
 // to accept twenty-five of something needs to know what that something is, and
 // snake_case in the German UI is not a translation of anything.
 //
-// The authoritative set is `decisionGrants` in the approvals module — a kind
-// absent from THAT map cannot be staged at all — so this one is pinned against
-// it in approvalkind.test.ts. A kind added upstream fails that test rather than
-// reaching a reader unlabelled, which is how two of them (a deal follow-up and
-// a close-date correction) reached a German list in English.
+// The authoritative set is the approvals module's grant maps — a kind absent
+// from those cannot be staged at all — so this one is pinned against them by
+// backend/frontendapprovalkinds_test.go, which DERIVES the corpus rather than
+// restating it. The gate this replaced compared against a list hand-copied
+// into the frontend's own test, and a mirror of a mirror agrees with itself:
+// eleven stageable kinds had no label and two labels named kinds the server
+// had already dropped.
 //
 // A kind that still slips through falls back to its own words rather than its
 // identifier: it must degrade to "site lead", never to a token that only makes
@@ -23,7 +25,6 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   promote_lead: "approval.kind.promote_lead",
   archive_record: "approval.kind.archive_record",
   merge_records: "approval.kind.merge_records",
-  share_record: "approval.kind.share_record",
   update_record: "approval.kind.update_record",
   create_record: "approval.kind.create_record",
   send_email: "approval.kind.send_email",
@@ -32,7 +33,6 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   // state in a queue rather than the decision in front of them.
   held_draft: "approval.kind.held_draft",
   book_meeting: "approval.kind.book_meeting",
-  send_offer: "approval.kind.send_offer",
   coldstart: "approval.kind.coldstart",
   // Not a change to a record — a question about a credential's volume, which is
   // why its label says what a yes DOES rather than naming an object.
@@ -50,6 +50,21 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   transcript_proposal: "approval.kind.transcript_proposal",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
   ai_model_rate_proposal: "approval.kind.ai_model_rate_proposal",
+  disqualify_lead: "approval.kind.disqualify_lead",
+  advance_project_phase: "approval.kind.advance_project_phase",
+  assign_owner: "approval.kind.assign_owner",
+  commit_import: "approval.kind.commit_import",
+  emit_flow_event: "approval.kind.emit_flow_event",
+  relink_activity: "approval.kind.relink_activity",
+  relink_thread: "approval.kind.relink_thread",
+  relink_activities: "approval.kind.relink_activities",
+  // Distinct from held_draft above, and not a second spelling of it: that one
+  // is a reply automation COMPOSED and is waiting to be sent, this one is a
+  // message that was already scheduled and got stopped. Different lifecycles,
+  // so different words.
+  scheduled_send_held: "approval.kind.scheduled_send_held",
+  send_account_email: "approval.kind.send_account_email",
+  send_message: "approval.kind.send_message",
 };
 
 // What a reader may CHANGE before accepting, per kind.

@@ -273,8 +273,12 @@ deps:
     # parity_test.go reads runner.ProjectionStateFor: both hold a module's own
     # vocabulary to a set that lives OUTSIDE it — the contract's enum and a
     # migration's CHECK — and only the root may see all three at once.
+    # frontendapprovalkinds_test.go reads approvals.StageableKinds and holds it
+    # to the frontend's KIND_LABEL map: the same "only root may hold both
+    # halves" shape again, across the wire this time — approvals must not gain
+    # a dependency on a TypeScript file to know its kinds have words.
     # Root carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, quotas, overlay, migration, webhooks, comms, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]

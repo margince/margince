@@ -4,8 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useId, useState } from "react";
 import { api } from "../api/client";
 import {
   approvalDotTier,
@@ -270,103 +269,24 @@ function DecideOutcome({
   );
 }
 
-// The screen-level "shown once" approval-token surface (AC-4). Rendered by
-// InboxScreen/HomeScreen — NOT the row — so the pending invalidation that
-// unmounts the just-approved row cannot take the token with it. This is the
-// most consequential irrecoverable state on the surface, so it leads with a
-// strong heading + a warn-tinted banner, not a small gray caption.
-function TokenOnceModal({
-  token,
-  onClose,
-}: Readonly<{ token: string | null; onClose: () => void }>) {
-  const t = useT();
-  const headingId = useId();
-  const [copied, setCopied] = useState(false);
-  // A fresh token clears the previous "copied" acknowledgement (referencing
-  // `token` in the body keeps it a genuine effect dependency).
-  useEffect(() => {
-    if (token != null) {
-      setCopied(false);
-    }
-  }, [token]);
-  const handleCopy = () => {
-    if (!token) {
-      return;
-    }
-    const clip = navigator.clipboard;
-    if (!clip) {
-      setCopied(false);
-      return;
-    }
-    clip.writeText(token).then(
-      () => setCopied(true),
-      () => setCopied(false),
-    );
-  };
-  return (
-    <Modal open={token != null} onClose={onClose} labelledBy={headingId}>
-      <h2
-        id={headingId}
-        className="t-h2"
-        style={{ color: "var(--textPrimary)", marginBottom: 10 }}
-      >
-        {t("inbox.tokenTitle")}
-      </h2>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          background: "var(--warnBg)",
-          border: "1px solid var(--warnBorder)",
-          borderRadius: "var(--r-sm)",
-          padding: "8px 10px",
-          marginBottom: 10,
-        }}
-      >
-        <TriangleAlert size={16} color="var(--warn)" aria-hidden />
-        <span className="t-caption" style={{ color: "var(--warn)" }}>
-          {t("inbox.tokenOnce")}
-        </span>
-      </div>
-      <p className="t-mono" style={{ wordBreak: "break-all" }}>
-        {token}
-      </p>
-      <div className="actions">
-        <Button small onClick={handleCopy}>
-          {copied ? t("inbox.copied") : t("inbox.copy")}
-        </Button>
-        <Button small variant="primary" onClick={onClose}>
-          {t("inbox.tokenDone")}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
-// Shared decision sink (AC-4/AC-6, cross-surface): owns the screen-level state
-// that must OUTLIVE the row that triggered it (a decide invalidates the
-// pending list, unmounting the row) — the once-shown approval token and the
-// "already decided by someone else" note. BOTH InboxScreen and HomeScreen
-// consume it so either surface catches the minted token AND shows the honest
-// already-decided note; neither may live in ApprovalRow (it unmounts).
-export function useApprovalTokenSink(): {
-  onApproved: (approvalId: string, token: string) => void;
+// Shared decision sink (AC-6, cross-surface): owns the screen-level state that
+// must OUTLIVE the row that triggered it — a decide invalidates the pending
+// list, which unmounts the row before it could render its own note. BOTH
+// InboxScreen and HomeScreen consume it so either surface shows the honest
+// already-decided note; it may not live in ApprovalRow (it unmounts).
+//
+// The approve response still carries an approval token. It is not shown to
+// anybody: an agent redeems its own staging by re-issuing the call under
+// `X-Approval-Token`, and the runner's resume path loads the staged proposal
+// server-side — so no human has ever needed to carry the string, while being
+// handed an irrecoverable secret made every approval look like a key ceremony.
+export function useDecisionSink(): {
   onAlreadyDecided: () => void;
-  tokenModal: ReactNode;
   decidedNote: ReactNode;
 } {
   const t = useT();
-  const [token, setToken] = useState<string | null>(null);
   const [alreadyDecided, setAlreadyDecided] = useState(false);
-  const onApproved = useCallback(
-    (_approvalId: string, minted: string) => setToken(minted),
-    [],
-  );
   const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
-  const tokenModal = (
-    <TokenOnceModal token={token} onClose={() => setToken(null)} />
-  );
   const decidedNote = alreadyDecided ? (
     <Card
       as="div"
@@ -386,7 +306,7 @@ export function useApprovalTokenSink(): {
       </Button>
     </Card>
   ) : null;
-  return { onApproved, onAlreadyDecided, tokenModal, decidedNote };
+  return { onAlreadyDecided, decidedNote };
 }
 
 // The words the decision card needs, in this surface's own vocabulary.
@@ -511,7 +431,6 @@ function StagedEditor({
 export function ApprovalRow({
   approval,
   decided,
-  onApproved,
   onAlreadyDecided,
   extraInvalidateKeys,
 }: Readonly<{
@@ -520,7 +439,6 @@ export function ApprovalRow({
   // Lift the just-minted token / the already-decided signal to a surface that
   // survives this row's unmount (the pending invalidation drops it). Optional
   // so HomeScreen can reuse the row without a screen-level surface.
-  onApproved?: (approvalId: string, token: string) => void;
   onAlreadyDecided?: () => void;
   // Reads outside the approvals list that a decision also changes. A record
   // page carrying its own count of what is waiting has to re-read it, and only
@@ -567,12 +485,7 @@ export function ApprovalRow({
       }
       return data;
     },
-    onSuccess: (data) => {
-      // Lift the token FIRST — the parent state is set before the invalidation
-      // below unmounts this row, so the screen-level surface always receives it.
-      if (data?.approval_token) {
-        onApproved?.(approval.id, data.approval_token);
-      }
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
@@ -847,13 +760,11 @@ type BundleVerdict = "approve" | "reject";
 function BundleCard({
   bundleId,
   members,
-  onApproved,
   onAlreadyDecided,
   onDecided,
 }: Readonly<{
   bundleId: string;
   members: readonly Approval[];
-  onApproved?: (approvalId: string, token: string) => void;
   onAlreadyDecided?: () => void;
   // Lifts the per-member report to a surface that survives this card's unmount:
   // the decision invalidates the pending list, which takes the card with it.
@@ -977,7 +888,6 @@ function BundleCard({
             <li key={member.id}>
               <ApprovalRow
                 approval={member}
-                onApproved={onApproved}
                 onAlreadyDecided={onAlreadyDecided}
               />
             </li>
@@ -1146,12 +1056,10 @@ function BundleOutcomeNote({
 // The pending queue: one card per act, one row per proposal staged alone.
 function PendingList({
   approvals,
-  onApproved,
   onAlreadyDecided,
   onBundleDecided,
 }: Readonly<{
   approvals: readonly Approval[];
-  onApproved: (approvalId: string, token: string) => void;
   onAlreadyDecided: () => void;
   onBundleDecided: (verdict: BundleVerdict, decision: BundleDecision) => void;
 }>) {
@@ -1163,7 +1071,6 @@ function PendingList({
             key={item.bundleId}
             bundleId={item.bundleId}
             members={item.members}
-            onApproved={onApproved}
             onAlreadyDecided={onAlreadyDecided}
             onDecided={onBundleDecided}
           />
@@ -1171,7 +1078,6 @@ function PendingList({
           <ApprovalRow
             key={item.approval.id}
             approval={item.approval}
-            onApproved={onApproved}
             onAlreadyDecided={onAlreadyDecided}
           />
         ),
@@ -1187,8 +1093,7 @@ export function InboxScreen() {
   // decide invalidates the pending list, unmounting the row): the once-shown
   // approval token (AC-4, via the shared sink) and the "already decided by
   // someone else" note (AC-6).
-  const { onApproved, onAlreadyDecided, tokenModal, decidedNote } =
-    useApprovalTokenSink();
+  const { onAlreadyDecided, decidedNote } = useDecisionSink();
   // The per-member report of a bundle decision, held here for the same reason:
   // the decision unmounts the card that made it.
   const [bundleResult, setBundleResult] = useState<BundleResult | null>(null);
@@ -1223,7 +1128,6 @@ export function InboxScreen() {
             <div className="approval-queue arrive-stack">
               <PendingList
                 approvals={page.data}
-                onApproved={onApproved}
                 onAlreadyDecided={onAlreadyDecided}
                 onBundleDecided={(verdict, decision) =>
                   setBundleResult({ verdict, decision })
@@ -1241,7 +1145,6 @@ export function InboxScreen() {
                   key={approval.id}
                   approval={approval}
                   decided
-                  onApproved={onApproved}
                   onAlreadyDecided={onAlreadyDecided}
                 />
               ))}
@@ -1249,7 +1152,6 @@ export function InboxScreen() {
           )
         }
       </QueryGate>
-      {tokenModal}
     </div>
   );
 }

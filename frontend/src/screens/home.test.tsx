@@ -448,7 +448,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
 
   // The token is minted by the approve and the row that triggered it unmounts on
   // the invalidation, so it has to be caught at SCREEN level to be readable.
-  it("keeps the once-minted approval token on screen after the commit re-reads the queue", async () => {
+  it("shows no approval token after the commit re-reads the queue", async () => {
     const queue = [proposal("ap-1", "Send the Weber follow-up")];
     const decided = new Set<string>();
     stubApi({
@@ -471,8 +471,10 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       screen.getByRole("button", { name: "Send staged decisions" }),
     );
 
-    expect(await screen.findByText("example-home-token")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.queryByText("Send the Weber follow-up")).toBeNull(),
+    );
+    expect(screen.queryByText("example-home-token")).toBeNull();
   });
 });
 

@@ -185,7 +185,6 @@ export const Decisions: Story = {
       items={deckItems([...singles, ...bundle])}
       nowMs={NOW}
       state="ready"
-      onApproved={() => undefined}
       onAlreadyDecided={() => undefined}
     />,
     { ...RAIL_ROUTES, "GET /approvals": () => jsonResponse({ data: [] }) },
@@ -200,7 +199,6 @@ export const DecisionsRefused: Story = {
       items={[]}
       nowMs={NOW}
       state="failed"
-      onApproved={() => undefined}
       onAlreadyDecided={() => undefined}
     />,
   ),

@@ -282,8 +282,8 @@ export const RejectWithReason: Story = {
   },
 };
 
-// AC-4: a successful approve carrying an approval_token → once-shown inset.
-export const TokenShown: Story = {
+// The approve response still carries an approval token; no surface shows it.
+export const ApprovedTokenNotShown: Story = {
   render: inbox({
     byStatus: { pending: [base] },
     post: () =>
@@ -298,11 +298,10 @@ export const TokenShown: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Accept" }),
     );
-    // `screen`, not the canvas: the token is revealed in a Modal portalled to
-    // document.body, so a canvas-scoped lookup rejects even though the reveal
-    // is on screen — and a rejecting play() used to report after the render
-    // gate had already screenshotted and passed the story.
-    await screen.findByText("example-approval-token");
+    // What the render gate photographs is the settled surface: the approved
+    // row gone and nothing in its place. That the token itself never reaches
+    // the screen is asserted in inbox.test.tsx, where a query for its absence
+    // is a real assertion rather than a screenshot.
   },
 };
 

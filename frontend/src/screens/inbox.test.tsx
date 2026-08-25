@@ -630,7 +630,7 @@ describe("InboxScreen — detail modal (AC-2)", () => {
 
 // ── AC-4: approval token shown once ─────────────────────────────────────
 describe("InboxScreen — approval token (AC-4)", () => {
-  it("keeps the token copyable AFTER the approved row is dropped by the refetch", async () => {
+  it("never puts the minted approval token on screen", async () => {
     // Simulate the REAL lifecycle: once approved, the pending refetch no longer
     // returns the row, so it unmounts. A row-local token would vanish with it;
     // the screen-level surface must survive.
@@ -661,11 +661,12 @@ describe("InboxScreen — approval token (AC-4)", () => {
     render(<InboxScreen />);
     await waitFor(() => expect(screen.getByText("Send an email")).toBeTruthy());
     await userEvent.click(screen.getByRole("button", { name: "Accept" }));
-    // The approved row leaves the pending list…
+    // The approved row leaves the pending list, and the token the response
+    // still carries reaches nobody: an agent redeems its own staging, so a
+    // human handed an irrecoverable secret was being asked to keep a key
+    // nothing on this surface unlocks.
     await waitFor(() => expect(screen.queryByText("Send an email")).toBeNull());
-    // …but the once-shown token + Copy stay visible at screen level.
-    expect(screen.getByText("example-approval-token")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.queryByText("example-approval-token")).toBeNull();
   });
 });
 

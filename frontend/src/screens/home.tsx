@@ -30,7 +30,7 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
-import { useApprovalTokenSink, usePendingApprovals } from "./inbox";
+import { useDecisionSink, usePendingApprovals } from "./inbox";
 import "./home.css";
 
 // Home — the morning handover.
@@ -183,7 +183,6 @@ function HomeWork({
   brief,
   deals,
   briefState,
-  onApproved,
   onAlreadyDecided,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
@@ -192,7 +191,6 @@ function HomeWork({
   brief: MorningBrief | null;
   deals: readonly Deal[];
   briefState: SectionState;
-  onApproved: (approvalId: string, token: string) => void;
   onAlreadyDecided: () => void;
 }>) {
   const decisions = (
@@ -201,7 +199,6 @@ function HomeWork({
       items={items}
       nowMs={nowMs}
       state={deckState}
-      onApproved={onApproved}
       onAlreadyDecided={onAlreadyDecided}
     />
   );
@@ -280,8 +277,7 @@ export function HomeScreen() {
   // Approving mints an approval token and can 409 already-decided; both must
   // outlive the deck's re-render on invalidation, so Home uses the same shared
   // sink the Decisions screen does.
-  const { onApproved, onAlreadyDecided, tokenModal, decidedNote } =
-    useApprovalTokenSink();
+  const { onAlreadyDecided, decidedNote } = useDecisionSink();
   const approvalsQuery = usePendingApprovals();
   const briefQuery = useMorningBrief();
   const digestQuery = useMorningDigest();
@@ -362,7 +358,6 @@ export function HomeScreen() {
             brief={brief}
             deals={deals}
             briefState={readState(briefQuery)}
-            onApproved={onApproved}
             onAlreadyDecided={onAlreadyDecided}
           />
         }
@@ -378,7 +373,6 @@ export function HomeScreen() {
           </>
         }
       />
-      {tokenModal}
     </div>
   );
 }
