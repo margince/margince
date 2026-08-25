@@ -23,12 +23,18 @@ package backendarch
 // correct in review and would only ever be visible during an outage — which is
 // the worst moment to discover it.
 //
-// WHAT THIS GATE CAN AND CANNOT SEE. The subject is a call to math/rand's
-// Float64 — the source every jitter in this tree draws from. It cannot see
-// jitter built from a different rand function (IntN, N), nor a spread computed
-// some other way entirely. It is a net under the one shape the tree reaches
-// for, not a proof, and the tree holds exactly zero of them outside the owner
-// today.
+// WHAT THIS GATE CAN AND CANNOT SEE. The subject is a call to one of math/rand's
+// number-drawing functions — Float64, which is what this tree reaches for, plus
+// the integer draws a ladder could just as well be spread with. Naming only the
+// one the owner happens to use would leave the census blind to a COPY while
+// still recognising the original, which is the wrong way round.
+//
+// It still cannot see a spread computed some other way entirely (a hash of the
+// connection id, a clock's low bits), nor a draw through a *rand.Rand value
+// rather than the package function, nor — the one that matters most — a copy
+// that DROPS the jitter and keeps only the doubling. That last would need a
+// detector that recognises the ladder rather than the randomness, and the
+// honest position is to say so rather than imply a proof the net does not give.
 
 import (
 	"go/ast"
@@ -61,7 +67,17 @@ func TestTheJitteredLadderIsSpelledOnce(t *testing.T) {
 	}
 }
 
-// drawsSchedulingRandomness reports whether a file calls math/rand's Float64.
+// schedulingDraws are the ways a ladder can take its spread. Float64 is what
+// this tree reaches for, but a jitter built from IntN or N is the same decision
+// spelled differently — and naming only the one the owner happens to use is how
+// a census goes blind to the copy rather than to the original.
+var schedulingDraws = map[string]bool{
+	"Float64": true, "Float32": true,
+	"IntN": true, "Int63n": true, "Int31n": true, "N": true,
+	"Intn": true, "Int64N": true, "Int32N": true,
+}
+
+// drawsSchedulingRandomness reports whether a file draws from math/rand.
 //
 // The import path decides what the local name means: a file that aliases the
 // package, or one with an unrelated `rand` of its own, would be read wrong by a
@@ -81,7 +97,7 @@ func drawsSchedulingRandomness(_ string, file *ast.File) bool {
 			return true
 		}
 		fn, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || fn.Sel.Name != "Float64" {
+		if !ok || !schedulingDraws[fn.Sel.Name] {
 			return true
 		}
 		if pkg, ok := fn.X.(*ast.Ident); ok && pkg.Name == local {
@@ -121,6 +137,10 @@ func TestTheJitterCensusStillSeesItsSubject(t *testing.T) {
 			"package p\nimport \"math/rand\"\nfunc f() float64 { return rand.Float64() }",
 		"a draw through an aliased import": "" +
 			"package p\nimport mr \"math/rand/v2\"\nfunc f() float64 { return mr.Float64() }",
+		"a ladder spread with an integer draw instead": "" +
+			"package p\nimport \"math/rand/v2\"\nfunc f() int { return 80 + rand.IntN(40) }",
+		"the v1 spelling of the same": "" +
+			"package p\nimport \"math/rand\"\nfunc f() int64 { return rand.Int63n(40) }",
 	}
 	for name, body := range subjects {
 		if !drawsSchedulingRandomness("x.go", parseGateFixture(t, body)) {
@@ -133,8 +153,8 @@ func TestTheJitterCensusStillSeesItsSubject(t *testing.T) {
 			"package p\nfunc f(row pgx.Row) float64 { return row.Float64() }",
 		"a file that names rand without importing it": "" +
 			"package p\nfunc f(rand source) float64 { return rand.Float64() }",
-		"a different rand function, which this gate says it cannot see": "" +
-			"package p\nimport \"math/rand/v2\"\nfunc f() int { return rand.IntN(10) }",
+		"a draw through a *rand.Rand value rather than the package function": "" +
+			"package p\nimport \"math/rand/v2\"\nfunc f(r *rand.Rand) float64 { return r.Float64() }",
 	}
 	for name, body := range nearMisses {
 		if drawsSchedulingRandomness("x.go", parseGateFixture(t, body)) {

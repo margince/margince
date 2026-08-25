@@ -55,6 +55,15 @@ func Jittered(priorFailures int, base, ceiling time.Duration) time.Duration {
 	}
 	delay := base
 	for i := 0; i < priorFailures && delay < ceiling; i++ {
+		// Clamped BEFORE the double, not after. A base past half the Duration
+		// range overflows on the multiply and comes back negative, and the
+		// clamp below never sees a number to clamp — a scheduler asked to wait
+		// a negative interval retries instantly, which is the failure this
+		// whole ladder exists to prevent.
+		if delay > ceiling/2 {
+			delay = ceiling
+			break
+		}
 		delay *= 2
 	}
 	if delay > ceiling {

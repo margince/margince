@@ -4,6 +4,7 @@
 package backoff_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -96,6 +97,26 @@ func TestABaseThatIsNotPositiveIsNoLadderAtAll(t *testing.T) {
 				t.Errorf("Jittered(%d, %v, ceiling) = %v, want no wait at all",
 					priorFailures, base, got)
 			}
+		}
+	}
+}
+
+// A base past half the Duration range overflows on the double and comes back
+// negative, and the clamp after the loop never sees a number to clamp. Absurd
+// as a configuration, and the ladder still owes a positive answer: a scheduler
+// asked to wait a negative interval retries instantly, against a system that
+// has just failed.
+func TestABaseNearTheDurationCeilingDoesNotOverflowIntoANegativeWait(t *testing.T) {
+	huge := time.Duration(1) << 62
+	roof := time.Duration(math.MaxInt64)
+	for _, priorFailures := range []int{1, 2, 10} {
+		got := backoff.Jittered(priorFailures, huge, roof)
+		if got <= 0 {
+			t.Errorf("Jittered(%d, 1<<62, MaxInt64) = %v; the double overflowed past the clamp",
+				priorFailures, got)
+		}
+		if got > roof {
+			t.Errorf("Jittered(%d, 1<<62, MaxInt64) = %v, above the ceiling", priorFailures, got)
 		}
 	}
 }
