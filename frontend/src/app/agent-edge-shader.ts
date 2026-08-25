@@ -67,23 +67,70 @@ void edgeCoords(vec2 p, vec2 size, out float dist, out float along) {
   }
 }
 
-/** Three trains at unrelated wavelengths and speeds, two of them travelling
- *  against the other. Their sum never repeats inside a period anybody watches,
- *  which is the difference between a wave and a rhythm. */
-float waves(float along, float t) {
-  // Shorter wavelengths than the first cut, which is what "more wavy" asks for:
-  // waviness is crests PER LENGTH of rim, not how far each one swells. A long
-  // wave across a whole side reads as the edge breathing; these put several
-  // crests on every side.
-  // The high harmonics carry the roughness, so they are the ones to hold back:
-  // each term above the first is weighted well under the one before it, which is
-  // what keeps the sum a rolling line rather than a busy one. Same number of
-  // crests per side, softer shoulders on each.
-  float w = sin(along * 0.0255 - t * 1.15);
-  w += 0.62 * sin(along * 0.0430 + t * 0.83);
-  w += 0.28 * sin(along * 0.0690 - t * 1.75);
-  w += 0.11 * sin(along * 0.1050 + t * 2.30);
-  return w / 2.01;
+float hash11(float n) {
+  return fract(sin(n * 17.13) * 43758.5453123);
+}
+
+/**
+ * Value noise that is PERIODIC over the whole rim.
+ *
+ * u is turns around the perimeter, so the wrap has to be exact rather than
+ * merely continuous: a field that only looks seamless leaves a discontinuity
+ * where the last side meets the first, and that seam then sits in one corner of
+ * a reader screen for as long as the app is open. Taking the cell index modulo
+ * the cell count makes the last cell interpolate back into the first by
+ * construction.
+ */
+float pnoise(float u, float cells, float seed) {
+  float x = u * cells;
+  float i = floor(x);
+  float f = fract(x);
+  float a = hash11(mod(i, cells) + seed);
+  float b = hash11(mod(i + 1.0, cells) + seed);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, f) * 2.0 - 1.0;
+}
+
+/**
+ * The rim displacement: warped fractal noise rather than a sum of sines.
+ *
+ * Tuning could not get the sine version here, and the reason is structural. A
+ * sum of sines spaces its crests EVENLY however many terms it has, because
+ * every term is symmetric about its own zero crossings, and evenly spaced
+ * crests are what read as machined. Detuning the wavelengths delays the moment
+ * a reader recognises the pattern; it does not change the texture.
+ *
+ * Noise has no such symmetry. Crests arrive in clusters, with quiet stretches
+ * between them, at widths that vary along the rim.
+ */
+float waves(float u, float t) {
+  // Domain warp: the field is read through a slow distortion of its own
+  // coordinate. This does the most work here, and it is the thing a sine sum has
+  // no equivalent for: crests stretch and bunch as the warp slides, so the
+  // SPACING is in motion rather than only the crests.
+  float warp = 0.055 * pnoise(u - t * 0.021, 3.0, 11.0)
+             + 0.028 * pnoise(u + t * 0.017, 5.0, 27.0);
+  float q = u + warp;
+
+  // Coprime cell counts, each octave scrolling at its own speed and direction,
+  // so the layers slide over one another and the field never returns to a state
+  // it has already been in.
+  float w = 1.00 * pnoise(q - t * 0.030, 7.0, 3.0);
+  w += 0.55 * pnoise(q + t * 0.019, 13.0, 41.0);
+  w += 0.30 * pnoise(q - t * 0.047, 23.0, 77.0);
+  w += 0.16 * pnoise(q + t * 0.062, 41.0, 129.0);
+  w /= 2.01;
+
+  // The swell is noise too. A sine envelope puts the calm stretch in a
+  // predictable place and moves it at a constant rate, which is the same tell
+  // one level up.
+  //
+  // Clamped both sides, and that bound is load-bearing: everything downstream
+  // that divides by a wave-dependent quantity is safe only while w stays inside
+  // about plus or minus one. A halo reach that crosses zero turns its falloff
+  // into a blowup and draws the crests as full-viewport bars.
+  float swell = 0.62 + 0.52 * pnoise(u - t * 0.013, 2.0, 5.0);
+  return w * clamp(swell, 0.22, 1.15);
 }
 
 /** The hues, cool to warm and back, so the loop closes without a seam. */
@@ -107,34 +154,39 @@ void main() {
   edgeCoords(p, size, dist, along);
 
   float t = uTime;
-  float w = waves(along, t);
+  float peri = 2.0 * (size.x + size.y);
+  float w = waves(along / peri, t);
 
-  // One head of light, making a lap.
+  // One head of light making a lap, shaped like a comet rather than a blob.
   //
   // The waves say the agent is working; the beam says it is still working NOW,
-  // which a standing wave pattern cannot: a reader who glances twice at a loop
-  // has no way to tell it apart from a still image. So one bright head travels
-  // the perimeter, and because along IS the perimeter unrolled, travelling is
-  // a fract() of the clock rather than anything that has to be animated.
+  // which a standing pattern cannot: a reader who glances twice at a loop has no
+  // way to tell it from a still image.
   //
-  // The distance is taken the SHORT way round (min(d, peri - d)), so the head
-  // crosses the seam where the last side meets the first without thinning to
-  // nothing and reappearing.
-  float peri = 2.0 * (size.x + size.y);
-  float head = fract(t * 0.105) * peri;
-  float d = abs(along - head);
-  d = min(d, peri - d);
-  // A twelfth of the way round, so it reads as a comet rather than as a lit
-  // half. Squared falloff: a linear one has a visible end, and a beam with an
-  // end is a bar.
-  float beam = exp(-pow(d / (peri * 0.085), 2.0));
+  // Asymmetric on purpose. A symmetric falloff reads as a lamp being carried
+  // around the frame, while a short bright nose with a long tail behind it reads
+  // as something travelling, because the tail says where it has been. The offset
+  // is SIGNED for that, taken the short way round so the head crosses the seam
+  // between the last side and the first without thinning and reappearing.
+  float head = fract(t * 0.205) * peri;
+  float rel = along - head;
+  rel -= peri * floor(rel / peri + 0.5);
+  float nose = peri * 0.030;
+  float tail = peri * 0.150;
+  // Each exponential is evaluated over the half it governs and flat over the
+  // other, so neither is handed a positive argument. Written this way rather
+  // than as a branch or a mix because exp() of a large positive is inf, and an
+  // inf reaching a mix() that would have discarded it still yields NaN.
+  float back = exp(min(rel, 0.0) / tail);
+  float front = exp(-max(rel, 0.0) / nose);
+  float beam = min(back, front);
 
   // The rim's thickness undulates with the wave, so the crests are visible as
   // the edge swelling and thinning rather than as a stripe moving inside it.
   // Amplitude, and it is generous on purpose: the rim nearly doubles at a crest
   // and thins to well under its resting width in a trough, which is what makes
   // the wave legible on something only a few pixels across.
-  float thick = uThick * (1.0 + 0.78 * w + 0.85 * beam) + 1.0;
+  float thick = uThick * max(0.25, 1.0 + 1.15 * w + 0.85 * beam) + 1.0;
 
   // The whole reason this is a shader: one pixel of smoothstep across the
   // boundary, computed per fragment. There is no raster to displace and nothing
@@ -145,7 +197,8 @@ void main() {
   // Two halos, both exponential falloffs rather than blurs: the near one seats
   // the rim, the far one is the light it throws onto the page. An exponential is
   // what a real falloff looks like and costs two instructions.
-  float near = exp(-max(dist - thick, 0.0) / (7.0 + 5.0 * w));
+  float reach = mix(4.0, 22.0, clamp(0.5 + 0.5 * w, 0.0, 1.0));
+  float near = exp(-max(dist - thick, 0.0) / reach);
   float far = exp(-max(dist - thick, 0.0) / 46.0);
 
   // The gradient MOVES inside the waves, and slower than they do: hue drifting
@@ -155,7 +208,7 @@ void main() {
   // was doing too much: an edge that runs the palette reads as a decoration in
   // its own right, and this one has a job. A third of the way out keeps the
   // shift visible as the light travels without the frame becoming the subject.
-  vec3 tint = mix(uHueB, palette(along / 1850.0 + t * 0.045), 0.34);
+  vec3 tint = mix(uHueB, palette(along / 1850.0 + t * 0.095), 0.34);
   // The head is the palette's light end, so the beam reads as MORE LIGHT rather
   // than as a different colour arriving.
   tint = mix(tint, uHueC, 0.55 * beam);
