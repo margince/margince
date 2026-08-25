@@ -1,6 +1,8 @@
 import type { Dispatch } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { formatNumber } from "../../format/format";
+import { useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessage } from "../common";
 import type { IntakeOutcome, RefusalReason } from "../voice-intake-core";
@@ -88,6 +90,7 @@ export function useVoiceCorpus({
   dispatch,
   initialSummary = null,
 }: UseVoiceCorpusArgs) {
+  const { locale } = useLocale();
   const [summary, setSummary] = useState<CorpusSummary | null>(initialSummary);
   const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>([]);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
@@ -112,11 +115,7 @@ export function useVoiceCorpus({
   });
 
   const say = useCallback(
-    (
-      id: string,
-      i18nKey: MessageKey,
-      params?: Record<string, string | number>,
-    ) => {
+    (id: string, i18nKey: MessageKey, params?: Record<string, string>) => {
       dispatch({
         type: "NARRATION",
         entry: { kind: "narration", id, i18nKey, params },
@@ -163,19 +162,19 @@ export function useVoiceCorpus({
         entry,
       ]);
       say(`react:${entry.ref}`, reactionKey, {
-        kept: stats.kept_words,
-        total: stats.input_words,
-        words: stats.kept_words,
+        kept: formatNumber(stats.kept_words, locale),
+        total: formatNumber(stats.input_words, locale),
+        words: formatNumber(stats.kept_words, locale),
       });
       if (seq <= appliedSummarySeq.current) {
         return;
       }
       appliedSummarySeq.current = seq;
-      queue.push(diffCorpus(summaryRef.current, next));
+      queue.push(diffCorpus(summaryRef.current, next, locale));
       summaryRef.current = next;
       setSummary(next);
     },
-    [queue, say],
+    [locale, queue, say],
   );
 
   // One place the conversation learns what an intake attempt ended as: the
@@ -343,11 +342,14 @@ export function useVoiceCorpus({
           value: speaker.label,
           label: speaker.label,
           detailKey: "ob.conv.voice.speakerOptionDetail" as const,
-          params: { words: speaker.words, turns: speaker.turns },
+          params: {
+            words: formatNumber(speaker.words, locale),
+            turns: formatNumber(speaker.turns, locale),
+          },
         })),
       },
     });
-  }, [nextAsk, state.phase, state.pendingQuestion, dispatch]);
+  }, [nextAsk, state.phase, state.pendingQuestion, dispatch, locale]);
 
   // The owner named themselves: ingest with the speaker filter, so only that
   // speaker's server-counted words ever reach the meter.

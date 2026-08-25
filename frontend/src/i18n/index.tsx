@@ -140,7 +140,7 @@ function rememberLocale(locale: Locale): void {
 export function translate(
   locale: Locale,
   key: MessageKey | ExtensionMessageKey,
-  params?: Record<string, string | number>,
+  params?: Record<string, string>,
 ): string {
   // CORE FIRST, and a unit second. The generator already refuses a key outside
   // the unit's own namespace, so the two sets cannot overlap today — this
@@ -285,6 +285,17 @@ export function useT() {
   // some two dozen core helpers take a translator as — and widening the RETURN
   // makes every core-only test fake stop being assignable to it, for a
   // capability no core helper has any use for.
-  return (key: MessageKey, params?: Record<string, string | number>) =>
+  return (key: MessageKey, params?: Record<string, string>) =>
     translate(locale, key, params);
 }
+
+/**
+ * The translator a helper outside a component takes as a parameter.
+ *
+ * Derived from `useT` rather than restated, because a hand-written copy of this
+ * shape is a SECOND declaration of what a translator accepts — and the copies
+ * in this tree were all wider than the real thing, each one a hole through
+ * which a raw number reached a catalog sentence and was grouped for nobody. A
+ * restatement cannot go stale if there is nothing to restate.
+ */
+export type Translator = ReturnType<typeof useT>;

@@ -15,7 +15,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { Checkbox, useScrollRegion } from "./atoms";
 import {
   CountLine,
@@ -1286,6 +1287,7 @@ function Pager({
   onPerPage?: (next: number) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className={`lt-foot${lastPage === 1 && !hasMore ? " single" : ""}`}>
       {/* A landmark, because this is navigation and a reader who jumps by region
@@ -1307,7 +1309,9 @@ function Pager({
               key={slot}
               className={slot === current ? "on" : undefined}
               aria-current={slot === current ? "page" : undefined}
-              aria-label={t("table.page", { number: slot })}
+              // A page number is an ordinal, never grouped: "page 1.234" reads
+              // as a fraction of a page rather than the 1234th of them.
+              aria-label={t("table.page", { number: String(slot) })}
               onClick={() => onGoto(slot)}
             >
               {slot}
@@ -1341,7 +1345,7 @@ function Pager({
           onChange={(next) => onPerPage?.(Number(next))}
           options={PAGE_SIZES.map((size) => ({
             value: String(size),
-            label: t("table.perPage", { count: size }),
+            label: t("table.perPage", { count: formatNumber(size, locale) }),
           }))}
         />
       </span>

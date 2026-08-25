@@ -1,7 +1,8 @@
 import type { ChangeEvent, Dispatch, RefObject } from "react";
 import { useRef } from "react";
 import type { components } from "../../api/schema";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import { useFileDrop } from "../use-file-drop";
 import { VOICE_MIN_WORDS } from "../voice-intake-core";
@@ -87,9 +88,10 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
 
   // Where the journey stands, in the rail's own counting.
   const stops = railStops(state.memberPath);
+  // A position in the rail, not a magnitude: never grouped, in any locale.
   const eyebrow = t("ob.conv.scene.step", {
-    n: stops.findIndex((stop) => stop.key === "voice") + 1,
-    m: stops.length,
+    n: String(stops.findIndex((stop) => stop.key === "voice") + 1),
+    m: String(stops.length),
     label: t("ob.rail.voice"),
   });
 
@@ -182,6 +184,7 @@ function CollectingNarration({
   serverWords,
   canBuild,
 }: Readonly<{ serverWords: number; canBuild: boolean }>) {
+  const { locale } = useLocale();
   return (
     <>
       <NarrationBubble
@@ -197,7 +200,10 @@ function CollectingNarration({
             kind: "narration",
             id: "voice:floor",
             i18nKey: "ob.conv.voice.buildFloor",
-            params: { words: serverWords, min: VOICE_MIN_WORDS },
+            params: {
+              words: formatNumber(serverWords, locale),
+              min: formatNumber(VOICE_MIN_WORDS, locale),
+            },
           }}
         />
       )}

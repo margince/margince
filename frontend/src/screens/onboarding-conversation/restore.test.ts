@@ -95,6 +95,7 @@ describe("restorePlan", () => {
         voice: null,
         read: null,
         routeConnect: false,
+        locale: "en",
       }),
     ).toEqual({
       kind: "start",
@@ -114,6 +115,7 @@ describe("restorePlan", () => {
         voice: null,
         read: null,
         routeConnect: false,
+        locale: "en",
       }),
     ).toMatchObject({ memberPath: true });
     // A returning creator has both a saved company and a state row saying
@@ -125,6 +127,7 @@ describe("restorePlan", () => {
         voice: emptyVoice,
         read: null,
         routeConnect: false,
+        locale: "en",
       }),
     ).toMatchObject({ memberPath: false, resumeTarget: "vo.collecting" });
   });
@@ -137,6 +140,7 @@ describe("restorePlan", () => {
         voice: null,
         read: null,
         routeConnect: false,
+        locale: "en",
       }),
     ).toMatchObject({
       memberPath: true,
@@ -154,6 +158,7 @@ describe("restorePlan", () => {
           voice: null,
           read: null,
           routeConnect: false,
+          locale: "en",
         }),
       ).toMatchObject({
         companyConfirmed: false,
@@ -170,6 +175,7 @@ describe("restorePlan", () => {
       voice: words(1240),
       read: null,
       routeConnect: false,
+      locale: "en",
     });
     expect(plan).toMatchObject({ resumeTarget: "vo.collecting" });
     if (plan.kind !== "start") {
@@ -178,7 +184,7 @@ describe("restorePlan", () => {
     expect(plan.recap).toContainEqual(
       expect.objectContaining({
         i18nKey: "ob.conv.recap.corpus",
-        params: { words: 1240 },
+        params: { words: "1,240" },
       }),
     );
   });
@@ -191,6 +197,7 @@ describe("restorePlan", () => {
         voice: emptyVoice,
         read: null,
         routeConnect: false,
+        locale: "en",
       }),
     ).toMatchObject({ resumeTarget: "vo.skipped" });
     const results = restorePlan({
@@ -199,6 +206,7 @@ describe("restorePlan", () => {
       voice: emptyVoice,
       read: null,
       routeConnect: false,
+      locale: "en",
     });
     expect(results).toMatchObject({ resumeTarget: "re.recap" });
     if (results.kind !== "start") {
@@ -216,6 +224,7 @@ describe("restorePlan", () => {
       voice: { ...words(2000), built: true },
       read: null,
       routeConnect: false,
+      locale: "en",
     });
     expect(plan).toMatchObject({ resumeTarget: "cn.consent" });
     if (plan.kind !== "start") {
@@ -236,6 +245,7 @@ describe("restorePlan", () => {
         voice: emptyVoice,
         read: null,
         routeConnect: true,
+        locale: "en",
       }),
     ).toMatchObject({ resumeTarget: "cn.consent" });
   });
@@ -248,6 +258,7 @@ describe("restorePlan", () => {
         voice: null,
         read: readRow(status),
         routeConnect: false,
+        locale: "en",
       });
       expect(plan).toMatchObject({
         companyConfirmed: false,
@@ -259,7 +270,7 @@ describe("restorePlan", () => {
       expect(plan.recap).toContainEqual(
         expect.objectContaining({
           i18nKey: "ob.conv.recap.readTerminal",
-          params: { host: "gradion.com", count: 1 },
+          params: { host: "gradion.com", count: "1" },
         }),
       );
     }
@@ -272,6 +283,7 @@ describe("restorePlan", () => {
       voice: null,
       read: readRow("reading"),
       routeConnect: false,
+      locale: "en",
     });
     expect(plan).toMatchObject({ adoptRead: { id: readRow("reading").id } });
     if (plan.kind !== "start") {
@@ -280,7 +292,7 @@ describe("restorePlan", () => {
     expect(plan.recap).toContainEqual(
       expect.objectContaining({
         i18nKey: "ob.conv.recap.readReading",
-        params: { host: "gradion.com", pages: 12 },
+        params: { host: "gradion.com", pages: "12" },
       }),
     );
   });
@@ -296,6 +308,7 @@ describe("restorePlan", () => {
         voice: null,
         read: readRow(status),
         routeConnect: false,
+        locale: "en",
       });
       expect(plan).toMatchObject({ adoptRead: null });
       if (plan.kind !== "start") {
@@ -315,6 +328,7 @@ describe("restorePlan", () => {
         voice: null,
         read: null,
         routeConnect: false,
+        locale: "en",
       }),
     ).toEqual({ kind: "complete" });
   });
@@ -331,6 +345,7 @@ describe("restorePlan", () => {
       voice: null,
       read: null,
       routeConnect: false,
+      locale: "en",
     });
     expect(plan.kind).toBe("start");
     if (plan.kind !== "start") {

@@ -41,9 +41,10 @@ import {
   EvidenceChip,
   ProvenanceTag,
 } from "../design-system/trust";
-import { formatDateTime } from "../format/format";
-import { formatCountdown, type Translator, useNow } from "../format/now";
+import { formatDateTime, formatNumber } from "../format/format";
+import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
+import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -337,10 +338,12 @@ function rowLabels(t: Translator): DecisionCardLabels {
 
 // The status chip's words. Spelled per surface like every other label bag here:
 // what a countdown or a verdict is CALLED belongs to the screen showing it.
-function statusLabels(t: Translator): DecisionStatusLabels {
+function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("inbox.expiresIn", { countdown: formatCountdown(msRemaining, t) }),
+      t("inbox.expiresIn", {
+        countdown: formatCountdown(msRemaining, t, locale),
+      }),
     approved: t("inbox.status.approved"),
     rejected: t("inbox.status.rejected"),
     expired: t("inbox.status.expired"),
@@ -446,6 +449,7 @@ export function ApprovalRow({
   extraInvalidateKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
@@ -567,7 +571,7 @@ export function ApprovalRow({
             approval={approval}
             decided={!!decided}
             now={now}
-            labels={statusLabels(t)}
+            labels={statusLabels(t, locale)}
           />
         </>
       }
@@ -727,6 +731,7 @@ function BundleExpiryChip({
   now,
 }: Readonly<{ live: readonly Approval[]; now: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (live.length === 0) {
     return <Badge tone="danger">{t("inbox.expired")}</Badge>;
   }
@@ -740,7 +745,7 @@ function BundleExpiryChip({
   return (
     <Badge tone={decisionUrgencyTone(remaining)}>
       {t("inbox.bundle.expiresIn", {
-        countdown: formatCountdown(remaining, t),
+        countdown: formatCountdown(remaining, t, locale),
       })}
     </Badge>
   );
@@ -771,6 +776,7 @@ function BundleCard({
   onDecided: (verdict: BundleVerdict, decision: BundleDecision) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
@@ -847,7 +853,9 @@ function BundleCard({
       </div>
       <p className="t-h2">{subject}</p>
       <p className="t-small approval-bundle-why">
-        {t("inbox.bundle.why", { count: members.length })}
+        {t("inbox.bundle.why", {
+          count: formatNumber(members.length, locale),
+        })}
       </p>
       {live.length > 0 && (
         <div className="approval-gate">
@@ -861,14 +869,18 @@ function BundleCard({
             pending={decide.isPending}
             onClick={() => setConfirming("approve")}
           >
-            {t("inbox.bundle.approveAll", { count: live.length })}
+            {t("inbox.bundle.approveAll", {
+              count: formatNumber(live.length, locale),
+            })}
           </Button>
           <Button
             small
             disabled={decide.isPending}
             onClick={() => setConfirming("reject")}
           >
-            {t("inbox.bundle.rejectAll", { count: live.length })}
+            {t("inbox.bundle.rejectAll", {
+              count: formatNumber(live.length, locale),
+            })}
           </Button>
         </div>
       )}
@@ -879,7 +891,9 @@ function BundleCard({
       )}
       <Disclosure
         className="approval-bundle-open"
-        summary={t("inbox.bundle.members", { count: members.length })}
+        summary={t("inbox.bundle.members", {
+          count: formatNumber(members.length, locale),
+        })}
       >
         {/* A list, not an indent: the count and the boundaries of the group have
             to reach a reader who is hearing this page rather than seeing it. */}
@@ -897,7 +911,9 @@ function BundleCard({
       <ConfirmModal
         open={confirming === "approve"}
         onClose={() => setConfirming(null)}
-        title={t("inbox.bundle.approveAll", { count: live.length })}
+        title={t("inbox.bundle.approveAll", {
+          count: formatNumber(live.length, locale),
+        })}
         confirmLabel={t("trust.accept")}
         pending={decide.isPending}
         onConfirm={() => send("approve", "")}
@@ -907,7 +923,9 @@ function BundleCard({
       <ConfirmModal
         open={confirming === "reject"}
         onClose={() => setConfirming(null)}
-        title={t("inbox.bundle.rejectAll", { count: live.length })}
+        title={t("inbox.bundle.rejectAll", {
+          count: formatNumber(live.length, locale),
+        })}
         confirmLabel={t("inbox.reject")}
         confirmVariant="danger"
         pending={decide.isPending}
@@ -982,7 +1000,11 @@ function outcomeCounts(decision: BundleDecision): Map<BundleOutcome, number> {
 // claim the response does not make: a member that had lapsed, one somebody else
 // had already answered, and one whose follow-on change failed to land each came
 // back saying so, and each is a different thing for the reader to do next.
-function outcomeLines(result: BundleResult, t: Translator): string[] {
+function outcomeLines(
+  result: BundleResult,
+  t: Translator,
+  locale: Locale,
+): string[] {
   const counts = outcomeCounts(result.decision);
   const lines: string[] = [];
   const decided = counts.get("decided") ?? 0;
@@ -992,7 +1014,7 @@ function outcomeLines(result: BundleResult, t: Translator): string[] {
         result.verdict === "approve"
           ? "inbox.bundle.result.approved"
           : "inbox.bundle.result.rejected",
-        { count: decided },
+        { count: formatNumber(decided, locale) },
       ),
     );
   }
@@ -1000,7 +1022,11 @@ function outcomeLines(result: BundleResult, t: Translator): string[] {
     const count = counts.get(outcome) ?? 0;
     if (count > 0) {
       const keys = OUTCOME_KEYS[outcome];
-      lines.push(t(count === 1 ? keys.one : keys.other, { count }));
+      lines.push(
+        t(count === 1 ? keys.one : keys.other, {
+          count: formatNumber(count, locale),
+        }),
+      );
     }
   }
   return lines;
@@ -1028,7 +1054,8 @@ function BundleOutcomeNote({
   onDismiss,
 }: Readonly<{ result: BundleResult; onDismiss: () => void }>) {
   const t = useT();
-  const lines = outcomeLines(result, t);
+  const { locale } = useLocale();
+  const lines = outcomeLines(result, t, locale);
   // A report with nothing in it says nothing: a call that decided no member
   // answers 404, so there is no honest sentence to put in an empty box here.
   if (lines.length === 0) {

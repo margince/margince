@@ -350,8 +350,8 @@ describe("the conversational voice act", () => {
     expect(
       await screen.findByText(/Which one is you\? Only your own words count/),
     ).toBeTruthy();
-    expect(screen.getByText("words: 1240 · turns: 12")).toBeTruthy();
-    expect(screen.getByText("words: 4160 · turns: 14")).toBeTruthy();
+    expect(screen.getByText("words: 1,240 · turns: 12")).toBeTruthy();
+    expect(screen.getByText("words: 4,160 · turns: 14")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("radio", { name: /Speaker 1/ }));
     await userEvent.click(
@@ -370,7 +370,9 @@ describe("the conversational voice act", () => {
 
     // The server's kept-of-total stats land on the collect scene's own
     // sources list, once — never a second copy of the same fact in the rail.
-    expect(await screen.findByText(/Kept 1240 of 5400 words/)).toBeTruthy();
+    // Both figures are word COUNTS, so they carry the reader's own grouping
+    // (en-GB here) rather than a bare digit run.
+    expect(await screen.findByText(/Kept 1,240 of 5,400 words/)).toBeTruthy();
   });
 
   it("ingests a document directly and reacts with the server word count", async () => {

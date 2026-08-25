@@ -376,7 +376,7 @@ describe("restore into the conversational shell", () => {
 
     expect(
       await screen.findByText(
-        /Your corpus already holds 1240 of your own words\./,
+        /Your corpus already holds 1,240 of your own words\./,
       ),
     ).toBeTruthy();
     // vo.collecting lands directly on the collect scene and its rail prompt.

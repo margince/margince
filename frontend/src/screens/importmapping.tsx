@@ -3,7 +3,8 @@
 
 import { TableScroll } from "../design-system/atoms";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { ImportColumn, ImportProfile } from "./importtypes";
 import { DONT_IMPORT } from "./importtypes";
 
@@ -34,6 +35,7 @@ export function ImportMappingTable({
   onChange: (column: string, target: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const options = [
     { value: DONT_IMPORT, label: t("import.dontImport") },
     ...profile.targets.map((target) => ({ value: target, label: target })),
@@ -42,7 +44,9 @@ export function ImportMappingTable({
   return (
     <div className="import__mapping">
       <p className="import__hint">
-        {t("import.profiled", { rows: profile.rows_profiled })}
+        {t("import.profiled", {
+          rows: formatNumber(profile.rows_profiled, locale),
+        })}
       </p>
       {/* The fifth screen to have written this box by hand. `.import__scroll`
           was `overflow-x: auto` and nothing else: no tab stop and no announced

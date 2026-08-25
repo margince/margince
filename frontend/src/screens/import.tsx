@@ -13,9 +13,9 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, useMe } from "./common";
 import { useImportFlow } from "./importflow";
@@ -344,7 +344,7 @@ function ImportOutcome({
       </dl>
       <p className="import__hint">
         {t("import.rowsRead", {
-          rows: report.rows_read,
+          rows: formatNumber(report.rows_read, locale),
           column: report.source_key_used,
         })}
       </p>
@@ -357,7 +357,11 @@ function ImportOutcome({
           <ul className="import__issues">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
-                {t("import.issueLine", { line: issue.line })} {issue.reason}
+                {/* A line number is where to look in the uploaded file, so it
+                    is never grouped: "1.234" is not a line the reader can find
+                    in a text editor. */}
+                {t("import.issueLine", { line: String(issue.line) })}{" "}
+                {issue.reason}
               </li>
             ))}
           </ul>
@@ -366,7 +370,9 @@ function ImportOutcome({
 
       {resumable ? (
         <Callout tone="danger" live="alert">
-          {t("import.failed", { checkpoint: run.checkpoint })}
+          {t("import.failed", {
+            checkpoint: formatNumber(run.checkpoint, locale),
+          })}
         </Callout>
       ) : null}
 
@@ -378,7 +384,9 @@ function ImportOutcome({
 
       {!committed ? (
         <Button small variant="primary" disabled={busy} onClick={onCommit}>
-          {busy ? t("import.importing") : commitLabel(t, d.created + d.updated)}
+          {busy
+            ? t("import.importing")
+            : commitLabel(t, locale, d.created + d.updated)}
         </Button>
       ) : null}
 
@@ -437,6 +445,7 @@ function UndoSection({
   onUndo: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
       {undoInterrupted ? (
@@ -453,7 +462,7 @@ function UndoSection({
             ? t("import.undoing")
             : undoInterrupted
               ? t("import.continueUndo")
-              : undoLabel(t, report.disposition.created)}
+              : undoLabel(t, locale, report.disposition.created)}
         </Button>
       ) : null}
       {undoError ? (
@@ -476,6 +485,7 @@ function UndoSection({
 // than rendering nothing.
 function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="import__undoOutcome">
       <Callout tone="success" live="status">
@@ -488,7 +498,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
               undo.reversed_count === 1
                 ? "import.undoReversed.one"
                 : "import.undoReversed.other",
-              { rows: undo.reversed_count },
+              { rows: formatNumber(undo.reversed_count, locale) },
             )}
           </p>
           {undo.kept.length > 0 ? (
@@ -527,30 +537,35 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
 // button is the last thing a human reads before the least reversible write in
 // the product, and "1 rows" reads like a machine wrote it.
 function commitLabel(
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
   rows: number,
 ): string {
   const key: MessageKey =
     rows === 1 ? "import.commit.one" : "import.commit.other";
-  return t(key, { rows });
+  return t(key, { rows: formatNumber(rows, locale) });
 }
 
 // undoLabel names the count on the undo button for the same reason
 // commitLabel does: it is the last thing a human reads before undo
 // archives every row this run created.
 function undoLabel(
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
   rows: number,
 ): string {
   const key: MessageKey = rows === 1 ? "import.undo.one" : "import.undo.other";
-  return t(key, { rows });
+  return t(key, { rows: formatNumber(rows, locale) });
 }
 
 function Count({ label, value }: Readonly<{ label: string; value: number }>) {
+  const { locale } = useLocale();
   return (
     <div className="import__count">
       <dt>{label}</dt>
-      <dd>{value}</dd>
+      {/* Grouped, like the row counts in the sentences around it: one card
+          spelling the same kind of count two ways is the drift this closes. */}
+      <dd>{formatNumber(value, locale)}</dd>
     </div>
   );
 }

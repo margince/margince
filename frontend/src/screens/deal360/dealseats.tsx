@@ -19,7 +19,8 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import { dealRoleLabel, RailPanel } from "../record360";
 import "../network.css";
 
@@ -47,6 +48,7 @@ export function DealSeats({
   overlay: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const seats = coverage?.stakeholders ?? [];
   const ours = coverage?.our_side ?? [];
   // `unsupported`, not `unavailable`: nothing is broken and retrying changes
@@ -80,7 +82,9 @@ export function DealSeats({
       footer={
         ours.length > 0 ? (
           <p className="t-caption">
-            {t("deal.seats.ours", { count: ours.length })}
+            {t("deal.seats.ours", {
+              count: formatNumber(ours.length, locale),
+            })}
           </p>
         ) : undefined
       }

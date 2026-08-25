@@ -24,9 +24,10 @@ import {
   calendarDaysBetween,
   formatDayMonth,
   formatMoneyOrAbsent,
+  formatNumber,
   relativeDays,
 } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
 type Deal = components["schemas"]["Deal"];
@@ -78,8 +79,13 @@ export function DealStrip({
       <StatStrip testId="deal-strip">
         <MoneyStat deal={deal} offers={offers} locale={locale} t={t} />
         <CloseStat deal={deal} locale={locale} zone={zone} t={t} />
-        <PeopleStat coverage={coverage} withheld={coverageWithheld} t={t} />
-        <MomentumStat deal={deal} t={t} />
+        <PeopleStat
+          coverage={coverage}
+          withheld={coverageWithheld}
+          locale={locale}
+          t={t}
+        />
+        <MomentumStat deal={deal} locale={locale} t={t} />
       </StatStrip>
     </section>
   );
@@ -101,12 +107,14 @@ function MoneyStat({
   deal: Deal;
   offers?: readonly Offer[];
   locale: Locale;
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  t: Translator;
 }>) {
   const newest = offers?.[0];
   const detail = newest
     ? t("deal.strip.money.offer", {
-        number: newest.offer_number,
+        // The offer's identifier, not a quantity: grouped, revision 1234 would
+        // read "1.234" and name no document.
+        number: String(newest.offer_number),
         status: t(`commercial.offer.${newest.status}` as MessageKey),
       })
     : t("deal.strip.money.noOffer");
@@ -136,7 +144,7 @@ function CloseStat({
   deal: Deal;
   locale: Locale;
   zone: string;
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  t: Translator;
 }>) {
   if (!deal.expected_close_date) {
     return (
@@ -153,8 +161,10 @@ function CloseStat({
   );
   const parts: string[] = [
     days < 0
-      ? t("deal.strip.close.overdue", { days: Math.abs(days) })
-      : t("deal.strip.close.inDays", { days }),
+      ? t("deal.strip.close.overdue", {
+          days: formatNumber(Math.abs(days), locale),
+        })
+      : t("deal.strip.close.inDays", { days: formatNumber(days, locale) }),
   ];
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
@@ -186,11 +196,13 @@ function CloseStat({
 function PeopleStat({
   coverage,
   withheld,
+  locale,
   t,
 }: Readonly<{
   coverage?: DealCoverage;
   withheld: boolean;
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  locale: Locale;
+  t: Translator;
 }>) {
   if (withheld) {
     return (
@@ -221,8 +233,8 @@ function PeopleStat({
     <StatCard
       label={t("deal.strip.people")}
       value={t("deal.strip.people.count", {
-        engaged,
-        total: seats.length,
+        engaged: formatNumber(engaged, locale),
+        total: formatNumber(seats.length, locale),
       })}
       detail={detail}
       tone={engaged <= 1 || !champion ? "warn" : undefined}
@@ -234,10 +246,12 @@ function PeopleStat({
 // Whether anything is happening.
 function MomentumStat({
   deal,
+  locale,
   t,
 }: Readonly<{
   deal: Deal;
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  locale: Locale;
+  t: Translator;
 }>) {
   const parts: string[] = [t("deal.strip.momentum.detail")];
   if (deal.stalled) {
@@ -246,7 +260,7 @@ function MomentumStat({
   return (
     <StatCard
       label={t("deal.strip.momentum")}
-      value={relativeDays(deal.last_activity_at, t)}
+      value={relativeDays(deal.last_activity_at, t, locale)}
       detail={parts.join(" · ")}
       tone={deal.stalled ? "danger" : undefined}
       dot={deal.stalled}

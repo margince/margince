@@ -38,6 +38,7 @@ import {
   formatMoney,
   formatMoneyCompact,
   formatMoneyOrAbsent,
+  formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -224,6 +225,7 @@ function CoverageSummary({
   routesReadable: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (contacts.length === 0) {
     return null;
   }
@@ -232,16 +234,22 @@ function CoverageSummary({
   // account is large and that this is not the whole of it.
   const parts = [
     truncated
-      ? t("co.coverage.contactsAtLeast", { count: contacts.length })
-      : t("co.coverage.contacts", { count: contacts.length }),
+      ? t("co.coverage.contactsAtLeast", {
+          count: formatNumber(contacts.length, locale),
+        })
+      : t("co.coverage.contacts", {
+          count: formatNumber(contacts.length, locale),
+        }),
   ];
   if (routesReadable && untried > 0) {
-    parts.push(t("co.coverage.untried", { count: untried }));
+    parts.push(
+      t("co.coverage.untried", { count: formatNumber(untried, locale) }),
+    );
   }
   // The gap count is only meaningful over a complete picture: a capped page
   // hides the contacts who might hold the roles it would report as missing.
   if (!truncated && gaps > 0) {
-    parts.push(t("co.coverage.gaps", { count: gaps }));
+    parts.push(t("co.coverage.gaps", { count: formatNumber(gaps, locale) }));
   }
   return <p className="surfacestate-empty">{parts.join(" · ")}</p>;
 }
@@ -272,6 +280,7 @@ export function PeopleCard({
   loading?: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const contacts = [...(view?.people?.data ?? [])].sort(byReach);
   const truncated = Boolean(view?.people?.page.has_more);
   const dealsReadable =
@@ -370,7 +379,9 @@ export function PeopleCard({
               <Badge tone="accent">
                 {untried.length === 1
                   ? t("co.people.untriedHintOne")
-                  : t("co.people.untriedHint", { count: untried.length })}
+                  : t("co.people.untriedHint", {
+                      count: formatNumber(untried.length, locale),
+                    })}
               </Badge>
             </p>
           )}
@@ -681,6 +692,7 @@ function ContactRow({
 // the time.
 function ContactRoutes({ routes }: Readonly<{ routes?: Contact["routes"] }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Absent, not empty: the caller has no roster grant, so naming a colleague is
   // a read they may not make. Silence is the honest answer — an "untried" badge
   // here would be a claim about the account rather than about the reader.
@@ -704,7 +716,9 @@ function ContactRoutes({ routes }: Readonly<{ routes?: Contact["routes"] }>) {
         // The count, not a silent truncation: three names with nothing after
         // them reads as "these are the only three".
         <span className="t-caption">
-          {t("co.routes.more", { count: routes.remainder })}
+          {t("co.routes.more", {
+            count: formatNumber(routes.remainder, locale),
+          })}
         </span>
       )}
     </span>
@@ -875,7 +889,11 @@ export function DealsCard({
               {t("co.deals.wonLifetime")}{" "}
               {formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
             </span>
-            <span>{t("co.deals.lostCount", { count: deals.lost_count })}</span>
+            <span>
+              {t("co.deals.lostCount", {
+                count: formatNumber(deals.lost_count, locale),
+              })}
+            </span>
           </p>
         )
       }
@@ -1713,7 +1731,12 @@ export function StateStrip({
             t={t}
           />
         )}
-        <HealthStat health={view?.health} withheld={healthWithheld} t={t} />
+        <HealthStat
+          health={view?.health}
+          locale={locale}
+          withheld={healthWithheld}
+          t={t}
+        />
         {/* Whose move it is and the worst open signal both moved to the daily
             brief's context band (companytoday.tsx) — the brief reads the same
             `engagement` and `signal` fields this strip used to, so the strip
@@ -1722,6 +1745,7 @@ export function StateStrip({
             which is what made this page a mishmash in the first place. */}
         <HealthSummaryStat
           health={view?.health}
+          locale={locale}
           orgId={orgId}
           withheld={healthWithheld}
           t={t}
@@ -1744,11 +1768,12 @@ export function StateStrip({
  */
 export function medianDaysLabel(
   median: number,
+  locale: Locale,
   t: ReturnType<typeof useT>,
 ): string {
   return median < 0
-    ? t("finance.medianEarly", { days: Math.abs(median) })
-    : t("finance.medianAfterDue", { days: median });
+    ? t("finance.medianEarly", { days: formatNumber(Math.abs(median), locale) })
+    : t("finance.medianAfterDue", { days: formatNumber(median, locale) });
 }
 
 // The caveat on a figure that IS shown but is not current. Undefined when the
@@ -1985,7 +2010,9 @@ function PipelineCard({
     commercial;
   const stalled =
     commercial.stalled_count > 0
-      ? t("co.strip.stalled", { count: commercial.stalled_count })
+      ? t("co.strip.stalled", {
+          count: formatNumber(commercial.stalled_count, locale),
+        })
       : undefined;
   if (value == null || !currency) {
     // Open deals with no priceable figure still say how many there are: the
@@ -1995,7 +2022,9 @@ function PipelineCard({
     return (
       <StatCard
         label={t("co.strip.pipeline")}
-        value={t("co.strip.openDeals", { count: commercial.open_count })}
+        value={t("co.strip.openDeals", {
+          count: formatNumber(commercial.open_count, locale),
+        })}
         detail={join(t("co.strip.unpriced"), stalled)}
         tone={stalled ? "warn" : undefined}
       />
@@ -2010,7 +2039,7 @@ function PipelineCard({
   const converted =
     commercial.converted_count > 0 && commercial.fx_as_of
       ? t("co.strip.convertedAsOf", {
-          count: commercial.converted_count,
+          count: formatNumber(commercial.converted_count, locale),
           date: formatDate(commercial.fx_as_of, locale, recordZone),
         })
       : undefined;
@@ -2022,10 +2051,12 @@ function PipelineCard({
       detail={join(
         partial
           ? t("co.strip.pricedPartly", {
-              priced: commercial.priced_count,
-              total: commercial.open_count,
+              priced: formatNumber(commercial.priced_count, locale),
+              total: formatNumber(commercial.open_count, locale),
             })
-          : t("co.strip.openDeals", { count: commercial.open_count }),
+          : t("co.strip.openDeals", {
+              count: formatNumber(commercial.open_count, locale),
+            }),
         converted,
         stalled,
       )}
@@ -2091,10 +2122,12 @@ function CloseDateStat({
 // opposite problems.
 function HealthStat({
   health,
+  locale,
   withheld,
   t,
 }: Readonly<{
   health?: Health;
+  locale: Locale;
   withheld: boolean;
   t: ReturnType<typeof useT>;
 }>) {
@@ -2125,7 +2158,9 @@ function HealthStat({
         label={t("co.strip.health")}
         value={t("co.strip.healthQuiet")}
         tone="warn"
-        detail={t("co.health.sinceInbound", { days })}
+        detail={t("co.health.sinceInbound", {
+          days: formatNumber(days, locale),
+        })}
       />
     );
   }
@@ -2150,7 +2185,9 @@ function HealthStat({
         oneSided ? t("co.strip.healthOneSided") : t("co.strip.healthBalanced")
       }
       tone={oneSided ? "warn" : undefined}
-      detail={t("co.strip.replyShare", { percent })}
+      detail={t("co.strip.replyShare", {
+        percent: formatNumber(percent, locale),
+      })}
     />
   );
 }
@@ -2172,11 +2209,13 @@ const HEALTH_QUIET_DAYS = 30;
 // verdict the account is.
 function HealthSummaryStat({
   health,
+  locale,
   orgId,
   withheld,
   t,
 }: Readonly<{
   health?: Health;
+  locale: Locale;
   orgId: string;
   withheld: boolean;
   t: ReturnType<typeof useT>;
@@ -2193,7 +2232,11 @@ function HealthSummaryStat({
         label={t("co.strip.healthSummary")}
         value={t(withheld ? WITHHELD_READING : UNASSESSED_READING)}
         detail={
-          withheld ? undefined : t("co.strip.healthSummary.of", { rated })
+          withheld
+            ? undefined
+            : t("co.strip.healthSummary.of", {
+                rated: formatNumber(rated, locale),
+              })
         }
       />
     );
@@ -2213,8 +2256,13 @@ function HealthSummaryStat({
       dot={overall === "at_risk"}
       detail={
         failing > 0
-          ? t("co.strip.healthSummary.failingOf", { failing, rated })
-          : t("co.strip.healthSummary.of", { rated })
+          ? t("co.strip.healthSummary.failingOf", {
+              failing: formatNumber(failing, locale),
+              rated: formatNumber(rated, locale),
+            })
+          : t("co.strip.healthSummary.of", {
+              rated: formatNumber(rated, locale),
+            })
       }
     />
   );
@@ -2255,7 +2303,8 @@ function SuggestionActionButton({
 // logic rather than a second copy of it.
 export function nextCommitmentLine(
   view: Organization360 | undefined,
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
 ): { headline: string; overdue: boolean } | undefined {
   const steps = view?.next_steps?.data ?? [];
   const step = steps[0];
@@ -2271,8 +2320,12 @@ export function nextCommitmentLine(
   const key = overdueCount > 0 ? "overdue" : "open";
   return {
     headline: truncated
-      ? t(`co.suggest.commitment.${key}AtLeast`, { count })
-      : t(`co.suggest.commitment.${key}Count`, { count }),
+      ? t(`co.suggest.commitment.${key}AtLeast`, {
+          count: formatNumber(count, locale),
+        })
+      : t(`co.suggest.commitment.${key}Count`, {
+          count: formatNumber(count, locale),
+        }),
     overdue: overdueCount > 0,
   };
 }
@@ -2350,7 +2403,7 @@ export function useSuggestionsBody({
             does not render at all. */}
         {dropped !== undefined && dropped > 0 && (
           <p className="co-row-meta">
-            {t("co.suggest.more", { count: dropped })}
+            {t("co.suggest.more", { count: formatNumber(dropped, locale) })}
           </p>
         )}
         {/* The row staying put with no word reads as a click that missed,
@@ -2453,11 +2506,12 @@ export function SuggestionsSection({
   onOpenTasks?: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const body = useSuggestionsBody({ orgId, view, onOpenRecord, onPerform });
   if (!body.ready) {
     return null;
   }
-  const commitment = nextCommitmentLine(view, t);
+  const commitment = nextCommitmentLine(view, locale, t);
   const footer =
     commitment || onOpenTasks || body.footer ? (
       <>

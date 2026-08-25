@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { Meter } from "../design-system/readings";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
   OverlayUnavailable,
@@ -146,7 +146,9 @@ function StrengthBody({
         <Badge tone={BUCKET_TONE[bucket]}>
           {t(`strength.bucket.${bucket}`)}
         </Badge>
-        <span className="t-mono">{t("strength.score", { score })}</span>
+        <span className="t-mono">
+          {t("strength.score", { score: formatNumber(score, locale) })}
+        </span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {factorRows.map((row) => {
@@ -186,14 +188,16 @@ function StrengthBody({
       {(strength.inbound_90d != null || strength.outbound_90d != null) && (
         <p className="t-caption">
           {t("strength.inout", {
-            in: strength.inbound_90d ?? 0,
-            out: strength.outbound_90d ?? 0,
+            in: formatNumber(strength.inbound_90d ?? 0, locale),
+            out: formatNumber(strength.outbound_90d ?? 0, locale),
           })}
         </p>
       )}
       {contributingCount > 0 && (
         <p className="t-caption">
-          {t("strength.computedFrom", { count: contributingCount })}
+          {t("strength.computedFrom", {
+            count: formatNumber(contributingCount, locale),
+          })}
         </p>
       )}
     </div>

@@ -5,6 +5,7 @@ import { useCanWrite } from "../app/capability";
 import { Badge, DataTable, EmptyState, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
+import { stable } from "../format/collate";
 import { formatMoney, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -97,7 +98,7 @@ export function outstandingByCurrency(
   }
   return [...totals.entries()]
     .map(([currency, amountMinor]) => ({ currency, amountMinor }))
-    .sort((a, b) => a.currency.localeCompare(b.currency));
+    .sort((a, b) => stable(a.currency, b.currency));
 }
 
 /**

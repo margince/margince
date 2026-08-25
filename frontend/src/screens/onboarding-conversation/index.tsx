@@ -6,7 +6,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { navigate, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
 import { EMPTY_DRAFT, pickBuiltVersion, useCompany } from "../onboarding";
 import { CompanyAct } from "./company-act";
@@ -163,6 +163,7 @@ function useRestore(
   dispatch: Dispatch<ConversationEvent>,
   routeConnect: boolean,
 ) {
+  const { locale } = useLocale();
   const existing = useCompany(true);
   const wizard = useQuery({
     queryKey: ["onboarding-conv-state"],
@@ -222,6 +223,7 @@ function useRestore(
       voice: voice.data ?? null,
       read: persistedRead.data ?? null,
       routeConnect,
+      locale,
     });
     if (plan.kind === "complete") {
       navigate({ screen: "home" });
@@ -249,6 +251,7 @@ function useRestore(
     voice.data,
     persistedRead.data,
     routeConnect,
+    locale,
     dispatch,
   ]);
 

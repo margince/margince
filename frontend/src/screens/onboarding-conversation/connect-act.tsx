@@ -181,9 +181,10 @@ export function ConnectAct({
 
   // Where the journey stands, in the rail's own counting.
   const stops = railStops(state.memberPath);
+  // A position in the rail, not a magnitude: never grouped, in any locale.
   const eyebrow = t("ob.conv.scene.step", {
-    n: stops.findIndex((stop) => stop.key === "connect") + 1,
-    m: stops.length,
+    n: String(stops.findIndex((stop) => stop.key === "connect") + 1),
+    m: String(stops.length),
     label: t("ob.rail.connect"),
   });
   return (

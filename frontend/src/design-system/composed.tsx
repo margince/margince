@@ -15,9 +15,9 @@ import {
   formatDate,
   formatDuration,
   formatMoneyOrAbsent,
+  formatNumber,
 } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { Avatar, Badge, Button } from "./atoms";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
@@ -301,7 +301,10 @@ function BoardLayout<Record extends BoardRecord>({
                   {countLabel
                     ? countLabel(column.count ?? column.deals.length)
                     : t("board.count", {
-                        count: column.count ?? column.deals.length,
+                        count: formatNumber(
+                          column.count ?? column.deals.length,
+                          locale,
+                        ),
                       })}
                 </span>
               </span>
@@ -1008,17 +1011,18 @@ export function GroupedTimelineList({
 // plural forms rendered "1 messages" and "sent to 1 people" for it.
 function groupCountLabel(
   group: TimelineGroup,
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+  t: Translator,
+  locale: Locale,
 ): string {
   const count = group.entries.length;
   if (group.kind === "bulk") {
     return count === 1
       ? t("timeline.group.bulkOne")
-      : t("timeline.group.bulk", { count });
+      : t("timeline.group.bulk", { count: formatNumber(count, locale) });
   }
   return count === 1
     ? t("timeline.group.threadOne")
-    : t("timeline.group.thread", { count });
+    : t("timeline.group.thread", { count: formatNumber(count, locale) });
 }
 
 function TimelineGroupRow({
@@ -1044,7 +1048,9 @@ function TimelineGroupRow({
       <div className="tl-body">
         <span className="tl-title">{newest.title}</span>
         <span className="tl-meta">
-          <span className="tl-group-count">{groupCountLabel(group, t)}</span>
+          <span className="tl-group-count">
+            {groupCountLabel(group, t, locale)}
+          </span>
           <span>{formatDate(newest.atIso, locale, zone)}</span>
           <ProvenanceTag provenance={newest.provenance} />
           <Button small aria-expanded={open} onClick={() => setOpen(!open)}>

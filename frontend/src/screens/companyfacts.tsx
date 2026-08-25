@@ -20,7 +20,7 @@
 // answers to one question, and the two disagree the moment somebody types.
 
 import type { components } from "../api/schema";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { CompanyOwnerControl } from "./companyheader";
 import "./companyfacts.css";
@@ -114,6 +114,7 @@ function pricedTotal(
  */
 function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (!view) {
     return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
   }
@@ -134,11 +135,11 @@ function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
   return (
     <span>
       {t(deals === 1 ? "co.facts.dealsOne" : "co.facts.dealsMany", {
-        count: deals,
+        count: formatNumber(deals, locale),
       })}
       {" · "}
       {t(projects === 1 ? "co.facts.projectsOne" : "co.facts.projectsMany", {
-        count: projects,
+        count: formatNumber(projects, locale),
       })}
       {(view.deals.page.has_more || view.projects_page?.has_more) &&
         ` ${t("co.facts.atLeast")}`}

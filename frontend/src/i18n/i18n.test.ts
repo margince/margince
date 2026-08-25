@@ -267,6 +267,23 @@ describe("i18n catalogs", () => {
     expect(translate("en", "trust.agentTag", {})).toBe("Automated by {agent}");
   });
 
+  it("refuses a raw number as a param, because nobody would have grouped it", () => {
+    // The gate for locale-blind figures, and it is the COMPILER rather than a
+    // sweep: a number handed to a catalog sentence reaches it through string
+    // coercion, which renders "1234" for a German reader whose every other
+    // figure on the page reads "1.234". Narrowing this parameter to strings
+    // makes every such site a build failure, so a new one cannot be written.
+    //
+    // Asserted here because the narrowing is invisible in the rendered output —
+    // it is the kind of type that gets widened back by the next author who
+    // meets it as an inconvenience, and nothing else would notice.
+    // @ts-expect-error a magnitude must be formatted (format/format.ts) first
+    translate("en", "person.strip.days", { count: 96 });
+    expect(translate("en", "person.strip.days", { count: "96" })).toContain(
+      "96",
+    );
+  });
+
   it("the default locale is en (A100: en-GB)", () => {
     expect(DEFAULT_LOCALE).toBe("en");
   });

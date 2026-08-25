@@ -8,7 +8,8 @@ import { DataTable, EmptyState, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import "./linkedin-reach.css";
 
@@ -68,25 +69,29 @@ function useLinkedInReach() {
  */
 function reachCaveat(
   t: ReturnType<typeof useT>,
+  locale: Locale,
   reach: LinkedInReach | undefined,
   shown: number,
 ): string | undefined {
   const unresolved = reach?.unresolved_connections ?? 0;
   if (shown === 0) {
     return unresolved > 0
-      ? t("linkedinReach.allUnresolved", { unresolved })
+      ? t("linkedinReach.allUnresolved", {
+          unresolved: formatNumber(unresolved, locale),
+        })
       : undefined;
   }
   return t("linkedinReach.footnote", {
-    shown,
-    total: reach?.accounts_total ?? shown,
-    unresolved,
+    shown: formatNumber(shown, locale),
+    total: formatNumber(reach?.accounts_total ?? shown, locale),
+    unresolved: formatNumber(unresolved, locale),
   });
 }
 
 /** Which accounts this member's imported network reaches. */
 export function LinkedInReachCard() {
   const t = useT();
+  const { locale } = useLocale();
   const query = useLinkedInReach();
   const accounts = query.data?.accounts ?? [];
 
@@ -130,7 +135,7 @@ export function LinkedInReachCard() {
               // resolved, and it matters MOST when nothing did: a fresh
               // workspace that imported five thousand connections and matched
               // no account should see the five thousand, not just "none yet".
-              description={reachCaveat(t, query.data, accounts.length)}
+              description={reachCaveat(t, locale, query.data, accounts.length)}
               // `.settingrow-measure` is what lets the table's own
               // `.table-scroll` box scroll: `.settingrow-control` is a flex row,
               // so a child with the default `min-width: auto` would grow to the
@@ -171,6 +176,7 @@ function ReachTable({
   accounts,
 }: Readonly<{ accounts: readonly ReachAccount[] }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <DataTable
       label={t("linkedinReach.accountsLabel")}
@@ -192,7 +198,9 @@ function ReachTable({
           header: t("linkedinReach.connections"),
           render: (account: ReachAccount) => (
             <span className="t-mono li-reach-cell li-reach-figure">
-              {account.connections}
+              {/* Grouped, like the pair in the column beside it: two spellings
+                  of one count in one table is the drift this closes. */}
+              {formatNumber(account.connections, locale)}
             </span>
           ),
         },
@@ -204,8 +212,8 @@ function ReachTable({
           render: (account: ReachAccount) => (
             <span className="t-mono li-reach-cell li-reach-figure">
               {t("linkedinReach.onFileOf", {
-                onFile: account.contacts_on_file,
-                total: account.connections,
+                onFile: formatNumber(account.contacts_on_file, locale),
+                total: formatNumber(account.connections, locale),
               })}
             </span>
           ),

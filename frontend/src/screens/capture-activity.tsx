@@ -12,7 +12,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
@@ -185,6 +185,7 @@ async function fetchWindow(
 
 function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [filter, setFilter] = useState<Outcome | null>(null);
   const [openTrace, setOpenTrace] = useState<string | null>(null);
   // Paged, because the window is 24 hours and a busy mailbox fills more than
@@ -246,8 +247,8 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                     // counter reading 26 would look like the counter was wrong.
                     <p className="capture-activity__count">
                       {t("captureActivity.filtered", {
-                        shown: shown.length,
-                        total: first.funnel[filter] ?? 0,
+                        shown: formatNumber(shown.length, locale),
+                        total: formatNumber(first.funnel[filter] ?? 0, locale),
                         outcome: t(`captureActivity.outcome.${filter}`),
                       })}
                     </p>

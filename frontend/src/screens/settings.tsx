@@ -74,7 +74,8 @@ import {
   PassportChip,
   toEvidence,
 } from "../design-system/trust";
-import { formatDate, formatDateTime } from "../format/format";
+import { stable } from "../format/collate";
+import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -1671,6 +1672,7 @@ function PassportRow({
 // picked means every row reads as reachable (the unfiltered inventory).
 function AgentToolsCard() {
   const t = useT();
+  const { locale } = useLocale();
   const [passportId, setPassportId] = useState<string>("");
   const tools = useQuery({
     queryKey: ["agent-tools"],
@@ -1757,7 +1759,7 @@ function AgentToolsCard() {
             {(data) => (
               <Disclosure
                 summary={t("tools.inventory", {
-                  count: String(data.data.length),
+                  count: formatNumber(data.data.length, locale),
                 })}
               >
                 <SettingList>
@@ -1872,6 +1874,7 @@ type ResetSummary =
 
 function ResetDataCard() {
   const t = useT();
+  const { locale } = useLocale();
   const me = useMe();
   const isAdmin = useHoldsAdminRole();
   const workspaceName = me.data?.workspace_name ?? "";
@@ -1939,11 +1942,11 @@ function ResetDataCard() {
         {summary && (
           <p className="t-caption settings-danger-result" role="status">
             {t("settings.resetDataResult", {
-              tables: summary.tables_cleared,
-              jobs: summary.jobs_deleted,
-              streams: summary.streams_purged,
-              keys: summary.cache_keys_deleted,
-              objects: summary.objects_deleted,
+              tables: formatNumber(summary.tables_cleared, locale),
+              jobs: formatNumber(summary.jobs_deleted, locale),
+              streams: formatNumber(summary.streams_purged, locale),
+              keys: formatNumber(summary.cache_keys_deleted, locale),
+              objects: formatNumber(summary.objects_deleted, locale),
             })}
           </p>
         )}
@@ -2529,12 +2532,11 @@ function diffKeys(
   for (const key of Object.keys(after ?? {})) {
     keys.add(key);
   }
-  // "en", like every other canonical ordering in this file's neighbourhood.
-  // These are the record's OWN column names, rendered untranslated a few lines
-  // below — so the reader's UI language has no claim on their order, and the
-  // runtime's default locale has even less: it would let one audit row read in
-  // two different orders on two machines showing the same page.
-  return [...keys].sort((a, b) => a.localeCompare(b, "en"));
+  // `stable`, because these are the record's OWN column names, rendered
+  // untranslated a few lines below: the reader's UI language has no claim on
+  // their order, and one audit row must not read in two orders on two machines
+  // showing the same page.
+  return [...keys].sort(stable);
 }
 
 // A key absent from an object (withheld/never set) reads the same as an

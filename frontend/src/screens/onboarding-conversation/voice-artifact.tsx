@@ -1,7 +1,8 @@
 import { Check, Loader } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { BuildStage } from "./conversation-machine";
 import { bandLabelKeys } from "./narration";
@@ -67,6 +68,7 @@ export function VoiceActArtifact({
   continueBar,
 }: VoiceActArtifactProps) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="mw-review ob-conv-artifact">
       <div className="mw-review-heading">
@@ -91,11 +93,11 @@ export function VoiceActArtifact({
                     <small>
                       {entry.transcript
                         ? t("ob.conv.voice.manifestKept", {
-                            kept: entry.keptWords,
-                            total: entry.inputWords,
+                            kept: formatNumber(entry.keptWords, locale),
+                            total: formatNumber(entry.inputWords, locale),
                           })
                         : t("ob.conv.voice.manifestWords", {
-                            words: entry.keptWords,
+                            words: formatNumber(entry.keptWords, locale),
                           })}
                     </small>
                   </span>
@@ -133,21 +135,22 @@ export function VoiceActArtifact({
 
 function CorpusMeter({ summary }: Readonly<{ summary: CorpusSummary }>) {
   const t = useT();
+  const { locale } = useLocale();
   const percent = Math.min(
     100,
     (summary.total_words / summary.target_words) * 100,
   );
   const registers = Object.entries(summary.register_words)
     .filter(([, words]) => words > 0)
-    .map(([register, words]) => `${register}: ${words}`)
+    .map(([register, words]) => `${register}: ${formatNumber(words, locale)}`)
     .join(" · ");
   return (
     <div className="ob-conv-meter">
       <div className="ob-conv-meter-top">
         <span>
           {t("ob.conv.voice.meterWords", {
-            words: summary.total_words,
-            target: summary.target_words,
+            words: formatNumber(summary.total_words, locale),
+            target: formatNumber(summary.target_words, locale),
           })}
         </span>
         <span>
