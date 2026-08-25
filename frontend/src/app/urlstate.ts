@@ -54,11 +54,28 @@ export function parseParams(hash: string): UrlParams {
  * chose the same filters in a different order get comparable links, and a write
  * that only reordered keys is recognisable as the no-op it is.
  */
+/**
+ * Key order for a written address, and it is BYTE order rather than the reader's.
+ *
+ * `localeCompare` is the usual advice for sorting strings and is wrong here: the
+ * point of sorting at all is that one view of a list has ONE address, so two
+ * readers who narrow the same list the same way can compare links and a rewrite
+ * that only reordered keys is recognisable as the no-op it is. A locale-aware
+ * order is a different order in a different locale, which would make the same
+ * view produce different URLs for a German reader and an English one.
+ */
+function byKey(one: string, other: string): number {
+  if (one === other) {
+    return 0;
+  }
+  return one < other ? -1 : 1;
+}
+
 export function hashWithParams(hash: string, params: UrlParams): string {
   const query = hash.indexOf("?");
   const path = query < 0 ? hash : hash.slice(0, query);
   const search = new URLSearchParams();
-  for (const key of [...params.keys()].sort()) {
+  for (const key of [...params.keys()].sort(byKey)) {
     const value = params.get(key);
     if (value) {
       search.set(key, value);

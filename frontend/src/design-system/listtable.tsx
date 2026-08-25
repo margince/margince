@@ -308,7 +308,9 @@ export function narrowingSignature(dials: {
   const narrowedBy =
     dials.narrowKey ??
     Object.keys(dials.chosen)
-      .sort()
+      // Byte order, not the reader's: this is an identity being compared with
+      // itself a render ago, so it has to be the same string in every locale.
+      .sort((one, other) => (one === other ? 0 : one < other ? -1 : 1))
       .map((name) => `${name}=${dials.chosen[name]}`)
       .join("&");
   return JSON.stringify([

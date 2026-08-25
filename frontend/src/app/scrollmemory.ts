@@ -41,8 +41,14 @@ let loadToken = newLoadToken();
 
 function newLoadToken(): string {
   // Only has to differ from the tokens of loads whose entries are still in this
-  // history, so a short random suffix is enough and needs no clock.
-  return Math.random().toString(36).slice(2, 8);
+  // history, so a short unique suffix is enough and needs no clock.
+  //
+  // `crypto` rather than `Math.random`: nothing here is a secret — the token
+  // names a page load to itself — but a scanner cannot tell that from the call,
+  // and neither can the next reader. The API that is always safe to have read is
+  // the one to use, and there is no fallback because every runtime this ships to
+  // has it (browsers since 2021, and jsdom through Node's own webcrypto).
+  return globalThis.crypto.randomUUID().slice(0, 8);
 }
 
 const ENTRY_KEY = "marginceEntry";
