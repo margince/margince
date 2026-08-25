@@ -24,9 +24,27 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-const files = sourceFiles(join(frontendRoot, "src")).concat(
-  join(frontendRoot, "index.html"),
-);
+// A unit's screen is held to the same rules as core, so it is enrolled the same
+// way. The shell gates beside this file already sweep the tier, but they are
+// greps: the inline camelCase spelling of a type family is invisible to them
+// and visible only here. Leaving the tier out of THIS corpus is the census that
+// fails short — it reads a smaller tree, reports PASS, and nothing asserts.
+function extensionFrontends(): string[] {
+  const root = join(frontendRoot, "..", "extensions");
+  if (!existsSync(root)) {
+    return [];
+  }
+  return readdirSync(root, { withFileTypes: true }).flatMap((unit) => {
+    const frontend = join(root, unit.name, "frontend");
+    return unit.isDirectory() && existsSync(frontend)
+      ? sourceFiles(frontend)
+      : [];
+  });
+}
+
+const files = sourceFiles(join(frontendRoot, "src"))
+  .concat(join(frontendRoot, "index.html"))
+  .concat(extensionFrontends());
 
 const allowedFamilies = new Set([
   "Outfit",
@@ -130,10 +148,15 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   it("uses only the three §2 type families", () => {
     for (const file of files) {
       const text = readFileSync(file, "utf8");
-      for (const [, families] of text.matchAll(
+      // Two spellings, two capture groups, and only ONE of them can match on a
+      // given hit — so the arm has to read whichever fired. Reading the first
+      // alone made every inline `fontFamily` a match whose families were
+      // `undefined`, silently skipped: the gate said PASS about a spelling it
+      // had never once looked at.
+      for (const [, declared, inline] of text.matchAll(
         /font-family\s*:\s*([^;}"']+)|fontFamily\s*:\s*"([^"]+)"/g,
       )) {
-        for (const family of (families ?? "").split(",")) {
+        for (const family of (declared ?? inline ?? "").split(",")) {
           const name = family.trim().replace(/^["']|["']$/g, "");
           if (name === "" || name.startsWith("var(")) {
             continue;

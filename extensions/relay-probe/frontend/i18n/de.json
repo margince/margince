@@ -1,6 +1,7 @@
 {
   "extRelayProbe.connection.absent": "Nicht verbunden",
   "extRelayProbe.connection.baseUrlLabel": "Relay-URL",
+  "extRelayProbe.connection.baseUrlPlaceholder": "https://workspace.example.com",
   "extRelayProbe.connection.catchingUp": "Holt nach ab",
   "extRelayProbe.connection.connect": "Verbinden",
   "extRelayProbe.connection.connectFailed": "Das Konto wurde möglicherweise nicht verbunden. Prüfen Sie den Stand oben, bevor Sie es erneut versuchen.",

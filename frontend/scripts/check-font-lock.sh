@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Font-lock gate: the three-family type
-# rule (design §2) — every font-family declaration under frontend/src names
-# only Outfit (display), DM Sans (body), or JetBrains Mono (mono).
+# rule (design §2) — every font-family declaration under frontend/src or an
+# extension unit's frontend names only Outfit (display), DM Sans (body), or
+# JetBrains Mono (mono).
 #
 # Allowed besides the three families: the generic stack fallbacks the §2
 # token definitions name (system-ui, sans-serif, ui-monospace, monospace) and
@@ -16,6 +17,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/src"
+# The unit trees are swept too. A unit's screen is shipped UI in the same
+# bundle, rendered on the same page, by an author the core team did not review
+# line by line — so a gate that stopped at frontend/src would hold the core to a
+# standard the extension tier escapes, which is the wrong way round. EXT_DIR is
+# overridable so the gate's own test can point it at a fixture.
+EXT_DIR="${MARGINCE_EXT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)/extensions}"
 
 FILES=()
 while IFS= read -r -d '' f; do FILES+=("$f"); done < <(
@@ -24,13 +31,21 @@ while IFS= read -r -d '' f; do FILES+=("$f"); done < <(
     -not -name "schema.d.ts" \
     -print0 2>/dev/null
 )
+while IFS= read -r -d '' f; do FILES+=("$f"); done < <(
+  find "$EXT_DIR" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.css" \) \
+    -path "*/frontend/*" \
+    -not -path "*/node_modules/*" \
+    -not -name "*.test.*" \
+    -print0 2>/dev/null
+)
 
+# An empty scan means the gate is pointed at the wrong tree — fail closed.
 if [[ "${#FILES[@]}" -eq 0 ]]; then
-  echo "FAIL: font-lock found no files under $SRC_DIR — the gate is miswired" >&2
+  echo "FAIL: font-lock found no files under $SRC_DIR or $EXT_DIR — the gate is miswired" >&2
   exit 1
 fi
 
-echo "==> Font-lock check (${#FILES[@]} files under frontend/src)"
+echo "==> Font-lock check (${#FILES[@]} files under frontend/src + extensions/*/frontend)"
 
 EXIT=0
 
