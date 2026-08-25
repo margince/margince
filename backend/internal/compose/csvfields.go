@@ -125,6 +125,9 @@ func importTargets(object string) ([]string, error) {
 		// `id` writes nothing. It names the record the row IS.
 		targets = append(targets, csvTargetID)
 	}
+	if linksEmployer(object) {
+		targets = append(targets, csvEmployerName)
+	}
 	return targets, nil
 }
 
@@ -136,6 +139,34 @@ func importTargets(object string) ([]string, error) {
 // not offering it.
 func selectsByID(object string) bool {
 	return object == migration.ObjectOrganization
+}
+
+// linksEmployer reports whether an object's rows may name a company to be
+// linked to, rather than written.
+//
+// People only: a contact file's company column is the person's employer, which
+// is a RELATIONSHIP between two records. An organization row naming a company
+// would be naming itself, and a lead holds its employer as free text on the lead
+// itself (`company_name`, an ordinary writable field) precisely because a lead is
+// not yet a record the estate links things to.
+func linksEmployer(object string) bool {
+	return object == migration.ObjectPerson
+}
+
+// isNonFieldTarget reports whether a mapped target names something other than a
+// value the record stores.
+//
+// Two targets qualify and they are different from each other, which is why this
+// is a set rather than a comparison. `id` names the RECORD the row is. The
+// employer column names an EDGE from that record to another one. Neither is a
+// column on the record, so neither may be compared against the stored JSON: the
+// lookup would find nothing, report the row as changed, and hand the update path
+// a field the store has no setter for — an update on every re-import of a file
+// nobody edited.
+//
+// Excluded in one place rather than at each caller so no path can forget one.
+func isNonFieldTarget(field string) bool {
+	return field == csvTargetID || field == csvEmployerName
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -153,11 +184,9 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
-		// `id` NAMES the record; it is not a value the record holds. Comparing it
-		// would find no stored `id` field, report it as changed, and hand the
-		// update path a field the contract has no setter for. Excluded here
-		// rather than at each caller so no path can forget.
-		if field == csvTargetID {
+		// `id` names the record and the employer column names an edge; neither is
+		// a value the record holds. See isNonFieldTarget.
+		if isNonFieldTarget(field) {
 			continue
 		}
 		if textOf(storedValue(current, field)) != canonicalFor(field, incoming) {

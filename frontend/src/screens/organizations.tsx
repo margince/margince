@@ -37,12 +37,7 @@ import {
 } from "../design-system/recordtimeline";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import {
-  AutonomyDot,
-  ConfidenceMeter,
-  confidenceLevel,
-  EvidenceChip,
-} from "../design-system/trust";
+import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -55,7 +50,6 @@ import {
   provenanceOf,
   QueryGate,
   QueryStates,
-  siteReadKindLabel,
   throwProblem,
   useSorMode,
   useViewerId,
@@ -762,101 +756,6 @@ export function CompaniesScreen() {
   );
 }
 
-// The EP05 enrich verb on the company 360: one click reads the org's own
-// website through the cold-start fetch + no-guess gate and STAGES a 🟡
-// proposal — every rendered field carries evidence + confidence or was
-// omitted, and nothing writes until the human accepts it in the inbox
-// (accept fills only EMPTY fields).
-function EnrichCard({ orgId }: Readonly<{ orgId: string }>) {
-  const t = useT();
-  const enrich = useMutation({
-    mutationKey: ["enrich", orgId],
-    mutationFn: async () => {
-      const { data, error } = await api.POST("/organizations/{id}/enrich", {
-        params: { path: { id: orgId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  return (
-    <Card
-      title={t("enrich.title")}
-      sub={t("enrich.sub")}
-      actions={
-        <Button
-          small
-          disabled={enrich.isPending}
-          onClick={() => enrich.mutate()}
-        >
-          {enrich.isPending ? t("enrich.reading") : t("enrich.cta")}
-        </Button>
-      }
-      style={{ marginBottom: "var(--space-4)" }}
-    >
-      {enrich.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
-          {problemMessageOf(enrich.error, t)}
-        </p>
-      )}
-      {enrich.data && (
-        <div>
-          <p
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexWrap: "wrap",
-              margin: "6px 0 12px",
-            }}
-          >
-            <AutonomyDot tier="confirm" />
-            <span className="t-small">{t("enrich.staged")}</span>
-            <Button small onClick={() => navigate({ screen: "inbox" })}>
-              {t("enrich.toInbox")}
-            </Button>
-          </p>
-          <p className="t-caption" style={{ marginBottom: 10 }}>
-            {t("enrich.from", { url: enrich.data.source_url })}
-          </p>
-          {enrich.data.fields.map((field) => {
-            const level = confidenceLevel(field.confidence);
-            return (
-              <div key={field.field} style={{ marginBottom: 12 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 3,
-                  }}
-                >
-                  <span className="t-label">
-                    {coldFieldLabel(field.field, t)}
-                  </span>
-                  {level && <ConfidenceMeter level={level} />}
-                </div>
-                <div>{field.value}</div>
-                {field.evidence_snippet && (
-                  <EvidenceChip
-                    evidence={{
-                      snippet: field.evidence_snippet,
-                      source: field.source_url ?? "",
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
 const SITE_READ_STATUS_LABELS: Record<SiteReadReport["status"], MessageKey> = {
@@ -878,24 +777,6 @@ const SITE_READ_STOP_LABELS: Record<
   byte_cap: "deepread.stopByteCap",
   deadline: "deepread.stopDeadline",
 };
-
-const SITE_READ_SKIP_LABELS: Record<
-  components["schemas"]["SiteReadSkip"]["reason"],
-  MessageKey
-> = {
-  robots: "deepread.skipRobots",
-  off_domain: "deepread.skipOffDomain",
-  page_cap: "deepread.skipPageCap",
-  byte_cap: "deepread.skipByteCap",
-  unreadable: "deepread.skipUnreadable",
-};
-
-// Trims the scheme and clamps long paths so the pages/skips lists stay
-// scannable; the full URL survives on the title attribute.
-function shortUrl(url: string): string {
-  const bare = url.replace(/^https?:\/\//, "");
-  return bare.length > 60 ? `${bare.slice(0, 59)}…` : bare;
-}
 
 function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
   const t = useT();
@@ -1032,58 +913,6 @@ function SiteReadPanel({
             {t("enrich.toInbox")}
           </Button>
         </p>
-      )}
-      {terminal && report.pages.length > 0 && (
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <span className="t-label">{t("deepread.pagesRead")}</span>
-          <ul
-            className="t-small"
-            style={{
-              listStyle: "none",
-              margin: "var(--space-2) 0 0",
-              padding: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-1)",
-            }}
-          >
-            {report.pages.map((page) => (
-              <li key={page.url}>
-                <Badge>{siteReadKindLabel(page.kind, t)}</Badge>{" "}
-                <span className="t-mono" title={page.url}>
-                  {shortUrl(page.url)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {terminal && report.skipped.length > 0 && (
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <span className="t-label">{t("deepread.skippedPages")}</span>
-          <ul
-            className="t-small"
-            style={{
-              listStyle: "none",
-              margin: "var(--space-2) 0 0",
-              padding: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-1)",
-            }}
-          >
-            {report.skipped.map((skip) => (
-              <li key={skip.url}>
-                <span className="t-mono" title={skip.url}>
-                  {shortUrl(skip.url)}
-                </span>{" "}
-                <Badge tone="warn">
-                  {t(SITE_READ_SKIP_LABELS[skip.reason])}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
     </div>
   );
@@ -1274,8 +1103,8 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
 
 // One confirmed profile field (S-E02): the human field label, the value, and
 // a footer that names where it came from — provenance, confidence when the
-// read carried one, and the grounding evidence snippet. Mirrors EnrichCard's
-// field row, but these are ACCEPTED values on the record, not staged proposals.
+// read carried one, and the grounding evidence snippet. These are values that
+// LANDED on the record, whatever lane wrote them.
 // The shared trust-signal footer for an evidence-backed row: provenance
 // always, confidence whenever graded, and the evidence snippet when present.
 // One spelling for profile fields and facts so the "confidence is never
@@ -3011,7 +2840,6 @@ function ReferenceDisclosures({
       <Disclosure summary={t("co.tools.title")}>
         <CustomFieldsCard object="organization" record={org} />
         <HierarchyRollupCard orgId={org.id} />
-        <EnrichCard orgId={org.id} />
         <DeepReadCard orgId={org.id} />
       </Disclosure>
     </>

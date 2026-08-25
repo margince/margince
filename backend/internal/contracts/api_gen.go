@@ -16974,6 +16974,32 @@ type ImportRunDisposition struct {
 	Updated int `json:"updated"`
 }
 
+// ImportRunLinks The connections between records a run makes, counted apart from the rows
+// it writes.
+//
+// A link is not a row and is never added to the disposition's four: one
+// person row can arrive with an employer and produce both a created person
+// and an applied link, and counting it twice would make the four stop
+// summing to the rows read.
+//
+// Today the only link a delimited file carries is a person's employer,
+// named by a company column the mapping points at `organization`.
+type ImportRunLinks struct {
+	// Applied Links actually written. Zero on a dry run, which writes nothing.
+	Applied int `json:"applied"`
+
+	// Offered Links the file asks for. A dry run reports this and nothing else,
+	// because resolving an endpoint is a read the dry run has not done —
+	// it says how many rows named an employer, not how many will find one.
+	Offered int `json:"offered"`
+
+	// Unresolved The links that named something the run could not act on, each with
+	// the reason. Enumerated rather than counted, because the answer a
+	// person needs is WHICH company was not found — that is the row of the
+	// spreadsheet they have to go and fix.
+	Unresolved *[]ImportUnresolvedLink `json:"unresolved,omitempty"`
+}
+
 // ImportRunReport The same shape before and after approval: a dry run reports what the
 // commit will do, a finished run reports what it did.
 type ImportRunReport struct {
@@ -16984,7 +17010,19 @@ type ImportRunReport struct {
 	EstimatedDurationSeconds *int `json:"estimated_duration_seconds,omitempty"`
 
 	// Issues Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal.
-	Issues   []ImportRowIssue   `json:"issues"`
+	Issues []ImportRowIssue `json:"issues"`
+
+	// Links The connections between records a run makes, counted apart from the rows
+	// it writes.
+	//
+	// A link is not a row and is never added to the disposition's four: one
+	// person row can arrive with an employer and produce both a created person
+	// and an applied link, and counting it twice would make the four stop
+	// summing to the rows read.
+	//
+	// Today the only link a delimited file carries is a person's employer,
+	// named by a company column the mapping points at `organization`.
+	Links    *ImportRunLinks    `json:"links,omitempty"`
 	RowsRead int                `json:"rows_read"`
 	RunId    openapi_types.UUID `json:"run_id"`
 
@@ -17142,6 +17180,18 @@ type ImportUndoReport struct {
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
 	// `complete` and only for the `csv` connector.
 	Status ImportRunStatus `json:"status"`
+}
+
+// ImportUnresolvedLink defines model for ImportUnresolvedLink.
+type ImportUnresolvedLink struct {
+	// From The record the link starts at, by the key the file identified it with.
+	From string `json:"from"`
+
+	// Reason Why it was not applied, in the words of the person who made the file.
+	Reason string `json:"reason"`
+
+	// To What the file named as the other end — a company name, not an id, because no id was found.
+	To string `json:"to"`
 }
 
 // IngestVoiceCorpusSourceRequest defines model for IngestVoiceCorpusSourceRequest.

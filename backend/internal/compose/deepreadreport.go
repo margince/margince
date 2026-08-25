@@ -111,7 +111,16 @@ func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepRead
 		// which ApplyDeepReadTx's auth.Require accepts.
 		return w.autoApply(ctx, args, claim, mergedFields, merged.facts, merged.people)
 	}
-	return w.stageProposals(ctx, args.SiteReadID, claim, mergedFields, merged.facts, merged.people, pagesRead)
+	// A read a human ASKED for applies its findings directly too: pressing
+	// "read the full site" is the decision, and staging what was just
+	// requested asks the same person the same question twice. Starting the
+	// read already required organization:update on this row
+	// (createOrJoinSiteRead), so the authority the apply needs was checked
+	// when it was commissioned. The findings stay marked as model-derived and
+	// reversible — direct is not unattributed. Site people still stage as
+	// leads: a stranger is a new record about a PERSON, which is a different
+	// question from filling in the company the human named.
+	return w.applyForRequester(ctx, args, claim, mergedFields, merged.facts, merged.people)
 }
 
 // readWarnings are the caveats the dossier shows a human: what this read could

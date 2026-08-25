@@ -11511,6 +11511,43 @@ export interface components {
          * @enum {string}
          */
         ImportOnDuplicate: "create" | "skip";
+        /**
+         * @description The connections between records a run makes, counted apart from the rows
+         *     it writes.
+         *
+         *     A link is not a row and is never added to the disposition's four: one
+         *     person row can arrive with an employer and produce both a created person
+         *     and an applied link, and counting it twice would make the four stop
+         *     summing to the rows read.
+         *
+         *     Today the only link a delimited file carries is a person's employer,
+         *     named by a company column the mapping points at `organization`.
+         */
+        ImportRunLinks: {
+            /**
+             * @description Links the file asks for. A dry run reports this and nothing else,
+             *     because resolving an endpoint is a read the dry run has not done —
+             *     it says how many rows named an employer, not how many will find one.
+             */
+            offered: number;
+            /** @description Links actually written. Zero on a dry run, which writes nothing. */
+            applied: number;
+            /**
+             * @description The links that named something the run could not act on, each with
+             *     the reason. Enumerated rather than counted, because the answer a
+             *     person needs is WHICH company was not found — that is the row of the
+             *     spreadsheet they have to go and fix.
+             */
+            unresolved?: components["schemas"]["ImportUnresolvedLink"][];
+        };
+        ImportUnresolvedLink: {
+            /** @description The record the link starts at, by the key the file identified it with. */
+            from: string;
+            /** @description What the file named as the other end — a company name, not an id, because no id was found. */
+            to: string;
+            /** @description Why it was not applied, in the words of the person who made the file. */
+            reason: string;
+        };
         /** @description What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something. */
         ImportRunDisposition: {
             created: number;
@@ -11552,6 +11589,7 @@ export interface components {
             issues: components["schemas"]["ImportRowIssue"][];
             /** @description Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it. */
             source_key_used: string;
+            links?: components["schemas"]["ImportRunLinks"];
             /** @description A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record. */
             estimated_duration_seconds?: number | null;
             /** @description Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise. */
