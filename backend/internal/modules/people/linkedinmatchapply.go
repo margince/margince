@@ -155,39 +155,61 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, personID); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `
-			UPDATE linkedin_connection
+		// The prior values come from the write itself, through a pre-write
+		// self-join: a separate read would be a different look at the same row,
+		// and the audit row would attest to something other than what this
+		// statement replaced.
+		var wasStatus string
+		var wasPerson *ids.UUID
+		err := tx.QueryRow(ctx, `
+			UPDATE linkedin_connection c
 			   SET matched_person_id = $2, match_status = 'confirmed', updated_at = now()
-			 WHERE id = $1 AND tombstoned_at IS NULL`, connectionID, personID)
-		if err != nil {
-			return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
+			  FROM linkedin_connection was
+			 WHERE c.id = $1 AND was.id = c.id AND c.tombstoned_at IS NULL
+			 RETURNING was.match_status, was.matched_person_id`,
+			connectionID, personID).Scan(&wasStatus, &wasPerson)
+		if errors.Is(err, pgx.ErrNoRows) {
 			// The connection went away between the proposal and the decision —
 			// a re-import that tombstoned it, or an erasure. Not found is the
 			// honest answer; silently succeeding would report a link that does
 			// not exist.
 			return apperrors.ErrNotFound
 		}
+		if err != nil {
+			return fmt.Errorf("people: applying an approved LinkedIn match: %w", err)
+		}
 		wrote, err := writeLinkedInHandle(ctx, tx, connectionID, personID)
 		if err != nil {
 			return err
 		}
-		return auditLinkedInMatch(ctx, tx, connectionID, personID, wrote)
+		return auditLinkedInMatch(ctx, tx, connectionID, personID, matchImages(wasStatus, wasPerson, personID), wrote)
 	})
+}
+
+// matchImagePair is the connection's own columns on either side of a confirmed
+// match, narrowed to what actually moved: re-confirming a match that already
+// names the same contact changes nothing, and an image saying otherwise would
+// publish a decision the row did not record.
+type matchImagePair struct{ before, after map[string]any }
+
+func matchImages(wasStatus string, wasPerson *ids.UUID, personID ids.UUID) matchImagePair {
+	before, after := storekit.ChangedColumns(
+		map[string]any{"match_status": wasStatus, "matched_person_id": wasPerson},
+		map[string]any{"match_status": matchConfirmed, "matched_person_id": personID},
+	)
+	return matchImagePair{before: before, after: after}
 }
 
 // auditLinkedInMatch commits the write shape. The connection's own audit row
 // records the link; a handle that reached the contact is a second mutation of a
 // second entity and takes its own audit and its own person.updated, so a trace
 // consumer resolves each event to an audit of the entity it describes.
-func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID ids.UUID, wroteURL bool) error {
-	auditID, err := storekit.Audit(ctx, tx, "update", "linkedin_connection", connectionID, nil,
-		map[string]any{
-			"match_status":        matchConfirmed,
-			"matched_person_id":   personID,
-			"profile_url_written": wroteURL,
-		})
+func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID ids.UUID, images matchImagePair, wroteURL bool) error {
+	// Whether the profile URL reached the contact is context ABOUT this
+	// decision, not a column on the connection, so it rides the evidence
+	// column rather than the images field history projects.
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "linkedin_connection", connectionID,
+		images.before, images.after, map[string]any{"profile_url_written": wroteURL})
 	if err != nil {
 		return err
 	}
@@ -198,8 +220,11 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID i
 	if !wroteURL {
 		return nil
 	}
-	personAudit, err := storekit.Audit(ctx, tx, "update", entityPerson, personID,
-		nil, map[string]any{auditKeySocial: []string{socialLinkedIn}})
+	// The handle lands in person_social, never on a column of the person, so
+	// there is no field image to carry — what the contact gained is the whole
+	// of it.
+	personAudit, err := storekit.AuditEvent(ctx, tx, "update", entityPerson, personID,
+		map[string]any{auditKeySocial: []string{socialLinkedIn}})
 	if err != nil {
 		return err
 	}

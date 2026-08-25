@@ -253,12 +253,25 @@ func TestAnAbsentImageIsNullAndNotTheBytesNull(t *testing.T) {
 // panics, because nothing else is on this path.
 type capturingTx struct {
 	refusingTx
-	execArgs []any
+	// Every statement, in order. The ledger writes TWO — the audit row and the
+	// outbox row — so keeping only the last would read the event's arguments
+	// and call them the audit's.
+	execs [][]any
 }
 
 func (c *capturingTx) Exec(_ context.Context, _ string, args ...any) (pgconn.CommandTag, error) {
-	c.execArgs = args
+	c.execs = append(c.execs, args)
 	return pgconn.NewCommandTag("INSERT 0 1"), nil
+}
+
+// auditRowArgs is the first statement the ledger sends: the audit row, which
+// has to land before the event that carries its id.
+func (c *capturingTx) auditRowArgs(t *testing.T) []any {
+	t.Helper()
+	if len(c.execs) == 0 {
+		t.Fatal("the ledger sent no statement at all")
+	}
+	return c.execs[0]
 }
 
 // auditBeforeArgPos is the before image's place in the audit INSERT's argument
@@ -288,15 +301,15 @@ func ledgerAuthority(t *testing.T) context.Context {
 func TestAnImagelessExtensionUpdateIsRecordedAsAnOccurrence(t *testing.T) {
 	tx := &capturingTx{}
 	ctx := ledgerAuthority(t)
-	if _, err := recordExtensionChange(ctx, tx, extension.Change{
+	if err := recordExtensionChange(ctx, tx, extension.Change{
 		Action: extension.AuditUpdate,
 		Entity: "ext_probe_connection",
 		ID:     ids.NewV7().String(),
 		After:  json.RawMessage(`{"polled":true}`),
-	}, ids.NewV7()); err != nil {
+	}, ids.NewV7(), "ext_probe.polled", nil); err != nil {
 		t.Fatalf("an imageless extension update was refused: %v", err)
 	}
-	if got := tx.execArgs[auditBeforeArgPos]; !storekit.AbsentImage(got) {
+	if got := tx.auditRowArgs(t)[auditBeforeArgPos]; !storekit.AbsentImage(got) {
 		t.Errorf("before column got %v, want SQL NULL", got)
 	}
 }
@@ -306,16 +319,16 @@ func TestAnImagelessExtensionUpdateIsRecordedAsAnOccurrence(t *testing.T) {
 func TestAnExtensionUpdateCarryingAnImageKeepsTheFieldDoor(t *testing.T) {
 	tx := &capturingTx{}
 	ctx := ledgerAuthority(t)
-	if _, err := recordExtensionChange(ctx, tx, extension.Change{
+	if err := recordExtensionChange(ctx, tx, extension.Change{
 		Action: extension.AuditUpdate,
 		Entity: "ext_probe_connection",
 		ID:     ids.NewV7().String(),
 		Before: json.RawMessage(`{"state":"idle"}`),
 		After:  json.RawMessage(`{"state":"polling"}`),
-	}, ids.NewV7()); err != nil {
+	}, ids.NewV7(), "ext_probe.polled", nil); err != nil {
 		t.Fatalf("recordExtensionChange: %v", err)
 	}
-	if got := tx.execArgs[auditBeforeArgPos]; storekit.AbsentImage(got) {
+	if got := tx.auditRowArgs(t)[auditBeforeArgPos]; storekit.AbsentImage(got) {
 		t.Error("the declared before-image was dropped on its way to the column")
 	}
 }

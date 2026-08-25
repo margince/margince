@@ -85,20 +85,11 @@ func (l extensionLedger) Record(ctx context.Context, ch extension.Change, ev ext
 		return err
 	}
 
-	auditID, err := recordExtensionChange(ctx, l.tx, ch, entityID)
-	if err != nil {
-		return ledgerFailure(ctx, "writing the ledger row for an extension's own write", err)
-	}
-	// The type is BUILT here, from the namespace the core derived and the verb
-	// the unit chose. There is no path by which a unit names the left-hand side,
-	// which is why the port needs no check that it did not: `person.created`
+	// The event type is BUILT here, from the namespace the core derived and the
+	// verb the unit chose. There is no path by which a unit names the left-hand
+	// side, which is why the port needs no check that it did not: `person.created`
 	// from a unit is not refused, it is unsayable.
-	eventType := l.namespace + "." + ev.Verb
-	if err := storekit.Emit(ctx, l.tx, auditID, eventType, ch.Entity, entityID,
-		imageOrNil(ev.Payload)); err != nil {
-		return ledgerFailure(ctx, "staging an extension's own event", err)
-	}
-	return nil
+	return recordExtensionChange(ctx, l.tx, ch, entityID, l.namespace+"."+ev.Verb, ev.Payload)
 }
 
 // ownTable refuses a ledger row against anything outside the invoking unit's
@@ -150,8 +141,9 @@ func withChangeDetail(ctx context.Context, detail json.RawMessage) (context.Cont
 	return provenance.WithExtension(ctx, ext), nil
 }
 
-// recordExtensionChange routes a unit's change to the audit door that matches
-// what it carries.
+// recordExtensionChange commits the ledger's whole write shape for one change:
+// the audit row through the door that matches what the change carries, and the
+// unit's event beside it in the same transaction.
 //
 // A unit may record an update without a before-image: Change.Validate forbids
 // one only on create, so an imageless update is a shape the extension surface
@@ -163,12 +155,24 @@ func withChangeDetail(ctx context.Context, detail json.RawMessage) (context.Cont
 // change describes a field transition, and none means it describes an
 // occurrence. A unit is neither refused nor made to claim an image it does not
 // have.
-func recordExtensionChange(ctx context.Context, tx pgx.Tx, ch extension.Change, entityID ids.UUID) (ids.UUID, error) {
+func recordExtensionChange(ctx context.Context, tx pgx.Tx, ch extension.Change, entityID ids.UUID,
+	eventType string, payload json.RawMessage,
+) error {
 	before, after := imageOrNil(ch.Before), imageOrNil(ch.After)
+	var auditID ids.UUID
+	var err error
 	if storekit.AbsentImage(before) {
-		return storekit.AuditEvent(ctx, tx, string(ch.Action), ch.Entity, entityID, after)
+		auditID, err = storekit.AuditEvent(ctx, tx, string(ch.Action), ch.Entity, entityID, after)
+	} else {
+		auditID, err = storekit.Audit(ctx, tx, string(ch.Action), ch.Entity, entityID, before, after)
 	}
-	return storekit.Audit(ctx, tx, string(ch.Action), ch.Entity, entityID, before, after)
+	if err != nil {
+		return ledgerFailure(ctx, "writing the ledger row for an extension's own write", err)
+	}
+	if err := storekit.Emit(ctx, tx, auditID, eventType, ch.Entity, entityID, imageOrNil(payload)); err != nil {
+		return ledgerFailure(ctx, "staging an extension's own event", err)
+	}
+	return nil
 }
 
 // imageOrNil hands storekit a JSON image or SQL NULL.
