@@ -73,6 +73,8 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/capture/exclusionstore.go:Add": "the settings row has no column for a rule; the write inserts one exclusion into a list, and the image names the rule that now applies",
+
 	"internal/modules/people/providerclaims.go:WriteProviderClaims": "the bought values land in person_provider_claim and the person row is untouched, and quoting them would put a second copy of the subject's data in a table the erasure treats as evidence rather than as subject data",
 	"internal/modules/people/researchclaim.go:SaveResearchClaims":   "the claims land in person_profile_field and the person row is untouched; what arrived rides the evidence column, where field history will not read it as a field of the record",
 

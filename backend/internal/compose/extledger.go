@@ -85,8 +85,7 @@ func (l extensionLedger) Record(ctx context.Context, ch extension.Change, ev ext
 		return err
 	}
 
-	auditID, err := storekit.Audit(ctx, l.tx, string(ch.Action), ch.Entity, entityID,
-		imageOrNil(ch.Before), imageOrNil(ch.After))
+	auditID, err := recordExtensionChange(ctx, l.tx, ch, entityID)
 	if err != nil {
 		return ledgerFailure(ctx, "writing the ledger row for an extension's own write", err)
 	}
@@ -149,6 +148,27 @@ func withChangeDetail(ctx context.Context, detail json.RawMessage) (context.Cont
 	}
 	ext.Detail = detail
 	return provenance.WithExtension(ctx, ext), nil
+}
+
+// recordExtensionChange routes a unit's change to the audit door that matches
+// what it carries.
+//
+// A unit may record an update without a before-image: Change.Validate forbids
+// one only on create, so an imageless update is a shape the extension surface
+// admits and shipped units send. The core door refuses that, because a core
+// writer with a row in hand and no image is a writer that did not look — which
+// is not what a unit with nothing to declare is saying.
+//
+// So the seam decides, being the only place that knows both: an image means the
+// change describes a field transition, and none means it describes an
+// occurrence. A unit is neither refused nor made to claim an image it does not
+// have.
+func recordExtensionChange(ctx context.Context, tx pgx.Tx, ch extension.Change, entityID ids.UUID) (ids.UUID, error) {
+	before, after := imageOrNil(ch.Before), imageOrNil(ch.After)
+	if storekit.AbsentImage(before) {
+		return storekit.AuditEvent(ctx, tx, string(ch.Action), ch.Entity, entityID, after)
+	}
+	return storekit.Audit(ctx, tx, string(ch.Action), ch.Entity, entityID, before, after)
 }
 
 // imageOrNil hands storekit a JSON image or SQL NULL.

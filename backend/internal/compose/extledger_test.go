@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/provenance"
@@ -243,6 +244,79 @@ func TestAnAbsentImageIsNullAndNotTheBytesNull(t *testing.T) {
 	got, ok := imageOrNil(raw).(json.RawMessage)
 	if !ok || string(got) != string(raw) {
 		t.Errorf("imageOrNil(%s) = %v, want the bytes through unchanged", raw, got)
+	}
+}
+
+// capturingTx is refusingTx's opposite, for the two cases that must reach the
+// database rather than be refused before it: it keeps the statement's arguments
+// so a test can read the column the row would carry. Everything else still
+// panics, because nothing else is on this path.
+type capturingTx struct {
+	refusingTx
+	execArgs []any
+}
+
+func (c *capturingTx) Exec(_ context.Context, _ string, args ...any) (pgconn.CommandTag, error) {
+	c.execArgs = args
+	return pgconn.NewCommandTag("INSERT 0 1"), nil
+}
+
+// auditBeforeArgPos is the before image's place in the audit INSERT's argument
+// list, which starts at the row id and so trails the placeholder numbers by one.
+const auditBeforeArgPos = 8
+
+// ledgerAuthority binds what any audit write needs — an actor and a correlation
+// — plus the extension attribution, the same three the ledger's own authority
+// hook binds in production.
+func ledgerAuthority(t *testing.T) context.Context {
+	t.Helper()
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:the-caller", UserID: ids.NewV7(),
+	})
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return provenance.WithExtension(ctx, provenance.Extension{
+		Unit: "relay-probe", Version: "1.0.0", Via: "job/poll",
+	})
+}
+
+// A unit may record an update carrying no before-image — Change.Validate forbids
+// one only on create — and the core door refuses exactly that, because a core
+// writer holding a row and recording no image is one that did not look. The seam
+// is the only place that knows which of the two it has, so it is where the
+// choice is made: an imageless update keeps working, and it reaches the column
+// as SQL NULL rather than as a claim nobody made.
+func TestAnImagelessExtensionUpdateIsRecordedAsAnOccurrence(t *testing.T) {
+	tx := &capturingTx{}
+	ctx := ledgerAuthority(t)
+	if _, err := recordExtensionChange(ctx, tx, extension.Change{
+		Action: extension.AuditUpdate,
+		Entity: "ext_probe_connection",
+		ID:     ids.NewV7().String(),
+		After:  json.RawMessage(`{"polled":true}`),
+	}, ids.NewV7()); err != nil {
+		t.Fatalf("an imageless extension update was refused: %v", err)
+	}
+	if got := tx.execArgs[auditBeforeArgPos]; !storekit.AbsentImage(got) {
+		t.Errorf("before column got %v, want SQL NULL", got)
+	}
+}
+
+// The other half: a unit that DOES declare what a field held keeps the
+// field-transition door, so its images are judged like any core writer's.
+func TestAnExtensionUpdateCarryingAnImageKeepsTheFieldDoor(t *testing.T) {
+	tx := &capturingTx{}
+	ctx := ledgerAuthority(t)
+	if _, err := recordExtensionChange(ctx, tx, extension.Change{
+		Action: extension.AuditUpdate,
+		Entity: "ext_probe_connection",
+		ID:     ids.NewV7().String(),
+		Before: json.RawMessage(`{"state":"idle"}`),
+		After:  json.RawMessage(`{"state":"polling"}`),
+	}, ids.NewV7()); err != nil {
+		t.Fatalf("recordExtensionChange: %v", err)
+	}
+	if got := tx.execArgs[auditBeforeArgPos]; storekit.AbsentImage(got) {
+		t.Error("the declared before-image was dropped on its way to the column")
 	}
 }
 
