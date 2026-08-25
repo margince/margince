@@ -107,8 +107,14 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 // quietly return an empty lane rather than an error.
 const approvalStatusApproved = "approved"
 
-// attentionReceipts reads what ran without asking: approvals a system actor
-// decided, which is exactly the set a human never chose.
+// attentionReceipts reads what ran without asking.
+//
+// The test is decided_by IS NULL, which is the convention the expiry sweep
+// states in its own words: "decided_by stays NULL and the actor is the system:
+// nobody decided". Filtering on status alone would put the reader's OWN
+// approvals in a lane headed "Done for you" — telling somebody the system
+// handled a thing they handled themselves, which is the one claim this lane
+// exists to make and the easiest one to get wrong.
 type attentionReceipts struct{ svc *approvals.Service }
 
 func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
@@ -117,8 +123,18 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 	if err != nil {
 		return nil, err
 	}
+	return receiptsWithin(rows, since), nil
+}
+
+// receiptsWithin keeps the decided rows this lane may claim: inside the window,
+// and decided by nobody.
+func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.Receipt {
 	out := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
+		// A human's own decision is not something that ran for them.
+		if row.DecidedBy != nil {
+			continue
+		}
 		// Inside the window, not before it: `since` is the receipt lane's own
 		// horizon, and the same authority answers "is this behind that" here as
 		// answers it for a task's due date.
@@ -136,7 +152,7 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 			OccurredAt: *row.DecidedAt,
 		})
 	}
-	return out, nil
+	return out
 }
 
 // newAttentionHandlers assembles the surface for the API role.
