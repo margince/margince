@@ -3,7 +3,10 @@
 
 package people
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // The pairs that sent an operator looking for records that did not exist.
 //
@@ -33,6 +36,20 @@ func TestUnrelatedCompaniesAreNotScoredAgainstEachOther(t *testing.T) {
 		// Generic words shared, nothing else.
 		{"The Group", "The Holding"},
 		{"Health Care", "Medical Care"},
+		// The control on the squashed-name comparison: two companies that
+		// share a generic FIRST word are not one company, however the
+		// separators fall.
+		{"Capital One", "Capital Group"},
+		{"Digital Ocean", "Digital Matter"},
+		{"Media Markt", "Media Monks"},
+		{"Health Engine", "Health Direct"},
+		// A word is not a prefix of another word. Jaro-Winkler boosts a shared
+		// start, so "base" reaches exactly 0.90 against "baseplan" — and these
+		// are two companies in one real workspace.
+		{"Base.com", "Baseplan"},
+		// Two domains share their suffix, not their identity. Without the
+		// country code and the level beneath it, both of these reduce to "or".
+		{"giba.or.kr", "utp.or.kr"},
 	}
 	for _, pair := range unrelated {
 		got := bestOrgNamePairing(pair[0], "", pair[1], "").Confidence
@@ -81,6 +98,30 @@ func TestRealDuplicatesStillMeetAtTheFuzzyTier(t *testing.T) {
 		{"Health Care", "Healthcare"},
 		{"The Group", "The Group Ltd"},
 		{"Digital Solutions", "Digital Solutions GmbH"},
+		// A generic word compounded onto the distinctive one. Half of all
+		// brands are written both ways, and the compound form leaves the token
+		// pass nothing to match: "digitalocean" shares no word with "digital
+		// ocean". These are the pairs the squashed-name comparison exists for.
+		{"Digital Ocean", "DigitalOcean"},
+		{"Media Markt", "MediaMarkt"},
+		{"Tech Data", "TechData Corp"},
+		{"Health Engine", "HealthEngine"},
+		// A company whose whole name is a word this gate calls generic.
+		{"Capital", "Capital Ltd"},
+		{"Capital One", "Capital One Financial"},
+		// A brand written as its own domain. The strip must not empty the name
+		// and leave the top-level domain as its identity.
+		{"Capital", "Capital.com"},
+		{"Digital", "Digital.ai"},
+		{"Media", "Media.net"},
+		// Punctuation is a word separator, whatever punctuation it is. An
+		// earlier version listed six ASCII characters and missed the period.
+		{"Hewlett Packard", "Hewlett.Packard"},
+		// Short transliterations. German turns an umlaut into a second vowel,
+		// which lands these at three and four runes.
+		{"Bär", "Baer"},
+		{"Röhm", "Roehm"},
+		{"Götz", "Goetz"},
 	}
 	for _, pair := range duplicates {
 		got := bestOrgNamePairing(pair[0], "", pair[1], "").Confidence
@@ -122,15 +163,76 @@ func TestNearIdentityIsOnlyTrustedOnLongEnoughWords(t *testing.T) {
 	}
 }
 
-// A name of nothing but market vocabulary has no distinctive word, and the
-// fallback answers the only question left: is this the same generic name
-// written differently?
-func TestAnAllGenericNameFallsBackToTheSquashedName(t *testing.T) {
-	if !sharesADistinctiveWord("Health Care", "Healthcare") {
-		t.Error("one company written with and without a space no longer meets")
+// Where the writer put the space is not evidence of a different company.
+//
+// This is asked BEFORE the token pass, not as a fallback after it: compounding
+// hides a shared word rather than removing one. "DigitalOcean" is a single
+// token, so it shares no word with "Digital Ocean" — but they are one company,
+// and the token pass alone would never say so.
+func TestCompoundingDoesNotDecideIdentity(t *testing.T) {
+	same := [][2]string{
+		{"Health Care", "Healthcare"},
+		{"Digital Ocean", "DigitalOcean"},
+		{"Media Markt", "MediaMarkt"},
+		{"E-Commerce", "E Commerce"},
 	}
-	if sharesADistinctiveWord("Health Care", "Medical Care") {
-		t.Error("two different generic names met — squashing must not make different words equal")
+	for _, pair := range same {
+		if !sharesADistinctiveWord(pair[0], pair[1]) {
+			t.Errorf("%q and %q no longer meet — they differ only in spacing",
+				pair[0], pair[1])
+		}
+	}
+	// Squashing merges the separators and nothing else: it must not make two
+	// different words equal.
+	different := [][2]string{
+		{"Health Care", "Medical Care"},
+		{"Digital Ocean", "Digital Matter"},
+	}
+	for _, pair := range different {
+		if sharesADistinctiveWord(pair[0], pair[1]) {
+			t.Errorf("%q and %q met — squashing must not make different words equal",
+				pair[0], pair[1])
+		}
+	}
+}
+
+// The comparison is a nested loop, so its cost is the PRODUCT of the two token
+// counts — and it runs inside DedupeOrganizationForCreate, which holds the
+// workspace-wide organization-name write lock. `display_name` is `text` with no
+// maxLength in the contract, so one create can hand it a megabyte; unbounded,
+// that would pin every organization-name writer in the workspace behind it.
+//
+// The 256-rune cap in jaroWinkler does not help: it bounds each call, and this
+// is about the number of calls.
+func TestTheTokenLoopIsBounded(t *testing.T) {
+	huge := strings.Repeat("acme ", 20000)
+	if got := len(distinctiveOrgTokens(huge)); got > orgGateTokenBudget {
+		t.Errorf("a 20,000-word name yields %d tokens, past the %d budget — the "+
+			"comparison is quadratic and runs under the name write lock",
+			got, orgGateTokenBudget)
+	}
+	// And the bound must not cost a real name: the longest in the measured
+	// corpus was six words.
+	if got := len(distinctiveOrgTokens("Dynamic Air Quality Solutions Pty Ltd")); got == 0 {
+		t.Error("an ordinary six-word name lost all its tokens")
+	}
+}
+
+// A word is not a prefix of another word.
+//
+// Jaro-Winkler boosts a shared start, so a short word scores high against any
+// longer word beginning with it. A spelling variant changes the letters inside
+// a word, not its length.
+func TestAPrefixIsNotASpellingVariant(t *testing.T) {
+	if sameOrgToken("base", "baseplan") {
+		t.Error("a word matched a longer word that merely starts with it")
+	}
+	if sameOrgToken("rate", "ratepay") {
+		t.Error("a word matched a longer word that merely starts with it")
+	}
+	// One rune apart is what a transliteration costs, and must still meet.
+	if !sameOrgToken("rohm", "roehm") {
+		t.Error("a one-rune transliteration no longer meets")
 	}
 }
 
