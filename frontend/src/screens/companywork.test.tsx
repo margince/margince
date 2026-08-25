@@ -437,6 +437,23 @@ describe("what moved since the reader was last here", () => {
     ).toBeDefined();
   });
 
+  // A composite that answered WITHOUT the omission list at all. The field is
+  // required on the wire, so every fixture in this file supplies one and none
+  // of them covered this — meanwhile the real page read `.length` off the
+  // absent list, threw, and the whole company record rendered as "this view no
+  // longer works". An older server, a trimmed mock and a partial cache entry
+  // all produce this payload.
+  it("says nothing is withheld when the payload carries no omission list", () => {
+    const noList = view();
+    // Deleted rather than set to undefined: absent and explicitly-undefined are
+    // the same bytes over the wire, and `delete` is the one that reproduces a
+    // response that never named the field.
+    delete (noList as { sections_omitted?: unknown }).sections_omitted;
+
+    expect(() => sinceLastVisitFooter(noList)).not.toThrow();
+    expect(sinceLastVisitFooter(noList)).toBeUndefined();
+  });
+
   // The standalone card is the mount that stayed broken while the other was
   // fixed. Both go through the same helper now, and this is what says so.
   it("draws no footer band on the standalone card when nothing moved", () => {
