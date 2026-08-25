@@ -116,38 +116,59 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 	}
 	var out OwnDomain
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Serialize this domain's registration before the row is read. The
+		// prior state chooses which audit door this write takes, and the CTE
+		// below does NOT close that window on its own: under READ COMMITTED the
+		// ON CONFLICT re-check resolves against a row a mailbox sync committed
+		// after the CTE's snapshot was taken, so the two would disagree and the
+		// row would claim there was nothing before. Every writer of the table
+		// takes it — the sync's seed and the removal as well as this.
+		if err := lockOwnDomain(ctx, tx, domain); err != nil {
+			return err
+		}
 		// The prior state, so the trail distinguishes "an admin registered a new
 		// domain" from "an admin confirmed a candidate a mailbox had seen".
-		// Left nil when there was none: the audit seam renders an absent image
-		// as SQL NULL whichever kind of nil carries it.
-		var beforeImage map[string]any
-		var priorSource string
-		var priorVerified bool
-		switch err := tx.QueryRow(ctx,
-			`SELECT source, verified FROM workspace_email_domain WHERE domain = $1`, domain).
-			Scan(&priorSource, &priorVerified); {
-		case err == nil:
-			beforeImage = map[string]any{auditKeyOwnDomain: domain, "source": priorSource, "verified": priorVerified}
-		case errors.Is(err, pgx.ErrNoRows):
-		default:
-			return fmt.Errorf("capture: reading the domain's prior state: %w", err)
-		}
+		//
+		// Read by the upsert itself, in a CTE: the statement that replaces the
+		// row is the only thing that can say what it replaced, and under the
+		// lock its snapshot is the same state the upsert acts on.
+		var priorSource *string
+		var priorVerified *bool
 		if err := tx.QueryRow(ctx, `
+			WITH was AS (
+			  SELECT source, verified FROM workspace_email_domain WHERE domain = $1
+			)
 			INSERT INTO workspace_email_domain (domain, source, verified)
 			VALUES ($1, 'admin', true)
 			ON CONFLICT (domain)
 			  DO UPDATE SET source = 'admin', verified = true
-			RETURNING domain, source, verified, created_at`, domain).
-			Scan(&out.Domain, &out.Source, &out.Verified, &out.CreatedAt); err != nil {
+			RETURNING domain, source, verified, created_at,
+			          (SELECT was.source FROM was), (SELECT was.verified FROM was)`, domain).
+			Scan(&out.Domain, &out.Source, &out.Verified, &out.CreatedAt, &priorSource, &priorVerified); err != nil {
 			return fmt.Errorf("capture: registering own domain: %w", err)
+		}
+		var beforeImage map[string]any
+		if priorSource != nil && priorVerified != nil {
+			beforeImage = map[string]any{
+				auditKeyOwnDomain: domain, "source": *priorSource, "verified": *priorVerified,
+			}
 		}
 		// Audit-only, like the capture-settings write beside it: this is
 		// workspace configuration, not a domain record, and the closed event
 		// catalog carries no type for it. The audit row is the durable answer to
 		// "who put this domain in", which is the question that will be asked.
+		after := map[string]any{auditKeyOwnDomain: domain, "source": "admin", "verified": true}
+		if beforeImage == nil {
+			// A domain nobody had seen: the list gained an entry, and there is
+			// no prior source or verification for the row to name.
+			_, err := storekit.AuditEvent(ctx, tx, "update", captureSettingsObject,
+				storekit.MustWorkspace(ctx), after)
+			return err
+		}
+		// A candidate a mailbox had already seen, now confirmed: source and
+		// verified moved, and the row says what they moved from.
 		_, err := storekit.Audit(ctx, tx, "update", captureSettingsObject,
-			storekit.MustWorkspace(ctx),
-			beforeImage, map[string]any{auditKeyOwnDomain: domain, "source": "admin", "verified": true})
+			storekit.MustWorkspace(ctx), beforeImage, after)
 		return err
 	})
 	return out, err
@@ -170,6 +191,12 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		return nil
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The same lock the registration takes: a removal committing while a
+		// registration reads the prior state would leave that row naming a
+		// candidate the list no longer held.
+		if err := lockOwnDomain(ctx, tx, domain); err != nil {
+			return err
+		}
 		// The domain IS the key now (ADR-0091 §8 phase D): one installation, one
 		// list, and the unique index the insert above conflicts on says the same.
 		tag, err := tx.Exec(ctx,
@@ -189,6 +216,16 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		return err
 	})
 }
+
+// lockOwnDomain serializes every writer of one own-domain entry, so the state
+// a registration replaces is read under the same lock that replaces it.
+func lockOwnDomain(ctx context.Context, tx pgx.Tx, domain string) error {
+	return storekit.LockWriteIdentity(ctx, tx, ownDomainWriteIdentity, domain)
+}
+
+// ownDomainWriteIdentity names the write identity an own-domain entry's writers
+// serialize on.
+const ownDomainWriteIdentity = "workspace_email_domain"
 
 // ValidOwnDomain vets a domain and returns its stored form.
 //

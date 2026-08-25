@@ -2707,10 +2707,13 @@ export const vi = {
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.organization": "Công ty",
+  "import.object.person": "Liên hệ",
   "import.objectHint.lead":
-    "Dữ liệu nhập hàng loạt vào dạng lead để người thẩm định — không bao giờ thành liên hệ.",
+    "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là liên hệ.",
   "import.objectHint.organization":
     "Công ty được nhận diện theo tên bạn ánh xạ, nên tải lên lại sẽ sửa chứ không nhân đôi.",
+  "import.objectHint.person":
+    "Dành cho những người bạn đã làm việc cùng. Nhận diện theo email, nên tải lên lại sẽ sửa chứ không nhân đôi, và địa chỉ đã có chủ sẽ được giữ nguyên.",
   "import.fileLabel": "Tệp CSV cần nhập",
   "import.choose": "Chọn tệp",
   "import.chooseAnother": "Chọn tệp khác",

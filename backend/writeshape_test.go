@@ -223,7 +223,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 					case *ast.SelectorExpr:
 						if pkg, ok := node.X.(*ast.Ident); ok && pkg.Name == "storekit" {
 							switch node.Sel.Name {
-							case "Audit", "AuditWithEvidence":
+							case "Audit", "AuditWithEvidence", "AuditEvent", "AuditEventWithEvidence":
 								audits = true
 							case "Emit", "EmitEvent", "EmitEventForEntity", "EmitPipeline", "EmitPipelinePayload":
 								emits = true

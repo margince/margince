@@ -458,3 +458,59 @@ func TestDeadInflightExpiresToUnknownAndFreshOnesStand(t *testing.T) {
 		t.Fatalf("a fresh in-flight submission was expired to %s", state)
 	}
 }
+
+// A definite refusal writes the provider's answer through to the connection
+// the settings card reads, and the audit row is the only place the status it
+// replaced is ever written down. An operator asking "when did this stop being
+// connected, and what was it before" has nothing else: the column itself has
+// been overwritten by the time anyone looks.
+func TestARefusalAuditsTheConnectionStatusItChangedFrom(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	sealCredential(t, e)
+	// The fake keys its scenario off the subject's last name: "RateLimited" is
+	// a definite pre-work refusal, the outcome that writes through.
+	e.store.WithDomain(
+		func(context.Context, pgx.Tx, string) (FenceVerdict, error) {
+			return FenceVerdict{Allowed: true}, nil
+		},
+		nil,
+		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
+			return provider.PersonIdentifiers{FirstName: "Anna", LastName: "RateLimited", CompanyName: "Example"}, nil
+		},
+	)
+	run := queueFor(t, e, e.mine.String())
+
+	if err := e.store.ExecuteSubmit(e.ctx, run.ID); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	var connID ids.UUID
+	var status string
+	if err := e.owner.QueryRow(ctx,
+		`SELECT id, status FROM provider_connection WHERE provider = 'surfe'`).Scan(&connID, &status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "rate_limited" {
+		t.Fatalf("the connection is %s, want rate_limited — the refusal never reached the row this test is about", status)
+	}
+
+	var before, after map[string]any
+	if err := e.owner.QueryRow(ctx, `
+		SELECT before, after FROM audit_log
+		 WHERE entity_type = 'provider_connection' AND entity_id = $1 AND action = 'update'
+		 ORDER BY id DESC LIMIT 1`, connID).Scan(&before, &after); err != nil {
+		t.Fatal(err)
+	}
+	if before["status"] != "connected" {
+		t.Errorf("audit before.status = %v, want \"connected\" — the status the refusal replaced is recorded nowhere else", before["status"])
+	}
+	// The connection was seeded with no safe status code, so a before-image
+	// that is genuinely the PRE-write row carries none. A copy of the new
+	// values would carry the refusal's code here.
+	if code, present := before["safe_status_code"]; !present || code != nil {
+		t.Errorf("audit before.safe_status_code = %v, want a recorded absence — the image is the new row, not the old one", code)
+	}
+	if after["status"] != "rate_limited" || after["safe_status_code"] != "provider_rate_limited" {
+		t.Errorf("audit after = %+v, want status rate_limited and safe_status_code provider_rate_limited", after)
+	}
+}

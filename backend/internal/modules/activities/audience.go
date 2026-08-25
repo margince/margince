@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -76,15 +77,22 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err := ensureAudienceSubjectsExist(ctx, tx, members); err != nil {
 			return err
 		}
+		current, err := readAudienceImage(ctx, tx, id)
+		if err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `UPDATE activity SET audience = $2 WHERE id = $1`, id, in.Audience); err != nil {
 			return err
 		}
 		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, nil, map[string]any{
-			"audience": in.Audience, "member_count": len(members),
-		})
+		stored, err := readAudienceImage(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		before, after := storekit.ChangedColumns(current, stored)
+		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
 		if err != nil {
 			return err
 		}
@@ -98,6 +106,44 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		return err
 	})
 	return out, err
+}
+
+// readAudienceImage renders one side of the audience audit diff: the column on
+// the activity row, and the member rows that qualify it.
+//
+// Both sides come from the tables rather than from the request. The member
+// write dedupes on conflict and a non-`selected` audience leaves no member rows
+// at all, so an image assembled from the input would name a set the row does
+// not hold.
+//
+// Members render as sorted `type:id` words so an unchanged set compares equal
+// across two reads: the rows come back in whatever order the index hands them
+// over, and an order difference is not a change anyone made.
+func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[string]any, error) {
+	var audience string
+	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1`, id).Scan(&audience); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT subject_type, subject_id FROM activity_audience_member WHERE activity_id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	members := []string{}
+	for rows.Next() {
+		var subjectType string
+		var subjectID ids.UUID
+		if err := rows.Scan(&subjectType, &subjectID); err != nil {
+			return nil, err
+		}
+		members = append(members, subjectType+":"+subjectID.String())
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	slices.Sort(members)
+	return map[string]any{"audience": audience, "members": members}, nil
 }
 
 // audienceMembersFor validates the member set: read only for `selected`,

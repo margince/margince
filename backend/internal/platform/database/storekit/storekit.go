@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -87,44 +86,27 @@ func Audit(ctx context.Context, tx pgx.Tx, action, entityType string, entityID i
 //
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (ids.UUID, error) {
-	p, err := Actor(ctx)
-	if err != nil {
-		return ids.Nil, err
+	if action == auditActionUpdate && AbsentImage(before) {
+		// A writer holding the row and recording nothing it held is a writer
+		// that did not look, and the row it lands says a field changed without
+		// saying from what — which nothing can recover afterwards, because an
+		// audit row cannot be written after the fact. A write that genuinely has
+		// no prior state says so by calling AuditEvent.
+		//
+		// Judged the way marshalOrNil judges it, so a typed nil map — the shape
+		// a store assembles an image in — is caught rather than let through as
+		// present and stored as SQL NULL.
+		return ids.Nil, fmt.Errorf(
+			"store: auditing an update of %s with no before-image: record what the fields held, "+
+				"or call AuditEvent if this write has no prior state", entityType)
 	}
-
-	beforeJSON, err := marshalOrNil(before)
-	if err != nil {
-		return ids.Nil, err
-	}
-	afterJSON, err := marshalOrNil(after)
-	if err != nil {
-		return ids.Nil, err
-	}
-	evidence, err = withExtensionAttribution(ctx, evidence)
-	if err != nil {
-		return ids.Nil, err
-	}
-	var evidenceJSON []byte
-	if evidence != nil {
-		evidenceJSON, err = json.Marshal(evidence)
-		if err != nil {
-			return ids.Nil, err
-		}
-	}
-
-	id := ids.NewV7()
-	_, err = tx.Exec(ctx,
-		// No tenant column. It came from the TRANSACTION's binding until
-		// ADR-0091 §8 phase D reached the ledgers — the last two tables that
-		// carried one — so an audit row now names WHAT happened and WHO did it,
-		// and the installation is the only answer to where.
-		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
-		action, entityType, entityID, beforeJSON, afterJSON, evidenceJSON,
-		auth.AuthzRule(p, entityType, action))
-	return id, err
+	return writeAuditRow(ctx, tx, action, entityType, entityID, before, after, evidence)
 }
+
+// auditActionUpdate is the one verb the before-image rule binds. archive and the
+// rest are left alone: un-archiving is not a replay of an image but a per-type
+// decision about what that record's archive took down with it.
+const auditActionUpdate = "update"
 
 // withExtensionAttribution adds the bound extension attribution to a write's
 // evidence, and refuses a caller that tried to write the reserved member
@@ -423,11 +405,25 @@ func JSONArg(m map[string]any) any {
 //
 //craft:ignore naked-any marshals the audit seam's schemaless before/after images (see Audit)
 func marshalOrNil(v any) ([]byte, error) {
-	if v == nil || isNilValue(v) {
+	if AbsentImage(v) {
 		return nil, nil
 	}
 	return json.Marshal(v)
 }
+
+// AbsentImage reports whether an audit image says nothing. It answers what the
+// COLUMN will hold: an image this is true of reaches audit_log as SQL NULL.
+//
+// Callers ask it rather than testing nil themselves so that the writer, the
+// image narrower and the refusal all read the same value the same way.
+//
+// Both halves are load-bearing. An untyped nil is the obvious absence; a typed
+// one is the dangerous absence, because a caller that builds its image in a
+// map[string]any and leaves it nil hands this an interface holding a typed nil,
+// which `v == nil` reads as present.
+//
+//craft:ignore naked-any the same audit-seam value marshalOrNil renders
+func AbsentImage(v any) bool { return v == nil || isNilValue(v) }
 
 // isNilValue reports whether v carries a typed nil of a kind that can be one.
 // Kinds that cannot be are answered false without inspecting their contents,

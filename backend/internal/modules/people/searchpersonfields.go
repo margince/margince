@@ -98,6 +98,11 @@ func fillDiscoveredFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	// of field NAMES here would show the contact's history as a change to a
 	// field called "fields" and never show what was filled in.
 	values := map[string]any{}
+	// The matching before-image, per field. The insert is ON CONFLICT DO
+	// NOTHING, so a field that landed had no value to lose — but "it held
+	// nothing" is a statement the row has to make, and an absent image makes
+	// it only by argument.
+	previous := map[string]any{}
 	for _, f := range fields {
 		value := strings.TrimSpace(f.Value)
 		snippet := strings.TrimSpace(f.EvidenceSnippet)
@@ -125,6 +130,7 @@ func fillDiscoveredFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		}
 		applied = append(applied, f.Field)
 		values[f.Field] = value
+		previous[f.Field] = nil
 	}
 	if len(applied) == 0 {
 		return nil, nil
@@ -137,11 +143,9 @@ func fillDiscoveredFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	//
 	// The images carry the fields; WHERE they came from is context about the
 	// mutation and rides the evidence column, because a source folded into the
-	// after-image projects as a field change that never happened. The before
-	// image is empty by construction: the insert is ON CONFLICT DO NOTHING, so
-	// every field named here had no value until this write.
+	// after-image projects as a field change that never happened.
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionUpdate, entityPerson, personID.UUID,
-		nil, values, map[string]any{auditKeySource: searchFieldSource})
+		previous, values, map[string]any{auditKeySource: searchFieldSource})
 	if err != nil {
 		return nil, fmt.Errorf("people: auditing the search-discovered fill: %w", err)
 	}

@@ -136,8 +136,8 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 		}
 		// Audit-only, like the own-domain list beside it: this is capture
 		// configuration, and the closed event catalog carries no type for it.
-		_, err := storekit.Audit(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
-			nil, exclusionAuditImage(out))
+		_, err := storekit.AuditEvent(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+			exclusionAuditImage(out))
 		return err
 	})
 	return out, err

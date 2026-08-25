@@ -212,7 +212,17 @@ func reachabilityImage(provider string, reachable bool) map[string]any {
 //     a record that changed and a history that does not say so — and a trail
 //     silently truncated by a budget reads exactly like a complete one.
 func auditChannelIdentityChange(ctx context.Context, tx pgx.Tx, personID ids.PersonID, before, after map[string]any) error {
-	auditID, err := storekit.Audit(ctx, tx, actionUpdate, entityPerson, personID.UUID, before, after)
+	// Binding an account to a person who had none replaces nothing: the
+	// question an auditor brings is which account reaches this human, and
+	// before the bind the answer was that none did. A rebind moved a binding
+	// and says which one it moved.
+	var auditID ids.UUID
+	var err error
+	if before == nil {
+		auditID, err = storekit.AuditEvent(ctx, tx, actionUpdate, entityPerson, personID.UUID, after)
+	} else {
+		auditID, err = storekit.Audit(ctx, tx, actionUpdate, entityPerson, personID.UUID, before, after)
+	}
 	if err != nil {
 		return err
 	}

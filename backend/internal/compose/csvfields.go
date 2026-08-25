@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/migration"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
 // fieldFullName is a lead's own name column, spelled once for the three places
@@ -32,8 +33,10 @@ const leadStatusNew = "new"
 // writer knows how to both create and update — a target it can only create
 // would silently stop honouring the file on the second upload.
 //
-// `lead` and not `person` is ADR-0008: machine-sourced rows land as leads and
-// a human promotes them.
+// `lead` and `person` are both offered and the caller picks per run: a
+// machine-sourced list lands as leads for a human to promote, a file the
+// business already knows lands as people. Neither skips the identity ladder.
+//
 // Every field here round-trips: the writer can both CREATE it and UPDATE it.
 // `linkedin_url` is deliberately absent from both lists even though the stores
 // know the field — a lead's patch input has no LinkedIn member and an
@@ -43,7 +46,12 @@ const leadStatusNew = "new"
 // offers.
 var csvTargets = map[string][]string{
 	migration.ObjectLead:         {fieldFullName, fieldEmail, "title", "company_name"},
-	migration.ObjectOrganization: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description"}, orgAddressTargets...),
+	migration.ObjectOrganization: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description"}, recordAddressTargets...),
+	// `phone`, `social` and `owner_id` are deliberately absent. A person's
+	// patch input carries no Phones member and no single-column spelling of
+	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
+	// storekit.OwnerOrActor already defaults it to whoever ran the import.
+	migration.ObjectPerson: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, "title"}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -62,7 +70,7 @@ var csvTargets = map[string][]string{
 // An id has none of that. It names one record or no record.
 const csvTargetID = "id"
 
-// orgAddressTargets are the address fields a CSV column may name, spelled with
+// recordAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested
 // shape (`address: {city, country, …}`). The mapping itself stays flat — one
 // column, one target — because a spreadsheet has no nesting to carry.
@@ -76,8 +84,10 @@ const csvTargetID = "id"
 //
 // Both halves of the round-trip rule this list is built on hold: the create
 // input and the patch input each take an *Address, so a mapped column is
-// written on the first import and rewritten on the second.
-var orgAddressTargets = []string{
+// written on the first import and rewritten on the second. That holds for a
+// person as well as an organization, which is why one list serves both — the
+// six names are the contract's, not either object's.
+var recordAddressTargets = []string{
 	"address.line1", "address.line2", "address.city",
 	"address.region", "address.postal_code", "address.country",
 }
@@ -88,6 +98,7 @@ var orgAddressTargets = []string{
 var csvSourceKeyDefault = map[string]string{
 	migration.ObjectLead:         fieldEmail,
 	migration.ObjectOrganization: fieldDisplayName,
+	migration.ObjectPerson:       fieldEmail,
 }
 
 // importTargets is the closed set a mapping may name for one object.
@@ -167,6 +178,9 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
+		if field == fieldEmail {
+			return storedPrimaryEmail(current)
+		}
 		return current[field]
 	}
 	raw, ok := current[parent]
@@ -319,6 +333,21 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 // same reason people.validSizeBands is: a band added to crm.yaml must not
 // leave a second list behind saying otherwise.
 func unwritableReason(object string, fields map[string]string) string {
+	if object == migration.ObjectPerson {
+		// A person's addresses are parsed before the write transaction opens
+		// (parsePersonContacts), so a malformed one refuses the row at commit.
+		// Unchecked here, the dry run would promise a create for every bad
+		// address in the file and the commit would answer differently — the
+		// same shape as the size_band defect below, on the other object.
+		email, given := fields[fieldEmail]
+		if !given || strings.TrimSpace(email) == "" {
+			return ""
+		}
+		if _, err := values.ParseEmail(strings.TrimSpace(email)); err != nil {
+			return fmt.Sprintf("%q is not an email address that can be written", email)
+		}
+		return ""
+	}
 	if object != migration.ObjectOrganization {
 		return ""
 	}

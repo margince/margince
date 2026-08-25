@@ -130,7 +130,10 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 // and a module whose tables' changes appear only in system_log has none. The two
 // gates have to agree about what "audits" means, or the same code satisfies one
 // and not the other.
-var auditWriters = map[string]bool{"Audit": true, "AuditWithEvidence": true}
+var auditWriters = map[string]bool{
+	"Audit": true, "AuditWithEvidence": true,
+	"AuditEvent": true, "AuditEventWithEvidence": true,
+}
 
 // modulesOwningTables inverts tableOwners into the set of modules that own at
 // least one table.

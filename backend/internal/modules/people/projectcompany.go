@@ -225,20 +225,33 @@ func setCompanyRoleTx(
 	// RETURNING carries the written row into the write shape below: the audit
 	// and outbox rows commit with the edge, in this transaction, like every
 	// other mutation in this tree.
-	row, err := scanRelationship(tx.QueryRow(ctx,
-		// The kind is a LITERAL in both the insert and the conflict predicate,
-		// not a bind parameter. uq_rel_project_company is a PARTIAL index, and
-		// Postgres infers a partial index only from a predicate it can prove
-		// matches — a parameter is opaque to that proof, so the same words with
-		// $1 in them raise 42P10, "no unique or exclusion constraint matching
-		// the ON CONFLICT specification", and every attach fails.
-		`INSERT INTO relationship (kind, project_id, organization_id, role, source, captured_by)
+	// The CTE reads the edge as it stands BEFORE the upsert, from the same
+	// statement: it is what says whether this attach created the edge or moved
+	// an existing one's role, and what the moved role was. Both are unknowable
+	// afterwards — the row looks identical either way.
+	//
+	// The kind is a LITERAL in both the insert and the conflict predicate, not a
+	// bind parameter. uq_rel_project_company is a PARTIAL index, and Postgres
+	// infers a partial index only from a predicate it can prove matches — a
+	// parameter is opaque to that proof, so the same words with $1 in them raise
+	// 42P10, "no unique or exclusion constraint matching the ON CONFLICT
+	// specification", and every attach fails.
+	var priorRole *string
+	var inserted bool
+	scan := tx.QueryRow(ctx,
+		`WITH was AS (
+		   SELECT role FROM relationship
+		    WHERE kind = '`+ProjectCompanyKind+`' AND project_id = $1
+		      AND organization_id = $2 AND archived_at IS NULL
+		 )
+		 INSERT INTO relationship (kind, project_id, organization_id, role, source, captured_by)
 		 VALUES ('`+ProjectCompanyKind+`', $1, $2, $3, $4, $5)
 		 ON CONFLICT (project_id, organization_id)
 		   WHERE kind = '`+ProjectCompanyKind+`' AND archived_at IS NULL
 		   DO UPDATE SET role = EXCLUDED.role, version = relationship.version + 1, updated_at = now()
-		 RETURNING `+relationshipColumns,
-		projectID, organizationID, role, projectCompanySource, by))
+		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was), xmax = 0`,
+		projectID, organizationID, role, projectCompanySource, by)
+	row, err := scanRelationshipWithPrior(scan, &priorRole, &inserted)
 	if err != nil {
 		return fmt.Errorf("put the company on the project: %w", err)
 	}
@@ -255,7 +268,22 @@ func setCompanyRoleTx(
 		}
 		return nil
 	}
-	return emitRelationshipChange(ctx, tx, "update", row)
+	// An attach that found no edge MADE one, and saying "update" of a row that
+	// did not exist puts a change into the project's history that never
+	// happened. xmax answers which branch ran, from the statement itself: the
+	// CTE's snapshot cannot, because an edge another transaction committed
+	// after it was taken is one this insert still resolves as a conflict.
+	if inserted {
+		return emitRelationshipChange(ctx, tx, "create", nil, row)
+	}
+	// The edge as it stood: every column this write leaves alone still holds
+	// what the returned row holds, and role is the one it moved. Handed over
+	// whole so the seam narrows ONCE — a pair pre-narrowed to role alone would
+	// be diffed again against the full image, and the columns missing from it
+	// would read as changes from nothing.
+	before := relationshipFieldImage(row)
+	before[relationshipRoleField] = priorRole
+	return emitRelationshipChange(ctx, tx, "update", before, row)
 }
 
 // RemoveProjectCompany takes a company off a project by archiving the edge.
@@ -326,7 +354,7 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 		if err != nil {
 			return fmt.Errorf("take the company off the project: %w", err)
 		}
-		return emitRelationshipChange(ctx, tx, "archive", row)
+		return emitRelationshipChange(ctx, tx, "archive", nil, row)
 	})
 }
 

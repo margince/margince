@@ -426,11 +426,18 @@ func (s *Store) recordRefusal(ctx context.Context, tx pgx.Tx, desc provider.Desc
 // the key and never a balance.
 func (s *Store) writeStatusThrough(ctx context.Context, tx pgx.Tx, name, status, safeCode string) error {
 	var id *string
-	var before string
+	var priorStatus string
+	var priorSafeCode *string
+	// `was` is the connection as this statement's snapshot found it. RETURNING
+	// answers the values the UPDATE has just written, so joining the pre-write
+	// image is the only way to read what the two columns held — and what they
+	// held is the whole question an operator brings to this row.
 	err := tx.QueryRow(ctx, `
-		UPDATE provider_connection SET status = $2, last_safe_status_code = $3, updated_at = now()
-		 WHERE provider = $1 AND status <> $2
-		 RETURNING id::text, $2`, name, status, safeCode).Scan(&id, &before)
+		UPDATE provider_connection c SET status = $2, last_safe_status_code = $3, updated_at = now()
+		  FROM provider_connection was
+		 WHERE was.id = c.id AND c.provider = $1 AND c.status <> $2
+		 RETURNING c.id::text, was.status, was.last_safe_status_code`,
+		name, status, safeCode).Scan(&id, &priorStatus, &priorSafeCode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Already in this status: nothing changed, so there is nothing to
 		// audit and no second identical row to write.
@@ -440,7 +447,8 @@ func (s *Store) writeStatusThrough(ctx context.Context, tx pgx.Tx, name, status,
 		return fmt.Errorf("integrations: writing the refusal through to the connection: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "provider_connection", uuidOf(id),
-		nil, map[string]any{auditKeyProvider: name, "status": status, "safe_status_code": safeCode}); err != nil {
+		map[string]any{auditKeyProvider: name, "status": priorStatus, "safe_status_code": priorSafeCode},
+		map[string]any{auditKeyProvider: name, "status": status, "safe_status_code": safeCode}); err != nil {
 		return err
 	}
 	return nil

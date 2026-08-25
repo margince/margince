@@ -131,7 +131,7 @@ func (s *Store) requireReplay(ctx context.Context, subID, deliveryID ids.UUID) e
 		if !belongs {
 			return apperrors.ErrNotFound
 		}
-		_, err = storekit.Audit(ctx, tx, "update", rbacObject, subID, nil,
+		_, err = storekit.AuditEvent(ctx, tx, "update", rbacObject, subID,
 			map[string]any{"replayed_delivery": deliveryID.String()})
 		return err
 	})

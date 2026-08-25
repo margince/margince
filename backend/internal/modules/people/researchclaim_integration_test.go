@@ -230,19 +230,24 @@ func TestOneAcceptanceWritesEveryClaimAndTheWriteShape(t *testing.T) {
 // that creates the person, their employer and the edge between them emits
 // events carrying this person's id too. Matching the id alone counts those and
 // reads as "the acceptance emitted three".
+//
+// The marker is read from EVIDENCE. The claims land in person_profile_field and
+// no column of the person moves, so the count is context about the write rather
+// than a field image: before/after describe the record's own fields, and a
+// count of saved claims is not one of them.
 func acceptanceLedger(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID) (audits, events, counted int) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT (SELECT count(*) FROM audit_log
 			         WHERE entity_type = 'person' AND entity_id = $1
-			           AND after -> 'research_claims_saved' IS NOT NULL),
+			           AND evidence -> 'research_claims_saved' IS NOT NULL),
 			       (SELECT count(*) FROM event_outbox
 			         WHERE envelope::text LIKE '%' || $1::text || '%'
 			           AND envelope::text LIKE '%profile_fields%'),
-			       coalesce((SELECT (after ->> 'research_claims_saved')::int FROM audit_log
+			       coalesce((SELECT (evidence ->> 'research_claims_saved')::int FROM audit_log
 			                  WHERE entity_type = 'person' AND entity_id = $1
-			                    AND after -> 'research_claims_saved' IS NOT NULL
+			                    AND evidence -> 'research_claims_saved' IS NOT NULL
 			                  LIMIT 1), 0)`,
 			personID).Scan(&audits, &events, &counted)
 	}); err != nil {

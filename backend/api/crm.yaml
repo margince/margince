@@ -16936,14 +16936,33 @@ components:
     # ---- Import: the migrate-in surface (IEM-GAP-2) ----
     ImportObject:
       type: string
-      enum: [organization, lead]
+      enum: [organization, lead, person]
       description: |
-        What the file's rows are. `lead` — not `person` — is what a bulk
-        prospect file creates: ADR-0008's anti-pollution rule is that machine-
-        sourced rows land as leads and are promoted by a human, and IEM-AC-7
-        asserts it by number (`0 person, N lead`). A file of people already
-        known to the business is imported as leads and promoted, not smuggled
-        past the qualification step by the choice of an enum value.
+        What the file's rows are, and therefore what the run creates.
+
+        `organization` creates companies.
+
+        `lead` and `person` are two answers to one question about a file of
+        humans, and the caller picks the one that matches where the file came
+        from.
+
+        `lead` is the right answer for a machine-sourced list — a scraped
+        export, a purchased list, a conference badge dump. Those rows land in
+        the unworked `new` status and a human promotes the ones worth keeping.
+        Landing them as people would put unqualified rows in the same table as
+        the contacts the business actually deals with.
+
+        `person` is for a file of humans the business already knows — a
+        migration off another CRM, a re-import of a corrected export, a
+        customer list from a system being retired. Those rows were qualified
+        somewhere else, and routing them through the lead table would force a
+        human to re-approve records nobody doubts.
+
+        Neither value bypasses anything. A `person` run runs the same identity
+        ladder every other person create runs, refuses a row whose email
+        already belongs to another person, and files a review pair for a near
+        match — so a file of duplicates produces a review queue, not a silent
+        merge.
 
     ImportColumn:
       type: object
