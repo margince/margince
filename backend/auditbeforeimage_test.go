@@ -73,6 +73,15 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	// Three writes whose FIRST occurrence has no prior state and whose later
+	// ones do. Each routes on that, so the branch that replaced something says
+	// what, and the branch that replaced nothing says so rather than inventing
+	// an image. The runtime refusal found all three; no static reading could,
+	// because each reaches the door through a verb it does not spell.
+	"internal/modules/capture/owndomainstore.go:Add":                "registering a domain nobody had seen adds an entry to the workspace list, so there is no prior source or verification for the row to name; confirming a candidate a mailbox already saw takes the other branch and records what moved",
+	"internal/modules/overlay/flipstate.go:auditFreeze":             "a first seal freezes a mirror that was not frozen, so no field held a value to record; a reseal or a release passes the state it moved and takes the image door",
+	"internal/modules/people/domainadmission.go:SetDomainAdmission": "a first decision replaces no admission, no reason and nobody answerable for one; every later decision moved all three and records what they were",
+
 	"internal/modules/people/linkedinmatchapply.go:auditLinkedInMatch": "the confirmed handle lands in person_social and no column of the person moves, so what the contact gained is the whole of what this write has to record",
 
 	"internal/modules/capture/exclusionstore.go:Add": "the settings row has no column for a rule; the write inserts one exclusion into a list, and the image names the rule that now applies",

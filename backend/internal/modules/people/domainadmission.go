@@ -106,7 +106,7 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 		// was it before" is the question this surface exists to answer. Without
 		// it admission_source says "human" but never WHICH human, and
 		// admission_at is overwritten on every change.
-		before, _, err := beforeAdmissionImage(ctx, tx, base)
+		before, decided, err := beforeAdmissionImage(ctx, tx, base)
 		if err != nil {
 			return err
 		}
@@ -135,11 +135,18 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 		}
 		// Audit-only (EVT-NOEVT-3): capture posture is not a record change the
 		// event stream carries, but it IS a decision somebody must answer for.
-		_, auditErr := storekit.Audit(ctx, tx, "update", entityOrganization, stored.ID, before,
-			map[string]any{
-				auditKeyDomain: stored.Domain, "admission": stored.Admission,
-				"admission_reason": stored.Reason, "admission_source": stored.Source,
-			})
+		after := map[string]any{
+			auditKeyDomain: stored.Domain, "admission": stored.Admission,
+			"admission_reason": stored.Reason, "admission_source": stored.Source,
+		}
+		// A first decision replaces nothing: there was no admission, no reason
+		// and nobody answerable for one. A later decision moved all three, and
+		// says what they were — which is the question this surface exists for.
+		if !decided {
+			_, auditErr := storekit.AuditEvent(ctx, tx, "update", entityOrganization, stored.ID, after)
+			return auditErr
+		}
+		_, auditErr := storekit.Audit(ctx, tx, "update", entityOrganization, stored.ID, before, after)
 		return auditErr
 	})
 	if err != nil {

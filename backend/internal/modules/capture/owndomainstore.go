@@ -145,9 +145,18 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 		// workspace configuration, not a domain record, and the closed event
 		// catalog carries no type for it. The audit row is the durable answer to
 		// "who put this domain in", which is the question that will be asked.
+		after := map[string]any{auditKeyOwnDomain: domain, "source": "admin", "verified": true}
+		if beforeImage == nil {
+			// A domain nobody had seen: the list gained an entry, and there is
+			// no prior source or verification for the row to name.
+			_, err := storekit.AuditEvent(ctx, tx, "update", captureSettingsObject,
+				storekit.MustWorkspace(ctx), after)
+			return err
+		}
+		// A candidate a mailbox had already seen, now confirmed: source and
+		// verified moved, and the row says what they moved from.
 		_, err := storekit.Audit(ctx, tx, "update", captureSettingsObject,
-			storekit.MustWorkspace(ctx),
-			beforeImage, map[string]any{auditKeyOwnDomain: domain, "source": "admin", "verified": true})
+			storekit.MustWorkspace(ctx), beforeImage, after)
 		return err
 	})
 	return out, err
