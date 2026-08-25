@@ -45,6 +45,14 @@ const (
 // priorFailures is the count BEFORE this attempt, so zero returns the base —
 // the first retry waits one interval rather than two.
 func Jittered(priorFailures int, base, ceiling time.Duration) time.Duration {
+	// A base that is not positive is a ladder nobody configured, and the
+	// arithmetic below does something worse than nothing with it: doubling
+	// zero stays zero, and doubling a NEGATIVE base walks away from the
+	// ceiling, so the jitter returns a negative duration and a scheduler asked
+	// to wait it retries immediately — against a system that has just failed.
+	if base <= 0 {
+		return 0
+	}
 	delay := base
 	for i := 0; i < priorFailures && delay < ceiling; i++ {
 		delay *= 2

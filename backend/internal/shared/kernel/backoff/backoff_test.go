@@ -83,3 +83,19 @@ func TestTheJitterNeverLeavesTheBand(t *testing.T) {
 func scaled(delay time.Duration) (low, high time.Duration) {
 	return time.Duration(float64(delay) * 0.8), time.Duration(float64(delay) * 1.2)
 }
+
+// A base that is not positive is a ladder nobody configured, and the negative
+// case is the one that does damage: doubling walks AWAY from the ceiling, the
+// jitter scales a negative duration, and a scheduler asked to wait it comes
+// back instantly — against a system that has just failed. Both callers pass
+// constants today, which is exactly why nothing would have caught it.
+func TestABaseThatIsNotPositiveIsNoLadderAtAll(t *testing.T) {
+	for _, base := range []time.Duration{0, -time.Minute} {
+		for _, priorFailures := range []int{0, 1, 5} {
+			if got := backoff.Jittered(priorFailures, base, ceiling); got != 0 {
+				t.Errorf("Jittered(%d, %v, ceiling) = %v, want no wait at all",
+					priorFailures, base, got)
+			}
+		}
+	}
+}
