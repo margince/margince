@@ -281,51 +281,15 @@ func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 	return relinked, nil
 }
 
-// mergeConsent applies the merge rule the package comment states:
-// where both records hold a row, B's state stands unless A withdrew —
-// a withdrawal always wins and, like every consent state change, lands
-// with an appended consent_event proof row in the same statement; A's
-// remaining rows (purposes B has no state for) relink to B with their
-// original proof chain intact.
+// mergeConsent carries the merged-away person's consent onto the survivor
+// (consentcarry.go). The person merge re-homes the proof rows with the state:
+// the delivery gate reads the double-opt-in proof off the live record.
 func mergeConsent(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID) error {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
-		WITH flipped AS (
-		  UPDATE person_consent b SET state = 'withdrawn', captured_at = $3, source = 'merge'
-		  FROM person_consent a
-		  WHERE a.person_id = $1 AND b.person_id = $2
-		    AND a.purpose_id = b.purpose_id
-		    AND a.state = 'withdrawn' AND b.state <> 'withdrawn'
-		  RETURNING b.purpose_id
-		)
-		INSERT INTO consent_event (person_id, purpose_id, new_state, source,
-		                           policy_text, policy_version, captured_at, captured_by)
-		SELECT $2, purpose_id, 'withdrawn', 'merge',
-		       'withdrawal carried over from a merged duplicate record', 'merge', $3, $4
-		FROM flipped`,
-		sourceID, targetID, time.Now().UTC(), by); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM person_consent a
-		WHERE a.person_id = $1 AND EXISTS (
-		  SELECT 1 FROM person_consent b
-		  WHERE b.person_id = $2 AND b.purpose_id = a.purpose_id)`,
-		sourceID, targetID); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE person_consent SET person_id = $2 WHERE person_id = $1`,
-		sourceID, targetID); err != nil {
-		return err
-	}
-	_, err = tx.Exec(ctx,
-		`UPDATE consent_event SET person_id = $2 WHERE person_id = $1`,
-		sourceID, targetID)
-	return err
+	return carryConsent(ctx, tx, consentCarryPersonMerge, sourceID.UUID, targetID.UUID, by)
 }
 
 // archiveMergedAway retires the source row: archived + the redirect

@@ -26,6 +26,27 @@ const (
 	voiceBuildStatusRunning      = "running"
 )
 
+// How a version came to exist, and what its writer chose. These are
+// voice_profile_version's own columns rather than the build vocabulary above:
+// `source` says which door the version came through, `reason` why, and
+// `builder_version` which assembler produced the artifact.
+const (
+	voiceVersionSourceBuild      = "build"
+	voiceVersionSourceManual     = "manual"
+	voiceVersionReasonManual     = "manual"
+	voiceVersionReasonRollback   = "rollback"
+	voiceProviderInternal        = "internal"
+	voiceBuilderLegacySetDerived = "legacy-set-derived"
+)
+
+// The delta row's own vocabulary: how big a change a version was, and what
+// happened to it.
+const (
+	voiceClassificationRoutine    = "routine"
+	voiceOutcomeManuallyActivated = "manually_activated"
+	voiceOutcomeRollback          = "rollback"
+)
+
 // The published event contract spells the two SENT outcomes differently
 // from the DDL: (drafted | sent_unedited | sent_edited | rejected) against
 // ('drafted','accepted','edited_sent','rejected'). Naming both vocabularies

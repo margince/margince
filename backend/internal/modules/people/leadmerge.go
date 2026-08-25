@@ -165,52 +165,13 @@ func carryLeadActivitiesToLead(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	return nil
 }
 
-// carryLeadConsentToLead re-points the loser's consent onto the survivor,
-// under the same rules the promotion carry keeps (carryLeadConsent):
-//
-//   - withdrawal wins: a withdrawn state on the loser flips the survivor's
-//     grant for that purpose, with an appended consent_event as proof — a
-//     merge must never turn an opt-out back into a grant;
-//   - where the survivor already holds a row for a purpose its state stands
-//     otherwise, and the colliding loser row is dropped;
-//   - the rest re-point.
-//
-// The consent_event proof rows re-home WITH the state: the delivery gate
-// reads the double-opt-in proof off the live lead, so a grant that moved
-// while its confirmation stayed on the archived row would be a grant nobody
-// can act on.
+// carryLeadConsentToLead carries the merged-away lead's consent onto the
+// surviving lead (consentcarry.go). A lead merge re-homes the proof rows with
+// the state: the delivery gate reads the double-opt-in proof off the live
+// lead, so a grant that moved while its confirmation stayed on the archived
+// row would be a grant nobody can act on.
 func carryLeadConsentToLead(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID, by string) error {
-	if _, err := tx.Exec(ctx, `
-		WITH flipped AS (
-		  UPDATE person_consent b SET state = 'withdrawn', captured_at = $3, source = 'merge'
-		  FROM person_consent a
-		  WHERE a.lead_id = $1 AND b.lead_id = $2
-		    AND a.purpose_id = b.purpose_id
-		    AND a.state = 'withdrawn' AND b.state <> 'withdrawn'
-		  RETURNING b.purpose_id
-		)
-		INSERT INTO consent_event (lead_id, purpose_id, new_state, source,
-		                           policy_text, policy_version, captured_at, captured_by)
-		SELECT $2, purpose_id, 'withdrawn', 'merge',
-		       'withdrawal carried over from the merged-away lead', 'merge', $3, $4
-		FROM flipped`,
-		sourceID, targetID, time.Now().UTC(), by); err != nil {
-		return fmt.Errorf("carry lead consent withdrawals: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM person_consent a
-		WHERE a.lead_id = $1 AND EXISTS (
-		  SELECT 1 FROM person_consent b WHERE b.lead_id = $2 AND b.purpose_id = a.purpose_id)`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("drop colliding lead consent: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `UPDATE person_consent SET lead_id = $2 WHERE lead_id = $1`, sourceID, targetID); err != nil {
-		return fmt.Errorf("carry lead consent: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `UPDATE consent_event SET lead_id = $2 WHERE lead_id = $1`, sourceID, targetID); err != nil {
-		return fmt.Errorf("carry lead consent proof: %w", err)
-	}
-	return nil
+	return carryConsent(ctx, tx, consentCarryLeadMerge, sourceID.UUID, targetID.UUID, by)
 }
 
 // retireStaleCandidates archives every OTHER open pair naming the loser: its
