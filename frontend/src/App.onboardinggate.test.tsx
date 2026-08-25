@@ -192,4 +192,24 @@ describe("the onboarding gate and the wizard's restore", () => {
     expect(moves.filter((hash) => hash === HOME)).toHaveLength(1);
     expect(moves.at(-1)).toBe(HOME);
   });
+
+  it("leave no entry behind for Back to land on", async () => {
+    // Both moves above are REDIRECTS: an address the product answers by sending
+    // the reader somewhere else. Pushed, each leaves the address it came from
+    // in history — so Back returns to it, it redirects again, and the reader
+    // cannot get out with the one key that exists for getting out of things.
+    // The settled hash cannot see this; the depth of the stack can.
+    // Measured from the reader's ARRIVAL, not from before it: setting the
+    // starting hash is itself an entry, and counting it would leave the
+    // assertion satisfied by a gate that pushed.
+    window.location.hash = HOME;
+    const onArrival = window.history.length;
+    mount({ companySaved: false }, HOME);
+
+    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.hash).toBe(GATE_TARGET);
+    });
+    expect(window.history.length).toBe(onArrival);
+  });
 });
