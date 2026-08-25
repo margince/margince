@@ -23,7 +23,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useOrganization360 } from "../screens/company360";
 import { useConnectors } from "../screens/connectors";
-import { useDedupeQueue } from "../screens/dedupe";
+import { useDedupeQueue } from "../screens/dedupe.queries";
 import { usePendingApprovals } from "../screens/inbox.queries";
 import { useLicenseEntitlement } from "../screens/license";
 import { type AppActivity, useAppActivity } from "./activity";
@@ -681,7 +681,7 @@ function AgentPanel({
             {signals.waiting !== undefined && (
               <a
                 className="arbox artile"
-                href="#/inbox"
+                href="#/today"
                 aria-label={`${LABELS.approvals} ${signals.waiting}`}
               >
                 <b>{signals.waiting}</b>
@@ -691,7 +691,7 @@ function AgentPanel({
             {signals.duplicates !== undefined && (
               <a
                 className="arbox artile"
-                href="#/dedupe"
+                href="#/today"
                 aria-label={`${LABELS.duplicatesRow} ${countLabel(signals.duplicates)}`}
               >
                 <b>{countLabel(signals.duplicates)}</b>

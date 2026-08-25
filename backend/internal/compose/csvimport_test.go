@@ -53,6 +53,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					"industry":            in.Industry != nil,
 					"size_band":           in.SizeBand != nil,
 					"description":         in.Description != nil,
+					"domain":              len(in.Domains) > 0,
 					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 					"address.city":        in.Address != nil && in.Address.City != nil,
@@ -60,11 +61,15 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
 					"address.country":     in.Address != nil && in.Address.Country != nil,
 				}, map[string]bool{
-					"display_name":        up.DisplayName != nil,
-					"legal_name":          up.LegalName != nil,
-					"industry":            up.Industry != nil,
-					"size_band":           up.SizeBand != nil,
-					"description":         up.Description != nil,
+					"display_name": up.DisplayName != nil,
+					"legal_name":   up.LegalName != nil,
+					"industry":     up.Industry != nil,
+					"size_band":    up.SizeBand != nil,
+					"description":  up.Description != nil,
+					// The replace-set behind a pointer: non-nil means the file
+					// carried a domain column, and only then is the stored set
+					// rewritten.
+					"domain":              up.Domains != nil && len(*up.Domains) > 0,
 					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
 					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
 					"address.city":        up.Address != nil && up.Address.City != nil,

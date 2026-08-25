@@ -5,7 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { NavCounts, NavSection } from "./nav";
+import type { NavSection } from "./nav";
 import { parseHash, type Route } from "./router";
 import {
   fixtureSection,
@@ -85,7 +85,6 @@ function renderTopBar(
   route: Route,
   extra: Readonly<{
     section?: NavSection;
-    counts?: NavCounts;
     collapsed?: boolean;
     onToggle?: () => void;
     onOpenSearch?: () => void;
@@ -95,7 +94,6 @@ function renderTopBar(
     <TopBar
       route={route}
       section={extra.section}
-      counts={extra.counts}
       collapsed={extra.collapsed ?? false}
       onToggle={extra.onToggle}
       onOpenSearch={extra.onOpenSearch ?? ignoreSearch}
@@ -200,31 +198,6 @@ describe("Top bar sidebar toggle", () => {
 // Where the reader is, ending in the page itself. The last stop is the page and
 // is never a link — a link to the page you are already on is a control that does
 // nothing — and it is the ONE element in the bar that claims the current page.
-describe("Top bar decisions", () => {
-  // Silent at zero. A mark that is always on screen with nothing behind it
-  // teaches a reader to stop looking at it, which is the one thing a queue that
-  // blocks other people cannot afford.
-  it("names the queue and shows no count when nothing is waiting", () => {
-    renderTopBar({ screen: "home" });
-    const mark = screen.getByRole("link", { name: "Decisions" });
-    expect(mark.getAttribute("href")).toBe("#/inbox");
-    expect(mark.querySelector(".topbar-decisioncount")).toBeNull();
-  });
-
-  // The number is in the accessible NAME, and the chip that draws it is
-  // aria-hidden: read out, the pair would say the count twice, the second time
-  // without the word for what is counted.
-  it("carries the waiting count in its name, with the chip decorative", () => {
-    renderTopBar({ screen: "home" }, { counts: { inbox: 7, tasks: 9 } });
-    // The inbox count specifically — tasks sits in the same record and carries a
-    // different number, so a mark reading any count would show 9.
-    const mark = screen.getByRole("link", { name: "Decisions — 7 waiting" });
-    const chip = mark.querySelector(".topbar-decisioncount");
-    expect(chip?.textContent).toBe("7");
-    expect(chip?.getAttribute("aria-hidden")).toBe("true");
-  });
-});
-
 describe("Top bar trail", () => {
   it("names the page once on a list route, with nothing to lead back to", () => {
     renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });

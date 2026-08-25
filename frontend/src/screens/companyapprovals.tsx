@@ -5,7 +5,7 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
-import { ApprovalRow, useDecisionSink } from "./inbox";
+import { ApprovalRow, useDecisionSink } from "./approvalrow";
 import { useTargetApprovals } from "./inbox.queries";
 
 // What is waiting on a decision FOR THIS ACCOUNT, where the account is being

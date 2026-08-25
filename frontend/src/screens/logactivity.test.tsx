@@ -16,7 +16,7 @@ import { calendarDay } from "../format/calendarday";
 import { LocaleProvider } from "../i18n";
 import { LogActivity } from "./logactivity";
 import { PersonScreen } from "./people";
-import { groupTask } from "./tasks";
+import { groupTask } from "./taskgroup";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):
 // the POST body carries the contract's shape (kind, subject, the viewed

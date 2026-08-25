@@ -324,7 +324,7 @@ export function DecisionsSection({
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {
-        navigate({ screen: "inbox" });
+        navigate({ screen: "today" });
       }
     },
   });

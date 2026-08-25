@@ -1363,6 +1363,35 @@ export async function mockApi(
     if (path === "/approvals") {
       return json(page([approval]));
     }
+    // The day's surface. One staged decision, so the focus lane has something
+    // to draw and the approve path has something to answer — the same approval
+    // the queue serves, because two fixtures for one row is how a screen comes
+    // to pass a test against a decision the product never staged.
+    if (path === "/attention" && method === "GET") {
+      return json({
+        as_of: "2026-07-05T06:00:00Z",
+        needs_you: [
+          {
+            id: approval.id,
+            source: "approval",
+            kind: approval.kind,
+            title: approval.summary,
+            actions: ["decide"],
+          },
+        ],
+        planned: [],
+        done_for_you: [],
+        counts: { needs_you: 1, planned: 0 },
+      });
+    }
+    // The decision lane reads the ONE approval it is showing, whole.
+    if (
+      method === "GET" &&
+      /^\/approvals\/[^/]+$/.test(path) &&
+      path !== "/approvals/bundles"
+    ) {
+      return json(approval);
+    }
     if (path.startsWith("/approvals/") && method === "POST") {
       return json({ ...approval, status: "approved" });
     }

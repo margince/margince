@@ -2,13 +2,10 @@ import {
   BarChart3,
   Briefcase,
   Building2,
-  CheckSquare,
   Home,
   Kanban,
-  Layers,
   ListFilter,
   type LucideIcon,
-  Merge,
   Sparkles,
   Sun,
   UserPlus,
@@ -41,19 +38,19 @@ export {
 // structure and collapse to hairline rules at 64px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
 //
-// It carries thirteen rows against upstream's own ten, and not as a superset:
-// Duplicates, Filters & views and Projects are destinations here, Automations is not.
-// Automations is set-and-forget configuration and now lives inside Settings →
-// AI, which is where the product already offered a second door to it; the dedupe
-// queue is work somebody has to get through, and it had no address outside a
-// home digest card; the filter builder is a full authoring surface, and a screen
-// this list does not name is a screen only a typed URL reaches. All three
-// divergences are the UI's to make and are on the founder's back-fill list.
+// It carries ten rows. Filters & views and Projects are destinations here and
+// Automations is not: Automations is set-and-forget configuration and lives
+// inside Settings → AI, where the product already offered a second door to it,
+// while the filter builder is a full authoring surface, and a screen this list
+// does not name is a screen only a typed URL reaches.
+//
+// Today is the single door to the work that waits on a person — the approval
+// queue, the task queue and the duplicate queue are lanes inside it rather than
+// rows of their own, because three sidebar entries for one question ("what
+// needs me?") read as three separate piles.
 //
 // `screen` is the route id and never changes with a label: `deals` presents as
-// Pipeline (it routes to the pipeline surface) and `inbox` presents as
-// Decisions (it is a governance surface, not a mailbox — issue 2532 tracks the
-// identifier sweep that has yet to make the route say the same word).
+// Pipeline, because it routes to the pipeline surface.
 export type NavItem = {
   screen: Screen;
   labelKey: MessageKey;
@@ -73,11 +70,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { screen: "contacts", labelKey: "nav.contacts", icon: Users },
       { screen: "companies", labelKey: "nav.companies", icon: Building2 },
       { screen: "leads", labelKey: "nav.leads", icon: UserPlus },
-      // Merging two records that are one is WORK on the records above it, not
-      // configuration — it was reachable only from a home digest card, which is
-      // no address at all for a queue somebody has to work through. It keeps that
-      // card; this is the destination the card now points into.
-      { screen: "dedupe", labelKey: "nav.dedupe", icon: Merge },
       // Slicing the records above it: a filter authored here becomes a dynamic
       // list, a saved view or an export, and each of those selects from the
       // record types this group names. So it belongs with them rather than under
@@ -95,11 +87,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.work",
     items: [
-      // The day's own surface, and the first row of the group it summarises:
-      // every other row here is one producer's queue, and this one is what a
-      // reader opens when the question is "what needs me?" rather than "show me
-      // the approvals". It leads the group for that reason — a summary placed
-      // under the things it summarises is a footnote.
+      // The day's own surface, and the only door to the work that waits on a
+      // person: decisions to answer, tasks to finish and duplicates to merge are
+      // lanes inside it. It leads the group because it is what a reader opens
+      // when the question is "what needs me?".
       { screen: "today", labelKey: "nav.today", icon: Sun },
       // The board, not a bullseye: this route opens a column per stage with the
       // deals standing in them, and `Target` drew a goal — which is what a quota
@@ -110,21 +101,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // outlives close-won, so it sits beside the pipeline rather than under
       // it: a project in delivery has no deal column to stand in.
       { screen: "projects", labelKey: "nav.projects", icon: Briefcase },
-      { screen: "tasks", labelKey: "nav.tasks", icon: CheckSquare },
-      // The same mark the top bar carries. This queue waits on a PERSON, and the
-      // chrome reports it in three places at once — this row, the strip's own
-      // affordance, and the phone bar; two glyphs for one queue reads as two
-      // queues. It also keeps the pair under Tasks readable: a shield-check
-      // beside a check-in-square was two ticks in two boxes at 20px, and this
-      // is a different shape entirely.
-      //
-      // Layers, not a bell. A bell says a notification arrived and has been
-      // read; what is here is work nobody has decided yet, and it stays until
-      // somebody does — and the product has no notification system at all, so
-      // the bell promised the one thing it could not deliver. A stack of layers
-      // is what the surface IS: a pile of proposals to work through one at a
-      // time, which is exactly how the deck on Home draws it.
-      { screen: "inbox", labelKey: "nav.inbox", icon: Layers },
     ],
   },
   {
@@ -140,21 +116,26 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
   (group) => group.items,
 );
 
-// A badge counts only what wants a human's attention (Tasks due, Decisions
-// waiting). Ambient totals are deliberately absent: the list endpoints are
-// keyset-paginated and are not known to return one, and a decorative count
-// contradicts the badge rule.
-export const BADGE_SCREENS: ReadonlySet<Screen> = new Set(["tasks", "inbox"]);
+// A badge counts only what wants a human's attention, and no row on the primary
+// nav does today: the queues that had counts (approvals, tasks) are lanes inside
+// Today, which reports its own numbers on the page rather than on its row. The
+// set stays because `badgeIds` is how a level declares badgeable rows and the
+// deeper levels use the same mechanism — the empty set says "this level badges
+// nothing", which is the honest answer, where deleting it would say the rail
+// cannot badge at all. Ambient totals are deliberately absent whatever the
+// level: the list endpoints are keyset-paginated and are not known to return
+// one, and a decorative count contradicts the badge rule.
+export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 
 // At phone width the sidebar becomes a bottom bar, which fits four thumb-sized
-// destinations plus More — thirteen would need horizontal scrolling, and a nav you
-// have to scroll is a nav you cannot see. Decisions is non-negotiable here: the
-// 390px approval path is required for V1.
+// destinations plus More — ten would need horizontal scrolling, and a nav you
+// have to scroll is a nav you cannot see. Today is non-negotiable here: the
+// 390px approval path is required for V1, and Today is where it now runs.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "home",
   "contacts",
   "deals",
-  "inbox",
+  "today",
 ]);
 
 // Which RECORD screens keep the reading column instead of taking the width they

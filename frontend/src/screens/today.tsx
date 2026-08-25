@@ -1,5 +1,5 @@
-import { CheckSquare, GitMerge, Layers, Sparkles } from "lucide-react";
-import { navigate } from "../app/router";
+import { CheckSquare, GitMerge, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -9,6 +9,7 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
 import { snoozedDueAt, useTaskUpdate } from "./taskactions";
+import { FocusLane } from "./today.focus";
 import {
   type Attention,
   type AttentionItem,
@@ -36,7 +37,7 @@ type LaneShape = Readonly<{
   title: string;
   empty: string;
   withheld: string;
-  icon: typeof Layers;
+  icon: typeof CheckSquare;
 }>;
 
 // The lead line: the largest true thing about the day, written here rather than
@@ -126,53 +127,10 @@ function itemDetail(
   return null;
 }
 
-// Where a card's verb takes the reader.
-//
-// Every route here belongs to the record that owns the item. This surface holds
-// no decision of its own, so a click hands the reader to the place where the
-// rules for that decision already live — which is also why a reader who lands
-// there sees the same answer they would have reached from the record page.
-function openItem(item: AttentionItem): void {
-  switch (item.source) {
-    case "dedupe_candidate":
-      navigate({ screen: "dedupe" });
-      return;
-    case "task":
-      navigate({ screen: "tasks" });
-      return;
-    default:
-      // A receipt is already decided, so it lives on the queue's Decided tab.
-      // Sending a reader to Pending to look for it would be sending them to
-      // the one list it is guaranteed not to be in.
-      navigate({
-        screen: "inbox",
-        id: item.actions.includes("open") ? "decided" : undefined,
-      });
-  }
-}
-
-// Which word a row's button carries.
-//
-// Read off the server's own `actions` in order of consequence, never by
-// elimination. The first version labelled anything that was not a task
-// "Decide", which put a Decide button on every RECEIPT — a finished act
-// offering to be decided again, which is the one thing this lane exists not to
-// do. It shipped past a test that only checked `actions`, and the screenshot is
-// what caught it.
-function verbLabel(
-  item: AttentionItem,
-): "day.merge" | "day.decide" | "day.open" {
-  if (item.actions.includes("merge")) {
-    return "day.merge";
-  }
-  if (item.actions.includes("decide")) {
-    return "day.decide";
-  }
-  return "day.open";
-}
-
-// One row. The verb it offers is the one the server said it has: a receipt gets
-// `open` and nothing else, so a finished act cannot be re-decided from here.
+// One row of the two REPORTING lanes — today's agreed work, and what already
+// ran. Neither carries a decision: a task is completed or pushed, and a receipt
+// is read. The lane that asks a person something does not use this row at all,
+// because a decision does not fit on one.
 function AttentionRow({
   item,
   onComplete,
@@ -188,7 +146,6 @@ function AttentionRow({
   const { locale } = useLocale();
   const zone = viewerZone();
   const detail = itemDetail(item, t, locale, zone);
-  const canComplete = item.actions.includes("complete");
   return (
     <PanelRow className="today-row">
       <div className="today-row-text">
@@ -197,7 +154,7 @@ function AttentionRow({
       </div>
       <div className="today-row-verbs">
         {item.overdue && <Badge tone="danger">{t("day.overdue")}</Badge>}
-        {canComplete ? (
+        {item.actions.includes("complete") && (
           <>
             {/* Not now, rather than not at all: a task pushed a day is still
                 agreed work, and a queue whose only verbs are "done" and
@@ -219,14 +176,6 @@ function AttentionRow({
               {t("day.complete")}
             </Button>
           </>
-        ) : (
-          <Button
-            small
-            variant={item.actions.includes("open") ? undefined : "primary"}
-            onClick={() => openItem(item)}
-          >
-            {t(verbLabel(item))}
-          </Button>
         )}
       </div>
     </PanelRow>
@@ -343,6 +292,30 @@ function TodayLanes({
   const planned = day.planned ?? [];
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
+  // How many decisions this reader has answered since the page opened, and
+  // which ones they have pushed to the back of the queue.
+  //
+  // Deferral is held HERE rather than sent, because "not now" is a fact about
+  // this sitting and not about the decision: it must not follow the reader to
+  // another device or survive until tomorrow, and there is no server state that
+  // would mean that. A decided item leaves the queue on its own — the mutation
+  // invalidates the read — so nothing has to remember those.
+  const [decided, setDecided] = useState(0);
+  const [deferred, setDeferred] = useState<readonly string[]>([]);
+  const onDecided = () => setDecided((n) => n + 1);
+  const onSkip = () =>
+    setDeferred((ids) =>
+      needsYou[0] && !ids.includes(needsYou[0].id)
+        ? [...ids, needsYou[0].id]
+        : ids,
+    );
+  // Deferred items go to the BACK, never away: a reader who put three things
+  // off still has three things to do, and a queue that dropped them would
+  // report a clear day that is not one.
+  const queue = [
+    ...needsYou.filter((item) => !deferred.includes(item.id)),
+    ...needsYou.filter((item) => deferred.includes(item.id)),
+  ];
   const onComplete = (id: string) =>
     complete.mutate({ id, body: { is_done: true } });
   // One day later, through the same helper the task queue snoozes with, so the
@@ -356,20 +329,13 @@ function TodayLanes({
   return (
     <>
       <p className="t-h2 today-lead">{leadLine(day, t, locale)}</p>
-      <Lane
-        shape={{
-          title: t("day.needsYou"),
-          empty: t("day.needsYou.empty"),
-          withheld: t("day.lane.withheld"),
-          icon: Layers,
-        }}
-        items={needsYou}
-        withheld={omitted.includes("needs_you")}
+      <FocusLane
+        items={queue}
         total={day.counts.needs_you}
-        tone="accent"
-        onComplete={onComplete}
-        onSnooze={onSnooze}
-        completing={complete.isPending}
+        decided={decided}
+        withheld={omitted.includes("needs_you")}
+        onDecided={onDecided}
+        onSkip={onSkip}
       />
       <Lane
         shape={{

@@ -21,9 +21,7 @@ import type { Route } from "./router";
 // current tab, filter or segment belongs beside that control, where it changes
 // with it; the page heading cannot see those and would go stale.
 export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
-  inbox: "inbox.sub",
   ai: "ai.sub",
-  dedupe: "dedupe.intro",
   // What the whole surface is for, not what the current object tab holds: the
   // sentence is true of a contact filter and a deal filter alike, which is the
   // test a page-level subtitle has to pass.
@@ -43,10 +41,10 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   partners: "nav.partners",
   share: "nav.share",
   search: "nav.search",
-  // Off the rail deliberately. The rail carries the product's twelve
-  // destinations and a queue of one person's own unsent mail is not a twelfth;
-  // it is reached from the composer that put a message in it and from the Tasks page,
-  // which is where the same rep's other waiting work already lives.
+  // Off the rail deliberately. The rail carries the product's ten destinations
+  // and a queue of one person's own unsent mail is not an eleventh; it is
+  // reached from the composer that put a message in it and from Today, which is
+  // where the same rep's other waiting work already lives.
   scheduled: "nav.scheduled",
 };
 

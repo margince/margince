@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2330 | 9% | 14670 | 15 | 8 |
-| _whole served catalog, for scale_ | 57 | 17755 | 73% | — | — | — |
+| _whole served catalog, for scale_ | 57 | 17790 | 74% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ a term in an addition.
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
 | `run_report` | 1213 | 3 scenarios |
-| `preview_import` | 618 | — |
+| `preview_import` | 653 | — |
 | `update_record` | 603 | 4 scenarios |
 | `log_activity` | 588 | 1 scenario |
 | `send_account_email` | 545 | — |

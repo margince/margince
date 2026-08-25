@@ -112,6 +112,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 	if claimed {
 		return predictUnwritable, personEmailClaimedReason, nil
 	}
+	takenDomain, err := w.orgDomainAlreadyHeld(ctx, row)
+	if err != nil {
+		return predictCreate, "", err
+	}
+	if takenDomain {
+		return predictUnwritable, domainClaimedReason, nil
+	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
 		return predictCreate, "", err

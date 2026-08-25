@@ -23,6 +23,20 @@ const fieldFullName = "full_name"
 // recognizes a row by, and the one value the store canonicalizes on write.
 const fieldEmail = "email"
 
+// fieldDomain is an organization's identifying field, and the one a spreadsheet
+// most often carries as a Website column.
+//
+// A company's name describes it; its domain identifies it. DedupeOrganization
+// asks about the domain FIRST and treats a hit as an exact collision, where a
+// name match is only ever the fuzzy tier — so a file that carries domains is
+// matched on a real key, and one that does not is matched on a string two
+// different companies may share.
+const fieldDomain = "domain"
+
+// fieldTitle is the job title, carried by both a lead and a person: the same
+// column of the same contact file, whichever object it is imported as.
+const fieldTitle = "title"
+
 // leadStatusNew is where an imported prospect starts: the unworked state a
 // human moves it out of, which is the whole point of landing machine-sourced
 // rows as leads rather than as people.
@@ -45,13 +59,18 @@ const leadStatusNew = "new"
 // paths. A target that only half works is worse than one the screen never
 // offers.
 var csvTargets = map[string][]string{
-	migration.ObjectLead:         {fieldFullName, fieldEmail, "title", "company_name"},
-	migration.ObjectOrganization: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description"}, recordAddressTargets...),
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldTitle, "company_name"},
+	// `domain` is what actually identifies a company. Its absence is why a
+	// spreadsheet's website column had nowhere to go, and why company dedupe
+	// falls back to matching names — which two real companies may legitimately
+	// share. It round-trips: the create input takes a domain set and the patch
+	// input takes the same set as a replace-set.
+	migration.ObjectOrganization: append([]string{fieldDisplayName, "legal_name", fieldIndustry, "size_band", "description", fieldDomain}, recordAddressTargets...),
 	// `phone`, `social` and `owner_id` are deliberately absent. A person's
 	// patch input carries no Phones member and no single-column spelling of
 	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
 	// storekit.OwnerOrActor already defaults it to whoever ran the import.
-	migration.ObjectPerson: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, "title"}, recordAddressTargets...),
+	migration.ObjectPerson: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -207,8 +226,14 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
-		if field == fieldEmail {
+		// Two targets name a CHILD COLLECTION rather than a column on the
+		// record, so a flat lookup finds nothing and reports them changed on
+		// every re-import of a file nobody edited.
+		switch field {
+		case fieldEmail:
 			return storedPrimaryEmail(current)
+		case fieldDomain:
+			return storedPrimaryDomain(current)
 		}
 		return current[field]
 	}
@@ -236,16 +261,24 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 // its version, and publish an update event for a change nobody made.
 func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
-	if field == fieldEmail {
+	switch field {
+	case fieldEmail:
 		return strings.ToLower(trimmed)
+	case fieldDomain:
+		// Through the store's OWN parser, not an approximation of it. A
+		// spreadsheet's website column carries "https://www.acme.com/" where the
+		// store holds "acme.com", so a comparison that folded only case would
+		// rewrite the row on every re-import of an unchanged file — the same
+		// defect the email lowercasing fixed, with more ways to spell it. An
+		// unparseable value compares as written and is refused later by name.
+		if parsed, err := values.ParseDomain(trimmed); err == nil {
+			return parsed.String()
+		}
+		return trimmed
 	}
 	return trimmed
 }
 
-// textOf renders one stored JSON value as the text a file would have carried.
-// Every value a delimited file can hold arrives as text, so text is the only
-// comparison that can be made without inventing a type the file never declared.
-// An absent field renders empty, which no non-empty import value equals.
 func textOf(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
@@ -270,7 +303,7 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
-	in.Title = importString(fields, "title")
+	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
 	return in
 }
@@ -280,38 +313,11 @@ func leadUpdateFrom(changed map[string]string) people.UpdateLeadInput {
 	return people.UpdateLeadInput{
 		FullName:    importString(changed, fieldFullName),
 		Email:       importString(changed, fieldEmail),
-		Title:       importString(changed, "title"),
+		Title:       importString(changed, fieldTitle),
 		CompanyName: importString(changed, "company_name"),
 	}
 }
 
-func organizationCreateFrom(fields map[string]string, source string) people.CreateOrganizationInput {
-	in := people.CreateOrganizationInput{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		Source:      source,
-	}
-	in.LegalName = importString(fields, "legal_name")
-	in.Description = importString(fields, "description")
-	in.Industry = importString(fields, fieldIndustry)
-	in.SizeBand = importString(fields, "size_band")
-	in.Address = addressFrom(fields)
-	return in
-}
-
-// addressMergedOnto folds the file's address components onto the ones the
-// record already holds, so an import that carries a City does not blank the
-// street beside it.
-//
-// The store's address patch is all-or-nothing by design — buildOrganizationPatch
-// assigns all six columns whenever an Address is present — which is right for a
-// form that always submits the whole address, and wrong for a spreadsheet whose
-// columns are whatever the customer happened to export. Merging here rather
-// than changing the patch keeps that door's contract intact: every other caller
-// still sends a complete address and still means it.
-//
-// The bool reports whether the file carried an address at all. A caller that
-// gets false must leave the record's address alone rather than send nil, which
-// the patch builder cannot distinguish from "no address given".
 func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontracts.Address, bool, error) {
 	if mapped == nil {
 		return nil, false, nil
@@ -380,6 +386,15 @@ func unwritableReason(object string, fields map[string]string) string {
 	if object != migration.ObjectOrganization {
 		return ""
 	}
+	// A company's domains are parsed before the write transaction opens
+	// (parseOrgDomains), so a value the parser refuses fails the row at commit.
+	// The same argument as the email arm above and the size_band one below: a dry
+	// run whose job is to say what WILL happen may not report the opposite.
+	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
+		if _, err := values.ParseDomain(domain); err != nil {
+			return fmt.Sprintf("%q is not a domain that can be written", domain)
+		}
+	}
 	band, given := fields["size_band"]
 	if !given || strings.TrimSpace(band) == "" {
 		return ""
@@ -433,21 +448,6 @@ func addressFrom(fields map[string]string) *crmcontracts.Address {
 	return &addr
 }
 
-func organizationUpdateFrom(changed map[string]string) people.UpdateOrganizationInput {
-	return people.UpdateOrganizationInput{
-		DisplayName: importString(changed, fieldDisplayName),
-		LegalName:   importString(changed, "legal_name"),
-		Description: importString(changed, "description"),
-		Industry:    importString(changed, fieldIndustry),
-		SizeBand:    importString(changed, "size_band"),
-		Address:     addressFrom(changed),
-	}
-}
-
-// importString reads one mapped field as a pointer, absent when the file did
-// not carry it. A nil is "the file said nothing", never "the file said empty":
-// the source drops blank values before they reach here, so an empty column
-// cannot silently erase a value somebody entered by hand.
 func importString(fields map[string]string, name string) *string {
 	value, ok := fields[name]
 	if !ok {

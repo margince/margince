@@ -1294,6 +1294,60 @@ func (e AttentionItemSource) Valid() bool {
 	}
 }
 
+// Defines values for AttentionPairEvidenceField.
+const (
+	AttentionPairEvidenceFieldChannelIdentity AttentionPairEvidenceField = "channel_identity"
+	AttentionPairEvidenceFieldDisplayName     AttentionPairEvidenceField = "display_name"
+	AttentionPairEvidenceFieldEmail           AttentionPairEvidenceField = "email"
+	AttentionPairEvidenceFieldFullName        AttentionPairEvidenceField = "full_name"
+	AttentionPairEvidenceFieldLegalName       AttentionPairEvidenceField = "legal_name"
+	AttentionPairEvidenceFieldMatchedLane     AttentionPairEvidenceField = "matched_lane"
+	AttentionPairEvidenceFieldPhone           AttentionPairEvidenceField = "phone"
+)
+
+// Valid indicates whether the value is a known member of the AttentionPairEvidenceField enum.
+func (e AttentionPairEvidenceField) Valid() bool {
+	switch e {
+	case AttentionPairEvidenceFieldChannelIdentity:
+		return true
+	case AttentionPairEvidenceFieldDisplayName:
+		return true
+	case AttentionPairEvidenceFieldEmail:
+		return true
+	case AttentionPairEvidenceFieldFullName:
+		return true
+	case AttentionPairEvidenceFieldLegalName:
+		return true
+	case AttentionPairEvidenceFieldMatchedLane:
+		return true
+	case AttentionPairEvidenceFieldPhone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionPairEvidenceSignal.
+const (
+	Collide       AttentionPairEvidenceSignal = "collide"
+	ExactConflict AttentionPairEvidenceSignal = "exact_conflict"
+	OneSided      AttentionPairEvidenceSignal = "one_sided"
+)
+
+// Valid indicates whether the value is a known member of the AttentionPairEvidenceSignal enum.
+func (e AttentionPairEvidenceSignal) Valid() bool {
+	switch e {
+	case Collide:
+		return true
+	case ExactConflict:
+		return true
+	case OneSided:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionSubjectType.
 const (
 	AttentionSubjectTypeActivity     AttentionSubjectType = "activity"
@@ -10572,58 +10626,58 @@ func (e CapturedByKind) Valid() bool {
 
 // Defines values for ProfileFieldKey.
 const (
-	BuyingCenter      ProfileFieldKey = "buying_center"
-	BuyingIntents     ProfileFieldKey = "buying_intents"
-	CommonObjections  ProfileFieldKey = "common_objections"
-	CustomerPains     ProfileFieldKey = "customer_pains"
-	DesiredOutcomes   ProfileFieldKey = "desired_outcomes"
-	DisplayName       ProfileFieldKey = "display_name"
-	History           ProfileFieldKey = "history"
-	Icp               ProfileFieldKey = "icp"
-	Industry          ProfileFieldKey = "industry"
-	LegalName         ProfileFieldKey = "legal_name"
-	OfferSummary      ProfileFieldKey = "offer_summary"
-	RegisterVat       ProfileFieldKey = "register_vat"
-	RegisteredAddress ProfileFieldKey = "registered_address"
-	SalesMotion       ProfileFieldKey = "sales_motion"
-	Usp               ProfileFieldKey = "usp"
-	ValueProposition  ProfileFieldKey = "value_proposition"
+	ProfileFieldKeyBuyingCenter      ProfileFieldKey = "buying_center"
+	ProfileFieldKeyBuyingIntents     ProfileFieldKey = "buying_intents"
+	ProfileFieldKeyCommonObjections  ProfileFieldKey = "common_objections"
+	ProfileFieldKeyCustomerPains     ProfileFieldKey = "customer_pains"
+	ProfileFieldKeyDesiredOutcomes   ProfileFieldKey = "desired_outcomes"
+	ProfileFieldKeyDisplayName       ProfileFieldKey = "display_name"
+	ProfileFieldKeyHistory           ProfileFieldKey = "history"
+	ProfileFieldKeyIcp               ProfileFieldKey = "icp"
+	ProfileFieldKeyIndustry          ProfileFieldKey = "industry"
+	ProfileFieldKeyLegalName         ProfileFieldKey = "legal_name"
+	ProfileFieldKeyOfferSummary      ProfileFieldKey = "offer_summary"
+	ProfileFieldKeyRegisterVat       ProfileFieldKey = "register_vat"
+	ProfileFieldKeyRegisteredAddress ProfileFieldKey = "registered_address"
+	ProfileFieldKeySalesMotion       ProfileFieldKey = "sales_motion"
+	ProfileFieldKeyUsp               ProfileFieldKey = "usp"
+	ProfileFieldKeyValueProposition  ProfileFieldKey = "value_proposition"
 )
 
 // Valid indicates whether the value is a known member of the ProfileFieldKey enum.
 func (e ProfileFieldKey) Valid() bool {
 	switch e {
-	case BuyingCenter:
+	case ProfileFieldKeyBuyingCenter:
 		return true
-	case BuyingIntents:
+	case ProfileFieldKeyBuyingIntents:
 		return true
-	case CommonObjections:
+	case ProfileFieldKeyCommonObjections:
 		return true
-	case CustomerPains:
+	case ProfileFieldKeyCustomerPains:
 		return true
-	case DesiredOutcomes:
+	case ProfileFieldKeyDesiredOutcomes:
 		return true
-	case DisplayName:
+	case ProfileFieldKeyDisplayName:
 		return true
-	case History:
+	case ProfileFieldKeyHistory:
 		return true
-	case Icp:
+	case ProfileFieldKeyIcp:
 		return true
-	case Industry:
+	case ProfileFieldKeyIndustry:
 		return true
-	case LegalName:
+	case ProfileFieldKeyLegalName:
 		return true
-	case OfferSummary:
+	case ProfileFieldKeyOfferSummary:
 		return true
-	case RegisterVat:
+	case ProfileFieldKeyRegisterVat:
 		return true
-	case RegisteredAddress:
+	case ProfileFieldKeyRegisteredAddress:
 		return true
-	case SalesMotion:
+	case ProfileFieldKeySalesMotion:
 		return true
-	case Usp:
+	case ProfileFieldKeyUsp:
 		return true
-	case ValueProposition:
+	case ProfileFieldKeyValueProposition:
 		return true
 	default:
 		return false
@@ -13002,6 +13056,16 @@ type AttentionItem struct {
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
+	// Pair The two records a duplicate item proposes to merge, with the detection-time
+	// evidence that raised it. Present so the decision can be MADE where it is
+	// shown: a card that named neither record could only ask a reader to go and
+	// look, which is the hand-off this surface exists to remove.
+	//
+	// Sent only for `source: dedupe_candidate`, and only when the reader may see
+	// BOTH sides — the queue's own both-sides-visible rule decides that, and an
+	// item the reader may not fully see is not offered as a decision at all.
+	Pair *AttentionPair `json:"pair,omitempty"`
+
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
 
@@ -13021,6 +13085,68 @@ type AttentionItemActions string
 
 // AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
 type AttentionItemSource string
+
+// AttentionPair The two records a duplicate item proposes to merge, with the detection-time
+// evidence that raised it. Present so the decision can be MADE where it is
+// shown: a card that named neither record could only ask a reader to go and
+// look, which is the hand-off this surface exists to remove.
+//
+// Sent only for `source: dedupe_candidate`, and only when the reader may see
+// BOTH sides — the queue's own both-sides-visible rule decides that, and an
+// item the reader may not fully see is not offered as a decision at all.
+type AttentionPair struct {
+	// Evidence The per-field snapshot the detector saw, in the order it weighed them.
+	// `field` is a stable key the client translates, never a column name to
+	// print: a reader asked to compare `full_name` is being shown the
+	// database rather than their own records.
+	Evidence []AttentionPairEvidence `json:"evidence"`
+
+	// Left One side of a proposed merge, named and weighed so a reader can tell which record to keep.
+	Left AttentionPairSide `json:"left"`
+
+	// Right One side of a proposed merge, named and weighed so a reader can tell which record to keep.
+	Right AttentionPairSide `json:"right"`
+}
+
+// AttentionPairEvidence One field the detector compared across the two records.
+type AttentionPairEvidence struct {
+	// Field Which attribute was compared. Mirrors the detector's own vocabulary, held by a gate that fails in both directions — a field missing here reaches a reader as a database column name, and one listed here that nothing writes is a word the client translates for nothing.
+	Field      AttentionPairEvidenceField `json:"field"`
+	LeftValue  *string                    `json:"left_value,omitempty"`
+	RightValue *string                    `json:"right_value,omitempty"`
+
+	// Signal What the detector made of the comparison. Mirrors the detector's own vocabulary, held by a gate that fails in both directions: a signal missing here costs its evidence row the whole card, and one listed here that nothing writes is a phrase every locale carries for a row that never arrives.
+	Signal AttentionPairEvidenceSignal `json:"signal"`
+}
+
+// AttentionPairEvidenceField Which attribute was compared. Mirrors the detector's own vocabulary, held by a gate that fails in both directions — a field missing here reaches a reader as a database column name, and one listed here that nothing writes is a word the client translates for nothing.
+type AttentionPairEvidenceField string
+
+// AttentionPairEvidenceSignal What the detector made of the comparison. Mirrors the detector's own vocabulary, held by a gate that fails in both directions: a signal missing here costs its evidence row the whole card, and one listed here that nothing writes is a phrase every locale carries for a row that never arrives.
+type AttentionPairEvidenceSignal string
+
+// AttentionPairSide One side of a proposed merge, named and weighed so a reader can tell which record to keep.
+type AttentionPairSide struct {
+	// CreatedAt Which side is the older record, the usual tiebreak when the evidence is even.
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+
+	// Detail One distinguishing line — a company's domain, a person's email.
+	Detail *string            `json:"detail,omitempty"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// Label The record's display name, resolved under the reader's own scope.
+	Label string `json:"label"`
+
+	// RelatedCount How many records hang off this side, where the record type carries such a
+	// count under the reader's own scope: contacts on a company. The reader's
+	// best single signal for which side is the real one, and the thing a merge
+	// would move.
+	//
+	// ABSENT rather than zero where no scoped count exists — a person and a lead
+	// send none today. Zero would claim the side carries nothing, which is a
+	// different fact from not having asked.
+	RelatedCount *int `json:"related_count,omitempty"`
+}
 
 // AttentionSubject The record this item is about, named so a reader knows who it concerns before opening anything.
 type AttentionSubject struct {

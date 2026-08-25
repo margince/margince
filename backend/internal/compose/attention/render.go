@@ -4,11 +4,14 @@
 package attention
 
 import (
+	"context"
+	"errors"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -20,7 +23,7 @@ import (
 // them to navigate. A card that printed `organization_id` at a reader was
 // showing them the plumbing and calling it information.
 
-// duplicateItem renders one open candidate pair.
+// duplicateItem renders one open candidate pair, with both records named.
 //
 // The title is left EMPTY and the kind carries the record type, because this
 // sentence has no server-side author: the product ships three languages, and a
@@ -28,16 +31,125 @@ import (
 // summary below is different — the server composed it at staging time out of
 // the proposal's own facts, and it is what every other decision surface already
 // shows.
-func duplicateItem(pair DuplicatePair) crmcontracts.AttentionItem {
+//
+// Naming the two sides is a READ of each record, so a side this reader may not
+// see costs the item its pair — and an item with no pair offers no merge. The
+// reader is told a duplicate is waiting and cannot act on it here, which is the
+// honest answer: the alternative is a merge button over a record they cannot
+// read.
+func (s *Service) duplicateItem(
+	ctx context.Context, pair DuplicatePair,
+) (crmcontracts.AttentionItem, error) {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
-	return crmcontracts.AttentionItem{
+	item := crmcontracts.AttentionItem{
 		Id:         pair.ID.String(),
 		Source:     crmcontracts.AttentionItemSource("dedupe_candidate"),
 		Kind:       &kind,
 		Confidence: &confidence,
-		Actions:    []crmcontracts.AttentionItemActions{"merge"},
+		Actions:    []crmcontracts.AttentionItemActions{},
 	}
+	left, right, ok, err := s.faces(ctx, pair)
+	if err != nil {
+		return crmcontracts.AttentionItem{}, err
+	}
+	if !ok {
+		return item, nil
+	}
+	item.Pair = &crmcontracts.AttentionPair{
+		Left:     left,
+		Right:    right,
+		Evidence: evidenceRows(pair.Evidence),
+	}
+	item.Actions = []crmcontracts.AttentionItemActions{"merge"}
+	return item, nil
+}
+
+// faces names both sides, or neither.
+//
+// A REFUSAL on one side is not an error to return: the rest of the day is still
+// readable, and one record this caller may not see must not empty the whole
+// lane. A refusal is `ErrPermissionDenied` (the object grant) or `ErrNotFound`
+// (a row-scope miss, which answers not-found so existence stays hidden).
+//
+// Any OTHER error is returned. A database that will not answer is not a record
+// the reader lacks the grants for, and rendering it as withheld would tell them
+// a pair is hidden from their account when nothing of the kind is true — the
+// same lie the lane assembler refuses to tell when a whole lane fails.
+func (s *Service) faces(
+	ctx context.Context, pair DuplicatePair,
+) (crmcontracts.AttentionPairSide, crmcontracts.AttentionPairSide, bool, error) {
+	left, ok, err := s.face(ctx, pair.EntityType, pair.LeftID)
+	if err != nil || !ok {
+		return crmcontracts.AttentionPairSide{}, crmcontracts.AttentionPairSide{}, false, err
+	}
+	right, ok, err := s.face(ctx, pair.EntityType, pair.RightID)
+	if err != nil || !ok {
+		return crmcontracts.AttentionPairSide{}, crmcontracts.AttentionPairSide{}, false, err
+	}
+	return left, right, true, nil
+}
+
+// face names one side: the record, whether the reader may see it, and whether
+// the read itself failed.
+func (s *Service) face(
+	ctx context.Context, entityType string, id ids.UUID,
+) (crmcontracts.AttentionPairSide, bool, error) {
+	record, err := s.duplicates.Describe(ctx, entityType, id)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+		return crmcontracts.AttentionPairSide{}, false, nil
+	case err != nil:
+		return crmcontracts.AttentionPairSide{}, false, err
+	default:
+		return pairSide(id, record), true, nil
+	}
+}
+
+func pairSide(id ids.UUID, face RecordFace) crmcontracts.AttentionPairSide {
+	side := crmcontracts.AttentionPairSide{
+		Id:           openapi_types.UUID(id),
+		Label:        face.Label,
+		CreatedAt:    face.CreatedAt,
+		RelatedCount: face.RelatedCount,
+	}
+	if face.Detail != "" {
+		side.Detail = &face.Detail
+	}
+	return side
+}
+
+// evidenceRows keeps the comparisons a client can name.
+//
+// A field or a verdict outside the contract's own enums is DROPPED rather than
+// passed through: the client turns each key into a phrase in the reader's
+// language, and a key it does not know would reach the screen as the database's
+// own column name. That is the leak this rendering exists to close, so it is
+// closed by the sender.
+//
+// Recognition asks the GENERATED enum whether it knows the value, rather than a
+// map kept beside it. A map here would be a third copy of one vocabulary — the
+// detector writes it, the contract publishes it, and a hand-maintained list in
+// the middle can drift from both while every gate stays green.
+// backend/dedupeevidencefields_test.go holds the detector's list against the
+// contract in both directions; this reads the contract directly, so the two
+// ends are all there is.
+func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
+	out := make([]crmcontracts.AttentionPairEvidence, 0, len(rows))
+	for _, row := range rows {
+		field := crmcontracts.AttentionPairEvidenceField(row.Field)
+		signal := crmcontracts.AttentionPairEvidenceSignal(row.Signal)
+		if !field.Valid() || !signal.Valid() {
+			continue
+		}
+		out = append(out, crmcontracts.AttentionPairEvidence{
+			Field:      field,
+			Signal:     signal,
+			LeftValue:  row.Left,
+			RightValue: row.Right,
+		})
+	}
+	return out
 }
 
 // approvalItem renders one staged proposal.
