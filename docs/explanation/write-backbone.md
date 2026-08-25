@@ -218,11 +218,11 @@ already committed:
 
 ## 5. The consumer side — groups & dedupe
 
-`internal/platform/events/subscriber.go` + `dedupe.go`. The catalog declares fifteen consumer
+`internal/platform/events/subscriber.go` + `dedupe.go`. The catalog declares seventeen consumer
 groups; each sees every event once and scales horizontally inside the group. Because Redis groups
 partition only by stream, the workspace and actor filters run in-process.
 
-**What each group does — and which are live.** Eleven are wired to a subscriber today; the other four
+**What each group does — and which are live.** Thirteen are wired to a subscriber today; the other four
 are catalog-declared placeholders with no consumer yet (honest status — the streams carry events, but
 nothing reads these groups). `TestEveryDeclaredConsumerGroupIsSubscribedSomewhere` in
 `backend/consumerlanes_test.go` holds the split: a new group with neither a lane nor a place in the
@@ -236,9 +236,11 @@ broken and nothing at runtime says a word about it.
 | `cg:audience-rescope` | narrow the derived signals citing a message whose audience changed | **live** (worker) |
 | `cg:linkedin-match` | attach a LinkedIn ghost as its contact or employer appears | **live** (worker) |
 | `cg:commissions` | accrue a partner's commission on a won deal, and reverse it on a reopen | **live** (worker) |
+| `cg:deal-room-timeline` | write what happened in a Deal Room onto the deal's timeline | **live** (worker) |
 | `cg:ai-activity` | project every AI-backed occurrence into `ai_task_run`, the table the rail will read once the read moves onto it | **live** (worker) |
 | `cg:person-auto-enrich` | fill a contact from what their employer's site already published | **live** (worker) |
 | `cg:person-data` | fill a contact from a licensed provider, spending credits | **live** (worker) |
+| `cg:org-auto-enrich` | queue a company's auto-enrich pass the moment it appears, instead of on the next daily sweep | **live** (worker) |
 | `cg:overnight-agent` | on `approval.decided`, resume the parked Surface-B run with the human's answer | **live** (worker; only when a model is configured) |
 | `cg:workflows` | dispatch the automation/workflow engine off matching events | **live** (worker) |
 | `cg:webhooks` | deliver subscribed events to outbound endpoints | **live** (api's inline relay) |

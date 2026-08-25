@@ -17,21 +17,34 @@ package compose
 // knowing this consumer exists.
 //
 // It queues the WORKSPACE PASS, not a read for the event's organization.
-// The pass already owns every gate — the auto-enrich setting, the daily
-// budget, the cursor backoff, the dossier check — and re-derives which
-// organizations are due, so this consumer cannot become a second spelling
-// of that decision, and a burst of creates costs redundant no-op passes
-// rather than redundant crawls.
+// The pass owns the gates — the daily budget, the cursor backoff, the
+// dossier check, and the auto-enrich setting for the enrich half (its
+// domain-triage half deliberately runs whatever the setting says; see
+// sweepWorkspace) — and re-derives which organizations are due, so this
+// consumer cannot become a second spelling of that decision, and a burst
+// of creates collapses onto one queued pass.
 
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
 )
+
+// orgAutoEnrichFreshWindow is how old an organization event may be and still
+// queue a pass. This consumer exists for PROMPTNESS alone — the daily sweep
+// already owns everything older — and the bound is what makes first
+// deployment safe: a new consumer group is created at stream position 0
+// (events.Subscriber), so the first boot replays the organization stream's
+// whole history into this handler, and without the bound every historical
+// event would mint a job. An hour is generous for a live event's delivery
+// lag (the relay ships in seconds) while excluding any replayed backlog.
+const orgAutoEnrichFreshWindow = time.Hour
 
 // OrgAutoEnrichTrigger queues one auto-enrich workspace pass per
 // organization event.
@@ -49,9 +62,13 @@ func NewOrgAutoEnrichTrigger(pool *pgxpool.Pool, enqueue *jobs.Runner, log *slog
 // HandleEvent routes one envelope. An event this consumer does not care about
 // answers nil, so the group keeps flowing rather than wedging on somebody
 // else's traffic. An enqueue failure comes back as an error and the bus
-// redelivers — safe, because a redelivered event only queues another no-op
-// pass, and the sweep still reconciles whatever slips through.
+// redelivers — safe, because a redelivered event dedupes onto the pass the
+// first delivery queued, and the sweep still reconciles whatever slips
+// through.
 func (g *OrgAutoEnrichTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if env.Entity.Type != string(recordTypeOrganization) {
+		return nil
+	}
 	switch env.Type {
 	// Every event that can make an organization newly due: appearing,
 	// gaining a domain (a company save's domain change arrives as
@@ -62,19 +79,38 @@ func (g *OrgAutoEnrichTrigger) HandleEvent(ctx context.Context, env events.Envel
 	default:
 		return nil
 	}
+	// A stale event has no promptness left to buy: it is either a replayed
+	// backlog (a freshly created consumer group starts at stream position 0)
+	// or a delivery the bus held for hours, and in both cases the daily
+	// sweep's next pass already covers whatever it announced. Skipping is
+	// nil, not an error — erroring would redeliver the same stale event.
+	if time.Since(env.OccurredAt) > orgAutoEnrichFreshWindow {
+		return nil
+	}
 	// The envelope carries no tenant (ADR-0091 §6); the store's handle names it.
 	ws, err := InstallationDB(g.pool).Workspace(ctx)
 	if err != nil {
 		return err
 	}
-	// One pass per event, no uniqueness — per oneOffChildOpts' own warning: a
-	// pass already RUNNING may have read the workspace before this event's
-	// rows landed, and River refuses a unique-state list that exempts
-	// running, so any dedupe here could drop exactly the organization the
-	// event fired about. The redundant passes a burst produces are a few
-	// SELECTs each: every gate they re-check — the cursor, the in-flight
-	// dossier index, the budget reservation — already makes a second pass
-	// over the same organization a no-op.
+	// The uniqueness is the flood bound: any authenticated writer can emit
+	// organization.updated in a loop (the store's emit has no value-changed
+	// guard), and without it every event would land its own row on the
+	// shared default queue. ByArgs over the active states collapses a burst
+	// onto the one pass already queued or running for this workspace.
+	//
+	// The states include running because River requires it in any custom
+	// list, and that opens the one hole this trigger accepts: a company
+	// created while a pass is mid-run can be deduped against a pass that
+	// listed the due organizations before the new row landed, and then
+	// waits for the reconciling sweep instead of being read promptly. The
+	// alternative — no uniqueness — trades that bounded promptness miss for
+	// an unbounded queue, which is the worse failure. Same args and states
+	// as the fleet dispatcher's insert (workspaceSweepOpts), so the two
+	// doors dedupe against each other instead of stacking; the sweep-tag
+	// gauges may therefore occasionally count a day's coverage against a
+	// trigger-queued pass that did the identical work untagged.
 	child := CaptureAutoEnrichWorkspaceArgs{Workspace: ws.UUID}
-	return g.enqueue.Enqueue(ctx, child, oneOffChildOpts(child.Kind()))
+	opts := oneOffChildOpts(child.Kind())
+	opts.UniqueOpts = river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}
+	return g.enqueue.Enqueue(ctx, child, opts)
 }

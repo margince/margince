@@ -5,9 +5,12 @@
 
 package compose
 
-// The cg:org-auto-enrich trigger: an organization event queues the workspace's
-// auto-enrich pass NOW, a burst of them collapses onto one queued pass, and
-// traffic that is not its business queues nothing.
+// The cg:org-auto-enrich trigger against the real queue: an organization
+// event queues the workspace's auto-enrich pass NOW, addressed to the right
+// workspace, and a burst collapses onto the one pass already queued. The
+// refusal arm — events the trigger ignores — is the unit lane's
+// (orgautoenrich_test.go), where a nil pool proves the refusal precedes the
+// query.
 
 import (
 	"context"
@@ -29,17 +32,6 @@ func TestAnOrganizationEventQueuesTheEnrichPassNow(t *testing.T) {
 	ctx := context.Background()
 	kind := CaptureAutoEnrichWorkspaceArgs{}.Kind()
 
-	// An archive can only make organizations LESS due, so it must queue
-	// nothing — and it must answer nil, because the group carries every
-	// organization event and a consumer that errored on one would wedge the
-	// stream for the rest.
-	if err := trigger.HandleEvent(ctx, envelopeFor(e.WS, "organization.archived", "organization", ids.NewV7())); err != nil {
-		t.Errorf("an archive event errored: %v", err)
-	}
-	if n := countJobsOfKind(ctx, t, e.Pool, kind); n != 0 {
-		t.Fatalf("an archive event queued %d enrich pass(es), want none", n)
-	}
-
 	// A create queues exactly one pass, addressed to the installation's own
 	// workspace — the envelope carries no tenant, so naming the wrong one
 	// here would run the pass against nobody's data and read as a no-op.
@@ -59,15 +51,14 @@ func TestAnOrganizationEventQueuesTheEnrichPassNow(t *testing.T) {
 		t.Errorf("the queued pass names workspace %q, want the installation's %q", workspace, e.WS)
 	}
 
-	// A second event queues its own pass rather than deduping onto the first:
-	// a pass already claimed by a worker may have listed the due organizations
-	// before this event's rows landed, so dropping the event could strand
-	// exactly the company it announced. Redundancy is the cheap side — the
-	// pass's own gates make a repeat over the same organization a no-op.
+	// A burst dedupes onto the pass already queued: the uniqueness is the
+	// flood bound, because any authenticated writer can emit
+	// organization.updated in a loop and every event landing its own row
+	// would bury the shared default queue.
 	if err := trigger.HandleEvent(ctx, envelopeFor(e.WS, "organization.updated", "organization", ids.NewV7())); err != nil {
 		t.Fatalf("organization.updated: %v", err)
 	}
-	if n := countJobsOfKind(ctx, t, e.Pool, kind); n != 2 {
-		t.Fatalf("two organization events left %d queued enrich pass(es), want one each", n)
+	if n := countJobsOfKind(ctx, t, e.Pool, kind); n != 1 {
+		t.Fatalf("a second event left %d queued enrich pass(es), want the burst deduped onto 1", n)
 	}
 }

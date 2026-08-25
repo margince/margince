@@ -202,6 +202,13 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		return lanes, err
 	}
 
+	// A company appearing queues its workspace's enrich pass now; the daily
+	// sweep stays the reconciler. Beside the enqueuing lanes rather than the
+	// projections because a failed inserter must fail the boot.
+	if err := startOrgAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
+		return lanes, err
+	}
+
 	announceGeocoding(cfg.geocodeBaseURL, stdout)
 
 	if err := startWebhookLane(laneCtx, cfg, pool, rdb, &lanes, logger, stdout); err != nil {
@@ -435,8 +442,6 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// matcher above and the same reason: matching only at write time means every
 	// later arrival is a match nobody will ever make.
 	startPersonAutoEnrich(ctx, pool, rdb, background, logger, stdout)
-
-	startOrgAutoEnrichTrigger(ctx, pool, rdb, background, logger, stdout)
 }
 
 // startWebhookLane starts the cg:webhooks delivery consumer, whose deliverer is
