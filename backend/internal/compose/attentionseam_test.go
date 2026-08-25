@@ -50,3 +50,55 @@ func approvalRow(summary string, decidedAt time.Time, decidedBy *openapi_types.U
 		DecidedBy: decidedBy,
 	}
 }
+
+// The receipts read reaches past the reader's own approvals.
+//
+// The filter that decides a receipt — decided_by IS NULL — runs AFTER the page
+// is read, because the engine can only page by status. So the SIZE of that read
+// decides whether an autonomous act is visible at all: a read the size of the
+// lane is filled by the reader's own recent decisions, filters down to nothing,
+// and the lane reports a quiet night while dozens of things ran.
+//
+// The bug was invisible while nothing was auto-applied: there was never an
+// autonomous act to crowd out. The stub answers a page of the reader's own
+// decisions with ONE autonomous act behind them, so a read that stops at the
+// lane's width finds nothing.
+func TestTheReceiptsReadIsWiderThanTheLaneItFills(t *testing.T) {
+	decidedAt := time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)
+	human := openapi_types.UUID(ids.NewV7())
+
+	page := make([]crmcontracts.Approval, 0, doneLaneWidth+2)
+	for i := 0; i < doneLaneWidth+1; i++ {
+		page = append(page, approvalRow("A decision the reader made", decidedAt, &human))
+	}
+	page = append(page, approvalRow("Filed a message under Riverty", decidedAt, nil))
+
+	engine := &stubApprovalPage{rows: page}
+	receipts, err := recentReceipts(decidedAt.Add(-time.Hour), doneLaneWidth, engine.list)
+	if err != nil {
+		t.Fatalf("reading the receipts: %v", err)
+	}
+	if len(receipts) != 1 {
+		t.Fatalf("the lane carries %d receipts; the read stopped at %d rows and never reached the autonomous act",
+			len(receipts), engine.asked)
+	}
+}
+
+// doneLaneWidth is what the day's surface shows in its receipt lane.
+const doneLaneWidth = 8
+
+// stubApprovalPage answers exactly the number of rows it is asked for, which is
+// the whole subject: a seam that asks for the lane's width gets a page of human
+// decisions and filters it to nothing.
+type stubApprovalPage struct {
+	rows  []crmcontracts.Approval
+	asked int
+}
+
+func (s *stubApprovalPage) list(limit int) ([]crmcontracts.Approval, error) {
+	s.asked = limit
+	if limit > len(s.rows) {
+		limit = len(s.rows)
+	}
+	return s.rows[:limit], nil
+}

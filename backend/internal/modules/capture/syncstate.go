@@ -12,12 +12,12 @@ package capture
 import (
 	"context"
 	"errors"
-	"math/rand/v2"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/backoff"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
 )
@@ -72,18 +72,10 @@ func classifySyncError(err error) errorClass {
 	}
 }
 
-// backoffDelay is the transient-failure ladder: 2min·2^n capped at 4h, with
-// ±20% jitter.
+// backoffDelay is this connector's transient-failure ladder. The shape — double
+// per failure, cap, jitter — is shared; the two bounds are this connector's own.
 func backoffDelay(consecutiveFailures int) time.Duration {
-	d := backoffBase
-	for i := 0; i < consecutiveFailures && d < backoffCap; i++ {
-		d *= 2
-	}
-	if d > backoffCap {
-		d = backoffCap
-	}
-	jitter := 0.8 + 0.4*rand.Float64() //nolint:gosec // G404: scheduling jitter, not key material — de-syncs a fleet that failed together
-	return time.Duration(float64(d) * jitter)
+	return backoff.Jittered(consecutiveFailures, backoffBase, backoffCap)
 }
 
 // recordSyncSuccess resets the ladder, paces the next sync one interval out,
