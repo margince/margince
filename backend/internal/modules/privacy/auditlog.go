@@ -180,6 +180,32 @@ func isJSONBool(raw json.RawMessage) bool {
 	return json.Unmarshal(raw, &flag) == nil
 }
 
+// UnscrubbedImageSQL renders the erasure boundary as a predicate over one
+// audit_log row, aliased for the query using it.
+//
+// Exported because the boundary has more than one reader and must have exactly
+// one spelling. Three reads of the spine take it — field history, record history
+// and the compliance log — and the workspace export reads the table too; the
+// defect this closes was those readers not agreeing. A second copy of these six
+// lines would be the same defect with better intentions.
+//
+// verbsPlaceholder is the caller's own bind placeholder for ScrubVerbs(): each
+// query numbers its arguments its own way, and a literal verb list here would
+// put the vocabulary in two places instead of one.
+func UnscrubbedImageSQL(alias, verbsPlaceholder string) string {
+	return fmt.Sprintf(`NOT EXISTS (
+		  SELECT 1 FROM audit_log scrub
+		   WHERE scrub.entity_type = %[1]s.entity_type
+		     AND scrub.entity_id = %[1]s.entity_id
+		     AND scrub.action = ANY(%[2]s)
+		     AND (scrub.occurred_at, scrub.id) > (%[1]s.occurred_at, %[1]s.id))`,
+		alias, verbsPlaceholder)
+}
+
+// ScrubVerbs are the verbs certifying a record's PII was scrubbed in place.
+// scrubverbs_test.go holds every verb this module writes against this list.
+func ScrubVerbs() []string { return fieldHistoryScrubActions }
+
 // scanAuditEntry reads one ledger line and applies what the row itself says a
 // caller may see of it.
 //
@@ -348,13 +374,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        actor_user.display_name, obo.display_name,
 			        (a.entity_type <> 'activity'
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
-			        NOT EXISTS (
-			          SELECT 1 FROM audit_log scrub
-			           WHERE scrub.entity_type = a.entity_type
-			             AND scrub.entity_id = a.entity_id
-			             AND scrub.action = ANY(`+arg(fieldHistoryScrubActions)+`)
-			             AND (scrub.occurred_at, scrub.id) > (a.occurred_at, a.id)
-			        ) AS images_readable
+			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditActorNameJoins+auditActivityJoin+`
 			 WHERE `+where+`
 			 ORDER BY a.occurred_at DESC, a.id DESC

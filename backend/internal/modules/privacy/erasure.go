@@ -153,7 +153,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		// the body before any activity exists, so nothing above this line can
 		// reach them — and a scheduled one would otherwise fire the morning
 		// after this erasure certified the data destroyed.
-		if err := redactScheduledSends(ctx, tx, emails); err != nil {
+		if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life
@@ -178,7 +178,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		// transaction (objects first). A failure here — including a
 		// misconfigured store — rolls the whole erasure back, so it stays
 		// retryable and never commits a half-erasure.
-		if err := e.eraseAttachments(ctx, tx, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
+		if err := e.eraseAttachments(ctx, tx, reason, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
 			return err
 		}
 		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, emails, identities)

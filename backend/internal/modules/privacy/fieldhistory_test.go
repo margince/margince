@@ -262,7 +262,8 @@ func TestDiffSaysNothingAboutAFieldThatWasNeverFilled(t *testing.T) {
 // jsonb numbers decoded as float64 lose the low bits past 2^53, so a stored
 // id or amount came back as a DIFFERENT number than the record holds.
 func TestDiffRendersALargeNumberExactly(t *testing.T) {
-	row := fhRow("human",
+	row := fhRow(
+		"human",
 		map[string]any{"external_id": json.Number("9007199254740993")},
 		map[string]any{"external_id": json.Number("9007199254740995")},
 	)

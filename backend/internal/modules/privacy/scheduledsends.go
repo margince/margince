@@ -51,14 +51,17 @@ import (
 // state-shape CHECK reserves held_reason for holds), and the delivery scrub's
 // park reason has no analogue here: nothing was handed to a provider, so there
 // is no operator waiting to be told why a transmission stopped.
-func redactScheduledSends(ctx context.Context, tx pgx.Tx, emails []string) error {
+func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails []string) error {
 	if len(emails) == 0 {
 		return nil
 	}
 	// jsonb ?| asks whether any of these addresses appears in the array. The
 	// payload keeps To, Cc and Bcc in one merged recipients list, so one test
 	// covers all three — a blind copy is not a hiding place.
-	if _, err := tx.Exec(ctx, `
+	// The schedule's audit image carries the message SUBJECT verbatim, so
+	// emptying the payload is only half the scrub: the other half is the
+	// tombstone that stops the spine's readers before the image that quoted it.
+	scrubbed, err := scrubbedIDs(ctx, tx, `
 		UPDATE scheduled_send
 		   SET payload = jsonb_build_object(
 		         'recipients', '[]'::jsonb,
@@ -71,8 +74,10 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, emails []string) error
 		       updated_at = now()
 		 WHERE payload->'recipients' ?| $1
 		    OR payload->'cc' ?| $1
-		    OR payload->'bcc' ?| $1`, emails); err != nil {
+		    OR payload->'bcc' ?| $1
+		 RETURNING id`, emails)
+	if err != nil {
 		return fmt.Errorf("redacting the scheduled messages addressed to the subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "scheduled_send", scrubbed, reason)
 }

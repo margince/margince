@@ -384,3 +384,42 @@ func TestTheBoundaryHoldsOnThePageAfterTheFirst(t *testing.T) {
 		}
 	}
 }
+
+// The two entity types the boundary could not reach until the erasure tombstoned
+// them. An attachment's create image carries the FILENAME somebody typed —
+// routinely the subject's own name — and a scheduled send's carries the message
+// SUBJECT. Neither type is projected by field history, so the compliance log is
+// the only door they were ever readable through, and the boundary only fires
+// where a tombstone exists.
+func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
+	for _, entityType := range []string{"attachment", "scheduled_send"} {
+		t.Run(entityType, func(t *testing.T) {
+			e := setupAuditBoundary(t)
+			id := ids.NewV7()
+			if _, err := e.owner.Exec(context.Background(),
+				`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
+				 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
+				         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
+				ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
+				t.Fatalf("seeding the %s image: %v", entityType, err)
+			}
+			if _, err := e.owner.Exec(context.Background(),
+				`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+				 VALUES ($1, 'human', 'user:'||$2::text, 'erase', $3, $4, $5)`,
+				ids.NewV7(), e.user, entityType, id, boundaryErasure); err != nil {
+				t.Fatalf("seeding the %s tombstone: %v", entityType, err)
+			}
+
+			limit := 50
+			page, err := ListAuditLog(e.ctx, e.db, AuditFilter{EntityType: &entityType, EntityID: &id, Limit: &limit})
+			if err != nil {
+				t.Fatalf("ListAuditLog: %v", err)
+			}
+			for _, entry := range page.Entries {
+				if strings.Contains(string(entry.After), "Sara Subject") {
+					t.Errorf("an erased %s still names the subject: %s", entityType, entry.After)
+				}
+			}
+		})
+	}
+}
