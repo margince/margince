@@ -1222,6 +1222,108 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for AttentionLanesOmitted.
+const (
+	DoneForYou AttentionLanesOmitted = "done_for_you"
+	NeedsYou   AttentionLanesOmitted = "needs_you"
+	Planned    AttentionLanesOmitted = "planned"
+)
+
+// Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
+func (e AttentionLanesOmitted) Valid() bool {
+	switch e {
+	case DoneForYou:
+		return true
+	case NeedsYou:
+		return true
+	case Planned:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionItemActions.
+const (
+	AttentionItemActionsComplete AttentionItemActions = "complete"
+	AttentionItemActionsDecide   AttentionItemActions = "decide"
+	AttentionItemActionsMerge    AttentionItemActions = "merge"
+	AttentionItemActionsOpen     AttentionItemActions = "open"
+	AttentionItemActionsSnooze   AttentionItemActions = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the AttentionItemActions enum.
+func (e AttentionItemActions) Valid() bool {
+	switch e {
+	case AttentionItemActionsComplete:
+		return true
+	case AttentionItemActionsDecide:
+		return true
+	case AttentionItemActionsMerge:
+		return true
+	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionItemSource.
+const (
+	AttentionItemSourceApproval        AttentionItemSource = "approval"
+	AttentionItemSourceBriefItem       AttentionItemSource = "brief_item"
+	AttentionItemSourceDedupeCandidate AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceTask            AttentionItemSource = "task"
+)
+
+// Valid indicates whether the value is a known member of the AttentionItemSource enum.
+func (e AttentionItemSource) Valid() bool {
+	switch e {
+	case AttentionItemSourceApproval:
+		return true
+	case AttentionItemSourceBriefItem:
+		return true
+	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionSubjectType.
+const (
+	AttentionSubjectTypeActivity     AttentionSubjectType = "activity"
+	AttentionSubjectTypeDeal         AttentionSubjectType = "deal"
+	AttentionSubjectTypeLead         AttentionSubjectType = "lead"
+	AttentionSubjectTypeOrganization AttentionSubjectType = "organization"
+	AttentionSubjectTypePerson       AttentionSubjectType = "person"
+	AttentionSubjectTypeProject      AttentionSubjectType = "project"
+)
+
+// Valid indicates whether the value is a known member of the AttentionSubjectType enum.
+func (e AttentionSubjectType) Valid() bool {
+	switch e {
+	case AttentionSubjectTypeActivity:
+		return true
+	case AttentionSubjectTypeDeal:
+		return true
+	case AttentionSubjectTypeLead:
+		return true
+	case AttentionSubjectTypeOrganization:
+		return true
+	case AttentionSubjectTypePerson:
+		return true
+	case AttentionSubjectTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuditHistoryEntryActorType.
 const (
 	AuditHistoryEntryActorTypeAgent     AuditHistoryEntryActorType = "agent"
@@ -11676,22 +11778,22 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
-	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
-	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
+	Dropped       ListSignalsParamsResolutionState = "dropped"
+	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	Resolved      ListSignalsParamsResolutionState = "resolved"
+	Unresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case ListSignalsParamsResolutionStateDropped:
+	case Dropped:
 		return true
-	case ListSignalsParamsResolutionStateLowConfidence:
+	case LowConfidence:
 		return true
-	case ListSignalsParamsResolutionStateResolved:
+	case Resolved:
 		return true
-	case ListSignalsParamsResolutionStateUnresolved:
+	case Unresolved:
 		return true
 	default:
 		return false
@@ -12822,6 +12924,112 @@ type AttachmentReadStarted struct {
 
 // AttachmentReadStartedStatus defines model for AttachmentReadStarted.Status.
 type AttachmentReadStartedStatus string
+
+// Attention What is waiting on the acting rep right now, in three tiers, plus the counts that
+// let a badge be drawn without paging the lanes. Every count here is scoped the way
+// its lane is scoped: a number a caller cannot page to would report the existence of
+// records they may not read.
+type Attention struct {
+	// AsOf The instant every lane below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Counts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
+	// queue's own count under its both-sides-visible rule, kept separate because the
+	// lane shows a bounded slice of it.
+	Counts AttentionCounts `json:"counts"`
+
+	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
+	DoneForYou []AttentionItem `json:"done_for_you"`
+
+	// LanesOmitted Lanes withheld because the caller may not read what they contain. Never returned empty instead.
+	LanesOmitted *[]AttentionLanesOmitted `json:"lanes_omitted,omitempty"`
+
+	// Lead One sentence naming what the day actually holds, in the reader's language.
+	// Absent when there is nothing to lead with, which is itself the honest answer.
+	Lead *string `json:"lead,omitempty"`
+
+	// NeedsYou Decisions only a person can make, highest-stakes first.
+	NeedsYou []AttentionItem `json:"needs_you"`
+
+	// Planned Work already agreed: overdue first, then due today.
+	Planned []AttentionItem `json:"planned"`
+}
+
+// AttentionLanesOmitted defines model for Attention.LanesOmitted.
+type AttentionLanesOmitted string
+
+// AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
+// queue's own count under its both-sides-visible rule, kept separate because the
+// lane shows a bounded slice of it.
+type AttentionCounts struct {
+	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
+	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
+	NeedsYou       int  `json:"needs_you"`
+	Planned        int  `json:"planned"`
+}
+
+// AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
+// the record that owns it. The client routes a verb to that owner's endpoint — this
+// feed adds no decision authority of its own, exactly as the second approvals door
+// adds none.
+type AttentionItem struct {
+	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
+	// person must choose; `complete` and `snooze` are a task's own verbs; `open` is
+	// the read-only fallback for a receipt.
+	Actions []AttentionItemActions `json:"actions"`
+
+	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
+	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Detail One supporting line: what changed, or what the evidence said.
+	Detail *string `json:"detail,omitempty"`
+
+	// DueAt When this is due (tasks), or when it lapses (approvals).
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// Id The owning record's id, as its own endpoint spells it.
+	Id string `json:"id"`
+
+	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
+	Kind *string `json:"kind,omitempty"`
+
+	// OccurredAt When a done_for_you receipt actually happened.
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
+	Overdue *bool `json:"overdue,omitempty"`
+
+	// Source Which producer raised it, and therefore which endpoint its verbs go to.
+	Source AttentionItemSource `json:"source"`
+
+	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
+	Subject *AttentionSubject `json:"subject,omitempty"`
+
+	// Title The server's own sentence for this item, when it has one — an approval
+	// summary is composed at staging time out of the proposal's own facts.
+	// ABSENT where the sentence would have to be invented: the product ships
+	// three languages, so a duplicate pair sends its `kind` and `confidence`
+	// and the client writes the line in the reader's own.
+	Title *string `json:"title,omitempty"`
+}
+
+// AttentionItemActions defines model for AttentionItem.Actions.
+type AttentionItemActions string
+
+// AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+type AttentionItemSource string
+
+// AttentionSubject The record this item is about, named so a reader knows who it concerns before opening anything.
+type AttentionSubject struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Label The record's display name. Absent when the caller may not read it, which is not the same as unnamed.
+	Label *string              `json:"label,omitempty"`
+	Type  AttentionSubjectType `json:"type"`
+}
+
+// AttentionSubjectType defines model for AttentionSubject.Type.
+type AttentionSubjectType string
 
 // AuditHistoryEntry One rendered history line for a record mutation. `before`/`after` are
 // masked to the viewer's readable fields — an absent key was hidden, not null.
@@ -36513,6 +36721,9 @@ type ServerInterface interface {
 	// Request access to a restricted attachment (audit row only — no notification system).
 	// (POST /attachments/{id}/request-access)
 	RequestAttachmentAccess(w http.ResponseWriter, r *http.Request, id Id)
+	// Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
+	// (GET /attention)
+	GetAttention(w http.ResponseWriter, r *http.Request)
 	// Read the human+agent-attributable audit log (Settings governance view).
 	// (GET /audit-log)
 	ListAuditLog(w http.ResponseWriter, r *http.Request, params ListAuditLogParams)
@@ -38085,6 +38296,12 @@ func (_ Unimplemented) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.R
 // Request access to a restricted attachment (audit row only — no notification system).
 // (POST /attachments/{id}/request-access)
 func (_ Unimplemented) RequestAttachmentAccess(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
+// (GET /attention)
+func (_ Unimplemented) GetAttention(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -42773,6 +42990,28 @@ func (siw *ServerInterfaceWrapper) RequestAttachmentAccess(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RequestAttachmentAccess(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAttention operation middleware
+func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAttention(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -62293,6 +62532,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/attachments/{id}/request-access", wrapper.RequestAttachmentAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/attention", wrapper.GetAttention)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/audit-log", wrapper.ListAuditLog)
