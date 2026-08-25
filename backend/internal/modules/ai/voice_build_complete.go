@@ -188,23 +188,28 @@ func (s *VoiceStore) persistBuildVersion(ctx context.Context, tx pgx.Tx, build V
 	if err != nil {
 		return VoiceProfileVersion{}, fmt.Errorf("voice build stats encode: %w", err)
 	}
-	reviewReasons := outcome.ReviewReasons
-	if reviewReasons == nil {
-		reviewReasons = []string{}
-	}
-	version, err := scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(`
-		INSERT INTO voice_profile_version
-		  (voice_profile_id, profile_version, status, voice_profile_md,
-		   profile_json, stats_json, source_hash, source_count, reason, predecessor_version,
-		   model_provider, model_name, builder_version, activation_policy_version,
-		   evaluation_json, review_reasons, activated_at, source, captured_by, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, '2', $14, $15, $16, 'build', $17, $18)
-		RETURNING %s`, voiceVersionColumns),
-		build.ProfileID, nextVersion, status, outcome.Artifact.Markdown,
-		storekit.JSONArg(profileJSON), statsJSON,
-		build.SourceHash, build.SourceCount, build.Reason, voicePredecessor(profile.ProfileVersion),
-		outcome.ModelProvider, outcome.ModelName, fmt.Sprintf("voicebuilder/%d", VoiceBuilderVersion),
-		storekit.JSONArg(outcome.Evaluation), reviewReasons, activatedAt, actorID, now))
+	version, err := insertVoiceVersion(ctx, tx, voiceVersionRow{
+		profileID:               build.ProfileID,
+		profileVersion:          nextVersion,
+		status:                  status,
+		voiceProfileMD:          outcome.Artifact.Markdown,
+		profileJSON:             storekit.JSONArg(profileJSON),
+		statsJSON:               statsJSON,
+		sourceHash:              build.SourceHash,
+		sourceCount:             build.SourceCount,
+		reason:                  build.Reason,
+		predecessorVersion:      voicePredecessor(profile.ProfileVersion),
+		modelProvider:           outcome.ModelProvider,
+		modelName:               outcome.ModelName,
+		builderVersion:          fmt.Sprintf("voicebuilder/%d", VoiceBuilderVersion),
+		activationPolicyVersion: "2",
+		evaluation:              storekit.JSONArg(outcome.Evaluation),
+		reviewReasons:           outcome.ReviewReasons,
+		activatedAt:             activatedAt,
+		source:                  voiceVersionSourceBuild,
+		capturedBy:              actorID,
+		now:                     now,
+	})
 	if err != nil {
 		return VoiceProfileVersion{}, err
 	}
@@ -244,14 +249,14 @@ func insertVoiceBuildDelta(ctx context.Context, tx pgx.Tx, build VoiceBuild, pro
 			delta[key] = value
 		}
 	}
-	_, err := tx.Exec(ctx, `
-		INSERT INTO voice_profile_delta
-		  (voice_profile_id, from_version, to_version, classification,
-		   activation_outcome, delta_json)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		build.ProfileID, voicePredecessor(profile.ProfileVersion), nextVersion,
-		outcome.Classification, outcome.Action, storekit.JSONArg(delta))
-	return err
+	return insertVoiceDelta(ctx, tx, voiceDeltaRow{
+		profileID:         build.ProfileID,
+		fromVersion:       voicePredecessor(profile.ProfileVersion),
+		toVersion:         nextVersion,
+		classification:    outcome.Classification,
+		activationOutcome: outcome.Action,
+		delta:             delta,
+	})
 }
 
 // ActiveVersion returns the profile's current active version, or ok=false
