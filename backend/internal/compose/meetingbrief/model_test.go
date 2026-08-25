@@ -37,7 +37,7 @@ func (l *laneReturning) Complete(_ context.Context, req model.Request) (model.Re
 
 func TestNoLaneIsTheDeterministicFloorRatherThanAnError(t *testing.T) {
 	sections, by := Write(context.Background(), nil, fullInput(), string(textlang.English))
-	if by != crmcontracts.WrittenByDeterministic {
+	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %v, want deterministic for a deployment with no model", by)
 	}
 	if len(sections) == 0 {
@@ -48,7 +48,7 @@ func TestNoLaneIsTheDeterministicFloorRatherThanAnError(t *testing.T) {
 func TestALaneThatFailsFallsBackAndSaysSo(t *testing.T) {
 	lane := &laneReturning{err: errors.New("over budget")}
 	sections, by := Write(context.Background(), lane, fullInput(), string(textlang.English))
-	if by != crmcontracts.WrittenByDeterministic {
+	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %v, want deterministic when the lane failed", by)
 	}
 	if len(sections) == 0 {
@@ -62,7 +62,7 @@ func TestARepliedBriefIsAttributedToTheModel(t *testing.T) {
 		{"text":"Get them to name a date.","nature":"recommendation",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
 	sections, by := Write(context.Background(), lane, in, string(textlang.English))
-	if by != crmcontracts.WrittenByModel {
+	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model for a reply that survived the filter", by)
 	}
 	// The goal is the model's; the rest is the floor's, restored because the
@@ -81,7 +81,7 @@ func TestASentenceCitingARecordTheBriefNeverSawIsDropped(t *testing.T) {
 		{"text":"Real.","nature":"fact",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
 	sections, by := Write(context.Background(), lane, in, string(textlang.English))
-	if by != crmcontracts.WrittenByModel {
+	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model", by)
 	}
 	for _, line := range sections[0].Sentences {
@@ -96,7 +96,7 @@ func TestAReplyThatCitesNothingRealFallsBackToTheFloor(t *testing.T) {
 		{"text":"All invented.","nature":"fact",
 		 "evidence":[{"entity_type":"deal","entity_id":"0198f000-0000-7000-8000-0000000000ff"}]}]}]}`}
 	sections, by := Write(context.Background(), lane, fullInput(), string(textlang.English))
-	if by != crmcontracts.WrittenByDeterministic {
+	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %v, want the floor when nothing survived grounding", by)
 	}
 	if len(sections) == 0 {
@@ -178,7 +178,7 @@ func TestASparseReplyKeepsTheFloorsCoverage(t *testing.T) {
 		{"text":"Get them to name a date.","nature":"recommendation",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
 	sections, by := Write(context.Background(), lane, in, string(textlang.English))
-	if by != crmcontracts.WrittenByModel {
+	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %v, want model", by)
 	}
 	for _, want := range floor {

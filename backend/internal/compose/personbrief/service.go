@@ -116,7 +116,7 @@ func (s *Service) Get(ctx context.Context, personID ids.PersonID, force bool) (c
 		Fingerprint: fingerprint,
 		Version:     storedVersion,
 		GeneratedAt: s.now().UTC(),
-		GeneratedBy: crmcontracts.WrittenByDeterministic,
+		GeneratedBy: crmcontracts.Deterministic,
 		Sentences:   Deterministic(personID.String(), in),
 	}
 	if err := s.save(ctx, userID, personID, written); err != nil {

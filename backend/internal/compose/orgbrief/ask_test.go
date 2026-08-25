@@ -405,7 +405,7 @@ func TestAnAnswerSpellingIDsFallsBackToTheFloor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("answer: %v", err)
 	}
-	if by != crmcontracts.WrittenByDeterministic {
+	if by != crmcontracts.Deterministic {
 		t.Errorf("generated_by = %q, want the floor — every model sentence spelled an id", by)
 	}
 	if len(answered) == 0 {

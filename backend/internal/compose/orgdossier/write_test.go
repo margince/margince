@@ -37,7 +37,7 @@ func TestEveryDossierModelFailureFallsBackToADescribedCompany(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, by, _ := WriteDossier(context.Background(), lane, in, string(textlang.English))
 
-			if by != crmcontracts.WrittenByDeterministic {
+			if by != crmcontracts.Deterministic {
 				t.Errorf("generated_by = %q, want deterministic — the model did not produce this", by)
 			}
 			if len(got) == 0 {
@@ -63,7 +63,7 @@ func TestAGroundedDossierIsServedAsTheModels(t *testing.T) {
 
 	got, by, _ := WriteDossier(context.Background(), lane, in, string(textlang.English))
 
-	if by != crmcontracts.WrittenByModel {
+	if by != crmcontracts.Model {
 		t.Fatalf("generated_by = %q, want model", by)
 	}
 	if len(got) != 1 || got[0].Kind != sectionSummary {

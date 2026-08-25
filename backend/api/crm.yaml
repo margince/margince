@@ -148,6 +148,10 @@ tags:
     description: >-
       Where a generated claim came from. Every sentence these surfaces write carries the records
       it was written from, and this is what a reader gets when they open one.
+  - name: Knowledge
+    description: >-
+      Workspace-uploaded document corpora and the grounded ask over them — answers
+      built only from what was filed, or a refusal that says which of the two it is.
   - name: Overlay
     description: The HubSpot mirror overlay — incumbent connection, mirror sync health, budget, and the read→overlay flip.
 
@@ -15303,7 +15307,7 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/KnowledgeCorpus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
     post:
       tags: [Knowledge]
       operationId: createCorpus
@@ -15330,7 +15334,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}:
@@ -15341,7 +15345,7 @@ paths:
       operationId: readCorpus
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
-      summary: One corpus, with its documents' coverage.
+      summary: One corpus and how much of it is searchable.
       responses:
         '200':
           description: The corpus.
@@ -15349,7 +15353,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [Knowledge]
@@ -15376,7 +15380,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
@@ -15391,7 +15395,7 @@ paths:
       responses:
         '204': { description: Archived. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /knowledge/corpora/{id}/documents:
@@ -15422,7 +15426,7 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/KnowledgeDocument' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /knowledge/documents/{id}:
@@ -15441,7 +15445,7 @@ paths:
       responses:
         '204': { description: Deleted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /knowledge/corpora/{id}/ask:
@@ -15485,7 +15489,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KnowledgeAnswer' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -29092,12 +29096,36 @@ components:
         filename: { type: string }
         content_type: { type: string }
         byte_size: { type: integer, format: int64 }
-        ingest_status: { type: string, enum: [queued, running, done, failed] }
+        ingest_status:
+          type: string
+          enum: [queued, running, done, failed]
+          # Pinned for the same reason as KnowledgeAnswer.outcome: Queued/Running/
+          # Done/Failed are names the whole contract package would have to live
+          # with, and their prefixing today depends on an unrelated collision.
+          x-enum-varnames:
+            [KnowledgeDocumentIngestStatusQueued, KnowledgeDocumentIngestStatusRunning, KnowledgeDocumentIngestStatusDone, KnowledgeDocumentIngestStatusFailed]
         ingest_detail:
           type: [string, 'null']
           description: Why it failed, in words the uploader can act on. Null unless failed.
         chunk_count: { type: integer }
         created_at: { type: string, format: date-time }
+
+    KnowledgeAnswerCorpus:
+      type: object
+      required: [id, name, topic_statement]
+      description: >-
+        The corpus as an ANSWER needs it: enough to name what was searched and to
+        quote the topic statement back in a refusal, and nothing else. It is not
+        KnowledgeCorpus, because that one carries coverage — which the answer already
+        reports at its own top level — and an answer shipping the same counts down two
+        paths is two components rendering different numbers on one screen with nothing
+        to fail when they disagree. The settings a corpus is administered by
+        (min_similarity, default_ask, reindexing) are no business of a reply.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        topic_statement: { type: string }
+        tuning_stale: { type: boolean }
 
     KnowledgeClaim:
       type: object
@@ -29124,6 +29152,13 @@ components:
         outcome:
           type: string
           enum: [answered, not_covered, not_ready, retrieval_unavailable]
+          # Pins the generated Go constant names. Unpinned, these four land as a
+          # bare Answered/NotCovered/NotReady/RetrievalUnavailable in the package
+          # every contract type shares — identifiers far too generic to carry
+          # there, and ones the generator only prefixes when something else
+          # happens to collide with them.
+          x-enum-varnames:
+            [KnowledgeAnswerOutcomeAnswered, KnowledgeAnswerOutcomeNotCovered, KnowledgeAnswerOutcomeNotReady, KnowledgeAnswerOutcomeRetrievalUnavailable]
           description: >-
             The four are not interchangeable. not_covered is a statement about the
             QUESTION; not_ready is a statement about the corpus; retrieval_unavailable
@@ -29133,6 +29168,6 @@ components:
           type: array
           items: { $ref: '#/components/schemas/KnowledgeClaim' }
           description: The answer IS this list, in order. Empty unless outcome is answered.
-        corpus: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        corpus: { $ref: '#/components/schemas/KnowledgeAnswerCorpus' }
         coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
-        generated_by: { type: string, enum: [model, deterministic] }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }

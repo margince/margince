@@ -10198,7 +10198,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** One corpus, with its documents' coverage. */
+        /** One corpus and how much of it is searchable. */
         get: operations["readCorpus"];
         put?: never;
         post?: never;
@@ -21967,6 +21967,14 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply. */
+        KnowledgeAnswerCorpus: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            topic_statement: string;
+            tuning_stale?: boolean;
+        };
         KnowledgeClaim: {
             /** @description One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written. */
             text?: string | null;
@@ -21986,10 +21994,9 @@ export interface components {
             outcome: "answered" | "not_covered" | "not_ready" | "retrieval_unavailable";
             /** @description The answer IS this list, in order. Empty unless outcome is answered. */
             claims?: components["schemas"]["KnowledgeClaim"][];
-            corpus: components["schemas"]["KnowledgeCorpus"];
+            corpus: components["schemas"]["KnowledgeAnswerCorpus"];
             coverage: components["schemas"]["KnowledgeCoverage"];
-            /** @enum {string} */
-            generated_by: "model" | "deterministic";
+            generated_by: components["schemas"]["WrittenBy"];
         };
     };
     responses: {
@@ -39666,7 +39673,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     createCorpus: {
@@ -39699,7 +39706,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -39725,7 +39732,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -39749,7 +39756,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -39786,7 +39793,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -39815,7 +39822,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -39839,7 +39846,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -39871,7 +39878,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
