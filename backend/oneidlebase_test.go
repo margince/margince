@@ -172,8 +172,16 @@ func qualifiedBefore(before string) bool {
 	return formatVerb.MatchString(before)
 }
 
+// isIdentifierByte is what may CONTINUE an unquoted Postgres identifier.
+//
+// `$` is one of them, which is not obvious and matters here: without it
+// `last_activity_at$old` and `previous$last_activity_at` are two different
+// columns that this detector would read as the canonical pair, and a coalesce
+// over them would be claimed as a second copy of a rule it does not spell.
+// A `$` in a statement is far more often a placeholder, which is why it is easy
+// to leave out of a boundary rule.
 func isIdentifierByte(b byte) bool {
-	return b == '_' || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9')
+	return b == '_' || b == '$' || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9')
 }
 
 // lastActivityName and creationName recognise the two columns in Go spelling —
@@ -466,6 +474,10 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 			"func f() { q(`coalesce(last_activity_at_utc, created_at_utc)`) }",
 		"a prefixed column that merely ends the same way": "" +
 			"func f() { q(`coalesce(previous_last_activity_at, previous_created_at)`) }",
+		"columns suffixed with a dollar, which Postgres allows inside a name": "" +
+			"func f() { q(`coalesce(last_activity_at$old, created_at$old)`) }",
+		"and prefixed with one": "" +
+			"func f() { q(`coalesce(previous$last_activity_at, previous$created_at)`) }",
 	}
 	for name, body := range nearMisses {
 		if spellsTheIdleBase("x.go", parseGateFixture(t, "package p\n"+body)) {
