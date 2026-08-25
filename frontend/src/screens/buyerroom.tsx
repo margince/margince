@@ -3,6 +3,7 @@ import { Download, LogOut, Mail } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { forgetHashCredential, takeHashCredential } from "../app/router";
 import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -18,8 +19,10 @@ import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside person ever
 // reaches in this app. Anonymous: no seat, no cookie. The invitation link lands
-// on `#/room?c=<credential>`; the credential is read once, scrubbed from the
-// address bar, and exchanged for a room session the tab keeps in
+// on `#/room?c=<credential>`; the credential comes out of the address bar as the
+// router reads the hash (app/router.tsx's takeHashCredential, which is ahead of
+// every gate that can render instead of this screen), and this screen takes it
+// from there and exchanges it for a room session the tab keeps in
 // sessionStorage and presents as a Bearer on every call. A dead link, a paused
 // room and an expired one each get their own honest screen and their own way
 // back, and none of them names anything the link did not already name.
@@ -28,30 +31,6 @@ type BuyerRoomView = components["schemas"]["BuyerRoomView"];
 
 const SESSION_KEY = "margince.room.session";
 const ROOM_ROUTE = "room";
-
-// credentialFromLocation reads `c` out of the hash's query and scrubs it —
-// replaceState, not a hash assignment, so the credential does not come back
-// through history. The identity module's reset link does the same.
-function credentialFromLocation(): string | null {
-  if (typeof globalThis.location === "undefined") {
-    return null;
-  }
-  const hash = globalThis.location.hash.replace(/^#\/?/, "");
-  if (hash.split("?")[0] !== ROOM_ROUTE || !hash.includes("?")) {
-    return null;
-  }
-  const credential = new URLSearchParams(hash.slice(hash.indexOf("?") + 1)).get(
-    "c",
-  );
-  if (credential) {
-    globalThis.history?.replaceState?.(
-      null,
-      "",
-      `${globalThis.location.pathname}${globalThis.location.search}#/${ROOM_ROUTE}`,
-    );
-  }
-  return credential;
-}
 
 function readSession(): string | null {
   try {
@@ -107,17 +86,17 @@ function retireOnRefusal(onSessionLost: () => void) {
 export function BuyerRoomScreen() {
   // Read at mount AND whenever the address changes to carry a new one.
   //
-  // The credential is scrubbed from the bar as soon as it is read, so a
-  // re-render never finds the same one twice — but a SECOND link pasted into a
-  // tab already sitting on #/room changes only the hash, which React does not
-  // treat as a new mount. Reading once meant that link was ignored and the tab
-  // went on presenting whatever session it already held, including a dead one:
-  // the buyer sees "Nothing published yet" for a room that has published, and
-  // concludes the link is broken.
-  const [credential, setCredential] = useState(credentialFromLocation);
+  // A SECOND link pasted into a tab already sitting on #/room changes only the
+  // hash, which React does not treat as a new mount. Reading once meant that
+  // link was ignored and the tab went on presenting whatever session it already
+  // held, including a dead one: the buyer sees "Nothing published yet" for a
+  // room that has published, and concludes the link is broken.
+  const [credential, setCredential] = useState(() =>
+    takeHashCredential(ROOM_ROUTE),
+  );
   useEffect(() => {
     const onHashChange = () => {
-      const next = credentialFromLocation();
+      const next = takeHashCredential(ROOM_ROUTE);
       if (next) {
         setCredential(next);
       }
@@ -177,6 +156,10 @@ export function BuyerRoomScreen() {
       return;
     }
     spent.current.add(credential);
+    // Out of the router's memory as well, which is where the address used to
+    // hold it: this tab is spending it now, and a remount that found it there
+    // would spend it again and be refused for a session that is working.
+    forgetHashCredential(ROOM_ROUTE, credential);
     awaiting.current = credential;
     // The session the tab already holds is KEPT while the new link is checked.
     // Clearing it first showed the dead-link page over a room the person could
