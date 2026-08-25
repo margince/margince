@@ -127,6 +127,7 @@ expect "a similar title is a different finding" \
 readonly GATES_TITLE="main is red: the backend gate fails on the tip"
 readonly INTEGRATION_TITLE="main is red: the integration lane fails on the tip"
 readonly FRONTEND_TITLE="main is red: the frontend lane fails on the tip"
+readonly UAT_TITLE="main is red: the screen-acceptance UAT fails on the tip"
 readonly SONAR_TITLE="main's SonarCloud analysis was not published"
 readonly SUSPECTS="- \`deadbeef\` Some Author — the commit that did it"
 
@@ -215,6 +216,16 @@ expect_health "a red frontend lane on main is filed with its suspect range" \
 # this file is what holds that, rather than this comment.
 expect_health "a red frontend lane with no range still files" \
 	MAIN_FRONTEND_RESULT "$FRONTEND_TITLE" ""
+
+# The screen-acceptance arm. It is the only lane that answers whether the pages
+# RENDER — the SPA lane above it passes over code that builds and never mounts —
+# and on a pull request it is classifier-gated, so the tip is the one place it is
+# asked unconditionally.
+expect_health "a red uat lane on main is filed with its suspect range" \
+	MAIN_UAT_RESULT "$UAT_TITLE" "$SUSPECTS"
+
+expect_health "a red uat lane with no range still files" \
+	MAIN_UAT_RESULT "$UAT_TITLE" ""
 
 # The publisher, which is the arm that exists because its failure is invisible:
 # a stale analysis reads exactly like a current one, so nothing but this issue

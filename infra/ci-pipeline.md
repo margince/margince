@@ -530,9 +530,19 @@ beside the gate, deliberately outside it:
   rather than per-push.
 
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
-  real-Postgres lane and the SPA lane (the last two called, not copied — it
-  `uses:` `_lane-integration.yml` and `_lane-frontend.yml`), and `main`'s
-  SonarCloud analysis published from the three coverage reports they produce.
+  real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
+  `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
+  and `main`'s SonarCloud analysis published from the three coverage reports
+  they produce.
+
+  The UAT lane runs **unconditionally** here, unlike on a pull request where it
+  is gated on the change classifier. That gate is right on a PR and wrong on the
+  tip: it is the SPA lane that can be green over a tree whose pages throw at
+  runtime — biome, tsc and vitest all pass on code that builds and never mounts —
+  and a classifier-gated UAT means a broken screen waits for whoever's pull
+  request happens to touch `frontend/` next, then goes red on their unrelated
+  change. It does not block `sonar`, which needs the coverage producers and gets
+  none from Playwright: a red UAT should not freeze `main`'s analysis.
   **It is not a gate and never will be**: it reports on a tree that has already
   landed.
 

@@ -263,6 +263,31 @@ not there."\
     || unreported=1
 fi
 
+if [ "${MAIN_UAT_RESULT:-}" = "failure" ]; then
+  report "main is red: the screen-acceptance UAT fails on the tip" bug \
+"The UAT lane (AC screens + axe WCAG 2.2 AA + the 390px sweep, against the built
+app over the seed mock) failed against \`main\` on the two-hourly health check:
+$RUN_URL
+
+This lane is the one that answers whether the screens actually RENDER. The SPA
+lane above it can be green over a tree whose pages throw at runtime: biome, tsc
+and vitest all pass on code that builds and never mounts.
+
+On a pull request this lane is gated on the change classifier and runs only for a
+diff touching \`frontend/\`, which is right there and wrong on the tip — a broken
+screen used to wait for whoever's pull request happened to touch the frontend
+next, and then went red on their unrelated change. Here it runs unconditionally,
+which is the whole point of asking on \`main\`.
+
+${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
+
+Reproduce locally with \`make frontend-e2e\`. It builds the app, serves the
+preview and drives Playwright against the seed mock, so it needs no database and
+no running stack — but it does need the browser: \`pnpm exec playwright install
+--with-deps chromium\` once."\
+    || unreported=1
+fi
+
 if [ "${MAIN_SONAR_RESULT:-}" = "failure" ]; then
   report "main's SonarCloud analysis was not published" bug \
 "The \`sonarcloud (main)\` job failed on the two-hourly health check, with every
