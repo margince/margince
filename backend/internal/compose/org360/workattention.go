@@ -32,6 +32,7 @@ import (
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -163,8 +164,8 @@ func projectUUIDs(projects []ids.ProjectID) []ids.UUID {
 //
 // The task must also reach the account: a link row alone would let a task
 // filed under a project this company shares with another reach a page it does
-// not belong to. activities.OrgLinkedActivityExists is the one spelling of
-// that walk.
+// not belong to. activities.OrgLinkedActivityExists performs that walk, and is
+// called rather than restated so the two cannot answer differently.
 func overdueTasksBy(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	linkColumn string, keys []ids.UUID, now time.Time,
@@ -194,7 +195,7 @@ func overdueTasksBy(
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.%[1]s = ANY($%[2]d)
 		  LEFT JOIN app_user u ON u.id = a.assignee_id
-		         AND u.status = 'active' AND u.archived_at IS NULL
+		         AND `+identity.LiveMemberSQL("u")+`
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
 		   AND a.due_at IS NOT NULL AND a.due_at < $%[4]d
 		   AND (%[5]s) AND %[6]s
