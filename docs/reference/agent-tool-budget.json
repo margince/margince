@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 57,
-    "tokens": 17647,
+    "tokens": 17755,
     "median_tool_tokens": 275,
-    "mean_tool_tokens": 309
+    "mean_tool_tokens": 311
   },
   "agents": [
     {
@@ -70,6 +70,10 @@
       "tokens": 1213
     },
     {
+      "name": "preview_import",
+      "tokens": 618
+    },
+    {
       "name": "update_record",
       "tokens": 603
     },
@@ -84,10 +88,6 @@
     {
       "name": "resolve_entities",
       "tokens": 513
-    },
-    {
-      "name": "preview_import",
-      "tokens": 510
     },
     {
       "name": "list_records",

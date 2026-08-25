@@ -2088,19 +2088,11 @@ export const vi = {
   "home.snooze": "Tạm hoãn",
   "home.snoozedState": "đã tạm hoãn",
 
-  "enrich.title": "Đọc từ website",
-  "enrich.sub":
-    "có bằng chứng mới điền, không thì bỏ trống — chỉ điền vào ô còn trống, và chỉ sau khi bạn duyệt",
-  "enrich.cta": "Đọc ngay",
-  "enrich.reading": "Đang đọc…",
-  "enrich.staged":
-    "Đang chờ duyệt — chưa ghi gì. Hãy chấp nhận trong hộp phê duyệt; chỉ những ô còn trống mới được điền.",
   "enrich.toInbox": "Mở hộp phê duyệt",
-  "enrich.from": "đọc từ {url}",
 
   "deepread.title": "Đọc toàn bộ website",
   "deepread.sub":
-    "Đọc tối đa 12 trang trên website của công ty. Những gì tìm được sẽ chờ bạn rà soát — không gì được ghi cho đến khi bạn chấp nhận.",
+    "Đọc website của công ty và điền những gì tìm được. Chỉ điền vào các trường còn trống, mọi giá trị đều được đánh dấu là đọc từ website, và bạn có thể hoàn tác.",
   "deepread.cta": "Đọc toàn bộ website",
   "deepread.starting": "Đang bắt đầu…",
   "deepread.unavailable": "Máy chủ này chưa cấu hình việc đọc website.",
@@ -2121,13 +2113,6 @@ export const vi = {
   "deepread.stopDeadline": "hết thời hạn",
   "deepread.factCount.one": "{count} dữ kiện có bằng chứng đang chờ duyệt",
   "deepread.factCount.other": "{count} dữ kiện có bằng chứng đang chờ duyệt",
-  "deepread.pagesRead": "Số trang đã đọc",
-  "deepread.skippedPages": "Số trang bỏ qua",
-  "deepread.skipRobots": "robots.txt",
-  "deepread.skipOffDomain": "ngoài tên miền",
-  "deepread.skipPageCap": "giới hạn số trang",
-  "deepread.skipByteCap": "giới hạn dung lượng",
-  "deepread.skipUnreadable": "không đọc được",
   "deepread.proposals": "{count} đề xuất đang chờ bạn rà soát",
   "deepread.proposalsOne": "1 đề xuất đang chờ bạn rà soát",
   "deepread.kindHome": "Trang chủ",
@@ -2771,6 +2756,9 @@ export const vi = {
   "import.count.unchanged": "Không đổi",
   "import.count.skipped": "Bỏ qua",
   "import.rowsRead": "Đã đọc {rows} dòng, nhận diện bằng {column}.",
+  "import.linksOffered":
+    "{offered} dòng có nêu nơi làm việc; {unresolved} dòng nêu công ty chưa có trong CRM.",
+  "import.linksApplied": "Đã ghi {applied}/{offered} liên kết nơi làm việc.",
   "import.issuesLead":
     "Một số dòng không nhập được. Danh sách kèm số dòng để bạn mở trong tệp.",
   "import.issueLine": "Dòng {line}:",

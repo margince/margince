@@ -10,16 +10,16 @@
   "totals": {
     "tools": 57,
     "resources": 9,
-    "tool_catalog_bytes": 160030,
+    "tool_catalog_bytes": 160774,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 40885,
+    "approx_wire_tokens_total": 41071,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 37084,
-      "input_schema_bytes": 35391,
-      "output_schema_bytes": 75186,
-      "description_plus_input_schema_bytes": 72475
+      "description_bytes": 37260,
+      "input_schema_bytes": 35647,
+      "output_schema_bytes": 75498,
+      "description_plus_input_schema_bytes": 72907
     }
   },
   "tools": {
@@ -5278,7 +5278,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is organization, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is organization, person or lead. Use `person` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a person whose email is already held, which is always refused, because an email is a real key. To link people to their employers, map the company column to `organization_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. run_id, and `duplicates` — give the user both numbers before committing. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5295,7 +5295,7 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add.",
+              "description": "Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands.",
               "type": "object"
             },
             "object": {
@@ -6634,6 +6634,43 @@
                         "type": "object"
                       },
                       "type": "array"
+                    },
+                    "links": {
+                      "properties": {
+                        "applied": {
+                          "type": "integer"
+                        },
+                        "offered": {
+                          "type": "integer"
+                        },
+                        "unresolved": {
+                          "items": {
+                            "properties": {
+                              "from": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "reason",
+                              "to"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "applied",
+                        "offered"
+                      ],
+                      "type": "object"
                     },
                     "rows_read": {
                       "type": "integer"
