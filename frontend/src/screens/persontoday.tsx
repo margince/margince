@@ -50,16 +50,16 @@ export function PersonToday({
     // it, tinted so it reads as the thing to DO rather than one more thing to
     // read — the company record's lead panel in the person's own words.
     <Panel
-      className={warn ? "pe-today pe-today-warn" : "pe-today"}
+      tone={warn ? "warn" : "accent"}
       title={
-        <span className="pe-today-head">
+        <>
           {warn ? (
             <AlertTriangle size={16} aria-hidden="true" />
           ) : (
             <Sparkles size={16} aria-hidden="true" />
           )}
           {t("person.today.heading", { name: firstName })}
-        </span>
+        </>
       }
       footer={
         <div className="pe-today-foot">

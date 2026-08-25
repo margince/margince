@@ -87,43 +87,11 @@
 
    It leads the stack rather than sharing a row: the moment is the page's
    answer, and an answer beside two other cards is one of three things to read
-   rather than the thing to do. Its shape is the design system's `Panel`, so
-   only the lead's own tint and its two-column interior live here.
+   rather than the thing to do. Its shape and its tint are both the design
+   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warn"` for
+   State B, where the finding itself is the bad news — so only the lead's
+   two-column interior lives here.
    --------------------------------------------------------------------------- */
-/* The head carries the tint, not the whole plate: the panel stays the same
-   surface as every panel under it and its HEADING says this one asks for a
-   move. A fully tinted card competes with its own content. */
-.pe-today {
-  border-color: var(--accentMed);
-}
-.pe-today > .panel-head {
-  background: var(--accentLight);
-  border-bottom-color: var(--accentMed);
-}
-.pe-today > .panel-head h2 {
-  color: var(--accent);
-}
-.pe-today > .panel-foot {
-  border-top-color: var(--accentMed);
-}
-
-/* The amber variant (State B). The tone is the finding — a relationship that
-   stopped, a promise that is late — so it recolours the panel's own frame and
-   head rather than adding a badge inside it. */
-.pe-today-warn {
-  border-color: var(--warnBorder);
-}
-.pe-today-warn > .panel-head {
-  background: var(--warnBg);
-  border-bottom-color: var(--warnBorder);
-}
-.pe-today-warn > .panel-head h2 {
-  color: var(--textPrimary);
-}
-.pe-today-warn > .panel-foot {
-  border-top-color: var(--warnBorder);
-}
-
 /* The ask and the verbs that answer it, side by side: the buttons sit with the
    moment they act on rather than under everything it says. */
 .pe-today-lead {
@@ -131,12 +99,6 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-6);
   align-items: start;
-}
-
-.pe-today-head {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .pe-today-headline {

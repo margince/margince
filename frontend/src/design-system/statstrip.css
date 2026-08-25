@@ -11,14 +11,20 @@
      page worth reading. White also has nothing to leak — a row of four slots
      in a wider template ends in white space, which is simply where the row
      ends. */
-  background: var(--bgElevated);
+  /* The RULES, drawn once by the plate rather than by each slot. The grid's
+     gaps expose this ground between the slots, so a divider exists wherever two
+     slots meet and nowhere else — no slot has to know whether it begins a row,
+     which is the arithmetic that only worked while the slot count divided the
+     column count. The slots paint `--bgElevated` back over everything else. */
+  background: var(--borderSubtle);
+  gap: 1px;
   /* The plate is a CARD: the same ground, border, radius and shadow `.card` and
      `Panel` stand on, because a readings plate on a page of cards that had no
      shadow read as a table drawn on the page rather than as a surface sitting
-     on it. The slots' own box-shadows are the divider rules and are unaffected
-     — they belong to the children. */
+     on it. */
   box-shadow: var(--shadow-card);
   overflow: hidden;
+  --stat-strip-tail: var(--stat-strip-tail-6, 1);
 }
 
 /* `1fr` rather than a min width: slots at a readable minimum wrap to two rows
@@ -34,29 +40,35 @@
 @media (max-width: 68rem) {
   .stat-strip {
     grid-template-columns: repeat(var(--stat-strip-slots-3, 3), 1fr);
+    --stat-strip-tail: var(--stat-strip-tail-3, 1);
   }
 }
 
 @media (max-width: 40rem) {
   .stat-strip {
     grid-template-columns: repeat(var(--stat-strip-slots-2, 2), 1fr);
+    --stat-strip-tail: var(--stat-strip-tail-2, 1);
   }
 }
 
-/* Each slot draws its own dividers OUTSIDE itself — one pixel to its left and
-   one above — and the plate clips them. The leading slot of every row puts its
-   left rule past the plate's edge and the first row puts its top rule above
-   it, so both vanish without anyone counting which slot starts a row: that
-   arithmetic is only right while the slot count divides the column count, and
-   a strip draws as many slots as the record has readings. */
+/* A slot draws no divider of its own: it paints the plate's ground back over
+   its own cell, and what it does NOT cover is the gap, which is the rule. */
 .stat-strip > * {
   border: 0;
   border-radius: 0;
   background: var(--bgElevated);
   margin: 0;
-  box-shadow:
-    -1px 0 0 var(--borderSubtle),
-    0 -1px 0 var(--borderSubtle);
+  box-shadow: none;
+}
+
+/* The last slot takes whatever is left of its row, so a fold never leaves the
+   row half-drawn. `tailSpan` in statstrip.tsx says why the component computes
+   this rather than the sheet: `span var()` resolves, `:nth-child(var() n + 1)`
+   does not. It is `1` on every row that came out even, which is every strip
+   whose slot count divides the column count — the case this used to be the
+   only correct one for. */
+.stat-strip > *:last-child {
+  grid-column: span var(--stat-strip-tail, 1);
 }
 
 /* A SLOT MAY BE A CONTROL. A strip of filters is still one comparison — the
@@ -99,10 +111,7 @@
  * the line is what makes it unambiguous next to `--bgHover`. */
 .stat-strip > [aria-pressed="true"] {
   background: var(--accentLight);
-  box-shadow:
-    -1px 0 0 var(--borderSubtle),
-    0 -1px 0 var(--borderSubtle),
-    inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 .stat-strip > *:focus-visible {
   outline: var(--focus-ring);

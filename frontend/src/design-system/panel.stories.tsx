@@ -144,6 +144,30 @@ export const AccentTone: Story = {
   },
 };
 
+// tone="warn": the same lead, when the FINDING is the bad news — a
+// relationship that went quiet, a promise that is late. The tone is the
+// reading, which is why it recolours the card's own frame instead of adding a
+// badge inside it, and why the geometry does not move: an accent lead and a
+// warn lead are one card in two states, not two cards.
+//
+// Check it in both themes. `--warn` inverts across them (a dark amber-brown on
+// light, a bright amber on dark) while `--warnBg` and `--warnBorder` stay the
+// same translucent amber, so the title's contrast against the band is the one
+// thing to look at twice.
+export const WarnTone: Story = {
+  args: {
+    tone: "warn",
+    title: "Gone quiet",
+    children: (
+      <>
+        <PanelRow>Nobody has written to Anna Brandt since 4 March.</PanelRow>
+        <PanelRow>She asked for pricing and never got it.</PanelRow>
+      </>
+    ),
+    footer: <span>Two sources · updated an hour ago</span>,
+  },
+};
+
 // actions: verbs that CHANGE the panel, in their own band under the body. The
 // footer reports; this acts. A caller renders it only when the content is
 // real — an "add" button under a section whose read failed offers a write

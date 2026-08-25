@@ -38,6 +38,9 @@ export function StatStrip({
     "--stat-strip-slots": slots,
     "--stat-strip-slots-3": Math.min(slots, 3),
     "--stat-strip-slots-2": Math.min(slots, 2),
+    "--stat-strip-tail-6": tailSpan(slots, 6),
+    "--stat-strip-tail-3": tailSpan(slots, 3),
+    "--stat-strip-tail-2": tailSpan(slots, 2),
   };
   return (
     <section
@@ -48,4 +51,23 @@ export function StatStrip({
       {children}
     </section>
   );
+}
+
+// How many columns the LAST slot occupies, so a folded row never ends in empty
+// cells. A strip draws as many slots as the record has readings, and nothing
+// makes that count divide the column count: four readings over three columns
+// left one slot alone in a row of its own beside two blank cells.
+//
+// Stretching the tail over what is left of its row is the whole answer, and it
+// is arithmetic the component can do because it already knows both numbers —
+// unlike "which slot begins a row", which CSS cannot ask (`An+B` takes literal
+// integers, so a `var()` there is dropped silently).
+//
+// The row is still one comparison: every slot on a FULL row is the same width,
+// and a wider tail says "this is the rest of the row" rather than "this reading
+// is bigger". The alternative — leaving the blanks — says a reading failed to
+// load.
+function tailSpan(slots: number, cap: number): number {
+  const columns = Math.max(1, Math.min(slots, cap));
+  return columns - ((slots - 1) % columns);
 }
