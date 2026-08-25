@@ -158,3 +158,100 @@ func TestASecondCreateSharingAPhoneStillRecordsTheReviewPair(t *testing.T) {
 		t.Fatalf("confidence = %v, want the exact-key ceiling %v", rows[0].Confidence, identityConflictConfidence)
 	}
 }
+
+// beginHeldNameCreate is beginHeldPhoneCreate for the name lane: a transaction
+// that has taken the lane's write identity and inserted its person row, handed
+// back still open. The key is derived through lockNameLane itself, so a change
+// to how the lane spells its key cannot leave this transaction holding one no
+// create waits on.
+func (e *dedupeEnv) beginHeldNameCreate(ctx context.Context, t *testing.T, name string) (pgx.Tx, ids.PersonID, int) {
+	t.Helper()
+	tx, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening the in-flight create's transaction: %v", err)
+	}
+	t.Cleanup(func() {
+		err := tx.Rollback(context.Background())
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the in-flight create's transaction: %v", err)
+		}
+	})
+	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
+		t.Fatalf("binding the workspace GUC: %v", err)
+	}
+	var pid int
+	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatalf("reading the in-flight create's backend pid: %v", err)
+	}
+	if err := lockNameLane(ctx, tx, name); err != nil {
+		t.Fatalf("taking the name lane's write identity: %v", err)
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		t.Fatalf("resolving captured_by: %v", err)
+	}
+	id := ids.New[ids.PersonKind]()
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', $3)`,
+		id, name, by); err != nil {
+		t.Fatalf("inserting the in-flight person: %v", err)
+	}
+	return tx, id, pid
+}
+
+// Two people can legitimately share a NAME, so person has no unique index on it
+// and nothing structural stops two creates carrying the same one from both
+// landing. What must not happen is that they land silently.
+//
+// This is the phone lane's race, on the lane added for the second-business-card
+// case, and it defeats that lane completely if unguarded: at READ COMMITTED both
+// creates read no committed incumbent, both fall to no-match, both commit, and
+// the pair reaches nobody — no queue row, and no later sweep that would find it.
+// A lane that exists to stop a silent duplicate has to hold under two people
+// typing the same card in at once, which is exactly when it happens.
+//
+// The two spellings differ in CASE deliberately. The lock key is the normalized
+// name, so a lock taken on the raw string would let these two race each other —
+// and "Lucy Vo" against "LUCY VO" is the pair most likely to be entered twice.
+func TestASecondCreateSharingANameStillRecordsTheReviewPair(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	first, firstID, pid := e.beginHeldNameCreate(ctx, t, "Lucy Vo")
+	second := e.createInBackground(ctx, CreatePersonInput{
+		FullName: "LUCY VO", Source: "manual",
+		Emails: []PersonEmailInput{{Email: "lucy@personal.test", EmailType: "personal", IsPrimary: true}},
+	})
+	// A create that finishes WITHOUT ever waiting is the defect itself, not a
+	// failed setup — so it is judged on the trail it left rather than aborted.
+	res, finished := waitUntilBlocked(t, first, pid, second)
+	if err := first.Commit(ctx); err != nil {
+		t.Fatalf("committing the first create: %v", err)
+	}
+	if !finished {
+		res = <-second
+	}
+	if res.err != nil {
+		t.Fatalf("a shared name must not refuse the second create — two people may share one: %v", res.err)
+	}
+	secondID := ids.From[ids.PersonKind](ids.UUID(res.person.Id))
+
+	// Both records really are live, so this test cannot pass on an outcome
+	// where one create simply never landed.
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM person WHERE id IN ($1, $2) AND archived_at IS NULL AND merged_into_id IS NULL`,
+		firstID, secondID); n != 2 {
+		t.Fatalf("%d live records, want 2 — both creates must have landed for this ordering to mean anything", n)
+	}
+
+	rows := openCandidates(ctx, t, e, entityPerson)
+	if len(rows) != 1 {
+		t.Fatalf("the review queue holds %d candidates, want exactly 1 — two live people are written the same way and no human will ever be asked about it",
+			len(rows))
+	}
+	pair := map[ids.UUID]bool{rows[0].LeftID: true, rows[0].RightID: true}
+	if !pair[firstID.UUID] || !pair[secondID.UUID] {
+		t.Fatalf("candidate pair = {%s, %s}, want it to name both creates %s and %s",
+			rows[0].LeftID, rows[0].RightID, firstID, secondID)
+	}
+}

@@ -66,6 +66,50 @@ func nearMatchLines(ctx context.Context, t *testing.T, e *dedupeEnv, entityType 
 	return out
 }
 
+// openCandidatePairs returns every OPEN review-queue row naming one created
+// entity, with the other side and the score. It reads dedupe_candidate itself
+// rather than the near-match ledger: the ledger records the fuzzy tier's own
+// working, while the queue is what a human is actually shown, and a pair can
+// reach the queue from an exact lane that writes no ledger line at all.
+func openCandidatePairs(ctx context.Context, t *testing.T, e *dedupeEnv, entityType string, createdID ids.UUID) []struct {
+	OtherID    string
+	Confidence float64
+} {
+	t.Helper()
+	var out []struct {
+		OtherID    string
+		Confidence float64
+	}
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT CASE WHEN left_person_id = $2 THEN right_person_id ELSE left_person_id END,
+			       confidence
+			  FROM dedupe_candidate
+			 WHERE entity_type = $1 AND disposition = 'open'
+			   AND $2 IN (left_person_id, right_person_id)`,
+			entityType, createdID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var pair struct {
+				OtherID    string
+				Confidence float64
+			}
+			if err := rows.Scan(&pair.OtherID, &pair.Confidence); err != nil {
+				return err
+			}
+			out = append(out, pair)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		t.Fatalf("read the dedupe review queue: %v", err)
+	}
+	return out
+}
+
 func TestCreatePersonFuzzyNearMatchCreatesAndRecords(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -250,5 +294,125 @@ func TestCreateOrganizationExactDomainStillRefusesWith409(t *testing.T) {
 	}
 	if dup.ExistingID.UUID != ids.UUID(incumbent.Id) {
 		t.Fatalf("409 discloses %s, want the incumbent %s", dup.ExistingID, incumbent.Id)
+	}
+}
+
+// LARS'S CASE, 2026-08-25: one person, a second business card, a different
+// address. Same name, same employer, and no key in common — the second card
+// carries the new address and nothing else that has been seen before.
+//
+// This is the scenario a rep actually hits. A card is typed in with a personal
+// address, or with a typo, and nothing on it matches what is stored except who
+// the person is and where they work. The email lane cannot fire, because the
+// addresses differ by construction; the phone lane cannot fire, because a card
+// hand-entered in a hurry often carries no number at all.
+//
+// It has to reach a human. Merging two people is not a decision an automatic
+// rule should take — a father and son at one firm are a real pair of records
+// that share everything this test shares — so the answer is the review queue,
+// not a silent merge and not a refusal.
+func TestCreatePersonWithASecondAddressAtTheSameEmployerIsQueuedForAHuman(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	lucyID, orgID := e.seedEmployedPerson(ctx, t,
+		"Lucy Vo", "lucy.vo@terralogic.test", "Terralogic", "terralogic.test")
+
+	// The second card: identical name, an address nobody has seen, no phone.
+	// The employment edge is stated the way a rep filing a card would state it
+	// — they know where she works, which is the whole reason the pair is worth
+	// a human's glance.
+	created, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Lucy Vo", Source: "manual",
+		Emails: []PersonEmailInput{{Email: "lucy@personal.test", EmailType: "personal", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("a second card must create, never block — a probability is not a conflict: %v", err)
+	}
+	createdID := ids.From[ids.PersonKind](ids.UUID(created.Id))
+	primary := true
+	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
+		Kind: "employment", PersonID: &createdID, OrganizationID: &orgID,
+		IsCurrentPrimary: &primary, Source: "manual",
+	}); err != nil {
+		t.Fatalf("attach the second card's employer: %v", err)
+	}
+
+	pairs := openCandidatePairs(ctx, t, e, "person", ids.UUID(created.Id))
+	if len(pairs) != 1 {
+		t.Fatalf("got %d open dedupe candidates for the second card, want exactly 1 — "+
+			"one person with two addresses at one employer is the case a human has to settle", len(pairs))
+	}
+	if pairs[0].OtherID != lucyID.String() {
+		t.Fatalf("the candidate names %s, want the incumbent %s", pairs[0].OtherID, lucyID)
+	}
+}
+
+// The other half of the same rule, and the reason the lane flags instead of
+// merging: two DIFFERENT people can be written exactly the same way. A father
+// and son at one firm share a name and an employer and are two real records.
+//
+// So the create must succeed and both records must survive. The pair still
+// reaches the queue — a human is the only one who can tell these two cases
+// apart — but nothing about the second record is merged, moved or refused.
+func TestAnIdenticalNameCreatesASecondRecordAndNeverMergesIt(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	seniorID, _ := e.seedEmployedPerson(ctx, t,
+		"Karl Fischer", "karl.fischer@fischerbau.test", "Fischer Bau", "fischerbau.test")
+
+	// The junior's address is on a DIFFERENT domain, deliberately. A shared
+	// employer domain scores 0.8 on the org term and carries the pair over the
+	// fuzzy bar on its own — which would prove the old tier still works and say
+	// nothing about the name lane. This pair has the name and nothing else.
+	junior, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Karl Fischer", Source: "manual",
+		Emails: []PersonEmailInput{{Email: "karl.junior@privat.test", EmailType: "personal", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("two people may share a name: %v", err)
+	}
+	if ids.UUID(junior.Id) == seniorID.UUID {
+		t.Fatal("the create returned the incumbent's id — the lane merged two records it was only allowed to question")
+	}
+
+	// Both rows are live. A lane that flags must leave the data exactly as a
+	// lane that did nothing would.
+	var live int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM person WHERE id IN ($1, $2) AND archived_at IS NULL AND merged_into_id IS NULL`,
+			seniorID, ids.UUID(junior.Id)).Scan(&live)
+	}); err != nil {
+		t.Fatalf("count the two records: %v", err)
+	}
+	if live != 2 {
+		t.Fatalf("got %d live unmerged records, want 2 — flagging a pair must not touch either row", live)
+	}
+
+	// And the question was asked, once.
+	if pairs := openCandidatePairs(ctx, t, e, "person", ids.UUID(junior.Id)); len(pairs) != 1 {
+		t.Fatalf("got %d open candidates, want exactly 1 — a name collision is a question, and it has to be put", len(pairs))
+	}
+}
+
+// A create that resembles nobody must still write nothing. The lane is narrow
+// by construction — it fires on an exact normalized name and on nothing else —
+// and this is what holds it there: a near-name below the fuzzy bar has no key
+// in common and no exact name either, so it is simply a new person.
+func TestANameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.seedEmployedPerson(ctx, t, "Karl Fischer", "karl.fischer@fischerbau.test", "Fischer Bau", "fischerbau.test")
+
+	created, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Karla Fischerova", Source: "manual",
+		Emails: []PersonEmailInput{{Email: "karla@elsewhere.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("create an unrelated person: %v", err)
+	}
+	if pairs := openCandidatePairs(ctx, t, e, "person", ids.UUID(created.Id)); len(pairs) != 0 {
+		t.Fatalf("got %d open candidates for a name nobody shares, want 0 — "+
+			"a lane that queues everything is a queue nobody works", len(pairs))
 	}
 }
