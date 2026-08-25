@@ -96,7 +96,6 @@ func (r *crawlRun) fetchWave(ctx context.Context, admitted []admission) []fetchR
 	return results
 }
 
-// commit files one fetched result — a page, a recorded skip, a silent
 // legalCensusOpen reports whether an Impressum candidate may still bypass
 // the one-language-per-document rule. The bypass exists because a group's
 // per-locale legal pages can name DIFFERENT legal entities, and the entity
