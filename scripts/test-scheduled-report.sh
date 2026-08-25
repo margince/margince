@@ -320,7 +320,13 @@ health="$root/.github/workflows/main-health.yml"
 # The slice runs from the job key at two-space indent to the next one; an empty
 # slice means the job was renamed or removed, and that fails rather than
 # silently checking nothing.
-report_job="$(awk '/^  report:/{inside=1} inside&&/^  [a-z_-]+:/&&!/^  report:/{exit} inside' "$health")"
+#
+# The boundary matches every id GitHub Actions accepts — uppercase and digits
+# included — because a boundary NARROWER than its subject is how this check
+# would reacquire the hole it was written to close: a job the pattern does not
+# recognise never ends the slice, so the slice swallows it and that job's wiring
+# can satisfy the census on the report job's behalf.
+report_job="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$health")"
 if [ -z "$report_job" ]; then
 	echo "FAIL: no 'report' job found in main-health.yml — the wiring checks below would pass by scanning nothing"
 	failures=$((failures + 1))
