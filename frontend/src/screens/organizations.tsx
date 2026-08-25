@@ -58,7 +58,6 @@ import {
   useViewerId,
 } from "./common";
 import {
-  AccountBrief,
   CommercialPanel,
   DealsCard,
   NextSteps,
@@ -79,6 +78,8 @@ import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { GrowthFitPanel } from "./companygrowthfit";
+import { CompanyFacts } from "./companyfacts";
+import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
 import {
   CompanyActionBadges,
   CompanyDescription,
@@ -2139,10 +2140,14 @@ function CompanyPage({
           />
         </>
       }
-      // Lifecycle and owner read as part of the account's own line rather than
-      // as a column beside it, so they travel with the identity in `pulse`
-      // and this record passes no `controls` at all. The verbs still sit on
-      // the identity's own row, which is what `actionsInline` asks for.
+      // The account's standing as a column beside the name: what the open
+      // pipeline is worth, how much work is in flight, and whose account it
+      // is. The owner control lives HERE now rather than mid-sentence in the
+      // identity meta line — the same component, moved rather than copied.
+      //
+      // Lifecycle stays in `nameBadge`, where it is edited. A read-only copy
+      // of it in this box would be a second answer to one question.
+      controls={<CompanyFacts org={org} view={view} />}
       actionsInline
       band={<CompanyBand org={org} view={view} overlay={overlay} t={t} />}
       // The account's context, beside the work rather than under it (mockup
@@ -2535,15 +2540,34 @@ function CompanyOverviewStack({
           onOpenTasks={onOpenTasks}
         />
       )}
-      {/* The account, in its own words and ours — the main column's own
-          lead now that "worth doing next" merged into the daily brief in the
-          band above (CompanyBand, organizations.tsx). */}
-      <AccountBrief
-        orgId={org.id}
-        view={view}
-        enabled={!overlay}
-        onOpenRecord={onOpenRecord}
-      />
+      {/* What is moving on this account, and for each piece of it the one
+          reason it wants a person. It leads the column because it is the
+          only card here written from the records themselves rather than
+          around them — every other reading on the page is a roll-up.
+
+          A written account brief used to hold this slot. On an account
+          carrying several engagements it blended them: correspondence about
+          one project became a sentence about another, and a figure read out
+          of the blend had nowhere to be checked.
+
+          The growth-fit panel takes the slot when nothing is in flight,
+          because "should we sell to them at all" is the question an account
+          with no work is actually asking. Never both: two cards in the lead
+          position is the page having no lead. */}
+      {!overlay &&
+        (hasWorkInFlight(view) ? (
+          <CompanyWorkCard
+            view={view}
+            loading={loading}
+            onOpenRecord={onOpenRecord}
+          />
+        ) : (
+          <GrowthFitPanel
+            orgId={org.id}
+            enabled={!overlay}
+            onOpenRecord={onOpenRecord}
+          />
+        ))}
       {/* Directly under the brief, because it asks about the same reading: the
           three prepared questions are the ones the brief answers in prose, and
           both are written server-side from this reader's own 360 and cite
@@ -2561,16 +2585,6 @@ function CompanyOverviewStack({
       />
       {!overlay && (
         <>
-          {/* What this account is worth to us. GrowthFitPanel IS a Panel —
-              title, the reassess verb in its header, the attribution in its
-              footer — so it needs no wrapper here. Inside the overlay guard:
-              the panel has nothing to hold in overlay mode, where none of the
-              facts it is assembled from exist. */}
-          <GrowthFitPanel
-            orgId={org.id}
-            enabled={!overlay}
-            onOpenRecord={onOpenRecord}
-          />
           {/* The commercial picture: what the account is already under
               contract for, then the pipeline's own lifetime figures, then the
               open deals themselves.

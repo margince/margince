@@ -859,13 +859,6 @@ export function CompanyIdentityLine({
   if (org.industry) {
     facts.push(<span key="industry">{org.industry}</span>);
   }
-  // Owner always has a slot, even unowned — "Unassigned" is the honest
-  // current state, not an absence to omit the way a missing website is.
-  facts.push(
-    <span key="owner">
-      {t("co.pulse.owner")} <CompanyOwnerControl org={org} hideLabel />
-    </span>,
-  );
   return (
     <div className="co-identity-meta">
       <div className="co-meta-line">

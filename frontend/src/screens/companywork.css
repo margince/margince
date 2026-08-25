@@ -1,0 +1,27 @@
+/* The work card's own two shapes: a group's subhead, and a row's status
+   clause on its own line under the row's facts. */
+
+.co-work-head {
+  padding-bottom: 0;
+}
+
+/* Its own line, full row width, so a sentence wraps as a sentence rather than
+   flowing into the chip rhythm the meta line above it keeps. */
+.co-work-status {
+  display: block;
+  width: 100%;
+  color: var(--textMeta);
+}
+
+.co-work-incomplete {
+  color: var(--textMeta);
+}
+
+/* The card's own footer band: two short caveats about the reading, side by
+   side, in the panel foot rather than among the rows they qualify. */
+.co-work-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--textMeta);
+}
