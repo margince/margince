@@ -13,7 +13,7 @@ import {
 import { EvidenceMark } from "../design-system/evidencemark";
 import { FactList } from "../design-system/factlist";
 import type { ConfidenceLevel } from "../design-system/trust";
-import { formatDate } from "../format/format";
+import { formatDate, formatDecimal } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { provenanceOf, throwProblem } from "./common";
 import { currentEmployer, formerEmployers } from "./employmentcurrency";
@@ -186,9 +186,9 @@ export function RelationshipPulse({ view }: Readonly<{ view: Person360 }>) {
             <p style={{ margin: 0, lineHeight: 1.55 }}>
               {t("person.pulse.arithmetic", {
                 score: String(s.score),
-                recency: s.factors.recency.toFixed(2),
-                frequency: s.factors.frequency.toFixed(2),
-                reciprocity: s.factors.reciprocity.toFixed(2),
+                recency: formatDecimal(s.factors.recency, locale, 2),
+                frequency: formatDecimal(s.factors.frequency, locale, 2),
+                reciprocity: formatDecimal(s.factors.reciprocity, locale, 2),
               })}
             </p>
           </Disclosure>

@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card } from "../design-system/atoms";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
@@ -125,7 +125,13 @@ function CandidateBanner({
     // "card">`: a copy of the card surface is a second card the moment one of
     // its five chrome values moves, and the README forbids it by name.
     <Card as="div" inset className="vdna-candidate">
-      <b>{t("voice.candidate.title", { n: candidate.profile_version })}</b>
+      {/* A version number is a name, not a magnitude: grouped, build 1234
+          would read as "1.234" and stop matching the version it refers to. */}
+      <b>
+        {t("voice.candidate.title", {
+          n: String(candidate.profile_version),
+        })}
+      </b>
       {candidate.review_reasons.length > 0 && (
         <ul className="vdna-reasons">
           {candidate.review_reasons.map((reason) => (
@@ -179,6 +185,7 @@ export function VoiceHistory({
   onChanged: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [versionCursor, setVersionCursor] = useState<string | undefined>();
   const [allVersions, setAllVersions] = useState<VoiceProfileVersion[]>([]);
   const versions = useQuery({
@@ -249,9 +256,9 @@ export function VoiceHistory({
         {(summary) => (
           <p className="t-small vdna-learning">
             {t("voice.history.learning", {
-              drafted: summary.drafted,
-              edited: summary.edited_sent,
-              rejected: summary.rejected,
+              drafted: formatNumber(summary.drafted, locale),
+              edited: formatNumber(summary.edited_sent, locale),
+              rejected: formatNumber(summary.rejected, locale),
             })}
           </p>
         )}
@@ -301,9 +308,11 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
                 .map((delta) => (
                   <li key={delta.id} className="vdna-row">
                     <span>
+                      {/* Both ends of a delta are version names, so neither
+                          is grouped — see the candidate title above. */}
                       {t("voice.history.deltaRow", {
-                        from: delta.from_version ?? 0,
-                        to: delta.to_version,
+                        from: String(delta.from_version ?? 0),
+                        to: String(delta.to_version),
                       })}
                       {" · "}
                       {classificationLabel(t, delta.classification)} ·{" "}
@@ -365,7 +374,10 @@ function VersionRow({
   return (
     <li className="vdna-row">
       <span>
-        {t("voice.history.versionRow", { n: version.profile_version })}{" "}
+        {/* Version name, not a magnitude — same rule as the candidate title. */}
+        {t("voice.history.versionRow", {
+          n: String(version.profile_version),
+        })}{" "}
         <Badge>{versionStatusLabel(t, version.status)}</Badge>
         {" · "}
         {/* `locale` is the app's own code ("en") — a valid BCP-47 tag, but a
@@ -382,7 +394,7 @@ function VersionRow({
           type="button"
           className="iconbtn vdna-row-verb"
           aria-label={t("voice.history.rollback", {
-            n: version.profile_version,
+            n: String(version.profile_version),
           })}
           disabled={rollback.isPending}
           onClick={() => rollback.mutate()}

@@ -228,7 +228,7 @@ describe("RetentionCard rows", () => {
       within(row).getByText(/its window is preserved/i),
     ).toBeInTheDocument();
     // Still on screen with its window intact — the whole point of E2.
-    expect(within(row).getByText(/2555 days/i)).toBeInTheDocument();
+    expect(within(row).getByText(/2,555 days/i)).toBeInTheDocument();
   });
 
   it("disables a policy through enabled:false rather than by deleting it", async () => {

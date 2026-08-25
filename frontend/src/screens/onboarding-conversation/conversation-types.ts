@@ -41,16 +41,24 @@ type LabelSource =
   | { labelKey: MessageKey; label?: never }
   | { label: string; labelKey?: never };
 
+// A thread entry's `params` are STRINGS, not numbers, and that is the carrier's
+// job rather than a narrowing for tidiness: a quantity handed across as a raw
+// number reaches the catalog sentence through string coercion, which groups for
+// nobody — so the producer has to have decided, before it packs the entry, that
+// the figure is a magnitude the reader groups (`formatNumber`) or a position
+// nobody groups (`String`). A number here lets that decision be skipped
+// silently, and the reader is the one who finds out.
+
 export type QuestionOption = {
   value: string;
   detailKey?: MessageKey;
-  params?: Record<string, string | number>;
+  params?: Record<string, string>;
 } & LabelSource;
 
 export type ConversationQuestion = {
   id: string;
   i18nKey: MessageKey;
-  params?: Record<string, string | number>;
+  params?: Record<string, string>;
   options: QuestionOption[];
   /** The subordinate local-dismiss action's label (humans outrank the
    * reader: a clarify is never an unanswerable gate). Absent on questions
@@ -69,7 +77,7 @@ export type ThreadEntry =
       kind: "narration";
       id: string;
       i18nKey: MessageKey;
-      params?: Record<string, string | number>;
+      params?: Record<string, string>;
       /** Params that are i18n keys themselves; the renderer translates them. */
       paramKeys?: Record<string, MessageKey>;
       findingIds?: string[];
@@ -79,7 +87,7 @@ export type ThreadEntry =
   | ({
       kind: "user";
       id: string;
-      params?: Record<string, string | number>;
+      params?: Record<string, string>;
     } & (
       | { i18nKey: MessageKey; text?: never }
       | { text: string; i18nKey?: never }
@@ -88,7 +96,7 @@ export type ThreadEntry =
       kind: "outcome";
       id: string;
       i18nKey: MessageKey;
-      params?: Record<string, string | number>;
+      params?: Record<string, string>;
       tone: OutcomeTone;
     };
 

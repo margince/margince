@@ -4,8 +4,9 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelPlate, PanelRow } from "../design-system/panel";
-import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { stable } from "../format/collate";
+import { formatDateTime, formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   ENGAGEMENT_LABELS,
@@ -219,11 +220,12 @@ export function TodayOnThisAccount({
     view,
     t,
     when: (at: string) => formatDateTime(at, locale, recordZone),
+    locale,
   };
   const lead = whoseMove(ctx);
   const items = todayContextItems(ctx);
   const manualMoves = manualMoveRows({ view, t, onPrepareMeeting, onDraftTo });
-  const commitment = nextCommitmentLine(view, t);
+  const commitment = nextCommitmentLine(view, locale, t);
   const hasContext = lead !== null || items.length > 0;
   const hasMoves = suggestions.ready || manualMoves.length > 0;
   const footer = briefFooter(commitment, suggestions.footer);
@@ -540,14 +542,14 @@ function todayContextItems(ctx: TodayContext): TodayItem[] {
 // own engagement tile rather than re-derived: the strip no longer draws it
 // (it is a DATED reading, not the account's standing state), and the brief
 // reads the same `state_strip.engagement` field the strip used to.
-function whoseMove({ view, t }: TodayContext): TodayLead | null {
+function whoseMove({ view, t, locale }: TodayContext): TodayLead | null {
   const engagement = view.state_strip?.engagement;
   if (!engagement) {
     return null;
   }
   return {
     headline: t(ENGAGEMENT_LABELS[engagement.state]),
-    note: silenceNote(view, t),
+    note: silenceNote(view, locale, t),
     tone: ENGAGEMENT_TONE[engagement.state],
   };
 }
@@ -563,6 +565,7 @@ function whoseMove({ view, t }: TodayContext): TodayLead | null {
 // trust in the whole panel.
 function silenceNote(
   view: Organization360,
+  locale: Locale,
   t: TodayContext["t"],
 ): string | undefined {
   const engagement = view.state_strip?.engagement;
@@ -575,7 +578,9 @@ function silenceNote(
   );
   // Same day, or a clock that disagrees with itself: "no answer in 0 days"
   // reads as a fault, and there is nothing yet to report.
-  return days > 0 ? t("today.silence.days", { count: days }) : undefined;
+  return days > 0
+    ? t("today.silence.days", { count: formatNumber(days, locale) })
+    : undefined;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -664,7 +669,7 @@ function byStrengthThenId(
   b: Organization360Contact,
 ): number {
   const delta = (b.strength?.score ?? 0) - (a.strength?.score ?? 0);
-  return delta !== 0 ? delta : a.person_id.localeCompare(b.person_id);
+  return delta !== 0 ? delta : stable(a.person_id, b.person_id);
 }
 
 // The deal actually in play used to be a context tile here. It moved to the
@@ -701,12 +706,14 @@ function openRisk({ view, t }: TodayContext): TodayItem | null {
 
 type TodayContext = {
   view: Organization360;
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  t: ReturnType<typeof useT>;
   // Dates are formatted at the presentation edge, so a builder is handed the
-  // formatter rather than the reader's locale: none of them chooses a format,
-  // and one that could would be the second place this page decides how a date
-  // looks.
+  // formatter rather than choosing one: `when` is the only place this page
+  // decides how a date looks. The locale beside it is for FIGURES only — a
+  // count reaches the catalog already written the reader's way, and there is
+  // no format left for a builder to pick.
   when: (at: string) => string;
+  locale: Locale;
 };
 
 type Organization360Contact = NonNullable<

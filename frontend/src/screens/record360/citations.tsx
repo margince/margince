@@ -10,7 +10,8 @@
 
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
 /**
@@ -206,12 +207,14 @@ function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
  * The kind label is also what a record with no name falls back to: the server
  * sends `name` when it has one, and nothing here invents one when it does not.
  */
-function chipLabel(chip: CitationChip, t: ReturnType<typeof useT>): string {
+function chipLabel(chip: CitationChip, t: Translator, locale: Locale): string {
   return (
     chip.name ??
     (chip.count === 1
       ? t(`co.brief.cite.${chip.entityType}`)
-      : t(`co.brief.cite.${chip.entityType}.many`, { count: chip.count }))
+      : t(`co.brief.cite.${chip.entityType}.many`, {
+          count: formatNumber(chip.count, locale),
+        }))
   );
 }
 
@@ -234,6 +237,7 @@ export function Citations({
   ) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const chips = citationChips(
     evidence,
     (entityType) => Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(entityType),
@@ -262,11 +266,11 @@ export function Citations({
               onOpenRecord?.(chip.entityType, chip.entityId, siblings)
             }
           >
-            {chipLabel(chip, t)}
+            {chipLabel(chip, t, locale)}
           </button>
         ) : (
           <span key={chip.entityType} className="co-brief-cite-flat">
-            {chipLabel(chip, t)}
+            {chipLabel(chip, t, locale)}
           </span>
         ),
       )}

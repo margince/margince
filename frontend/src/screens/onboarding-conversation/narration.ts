@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
+import { formatNumber } from "../../format/format";
+import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabelKey } from "../common";
 import type { BuildStage } from "./conversation-machine";
@@ -25,7 +27,10 @@ export type NarrationSayEvent = {
   /** Scoped to the run/operation, stable across repeated diffs. */
   id: string;
   i18nKey: MessageKey;
-  params?: Record<string, string | number>;
+  /** Already RENDERED for the reader — see conversation-types' ThreadEntry.
+   * A diff is where the server's raw counter is, so a diff is where the
+   * decision to group it belongs. */
+  params?: Record<string, string>;
   /** Params that are i18n keys themselves; the renderer translates them. */
   paramKeys?: Record<string, MessageKey>;
   findingIds?: string[];
@@ -63,7 +68,7 @@ function newFieldEvents(
     .filter((field) => !known.has(field.field))
     .map((field): NarrationEvent => {
       const labelKey = coldFieldLabelKey(field.field);
-      const params: Record<string, string | number> = {
+      const params: Record<string, string> = {
         value: previewValue(field.value),
       };
       if (!labelKey) {
@@ -98,6 +103,7 @@ function newWarningEvents(
 export function diffSiteRead(
   prevSnapshot: CompanySiteRead | null,
   next: CompanySiteRead,
+  locale: Locale,
 ): NarrationEvent[] {
   // A snapshot from another run is no baseline: a NEW read diffs against
   // nothing, so its findings narrate fresh and its terminal flushes even
@@ -117,7 +123,7 @@ export function diffSiteRead(
       kind: "say",
       id: `${run}:pages`,
       i18nKey: "ob.conv.read.pages",
-      params: { pages: nextPages },
+      params: { pages: formatNumber(nextPages, locale) },
     });
   }
 
@@ -195,6 +201,7 @@ export const bandLabelKeys: Record<
 export function diffCorpus(
   prev: VoiceCorpusSummary | null,
   next: VoiceCorpusSummary,
+  locale: Locale,
 ): NarrationEvent[] {
   const events: NarrationEvent[] = [];
   const prevWords = prev?.total_words ?? 0;
@@ -205,7 +212,7 @@ export function diffCorpus(
       kind: "say",
       id: "words",
       i18nKey: "ob.conv.corpus.words",
-      params: { words: next.total_words },
+      params: { words: formatNumber(next.total_words, locale) },
     });
   }
   if (prev && next.quality_band !== prev.quality_band) {

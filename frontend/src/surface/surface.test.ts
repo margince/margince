@@ -70,6 +70,10 @@ describe("the published frontend surface", () => {
     expect(Object.keys(appSurface).sort()).toEqual([
       "LocaleProvider",
       "formatDateTime",
+      // formatNumber: `useT` refuses a raw number, so without it a unit's only
+      // way to put a figure in a sentence is `String(n)` — ungrouped for every
+      // reader. The narrowing and the formatter are one change.
+      "formatNumber",
       "useCan",
       "useCanWrite",
       "useLocale",

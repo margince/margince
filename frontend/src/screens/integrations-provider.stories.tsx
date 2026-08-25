@@ -141,6 +141,19 @@ export const ConnectDialog: Story = {
   },
 };
 
+// Both switches on: the state where a mailbox sync is also buying data, which
+// no other story draws. The two rows carry the same control at the same x, so
+// the only thing separating them is their labels — the picture worth having,
+// since a reader who misreads which one is on has misread the bill.
+export const OperatorEnrichingCapturedContacts: Story = {
+  render: cardStory(OPERATOR, [
+    {
+      ...connected,
+      configuration: { ...connected.configuration, automatic_import: true },
+    },
+  ]),
+};
+
 // May bind a key, may not destroy what it bought — so the overflow that holds
 // disconnect and delete-data is not offered at all.
 export const ConnectOnly: Story = {

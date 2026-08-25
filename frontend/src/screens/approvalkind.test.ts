@@ -12,7 +12,7 @@ import {
 
 const t = (
   key: Parameters<typeof translate>[1],
-  params?: Record<string, string | number>,
+  params?: Record<string, string>,
 ) => translate("en", key, params);
 
 describe("what a staged proposal is called", () => {

@@ -1,6 +1,7 @@
 import { Check, Filter, MoreVertical, Plus, Search } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import "./listtable.css";
 
 // The value list's own search box debounces on the same rhythm as the list
@@ -734,14 +735,21 @@ export function CountLine({
   sortedBy?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  // All three figures are magnitudes in ONE sentence ("1–25 of 1,234 rows"), so
+  // they group together or the line reads as two notations at once.
+  const range = {
+    first: formatNumber(first, locale),
+    last: formatNumber(last, locale),
+    count: formatNumber(total, locale),
+    unit,
+  };
   // The surface owns the count's placement; this only says what it reads.
   return (
     <>
       {total === 0 && t("table.none", { unit })}
       {total > 0 &&
-        (more
-          ? t("table.rangeLoaded", { first, last, count: total, unit })
-          : t("table.range", { first, last, count: total, unit }))}
+        (more ? t("table.rangeLoaded", range) : t("table.range", range))}
       {sortedBy && `, ${t("table.sortedBy", { column: sortedBy })}`}
     </>
   );

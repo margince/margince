@@ -17,6 +17,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gradionhq/margince/backend/internal/compose/attention"
 	"github.com/gradionhq/margince/backend/internal/compose/briefs"
 	"github.com/gradionhq/margince/backend/internal/compose/dealstatus"
 	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
@@ -62,6 +63,11 @@ type Server struct {
 	voiceHandlers
 	reportHandlers
 	briefs.Handlers
+	// The day's one surface, assembled across approvals, dedupe and tasks.
+	// Named rather than embedded: briefs.Handlers already claims the
+	// unqualified name, and two embedded `Handlers` is a compile error rather
+	// than a decision anybody made.
+	attentionHandlers attention.Handlers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads
@@ -362,3 +368,9 @@ type Server struct {
 }
 
 var _ crmcontracts.ServerInterface = Server{}
+
+// GetAttention forwards the day's read to the assembled surface. Explicit
+// because the field is named rather than embedded, so no method is promoted.
+func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.GetAttention(w, r)
+}

@@ -16,6 +16,7 @@ import {
   EvidenceChip,
   ProvenanceTag,
 } from "../../design-system/trust";
+import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../common";
@@ -334,7 +335,10 @@ function FieldRow({
                 {Math.round(row.confidence * 100)}
                 {row.evidence !== null && (
                   <span className="ob-triage-source">
-                    {t("ob.conv.triage.sourceCount", { count: 1 })}
+                    {/* A row carries at most one evidence record, so this
+                        count is the literal one — a single digit no locale
+                        groups or punctuates differently. */}
+                    {t("ob.conv.triage.sourceCount", { count: "1" })}
                   </span>
                 )}
               </span>
@@ -533,6 +537,7 @@ function SectionBadge({
   advisory: readonly ReviewRow[];
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   if (blocking.length === 0 && advisory.length === 0) {
     return (
       <span className="ob-triage-nav-settled">
@@ -546,7 +551,9 @@ function SectionBadge({
       <span className="ob-triage-nav-advisory">
         <b aria-hidden>{advisory.length}</b>
         <span className="sr-only">
-          {t("ob.conv.triage.sectionAdvisory", { count: advisory.length })}
+          {t("ob.conv.triage.sectionAdvisory", {
+            count: formatNumber(advisory.length, locale),
+          })}
         </span>
       </span>
     );
@@ -555,7 +562,9 @@ function SectionBadge({
     <span className="ob-triage-nav-badge" data-blocking="true">
       <b aria-hidden>{blocking.length}</b>
       <span className="sr-only">
-        {t("ob.conv.triage.sectionBlocking", { count: blocking.length })}
+        {t("ob.conv.triage.sectionBlocking", {
+          count: formatNumber(blocking.length, locale),
+        })}
       </span>
     </span>
   );
@@ -580,6 +589,7 @@ function NavOutstandingList({
   advisory: readonly ReviewRow[];
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   const rows = [
     ...blocking.map((row) => ({ row, isBlocking: true as const })),
     ...advisory.map((row) => ({ row, isBlocking: false as const })),
@@ -613,7 +623,9 @@ function NavOutstandingList({
       ))}
       {overflow > 0 && (
         <li className="ob-triage-nav-more">
-          {t("ob.conv.triage.sectionMore", { count: overflow })}
+          {t("ob.conv.triage.sectionMore", {
+            count: formatNumber(overflow, locale),
+          })}
         </li>
       )}
     </ul>
@@ -636,6 +648,7 @@ function SectionQuantity({
   labelKey: MessageKey;
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   if (count === 0) {
     return (
       <span className="ob-triage-nav-settled">
@@ -647,7 +660,9 @@ function SectionQuantity({
   return (
     <span className="ob-triage-nav-quantity">
       <b aria-hidden>{count}</b>
-      <span className="sr-only">{t(labelKey, { count })}</span>
+      <span className="sr-only">
+        {t(labelKey, { count: formatNumber(count, locale) })}
+      </span>
     </span>
   );
 }
@@ -893,13 +908,16 @@ function PeopleGroupSection({
   people,
   t,
 }: Readonly<{ people: readonly SitePerson[]; t: ReturnType<typeof useT> }>) {
+  const { locale } = useLocale();
   return (
     <section id={groupDomId(PEOPLE_KEY)} className="ob-triage-group">
       <div className="ob-triage-group-head">
         <h3>{t("ob.conv.triage.peopleLabel")}</h3>
         {people.length > 0 && (
           <span>
-            {t("ob.conv.triage.peopleCount", { count: people.length })}
+            {t("ob.conv.triage.peopleCount", {
+              count: formatNumber(people.length, locale),
+            })}
           </span>
         )}
       </div>
@@ -1075,8 +1093,8 @@ function FactsGroupSection({
         <h3>{t("ob.conv.triage.factsLabel")}</h3>
         <span>
           {t("ob.factsSelected", {
-            selected: selection.selectedCount,
-            total: facts.length,
+            selected: formatNumber(selection.selectedCount, locale),
+            total: formatNumber(facts.length, locale),
           })}
         </span>
       </div>
@@ -1112,6 +1130,7 @@ function FieldGroupSection({
   setField: (field: CompanyFieldName, value: string) => void;
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   const ordered = group.order
     .map((field) => rowByField.get(field))
     .filter((row): row is ReviewRow => row !== undefined);
@@ -1135,7 +1154,9 @@ function FieldGroupSection({
               solidCount > 0 && (
                 <li className="ob-triage-solid-divider" aria-hidden>
                   <span>
-                    {t("ob.conv.triage.looksSolid", { count: solidCount })}
+                    {t("ob.conv.triage.looksSolid", {
+                      count: formatNumber(solidCount, locale),
+                    })}
                   </span>
                 </li>
               )}
@@ -1239,6 +1260,7 @@ function ReviewContinueBar({
   onContinue: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   const statusId = "ob-triage-continue-status";
   // Required fields first: it is the more actionable of the two blockers
   // (a value to type, right here) and the one this surface can always
@@ -1265,7 +1287,7 @@ function ReviewContinueBar({
           hears why the moment it changes rather than only if focus happens
           to land on this paragraph first. */}
       <p id={statusId} className="ob-triage-continue-status" role="status">
-        {t(statusKey, { count: remaining })}
+        {t(statusKey, { count: formatNumber(remaining, locale) })}
       </p>
       <Button
         variant="primary"

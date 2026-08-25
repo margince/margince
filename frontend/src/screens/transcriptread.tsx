@@ -6,7 +6,8 @@ import { navigate } from "../app/router";
 import { Badge, Button, Card, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { AutonomyDot } from "../design-system/trust";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 
@@ -39,6 +40,7 @@ function TranscriptReadOutcome({
   report,
 }: Readonly<{ report: TranscriptReadReport }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (report.status === "failed") {
     return (
       <Callout tone="danger" live="status">
@@ -68,7 +70,7 @@ function TranscriptReadOutcome({
         {report.proposal_ids.length === 1
           ? t("transcriptread.proposalsOne")
           : t("transcriptread.proposals", {
-              count: report.proposal_ids.length,
+              count: formatNumber(report.proposal_ids.length, locale),
             })}
       </span>
       <Button small onClick={() => navigate({ screen: "inbox" })}>
@@ -86,6 +88,7 @@ function TranscriptReadPanel({
   readId,
 }: Readonly<{ activityId: string; readId: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const reportQuery = useQuery({
     queryKey: ["transcript-read", activityId, readId],
     queryFn: async () => {
@@ -138,7 +141,7 @@ function TranscriptReadPanel({
               report.line_count === 1
                 ? "transcriptread.lineCount.one"
                 : "transcriptread.lineCount.other",
-              { count: report.line_count },
+              { count: formatNumber(report.line_count, locale) },
             )}
           </span>
         )}

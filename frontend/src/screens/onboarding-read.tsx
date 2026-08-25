@@ -18,9 +18,9 @@ import type { components } from "../api/schema";
 import { Button, Card } from "../design-system/atoms";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { coldFieldLabel, problemMessageOf, throwProblem } from "./common";
 import { onboardingLocale } from "./onboarding-conversation/onboarding-locale";
@@ -33,7 +33,6 @@ type OnboardingCompanyDraft = components["schemas"]["OnboardingCompanyDraft"];
 type MessageReply = components["schemas"]["OnboardingCompanyMessageReply"];
 type ConversationTurn =
   components["schemas"]["CompanySiteReadConversationTurn"];
-type Translate = ReturnType<typeof useT>;
 export type SuggestedCompanyChange =
   components["schemas"]["CompanySiteReadSuggestedChange"];
 
@@ -161,7 +160,7 @@ const tierKeys = {
 export function configuredModelLabel(
   profile: AiProfile | undefined,
   unavailable: string,
-  t: Translate,
+  t: Translator,
 ) {
   const configured = profile?.configured_models
     ?.map(
@@ -212,14 +211,15 @@ function distinctModelIds(models: readonly AssistantConfiguredModel[]) {
 export function configuredModelSummary(
   profile: AiProfile | undefined,
   unavailable: string,
-  t: Translate,
+  t: Translator,
+  locale: Locale,
 ): string {
   if (!profile) return unavailable;
   const models = distinctModelIds(profile.configured_models ?? []);
   if (models.length > 0 && profile.inference_mode) {
     const keys = SUMMARY_KEYS[profile.inference_mode];
     return t(models.length === 1 ? keys.one : keys.other, {
-      count: models.length,
+      count: formatNumber(models.length, locale),
     });
   }
   const providerCount = profile.providers?.length ?? 0;
@@ -228,13 +228,13 @@ export function configuredModelSummary(
       providerCount === 1
         ? "ob.ai.summaryProviders.one"
         : "ob.ai.summaryProviders.other",
-      { count: providerCount },
+      { count: formatNumber(providerCount, locale) },
     );
   }
   return t("ob.ai.summary.none");
 }
 
-function workbenchStatus(props: ReadCompanyStepProps, t: Translate) {
+function workbenchStatus(props: ReadCompanyStepProps, t: Translator) {
   if (props.error) return t("ob.readStatus.failed");
   if (props.read) return t(`ob.readStatus.${props.read.status}`);
   return t("ob.ai.ready");
@@ -290,6 +290,7 @@ function WebsiteWorkbench(
         new URL(props.read.root_url).hostname,
         props.read.profile_fields.length + props.read.facts.length,
         t,
+        locale,
       )
     : null;
 
@@ -778,8 +779,6 @@ function WebsiteComposer(
   );
 }
 
-type Translator = ReturnType<typeof useT>;
-
 function latestFetchedPage(read: CompanySiteRead) {
   return [...read.pages].reverse().find((page) => page.status === "fetched");
 }
@@ -790,6 +789,7 @@ function coreReadPresentation(
   host: string,
   findings: number,
   t: Translator,
+  locale: Locale,
 ) {
   if (read.status === "deferred") {
     return {
@@ -807,14 +807,14 @@ function coreReadPresentation(
   }
   if (successfulStatuses.has(read.status)) {
     return {
-      title: t("ob.coreReady", { count: findings }),
+      title: t("ob.coreReady", { count: formatNumber(findings, locale) }),
       body: t("ob.coreReadyBody"),
       journeyStage: 3,
     };
   }
   if (read.status === "partial") {
     return {
-      title: t("ob.corePartial", { count: findings }),
+      title: t("ob.corePartial", { count: formatNumber(findings, locale) }),
       body: t("ob.coreReadyBody"),
       journeyStage: 3,
     };

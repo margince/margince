@@ -76,7 +76,7 @@ type satellitePath struct {
 var satelliteLifecyclePaths = []satellitePath{
 	{
 		name:         "archive_cascade",
-		file:         "internal/modules/people/person.go",
+		file:         "internal/modules/people/personarchive.go",
 		remedy:       "add it to ArchivePerson's statement list — an unlisted satellite stays LIVE under an archived Person",
 		archivedOnly: true,
 	},

@@ -39,10 +39,10 @@ import { connectionLabel, connectionTone } from "./provider-status";
 // decide whether new contacts are enriched automatically, and read what the
 // provider says is left against what this installation has spent.
 //
-// Four settings ROWS, in the order a reader needs them: the key that makes any
-// of this possible, the one judgement that spends it, then the two readings
-// those two produce. The readings take the full width because a table IS the
-// subject rather than an answer to a question; the key and the switch are
+// Five settings ROWS, in the order a reader needs them: the key that makes any
+// of this possible, the two judgements that spend it, then the two readings
+// those produce. The readings take the full width because a table IS the
+// subject rather than an answer to a question; the key and the switches are
 // answers, so they sit in the right column at the same x as every other card on
 // the page.
 //
@@ -317,13 +317,21 @@ function CreditsReading({
   );
 }
 
+// The half of the saved policy this card decides. A patch carries only the
+// switch that moved, so the two toggles never overwrite each other's value on
+// the way past — the server merges the rest of the policy itself.
+type PolicyPatch = Pick<
+  components["schemas"]["ProviderConfigurationPatch"],
+  "automatic_individual_create" | "automatic_import"
+>;
+
 function usePatchConfiguration(
   provider: ProviderConnection["provider"],
   version: number,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (automaticIndividualCreate: boolean) => {
+    mutationFn: async (configuration: PolicyPatch) => {
       const { data, error } = await api.PATCH(
         "/provider-connections/{provider}",
         {
@@ -335,11 +343,7 @@ function usePatchConfiguration(
             // stored.
             header: { "If-Match": String(version) },
           },
-          body: {
-            configuration: {
-              automatic_individual_create: automaticIndividualCreate,
-            },
-          },
+          body: { configuration },
         },
       );
       if (error) {
@@ -369,13 +373,14 @@ function usePatchConfiguration(
   });
 }
 
-// Auto-enrich is the one control here that a reader who may not change it still
-// needs to READ: it is the only place the installation says whether new contacts
-// are being enriched at somebody's expense. So it is neither absent (that would
-// hide a granted read) nor withheld (there is a fact to show) — it is the shape
-// the design system keeps for exactly this: a Switch, because flipping it
-// writes, with `reason` carrying the denial to a screen reader through
-// aria-describedby rather than leaving it beside the control as decoration.
+// The two auto-enrich switches are the controls here that a reader who may not
+// change them still needs to READ: this is the only place the installation says
+// whether new contacts are being enriched at somebody's expense. So neither is
+// absent (that would hide a granted read) nor withheld (there is a fact to
+// show) — each is the shape the design system keeps for exactly this: a Switch,
+// because flipping it writes, with `reason` carrying the denial to a screen
+// reader through aria-describedby rather than leaving it beside the control as
+// decoration.
 function PolicyRow({
   connection,
   canEdit,
@@ -396,6 +401,9 @@ function PolicyRow({
             // the id the row minted for it.
             describedBy={control["aria-describedby"]}
             checked={configuration.automatic_individual_create ?? false}
+            onChange={(next) =>
+              patch.mutate({ automatic_individual_create: next })
+            }
             // Three causes, and only one of them is worth words. A permission
             // is permanent and has to be explained; a write in flight explains
             // itself by finishing, and a disconnected provider is already
@@ -408,12 +416,32 @@ function PolicyRow({
             reason={canEdit ? undefined : t("captureSettings.adminOnly")}
             disabled={!canEdit || disconnected}
             pending={patch.isPending}
-            onChange={(next) => patch.mutate(next)}
             // The row already draws this name on the left, so the switch keeps
             // its own copy hidden: it owns its accessible name by design (see
             // switch.tsx) and pointing it at the row's span as well would name
             // it twice.
             label={t("provider.autoEnrich")}
+            labelHidden
+          />
+        )}
+      />
+      {/* Arrivals from a connection, decided separately from the ones a
+          colleague types. Every connector — a mailbox, a channel, an extension
+          — mints a person per counterparty it sees, so this switch spends per
+          arrival where the one above spends per deliberate act. That is why
+          the customer answers them apart, and why this one starts off. */}
+      <SettingRow
+        label={t("provider.autoImport")}
+        description={t("provider.autoImportHint")}
+        control={(control) => (
+          <Switch
+            describedBy={control["aria-describedby"]}
+            checked={configuration.automatic_import ?? false}
+            reason={canEdit ? undefined : t("captureSettings.adminOnly")}
+            disabled={!canEdit || disconnected}
+            pending={patch.isPending}
+            onChange={(next) => patch.mutate({ automatic_import: next })}
+            label={t("provider.autoImport")}
             labelHidden
           />
         )}

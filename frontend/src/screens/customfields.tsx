@@ -44,6 +44,7 @@ import {
   slug,
 } from "./customfields.logic";
 import "./customfields.css";
+import { stable } from "../format/collate";
 
 // The add-field builder (AC-custom-fields-3..5/8): a governed form that turns a
 // human's plain label into one typed scalar column on an existing object. The
@@ -477,7 +478,7 @@ export function AuditRail({
 }>) {
   const t = useT();
   const recentFirst = [...entries].sort((a, b) =>
-    b.occurred_at.localeCompare(a.occurred_at),
+    stable(b.occurred_at, a.occurred_at),
   );
 
   return (

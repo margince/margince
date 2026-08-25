@@ -1,3 +1,4 @@
+import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 // What a staged proposal is, in words a reader recognises.
@@ -178,10 +179,7 @@ export function humanizeKind(kind: string): string {
   return kind.replaceAll("_", " ");
 }
 
-export function approvalKindLabel(
-  kind: string,
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
-): string {
+export function approvalKindLabel(kind: string, t: Translator): string {
   const key = KIND_LABEL[kind];
   return key ? t(key) : humanizeKind(kind);
 }

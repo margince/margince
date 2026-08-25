@@ -5204,6 +5204,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
+         * @description The day's one surface. Five producers already ask a rep for something — staged
+         *     approvals, duplicate pairs, open tasks, the Morning-Brief queue, the overnight
+         *     digest — and before this they asked from four screens with four shapes, so the
+         *     rep's real question ("what needs me?") had no single answer.
+         *
+         *     The tier is derived from what the item COSTS, not from which producer raised it:
+         *
+         *     * `needs_you` — a decision only a person can make: an outbound send, a merge that
+         *       cannot be undone, a proposal against a record. Bounded, and ordered
+         *       highest-stakes-first.
+         *     * `planned` — work already agreed: today's and overdue tasks.
+         *     * `done_for_you` — what the system did on its own, as a receipt. Reported so a rep
+         *       can see and challenge it, never to ask for a decision that has already happened.
+         *
+         *     One transaction, one instant: `as_of` stamps the read, exactly as the record page
+         *     does. A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
+         *     than returned empty — "you may not see this" and "there is none" are different
+         *     answers, and a queue that conflated them would tell a rep their day is clear.
+         */
+        get: operations["getAttention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/digest": {
         parameters: {
             query?: never;
@@ -11329,15 +11366,34 @@ export interface components {
             } | null;
         };
         /**
-         * @description What the file's rows are. `lead` — not `person` — is what a bulk
-         *     prospect file creates: ADR-0008's anti-pollution rule is that machine-
-         *     sourced rows land as leads and are promoted by a human, and IEM-AC-7
-         *     asserts it by number (`0 person, N lead`). A file of people already
-         *     known to the business is imported as leads and promoted, not smuggled
-         *     past the qualification step by the choice of an enum value.
+         * @description What the file's rows are, and therefore what the run creates.
+         *
+         *     `organization` creates companies.
+         *
+         *     `lead` and `person` are two answers to one question about a file of
+         *     humans, and the caller picks the one that matches where the file came
+         *     from.
+         *
+         *     `lead` is the right answer for a machine-sourced list — a scraped
+         *     export, a purchased list, a conference badge dump. Those rows land in
+         *     the unworked `new` status and a human promotes the ones worth keeping.
+         *     Landing them as people would put unqualified rows in the same table as
+         *     the contacts the business actually deals with.
+         *
+         *     `person` is for a file of humans the business already knows — a
+         *     migration off another CRM, a re-import of a corrected export, a
+         *     customer list from a system being retired. Those rows were qualified
+         *     somewhere else, and routing them through the lead table would force a
+         *     human to re-approve records nobody doubts.
+         *
+         *     Neither value bypasses anything. A `person` run runs the same identity
+         *     ladder every other person create runs, refuses a row whose email
+         *     already belongs to another person, and files a review pair for a near
+         *     match — so a file of duplicates produces a review queue, not a silent
+         *     merge.
          * @enum {string}
          */
-        ImportObject: "organization" | "lead";
+        ImportObject: "organization" | "lead" | "person";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -11835,7 +11891,7 @@ export interface components {
             /** @default true */
             automatic_individual_create: boolean;
             /**
-             * @description Still requires import preview, maximum-credit estimate and explicit confirmation.
+             * @description Enrich every person a connector creates. A mailbox, channel or other connection mints one person per counterparty it sees, and each purchase spends credits; off by default for that reason.
              * @default false
              */
             automatic_import: boolean;
@@ -21204,6 +21260,101 @@ export interface components {
             momentum: number;
             /** @description strongest visible stakeholder's §4 strength / 100; floor 0 without contributing interactions. */
             warmth: number;
+        };
+        /**
+         * @description What is waiting on the acting rep right now, in three tiers, plus the counts that
+         *     let a badge be drawn without paging the lanes. Every count here is scoped the way
+         *     its lane is scoped: a number a caller cannot page to would report the existence of
+         *     records they may not read.
+         */
+        Attention: {
+            /**
+             * Format: date-time
+             * @description The instant every lane below was read at.
+             */
+            as_of: string;
+            /**
+             * @description One sentence naming what the day actually holds, in the reader's language.
+             *     Absent when there is nothing to lead with, which is itself the honest answer.
+             */
+            lead?: string;
+            /** @description Decisions only a person can make, highest-stakes first. */
+            needs_you: components["schemas"]["AttentionItem"][];
+            /** @description Work already agreed: overdue first, then due today. */
+            planned: components["schemas"]["AttentionItem"][];
+            /** @description What the system did on its own, most recent first. Receipts, not questions. */
+            done_for_you: components["schemas"]["AttentionItem"][];
+            /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
+            lanes_omitted?: ("needs_you" | "planned" | "done_for_you")[];
+            counts: components["schemas"]["AttentionCounts"];
+        };
+        /**
+         * @description How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
+         *     queue's own count under its both-sides-visible rule, kept separate because the
+         *     lane shows a bounded slice of it.
+         */
+        AttentionCounts: {
+            needs_you: number;
+            planned: number;
+            /** @description Open duplicate pairs both of whose sides this caller can see. */
+            duplicates_open?: number;
+        };
+        /**
+         * @description One thing waiting, in the words a reader recognises, with a typed reference back to
+         *     the record that owns it. The client routes a verb to that owner's endpoint — this
+         *     feed adds no decision authority of its own, exactly as the second approvals door
+         *     adds none.
+         */
+        AttentionItem: {
+            /** @description The owning record's id, as its own endpoint spells it. */
+            id: string;
+            /**
+             * @description Which producer raised it, and therefore which endpoint its verbs go to.
+             * @enum {string}
+             */
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item";
+            /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
+            kind?: string;
+            /**
+             * @description The server's own sentence for this item, when it has one — an approval
+             *     summary is composed at staging time out of the proposal's own facts.
+             *     ABSENT where the sentence would have to be invented: the product ships
+             *     three languages, so a duplicate pair sends its `kind` and `confidence`
+             *     and the client writes the line in the reader's own.
+             */
+            title?: string;
+            /** @description One supporting line: what changed, or what the evidence said. */
+            detail?: string;
+            /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
+            confidence?: number;
+            subject?: components["schemas"]["AttentionSubject"];
+            /**
+             * Format: date-time
+             * @description When this is due (tasks), or when it lapses (approvals).
+             */
+            due_at?: string;
+            /** @description Past due at the read instant, resolved server-side so every surface agrees. */
+            overdue?: boolean;
+            /**
+             * Format: date-time
+             * @description When a done_for_you receipt actually happened.
+             */
+            occurred_at?: string;
+            /**
+             * @description What this item offers. `decide` and `merge` mean the verb is irreversible and a
+             *     person must choose; `complete` and `snooze` are a task's own verbs; `open` is
+             *     the read-only fallback for a receipt.
+             */
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open")[];
+        };
+        /** @description The record this item is about, named so a reader knows who it concerns before opening anything. */
+        AttentionSubject: {
+            /** @enum {string} */
+            type: "organization" | "person" | "deal" | "lead" | "activity" | "project";
+            /** Format: uuid */
+            id: string;
+            /** @description The record's display name. Absent when the caller may not read it, which is not the same as unnamed. */
+            label?: string;
         };
         /**
          * @description A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
@@ -30797,6 +30948,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getAttention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tiered feed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attention"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getMorningDigest: {

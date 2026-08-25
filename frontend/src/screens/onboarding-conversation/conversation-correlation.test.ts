@@ -33,7 +33,7 @@ describe("read-run correlation", () => {
           kind: "narration",
           id: "pages:9",
           i18nKey: "ob.conv.read.pages",
-          params: { pages: 9 },
+          params: { pages: "9" },
         },
       },
     ];
@@ -80,7 +80,7 @@ describe("read-run correlation", () => {
           kind: "narration",
           id: "pages:12",
           i18nKey: "ob.conv.read.pages",
-          params: { pages: 12 },
+          params: { pages: "12" },
         },
       },
     ];

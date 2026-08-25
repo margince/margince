@@ -29,15 +29,22 @@ type entityFieldMask map[string]struct{}
 var defaultFieldMasks = map[string]entityFieldMask{}
 
 // writerBookkeepingKeys names keys an audit image carries that are not fields
-// OF the record: the writing pipeline's own state. A site-read confirmation
-// audits which draft it applied (`site_read_id`, `draft_version`), where it
-// read (`source`, `source_url`) and the whole applied payload (`fields`,
-// `human_fields`, `facts`) — none of which is a column anyone can see as a
-// live value, and one of which is a fact array thousands of characters long.
+// OF the record: the writing pipeline's own state — which draft it applied
+// (`site_read_id`, `draft_version`), where it read (`source`, `source_url`), the
+// whole applied payload (`fields`, `human_fields`, `facts`). None is a column
+// anyone can see as a live value, and one is a fact array thousands of
+// characters long.
 //
 // Field history answers "what changed on this record", so it withholds them.
 // The audit spine (recordHistoryEntry) keeps them: an auditor asking which
 // pipeline run wrote a row is asking exactly this.
+//
+// It reads HISTORY, not today's writers. The writers that put these keys in an
+// image now put them in evidence, so nothing being written today needs masking —
+// but audit_log is append-only, every row those writers already wrote still
+// carries them, and a reader of a record's past still meets them. The set
+// shrinks only when there are no such rows left to read, which is not a thing
+// this table lets anyone arrange.
 var writerBookkeepingKeys = entityFieldMask{
 	"source":        {},
 	"source_url":    {},

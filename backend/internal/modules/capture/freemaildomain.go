@@ -209,8 +209,15 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 		// names the grant that actually admitted the write (auth.AuthzRule
 		// maps verb to grant) — a fresh `never` carve-out audits as the
 		// update it was admitted on, never as a create any rep could make.
+		after := map[string]any{auditKeyDomain: base, auditKeyKind: kind}
+		// A carve-out the list did not hold replaces no kind — the domain simply
+		// was not on it. One that did says which kind it was.
+		if beforeImage == nil {
+			_, auditErr := storekit.AuditEvent(ctx, tx, string(required), freemailDomainObject, out.ID, after)
+			return auditErr
+		}
 		_, auditErr := storekit.Audit(ctx, tx, string(required), freemailDomainObject, out.ID,
-			beforeImage, map[string]any{auditKeyDomain: base, auditKeyKind: kind})
+			beforeImage, after)
 		return auditErr
 	})
 	if err != nil {

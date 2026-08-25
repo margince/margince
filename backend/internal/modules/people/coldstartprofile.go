@@ -125,7 +125,7 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	// reader is entitled to see.
 	//
 	// A row this call just minted has no before-image at all. Reading one back
-	// would return the values the create itself wrote, changedColumnsOnly
+	// would return the values the create itself wrote, ChangedColumns
 	// would then find nothing moved, and the create audit would omit the name
 	// it inserted — the one change the row is entirely made of.
 	var before map[string]any
@@ -142,7 +142,7 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	if err != nil {
 		return ids.OrganizationID{}, err
 	}
-	before, after = changedColumnsOnly(before, after)
+	before, after = storekit.ChangedColumns(before, after)
 
 	action := "update"
 	if created {

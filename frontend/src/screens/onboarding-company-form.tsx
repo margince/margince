@@ -7,6 +7,7 @@ import {
   EvidenceChip,
   ProvenanceTag,
 } from "../design-system/trust";
+import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { coldFieldLabel } from "./common";
 import {
@@ -83,7 +84,10 @@ export function CompanyStep({
         <span>
           {read
             ? t("ob.confirmWebsite", {
-                count: read.pages_read ?? read.pages.length,
+                count: formatNumber(
+                  read.pages_read ?? read.pages.length,
+                  locale,
+                ),
               })
             : t("ob.confirmManual")}
         </span>
@@ -174,8 +178,8 @@ export function CompanyStep({
             <span className="seclabel">{t("ob.factsTitle")}</span>
             <span className="facts-count">
               {t("ob.factsSelected", {
-                selected: selectedFactKeys.length,
-                total: read.facts.length,
+                selected: formatNumber(selectedFactKeys.length, locale),
+                total: formatNumber(read.facts.length, locale),
               })}
             </span>
           </summary>

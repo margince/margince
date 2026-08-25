@@ -10,7 +10,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { Select } from "../design-system/select";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -230,7 +230,10 @@ export function LeadManualSignals({
                     {live.confidence != null && (
                       <span className="t-caption">
                         {t("lead.signalConfidenceValue", {
-                          value: Math.round(live.confidence * 100),
+                          value: formatNumber(
+                            Math.round(live.confidence * 100),
+                            locale,
+                          ),
                         })}
                       </span>
                     )}
@@ -352,7 +355,10 @@ export function LeadManualSignals({
                       ...CONFIDENCE_LEVELS.map((value) => ({
                         value,
                         label: t("lead.signalConfidenceValue", {
-                          value: Math.round(Number(value) * 100),
+                          value: formatNumber(
+                            Math.round(Number(value) * 100),
+                            locale,
+                          ),
                         }),
                       })),
                     ]}

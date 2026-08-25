@@ -16,7 +16,8 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
@@ -134,6 +135,7 @@ function useSettledSearch(typed: string): string {
 // anyone is asking.
 function BaselineRow() {
   const t = useT();
+  const { locale } = useLocale();
   const [q, setQ] = useState("");
   // The field shows what is being typed; the SEARCH is what has settled. `q`
   // is the query key, so without this every character was its own request over
@@ -148,7 +150,10 @@ function BaselineRow() {
       <SettingRow
         label={t("consumerMail.baselineSearchLabel")}
         description={
-          result && t("consumerMail.baselineCount", { total: result.total })
+          result &&
+          t("consumerMail.baselineCount", {
+            total: formatNumber(result.total, locale),
+          })
         }
         layout="stack"
         // The function form, so the words the row draws are also the name the
@@ -180,8 +185,8 @@ function BaselineRow() {
                 {result.matched > result.data.length && (
                   <p className="t-small">
                     {t("consumerMail.baselineMore", {
-                      shown: result.data.length,
-                      matched: result.matched,
+                      shown: formatNumber(result.data.length, locale),
+                      matched: formatNumber(result.matched, locale),
                     })}
                   </p>
                 )}

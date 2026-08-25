@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { Button, PendingBody } from "./atoms";
 import { Eyebrow, type EyebrowElement } from "./eyebrow";
 import "./surfacestate.css";
@@ -183,6 +184,7 @@ export function SurfaceState({
   children: ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const body = (
     <>
       {state === "ready" && children}
@@ -231,7 +233,9 @@ export function SurfaceState({
           {children}
           <p className="surfacestate-empty">
             {detail?.remaining
-              ? t("state.partialCount", { count: detail.remaining })
+              ? t("state.partialCount", {
+                  count: formatNumber(detail.remaining, locale),
+                })
               : t("state.partial")}
           </p>
         </>
