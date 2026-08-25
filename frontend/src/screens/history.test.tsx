@@ -96,6 +96,18 @@ const writtenByPassport = {
   summary: "An agent updated the record",
 };
 
+// The other side of a Deal Room: a person with no seat, whose actor_id is the
+// participant uuid. The source IS recorded here — reading it as unattributed
+// said the opposite about a row somebody signed.
+const commentedByBuyer = {
+  id: "h6",
+  actor_type: "buyer",
+  actor_id: `buyer:${OPAQUE}`,
+  action: "create",
+  occurred_at: "2026-07-18T10:00:00Z",
+  summary: "A comment was added in the Deal Room",
+};
+
 describe("RecordHistory", () => {
   it("renders plain-language summaries with attribution", async () => {
     vi.stubGlobal(
@@ -181,6 +193,26 @@ describe("RecordHistory", () => {
     render(<RecordHistory kind="deal" id="d1" />);
     expect(await screen.findByText("Automated by sdr")).toBeTruthy();
     expect(screen.getByText("System task")).toBeTruthy();
+  });
+
+  it("attributes a buyer to a buyer, not to a source nobody recorded", async () => {
+    // The two are one branch apart, which is how this went wrong: `unknown`
+    // means nobody recorded a source, and a buyer's action has one.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [commentedByBuyer],
+          page: { next_cursor: null },
+        }),
+      ),
+    );
+    render(<RecordHistory kind="deal" id="d1" />);
+    expect(await screen.findByText("typed by a buyer")).toBeTruthy();
+    expect(screen.queryByText("source not recorded")).toBeNull();
+    // A participant uuid resolves to no name on this side, and no tag prints
+    // an identifier a reader cannot look up.
+    expect(screen.queryByText(new RegExp(OPAQUE))).toBeNull();
   });
 
   it("shows an honest empty state", async () => {

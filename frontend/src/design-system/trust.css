@@ -120,7 +120,11 @@ button.evidence-chip:hover {
 }
 .provenance-human {
   background: var(--bgCard);
-  color: var(--teal);
+  /* --tealText, not --teal: the two are byte-identical in light, and only
+     --tealText is lifted for dark. Unlifted teal on a dark card measures
+     2.74:1 at this size — under the 4.5:1 text floor, on the most-rendered
+     arm of the five. */
+  color: var(--tealText);
 }
 /* The installation's own housekeeping: neither a person nor a model, so it
    borrows neither the human teal nor the AI tint. Plain ink on the card ground
@@ -129,6 +133,15 @@ button.evidence-chip:hover {
 .provenance-system {
   background: var(--bgCard);
   color: var(--textPrimary);
+}
+/* A buyer typed it, so the tag keeps the human arm's plain card ground and
+   never the AI tint — a person did this. The ink is the accent rather than the
+   colleague teal because a buyer is a person from OUTSIDE the organization, and
+   the accent is already how the product marks a buyer's own contribution (the
+   stripe on their Deal Room comment). */
+.provenance-buyer {
+  background: var(--bgCard);
+  color: var(--accent);
 }
 /* An unrecorded source claims neither a person nor a machine, and reads as
    the absence it is rather than borrowing either one's colour. */

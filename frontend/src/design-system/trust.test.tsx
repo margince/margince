@@ -137,6 +137,24 @@ describe("ProvenanceTag", () => {
     );
   });
 
+  // A buyer and an unrecorded source are one branch apart, and collapsing the
+  // first into the second is what put "source not recorded" on a row whose
+  // source was a person. The two are asserted together because that is the
+  // distinction: `unknown` still has to mean nobody recorded a source.
+  it("reads a buyer as a person from outside, never as an unrecorded source", () => {
+    render(<ProvenanceTag provenance={{ kind: "buyer" }} />);
+    render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
+
+    const buyer = screen.getByText("typed by a buyer");
+    expect(buyer.className).toContain("provenance-buyer");
+    // Not the colleague arm either: a buyer holds no seat, and "typed by a
+    // person" would send a reader looking for them in the member directory.
+    expect(buyer.className).not.toContain("provenance-human");
+    expect(screen.getByText("source not recorded").className).toContain(
+      "provenance-unknown",
+    );
+  });
+
   it("names the connector a record was imported through", () => {
     render(
       <ProvenanceTag provenance={{ kind: "connector", connector: "gmail" }} />,
