@@ -22,9 +22,12 @@ package people
 
 import (
 	"context"
+	"errors"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -181,5 +184,58 @@ func TestARefusedWriteReportsThatItDidNotLand(t *testing.T) {
 	}
 	if rows := claimRowsFor(ctx, t, e, personID); rows != 0 {
 		t.Errorf("rows for the archived person = %d, want 0", rows)
+	}
+}
+
+// The predicate NARROWS the window; the lock closes it. Proved by making an
+// erasure wait for a fill that is holding the subject.
+//
+// No sleep and no clock: the erasure's own lock_timeout is what reports the
+// blocking, and it can only fire when something is holding the row. Without the
+// lock the erasure commits immediately and the test fails on the successful
+// path, so both directions are observable.
+func TestAFillHoldsTheSubjectAgainstAConcurrentErasure(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Sunniva Dahl", "sunniva@holds.test", "Dahl AS", "holds.test")
+
+	held, release := make(chan struct{}), make(chan struct{})
+	filling := make(chan error, 1)
+	// once, because WithWorkspaceTx may run the closure again and a second
+	// close would panic in a goroutine the test cannot recover.
+	var announce sync.Once
+	go func() {
+		filling <- e.store.tx(ctx, func(tx pgx.Tx) error {
+			if _, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
+				Field: "role", Value: "Owner", EvidenceSnippet: "Sunniva Dahl owns the company.",
+				SourceRef: "https://holds.test/about", Source: researchSource, CapturedBy: "human:probe",
+			}, replaceOnAcceptance); err != nil {
+				return err
+			}
+			announce.Do(func() { close(held) })
+			<-release
+			return nil
+		})
+	}()
+	<-held
+
+	erasure := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '2s'`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `UPDATE person SET archived_at = now() WHERE id = $1`, personID)
+		return err
+	})
+	close(release)
+	if err := <-filling; err != nil {
+		t.Fatalf("the fill itself failed, so this test proves nothing about the erasure: %v", err)
+	}
+
+	var pgErr *pgconn.PgError
+	if !errors.As(erasure, &pgErr) || pgErr.Code != "55P03" {
+		t.Fatalf("the erasure got %v, want a lock timeout (55P03) — a fill in flight must hold the "+
+			"subject, or the erasure commits between this transaction's snapshot and its write and "+
+			"the row lands on a person it had just cleared", erasure)
 	}
 }

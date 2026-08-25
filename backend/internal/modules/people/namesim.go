@@ -218,18 +218,27 @@ func jaro(a, b string) float64 {
 	return (m/float64(len(ra)) + m/float64(len(rb)) + (m-float64(transpositions)/2)/m) / 3
 }
 
-// personNameKeySQL is the SQL side of NormalizePersonName: the two properties a
-// bare comparison lacks. Both sides of the equality arm in fuzzyPerson call it,
-// so that comparison cannot fold its two halves with different normalizations
-// of the same name.
+// personNameKeySQL is the SQL side of NormalizePersonName. Both sides of the
+// equality arm in fuzzyPerson call it, so that comparison cannot fold its two
+// halves with different normalizations of the same name.
 //
 // Not a mirror of the Go key — it deliberately is not one. SQL's lower and Go's
-// Unicode full fold are different normalizations, and this arm exists so the
-// lane does not rely on either being a superset of the other. What it DOES owe
-// is every property the Go key has that plain SQL text comparison does not: the
-// trim, and the collapse of internal whitespace, because a name a crawled page
-// reflowed across a line break is Go-equal to the same name typed by hand and
-// would otherwise be invisible to the arm that guarantees the lane sees it.
+// Unicode full fold are different normalizations, and the arm exists so the lane
+// does not rely on either being a superset of the other. What it DOES owe is
+// every pair the Go key calls equal, since that is the equality the lane
+// decides on, and three properties of the Go key are not free in SQL:
+//
+//   - the trim, and the collapse of internal whitespace, because a name a
+//     crawled page reflowed across a line break is Go-equal to the same name
+//     typed by hand;
+//   - Greek final sigma, which full folding maps onto σ and lower() leaves
+//     alone, so "Οδυσσεύς" and "ΟΔΥΣΣΕΥΣ" are one person in Go and two here.
+//
+// Held by TestTheNameKeyArmAdmitsEveryGoEqualPair (creatededupe_integration_test.go),
+// which runs this expression against the database over the same pairs the
+// reachability test carries — the arm's own claim, asked of the arm rather than
+// of the query it sits in, where the trigram arm answers first and hides it.
 func personNameKeySQL(expr string) string {
-	return storekit.SQLf(`btrim(regexp_replace(f_fold_apostrophes(lower(%s)), '\s+', ' ', 'g'))`, expr)
+	return storekit.SQLf(
+		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr)
 }
