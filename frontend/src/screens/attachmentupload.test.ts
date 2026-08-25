@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { uploadAttachment } from "./attachmentupload";
+import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { ProblemError } from "./common";
 
 // One upload wrapper for every surface that files bytes, so what the document
@@ -9,7 +9,10 @@ import { ProblemError } from "./common";
 // cannot be read.
 
 const FILE = new File(["signed"], "agreement.pdf", { type: "application/pdf" });
-const ORG = { entityType: "organization", entityId: "org-1" } as const;
+const ORG: AttachmentParent = {
+  entityType: "organization",
+  entityId: "org-1",
+};
 
 /** The one request the wrapper made, recorded as it was sent. */
 type Sent = { url: string; credentials?: RequestCredentials; parts: FormData };

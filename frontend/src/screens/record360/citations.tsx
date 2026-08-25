@@ -80,16 +80,28 @@ export function citationChips(
   groupable: (entityType: CitedKind) => boolean = () => false,
 ): CitationChip[] {
   const chips: CitationChip[] = [];
-  const seen = new Set<string>();
+  const seenAt = new Map<string, number>();
   const groupAt = new Map<CitedKind, number>();
   for (const cited of evidence) {
     const identity = `${cited.entity_type}:${cited.entity_id}`;
-    if (seen.has(identity)) {
+    const already = seenAt.get(identity);
+    if (already !== undefined) {
+      // The same record cited twice is one source, so the chip stays — but the
+      // server names a record on the citation rather than once per record, and
+      // nothing promises the FIRST mention is the one that carried the name.
+      // Dropping the repeat outright therefore threw away the only name there
+      // was, and the chip fell back to its bare kind. Still one record, so it
+      // may still speak with its own name; `count === 1` is what says it has
+      // not since become a group speaking for several.
+      const held = chips[already];
+      if (held.name === undefined && held.count === 1 && cited.name) {
+        held.name = cited.name;
+      }
       continue;
     }
-    seen.add(identity);
     const isOpenable = openable(cited.entity_type);
     if (isOpenable && !groupable(cited.entity_type)) {
+      seenAt.set(identity, chips.length);
       chips.push({
         openable: true,
         entityType: cited.entity_type,
@@ -101,6 +113,10 @@ export function citationChips(
     }
     const at = groupAt.get(cited.entity_type);
     if (at === undefined) {
+      // The record's chip is the one just pushed. Recorded per BRANCH rather
+      // than once above, because a record joining an existing group lands on
+      // that group's index and not at the end.
+      seenAt.set(identity, chips.length);
       groupAt.set(cited.entity_type, chips.length);
       chips.push(
         isOpenable
@@ -119,6 +135,7 @@ export function citationChips(
       );
       continue;
     }
+    seenAt.set(identity, at);
     const grouped = chips[at];
     grouped.count += 1;
     // It now speaks for several records, so it may no longer carry one of

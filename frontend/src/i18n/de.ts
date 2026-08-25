@@ -1398,7 +1398,7 @@ export const de = {
   "co.tags.apply": "Tag hinzufügen",
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
-    "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, das hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neues angelegt wird.",
+    "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
   "co.lists.add": "Zu Liste hinzufügen",
   "co.lists.pick": "Listenname",
   "co.lists.overCap":

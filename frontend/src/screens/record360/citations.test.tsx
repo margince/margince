@@ -77,6 +77,38 @@ describe("citationChips", () => {
       { openable: false, entityType: "activity", count: 1, name: "Renewal" },
     ]);
   });
+
+  it("takes the name from whichever citation of that record carried one", () => {
+    // The reverse order of the case above. The name rides the CITATION, not
+    // the record, so nothing promises the first mention is the one that has
+    // it — and dropping the repeat outright threw away the only name there
+    // was, leaving the chip to render its bare kind.
+    expect(
+      citationChips(
+        [cited("activity", "a-1"), cited("activity", "a-1", "Renewal")],
+        () => false,
+      ),
+    ).toEqual([
+      { openable: false, entityType: "activity", count: 1, name: "Renewal" },
+    ]);
+  });
+
+  it("still refuses one member's name once the chip counts several", () => {
+    // A late name must not reopen the group's mouth: the chip speaks for two
+    // records here, and either name would claim the other is it.
+    expect(
+      citationChips(
+        [
+          cited("activity", "a-1"),
+          cited("activity", "a-2"),
+          cited("activity", "a-1", "Renewal"),
+        ],
+        () => false,
+      ),
+    ).toEqual([
+      { openable: false, entityType: "activity", count: 2, name: undefined },
+    ]);
+  });
 });
 
 describe("Citations", () => {

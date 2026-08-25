@@ -13,12 +13,19 @@ type ConversationClaim = components["schemas"]["ConversationClaim"];
 // said "due yesterday" about the same promise the task list, the agent tool and
 // the SQL all called late. These pin the boundary at the instant.
 
-const CAPTURED = {
+// The provenance every fixture person carries, typed from the contract rather
+// than asserted: these are Person360's own person fields, so a change to any
+// of them fails here instead of being widened away by the assertion that used
+// to stand in for the type.
+const CAPTURED: Pick<
+  Person360["person"],
+  "source" | "captured_by" | "created_at" | "updated_at"
+> = {
   source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
-} as const;
+};
 
 // The reading moment every case below is an offset from. Fixed, because a
 // suite that reads the machine's calendar changes its verdict in December.

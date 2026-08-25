@@ -144,30 +144,90 @@ function scannableSource(file: string, text: string): string {
   return chars.join("");
 }
 
+/**
+ * Every type family named in one source text, in either spelling.
+ *
+ * A stylesheet declares `font-family:` and a TSX style prop spells the same
+ * thing `fontFamily:`, so the pattern carries two alternatives — and only ONE
+ * capture group can fire on a given hit. Reading the first alone made every
+ * inline `fontFamily` a match whose families were `undefined` and silently
+ * skipped: the gate said PASS about a spelling it had never once looked at.
+ *
+ * The inline arm takes either quote, because the quote is the formatter's
+ * choice and not the author's, and the declared arm runs to the `;`/`}` rather
+ * than stopping at a quote — a CSS family whose name needs quoting is exactly
+ * the multi-word kind this rule is about, and stopping short made
+ * `font-family: "Comic Sans MS"` invisible while `font-family: Outfit, "DM
+ * Sans"` was read as naming only Outfit. A gate that only sees what biome happens to
+ * emit today stops seeing the day that changes — and it is the same shape of
+ * miss as the capture group: under-recognition, reported as PASS.
+ *
+ * Exported to the fixture test below rather than inlined in the scan, so the
+ * spellings this gate can see are asserted rather than assumed.
+ */
+function familiesIn(text: string): string[] {
+  const found: string[] = [];
+  for (const [, declared, inline] of text.matchAll(
+    /font-family\s*:\s*([^;}]+)|fontFamily\s*:\s*["']([^"']+)["']/g,
+  )) {
+    for (const family of (declared ?? inline ?? "").split(",")) {
+      const name = family.trim().replace(/^["']|["']$/g, "");
+      if (name !== "" && !name.startsWith("var(")) {
+        found.push(name);
+      }
+    }
+  }
+  return found;
+}
+
 describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   it("uses only the three §2 type families", () => {
     for (const file of files) {
-      const text = readFileSync(file, "utf8");
-      // Two spellings, two capture groups, and only ONE of them can match on a
-      // given hit — so the arm has to read whichever fired. Reading the first
-      // alone made every inline `fontFamily` a match whose families were
-      // `undefined`, silently skipped: the gate said PASS about a spelling it
-      // had never once looked at.
-      for (const [, declared, inline] of text.matchAll(
-        /font-family\s*:\s*([^;}"']+)|fontFamily\s*:\s*"([^"]+)"/g,
+      // `*.test.*` is fixture data, exactly as the colour arm below reads it
+      // and as scripts/check-font-lock.sh already excludes it: a test naming a
+      // forbidden family is the assertion, not the defect.
+      if (/\.test\.tsx?$/.test(file)) {
+        continue;
+      }
+      // Through `scannableSource`, the same as the colour arm: prose naming a
+      // family is discussing the rule, not breaking it, and a detector that
+      // strips comments for one rule and not the other is the inconsistency
+      // that made this pair hard to reason about.
+      for (const name of familiesIn(
+        scannableSource(file, readFileSync(file, "utf8")),
       )) {
-        for (const family of (declared ?? inline ?? "").split(",")) {
-          const name = family.trim().replace(/^["']|["']$/g, "");
-          if (name === "" || name.startsWith("var(")) {
-            continue;
-          }
-          expect(
-            allowedFamilies.has(name),
-            `${relative(frontendRoot, file)}: font-family "${name}" is outside the three-family rule (§2)`,
-          ).toBe(true);
-        }
+        expect(
+          allowedFamilies.has(name),
+          `${relative(frontendRoot, file)}: font-family "${name}" is outside the three-family rule (§2)`,
+        ).toBe(true);
       }
     }
+  });
+
+  // What the scan above can SEE, planted rather than assumed. Each spelling is
+  // one a real file uses, and a miss in any of them reads as a clean PASS.
+  it("reads a family in every spelling a source can carry", () => {
+    expect(familiesIn('font-family: "Comic Sans MS";')).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn("font-family: Comic Sans MS;")).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn('fontFamily: "Comic Sans MS"')).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn("fontFamily: 'Comic Sans MS'")).toEqual([
+      "Comic Sans MS",
+    ]);
+    // A stack names several, and every one of them is held to the rule.
+    expect(familiesIn('font-family: Outfit, "DM Sans", sans-serif;')).toEqual([
+      "Outfit",
+      "DM Sans",
+      "sans-serif",
+    ]);
+    // A token reference is the ALLOWED spelling and names no family, so it
+    // must not be reported as one.
+    expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
   });
 
   // B-EP09.16: no inline user-facing copy — every string the user reads comes
