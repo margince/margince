@@ -404,13 +404,21 @@ func withPartial(rep Report, or ObjectReport) Report {
 
 // mergedWith folds an earlier attempt's dispositions into this one's, so
 // a run resumed across several crashes still reports the whole estate it
-// imported rather than only its final leg. Counts add and per-object
+// imported rather than only its final leg. Row counts add and per-object
 // entries fold by class; the checkpoint guarantees no row is walked
-// twice, so addition cannot double-count.
+// twice, so addition cannot double-count them.
+//
+// EDGES REPLACE RATHER THAN ADD, and the difference is the checkpoint. There is
+// none over the association phase: it runs whole on every attempt, and the dry
+// run walks the same edges again to say what it would link. Adding those would
+// report a file's 12,000 employer links as 24,000 the moment it was approved,
+// and name every company it could not find twice over. The later answer is the
+// true one — it was computed against the estate as it stands now — so it wins
+// outright.
 func (r Report) mergedWith(next Report) Report {
 	out := Report{
-		Associations:        r.Associations + next.Associations,
-		AssociationsSkipped: append(append([]SkippedAssoc(nil), r.AssociationsSkipped...), next.AssociationsSkipped...),
+		Associations:        next.Associations,
+		AssociationsSkipped: append([]SkippedAssoc(nil), next.AssociationsSkipped...),
 		Imported:            r.Imported + next.Imported,
 	}
 	at := map[string]int{}

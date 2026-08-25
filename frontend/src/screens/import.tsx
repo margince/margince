@@ -348,6 +348,7 @@ function ImportOutcome({
           column: report.source_key_used,
         })}
       </p>
+      <LinkCount links={report.links} committed={committed} />
 
       {report.issues.length > 0 ? (
         <>
@@ -650,5 +651,36 @@ function ImportMappingStep({
         </Callout>
       ) : null}
     </>
+  );
+}
+
+// LinkCount reports the connections a run makes, apart from the rows it writes.
+//
+// Its own component because it is its own question: one person can arrive as a
+// created row AND an applied link, so putting links among the four counts above
+// would make them stop summing to the rows read. Renders nothing when the file
+// asked for no links, which is every import that mapped no company column.
+function LinkCount({
+  links,
+  committed,
+}: {
+  links: ImportReport["links"];
+  committed: boolean;
+}) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!links || links.offered === 0) return null;
+  return (
+    <p className="import__hint">
+      {committed
+        ? t("import.linksApplied", {
+            applied: formatNumber(links.applied, locale),
+            offered: formatNumber(links.offered, locale),
+          })
+        : t("import.linksOffered", {
+            offered: formatNumber(links.offered, locale),
+            unresolved: formatNumber(links.unresolved?.length ?? 0, locale),
+          })}
+    </p>
   );
 }

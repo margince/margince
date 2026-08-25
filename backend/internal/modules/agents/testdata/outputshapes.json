@@ -5099,6 +5099,43 @@
                   ]
                 }
               },
+              "links": {
+                "type": "object",
+                "properties": {
+                  "applied": {
+                    "type": "integer"
+                  },
+                  "offered": {
+                    "type": "integer"
+                  },
+                  "unresolved": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "reason",
+                        "to"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "applied",
+                  "offered"
+                ]
+              },
               "rows_read": {
                 "type": "integer"
               },

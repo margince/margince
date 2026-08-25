@@ -154,7 +154,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
   "person.enriched.field.linkedin",
-  "deepread.skipRobots",
   "quotas.periodRange",
 
   // Units, version rows and other format-only strings: symbols/abbreviations

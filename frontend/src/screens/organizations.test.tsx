@@ -32,12 +32,7 @@ import {
   mapOrgUpdate,
 } from "./organizations";
 
-// Company-360 enrichment (EP05 scrapeCompany): one click stages a 🟡
-// evidence-backed proposal — human field labels, per-field confidence +
-// evidence, the confirm-first banner (nothing written until the inbox
-// accept), and honest 422 degradation with the server's detail verbatim.
-//
-// Below that: the same P-14/15/16/1 shared-block wiring as contacts
+// The same P-14/15/16/1 shared-block wiring as contacts
 // (people.test.tsx) — search/sort/pagination, the rich create modal
 // (display_name/legal_name/industry/size_band/domains), the company-360
 // If-Match edit, and the duplicate_domain dedupe link.
@@ -75,32 +70,6 @@ async function openRecordMenu(testId: string): Promise<HTMLElement> {
   return screen.getByTestId(testId);
 }
 
-const proposal = {
-  proposal_id: "pr-1",
-  organization_id: "o-1",
-  source_url: "https://brandt.example",
-  status: "staged",
-  fields: [
-    {
-      field: "value_proposition",
-      value: "Fleet retrofits without downtime",
-      evidence_snippet: "We retrofit fleets without downtime",
-      source_url: "https://brandt.example",
-      confidence: 0.85,
-    },
-  ],
-};
-
-// The enrichment suite's only variable is what POST /enrich answers back; every
-// other read the page fires falls to the shared company backstop.
-function stubApi(enrich: () => Response) {
-  stubFetch(async (url, method) =>
-    method === "POST" && url.endsWith("/enrich")
-      ? enrich()
-      : companyBackstop(url),
-  );
-}
-
 // openHistory switches to the tab the account's chronology now lives on. The
 // timeline left the overview when the page gained People and History tabs, so
 // a test about the timeline has to go there first.
@@ -115,48 +84,6 @@ async function openHistory() {
 async function openProfile() {
   await userEvent.click(await screen.findByRole("button", { name: "Profile" }));
 }
-
-describe("company-360 enrichment", () => {
-  it("stages an evidence-backed proposal: human labels, confidence, confirm-first banner", async () => {
-    stubApi(() => jsonResponse(proposal));
-    render(<CompanyScreen id="o-1" />);
-    await waitFor(() =>
-      expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
-    );
-    await openProfile();
-    await userEvent.click(screen.getByRole("button", { name: "Read now" }));
-    await waitFor(() =>
-      expect(screen.getByText("Value proposition")).toBeTruthy(),
-    );
-    expect(screen.queryByText("value_proposition")).toBeNull();
-    expect(screen.getByText("Fleet retrofits without downtime")).toBeTruthy();
-    expect(screen.getByText(/Staged — nothing written yet/)).toBeTruthy();
-    expect(screen.getByText(/read from https:\/\/brandt.example/)).toBeTruthy();
-  });
-
-  it("renders the honest 422 detail when the page is unreadable", async () => {
-    stubApi(() =>
-      jsonResponse(
-        {
-          title: "Unprocessable",
-          detail: "the organization has no domain to read",
-        },
-        422,
-      ),
-    );
-    render(<CompanyScreen id="o-1" />);
-    await waitFor(() =>
-      expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
-    );
-    await openProfile();
-    await userEvent.click(screen.getByRole("button", { name: "Read now" }));
-    await waitFor(() =>
-      expect(
-        screen.getByText("the organization has no domain to read"),
-      ).toBeTruthy(),
-    );
-  });
-});
 
 // The deep read (A102/R2): one click starts a background whole-site crawl and
 // the card polls the read report until it lands on a terminal status. The
@@ -292,7 +219,7 @@ describe("company-360 deep read", () => {
     expect(screen.queryByText("Failed")).toBeNull();
   });
 
-  it("a partial report says it stopped early and names every skip reason", async () => {
+  it("a partial report says it stopped early, without listing the crawl's URLs", async () => {
     const { calls } = stubDeepRead({
       report: () =>
         jsonResponse({
@@ -314,13 +241,13 @@ describe("company-360 deep read", () => {
       expect(screen.getByText("Stopped early: page cap")).toBeTruthy(),
     );
     expect(screen.getByText("6 evidenced facts staged")).toBeTruthy();
-    expect(screen.getByText("Pages skipped")).toBeTruthy();
-    expect(screen.getByText("robots.txt")).toBeTruthy();
-    expect(screen.getByText("off domain")).toBeTruthy();
-    expect(screen.getByText("brandt.example/careers")).toBeTruthy();
+    // The crawl's own URL lists are debug output, not something a person
+    // reading a company record has any use for.
+    expect(screen.queryByText("Pages skipped")).toBeNull();
+    expect(screen.queryByText("brandt.example/careers")).toBeNull();
   });
 
-  it("a done report lists the pages read and links staged proposals to the inbox", async () => {
+  it("a done report links staged leads to the inbox and lists no crawl URLs", async () => {
     const { calls } = stubDeepRead({
       report: () =>
         jsonResponse({
@@ -341,9 +268,8 @@ describe("company-360 deep read", () => {
     );
     // A complete crawl carries no stopped-early banner.
     expect(screen.queryByText(/Stopped early:/)).toBeNull();
-    expect(screen.getByText("Pages read")).toBeTruthy();
-    expect(screen.getByText("Home")).toBeTruthy();
-    expect(screen.getByText("brandt.example/team")).toBeTruthy();
+    expect(screen.queryByText("Pages read")).toBeNull();
+    expect(screen.queryByText("brandt.example/team")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Open inbox" }));
     expect(window.location.hash).toBe("#/inbox");
