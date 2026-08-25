@@ -6,7 +6,17 @@ import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { steppedClock } from "../testing/steppedclock";
 import { AiUsageCard } from "./aiusage";
+
+// The reader's zone is an input to this card, so it is injected rather than
+// inherited from whatever machine runs the suite — a test that agrees with the
+// runner's clock proves nothing about a reader east of it.
+const viewer = vi.hoisted(() => ({ zone: "UTC" }));
+vi.mock("../format/timezone", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../format/timezone")>();
+  return { ...actual, viewerZone: () => viewer.zone };
+});
 
 const budget = { monthly_tokens: 1000, spent_tokens: 850, band: "degraded" };
 
@@ -186,4 +196,55 @@ it("withholds the spend from a principal without the automation grant, and asks 
   ).toBeTruthy();
   expect(screen.getByText("AI usage & budget")).toBeTruthy();
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);
+});
+
+// The month window, at the boundary where the reader's calendar and UTC's
+// disagree. 2026-08-31T20:00Z is already 1 September in Asia/Ho_Chi_Minh.
+//
+// The FIRST window is asserted, not just the steps. An unbounded query returns
+// the server's UTC month, so a card that let the server choose and then stepped
+// from the reader's month would disagree with itself — Previous would land on
+// the month already on screen. One reading of "this month" is what is being
+// held here, and it takes three assertions to see it: where the card opens,
+// where one step back lands, and that there is nothing forward of the month the
+// reader is standing in.
+it("opens on the READER's month and steps from it, not from UTC's", async () => {
+  // A frozen clock, because the wall clock is an INPUT to this card: it decides
+  // which month "now" falls in, so a test that let it run would be asking a
+  // different question on every run. steppedClock is the house way in — it is
+  // what keeps an awaited userEvent from deadlocking against mocked timers, and
+  // the reason is written down where that helper lives.
+  const user = steppedClock();
+  vi.setSystemTime(new Date("2026-08-31T20:00:00Z"));
+  viewer.zone = "Asia/Ho_Chi_Minh";
+  try {
+    const { seen } = mount({ budget, days: [] });
+
+    // September, the month the reader is in — not August, which is where UTC
+    // still is and where an unbounded query would have landed.
+    await waitFor(() =>
+      expect(
+        seen.some((url) => url.includes("from=2026-09-01&to=2026-09-30")),
+      ).toBe(true),
+    );
+    // And the card opens on the current month, so there is nothing later.
+    expect(
+      (await screen.findByLabelText("Next month")).hasAttribute("disabled"),
+    ).toBe(true);
+
+    await user.click(screen.getByLabelText("Previous month"));
+    await waitFor(() =>
+      expect(
+        seen.some((url) => url.includes("from=2026-08-01&to=2026-08-31")),
+      ).toBe(true),
+    );
+
+    // Having stepped off the reader's month, Next is a real destination again.
+    expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
+      false,
+    );
+  } finally {
+    vi.useRealTimers();
+    viewer.zone = "UTC";
+  }
 });
