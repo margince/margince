@@ -40,7 +40,7 @@ function view(overrides: Partial<Organization360> = {}): Organization360 {
     projects: [],
     projects_page: page,
     ...overrides,
-  } as Organization360;
+  };
 }
 
 const deal = {
