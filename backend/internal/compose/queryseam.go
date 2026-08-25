@@ -125,8 +125,24 @@ type placeCache struct{ people *people.Store }
 
 func (p placeCache) LookupPlace(ctx context.Context, query string) (search.Point, bool, error) {
 	found, ok, err := p.people.LookupPlace(ctx, query)
+	if err != nil {
+		return search.Point{}, false, err
+	}
+	if ok {
+		return search.Point{Lat: found.Lat, Lon: found.Lon}, true, nil
+	}
+	// THE CITY FALLBACK, and it is why a radius around a place NAME works at
+	// all. The cache is keyed on the exact string that was geocoded, and what
+	// gets geocoded is a company's full address — so "Düsseldorf" missed while
+	// "arnulfstraße 33, 40545, düsseldorf" hit. A person saying where they are
+	// names the city, never the street of a company they have not reached yet,
+	// so the one form a caller actually sends was the one form that failed.
+	//
+	// Still no egress: the point is averaged from the organizations this
+	// installation has ALREADY located in that city. See people.LookupCity.
+	city, ok, err := p.people.LookupCity(ctx, query)
 	if err != nil || !ok {
 		return search.Point{}, false, err
 	}
-	return search.Point{Lat: found.Lat, Lon: found.Lon}, true, nil
+	return search.Point{Lat: city.Lat, Lon: city.Lon}, true, nil
 }

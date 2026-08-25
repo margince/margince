@@ -4,9 +4,9 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 57,
-    "tokens": 17790,
-    "median_tool_tokens": 275,
+    "tools": 58,
+    "tokens": 18064,
+    "median_tool_tokens": 274,
     "mean_tool_tokens": 311
   },
   "agents": [
@@ -184,6 +184,10 @@
     {
       "name": "list_approvals",
       "tokens": 274
+    },
+    {
+      "name": "describe_query_vocabulary",
+      "tokens": 273
     },
     {
       "name": "check_availability",

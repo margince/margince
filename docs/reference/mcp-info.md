@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 57 |
+| Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 157.1 KB |
+| Tool catalog | 159.3 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 41103 |
+| Approx. wire tokens | 41649 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 73.7 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 36.5 KB | 23% | Yes, every step |
-| Input schemas | 34.8 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.1 KB | 7% | Partly |
-| **Description + input schema** | **71.3 KB** | **45%** | **the recurring cost** |
+| Output schemas | 74.5 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 37.5 KB | 23% | Yes, every step |
+| Input schemas | 34.9 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 12.3 KB | 7% | Partly |
+| **Description + input schema** | **72.4 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (57)
+### Tools (58)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -76,6 +76,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
+| [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 1.9 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
@@ -2936,6 +2937,122 @@ Answer every still-waiting proposal that one act staged together — the overnig
       },
       "required": [
         "members"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### describe_query_vocabulary
+
+**Describe the query vocabulary**
+
+Answer what a query plan may SAY in this workspace: the record types that can be asked about, the fields nameable on each, the operators each field admits, and the one relationship hop a plan may take. It is the vocabulary query_workspace refuses against, so it holds the spelling of a field whose name a plan got wrong. It describes the vocabulary; it returns no records — query_workspace does that. What comes back is narrowed to what you may already read, so it names nothing you could not otherwise reach. Call query_workspace once you know the names. This tool answers the same document as the margince://schema/query resource, for a client that reads tools rather than resources. Take the field and operator names from `targets` verbatim — a plan naming anything outside them is refused rather than approximated, so guessing at a spelling costs a round trip. `grammar` says how the clauses are assembled, and `version` is the value a plan's own `version` member must carry. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "vocabulary": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "vocabulary"
       ],
       "type": "object"
     },

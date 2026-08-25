@@ -78,6 +78,41 @@ func (r *QuerySchemaResource) ReadResource(ctx context.Context, uri string) (mcp
 	return mcp.ResourceContents{URI: uri, MIMEType: "application/json", Text: string(body)}, nil
 }
 
+// VocabularyDocument answers the SAME document ReadResource serves, for a
+// caller that reaches this surface through a tool rather than a resource.
+//
+// WHY A SECOND DOOR EXISTS. `query_workspace` refuses every name outside the
+// vocabulary and its description sends the caller to margince://schema/query to
+// learn what the names are. That instruction assumes the caller can read a
+// resource, and a large share of MCP clients — Claude's connector among them —
+// surface tools only. For those callers the loop had no exit: the tool named a
+// document they could not open, then refused each guess by name. Observed on
+// 2026-08-26, a client probed four field spellings, was correctly refused four
+// times, and reported to its user that this workspace had no address field at
+// all — while `within_radius` sat in the vocabulary it could not read.
+//
+// ONE COMPUTATION, TWO DOORS. This renders `querySchemaDocument` over the same
+// resolver ReadResource does, so both answer one document rather than two that
+// can disagree — which is the reason the grammar was never inlined into the
+// tool's input schema either: a hand-written copy would be a maintained
+// restatement of exactly what is derived.
+//
+// Held by: TestBothDoorsAnswerOneVocabulary (queryschematool_test.go)
+//
+// Still not a discovery channel. `Resolve` narrows to what this principal may
+// already read, so a caller learns nothing here they could not learn by asking.
+func (r *QuerySchemaResource) VocabularyDocument(ctx context.Context) (json.RawMessage, error) {
+	vocab, err := r.vocab.Resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	body, err := json.Marshal(querySchemaDocument(vocab))
+	if err != nil {
+		return nil, fmt.Errorf("search: rendering the query vocabulary: %w", err)
+	}
+	return body, nil
+}
+
 // querySchemaDoc is the published shape. It is a hand-written wire type
 // rather than the internal Vocabulary because the two answer different
 // questions: the internal one carries what the validator needs to check a
