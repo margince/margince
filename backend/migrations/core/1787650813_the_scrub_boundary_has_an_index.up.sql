@@ -19,6 +19,11 @@
 -- that (see 1787320004's note on the same point), so this holds a write-blocking
 -- build for its duration — bounded by the partial predicate rather than by the
 -- whole of audit_log.
+-- Bounded, because this blocks writers on a table it did not create: without a
+-- timeout, an open transaction holding a conflicting lock stalls every write to
+-- audit_log for as long as this is willing to queue, which is forever.
+SET LOCAL lock_timeout = '3s';
+
 CREATE INDEX IF NOT EXISTS idx_audit_scrub_boundary
     ON audit_log (entity_type, entity_id, occurred_at DESC, id DESC)
     WHERE action IN ('erase', 'anonymize', 'restrict');
