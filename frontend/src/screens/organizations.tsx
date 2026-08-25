@@ -26,6 +26,7 @@ import {
   EvidenceMark,
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
+import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
@@ -96,8 +97,13 @@ import {
 } from "./companylookups";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
+import { CompanySpine } from "./companyspine";
 import { TodayOnThisAccount } from "./companytoday";
-import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
+import {
+  CompanyWorkCard,
+  hasWorkInFlight,
+  sinceLastVisitFooter,
+} from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
 import {
   CreateAction,
@@ -2480,6 +2486,96 @@ function CompanyRecordBody({
   );
 }
 
+// One labelled section of the Company 360 card. The subhead is what lets a
+// reader tell four readings apart inside one card — without it the card is a
+// wall, which is the failure the four separate cards at least did not have.
+function Section({
+  label,
+  children,
+}: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <>
+      <PanelBody className="co-360-head">
+        <Eyebrow as="h3">{label}</Eyebrow>
+      </PanelBody>
+      {children}
+    </>
+  );
+}
+
+// The account's commercial standing inside the Company 360 card: what it is
+// under contract for, and what it has won and lost over its life.
+//
+// The contract block is the SAME component the Deals tab draws
+// (CompanyContractState), not a second reading of the same money and dates —
+// an account's contracted value and its renewal must not be able to say two
+// things on two tabs, and one renderer is the only way that cannot happen.
+function CommercialSection({
+  view,
+  org,
+  readOnly,
+  loading,
+  onAllDeals,
+}: Readonly<{
+  view?: Organization360View;
+  org: Organization;
+  readOnly: boolean;
+  loading: boolean;
+  onAllDeals: () => void;
+}>) {
+  const t = useT();
+  // The verbs ride on the section being READABLE, exactly as they did when
+  // this was its own card's titleAction. A reader with no deal grant is not
+  // offered a button to add one — and the guard has to be here rather than
+  // inside the verb, because NewDealAction reads the pipelines the moment it
+  // mounts, which is itself a disclosure to a reader who may not see deals.
+  const present =
+    Boolean(view?.deals) && !view?.sections_omitted.includes("deals");
+  return (
+    <Section label={t("co.commercial.title")}>
+      <CommercialPanel
+        view={view}
+        extra={<CompanyContractState view={view} />}
+        loading={loading}
+        figuresOnly
+      />
+      {present && (
+        <PanelBody className="co-360-verbs">
+          {!readOnly && (
+            <NewDealAction orgId={org.id} orgName={org.display_name} />
+          )}
+          <Button small variant="ghost" onClick={onAllDeals}>
+            {t("co.commercial.allDeals")}
+          </Button>
+        </PanelBody>
+      )}
+    </Section>
+  );
+}
+
+// What happened lately, grouped by day, inside the Company 360 card.
+function RecentActivitySection({
+  view,
+  loading,
+  onOpenHistory,
+}: Readonly<{
+  view?: Organization360View;
+  loading: boolean;
+  onOpenHistory: () => void;
+}>) {
+  const t = useT();
+  return (
+    <Section label={t("co.recent.title")}>
+      <RecentActivityPanel view={view} loading={loading} bare />
+      <PanelBody className="co-360-verbs">
+        <Button small variant="ghost" onClick={onOpenHistory}>
+          {t("co.recent.viewHistory")}
+        </Button>
+      </PanelBody>
+    </Section>
+  );
+}
+
 // The overview's own stack: one vertical column of same-shaped panels, in the
 // order a rep works them — what is worth doing next, then the account itself,
 // what it is worth to us, the commercial picture, the money, and what
@@ -2528,6 +2624,12 @@ function CompanyOverviewStack({
           describe the account, this asks for a move on it. It belongs to the
           overview rather than to the record, because a rep who has opened
           People or Documents has already chosen what to read. */}
+      {/* ONE reading of the account, under the record's own name. What needs a
+          person today, then what is in flight and why, then the commercial
+          figures, then what happened lately — sections of one card rather
+          than four cards a reader has to assemble themselves.
+          It is the page's accent card, and the only one: four cards of equal
+          weight made the move-to-make look like one section of five. */}
       {!overlay && (
         <TodayOnThisAccount
           orgId={org.id}
@@ -2539,36 +2641,68 @@ function CompanyOverviewStack({
           onOpenRecord={onOpenRecord}
           onPerform={onPerform}
           onOpenTasks={onOpenTasks}
+          foot={sinceLastVisitFooter(view)}
+          spine={<CompanySpine view={view} />}
+          sections={
+            <>
+              {/* What is moving, and for each piece the one reason it wants a
+                  person. Absent on an account with nothing in flight, where
+                  the growth-fit card below answers the question such an
+                  account is actually asking instead. */}
+              {hasWorkInFlight(view) && (
+                <CompanyWorkCard
+                  view={view}
+                  loading={loading}
+                  onOpenRecord={onOpenRecord}
+                  bare
+                />
+              )}
+              {/* The commercial standing: what the account is signed for, and
+                  what it has won and lost over its life. FIGURES only — the
+                  work section above already names every open deal, and listing
+                  them again would print each one twice on one screen. */}
+              <CommercialSection
+                view={view}
+                org={org}
+                readOnly={readOnly}
+                loading={loading}
+                onAllDeals={onAllDeals}
+              />
+              {/* What happened lately, grouped by day. */}
+              <RecentActivitySection
+                view={view}
+                loading={loading}
+                onOpenHistory={onOpenHistory}
+              />
+            </>
+          }
         />
       )}
-      {/* What is moving on this account, and for each piece of it the one
-          reason it wants a person. It leads the column because it is the
-          only card here written from the records themselves rather than
-          around them — every other reading on the page is a roll-up.
+      {/* Is this an account we should be selling to at all — the question an
+          account with nothing in flight is actually asking, and the reason
+          the work section above is absent for one.
 
-          A written account brief used to hold this slot. On an account
-          carrying several engagements it blended them: correspondence about
-          one project became a sentence about another, and a figure read out
-          of the blend had nowhere to be checked.
-
-          The growth-fit panel takes the slot when nothing is in flight,
-          because "should we sell to them at all" is the question an account
-          with no work is actually asking. Never both: two cards in the lead
-          position is the page having no lead. */}
-      {!overlay &&
-        (hasWorkInFlight(view) ? (
-          <CompanyWorkCard
-            view={view}
-            loading={loading}
-            onOpenRecord={onOpenRecord}
-          />
-        ) : (
-          <GrowthFitPanel
-            orgId={org.id}
-            enabled={!overlay}
-            onOpenRecord={onOpenRecord}
-          />
-        ))}
+          Its own card rather than that section's substitute: it carries its
+          own attribution and its own reassess verb in a footer band, and a
+          section inside another card has no footer to put them in. */}
+      {!overlay && !hasWorkInFlight(view) && (
+        <GrowthFitPanel
+          orgId={org.id}
+          enabled={!overlay}
+          onOpenRecord={onOpenRecord}
+        />
+      )}
+      {/* The money stays its OWN card rather than a section of the 360, for
+          the one reason a section cannot survive: its title changes meaning
+          with the account. A former customer's figures read under "Finance
+          (historical)", and a subhead inside another card cannot say that
+          without the card's title contradicting it. It is also absent
+          entirely on an account we have never billed — its own FIN-AC-3
+          gate — and a section that vanishes leaves a hole where a card
+          simply is not there. */}
+      {!overlay && (
+        <CompanyFinanceCard orgId={org.id} lifecycle={org.lifecycle} />
+      )}
       {/* Directly under the brief, because it asks about the same reading: the
           three prepared questions are the ones the brief answers in prose, and
           both are written server-side from this reader's own 360 and cite
@@ -2584,40 +2718,6 @@ function CompanyOverviewStack({
         onOpenRecord={onOpenRecord}
         projects={view?.projects}
       />
-      {!overlay && (
-        <>
-          {/* The commercial picture: what the account is already under
-              contract for, then the pipeline's own lifetime figures, then the
-              open deals themselves.
-              The contract block is the SAME component the Deals tab draws
-              (CompanyContractState), not a second reading of the same money
-              and dates — an account's contracted value and its renewal must
-              not be able to say two things on two tabs, and one renderer is
-              the only way that cannot happen. It leads for the same reason it
-              leads there: what is signed frames the deals that are still
-              moving. */}
-          <CommercialPanel
-            view={view}
-            titleAction={
-              readOnly ? undefined : (
-                <NewDealAction orgId={org.id} orgName={org.display_name} />
-              )
-            }
-            extra={<CompanyContractState view={view} />}
-            onAllDeals={onAllDeals}
-            loading={loading}
-          />
-          {/* The money. Absent entirely on an account we have never billed —
-              CompanyFinanceCard's own FIN-AC-3 gate. */}
-          <CompanyFinanceCard orgId={org.id} lifecycle={org.lifecycle} />
-          {/* What happened lately, grouped by day. */}
-          <RecentActivityPanel
-            view={view}
-            onOpenHistory={onOpenHistory}
-            loading={loading}
-          />
-        </>
-      )}
     </div>
   );
 }

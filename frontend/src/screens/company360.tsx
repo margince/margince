@@ -949,6 +949,7 @@ export function CommercialPanel({
   extra,
   onAllDeals,
   loading = false,
+  figuresOnly = false,
 }: Readonly<{
   view?: Organization360;
   // The "new deal" verb, gated by the caller on the record being writable.
@@ -966,6 +967,16 @@ export function CommercialPanel({
   onAllDeals?: () => void;
   // The composite read's own pending flag — see sectionState's own doc.
   loading?: boolean;
+  // Draw the FIGURES and the contract block without this card's own header
+  // band or its list of deals, for a caller that already lists them. The
+  // Company 360 card does: its work section names every open deal with the
+  // reason it needs a person, and repeating them underneath would show each
+  // deal twice on one screen.
+  //
+  // The figures are what does not appear there — what the account has won
+  // over its life and how much it has lost — so this is the half of the
+  // reading the work list cannot carry, not a second copy of it.
+  figuresOnly?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -982,6 +993,43 @@ export function CommercialPanel({
   // The section is a page of `deals.data` with `has_more` beside it — past
   // the cap this reads as the whole open pipeline unless it says otherwise.
   const truncated = deals?.page.has_more === true;
+  const figures = state === "ready" && deals && (
+    <PanelBody className="co-figures">
+      <CommercialFigure
+        label={t("co.deals.wonLifetime")}
+        value={formatMoneyOrAbsent(
+          deals.won_lifetime?.amount_minor,
+          deals.won_lifetime?.currency,
+          locale,
+        )}
+      />
+      <CommercialFigure
+        label={t("co.commercial.lostFigure")}
+        value={String(deals.lost_count)}
+      />
+    </PanelBody>
+  );
+  if (figuresOnly) {
+    // The contract block first, for the same reason it leads the whole card:
+    // what the account is already signed for frames the deals still moving.
+    return (
+      <>
+        {extra}
+        {figures}
+        {/* `figures` covers `ready` alone. Every other state still owes the
+            reader a sentence — an empty section is a FACT about the account
+            and a withheld one is a fact about the reader, and a section that
+            fell silently blank would be read as neither. */}
+        {state !== "ready" && (
+          <PanelBody>
+            <SurfaceState state={state} emptyLabel={t("co.deals.empty")}>
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        )}
+      </>
+    );
+  }
   return (
     <Panel
       title={t("co.commercial.title")}
@@ -1007,20 +1055,7 @@ export function CommercialPanel({
       {extra}
       {state === "ready" && deals ? (
         <>
-          <PanelBody className="co-figures">
-            <CommercialFigure
-              label={t("co.deals.wonLifetime")}
-              value={formatMoneyOrAbsent(
-                deals.won_lifetime?.amount_minor,
-                deals.won_lifetime?.currency,
-                locale,
-              )}
-            />
-            <CommercialFigure
-              label={t("co.commercial.lostFigure")}
-              value={String(deals.lost_count)}
-            />
-          </PanelBody>
+          {figures}
           {deals.data.map((deal) => (
             <PanelRow key={deal.deal_id} className="co-commercial-row">
               <button
@@ -1125,6 +1160,7 @@ export function RecentActivityPanel({
   view,
   onOpenHistory,
   loading = false,
+  bare = false,
 }: Readonly<{
   view?: Organization360;
   // Where the header's link leads. Absent for a caller with no History tab
@@ -1132,6 +1168,12 @@ export function RecentActivityPanel({
   onOpenHistory?: () => void;
   // The composite read's own pending flag — see sectionState's own doc.
   loading?: boolean;
+  // Render the BODY without this card's own header band, for a caller that
+  // holds the Panel itself and labels the section. One implementation, two
+  // mounts: the Deals tab still draws the whole card, and the Company 360
+  // card draws this section inside its own chrome — a second copy of the
+  // timeline is how two surfaces come to disagree about what happened.
+  bare?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1154,6 +1196,33 @@ export function RecentActivityPanel({
     locale,
     recordZone,
   );
+  const body =
+    state === "ready" ? (
+      days.map((day) => (
+        <div key={day.key} className="co-timeline-day">
+          {/* One level under whatever names this timeline: the card's own
+              title when it stands alone, the section subhead when it is a
+              section of the Company 360 card. */}
+          <Eyebrow as={bare ? "h4" : "h3"} className="co-timeline-day-heading">
+            {day.key}
+          </Eyebrow>
+          <ul className="timeline">
+            {day.entries.map((entry) => (
+              <TimelineRow key={entry.id} entry={entry} zone={recordZone} />
+            ))}
+          </ul>
+        </div>
+      ))
+    ) : (
+      <PanelBody>
+        <SurfaceState state={state} emptyLabel={t("co.recent.empty")}>
+          {null}
+        </SurfaceState>
+      </PanelBody>
+    );
+  if (bare) {
+    return <>{body}</>;
+  }
   return (
     <Panel
       title={t("co.recent.title")}
@@ -1165,24 +1234,7 @@ export function RecentActivityPanel({
         )
       }
     >
-      {state === "ready" ? (
-        days.map((day) => (
-          <div key={day.key} className="co-timeline-day">
-            <h3 className="co-timeline-day-heading t-eyebrow">{day.key}</h3>
-            <ul className="timeline">
-              {day.entries.map((entry) => (
-                <TimelineRow key={entry.id} entry={entry} zone={recordZone} />
-              ))}
-            </ul>
-          </div>
-        ))
-      ) : (
-        <PanelBody>
-          <SurfaceState state={state} emptyLabel={t("co.recent.empty")}>
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      )}
+      {body}
     </Panel>
   );
 }

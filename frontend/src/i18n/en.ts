@@ -2232,6 +2232,16 @@ export const en = {
 
   "dedupe.viewExisting": "View existing record",
 
+  "co.spine.lastSpoke": "You last spoke",
+  "co.spine.days": "{count} days",
+  "co.spine.quietSince": "Silence since then",
+  "co.spine.neverReplied": "They have never written back",
+  "co.spine.singleThreaded": "One contact, and no reply from them",
+  "co.spine.overdue": "Past its date",
+  "co.spine.expectedClose": "Expected close",
+  "co.spine.worth": "{amount} riding on it",
+  "co.spine.unpriced": "{count} open, none priced yet",
+  "co.360.title": "Company 360",
   "today.title": "Today on this account",
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",
@@ -2248,7 +2258,6 @@ export const en = {
   "today.route.ofThoseShown": "of the contacts shown",
   "today.tile.meeting": "Next meeting",
   "today.tile.route": "Best route",
-  "today.tile.lastInteraction": "Last exchange",
   "today.exchange.subjectWhen": "{subject} · {when}",
   "today.tile.risk": "Risk",
   "today.tile.signal": "Worth knowing",

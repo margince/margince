@@ -456,6 +456,71 @@ func TestOrganization360NextMeetingParticipantsHideACapturePrivateContact(t *tes
 	}
 }
 
+// A meeting is an ACTIVITY fact; who is in the room is a fact about PEOPLE,
+// and the activity grant does not open it.
+//
+// The section's row-scope clause narrows WHICH attendees a caller sees, never
+// whether they may see people at all — auth.ScopeClauseFor returns no
+// predicate whatsoever for an unbounded actor, so a scope clause on its own
+// admits everybody. A reader holding activity but not person was handed every
+// attendee's full name, and the account page now links each of those names to
+// the person's own record.
+//
+// The meeting itself stays readable: "a meeting is booked" is the activity
+// fact this caller does hold, so the attendee list comes back empty rather
+// than the whole section disappearing.
+func TestOrganization360NextMeetingWithholdsAttendeesWithoutThePersonGrant(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := org360Service(e)
+	org := e.SeedOrg(t, "Acme", &e.Rep1)
+
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, org)
+	meeting := seedMeeting(t, owner, e.WS, "Renewal review", org360Clock.Add(24*time.Hour))
+	integration.LinkActivity(t, owner, meeting, "organization", org)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
+		VALUES ($1, $2, 'attendee')`, meeting, contact)
+
+	noPeople := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"organization": {Read: true},
+			"activity":     {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	})
+	view, err := svc.Assemble(noPeople, ids.From[ids.OrganizationKind](org))
+	if err != nil {
+		t.Fatalf("assemble without the person grant: %v", err)
+	}
+	if view.NextMeeting == nil {
+		t.Fatal("next_meeting = null — the activity grant is held, so the booking itself is readable")
+	}
+	if len(view.NextMeeting.Participants) != 0 {
+		t.Errorf("participants = %+v, want none — this caller holds no person grant",
+			view.NextMeeting.Participants)
+	}
+
+	// The ADMIT case. Without it this passes just as well against a section
+	// that names nobody for anybody, which is the shape three security tests
+	// in this tree have silently taken.
+	granted := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	withNames, err := svc.Assemble(granted, ids.From[ids.OrganizationKind](org))
+	if err != nil {
+		t.Fatalf("assemble with the person grant: %v", err)
+	}
+	if withNames.NextMeeting == nil || len(withNames.NextMeeting.Participants) != 1 {
+		t.Fatalf("next_meeting = %+v, want the one attendee for a caller who may read people",
+			withNames.NextMeeting)
+	}
+	if ids.UUID(withNames.NextMeeting.Participants[0].PersonId) != contact {
+		t.Errorf("attendee = %q, want the account's contact",
+			withNames.NextMeeting.Participants[0].DisplayName)
+	}
+}
+
 // seedMeeting books one meeting at a chosen instant. SeedRow binds only the id
 // and the workspace, and a meeting's whole identity here is WHEN it is.
 func seedMeeting(t *testing.T, owner *pgx.Conn, ws ids.UUID, subject string, at time.Time) ids.UUID {

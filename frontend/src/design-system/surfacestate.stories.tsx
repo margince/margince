@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
 import { Card } from "./atoms";
+import { Eyebrow } from "./eyebrow";
 import { type SectionState, SurfaceState } from "./surfacestate";
 
 // The nine states a surface can be in. They are drawn together because that is
@@ -153,3 +154,33 @@ function LabelledDemo() {
 }
 
 export const NamedParts: Story = { render: () => <LabelledDemo /> };
+
+/** A card whose parts are themselves sections of a bigger card. The labels
+ * drop to h4 so the outline NESTS — an h3 under an h3 reads to a screen
+ * reader as a sibling of the section it belongs to, which is a flat list of
+ * everything on the page rather than a structure a reader can walk. */
+function NestedDemo() {
+  return (
+    <Card title="Company 360" style={{ maxWidth: 420 }}>
+      <Eyebrow as="h3">What is in flight</Eyebrow>
+      <SurfaceState
+        label="Deals"
+        labelLevel="h4"
+        state="ready"
+        emptyLabel="No open deals."
+      >
+        <p className="t-body">Fleet retrofit 2026</p>
+      </SurfaceState>
+      <SurfaceState
+        label="Projects"
+        labelLevel="h4"
+        state="withheld"
+        emptyLabel="No projects in flight."
+      >
+        <p className="t-body">Depot fit-out</p>
+      </SurfaceState>
+    </Card>
+  );
+}
+
+export const NestedUnderASection: Story = { render: () => <NestedDemo /> };

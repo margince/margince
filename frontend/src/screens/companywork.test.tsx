@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
+import {
+  CompanyWorkCard,
+  hasWorkInFlight,
+  sinceLastVisitFooter,
+} from "./companywork";
 
 // What the work card is FOR, as assertions: the account's work in flight, one
 // line per piece of it, each line's reason drawn from that piece's own
@@ -369,6 +373,90 @@ describe("a half of the card the reader may not have", () => {
         "You cannot read this account’s conversations, so the rows above carry no reasons.",
       ),
     ).toBeTruthy();
+  });
+});
+
+describe("what moved since the reader was last here", () => {
+  // What a footer slot consumes: Panel draws its band on truthiness, so the
+  // ONLY safe answer for "nothing to report" is undefined. An element that
+  // renders null is still truthy and costs the record a blank row — which is
+  // what both mounts of this card did, one of them for the whole time the
+  // other was being fixed.
+  it("hands a footer slot nothing at all when nothing moved", () => {
+    const quiet = view({
+      since_last_visit: {
+        baseline_at: "2026-07-01T09:00:00Z",
+        new_activities: 0,
+        deal_stage_moves: 0,
+        pending_proposals: 0,
+      },
+    });
+    expect(sinceLastVisitFooter(quiet)).toBeUndefined();
+  });
+
+  it("greets a first visit", () => {
+    const first = view({
+      since_last_visit: {
+        baseline_at: null,
+        new_activities: 0,
+        deal_stage_moves: 0,
+        pending_proposals: 0,
+      },
+    });
+    expect(sinceLastVisitFooter(first)).toBeDefined();
+    rtlRender(
+      <LocaleProvider initial="en">
+        {sinceLastVisitFooter(first)}
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("You are opening this account for the first time."),
+    ).toBeTruthy();
+  });
+
+  it("counts what landed", () => {
+    const moved = view({
+      since_last_visit: {
+        baseline_at: "2026-07-01T09:00:00Z",
+        new_activities: 3,
+        deal_stage_moves: 0,
+        pending_proposals: 0,
+      },
+    });
+    rtlRender(
+      <LocaleProvider initial="en">
+        {sinceLastVisitFooter(moved)}
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("3 new items since your last visit.")).toBeTruthy();
+  });
+
+  it("speaks for a withheld section even when nothing moved", () => {
+    expect(
+      sinceLastVisitFooter(view({ sections_omitted: ["deals"] })),
+    ).toBeDefined();
+  });
+
+  // The standalone card is the mount that stayed broken while the other was
+  // fixed. Both go through the same helper now, and this is what says so.
+  it("draws no footer band on the standalone card when nothing moved", () => {
+    draw(
+      view({
+        deals: {
+          data: [deal],
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+        since_last_visit: {
+          baseline_at: "2026-07-01T09:00:00Z",
+          new_activities: 0,
+          deal_stage_moves: 0,
+          pending_proposals: 0,
+        },
+      }),
+    );
+    expect(document.querySelector(".panel-foot")).toBeNull();
   });
 });
 

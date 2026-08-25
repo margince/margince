@@ -2194,6 +2194,18 @@ export const vi = {
 
   "dedupe.viewExisting": "Xem bản ghi hiện có",
 
+  "co.spine.lastSpoke": "L\u1ea7n cu\u1ed1i trao \u0111\u1ed5i",
+  "co.spine.days": "{count} ng\u00e0y",
+  "co.spine.quietSince": "Im l\u1eb7ng t\u1eeb \u0111\u00f3",
+  "co.spine.neverReplied": "H\u1ecd ch\u01b0a bao gi\u1edd h\u1ed3i \u00e2m",
+  "co.spine.singleThreaded":
+    "M\u1ed9t \u0111\u1ea7u m\u1ed1i, v\u00e0 kh\u00f4ng c\u00f3 h\u1ed3i \u00e2m",
+  "co.spine.overdue": "\u0110\u00e3 qu\u00e1 h\u1ea1n",
+  "co.spine.expectedClose": "D\u1ef1 ki\u1ebfn ch\u1ed1t",
+  "co.spine.worth": "{amount} \u0111ang \u0111\u1eb7t c\u01b0\u1ee3c",
+  "co.spine.unpriced":
+    "{count} \u0111ang m\u1edf, ch\u01b0a \u0111\u1ecbnh gi\u00e1",
+  "co.360.title": "Company 360",
   "today.title": "Hôm nay ở tài khoản này",
   "today.failed":
     "Không thể tổng hợp phần này. Phần còn lại của trang vẫn hiển thị những gì đọc được.",
@@ -2210,7 +2222,6 @@ export const vi = {
   "today.route.ofThoseShown": "trong số liên hệ đang hiển thị",
   "today.tile.meeting": "Cuộc họp kế tiếp",
   "today.tile.route": "Đường tiếp cận tốt nhất",
-  "today.tile.lastInteraction": "Trao đổi gần nhất",
   "today.exchange.subjectWhen": "{subject} · {when}",
   "today.tile.risk": "Rủi ro",
   "today.tile.signal": "Đáng lưu ý",

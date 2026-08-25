@@ -2208,6 +2208,16 @@ export const de = {
 
   "dedupe.viewExisting": "Vorhandenen Eintrag anzeigen",
 
+  "co.spine.lastSpoke": "Zuletzt gesprochen",
+  "co.spine.days": "{count} Tage",
+  "co.spine.quietSince": "Seitdem Funkstille",
+  "co.spine.neverReplied": "Sie haben nie geantwortet",
+  "co.spine.singleThreaded": "Ein Kontakt, und keine Antwort von ihm",
+  "co.spine.overdue": "\u00dcberf\u00e4llig",
+  "co.spine.expectedClose": "Erwarteter Abschluss",
+  "co.spine.worth": "{amount} h\u00e4ngen daran",
+  "co.spine.unpriced": "{count} offen, noch nicht beziffert",
+  "co.360.title": "Company 360",
   "today.title": "Heute bei diesem Account",
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
@@ -2224,7 +2234,6 @@ export const de = {
   "today.route.ofThoseShown": "von den gezeigten Kontakten",
   "today.tile.meeting": "Nächster Termin",
   "today.tile.route": "Bester Weg hinein",
-  "today.tile.lastInteraction": "Letzter echter Austausch",
   "today.exchange.subjectWhen": "{subject} · {when}",
   "today.tile.risk": "Risiko",
   "today.tile.signal": "Gut zu wissen",
