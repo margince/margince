@@ -157,6 +157,41 @@ export function formatNumber(value: number, locale: Locale): string {
 }
 
 /**
+ * A number that NAMES something rather than measuring it — a version, a
+ * revision, an invoice number, a record's own number.
+ *
+ * Bare on purpose, and this is the ruling rather than the omission of one.
+ * `formatNumber` would print revision 1234 as "1.204" to a German reader and
+ * "1,204" to an English one, which reads as a quantity of revisions where a
+ * name was meant. Grouping a name is as wrong as leaving a magnitude ungrouped;
+ * the two are opposite defects and no single answer covers both.
+ *
+ * It is a FUNCTION and not a bare interpolation because the name is where the
+ * decision is recorded. `format/jsx-magnitude.test.ts` refuses a raw number in
+ * anything a reader is shown, so every site has had to pick between this,
+ * `ordinalNumber` and a formatter — which is what makes the gate absolute
+ * instead of a list of blessed exceptions. `format/collate.ts` reached the same
+ * shape first, for the same reason: `forReader` and `stable` both order, and
+ * only the name says which order was meant.
+ */
+export function identifierNumber(value: number): string {
+  return String(value);
+}
+
+/**
+ * A number that says WHERE in a sequence — an ordinal, a step, a row's index.
+ *
+ * Bare for the same reason as `identifierNumber` and kept apart from it because
+ * the two say different things to the next reader: a version is a name a
+ * server chose, a position is one this list computed, and a site that renames
+ * one is not making a claim about the other. See that function for why the
+ * ruling is spelled as a call at all.
+ */
+export function ordinalNumber(value: number): string {
+  return String(value);
+}
+
+/**
  * A figure whose DECIMALS are part of what it says — a score, a rate, a factor.
  *
  * `formatNumber` renders a count, where a trailing `.0` would be noise. This
