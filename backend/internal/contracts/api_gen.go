@@ -21317,7 +21317,7 @@ type ProviderCategorySelection map[string]bool
 
 // ProviderConfiguration defines model for ProviderConfiguration.
 type ProviderConfiguration struct {
-	// AutomaticImport Still requires import preview, maximum-credit estimate and explicit confirmation.
+	// AutomaticImport Enrich every person a connector creates. Capture mints one person per external counterparty, so a mailbox sync spends a credit each time; off by default for that reason.
 	AutomaticImport           bool `json:"automatic_import"`
 	AutomaticIndividualCreate bool `json:"automatic_individual_create"`
 

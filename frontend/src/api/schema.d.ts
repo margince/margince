@@ -11835,7 +11835,7 @@ export interface components {
             /** @default true */
             automatic_individual_create: boolean;
             /**
-             * @description Still requires import preview, maximum-credit estimate and explicit confirmation.
+             * @description Enrich every person a connector creates. Capture mints one person per external counterparty, so a mailbox sync spends a credit each time; off by default for that reason.
              * @default false
              */
             automatic_import: boolean;

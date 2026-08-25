@@ -6045,6 +6045,9 @@ export const de = {
   "provider.autoEnrich": "Neue Kontakte automatisch anreichern",
   "provider.autoEnrichHint":
     "Wenn jemand einen Kontakt von Hand anlegt, dessen Daten gleich mitkaufen.",
+  "provider.autoImport": "Kontakte aus verbundenen Postfächern anreichern",
+  "provider.autoImportHint":
+    "Ein Postfachabgleich legt für jede Person an, mit der geschrieben wurde — und jede kostet ein Guthaben.",
   "provider.credits": "Restguthaben beim Anbieter",
   "provider.credits.none": "Der Anbieter hat uns noch keinen Stand genannt.",
   "provider.credits.notConnected":
