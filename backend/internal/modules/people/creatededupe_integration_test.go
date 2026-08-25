@@ -444,7 +444,6 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 		{"untrimmed", "Ada Lindqvist", "  Ada Lindqvist  "},
 		{"accents", "Renée Bär", "Renee Bar"},
 		{"sharp s", "Anna Straße", "Anna Strasse"},
-		{"apostrophe", "Sean O'Brien", "Sean OBrien"},
 		// Reflowed internal whitespace, which is how a name copied off a
 		// crawled page arrives. The key collapses it, so the lane owes the
 		// pair — and the trigram arm cannot be relied on to rescue a short
@@ -453,14 +452,17 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 		{"internal whitespace and accents", "Éva Ő", "Eva  O"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			// The skip-guard asks the key the lane actually decides on. It
-			// used to ask normalizeName, which is the METRIC's input: a pair
-			// the key calls equal and the metric does not was skipped rather
-			// than enforced, and the case this lane most needs — reflowed
-			// whitespace — is exactly that pair.
+			// A FATAL guard, not a skip. The guard asks the key the lane
+			// decides on, and a row the key does not call equal is a row this
+			// table has no business carrying: it asserts nothing and says so
+			// to nobody. One row sat here in exactly that state — an
+			// apostrophe pair the fold never touched — and a skip is also how
+			// the five real rows would go quiet if the key ever stopped
+			// folding case or accents, which is the failure this file's own
+			// comment warns about, aimed at the test instead of the lane.
 			if NormalizePersonName(tc.incumbent) != NormalizePersonName(tc.second) {
-				t.Skipf("NormalizePersonName does not call these equal, so the lane owes nothing: %q vs %q",
-					tc.incumbent, tc.second)
+				t.Fatalf("NormalizePersonName does not call %q and %q equal, so this row asserts nothing "+
+					"about the lane — fix the key or drop the row", tc.incumbent, tc.second)
 			}
 			e := setupDedupe(t)
 			ctx := e.as()

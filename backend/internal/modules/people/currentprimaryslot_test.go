@@ -17,8 +17,8 @@ import (
 	"testing"
 )
 
-// slotHelperName is what the failure report calls the function it is about.
-const slotHelperName = "CurrentPrimarySlotSQL"
+// slotPredicateName is what the failure report calls the function it is about.
+const slotPredicateName = "CurrentPrimarySlotSQL"
 
 // headCatalog is the generated shape of a freshly migrated database — the
 // index's own text, and therefore the only statement of what the slot
@@ -50,7 +50,7 @@ var printedSQLNoise = regexp.MustCompile(`::text|[()]`)
 // disjunction is the shape this comparison cannot judge.
 var disjunction = regexp.MustCompile(`(?i)\bOR\b`)
 
-func TestTheCurrentPrimarySlotHelperMirrorsItsIndex(t *testing.T) {
+func TestTheCurrentPrimarySlotPredicateMirrorsItsIndex(t *testing.T) {
 	catalog, err := os.ReadFile(headCatalog)
 	if err != nil {
 		t.Fatalf("reading %s: %v", headCatalog, err)
@@ -80,12 +80,12 @@ func TestTheCurrentPrimarySlotHelperMirrorsItsIndex(t *testing.T) {
 		t.Errorf("%s renders %q, but %s is %q.\n\n"+
 			"The helper IS that index's predicate. A guard that asks a narrower question skips a write "+
 			"the index then refuses with a 409; a wider one skips a write the index would have accepted.",
-			slotHelperName, got, slotIndex, want)
+			slotPredicateName, got, slotIndex, want)
 	}
 	// The aliased form is the same predicate with every column qualified, and
 	// nothing else — the shape four of the six call sites need.
 	if want, got := "b.", CurrentPrimarySlotSQL("b"); strings.Count(got, want) != 3 {
-		t.Errorf("%s(%q) = %q, want every one of the three columns qualified", slotHelperName, "b", got)
+		t.Errorf("%s(%q) = %q, want every one of the three columns qualified", slotPredicateName, "b", got)
 	}
 }
 

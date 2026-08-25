@@ -95,24 +95,16 @@ func CurrentPrimaryEmploymentSQL(alias string) string {
 // `alias` is the relationship table's alias at the call site, or "" when the
 // statement does not alias it.
 //
-// Six statements ask this: the two capture planters that must never reassign
-// an employer somebody already has (employmentedge.go, domaintriageresolve.go),
-// the two merge relinks that keep ≤1 slot-holder per person after re-homing
-// rows (merge.go, merge_organization.go), and the two demotions in
-// relationship.go that empty the slot before a new row takes it. Every one of
-// them had spelled it by hand.
+// Held by: TestTheCurrentPrimarySlotPredicateMirrorsItsIndex (backend/internal/modules/people/currentprimaryslot_test.go)
+// — it derives the expectation from uq_rel_current_primary_employer in the
+// migration head catalog, so this cannot drift from the index it exists to
+// satisfy.
 //
-// Held by: TestTheCurrentPrimarySlotHelperMirrorsItsIndex (backend/internal/modules/people/currentprimaryslot_test.go)
-// — it derives the expected predicate from uq_rel_current_primary_employer in
-// the migration head catalog, so the helper cannot drift from the index it
-// exists to satisfy.
-//
-// Two gates and not one, because either alone reads green over the defect that
-// shipped: TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling in
-// backend/employmentcurrency_test.go
-// reads every hand-written Go source for the FRAGMENT — the flag AND-ed with an
-// archived test, in either order — which is the shape that let six copies
-// through a census that only knew the whole predicate.
+// Two gates and not one, because either alone reads green over a second
+// spelling: TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling in
+// backend/employmentcurrency_test.go reads every hand-written Go source for the
+// FRAGMENT — the flag sharing a conjunction with an archived test — which a
+// census that knows only the whole predicate cannot see.
 func CurrentPrimarySlotSQL(alias string) string {
 	prefix := ""
 	if alias != "" {

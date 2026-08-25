@@ -357,9 +357,9 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 // the FRAGMENT — the flag AND-ed with an archived test — which is the shape
 // that hid six copies from a census that only knew whole predicates.
 
-// currentPrimarySlotHelper names the helper this census requires, so the
+// currentPrimarySlotPredicate names the helper this census requires, so the
 // report can point at it.
-const currentPrimarySlotHelper = "CurrentPrimarySlotSQL"
+const currentPrimarySlotPredicate = "CurrentPrimarySlotSQL"
 
 // slotBlockedByTheModuleDAG ratifies the statement that cannot adopt the
 // helper today, for the architectural reason above and not for want of
@@ -446,7 +446,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 		scope := helperScope{
 			qualifier: importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people"),
 			inside:    file.Name != nil && file.Name.Name == "people",
-			names:     map[string]bool{currentPrimarySlotHelper: true},
+			names:     map[string]bool{currentPrimarySlotPredicate: true},
 		}
 		for _, decl := range file.Decls {
 			for _, sql := range slotStatements(decl, scope) {
@@ -470,7 +470,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 	t.Errorf("these statements spell the current-primary slot predicate by hand:\n  %s\n\n"+
 		"people.%s is the one spelling, and it mirrors uq_rel_current_primary_employer's own "+
 		"predicate — including the kind, which is part of that index. Call it.",
-		strings.Join(findings, "\n  "), currentPrimarySlotHelper)
+		strings.Join(findings, "\n  "), currentPrimarySlotPredicate)
 }
 
 // slotStatements returns the SQL statements in a declaration that name the
@@ -552,7 +552,7 @@ func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 	for _, tc := range slotProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
-			names := map[string]bool{currentPrimarySlotHelper: true}
+			names := map[string]bool{currentPrimarySlotPredicate: true}
 			scope := helperScope{qualifier: "people", names: names}
 			switch tc.mode {
 			case "people":

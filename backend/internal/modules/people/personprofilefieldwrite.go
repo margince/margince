@@ -5,15 +5,11 @@ package people
 
 // The one writer of person_profile_field, and the precedence rule it carries.
 //
-// Four passes fill this table — a mail signature, a public search result, a
-// site read and a human's acceptance of a research claim — and each used to
-// hand-copy the column list with its own ON CONFLICT clause. Three wrote
-// DO NOTHING and one wrote DO UPDATE, each justifying itself locally, so which
-// value a profile field held depended on which pass happened to run last
-// rather than on a rule anybody had stated.
+// Several passes fill this table — a mail signature, a public search result, a
+// site read, a human's acceptance of a research claim — and a conflict clause
+// chosen per pass makes the value a field holds depend on which pass ran last.
 //
-// The rule, stated once, is not "first wins" or "last wins". It is about WHO
-// is writing:
+// The rule is not "first wins" or "last wins". It is about WHO is writing:
 //
 //   - A machine fill CLAIMS an unanswered field and never replaces one. It read
 //     a footer, a search snippet or a page; none of that outranks an answer
