@@ -60,7 +60,7 @@ func eraseDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string, reason 
 	// the field-history projection cuts a record's timeline at its own newest
 	// erase row. Without this the audit log hands the "erased" address
 	// straight back — an erasure the record itself contradicts.
-	return tombstoneCollateralScrubs(ctx, tx, "deal_room_participant", seats, reason)
+	return tombstoneCollateralScrubs(ctx, tx, "deal_room_participant", seats, reason, causePersonErasure)
 }
 
 // anonymizeDealRoomSeats wipes the subject's name and address from every Deal

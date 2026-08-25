@@ -49,8 +49,7 @@
 /* What a host without WebGL2 wears: a plain lit rim, no waves. It says the agent
    is working without claiming to show how, which is the honest fallback. */
 .agentedge-still {
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--orbJade) 80%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbMid) 80%, transparent);
 }
 
 /* ===== Waiting: the contour closes =====

@@ -270,7 +270,8 @@ func ParseStatedReason(reason string) (StatedReason, error) {
 	if stated == "" || len([]rune(stated)) > maxOverrideReason {
 		return StatedReason{}, httperr.Validation("reason", "required", fmt.Sprintf(
 			"a release or a pin records a controller's decision, so it must state why in 1–%d characters",
-			maxOverrideReason))
+			maxOverrideReason,
+		))
 	}
 	return StatedReason{text: stated}, nil
 }
@@ -300,7 +301,8 @@ func admitRestrictionDecision(ctx context.Context, tx pgx.Tx, reason StatedReaso
 		// than as a constraint violation from underneath.
 		return restrictionDecision{}, fmt.Errorf(
 			"the deciding account carries no display name, and an unattributed decision cannot be accounted for: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	if err != nil {
 		return restrictionDecision{}, err

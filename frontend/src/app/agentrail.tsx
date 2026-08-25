@@ -879,9 +879,21 @@ function derive(
   if (signals.ai === "unconfigured" || signals.offline.length > 0) {
     return "error";
   }
-  // It STAYS amber rather than escalating, because escalating would make the
-  // chrome a sales surface.
-  if (signals.license === "none" || signals.license === "refused") {
+  // REFUSED only, and it stays amber rather than escalating, because escalating
+  // would make the chrome a sales surface.
+  //
+  // An installation that never had a licence is deliberately not a fault here.
+  // It used to be, and the result was that every demo and every fresh dev stack
+  // wore a permanent amber orb: the state stopped reading as "a fault that can
+  // wait" and started reading as "this is a default install", which is the way a
+  // signal that is always on stops being a signal at all. Asking and being told
+  // no is different, because there is a repair behind it.
+  //
+  // The cost is real and recorded rather than smoothed over: nothing in the
+  // chrome now says the licence is missing. Issue 2679 carries the decision
+  // about where that belongs, since the answer is probably neither amber forever
+  // nor silence.
+  if (signals.license === "refused") {
     return "warning";
   }
   // Below the two faults, because a source the agent cannot reach outranks work
