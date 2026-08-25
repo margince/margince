@@ -7,6 +7,8 @@ import { useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { formatNumber } from "../format/format";
+import { useLocale } from "../i18n";
 import { StoryProviders } from "../screens/story-utils";
 import {
   AttentionProvider,
@@ -44,11 +46,13 @@ function Chrome() {
 /** Stands in for a list screen: it selects rows and says so, nothing more. */
 function SelectingList({ rows }: Readonly<{ rows: number }>) {
   const [selected, setSelected] = useState(0);
+  const { locale } = useLocale();
   usePublishSelection(selected);
   return (
     <PanelBody>
       <p className="t-caption">
-        A list of {rows} rows. It publishes its selection and reads nothing.
+        A list of {formatNumber(rows, locale)} rows. It publishes its selection
+        and reads nothing.
       </p>
       <div className="card-actions">
         <Button variant="primary" small onClick={() => setSelected(rows)}>
