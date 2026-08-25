@@ -298,7 +298,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 		// write them to: "overwrite human-edited amount_minor" told an
 		// approver which field was at stake and never with what.
 		Summary: "overwrite human-edited " + strings.Join(split.Conflicts, ", ") + " — " +
-			restSummary(pol.Op, r.Method, r.URL.Path, split.Staged),
+			restSummary(pol, r, split.Staged),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, fmt.Errorf("the other fields were updated, but staging the human-edited fields (%s) failed: %w",
