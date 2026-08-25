@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
@@ -173,7 +174,8 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 		// In overlay mode the bundle additionally carries the mirror
 		// snapshot and documents where canonical data lives (AC-OV-9) —
 		// P7 stays honestly partial until the flip.
-		if err := tx.QueryRow(ctx, `
+		if err := tx.QueryRow(
+			ctx, `
 			SELECT coalesce(x_incumbent, '') FROM workspace WHERE id = $1`,
 			storekit.MustWorkspace(ctx),
 		).Scan(&incumbent); err != nil {
@@ -263,7 +265,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 
 	selects := make([]string, len(columns))
 	for i, col := range columns {
-		selects[i] = "t." + col
+		selects[i] = exportColumnSQL(m.table, col, arg)
 	}
 	sql := fmt.Sprintf("SELECT %s FROM %s t", strings.Join(selects, ", "), m.table)
 	if scope != "" {
@@ -293,6 +295,26 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 		return memberData{}, err
 	}
 	return data, nil
+}
+
+// exportColumnSQL renders one exported column, withholding what a scrub put out
+// of reach.
+//
+// audit_log is append-only, so an Art. 17 erase cannot rewrite the images it
+// certifies gone; every reader of the spine stops at the newest scrub tombstone
+// instead. The bundle is a reader — the whole table leaves the installation in
+// it — and a boundary the three API reads apply and the export does not is the
+// same disclosure through a quieter door.
+//
+// The ROW still exports. What a subject typed is in the images; that a write
+// happened is not something an erasure undoes, and a bundle missing the line
+// would answer "who touched this record" with a gap.
+func exportColumnSQL(table, column string, arg func(any) int) string {
+	if table != "audit_log" || (column != "before" && column != "after") {
+		return "t." + column
+	}
+	return fmt.Sprintf("CASE WHEN %s THEN t.%s ELSE NULL END AS %s",
+		privacy.UnscrubbedImageSQL("t", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))), column, column)
 }
 
 // exportableColumns lists a table's persisted columns in definition

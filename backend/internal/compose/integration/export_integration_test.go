@@ -312,3 +312,40 @@ func keys(m map[string][]byte) []string {
 	}
 	return out
 }
+
+// The bundle is a reader of the audit spine, and the spine is append-only: an
+// Art. 17 erase cannot rewrite the images it certifies gone, so every reader
+// stops at the newest scrub tombstone. A boundary the three API reads apply and
+// the export does not is the same disclosure through a quieter door — and the
+// export is the door that puts the whole table on somebody's disk.
+func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
+	e := SetupSearch(t)
+	f := e.seedExportFixture(t)
+
+	const typed = "Sara Typed This"
+	e.SeedID(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
+		VALUES ($1, 'human', $2, 'update', 'person', $3, $4::jsonb, $5::jsonb, now() - interval '2 hours')`,
+		"human:"+e.Rep1.String(), f.rep1Person,
+		`{"full_name":"`+typed+`"}`, `{"full_name":"Sara Renamed"}`)
+	e.SeedID(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		VALUES ($1, 'human', $2, 'erase', 'person', $3, now() - interval '1 hour')`,
+		"human:"+e.Rep1.String(), f.rep1Person)
+
+	var buf bytes.Buffer
+	if _, err := compose.NewExportWriter(e.Pool).WriteBundle(e.exportAdmin(), &buf); err != nil {
+		t.Fatal(err)
+	}
+	entries := BundleEntries(t, buf.Bytes())
+
+	if bytes.Contains(entries["audit_log.csv"], []byte(typed)) {
+		t.Error("audit_log.csv carries a value the erasure certified gone")
+	}
+	if bytes.Contains(entries["data.json"], []byte(typed)) {
+		t.Error("data.json carries a value the erasure certified gone")
+	}
+	// The row is still exported: a bundle that dropped it would answer "who
+	// touched this record" with a gap, which an erasure does not create.
+	if !bytes.Contains(entries["audit_log.csv"], []byte(f.rep1Person.String())) {
+		t.Error("the erased record's audit rows vanished from the bundle entirely")
+	}
+}

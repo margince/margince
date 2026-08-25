@@ -125,7 +125,8 @@ func validateRetentionAction(scope RetentionScope, action string) error {
 		Field: fieldAction, Code: "unsupported_retention_action",
 		Message: fmt.Sprintf(
 			"%q is not an action this installation can take on %s — for that scope the actions are: %s",
-			action, scope.ObjectType, strings.Join(supported, ", ")),
+			action, scope.ObjectType, strings.Join(supported, ", "),
+		),
 	}
 }
 
