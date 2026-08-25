@@ -1116,15 +1116,19 @@ export const en = {
   "co.work.noProjects": "No projects in flight.",
   "co.work.closes": "closes {date}",
   "co.work.targetEnd": "due to end {date}",
-  "co.work.stalled": "Nothing has been filed against this deal in the last 60 days.",
+  "co.work.stalled":
+    "Nothing has been filed against this deal in the last 60 days.",
   "co.work.quiet": "Nothing has been filed against this project since {when}.",
   "co.work.neverTouched": "Nothing has ever been filed against this project.",
-  "co.work.overdueTask": "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
-  "co.work.overdueTaskUnnamed": "\u2018{title}\u2019 was due {date} and is still open.",
+  "co.work.overdueTask":
+    "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
+  "co.work.overdueTaskUnnamed":
+    "\u2018{title}\u2019 was due {date} and is still open.",
   "co.work.owesUs": "{who} said: \u2018{body}\u2019",
   "co.work.owesUsUnnamed": "They said: \u2018{body}\u2019",
   "co.work.wasDue": "\u2014 by {date}.",
-  "co.work.statusesWithheld": "You cannot read this account\u2019s conversations, so the rows above carry no reasons.",
+  "co.work.statusesWithheld":
+    "You cannot read this account\u2019s conversations, so the rows above carry no reasons.",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Assembled from your records",
   "co.brief.generatedAt": "as of {when}",
