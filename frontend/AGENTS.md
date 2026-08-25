@@ -138,7 +138,8 @@ a number, so `wait()` schedules a real `setTimeout` and every simulated keystrok
 and click yields a macrotask (`user-event` 14.6.3, `utils/misc/wait.js:9`). A
 test's cost therefore scales with its interaction count, on a queue it shares
 with every other jsdom suite, which is what pushes the interaction-heavy screen
-suites past vitest's 5s default under contention (#1144, open).
+suites past vitest's 5s default under contention (#1144, since closed; the
+family recurs and is tracked in #2661).
 
 The cost is per event, not per `setup()`, so constructing an instance per
 interaction is not itself the expense. Do it once per test anyway: one instance
