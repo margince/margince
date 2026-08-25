@@ -129,6 +129,7 @@ readonly INTEGRATION_TITLE="main is red: the integration lane fails on the tip"
 readonly FRONTEND_TITLE="main is red: the frontend lane fails on the tip"
 readonly UAT_TITLE="main is red: the screen-acceptance UAT fails on the tip"
 readonly SONAR_TITLE="main's SonarCloud analysis was not published"
+readonly DCO_TITLE="main carries a commit with no Signed-off-by"
 readonly SUSPECTS="- \`deadbeef\` Some Author — the commit that did it"
 
 # What the cases below actually exercised, recorded as they run rather than
@@ -235,6 +236,15 @@ expect_health "a failed publish of main's analysis is filed with its suspect ran
 
 expect_health "a failed publish with no range still files" \
 	MAIN_SONAR_RESULT "$SONAR_TITLE" ""
+
+# The provenance arm. It exists because the PR-side `dco` job checks the
+# BRANCH's commits and main takes the squash, so an unsigned commit on main is
+# invisible from main once the branch is gone.
+expect_health "an unsigned commit on main is filed with its suspect range" \
+	MAIN_DCO_RESULT "$DCO_TITLE" "$SUSPECTS"
+
+expect_health "an unsigned commit with no range still files" \
+	MAIN_DCO_RESULT "$DCO_TITLE" ""
 
 # --- the census -----------------------------------------------------------------
 #

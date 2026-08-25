@@ -275,6 +275,43 @@ jobs:
 
   # Say what broke and who landed it. This is the job the whole workflow exists
   # for: a red lane nobody is told about is the state we already had.
+  # Whether main's own history is signed off, which nothing was asking.
+  #
+  # The `dco` job in ci.yml runs PR-side over the branch's commits. main takes
+  # the SQUASH, whose message GitHub composes from the pull request — so the two
+  # are not the same text, and once the branch is deleted the check is attached
+  # to a ref that no longer exists. An unsigned commit on main is therefore
+  # invisible FROM main, which is how ab64ef038 landed carrying no trailer at
+  # all while its PR's dco check was red.
+  #
+  # The baseline is a start point, not a skip list: everything after it is
+  # checked, every time, and nothing is exempted by pattern. It names where this
+  # gate was armed. Move it back — to the baseline commit — once the unsigned
+  # commit before it has been remediated by its author, which is a sign-off only
+  # they can give.
+  dco:
+    name: dco (main)
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The range starts at the baseline, which is many merges back.
+          fetch-depth: 0
+      - name: Every commit on main since the baseline is signed off
+        env:
+          # The first commit this gate covers. A SHA that has left the history
+          # makes `git rev-list` fail loudly rather than check nothing, which is
+          # the failure mode a baseline has to avoid.
+          DCO_MAIN_BASELINE: 250f692f7
+        run: ./scripts/check-dco.sh "$DCO_MAIN_BASELINE" "${{ github.sha }}"
+
   report:
     name: report
     timeout-minutes: 10
@@ -285,7 +322,7 @@ jobs:
     # working one on every dashboard. Left out of this list, the job that exists
     # to publish main's verdict was the one job whose failure nobody was told
     # about.
-    needs: [gates, integration, frontend, uat, sonar]
+    needs: [gates, integration, frontend, uat, sonar, dco]
     if: >-
       !cancelled()
       && (needs.gates.result == 'failure'
@@ -329,5 +366,6 @@ jobs:
           MAIN_FRONTEND_RESULT: ${{ needs.frontend.result }}
           MAIN_UAT_RESULT: ${{ needs.uat.result }}
           MAIN_SONAR_RESULT: ${{ needs.sonar.result }}
+          MAIN_DCO_RESULT: ${{ needs.dco.result }}
           MAIN_SUSPECTS: ${{ steps.range.outputs.suspects }}
         run: ./scripts/scheduled-report.sh
