@@ -36,7 +36,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -56,11 +55,10 @@ import (
 const (
 	filterPreviewDefaultRows = 25
 	filterPreviewMaxRows     = 100
-	// previewStatementBudget bounds each statement in a preview. Generous for an
-	// indexable filter and short enough that an expensive one cannot hold a pool
-	// connection: a glance that takes five seconds has already failed at being a
-	// glance.
-	previewStatementBudget = 5 * time.Second
+	// previewStatementBudget bounds each statement in a preview. The filter is
+	// the caller's own, so the ceiling is the one database declares for that: a
+	// glance that takes five seconds has already failed at being a glance.
+	previewStatementBudget = database.CallerPredicateBudget
 )
 
 // filterPreviewHandlers shadows the generated PreviewFilter stub.

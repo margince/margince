@@ -66,8 +66,10 @@ func (h overlayExportHandlers) DownloadOverlayExport(w http.ResponseWriter, r *h
 		httperr.Write(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", `attachment; filename="margince-export.zip"`)
+	// Headers before the first byte: the bundle streams, so this is the last
+	// moment a header is settable. Size is unknown — the archive is written as
+	// it is produced — so Content-Length is deliberately omitted.
+	httperr.Download{ContentType: "application/zip", Filename: "margince-export.zip"}.WriteHeaders(w)
 	if _, err := h.writer.WriteBundle(r.Context(), w); err != nil {
 		h.log.ErrorContext(r.Context(), "overlay export: the bundle failed mid-stream; the client's download is truncated", "err", err)
 	}

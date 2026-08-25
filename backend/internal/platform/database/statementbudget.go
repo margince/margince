@@ -12,6 +12,27 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// CallerPredicateBudget is how long a statement whose predicate the CALLER
+// wrote may hold a connection: a saved filter's tree, an agent's query plan, a
+// builder's preview.
+//
+// One number, because it answers one question and it was answered twice. The
+// filter preview and the search plan each declared five seconds with its own
+// paragraph arguing for it — two writers of one invariant, each reasoning from
+// the same fact and neither able to see the other move. The reason is not a
+// property of either surface: somebody is WAITING on the answer, and a glance
+// that takes five seconds has already failed at being a glance, exactly as an
+// agent still waiting after five seconds has already lost the turn it asked in.
+//
+// It bounds the plans that cannot be answered at all rather than the ones that
+// are merely large — an indexed plan with a page limit answers an SMB-sized
+// corpus in milliseconds. A background path that nobody is waiting on wants its
+// own ceiling and should say so with its own constant and its own reason.
+//
+// Held by: TestTheCallerPredicateBudgetIsDeclaredOnce
+// (backend/onecallerpredicatebudget_test.go)
+const CallerPredicateBudget = 5 * time.Second
+
 // BoundStatement gives every statement that follows it in tx a wall-clock
 // ceiling. It is the ONE spelling of "this statement has a budget", for the
 // same reason this package owns the workspace GUC: a store that builds its own

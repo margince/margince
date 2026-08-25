@@ -363,8 +363,11 @@ func (h filteredExportHandlers) CreateFilteredExport(w http.ResponseWriter, r *h
 		return
 	}
 
-	w.Header().Set("Content-Type", result.ContentType)
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", result.Filename))
+	httperr.Download{
+		ContentType: result.ContentType,
+		Filename:    result.Filename,
+		Size:        int64(len(result.Body)),
+	}.WriteHeaders(w)
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(result.Body); err != nil {
 		// The body is fully rendered before the header is written, so a

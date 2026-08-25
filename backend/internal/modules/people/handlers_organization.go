@@ -130,10 +130,8 @@ func (h Handlers) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id
 	// requests without holding a stale mark for long.
 	w.Header().Set("Cache-Control", "private, max-age=300")
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Body:        rc,
-		ContentType: imagenorm.ContentType,
-		Inline:      true,
-		Size:        obj.Size,
+		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: obj.Size},
+		Body:     rc,
 	}, "organization logo "+id.String())
 }
 

@@ -3,17 +3,37 @@
 
 package compose
 
-// The three drafting surfaces write under one set of rules, and this is what
-// keeps that true.
+// The drafting surfaces write under one set of rules, and this is what keeps
+// that true.
 //
 // Before this, a rule learned on one surface stayed on that surface: the reply
 // drafter alone was told not to claim a personal voice, the person composer
 // alone was told not to explain itself, and nothing anywhere said what language
 // to write in. Every one of those gaps produced a defect a user reported.
+//
+// WHICH surfaces is derived, not listed. A hand-written list is a thing to
+// forget to add to, and forgetting is the failure this exists to catch — so the
+// corpus is swept out of the tree (every file that composes draftrules.Shared)
+// and the assembled-prompt table below has to cover exactly that set. A fourth
+// adopter fails this file until somebody assembles its prompt here.
+//
+// WHAT IT CANNOT DECIDE. It governs the surfaces that HAVE adopted the block.
+// Whether a prose surface that carries none should — the offer draft, the
+// meeting brief, the account dossier — is a product judgement about what counts
+// as correspondence, and a gate that answered it by fiat would be wrong in one
+// direction or the other. It is asked as its own question rather than admitted
+// silently here.
 
 import (
 	"context"
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -25,6 +45,30 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
 )
 
+// draftingSurfaces is every surface's assembled system turn, keyed by the file
+// that composes the shared block into it. The KEY is what ties this table to
+// the sweep below: a name would let the table and the tree drift apart while
+// both looked full.
+//
+// A surface may assemble more than one prompt — the reply drafter has a voiced
+// and an unvoiced turn, and they are two chances to drop the block — so each
+// entry is a slice.
+//
+// Held by: TestTheParityTableCoversEveryFileThatComposesTheSharedRules
+// (internal/compose/draftrulesparity_test.go) — "every surface" is a claim
+// about the tree, and the sweep below is what makes it one rather than a
+// description of this table.
+func draftingSurfaces(fence promptfence.Fence) map[string][]string {
+	return map[string][]string{
+		"replydraftmodel.go": {
+			replyDraftSystemFor(replyDraftSystem, fence),
+			replyDraftSystemFor(replyDraftVoiceSystem, fence),
+		},
+		"persondraft/write.go":  {persondraft.SystemPromptFor(fence)},
+		"accountdraft/write.go": {accountdraft.SystemPromptFor(fence)},
+	}
+}
+
 // Every surface's assembled system turn carries the shared block verbatim.
 //
 // Verbatim rather than "contains the important lines", because a paraphrase is
@@ -32,17 +76,175 @@ import (
 // pass a looser check while writing under a rule of its own.
 func TestEveryDraftingSurfaceCarriesTheSharedRules(t *testing.T) {
 	fence := promptfence.New()
-	surfaces := map[string]string{
-		"reply":        replyDraftSystemFor(replyDraftSystem, fence),
-		"reply/voiced": replyDraftSystemFor(replyDraftVoiceSystem, fence),
-		"person":       persondraft.SystemPromptFor(fence),
-		"account":      accountdraft.SystemPromptFor(fence),
-	}
-	for name, system := range surfaces {
-		if !strings.Contains(system, draftrules.Shared) {
-			t.Errorf("the %s drafting surface does not carry the shared rules block verbatim", name)
+	for where, systems := range draftingSurfaces(fence) {
+		for at, system := range systems {
+			if !strings.Contains(system, draftrules.Shared) {
+				t.Errorf("the drafting surface in %s does not carry the shared rules block verbatim in its "+
+					"prompt %d of %d", where, at+1, len(systems))
+			}
 		}
 	}
+}
+
+// The table above covers exactly the files that compose the shared block.
+//
+// This is the half that makes the parity test a census rather than a list. The
+// four surfaces were hand-written, and a fifth adopter would have been governed
+// by nothing while this file went on reporting the clean word — which is the
+// direction a census must not fail in. So the corpus comes from the tree: every
+// production file under compose that names draftrules.Shared is a surface, and
+// one the table does not assemble is a failure here rather than a silence.
+func TestTheParityTableCoversEveryFileThatComposesTheSharedRules(t *testing.T) {
+	swept := filesComposingTheSharedRules(t)
+	if len(swept) == 0 {
+		t.Fatal("no file under internal/compose composes draftrules.Shared, so this gate is reading an " +
+			"empty tree rather than a governed one")
+	}
+	assembled := draftingSurfaces(promptfence.New())
+	for _, where := range swept {
+		if _, covered := assembled[where]; !covered {
+			t.Errorf("%s composes draftrules.Shared but no entry above assembles its prompt, so nothing "+
+				"checks that the block survives into what the model is actually sent. Add it to "+
+				"draftingSurfaces with its assembled system turn", where)
+		}
+	}
+	for where := range assembled {
+		if !slicesContains(swept, where) {
+			t.Errorf("draftingSurfaces names %s, which no longer composes draftrules.Shared. A table entry "+
+				"describing code that is gone is a gate holding nothing: remove it, or restore the block",
+				where)
+		}
+	}
+}
+
+// filesComposingTheSharedRules sweeps the compose tree for the production files
+// that READ draftrules.Shared, reported relative to internal/compose.
+//
+// Off the syntax, not the text. promptlang's docblock names draftrules.Shared
+// in prose — the two blocks share a heading and it says so — and a text search
+// enrolled that file as a drafting surface. A comment mentioning the block is
+// not a surface writing under it, and the false positive is the direction that
+// gets a gate turned off.
+//
+// draftrules' own package is skipped for the same reason one step up: it
+// DECLARES the block rather than composing it.
+func filesComposingTheSharedRules(t *testing.T) []string {
+	t.Helper()
+	const root = "."
+	var out []string
+	var dotImports []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") ||
+			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+			return nil
+		}
+		rel := strings.TrimPrefix(filepath.ToSlash(path), "./")
+		if strings.HasPrefix(rel, "draftrules/") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		if parseErr != nil {
+			return parseErr
+		}
+		if dotImportsDraftRules(parsed) {
+			dotImports = append(dotImports, rel)
+		}
+		if readsTheSharedRules(parsed) {
+			out = append(out, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("sweeping internal/compose for the shared rules block: %v", err)
+	}
+	for _, path := range dotImports {
+		t.Errorf("%s dot-imports draftrules, which puts Shared in the file's own scope as a bare "+
+			"identifier. The sweep reads selectors, so this file would drop out of the census and its "+
+			"prompt would be governed by nothing — import it under a name", path)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// dotImportsDraftRules reports the shape the census cannot read.
+func dotImportsDraftRules(file *ast.File) bool {
+	for _, imported := range file.Imports {
+		if importsDraftRules(imported) && imported.Name != nil && imported.Name.Name == "." {
+			return true
+		}
+	}
+	return false
+}
+
+// importsDraftRules reads one import's path, UNQUOTED.
+//
+// Trimming double quotes is not unquoting: go/parser keeps the literal as
+// written, and a raw-string import — “ `…/draftrules` “ — is valid Go that a
+// quote-trim leaves with its backticks on. The suffix then never matches, the
+// file drops out of the census, and its prompt is governed by nothing. Nothing
+// in this tree writes one; that is exactly why a reader would not think of it.
+func importsDraftRules(imported *ast.ImportSpec) bool {
+	const path = "internal/compose/draftrules"
+	unquoted, err := strconv.Unquote(imported.Path.Value)
+	if err != nil {
+		// An import path the parser accepted but strconv cannot unquote is a
+		// shape this reader does not understand, and guessing either way is
+		// worse than saying so.
+		return false
+	}
+	return strings.HasSuffix(unquoted, path)
+}
+
+// readsTheSharedRules reports whether the file holds a `draftrules.Shared`
+// selector in its code — an alias honoured, because the local name for an
+// imported package is whatever the file says it is.
+func readsTheSharedRules(file *ast.File) bool {
+	local, imported := localNameForDraftRules(file)
+	if !imported {
+		return false
+	}
+	found := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		selector, ok := n.(*ast.SelectorExpr)
+		if !ok || selector.Sel.Name != "Shared" {
+			return true
+		}
+		if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == local {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// localNameForDraftRules returns the name this file calls the draftrules
+// package by, and whether it imports it at all.
+func localNameForDraftRules(file *ast.File) (string, bool) {
+	for _, imported := range file.Imports {
+		if !importsDraftRules(imported) {
+			continue
+		}
+		if imported.Name != nil {
+			// A dot import puts Shared in the file's own scope, where it is a
+			// bare identifier and not a selector — the shape below cannot see
+			// it, so such a file would drop OUT of the census and its prompt
+			// would be governed by nothing. Nothing in this tree dot-imports;
+			// refusing is how it stays that way, rather than the sweep quietly
+			// getting smaller.
+			if imported.Name.Name == "." {
+				return "", false
+			}
+			return imported.Name.Name, true
+		}
+		return "draftrules", true
+	}
+	return "", false
 }
 
 // The rules that exist because a specific defect shipped. Named individually so
