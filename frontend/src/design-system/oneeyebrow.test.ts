@@ -141,6 +141,18 @@ function tokenValues(): Map<string, string> {
   return values;
 }
 
+/**
+ * Whether a rule body declares the eyebrow's type.
+ *
+ * PRESENT, not exclusive: a copy carries its own spacing, layout and colour —
+ * every one of the twenty-eight in this tree did — so asking whether the rule
+ * declares ONLY the four would have found none of them.
+ */
+function redeclaresTheEyebrow(body: string): boolean {
+  const declared = new Set(typeOf(body));
+  return eyebrowType().every((property) => declared.has(property));
+}
+
 describe("one eyebrow", () => {
   const sheets = stylesheets(join(frontendRoot, "src"));
 
@@ -171,16 +183,42 @@ describe("one eyebrow", () => {
     expect(eyebrowType()).toHaveLength(4);
   });
 
+  it("sees a copy that carries its own spacing and colour too", () => {
+    // Asked of the census's OWN predicate, not of a second spelling of it: a
+    // test that rewrote the comparison would keep passing while the comparison
+    // it describes was tightened into blindness. Every one of the twenty-eight
+    // copies in the tree carried extras — a set-equality here would have found
+    // none of them.
+    expect(
+      redeclaresTheEyebrow(`
+        margin: 0 0 var(--space-2);
+        display: flex;
+        gap: var(--space-1);
+        color: var(--accent);
+        font-size: var(--fs-eyebrow);
+        font-weight: var(--fw-semibold);
+        letter-spacing: var(--tracking-eyebrow);
+        text-transform: uppercase;
+      `),
+    ).toBe(true);
+    // And a rule taking three of the four is a variant somebody decided on.
+    expect(
+      redeclaresTheEyebrow(`
+        font-size: var(--fs-eyebrow);
+        font-weight: var(--fw-semibold);
+        text-transform: uppercase;
+      `),
+    ).toBe(false);
+  });
+
   it("is declared only by the design system", () => {
-    const type = eyebrowType();
     const copies: string[] = [];
     for (const path of sheets) {
       for (const rule of rules(withoutComments(readFileSync(path, "utf8")))) {
         if (path === eyebrowSource && rule.selector === ".t-eyebrow") {
           continue;
         }
-        const declared = new Set(typeOf(rule.body));
-        if (type.every((property) => declared.has(property))) {
+        if (redeclaresTheEyebrow(rule.body)) {
           copies.push(`${relative(frontendRoot, path)}: ${rule.selector}`);
         }
       }
