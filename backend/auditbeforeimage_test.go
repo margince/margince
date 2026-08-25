@@ -299,7 +299,7 @@ func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
 				key:            parsed.Path + ":" + fn.Name.Name,
 				door:           door,
 				args:           call.Args,
-				beforeIsAbsent: auditDoorsWithBeforeImage[door] && isAbsentImageExpr(call, parsed.File),
+				beforeIsAbsent: auditDoorsWithBeforeImage[door] && isAbsentImageExpr(call),
 			})
 			return true
 		})
@@ -323,16 +323,16 @@ func auditDoorAt(n ast.Node) (string, bool) {
 	return selector.Sel.Name, true
 }
 
-// isAbsentImageExpr reads the before argument the only way source can be read:
-// the bare `nil` identifier, or a local variable this function only ever
-// declares and never assigns a value to.
+// isAbsentImageExpr reads the before argument the one way source can be read
+// here: the bare `nil` identifier, written at the call.
 //
-// It CANNOT see a typed nil that arrives through a call, a parameter or a field
-// — `imageOrNil(ch.Before)` returns one, and so does any helper that builds an
-// image conditionally. Those reach audit_log as SQL NULL exactly as a bare nil
-// does, and only storekit's refusal catches them. That is the division of labour
-// this gate's doc comment describes, and the reason the refusal is not optional.
-func isAbsentImageExpr(call *ast.CallExpr, _ *ast.File) bool {
+// Everything else is invisible to it — a variable assigned nil, a parameter, a
+// field, and any helper that builds an image conditionally, such as
+// `imageOrNil(ch.Before)`. Each of those reaches audit_log as SQL NULL exactly
+// as a bare nil does, and only storekit's refusal catches them. That is the
+// division of labour this gate's doc comment describes, and the reason the
+// refusal is not optional.
+func isAbsentImageExpr(call *ast.CallExpr) bool {
 	if auditBeforeArg >= len(call.Args) {
 		return false
 	}

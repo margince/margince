@@ -5,7 +5,6 @@ package ai
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,36 +58,6 @@ func (s *VoiceStore) PreviewSource(ctx context.Context, profileID ids.UUID, form
 	return PreviewCorpusText(format, content)
 }
 
-// priorVoiceSource is the manifest row a re-ingest replaces — the fields the
-// upsert overwrites, read before it runs, so the audit row can say what the
-// replaced source held. exists separates "there was no such source" from a
-// source whose every field happened to read as a zero value.
-type priorVoiceSource struct {
-	kind      string
-	register  string
-	wordCount int
-	excluded  bool
-	exists    bool
-}
-
-func loadPriorVoiceSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, sourceRef string) (priorVoiceSource, error) {
-	var prior priorVoiceSource
-	err := tx.QueryRow(ctx, `
-			SELECT kind, register, word_count, excluded
-			FROM voice_corpus_source
-			WHERE voice_profile_id = $1 AND source_ref = $2 AND archived_at IS NULL`,
-		profileID, sourceRef).Scan(&prior.kind, &prior.register, &prior.wordCount, &prior.excluded)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return prior, nil
-	case err != nil:
-		return prior, err
-	default:
-		prior.exists = true
-		return prior, nil
-	}
-}
-
 func (s *VoiceStore) ingestPreparedSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, prepared preparedSource) (VoiceCorpusSource, CorpusSummary, error) {
 	profile, err := s.visibleProfile(ctx, tx, profileID)
 	if err != nil {
@@ -101,11 +70,7 @@ func (s *VoiceStore) ingestPreparedSource(ctx context.Context, tx pgx.Tx, profil
 	if !ok {
 		return VoiceCorpusSource{}, CorpusSummary{}, apperrors.ErrPermissionDenied
 	}
-	prior, err := loadPriorVoiceSource(ctx, tx, profileID, prepared.SourceRef)
-	if err != nil {
-		return VoiceCorpusSource{}, CorpusSummary{}, err
-	}
-	source, err := s.persistPreparedSource(ctx, tx, profileID, prepared, actor.ID)
+	source, prior, err := s.persistPreparedSource(ctx, tx, profileID, prepared, actor.ID)
 	if err != nil {
 		return VoiceCorpusSource{}, CorpusSummary{}, err
 	}
@@ -116,13 +81,34 @@ func (s *VoiceStore) ingestPreparedSource(ctx context.Context, tx pgx.Tx, profil
 	return source, summary, nil
 }
 
-func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, prepared preparedSource, actorID string) (VoiceCorpusSource, error) {
+// priorVoiceSource is the manifest row a re-ingest replaces — the fields the
+// upsert overwrites, carried out of that same statement, so the audit row can
+// say what the replaced source held. exists separates "there was no such
+// source" from a source whose every field happened to read as a zero value.
+type priorVoiceSource struct {
+	kind      string
+	register  string
+	wordCount int
+	excluded  bool
+	exists    bool
+}
+
+// persistPreparedSource writes the source and reports the row it replaced, read
+// by the upsert's own CTE. A separate read before it would be a different look
+// at the table: a concurrent ingest of the same source_ref committing in between
+// would leave this write recording a create for a row it actually replaced.
+func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, prepared preparedSource, actorID string) (VoiceCorpusSource, priorVoiceSource, error) {
 	occurredAt := prepared.OccurredAt
 	if occurredAt.IsZero() {
 		occurredAt = s.now().UTC()
 	}
 	var sourceID ids.UUID
 	row := tx.QueryRow(ctx, `
+			WITH was AS (
+			  SELECT kind, register, word_count, excluded
+			    FROM voice_corpus_source
+			   WHERE voice_profile_id = $1 AND source_ref = $6 AND archived_at IS NULL
+			)
 			INSERT INTO voice_corpus_source
 			  (voice_profile_id, origin, kind, register, weight, source_label,
 			   source_ref, content, content_hash, word_count, excluded, exclusion_reason,
@@ -146,15 +132,27 @@ func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profi
 			  archived_at = NULL,
 			  version = voice_corpus_source.version + 1,
 			  updated_at = EXCLUDED.updated_at
-			RETURNING id`,
+			RETURNING id,
+			          (SELECT was.kind FROM was), (SELECT was.register FROM was),
+			          (SELECT was.word_count FROM was), (SELECT was.excluded FROM was)`,
 		profileID, prepared.Kind, prepared.Register, prepared.Weight, prepared.Label,
 		prepared.SourceRef, prepared.Text, SourceRefForContent(prepared.Text), prepared.Words,
 		occurredAt, actorID, s.now().UTC())
-	if err := row.Scan(&sourceID); err != nil {
-		return VoiceCorpusSource{}, err
+	var prior priorVoiceSource
+	var kind, register *string
+	var wordCount *int
+	var excluded *bool
+	if err := row.Scan(&sourceID, &kind, &register, &wordCount, &excluded); err != nil {
+		return VoiceCorpusSource{}, priorVoiceSource{}, err
 	}
-	return scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(
+	if kind != nil {
+		prior = priorVoiceSource{
+			kind: *kind, register: *register, wordCount: *wordCount, excluded: *excluded, exists: true,
+		}
+	}
+	source, err := scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s FROM voice_corpus_source WHERE id = $1`, voiceSourceColumns), sourceID))
+	return source, prior, err
 }
 
 func (s *VoiceStore) recordSourceIngest(ctx context.Context, tx pgx.Tx, profile VoiceProfile, source VoiceCorpusSource, prior priorVoiceSource) (CorpusSummary, error) {

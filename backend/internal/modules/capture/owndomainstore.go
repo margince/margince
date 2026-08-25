@@ -118,28 +118,32 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The prior state, so the trail distinguishes "an admin registered a new
 		// domain" from "an admin confirmed a candidate a mailbox had seen".
-		// Left nil when there was none: the audit seam renders an absent image
-		// as SQL NULL whichever kind of nil carries it.
-		var beforeImage map[string]any
-		var priorSource string
-		var priorVerified bool
-		switch err := tx.QueryRow(ctx,
-			`SELECT source, verified FROM workspace_email_domain WHERE domain = $1`, domain).
-			Scan(&priorSource, &priorVerified); {
-		case err == nil:
-			beforeImage = map[string]any{auditKeyOwnDomain: domain, "source": priorSource, "verified": priorVerified}
-		case errors.Is(err, pgx.ErrNoRows):
-		default:
-			return fmt.Errorf("capture: reading the domain's prior state: %w", err)
-		}
+		//
+		// Read by the upsert itself, in a CTE: the statement that replaces the
+		// row is the only thing that can say what it replaced. A separate SELECT
+		// before it would be a different look at the table, and a concurrent
+		// registration committing in between would leave this row claiming there
+		// was nothing before — which is the very distinction it exists to draw.
+		var priorSource *string
+		var priorVerified *bool
 		if err := tx.QueryRow(ctx, `
+			WITH was AS (
+			  SELECT source, verified FROM workspace_email_domain WHERE domain = $1
+			)
 			INSERT INTO workspace_email_domain (domain, source, verified)
 			VALUES ($1, 'admin', true)
 			ON CONFLICT (domain)
 			  DO UPDATE SET source = 'admin', verified = true
-			RETURNING domain, source, verified, created_at`, domain).
-			Scan(&out.Domain, &out.Source, &out.Verified, &out.CreatedAt); err != nil {
+			RETURNING domain, source, verified, created_at,
+			          (SELECT was.source FROM was), (SELECT was.verified FROM was)`, domain).
+			Scan(&out.Domain, &out.Source, &out.Verified, &out.CreatedAt, &priorSource, &priorVerified); err != nil {
 			return fmt.Errorf("capture: registering own domain: %w", err)
+		}
+		var beforeImage map[string]any
+		if priorSource != nil && priorVerified != nil {
+			beforeImage = map[string]any{
+				auditKeyOwnDomain: domain, "source": *priorSource, "verified": *priorVerified,
+			}
 		}
 		// Audit-only, like the capture-settings write beside it: this is
 		// workspace configuration, not a domain record, and the closed event
