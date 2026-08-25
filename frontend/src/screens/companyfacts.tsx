@@ -20,9 +20,8 @@
 // answers to one question, and the two disagree the moment somebody types.
 
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
-import { useLocale } from "../i18n";
 import { formatMoney } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { CompanyOwnerControl } from "./companyheader";
 import "./companyfacts.css";
 

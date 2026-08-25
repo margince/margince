@@ -76,10 +76,9 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
+import { CompanyFacts } from "./companyfacts";
 import { CompanyFinanceCard } from "./companyfinance";
 import { GrowthFitPanel } from "./companygrowthfit";
-import { CompanyFacts } from "./companyfacts";
-import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
 import {
   CompanyActionBadges,
   CompanyDescription,
@@ -96,6 +95,7 @@ import {
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { TodayOnThisAccount } from "./companytoday";
+import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
 import {
   CreateAction,
