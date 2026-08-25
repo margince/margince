@@ -68,6 +68,38 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					"address.country":     up.Address != nil && up.Address.Country != nil,
 				}
 		},
+		migration.ObjectPerson: func(fields map[string]string) (map[string]bool, map[string]bool) {
+			in := personCreateFrom(fields, "src")
+			up := personUpdateFrom(fields)
+			return map[string]bool{
+					"full_name":           in.FullName != "",
+					"first_name":          in.FirstName != nil,
+					"last_name":           in.LastName != nil,
+					"title":               in.Title != nil,
+					"email":               len(in.Emails) > 0,
+					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
+					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
+					"address.city":        in.Address != nil && in.Address.City != nil,
+					"address.region":      in.Address != nil && in.Address.Region != nil,
+					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
+					"address.country":     in.Address != nil && in.Address.Country != nil,
+				}, map[string]bool{
+					"full_name":  up.FullName != nil,
+					"first_name": up.FirstName != nil,
+					"last_name":  up.LastName != nil,
+					"title":      up.Title != nil,
+					// The half that did not exist before this object did: a
+					// person's emails are child rows, and the patch input
+					// carried no member for them at all.
+					"email":               len(up.Emails) > 0,
+					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
+					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
+					"address.city":        up.Address != nil && up.Address.City != nil,
+					"address.region":      up.Address != nil && up.Address.Region != nil,
+					"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
+					"address.country":     up.Address != nil && up.Address.Country != nil,
+				}
+		},
 	} {
 		t.Run(object, func(t *testing.T) {
 			targets, err := importTargets(object)
@@ -112,7 +144,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 // the import writes through refuses custom fields: offering one would accept a
 // column, report the row as written, and drop the value.
 func TestImportTargetsOfferNoCustomFields(t *testing.T) {
-	for _, object := range []string{migration.ObjectLead, migration.ObjectOrganization} {
+	for _, object := range []string{migration.ObjectLead, migration.ObjectOrganization, migration.ObjectPerson} {
 		targets, err := importTargets(object)
 		if err != nil {
 			t.Fatalf("importTargets(%s): %v", object, err)

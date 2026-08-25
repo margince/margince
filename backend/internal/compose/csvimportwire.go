@@ -386,7 +386,7 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (stri
 	object := strings.TrimSpace(r.FormValue("object"))
 	if _, ok := csvTargets[object]; !ok {
 		return "", nil, httperr.Validation("object", "unsupported",
-			"An import lands leads or organizations; name one of them.")
+			"An import lands organizations, people or leads; name one of them.")
 	}
 
 	file, _, err := r.FormFile("file")
