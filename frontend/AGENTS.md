@@ -56,40 +56,21 @@ script gates — but none of them can tell that the perfectly good
 component you just wrote already existed under a different name. That part is
 yours.
 
-### Indigo is the AI hue, and it is a claim about provenance
+### Indigo is a claim about provenance
 
-`--ai` / `--aiLight` / `--aiMed` / `--aiText` mark **information or a proposed
-action that came from an agent rather than from a person**: a decision card in
-somebody's queue, a staged field value, a `provenance-agent` chip, the workbench
-chrome around a run. It is a colour family of its own alongside brand and status
-because one colour carries one meaning, so it is never available as decoration.
-Tint a card indigo because indigo looked good and you have told every reader of
-that screen something false about who decided.
+`--ai` / `--aiLight` / `--aiMed` / `--aiText` mark **information or an action
+proposed by an agent rather than by a person** — decision cards, staged values,
+the orb and the lit margin included. One colour, one meaning: it is never
+decoration, and tinting a card indigo because it looked good tells every reader
+something false about who decided. `1.5px dashed var(--aiMed)` means staged and
+not yet accepted; the dashes going solid is acceptance. Text on `--aiLight` takes
+`--aiText`, never `--ai`, which fails AA on its own family's ground.
+`--orbAmber` / `--orbRed` / `--orbGrey` are OUTCOME, not provenance, and stay put.
 
-Two things go with it:
-
-- **`1.5px dashed var(--aiMed)` means staged, not yet accepted.** The dashes
-  going solid is what acceptance looks like. The tint says who, the stroke says
-  whether it counts yet.
-- **`--aiText` for text over `--aiLight`, never `--ai`.** The two are close
-  enough that the strong tone fails AA on the ground its own family paints.
-
-**The orb and the window edge make the same claim, loudest.** Their working
-tones ARE the AI indigo: `--orbBody` is declared as `var(--ai)`, with
-`--orbGlow` / `--orbMid` / `--orbBright` around it because a lit glass body needs
-tones a flat UI accent cannot supply. They were greens around `--accent` until
-2026-08; a re-themed brand moving the orb was not worth a reader meeting two
-colours for one meaning. The tones are named by role rather than by hue for the
-same reason a repaint taught: `--orbJade` holding an indigo is a name that lies.
-
-**`--orbAmber`, `--orbRed` and `--orbGrey` stay put.** Asks-you-something,
-failed, and cannot-reach-a-source are OUTCOME, not provenance, and an orb that
-went indigo when a run failed would stop saying how it went.
-
-The full section, with the token table and the provenance triad, is
-[`src/design-system/README.md`](src/design-system/README.md) under *Indigo says a
-machine did it*. `check-ds-purity.sh` holds that colours come from tokens at all;
-nothing automated can tell that the token you picked means the wrong thing.
+Why, plus the token table and the provenance triad:
+[`src/design-system/README.md`](src/design-system/README.md). `check-ds-purity.sh`
+holds that colours come from tokens; nothing can tell you the token you picked
+means the wrong thing.
 
 ## A test may not depend on how busy the machine is
 
@@ -138,8 +119,7 @@ a number, so `wait()` schedules a real `setTimeout` and every simulated keystrok
 and click yields a macrotask (`user-event` 14.6.3, `utils/misc/wait.js:9`). A
 test's cost therefore scales with its interaction count, on a queue it shares
 with every other jsdom suite, which is what pushes the interaction-heavy screen
-suites past vitest's 5s default under contention (#1144, since closed; the
-family recurs and is tracked in #2661).
+suites past vitest's 5s default under contention (#1144, closed; recurs in #2661).
 
 The cost is per event, not per `setup()`, so constructing an instance per
 interaction is not itself the expense. Do it once per test anyway: one instance
