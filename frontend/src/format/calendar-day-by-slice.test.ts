@@ -32,21 +32,42 @@ import { describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(here, "..");
-const owner = join(here, "calendarday.ts");
 
 // Sites that render a UTC day ON PURPOSE, keyed by file and the function that
 // holds them so a waiver ratifies the instance rather than the file. Each says
 // why UTC is the right clock there — an entry that stops matching fails, so a
 // waiver cannot outlive the code it was written about.
-const deliberateUtcDays: Record<string, string> = {
-  "screens/aiusage.tsx#adjacentMonth":
-    "the two boundaries are read back off dates this function just built with Date.UTC(...) from a month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only the seed asks it",
-  "format/timezone.ts#shifted":
-    "the same round trip as adjacentMonth's: the date is built with Date.UTC(...) from a day this function was GIVEN, and the components read back are the ones just written. It is arithmetic on a named day, not a reading of the clock, and the zoned question is answered by startOfDayInstant on the next line",
-  "mcp-apps/bridge.ts#day":
-    "the answer beside this date says whether a promise is overdue, and the server judged that in UTC. A day rendered in the reader's zone could print tomorrow's date beside the word overdue — one clock, one day",
+//
+// `sites` is how many cuts the reason covers, and it is load-bearing. The key
+// is a NAME and not a position, deliberately: a line number moves under an edit
+// above it and silently starts covering different code. The cost of that choice
+// is that a cut added to an already-ratified function would inherit a reason
+// written about a different one — so the count is part of what is ratified, and
+// a third cut in a function ratified for two is a finding again.
+const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
+  "screens/aiusage.tsx#adjacentMonth": {
+    sites: 2,
+    why: "the two boundaries are read back off dates this function just built with Date.UTC(...) from a month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only the seed asks it",
+  },
+  "format/timezone.ts#shifted": {
+    sites: 1,
+    why: "the same round trip as adjacentMonth's: the date is built with Date.UTC(...) from a day this function was GIVEN, and the components read back are the ones just written. It is arithmetic on a named day, not a reading of the clock, and the zoned question is answered by startOfDayInstant on the next line",
+  },
+  "mcp-apps/bridge.ts#day": {
+    sites: 1,
+    why: "the answer beside this date says whether a promise is overdue, and the server judged that in UTC. A day rendered in the reader's zone could print tomorrow's date beside the word overdue — one clock, one day",
+  },
 };
 
+// NOTHING is skipped, deliberately. The first cut excluded this file and the
+// owner — this file because it spells the pattern it hunts, the owner because
+// it is the permitted site — and both exclusions were unnecessary: the fixtures
+// here live inside string literals, which the syntactic detector cannot match,
+// and calendarday.ts answers the question from date PARTS and never cuts an ISO
+// string at all. An exclusion nobody needs is a hole nobody is watching, and
+// the owner is exactly the file where an unnoticed `toISOString().slice(0, 10)`
+// would do the most damage. If the owner ever earns one it goes in
+// deliberateUtcDays, keyed and reasoned like every other.
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -54,11 +75,6 @@ function sourceFiles(dir: string): string[] {
       return entry.name === "node_modules" || entry.name === "dist"
         ? []
         : sourceFiles(path);
-    }
-    if (path === fileURLToPath(import.meta.url) || path === owner) {
-      // This gate spells the pattern it hunts, and the owner is the permitted
-      // site. A sweep that read either would vouch for itself.
-      return [];
     }
     return /\.tsx?$/.test(entry.name) ? [path] : [];
   });
@@ -213,11 +229,23 @@ describe("a calendar day is never cut out of an ISO string", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps no waiver that has stopped covering a site", () => {
-    const live = new Set(findings.map((f) => f.key));
-    const stale = Object.keys(deliberateUtcDays).filter(
-      (key) => !live.has(key),
-    );
-    expect(stale).toEqual([]);
+  // One assertion for both directions a waiver can go wrong: a cut added to an
+  // already-ratified function would otherwise inherit a reason written about a
+  // different one, and a waiver whose sites are all gone would outlive the code
+  // it was written about. `found 0` is the second case.
+  it("ratifies the sites it counted, not the function they sit in", () => {
+    const perKey = new Map<string, number>();
+    for (const finding of findings) {
+      perKey.set(finding.key, (perKey.get(finding.key) ?? 0) + 1);
+    }
+    const miscounted = Object.entries(deliberateUtcDays)
+      .map(([key, waiver]) => ({
+        key,
+        ratified: waiver.sites,
+        live: perKey.get(key) ?? 0,
+      }))
+      .filter((row) => row.ratified !== row.live)
+      .map((row) => `${row.key}: ratified ${row.ratified}, found ${row.live}`);
+    expect(miscounted).toEqual([]);
   });
 });
