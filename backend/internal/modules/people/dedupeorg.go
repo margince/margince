@@ -237,6 +237,12 @@ func orgTrigramArms(args *[]any, axes ...string) []string {
 // An empty axis scores nothing rather than matching every other empty one: two
 // companies that both lack a registered name have said nothing about being the
 // same company.
+//
+// A pairing is only SCORED once the two names share a distinctive word
+// (orgnamegate.go). Jaro-Winkler cannot see a word boundary, and on company
+// names — where every name in a market ends in the same nouns — that made it
+// read shared vocabulary as shared identity: measured at 179 false pairs
+// against 1 true one across one real workspace.
 func bestOrgNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) OrganizationCandidateScore {
 	sides := []struct {
 		value string
@@ -248,6 +254,12 @@ func bestOrgNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal s
 		for _, right := range sides {
 			normalizedLeft, normalizedRight := NormalizeOrgName(left), NormalizeOrgName(right.value)
 			if normalizedLeft == "" || normalizedRight == "" {
+				continue
+			}
+			// BEFORE the score, not a filter applied after it: a pair with no
+			// word in common has said nothing about being one company, whatever
+			// their letters do.
+			if !sharesADistinctiveWord(left, right.value) {
 				continue
 			}
 			score := nameSimilarity(normalizedLeft, normalizedRight)
