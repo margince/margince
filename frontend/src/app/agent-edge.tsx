@@ -3,7 +3,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "../design-system/motion";
-import { createEdgeRenderer, type EdgeHues, readHue } from "./agent-edge-gl";
+import { type EdgeHues, readHue } from "./agent-edge-gl";
+import { runEdgeLoop } from "./agent-edge-loop";
 import { useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
 
@@ -49,20 +50,12 @@ export function AgentEdge() {
   );
 }
 
-/** Thirty a second. The waves are slow and the shader is the most expensive thing
- *  on the surface; at a display's own rate this is the same picture drawn twice. */
-const FRAME_MS = 1000 / 30;
-
-/** How long the light takes to arrive and to leave, in seconds. Nothing here
- *  appears or cuts: an edge that snapped on would read as a fault. */
-const FADE = 0.45;
-
 /**
  * The lit edge.
  *
  * A shader, and the third technique this surface has worn. The two before it were
  * a masked band carrying moving gradients, then that band warped by an SVG
- * turbulence filter. Both failed the same two tests, and for reasons no amount of
+ * turbulence filter. Both failed the same two tests, for reasons no amount of
  * tuning could reach:
  *
  * - **The crests could not travel.** A gradient inside a band slides across the
@@ -75,8 +68,9 @@ const FADE = 0.45;
  *   full-viewport filtering to make a fullscreen window stutter. The rim's edge is
  *   now one `smoothstep` per fragment: smooth at any size, and one draw call.
  *
- * The whole thing is unmounted when the agent is not reading, so a quiet screen
- * pays nothing at all.
+ * Everything about WHEN it draws lives in `agent-edge-loop.ts`, which is where a
+ * test can reach it. What stays here is the mounting: read the hues off the
+ * document, start the loop, and wear the static rim if the host cannot run it.
  */
 function LitEdge() {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -88,9 +82,9 @@ function LitEdge() {
     if (!element) {
       return;
     }
-    // The hues are read once per mount rather than per frame: a theme change
-    // remounts this (the signal clears on unmount), and `getComputedStyle` is a
-    // layout read that has no business in a draw loop.
+    // Read once per mount rather than per frame: a theme change remounts this
+    // (the signal clears on unmount), and `getComputedStyle` is a layout read
+    // with no business in a draw loop.
     const hues: EdgeHues = [
       readHue("--teal"),
       readHue("--orbJade"),
@@ -98,67 +92,15 @@ function LitEdge() {
       readHue("--orbLime"),
       readHue("--orbAmber"),
     ];
-    const renderer = createEdgeRenderer(element, hues);
-    setLive(renderer !== null);
-    if (!renderer) {
-      return;
-    }
-
-    let handle = 0;
-    let drawnAt = 0;
-    let born = 0;
-    let stopped = false;
-
-    const measure = () => {
-      renderer.resize(
-        window.innerWidth,
-        window.innerHeight,
-        window.devicePixelRatio || 1,
-      );
-    };
-
-    const tick = (now: number) => {
-      handle = requestAnimationFrame(tick);
-      if (born === 0) {
-        born = now;
-      }
-      if (now - drawnAt < FRAME_MS) {
-        return;
-      }
-      drawnAt = now;
-      const age = (now - born) / 1000;
-      // Reduced motion keeps the light and gives up the travel: the waves hold
-      // the shape they arrived in, which still says the agent is working.
-      renderer.draw({
-        time: reduced ? 0 : age,
-        level: Math.min(age / FADE, 1),
-      });
-    };
-
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(document.documentElement);
-    handle = requestAnimationFrame(tick);
-
-    // A context lost to a GPU reset is not recoverable in place: the program and
-    // the buffer are gone with it. Stopping AND reporting, because reporting
-    // alone would leave the loop drawing into a context that no longer exists.
-    const onLost = (event: Event) => {
-      event.preventDefault();
-      stopped = true;
-      cancelAnimationFrame(handle);
-      setLive(false);
-    };
-    element.addEventListener("webglcontextlost", onLost);
-
-    return () => {
-      element.removeEventListener("webglcontextlost", onLost);
-      observer.disconnect();
-      if (!stopped) {
-        cancelAnimationFrame(handle);
-      }
-      renderer.dispose();
-    };
+    const loop = runEdgeLoop(element, hues, {
+      reduced,
+      // A context lost to a GPU reset is not recoverable in place: the program
+      // and the buffer went with it, so the honest picture of what this machine
+      // can draw is the static rim.
+      onLost: () => setLive(false),
+    });
+    setLive(loop !== null);
+    return () => loop?.stop();
   }, [reduced]);
 
   return (
