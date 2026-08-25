@@ -123,7 +123,7 @@ budget rather than keeping its own list of which pages are generated.
 **The product surface**
 
 - [frontend-architecture.md](explanation/frontend-architecture.md) — the SPA's layers, the shell and its nav rules, the colour and theme contract, the evidence mark, and the gates that fail a frontend push.
-- [company-record-page.md](explanation/company-record-page.md) — the company record page: one gated 360 read, the per-viewer account brief, Ask, record-derived suggestions, the visit baseline, and why view state carries no audit row.
+- [company-record-page.md](explanation/company-record-page.md) — the company record page: one gated 360 read, the work-in-flight card, Ask, record-derived suggestions, the visit baseline, and why view state carries no audit row.
 
 **Modes and extension**
 

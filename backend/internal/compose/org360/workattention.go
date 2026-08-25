@@ -59,6 +59,12 @@ type overdueTask struct {
 // swallowed here rather than named in sections_omitted: the deals and the
 // projects are present and true, and reporting them as withheld would hide
 // the pipeline from a reader who may read it.
+//
+// The flag covers a PARTIAL refusal too — a caller who may read the tasks but
+// not the people the commitments were made by keeps the reasons that were
+// derived and is still told some are missing. Half the reasons with no such
+// line would read as "these rows have nothing to explain", which is the one
+// thing this card must never say by accident.
 func (a *assembly) readWorkAttention() error {
 	dealIDs, projects := attentionTargets(a.out)
 	if len(dealIDs) == 0 && len(projects) == 0 {
@@ -123,6 +129,12 @@ func attentionTargets(out *crmcontracts.Organization360) ([]ids.UUID, []ids.Proj
 	var projects []ids.ProjectID
 	if out.Projects != nil {
 		for _, row := range *out.Projects {
+			// A closed project is history, and "why does this need a person"
+			// is not a question about history. It is also what the card shows,
+			// so decorating one would be a fact nothing renders.
+			if row.Phase == crmcontracts.Organization360ProjectPhaseClosed {
+				continue
+			}
 			projects = append(projects, ids.From[ids.ProjectKind](ids.UUID(row.ProjectId)))
 		}
 	}
