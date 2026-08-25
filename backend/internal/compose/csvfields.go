@@ -33,6 +33,10 @@ const fieldEmail = "email"
 // different companies may share.
 const fieldDomain = "domain"
 
+// fieldTitle is the job title, carried by both a lead and a person: the same
+// column of the same contact file, whichever object it is imported as.
+const fieldTitle = "title"
+
 // leadStatusNew is where an imported prospect starts: the unworked state a
 // human moves it out of, which is the whole point of landing machine-sourced
 // rows as leads rather than as people.
@@ -55,7 +59,7 @@ const leadStatusNew = "new"
 // paths. A target that only half works is worse than one the screen never
 // offers.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, "title", "company_name"},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldTitle, "company_name"},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -66,7 +70,7 @@ var csvTargets = map[string][]string{
 	// patch input carries no Phones member and no single-column spelling of
 	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
 	// storekit.OwnerOrActor already defaults it to whoever ran the import.
-	migration.ObjectPerson: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, "title"}, recordAddressTargets...),
+	migration.ObjectPerson: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -299,7 +303,7 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
-	in.Title = importString(fields, "title")
+	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
 	return in
 }
@@ -309,7 +313,7 @@ func leadUpdateFrom(changed map[string]string) people.UpdateLeadInput {
 	return people.UpdateLeadInput{
 		FullName:    importString(changed, fieldFullName),
 		Email:       importString(changed, fieldEmail),
-		Title:       importString(changed, "title"),
+		Title:       importString(changed, fieldTitle),
 		CompanyName: importString(changed, "company_name"),
 	}
 }
