@@ -136,7 +136,11 @@ func personProfileFieldStatements(decl ast.Decl) []string {
 			return false
 		}
 		text, ok := flattenSQL(n, seen, helperScope{names: map[string]bool{"writePersonProfileField": true}})
-		if !ok || !strings.Contains(text, "person_profile_field") {
+		// Lower-cased for the prefilter, because the detector is
+		// case-insensitive and a prefilter narrower than its detector is where
+		// a census goes blind: the file is dropped before anything looks at it,
+		// and there is no finding to notice.
+		if !ok || !strings.Contains(strings.ToLower(text), "person_profile_field") {
 			return true
 		}
 		out = append(out, text)
@@ -150,7 +154,7 @@ func personProfileFieldStatements(decl ast.Decl) []string {
 func firstPersonProfileFieldLine(sql string) string {
 	lines := strings.Split(sql, "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "person_profile_field") {
+		if strings.Contains(strings.ToLower(line), "person_profile_field") {
 			return strings.TrimSpace(line)
 		}
 	}
@@ -184,6 +188,10 @@ var personProfileFieldProbes = []struct {
 	// An UPDATE answers the precedence question — what happens to a row that
 	// is already there — without ever reaching a conflict clause.
 	{"a second writer spelled as an UPDATE", true, "\nfunc write() string {\n\treturn `UPDATE person_profile_field SET value = $2 WHERE person_id = $1 AND field = 'role'`\n}"},
+	// The TABLE name in upper case. The detector folded case and the prefilter
+	// in front of it did not, which drops the statement before the detector
+	// ever runs.
+	{"the table identifier in upper case", true, "\nfunc write() string {\n\treturn `INSERT INTO PERSON_PROFILE_FIELD (person_id, field, value) VALUES ($1, $2, $3)`\n}"},
 }
 
 // The waiver's second half, read directly: a file key alone would ratify the

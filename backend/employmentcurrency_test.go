@@ -385,14 +385,52 @@ var slotBlockedByTheModuleDAG = gatekit.Waive(map[string]string{
 // flag, and lower-case keywords. A text comparison loses to an equivalent
 // spelling, and there are four of them here.
 //
-// Splitting on OR and on parentheses is what keeps the create path out. Its
-// guard is deliberately WIDER than the slot — `archived_at IS NULL AND (still
-// employed OR is_current_primary)` — and that is a different question, not a
-// hand-spelled copy of this one: the flag never shares a conjunction with the
-// archived test there.
+// Splitting on OR first is what keeps the create path out. Its guard is
+// deliberately WIDER than the slot — `archived_at IS NULL AND (still employed
+// OR is_current_primary)` — and there the flag and the archived test are in
+// different groups, which is a different question rather than a copy of this
+// one. Brackets are TRIMMED from a term rather than treated as separators: a
+// bracket is where a conjunction nests, not where it ends, and a split on them
+// missed `is_current_primary AND (archived_at IS NULL AND person_id = $1)`.
 func spellsSlotPredicate(sql string) bool {
-	for _, chunk := range slotChunks.Split(strings.ToLower(sql), -1) {
-		if slotFlagTest.MatchString(chunk) && slotArchivedTest.MatchString(chunk) {
+	for _, group := range slotOr.Split(strings.ToLower(sql), -1) {
+		flag, archived := false, false
+		for _, term := range slotAnd.Split(group, -1) {
+			if asksTheFlag(term) {
+				flag = true
+			}
+			if slotArchivedTerm.MatchString(term) {
+				archived = true
+			}
+		}
+		if flag && archived {
+			return true
+		}
+	}
+	return false
+}
+
+// asksTheFlag reports whether a conjunct TESTS the flag, which is the only
+// mention of it that makes a statement a guard. Two other mentions exist and
+// neither is one: an INSERT's column list NAMES it, and a merge relink ASSIGNS
+// it (`SET is_current_primary = a.is_current_primary AND NOT EXISTS (…)`) —
+// there the flag is the value being carried across, and the guard is the
+// EXISTS beside it.
+//
+// A test is what a bracketed SEGMENT of the conjunct ends with — the segment
+// and not the whole conjunct, because the statement text is a fragment and a
+// predicate's last term carries whatever closes and follows it. A column list
+// puts a comma after the name or closes the list on it; an assignment puts an
+// equals sign before it.
+func asksTheFlag(term string) bool {
+	for _, segment := range slotBrackets.Split(term, -1) {
+		trimmed := strings.TrimRight(segment, " \t\n")
+		at := slotFlagTail.FindStringIndex(trimmed)
+		if at == nil || at[1] != len(trimmed) {
+			continue
+		}
+		before := strings.TrimRight(trimmed[:at[0]], " \t\n")
+		if !strings.HasSuffix(before, ",") && !strings.HasSuffix(before, "=") {
 			return true
 		}
 	}
@@ -400,15 +438,24 @@ func spellsSlotPredicate(sql string) bool {
 }
 
 var (
-	// slotChunks ends a conjunction: a parenthesis or an OR starts a different
-	// one, and two terms on opposite sides of either are not AND-ed together.
-	slotChunks = regexp.MustCompile(`[()]|\bor\b`)
+	// slotOr ends a conjunction; slotAnd separates the terms inside one. Both
+	// are bounded so `or` does not match inside `organization_id`.
+	slotOr  = regexp.MustCompile(`\bor\b`)
+	slotAnd = regexp.MustCompile(`\band\b`)
 
-	// slotFlagTest is the flag asked as a boolean, in every spelling this
-	// dialect offers.
-	slotFlagTest = regexp.MustCompile(`(\w+\.)?is_current_primary(\s*=\s*true|\s+is\s+true)?\b`)
+	// slotBrackets ends a segment inside a conjunct — see asksTheFlag.
+	slotBrackets = regexp.MustCompile(`[()]`)
 
-	slotArchivedTest = regexp.MustCompile(`(\w+\.)?archived_at\s+is\s+null`)
+	// slotFlagTail is the flag asked as a boolean, in every spelling this
+	// dialect offers, anchored to the END of a conjunct — see asksTheFlag.
+	slotFlagTail = regexp.MustCompile(`(\w+\.)?is_current_primary(\s*=\s*true|\s+is\s+true)?$`)
+
+	// slotArchivedTerm is unanchored, because the statement text a census reads
+	// is a fragment: a conjunct carries whatever surrounds it — a SELECT before
+	// it, an ON CONFLICT after. There is no column-list ambiguity to guard
+	// against here the way there is for the flag, since a column list names
+	// `archived_at` and never tests it.
+	slotArchivedTerm = regexp.MustCompile(`(\w+\.)?archived_at\s+is\s+null\b`)
 )
 
 // slotProbeFile plants the probes below, which are deliberate defects. Named by
@@ -421,7 +468,7 @@ const slotProbeFile = "employmentcurrency_test.go"
 // nothing else in this schema carries it, so no kind-scoping is needed and none
 // is done — scoping to `kind = 'employment'` would have dropped every adopted
 // site, since the kind now lives inside the helper.
-var slotColumn = regexp.MustCompile(`is_current_primary`)
+var slotColumn = regexp.MustCompile(`(?i)is_current_primary`)
 
 func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 	// A ratification that stops matching describes a site that has moved or
@@ -545,6 +592,16 @@ var slotProbes = []struct {
 	// The archived test belongs to the OTHER side of an OR, so the flag is not
 	// AND-ed with it and this is not the slot predicate.
 	{"the two halves on opposite sides of an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary OR archived_at IS NULL`\n}"},
+	// A bracket is where a conjunction NESTS, not where it ends. A detector
+	// that ended a group at every bracket read this as two groups and missed
+	// the guard sitting whole inside them.
+	{"the second half inside a bracketed conjunction", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary AND (archived_at IS NULL AND person_id = $1)`\n}"},
+	// The merge relinks CARRY the flag across rather than testing it; the
+	// guard beside them is the EXISTS, which calls the helper.
+	{"the flag as the value of an assignment", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship a SET is_current_primary = a.is_current_primary AND NOT EXISTS (SELECT 1 FROM relationship b WHERE b.person_id = $2) WHERE a.person_id = $1 AND a.archived_at IS NULL`\n}"},
+	// A statement that merely WRITES the column names it in a list; naming is
+	// not asking.
+	{"the flag in an INSERT's column list", false, "", "\nfunc read() string {\n\treturn `INSERT INTO relationship (kind, person_id, is_current_primary, archived_at) SELECT 'employment', $1, true, NULL FROM person WHERE archived_at IS NULL`\n}"},
 }
 
 func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
