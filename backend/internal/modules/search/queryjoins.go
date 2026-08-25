@@ -127,10 +127,12 @@ var notAnEdge = map[string]string{
 	"consent_event": "the append-only log behind person_consent, and polymorphic in the same way",
 	"activity_retention_evidence": "what a retention decision was taken on; it relates a record to a " +
 		"DECISION about it, and nothing traverses from one record to another through it",
-	"project_link_candidate": "a QUESTION the attribution ladder asked about a message and a project, " +
-		"not an answer: until a human confirms it nothing connects the two, and once they do the " +
-		"activity_link row is the edge a hop traverses — reading the candidate as one would file " +
-		"a message under a project nobody agreed it belongs to",
+	"project_link_candidate": "a RETIRED table: it held questions the attribution ladder's uncertain rung " +
+		"asked about a message and a project, and that rung is gone — a message is filed by its project " +
+		"key, never by a guess. A later migration drops it, but this census reads every up-migration ever " +
+		"shipped, so the create is still here and still owes a verdict. It was never an edge even while " +
+		"live: until a human confirmed one nothing connected the two records, and once they did the " +
+		"activity_link row was the edge a hop traverses",
 	"person_signature_enrich_state": "enrichment bookkeeping keyed by the activity a signature was read " +
 		"from — a cursor over work, not a statement about the two records",
 	"attachment": "a file, which is a record in its own right. Its extra references are the " +

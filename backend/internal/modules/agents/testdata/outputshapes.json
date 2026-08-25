@@ -5688,16 +5688,12 @@
               "attributed": {
                 "type": "integer"
               },
-              "awaiting_decision": {
-                "type": "integer"
-              },
               "unattributed_nearby": {
                 "type": "integer"
               }
             },
             "required": [
               "attributed",
-              "awaiting_decision",
               "unattributed_nearby"
             ]
           },

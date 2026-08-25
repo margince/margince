@@ -250,8 +250,6 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// own reads — the activity capture just wrote, and a project the rung read
 	// under the caller's project grant and row scope (readableProjectScope +
 	// the finder's ScopeClauseFor), never a request body.
-	"project_link_candidate.activity_id": "server-derived: stamped by the capture Sink's attribution ladder from the activity it just wrote",
-	"project_link_candidate.project_id":  "gated then stamped: read under the caller's project row scope by the uncertain rung's finder before the candidate is written",
 	// Client-supplied edge endpoints — every one probed at the store:
 	"relationship.person_id":                     "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.counterparty_org_id":           "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
