@@ -76,7 +76,7 @@ function Card({ view, loading }: Readonly<{ view?: View; loading?: boolean }>) {
 }
 
 const meta: Meta<typeof Card> = {
-  title: "Screens/Company/Work",
+  title: "Records/Company 360/Work in flight",
   component: Card,
 };
 export default meta;

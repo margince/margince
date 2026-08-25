@@ -132,7 +132,7 @@ const neverSpoken = {
 export const NeverSpoken: Story = { render: () => <Card view={neverSpoken} /> };
 
 const meta: Meta<typeof CompanySpine> = {
-  title: "Screens/CompanySpine",
+  title: "Records/Company 360/Spine",
   component: CompanySpine,
 };
 export default meta;

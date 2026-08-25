@@ -83,7 +83,7 @@ function Box({ view }: Readonly<{ view?: View }>) {
 }
 
 const meta: Meta<typeof Box> = {
-  title: "Screens/Company/Facts",
+  title: "Records/Company 360/Facts",
   component: Box,
 };
 export default meta;
