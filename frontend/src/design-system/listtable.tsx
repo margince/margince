@@ -328,6 +328,8 @@ export function ListTable<Row>({
   onLoadMore,
   perPage = PAGE_SIZES[0],
   onPerPage,
+  page: controlledPage,
+  onPage,
   pending = false,
   problem,
   widthsKey,
@@ -444,6 +446,19 @@ export function ListTable<Row>({
    */
   onPerPage?: (next: number) => void;
   /**
+   * Which RENDERED page is on screen, for a caller that keeps it somewhere the
+   * table cannot — the address, so a reader who paged through a list and
+   * opened a record comes back to the page they left.
+   *
+   * Omit it and the table holds the number itself, which is what every caller
+   * did before this existed. Pass it and the table still tells you when it
+   * moves, through `onPage`: the pager, the reset on a new narrowing, and
+   * stepping past what is loaded all go through one place.
+   */
+  page?: number;
+  /** The rendered page changed, whether by the pager or by a reset. */
+  onPage?: (next: number) => void;
+  /**
    * The rows are still loading. The surface keeps its header and controls and
    * puts placeholders in the body: the primary action and the dials belong to
    * the screen, not to the response, and a create button that disappears while
@@ -477,7 +492,21 @@ export function ListTable<Row>({
     live.current = next;
     setWidths(next);
   };
-  const [page, setPage] = useState(1);
+  // The rendered page is the table's own by default, and the caller's when it
+  // offers one. It becomes the caller's on a screen that puts the page in the
+  // ADDRESS — a reader who paged through a list, opened a record and pressed
+  // Back arrived on page one, having lost their place — and the table goes on
+  // owning it everywhere else, so no caller is made to hold a number it has
+  // nowhere to keep.
+  const [ownPage, setOwnPage] = useState(1);
+  // Whether a narrowing dial has moved since this table mounted. See the reset
+  // effect below: arriving is not narrowing.
+  const narrowed = useRef(false);
+  const page = controlledPage ?? ownPage;
+  const setPage = (to: number) => {
+    setOwnPage(to);
+    onPage?.(to);
+  };
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
   // The frozen column only casts a shadow once columns have actually slid under
@@ -657,22 +686,32 @@ export function ListTable<Row>({
   // looking at rows they never asked for. Same for widening the set with
   // Show archived.
   //
+  // Not on ARRIVAL, though. An effect with a dependency list runs on the first
+  // render as well as on a change, and a caller whose page comes from the
+  // address is then reset off the page it was addressed with — a reader
+  // following a link to page 2 watched it become page 1 and the URL rewrite
+  // itself. Nothing is being narrowed on arrival: the reset exists for a dial
+  // the reader MOVES.
+  //
   // These deps are the TRIGGER, not values the body reads — the body only calls
   // setPage(1). The lint rule cannot see that distinction, and dropping them
   // would break the reset.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only deps
-  useEffect(
-    () => setPage(1),
-    [
-      search?.value,
-      narrowKey ?? chosen,
-      activeView,
-      perPage,
-      sort?.value,
-      archived?.checked,
-      scopeKey,
-    ],
-  );
+  useEffect(() => {
+    if (!narrowed.current) {
+      narrowed.current = true;
+      return;
+    }
+    setPage(1);
+  }, [
+    search?.value,
+    narrowKey ?? chosen,
+    activeView,
+    perPage,
+    sort?.value,
+    archived?.checked,
+    scopeKey,
+  ]);
 
   // The overlay needs two numbers CSS cannot work out for itself: where the
   // frozen column ends, which a reader changes by dragging its grip, and how

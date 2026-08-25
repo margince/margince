@@ -192,3 +192,30 @@ test("the deals board remembers its pipeline and its view in the address", async
   await expect(page).toHaveURL(/view=table/);
   await expect(page).toHaveURL(/pipeline_id=pl-1/);
 });
+
+test("paging is in the address, and Back returns to the page you left", async ({
+  page,
+}) => {
+  // Page one is spelled by ABSENCE, so an address only carries a page once the
+  // reader has moved off the first — a dial in front of somebody who turned
+  // nothing is noise.
+  await page.goto("/#/companies");
+  await expect(page).not.toHaveURL(/[?&]page=/);
+
+  await page.goto("/#/companies?page=2");
+  await page
+    .getByRole("link", { name: /Brandt/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/#\/companies\/o-brandt/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/[?&]page=2/);
+});
+
+test("the leads board is an address", async ({ page }) => {
+  await page.goto("/#/leads?view=board");
+  await expect(page).toHaveURL(/view=board/);
+  await page.reload();
+  await expect(page).toHaveURL(/view=board/);
+});

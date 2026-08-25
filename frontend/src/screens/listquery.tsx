@@ -86,12 +86,37 @@ function pageSizeOf(value: string | undefined): number | undefined {
  * is a choice about drawing rather than about which rows exist. It is the
  * list's own name, which is why a filter param may not be called `per`.
  */
+// Which RENDERED page is on screen. The list's own name, not a wire one: the
+// server is paged by keyset cursor, and a page NUMBER is a slice of what has
+// already been fetched (see listFetchLimit) rather than something to ask it for.
+// A stale cursor in an address would 422; a stale page number simply shows the
+// last page there is.
+const PAGE_PARAM = "page";
+
+/** The page `params` names, or 1 for an address that names none or names junk. */
+function pageOf(params: UrlParams): number {
+  const asked = Number(params.get(PAGE_PARAM));
+  return Number.isInteger(asked) && asked > 1 ? asked : 1;
+}
+
+/** `params` with the rendered page set, page one being spelled by absence. */
+function withPage(params: UrlParams, page: number): UrlParams {
+  const next = new Map(params);
+  if (page > 1) {
+    next.set(PAGE_PARAM, String(page));
+  } else {
+    next.delete(PAGE_PARAM);
+  }
+  return next;
+}
+
 const PER_PAGE_PARAM = "per";
 const LIST_OWN_PARAMS: ReadonlySet<string> = new Set([
   "q",
   "sort",
   "include_archived",
   PER_PAGE_PARAM,
+  PAGE_PARAM,
 ]);
 
 /**
@@ -363,6 +388,7 @@ export function useListQuery<Row>({
       if (overlay) {
         return;
       }
+      const live = currentParams();
       const next =
         typeof update === "function"
           ? // Read from the LIVE address, never from this render's snapshot: a
@@ -374,7 +400,12 @@ export function useListQuery<Row>({
               listQueryFromParams(currentParams(), opening, seeded.current),
             )
           : update;
-      setParams(paramsFromListQuery(next, opening));
+      // The rendered page is the list's own dial but not one this codec
+      // computes, so it is carried across rather than dropped: without this,
+      // the first write of any kind wipes the page out of an address a reader
+      // was sent to. A write that really is a NARROWING still resets it — the
+      // table's own reset fires straight after and takes it back to one.
+      setParams(withPage(paramsFromListQuery(next, opening), pageOf(live)));
     },
     [overlay, opening, setParams],
   );
@@ -515,6 +546,11 @@ export function ListTable<Row>({
   // archived rows, so the second is a harmless no-op.
   const overlay = useSorMode() === "overlay";
   const { rows, query, setQuery, isPending, isError, error, refetch } = state;
+  // The rendered page is a dial like the rest, so it comes from the address.
+  // Read here rather than threaded through ListState: it is the only one the
+  // TABLE owns by default, and a screen that never puts it in the URL keeps the
+  // table's own number.
+  const [params, setParams] = useUrlParams();
   const [localSearch, setLocalSearch] = useState(query.q);
   // Which view tab is lit is READ from the query rather than remembered: a tab
   // is a claim about what the list is showing, and a reader who then edits a
@@ -751,6 +787,12 @@ export function ListTable<Row>({
       // ListQuery the fetchers read their `limit` from.
       perPage={query.perPage}
       onPerPage={(next) => setQuery((prev) => ({ ...prev, perPage: next }))}
+      // The rendered page is in the address too, so paging through a list and
+      // opening a record no longer costs the reader their place. Page one is
+      // left OUT of it: it is where every list opens, and an address that said
+      // so on arrival would put a dial in front of a reader who turned nothing.
+      page={pageOf(params)}
+      onPage={(next) => setParams(withPage(currentParams(), next))}
       // The unit key names the table for the widths it remembers.
       widthsKey={unit}
       body={body}
