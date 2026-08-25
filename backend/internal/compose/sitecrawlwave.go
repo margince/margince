@@ -144,6 +144,15 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		return
 	}
 	page := res.page
+	if page.FinalURL != "" && !webread.SameRegistrableDomain(r.seedURL, page.FinalURL) {
+		// The candidate was on-site but its server answered from another
+		// site. An off-site redirect is the same boundary crossing as an
+		// off-site link, discovered one fetch later — the body is discarded
+		// unread, links and all. Only the SEED's redirect may move the
+		// boundary (siteseed.go); a later page's never widens it.
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonOffDomain)
+		return
+	}
 	if utf8.RuneCountInString(page.Text) < crawlMinRunes {
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
 		return
@@ -165,6 +174,14 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		return
 	}
 
+	servedURL := adm.url
+	if page.FinalURL != "" {
+		// The page's evidence names the URL that actually served it, and that
+		// URL counts as read: a second candidate redirecting to the same
+		// place must not buy another fetch.
+		servedURL = page.FinalURL
+		r.markVisited(servedURL)
+	}
 	r.seenText[page.Text] = true
 	r.canonicalDone[localeCanonical(adm.url)] = true
 	if adm.kind == crmcontracts.SiteReadPageKindImpressum {
@@ -174,7 +191,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 	if adm.cand.probe {
 		r.probeKindDone[adm.cand.kind] = true
 	}
-	committed := crawlPage{URL: adm.url, Kind: adm.kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
+	committed := crawlPage{URL: servedURL, Kind: adm.kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
 	r.crawl.Pages = append(r.crawl.Pages, committed)
 	if r.onPage != nil {
 		r.onPage(committed)
