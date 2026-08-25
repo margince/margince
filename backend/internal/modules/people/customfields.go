@@ -66,6 +66,13 @@ func (s *Store) ActiveOrganizationColumns(ctx context.Context) (CustomColumns, e
 	return s.activeCustomColumns(ctx, "organization", principal.ActionRead)
 }
 
+// ActiveLeadColumns is ActivePersonColumns for FillEmptyLeadFieldsTx. It takes
+// lead:UPDATE rather than read, because the seam it feeds writes: the refusal
+// belongs before the catalog read, not after it.
+func (s *Store) ActiveLeadColumns(ctx context.Context) (CustomColumns, error) {
+	return s.activeCustomColumns(ctx, "lead", principal.ActionUpdate)
+}
+
 func (s *Store) activeCustomColumns(ctx context.Context, object string, action principal.Action) (CustomColumns, error) {
 	if err := auth.Require(ctx, object, action); err != nil {
 		return CustomColumns{}, err
