@@ -17,6 +17,7 @@ package integration_test
 import (
 	"crypto/rand"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose"
@@ -221,5 +222,152 @@ func TestGoogleAppOverHTTPWithoutAVaultIsUnavailableNotUnimplemented(t *testing.
 				t.Fatalf("%s google-app with no vault → %d, want 503", tc.method, status)
 			}
 		})
+	}
+}
+
+// setupGoogleAppWithEnvApp composes a vault AND an environment-supplied Google
+// app, which is what registers the Google connectors — the shape in which a
+// STORED app can actually be used, and so the only one where its precedence
+// over the environment is observable.
+func setupGoogleAppWithEnvApp(t *testing.T) *apptest.AppEnv {
+	t.Helper()
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		t.Fatalf("generating a test root key: %v", err)
+	}
+	vault, err := keyvault.New(keyvault.Config{RootKey: key, Pool: apptest.EarlyPool(t)})
+	if err != nil {
+		t.Fatalf("building the local vault: %v", err)
+	}
+	e := apptest.SetupAppWithOptions(t,
+		compose.WithKeyvault(vault),
+		compose.WithGmailCapture(compose.GmailConfig{
+			ClientID:      "env-client.apps.googleusercontent.com",
+			ClientSecret:  "GOCSPX-from-the-environment",
+			StateKey:      "0123456789abcdef0123456789abcdef",
+			PublicBaseURL: "https://app.example",
+		}, compose.CaptureConfig{}),
+	)
+	e.BootstrapWorkspace(t)
+	return e
+}
+
+// The whole point of storing an app: once one is set in Settings, it is the app
+// the consent flow uses — the environment's is no longer what a person is sent
+// to Google with. Asserted on the authorize URL, because the client id in it is
+// the only place the choice becomes visible from outside.
+//
+// Both providers. Gmail and Calendar authorize SEPARATELY through one app, and
+// they build their consent pair in two different functions — so a stored app
+// reaching one and not the other is a live failure mode, not a hypothetical.
+func TestAStoredGoogleAppOutranksTheEnvironmentForBothProviders(t *testing.T) {
+	e := setupGoogleAppWithEnvApp(t)
+
+	authorizeClientID := func(t *testing.T, provider string) string {
+		t.Helper()
+		var resp crmcontracts.ConnectConnectorResponse
+		if status := e.Call(t, "POST", "/v1/connectors/"+provider+"/connect", nil, nil, &resp); status != http.StatusOK {
+			t.Fatalf("POST connect %s → %d, want 200", provider, status)
+		}
+		if resp.AuthorizeUrl == nil {
+			t.Fatalf("connect %s returned no authorize url", provider)
+		}
+		u, err := url.Parse(*resp.AuthorizeUrl)
+		if err != nil {
+			t.Fatalf("connect %s returned an unparseable authorize url %q: %v", provider, *resp.AuthorizeUrl, err)
+		}
+		return u.Query().Get("client_id")
+	}
+
+	// Before: the environment's app, which is what makes the assertion after
+	// storing mean something rather than passing on a constant.
+	for _, provider := range []string{"gmail", "gcal"} {
+		if got := authorizeClientID(t, provider); got != "env-client.apps.googleusercontent.com" {
+			t.Fatalf("%s consent uses client_id %q before an app is stored, want the environment's", provider, got)
+		}
+	}
+
+	secret := httpSecret
+	if status := e.Call(t, "PUT", "/v1/installation/google-app",
+		crmcontracts.GoogleAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("PUT google-app → %d, want 204", status)
+	}
+
+	// After: the stored one, with no restart — the resolution is per request.
+	for _, provider := range []string{"gmail", "gcal"} {
+		if got := authorizeClientID(t, provider); got != httpClientID {
+			t.Errorf("%s consent uses client_id %q after an app was stored, want the stored one — an app set in Settings that never reaches Google is the whole feature not working", provider, got)
+		}
+	}
+
+	// And removing it falls back rather than breaking: the environment still has
+	// an app, and an installation that clears its own must not lose the flow.
+	if status := e.Call(t, "DELETE", "/v1/installation/google-app", nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("DELETE google-app → %d, want 204", status)
+	}
+	for _, provider := range []string{"gmail", "gcal"} {
+		if got := authorizeClientID(t, provider); got != "env-client.apps.googleusercontent.com" {
+			t.Errorf("%s consent uses client_id %q after the stored app was removed, want the environment's back", provider, got)
+		}
+	}
+}
+
+// The AI step of the setup report, which is the other half of what onboarding
+// gates on — and the half with the rule worth pinning: a BINDING alone does not
+// make the step configured. Every cloud vendor the binding names needs a
+// credential too, because a bound installation with no key fails on its first
+// real call, and reporting it ready would send an admin through onboarding into
+// a cold start that cannot run.
+func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
+	e := setupGoogleAppHTTP(t)
+
+	aiStep := func(t *testing.T) crmcontracts.InstallationSetupStep {
+		t.Helper()
+		var setup crmcontracts.InstallationSetup
+		if status := e.Call(t, "GET", "/v1/installation/setup", nil, nil, &setup); status != http.StatusOK {
+			t.Fatalf("GET installation/setup → %d, want 200", status)
+		}
+		for _, s := range setup.Steps {
+			if s.Step == crmcontracts.InstallationSetupStepStepAiModels {
+				return s
+			}
+		}
+		t.Fatal("the setup report names no ai_models step, so onboarding has nothing to gate on")
+		return crmcontracts.InstallationSetupStep{}
+	}
+
+	if step := aiStep(t); step.Configured {
+		t.Fatal("a fresh installation reports the AI step as configured with nothing bound")
+	}
+
+	// Bind a CLOUD vendor on every tier. Cloud is the point: it is the case that
+	// needs a credential, and a local-only binding would pass this step with no
+	// key at all — which is correct, and would prove nothing here.
+	binding := crmcontracts.AiTierBinding{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
+	routing := crmcontracts.AiRouting{
+		Profile: "eu_hosted",
+		Tiers: map[string]crmcontracts.AiTierBinding{
+			"local_small": binding, "cheap_cloud": binding, "premium": binding,
+		},
+		Embeddings: crmcontracts.AiEmbeddingsBinding{Provider: "gemini", Model: "gemini-embed-1"},
+	}
+	if status := e.Call(t, "PUT", "/v1/ai/routing", routing, nil, nil); status != http.StatusOK && status != http.StatusNoContent {
+		t.Fatalf("PUT ai/routing → %d, want 200 or 204", status)
+	}
+
+	// Bound, and still NOT configured: the vendor has no key.
+	if step := aiStep(t); step.Configured {
+		t.Error("the AI step reads configured with a cloud vendor bound and no key for it — onboarding would wave the admin through into a cold start that cannot make a call")
+	}
+
+	key := "AIza-test-key"
+	if status := e.Call(t, "PUT", "/v1/ai/provider-keys/gemini",
+		crmcontracts.AiProviderKeyInput{ApiKey: &key}, nil, nil); status != http.StatusNoContent && status != http.StatusOK {
+		t.Fatalf("PUT provider key → %d, want 200 or 204", status)
+	}
+
+	// Both halves present: now it is configured.
+	if step := aiStep(t); !step.Configured {
+		t.Error("the AI step still reads unconfigured with a binding AND its key stored")
 	}
 }
