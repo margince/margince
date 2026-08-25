@@ -823,6 +823,38 @@ func (stubs) GetInstallationSetup(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetInstallationSetup")
 }
 
+func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCorpora")
+}
+
+func (stubs) CreateCorpus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateCorpus")
+}
+
+func (stubs) ArchiveCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveCorpus")
+}
+
+func (stubs) ReadCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReadCorpus")
+}
+
+func (stubs) UpdateCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateCorpus")
+}
+
+func (stubs) AskCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AskCorpus")
+}
+
+func (stubs) ListCorpusDocuments(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCorpusDocuments")
+}
+
+func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeleteCorpusDocument")
+}
+
 func (stubs) ListLeadDisqualifyReasons(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListLeadDisqualifyReasons")
 }
