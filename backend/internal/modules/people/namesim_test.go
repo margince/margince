@@ -155,3 +155,24 @@ func TestAConnectiveIsOnlyStrippedInsideACompoundLegalForm(t *testing.T) {
 		}
 	}
 }
+
+// NormalizePersonName is the key the create lane locks on and the key the
+// same-name comparison reads, so the two halves it folds are both part of the
+// contract — and each of them was, until this test, held by only one of the
+// two normalizers a person name used to run through.
+func TestNormalizePersonNameFoldsAndCollapses(t *testing.T) {
+	for _, c := range []struct{ left, right, lost string }{
+		{"Straße Müller", "STRASSE MULLER", "the full Unicode fold — ToLower leaves ß alone"},
+		{"Anna Muster", "Anna  Muster", "the internal-whitespace collapse"},
+		{" Anna Muster ", "anna muster", "the trim"},
+	} {
+		if got, want := NormalizePersonName(c.left), NormalizePersonName(c.right); got != want {
+			t.Errorf("NormalizePersonName(%q) = %q, NormalizePersonName(%q) = %q — the key lost %s",
+				c.left, got, c.right, want, c.lost)
+		}
+	}
+	// Two people are still two people: folding is not collapsing everybody.
+	if NormalizePersonName("Anna Muster") == NormalizePersonName("Bernd Beispiel") {
+		t.Error("two different names share one key")
+	}
+}

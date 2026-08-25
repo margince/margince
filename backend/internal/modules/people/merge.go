@@ -234,8 +234,7 @@ func relinkPersonEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Pe
 		UPDATE relationship a SET person_id = $2,
 		  is_current_primary = a.is_current_primary AND NOT EXISTS (
 		    SELECT 1 FROM relationship b
-		    WHERE b.person_id = $2 AND b.kind = 'employment'
-		      AND b.is_current_primary AND b.archived_at IS NULL)
+		    WHERE b.person_id = $2 AND `+CurrentPrimarySlotSQL("b")+`)
 		WHERE a.person_id = $1 AND a.archived_at IS NULL`, sourceID, targetID)
 	return tag.RowsAffected(), err
 }

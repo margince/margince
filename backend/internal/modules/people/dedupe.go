@@ -170,7 +170,7 @@ func DedupePerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonReso
 	// A nameless captured contact never fuzzy-matches: with no name there
 	// is nothing to score, and org_match alone would collide every
 	// colleague onto one record.
-	if normalizeName(c.FullName) == "" {
+	if NormalizePersonName(c.FullName) == "" {
 		return PersonResolution{Decision: DecisionNoMatch}, nil
 	}
 	return fuzzyPerson(ctx, tx, c)
@@ -324,7 +324,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	// exact name with no employer known, so reading the name lane off `best`
 	// would lose exactly the pair it exists to catch.
 	sameName := PersonResolution{Decision: DecisionNoMatch}
-	candidateKey := normalizeName(c.FullName)
+	candidateKey := NormalizePersonName(c.FullName)
 	for rows.Next() {
 		var row personCandidateRow
 		if err := rows.Scan(&row.id, &row.fullName, &row.orgID, &row.orgDomain, &row.mailDomains); err != nil {
@@ -337,7 +337,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 			(confidence == best.Confidence && best.PersonID != (ids.PersonID{}) && row.id.String() < best.PersonID.String()) {
 			best.Confidence, best.PersonID = confidence, row.id
 		}
-		if normalizeName(row.fullName) == candidateKey {
+		if NormalizePersonName(row.fullName) == candidateKey {
 			// Same tie-break as above, and for the same reason: two incumbents
 			// spelled identically must not shuffle the queue between runs.
 			if confidence > sameName.Confidence ||

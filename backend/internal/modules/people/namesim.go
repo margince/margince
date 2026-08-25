@@ -62,6 +62,23 @@ func normalizeName(s string) string {
 	return strings.TrimSpace(cases.Fold().String(unaccented))
 }
 
+// NormalizePersonName is the person-name KEY: normalizeName's fold and
+// unaccent, plus a collapse of internal whitespace. Both halves are
+// load-bearing and neither implies the other.
+//
+// The fold is what makes Straße and STRASSE one person — strings.ToLower
+// leaves ß alone, and the DACH market meets that pair daily. The collapse is
+// what makes a page that reflows "Anna  Muster" across a line break the same
+// person as "Anna Muster" — a key that kept the second space mints a second
+// record on the next crawl of an unchanged page.
+//
+// Deliberately not normalizeName itself, which also feeds nameSimilarity:
+// that input is pinned by PO-PARAM-JW-2 so the spec's worked examples stay
+// reproducible against this code.
+func NormalizePersonName(s string) string {
+	return strings.Join(strings.Fields(normalizeName(s)), " ")
+}
+
 // NormalizeOrgName is normalizeName plus the PO-PARAM-1 legal-suffix
 // strip, applied only to the trailing token: "Co" inside "Coca Co" is a
 // name, "Co" at the end is a suffix.

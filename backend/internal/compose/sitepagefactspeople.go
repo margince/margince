@@ -11,7 +11,11 @@ package compose
 // copies out of the page — checked verbatim, then checked for reaching over
 // somebody else — rather than from where the two strings happen to sit.
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/gradionhq/margince/backend/internal/modules/people"
+)
 
 // attributionQuote checks the model's claim that the page gives THIS person
 // THIS role, and returns the page's own words that say so.
@@ -240,7 +244,7 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 			SourceURL:       page.URL,
 			Confidence:      gatedConfidence,
 		}
-		key := normalizedPersonName(name)
+		key := people.NormalizePersonName(name)
 		if prior, dup := personIndex[key]; dup {
 			// Two claims for one person, and the reply's ORDER must not decide
 			// which survives. The tighter evidence wins: a role stated right

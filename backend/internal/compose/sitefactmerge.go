@@ -165,7 +165,7 @@ func mergePageResults(results []pageFactsResult) pageFactsResult {
 			}
 		}
 		for _, person := range res.people {
-			key := normalizedPersonName(person.Name)
+			key := people.NormalizePersonName(person.Name)
 			at, seen := personIndex[key]
 			if !seen {
 				personIndex[key] = len(out.people)

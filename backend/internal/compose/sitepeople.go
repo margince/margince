@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"strings"
 
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -73,22 +74,19 @@ func verbatimOrEmpty(claimed, pageText string) string {
 	return claimed
 }
 
-// normalizedPersonName is a person's dedupe identity within one read AND
-// the stable half of the cross-read lead natural key: casefolded,
-// whitespace collapsed, so a re-read that reflows the page cannot mint a
-// second lead for the same printed name.
-func normalizedPersonName(name string) string {
-	return strings.ToLower(strings.Join(strings.Fields(name), " "))
-}
-
 // siteLeadSourceID is the lead's idempotency key under source_system
-// "siteread": the ORGANIZATION plus the normalized name (plus a published
-// email when the site prints one, so two distinct people who share a name
-// stay distinct). Keyed on the org, not the page URL, so the same person is
-// the same lead whether they were found on /team or /about, and whether a
-// later crawl's page layout moved — a page-URL key would duplicate them.
+// "siteread": the ORGANIZATION plus people.NormalizePersonName of the name
+// (plus a published email when the site prints one, so two distinct people
+// who share a name stay distinct). Keyed on the org, not the page URL, so the
+// same person is the same lead whether they were found on /team or /about,
+// and whether a later crawl's page layout moved — a page-URL key would
+// duplicate them.
+//
+// The name goes through the module's key and not a local casefold: this is a
+// person's identity across reads, so it is the same question people asks when
+// it decides whether a captured contact is somebody already stored.
 func siteLeadSourceID(orgID ids.UUID, name, publishedEmail string) string {
-	key := orgID.String() + "|" + normalizedPersonName(name)
+	key := orgID.String() + "|" + people.NormalizePersonName(name)
 	if e := strings.ToLower(strings.TrimSpace(publishedEmail)); e != "" {
 		key += "|" + e
 	}

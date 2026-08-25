@@ -76,7 +76,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 		SELECT 'employment', $1, $2, true, $3, $4
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
-			WHERE kind = 'employment' AND person_id = $1 AND is_current_primary AND archived_at IS NULL)
+			WHERE person_id = $1 AND `+CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
 		personID, orgID, in.Source, in.CapturedBy).Scan(&edgeID)
