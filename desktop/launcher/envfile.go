@@ -134,16 +134,20 @@ const envTemplate = `# Margince settings.
 # ---------------------------------------------------------------------------
 # AI (bring your own key)
 #
-# Without a key the AI surfaces run on the offline fake model: they respond,
-# but the answers are canned. Two things turn that off: the key below, and an
-# ai-routing.yaml next to this file binding tasks to models.
+# Until models are bound the AI surfaces run on the offline fake: they respond,
+# but the answers are canned. Binding them is done IN THE APP, under
+# Settings -> AI, and it takes TWO things: pick a provider and model for each
+# tier, and put that provider's key in under Model provider keys. Neither is
+# enough on its own — a key with no tier bound to its vendor changes nothing.
 #
-# ai-routing.example.yaml is already in this folder, ready to copy:
+# Both take effect without a restart, within the routing refresh interval rather
+# than the instant you save, and neither needs a file in this folder.
 #
-#   copy "ai-routing.example.yaml" "ai-routing.yaml"     Windows
-#   cp ai-routing.example.yaml ai-routing.yaml           macOS
-#
-# It is bound to Gemini, so GEMINI_API_KEY below is the only other edit.
+# A key set below only does the SECOND half: the next start seals it into the
+# app's key vault and records where, after which the line here can go. It saves
+# pasting a long key into a browser and nothing else — the tiers still have to be
+# bound in the app, and Settings -> AI is the only path that can rotate a key
+# later.
 # ---------------------------------------------------------------------------
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=

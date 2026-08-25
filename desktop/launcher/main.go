@@ -66,9 +66,6 @@ func run() error {
 	}
 	// The routing example, so a user with an API key can see the shape the api
 	// wants instead of reading the backend's source for it.
-	if err := ensureAIRoutingExample(layout); err != nil {
-		return err
-	}
 	userEnv, err := loadEnvFile(layout.envPath())
 	if err != nil {
 		return err

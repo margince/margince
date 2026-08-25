@@ -2,7 +2,7 @@
 # Container entrypoint for cmd/worker: serve the background role as the APP role.
 # Deployment-target-agnostic — every setting is read from the environment (the
 # MARGINCE_* vars in docs/reference/configuration.md); the worker resolves
-# --config/--dsn/--redis/--ai-routing/--public-base-url from their env fallbacks.
+# --config/--dsn/--redis/--public-base-url from their env fallbacks.
 #
 # The worker runs NO migrations (the api role owns that) — on a cold database it
 # fails its dependency probe and the orchestrator restarts it until the api has

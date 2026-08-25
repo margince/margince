@@ -87,9 +87,11 @@ coverage-extensions.out
 # Local secrets — never commit
 .env.local
 
-# Per-engineer AI model routing — each engineer copies config/ai-routing.example.yaml
-# here (via `make install` / `make dev`) and binds their own local models. Anchored
-# so the committed .example template is never matched.
+# A local routing file, if you keep one. Nothing seeds it any more — the
+# installation's binding is a stored setting, declared for a fresh stack under
+# `seeds.ai_routing` — but the debug and certification lanes still take a file,
+# and a hand-written one belongs to its author. Anchored so the committed
+# .example templates are never matched.
 /config/ai-routing.yaml
 
 # Per-engineer dev deployment config — `make dev` seeds config/margince.yaml

@@ -2,7 +2,7 @@
 # Container entrypoint for cmd/api: apply migrations as the OWNER role, then serve
 # as the APP role. Deployment-target-agnostic — every setting is read from the
 # environment (the MARGINCE_* vars in docs/reference/configuration.md); the api
-# resolves --config/--dsn/--redis/--ai-routing/--public-base-url from their env
+# resolves --config/--dsn/--redis/--public-base-url from their env
 # fallbacks, so no flags are needed here.
 #
 # The two DB roles + the database are created ONCE, out of band, by

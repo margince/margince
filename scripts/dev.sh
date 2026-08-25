@@ -480,6 +480,25 @@ log_colour=0
 # layer, and a key it names decides even when it names `false`. Both files are
 # grepped rather than parsed: this is a status line, and a shell YAML parser
 # would be a second implementation of the loader that could disagree with it.
+# seeded_ai_routing — print a config file's `seeds.ai_routing` subtree, comments
+# stripped, or nothing if the file does not declare one.
+#
+# Scoped by INDENTATION rather than grepped whole-file: `provider:` appears under
+# other sections too (a connector names one), and a flat grep would report a
+# provider this stack never binds and then demand a key for it. A missing file is
+# not an error — most of the callers' inputs are optional by design.
+seeded_ai_routing() { # path
+  [[ -f "$1" ]] || return 0
+  sed 's/#.*//' "$1" | awk '
+    /^[[:space:]]*ai_routing:[[:space:]]*$/ && !inblk { inblk = 1; base = match($0, /[^[:space:]]/); next }
+    inblk {
+      if ($0 ~ /^[[:space:]]*$/) { next }
+      if (match($0, /[^[:space:]]/) <= base) { inblk = 0; next }
+      print
+    }
+  '
+}
+
 effective_flag() { # key
   local key=$1 f value
   for f in "$dev_cfg" "$deploy_cfg"; do
@@ -695,13 +714,18 @@ up)
     echo "=== servers ==="
   } > >(log_as boot) 2>&1
 
-  # Per-engineer routing lives in a gitignored config/ai-routing.yaml; seed it
-  # from the committed template on first run so `make dev` is green without a
-  # prior `make install`. Editing the copy binds your own local models.
-  routing_src="config/ai-routing.yaml"
-  if [[ ! -f "$routing_src" ]]; then
-    cp config/ai-routing.example.yaml "$routing_src"
-    echo "dev: seeded $routing_src from config/ai-routing.example.yaml — edit it to bind local models"
+  # The model binding is a stored setting, planted at bootstrap from
+  # `seeds.ai_routing`; there is no routing file to seed any more. Which file
+  # declares it decides which providers this stack binds, and the layering picks
+  # the winner: the posture overlay is applied AFTER the base, so if
+  # config/margince.dev.yaml declares the key it wins over the engineer's own
+  # config/margince.yaml.
+  #
+  # Scanned only to choose between a real model and the offline fake below. The
+  # binding itself is never read from a file by the api or the worker.
+  routing_src="config/margince.yaml"
+  if seeded_ai_routing config/margince.dev.yaml | grep -q .; then
+    routing_src="config/margince.dev.yaml"
   fi
 
   # BYOK: the real model powers the /coldstart read-back when a cloud key is in
@@ -726,7 +750,13 @@ up)
   # (e.g. an anthropic-only .env.local against the gemini-bound template
   # would refuse to start). Comments are stripped before scanning so the
   # template's commented alternatives don't count as bindings.
-  bound_providers=$(sed 's/#.*//' "$routing_src" | grep -Eo 'provider:[[:space:]]*[a-z_]+' | awk -F': *' '{print $2}' | sort -u || true)
+  # Quotes stripped before matching: `provider: "gemini"` is valid YAML, and a
+  # pattern anchored on a bare word skipped it — which left bound_providers
+  # empty, missing_keys empty, and real mode selected with no key at all.
+  bound_providers=$(seeded_ai_routing "$routing_src" \
+    | tr -d "\"'" \
+    | grep -Eo 'provider:[[:space:]]*[a-z_]+' \
+    | awk -F': *' '{print $2}' | sort -u || true)
   missing_keys=""
   for _p in $bound_providers; do
     _env=""
@@ -740,14 +770,26 @@ up)
       missing_keys="$missing_keys $_env"
     fi
   done
-  # Real routing whenever every bound provider is satisfied — cloud providers
-  # need their key; local ones (ollama/vllm/fake) need none, so a local-only
-  # routing file gets --ai-routing without any key in the environment.
-  if [[ -z "$missing_keys" ]]; then
-    ai_flag=(--ai-routing "$routing_src")
-    echo "dev: using $routing_src for the cold-start read-back (bound providers: $(echo $bound_providers | tr '\n' ' '))"
+  # THREE outcomes, and collapsing the first two is how this lied: "no binding
+  # declared" is not "every bound provider is satisfied", but both leave
+  # missing_keys empty.
+  #
+  # --ai-fake is kept in the first two cases rather than dropped. It is inert
+  # against a servable stored binding — the api prefers what the database holds
+  # — so passing it costs a bound installation nothing, and it is what makes the
+  # AI surfaces answer at all when the binding is absent or unbuildable.
+  if [[ -z "$bound_providers" ]]; then
+    echo "dev: $routing_src declares no model binding, so the AI lanes answer from the offline fake. Declare one under seeds.ai_routing and \`make dev-fresh\`, or bind models under Settings -> AI on the running stack"
+  elif [[ -n "$missing_keys" ]]; then
+    echo "dev: $routing_src binds provider(s) whose key is not set (${missing_keys# }) — the AI lanes answer from the offline fake; set the key(s) in .env.local or rebind the provider in $routing_src"
   else
-    echo "dev: $routing_src binds provider(s) whose key is not set (${missing_keys# }) — cold-start runs on the offline fake; set the key(s) in .env.local or rebind the provider in $routing_src"
+    # Every bound provider is satisfied, so the stored binding serves and the
+    # flag above never comes into play. It was planted from $routing_src at
+    # BOOTSTRAP, so a database created before that file declared a binding still
+    # has none — `make dev-fresh` re-runs the bootstrap, and Settings -> AI binds
+    # a running stack without one.
+    ai_flag=()
+    echo "dev: the stored model binding serves the cold-start read-back (providers bound by $routing_src: $(echo $bound_providers | tr '\n' ' '))"
   fi
 
   # The dev keyvault seals connector credentials (IMAP app passwords, OAuth
@@ -795,8 +837,8 @@ up)
   # The deployment configuration (A107/ADR-0061): the api bootstraps the demo
   # organization itself at boot — no public provisioning endpoint exists. Seeded
   # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml
-  # and then LEFT ALONE — the same create-if-missing / leave-if-exists pattern as
-  # config/ai-routing.yaml — so an engineer can edit org details or runtime
+  # and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
+  # can edit org details or runtime
   # posture (e.g. ai.capture_payloads for Layer-3 capture) and it persists across
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
   deploy_cfg="config/margince.yaml"
@@ -886,7 +928,7 @@ up)
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
     --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
-    "${ai_flag[@]}" "${gmail_api_flags[@]+"${gmail_api_flags[@]}"}" > >(log_as api) 2>&1 &
+    "${ai_flag[@]+"${ai_flag[@]}"}" "${gmail_api_flags[@]+"${gmail_api_flags[@]}"}" > >(log_as api) 2>&1 &
   be_pid=$!
 
   if ! wait_ready "http://localhost:${api_port}/readyz" 90; then
@@ -940,7 +982,7 @@ up)
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     --retention-interval 720h \
-    "${ai_flag[@]}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
+    "${ai_flag[@]+"${ai_flag[@]}"}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
   worker_pid=$!
   if [[ "$gmail_enabled" == "1" ]]; then
     echo "  worker   background relay + Surface-B runner + time-scan + Gmail sync (poll every 30s)"

@@ -22,10 +22,13 @@ it too (`ollama pull mistral`) if enrich grounding is weak.
 
 ## 2. Point the AI lanes at Ollama
 
-Your local `config/ai-routing.yaml` (seeded from the template by `make install` /
-`make dev`) binds every tier to `gemini`, so **enrich needs one edit**: rebind
-`local_small` — the first rung of `enrich`'s ladder (`local_small` →
-`cheap_cloud`) — to Ollama.
+A dev stack is bound to `gemini` on every tier (`seeds.ai_routing` in
+`config/margince.dev.yaml`), so **enrich needs one rebind**: point `local_small`
+— the first rung of `enrich`'s ladder (`local_small` → `cheap_cloud`) — at Ollama.
+
+On a running stack do it under **Settings → AI**, which takes effect immediately.
+To have a *fresh* stack come up this way, edit the seed and `make dev-fresh`; the
+shape is the same either way:
 
 ```yaml
 local_small: { provider: ollama, model: gemma3 }   # no base_url ⇒ localhost:11434
@@ -41,25 +44,31 @@ Edit the other tiers to:
 - **run cold-start / offer-draft locally too** (they ladder `cheap_cloud` →
   `premium`, cloud by default) — rebind those tiers to `ollama` as well.
 
-> `config/ai-routing.yaml` is **gitignored** — edit it freely for local dev; it
-> can never be committed. To reset, delete it and re-run `make install` (or
-> `make dev`) to re-seed from `config/ai-routing.example.yaml`.
+> A seed is consumed once, at bootstrap, so editing it under a database that
+> already exists changes nothing until `make dev-fresh`. Settings → AI is the
+> path that works on a stack already running — and the one a real operator has.
 
 ## 3. Start the stack
 
-`scripts/dev.sh` (`make dev`) scans `config/ai-routing.yaml` and activates the
-real routing only when **every bound cloud provider's key is set** (`anthropic`
-→ `ANTHROPIC_API_KEY`, `openai` → `OPENAI_API_KEY`, `gemini` →
+`scripts/dev.sh` (`make dev`) scans the `seeds.ai_routing` that will bind this
+stack and drops to the offline fake unless **every bound cloud provider's key is
+set** (`anthropic` → `ANTHROPIC_API_KEY`, `openai` → `OPENAI_API_KEY`, `gemini` →
 `GEMINI_API_KEY`, `openai_compatible` → `OPENAI_COMPATIBLE_API_KEY`); local
-providers (`ollama`/`vllm`/`fake`) need no key. If any key is missing it falls
-back to the offline fake — which would also fake the *Ollama* call.
+providers (`ollama`/`vllm`/`fake`) need no key.
+
+If any key is missing the stack runs on the offline fake — and that fakes the
+*Ollama* call too, because the fake stands in for the whole binding rather than
+for the unkeyed tier. So the fix is to rebind the tiers you exercise to a local
+provider, not to leave one cloud tier unkeyed. Note the fake is a fallback: once
+the binding is servable it outranks the flag, so a stack that CAN reach its
+models never answers with canned text.
 
 The shipped default routing binds **gemini** on every tier, so out of the box you
 must either set `GEMINI_API_KEY`, or rebind the tiers you exercise to `ollama`
 (§2) for a fully local, no-key stack:
 
 ```sh
-make dev   # look for: "dev: using config/ai-routing.yaml for the cold-start read-back (bound providers: …)"
+make dev   # look for: "dev: the stored model binding serves the cold-start read-back (providers bound by …)"
 ```
 
 > Persist keys in `.env.local` if you prefer — it is git-ignored and `make dev`
@@ -103,7 +112,7 @@ the anti-hallucination guarantee, not a bug.
 
 | Symptom | Meaning / fix |
 |---|---|
-| Log says *"binds provider(s) whose key is not set … offline fake"* | A tier is still bound to a cloud provider whose key is missing — set the named key in `.env.local`, or rebind that tier to `ollama` in `config/ai-routing.yaml`, then restart `make dev`. |
+| Log says *"binds provider(s) whose key is not set … offline fake"* | A tier is still bound to a cloud provider whose key is missing. Rebind that tier to `ollama` under **Settings → AI** — that takes effect on the running stack, within the routing refresh interval, with no restart. Setting the named key in `.env.local` instead does need `make dev` again, because a process reads the environment only at boot. |
 | *"Couldn't read enough from this company's site."* | The fetch failed: the offline fake is active (see above), a **403** from a bot-protected domain, or a genuinely thin page. Use a crawlable domain. |
 | *"no field survived the no-guess evidence gate"* | The model returned JSON but no `evidence_snippet` was verbatim on the page (or confidences ≤ 0). Expected for weak models / thin pages — try a content-rich page, or `mistral` over `gemma3`. |
 | A 500 mentioning *"cannot unmarshal … into … string"* | The model ignored the schema and emitted a wrong-typed field. Switch to `mistral`. |

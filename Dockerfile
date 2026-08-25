@@ -261,8 +261,8 @@ ARG MARGINCE_RELEASE_VERSION=dev
 RUN mkdir -p /etc/margince && printf '%s\n' "$MARGINCE_RELEASE_VERSION" > /etc/margince/release-version
 
 # Run as a non-root user. /app/config is where a deployment mounts its
-# margince.yaml (+ ai-routing.yaml); /app/secrets is where the entrypoint writes
-# the bootstrap admin password. Both must be writable by the runtime user.
+# margince.yaml; /app/secrets is where the entrypoint writes the bootstrap admin
+# password. Both must be writable by the runtime user.
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && adduser -D -u 10001 app \
     && mkdir -p /app/config /app/secrets \
@@ -286,7 +286,7 @@ COPY scripts/deploy/worker-entrypoint.sh /usr/local/bin/entrypoint.sh
 ARG MARGINCE_RELEASE_VERSION=dev
 RUN mkdir -p /etc/margince && printf '%s\n' "$MARGINCE_RELEASE_VERSION" > /etc/margince/release-version
 
-# /app/config is where a deployment mounts its margince.yaml / ai-routing.yaml.
+# /app/config is where a deployment mounts its margince.yaml.
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && adduser -D -u 10001 app \
     && mkdir -p /app/config \
