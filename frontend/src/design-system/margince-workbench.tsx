@@ -155,7 +155,9 @@ export function MarginceWorkbench({
                   spending — cost is part of who is talking, not a footnote. */}
               <div className="mw-aifooter">
                 {footerLabel !== undefined && (
-                  <span className="t-eyebrow mw-aifooter-label">{footerLabel}</span>
+                  <span className="t-eyebrow mw-aifooter-label">
+                    {footerLabel}
+                  </span>
                 )}
                 <AiRuntimeChip
                   runtime={runtime}

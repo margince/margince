@@ -200,7 +200,9 @@ export function CoverageCard({
             // beside it says the same thing in words, so the colour it selects
             // is never the only signal.
             <li className="ob-live-coverage" data-kind={row.kind} key={row.id}>
-              <span className="t-eyebrow ob-live-coverage-label">{row.label}</span>
+              <span className="t-eyebrow ob-live-coverage-label">
+                {row.label}
+              </span>
               {row.name !== undefined && (
                 <span className="ob-live-coverage-name">{row.name}</span>
               )}

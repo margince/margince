@@ -522,7 +522,9 @@ function TheatreTail({
           beneath rather than a column it would have to be squeezed into. */}
       <div className="ob-scan-cost">
         <div className="ob-scan-cost-head">
-          <p className="t-eyebrow ob-scan-cost-label">{t("ob.scan.transparency")}</p>
+          <p className="t-eyebrow ob-scan-cost-label">
+            {t("ob.scan.transparency")}
+          </p>
           <p className="ob-scan-cost-line">
             {runtime === undefined ? (
               t("ob.scan.costPending")

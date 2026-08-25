@@ -794,7 +794,9 @@ function VoiceMovesCard({
   const t = useT();
   return (
     <div className="ob-voice-result-card">
-      <p className="t-eyebrow ob-voice-result-label">{t("voice.insights.movesLabel")}</p>
+      <p className="t-eyebrow ob-voice-result-label">
+        {t("voice.insights.movesLabel")}
+      </p>
       <ul className="ob-voice-moves">
         {moves.map((move) => (
           <li key={move.move}>
@@ -811,7 +813,9 @@ function VoiceAvoidCard({ avoid }: Readonly<{ avoid: readonly string[] }>) {
   const t = useT();
   return (
     <div className="ob-voice-result-card">
-      <p className="t-eyebrow ob-voice-result-label">{t("voice.insights.avoidLabel")}</p>
+      <p className="t-eyebrow ob-voice-result-label">
+        {t("voice.insights.avoidLabel")}
+      </p>
       <ul className="ob-voice-avoid">
         {avoid.map((item) => (
           <li key={item}>{item}</li>

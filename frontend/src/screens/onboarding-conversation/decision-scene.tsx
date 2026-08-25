@@ -48,7 +48,9 @@ export function DecisionScene({
     <div className="ob-scene ob-decision">
       <div className="ob-decision-head">
         <div>
-          <p className="t-eyebrow ob-scene-eyebrow">{t("ob.conv.scene.detour")}</p>
+          <p className="t-eyebrow ob-scene-eyebrow">
+            {t("ob.conv.scene.detour")}
+          </p>
           <h2 id={headline}>{t(question.i18nKey, question.params)}</h2>
           <p className="ob-scene-sub">{t("ob.conv.scene.decisionSub")}</p>
         </div>
@@ -172,7 +174,9 @@ function CandidateCard({
       </div>
       {hasEvidence && open && (
         <div className="ob-decision-proof" id={panel}>
-          <p className="t-eyebrow ob-decision-proof-head">{t("ob.conv.scene.whyThis")}</p>
+          <p className="t-eyebrow ob-decision-proof-head">
+            {t("ob.conv.scene.whyThis")}
+          </p>
           <blockquote>{facts?.snippet}</blockquote>
           {facts?.source !== undefined && facts.source !== "" && (
             <>

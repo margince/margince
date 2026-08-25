@@ -1470,7 +1470,9 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           under a tail head of its own. */}
       {props.read != null && (
         <div className="ob-triage-readmore">
-          <p className="t-eyebrow ob-triage-rest-head">{t("ob.conv.triage.restTitle")}</p>
+          <p className="t-eyebrow ob-triage-rest-head">
+            {t("ob.conv.triage.restTitle")}
+          </p>
           <CoverageCard
             pages={props.read.pages}
             warnings={props.read.warnings}
