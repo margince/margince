@@ -180,6 +180,41 @@ func isJSONBool(raw json.RawMessage) bool {
 	return json.Unmarshal(raw, &flag) == nil
 }
 
+// scanAuditEntry reads one ledger line and applies what the row itself says a
+// caller may see of it.
+//
+// Two withholdings, one treatment. An activity outside the caller's audience
+// carries content they may not read; a record scrubbed after this row was
+// written carries what an erasure certified gone, and audit_log is append-only,
+// so the read is where that is enforced or nowhere. Either way the ROW stays: a
+// compliance log answers who did what and when, and a write that happened is not
+// a fact an erasure undoes.
+func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {
+	var e AuditEntry
+	// The nullable envelope ids scan through untyped locals, then widen to their
+	// kind — a NULL column stays a nil typed pointer.
+	var passportID, onBehalfOf *ids.UUID
+	var contentReadable, imagesReadable bool
+	if err := rows.Scan(&e.ID, &e.ActorType, &e.ActorID,
+		&passportID, &onBehalfOf, &e.Action, &e.EntityType, &e.EntityID,
+		&e.Before, &e.After, &e.AuthorizationRule, &e.Evidence, &e.OccurredAt,
+		&e.ActorName, &e.OnBehalfOfName, &contentReadable, &imagesReadable); err != nil {
+		return AuditEntry{}, err
+	}
+	if !contentReadable || !imagesReadable {
+		withholdAuditImage(&e)
+	}
+	if passportID != nil {
+		v := ids.From[ids.PassportKind](*passportID)
+		e.PassportID = &v
+	}
+	if onBehalfOf != nil {
+		v := ids.From[ids.UserKind](*onBehalfOf)
+		e.OnBehalfOf = &v
+	}
+	return e, nil
+}
+
 // withholdAuditImage redacts the record images on one entry, keeping the row and
 // keeping everything the audience has no claim over.
 //
@@ -312,7 +347,14 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.evidence, a.occurred_at,
 			        actor_user.display_name, obo.display_name,
 			        (a.entity_type <> 'activity'
-			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable
+			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
+			        NOT EXISTS (
+			          SELECT 1 FROM audit_log scrub
+			           WHERE scrub.entity_type = a.entity_type
+			             AND scrub.entity_id = a.entity_id
+			             AND scrub.action = ANY(`+arg(fieldHistoryScrubActions)+`)
+			             AND (scrub.occurred_at, scrub.id) > (a.occurred_at, a.id)
+			        ) AS images_readable
 			 FROM audit_log a`+auditActorNameJoins+auditActivityJoin+`
 			 WHERE `+where+`
 			 ORDER BY a.occurred_at DESC, a.id DESC
@@ -322,27 +364,9 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var e AuditEntry
-			// The nullable envelope ids scan through untyped locals, then
-			// widen to their kind — a NULL column stays a nil typed pointer.
-			var passportID, onBehalfOf *ids.UUID
-			var contentReadable bool
-			if err := rows.Scan(&e.ID, &e.ActorType, &e.ActorID,
-				&passportID, &onBehalfOf, &e.Action, &e.EntityType, &e.EntityID,
-				&e.Before, &e.After, &e.AuthorizationRule, &e.Evidence, &e.OccurredAt,
-				&e.ActorName, &e.OnBehalfOfName, &contentReadable); err != nil {
+			e, err := scanAuditEntry(rows)
+			if err != nil {
 				return err
-			}
-			if !contentReadable {
-				withholdAuditImage(&e)
-			}
-			if passportID != nil {
-				v := ids.From[ids.PassportKind](*passportID)
-				e.PassportID = &v
-			}
-			if onBehalfOf != nil {
-				v := ids.From[ids.UserKind](*onBehalfOf)
-				e.OnBehalfOf = &v
 			}
 			page.Entries = append(page.Entries, e)
 		}
