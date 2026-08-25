@@ -13,6 +13,8 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,6 +24,8 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -71,9 +75,85 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]a
 			ID:         row.ID,
 			EntityType: row.EntityType,
 			Confidence: row.Confidence,
+			LeftID:     row.LeftID,
+			RightID:    row.RightID,
+			Evidence:   comparisons(ctx, row.ID, row.Evidence),
 		})
 	}
 	return pairs, nil
+}
+
+// dedupeEvidenceRow is the detection-time snapshot as the queue stores it.
+type dedupeEvidenceRow struct {
+	Field      string  `json:"field"`
+	LeftValue  *string `json:"left_value"`
+	RightValue *string `json:"right_value"`
+	Signal     string  `json:"signal"`
+}
+
+// comparisons decodes the stored snapshot.
+//
+// A snapshot that will not decode yields NO evidence rather than an error: the
+// pair is still a real decision, and the two records beside each other are the
+// larger part of the answer. Losing the field table degrades the card; refusing
+// the whole lane over one malformed row would hide every other decision behind
+// it.
+func comparisons(ctx context.Context, candidate ids.UUID, raw json.RawMessage) []attention.FieldComparison {
+	if len(raw) == 0 {
+		return nil
+	}
+	var rows []dedupeEvidenceRow
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		// Degrade for the reader, but say so. A snapshot that will not parse
+		// means a detector wrote something nothing can read, and this is the
+		// only place that would ever notice: an empty comparison and a corrupt
+		// one look identical on screen, and forever.
+		slog.WarnContext(ctx, "attention: dedupe evidence snapshot will not parse",
+			"candidate_id", candidate.String(), "error", err)
+		return nil
+	}
+	out := make([]attention.FieldComparison, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, attention.FieldComparison{
+			Field:  row.Field,
+			Left:   row.LeftValue,
+			Right:  row.RightValue,
+			Signal: row.Signal,
+		})
+	}
+	return out
+}
+
+// Describe names one side of a pair, under the reader's own scope.
+//
+// Each branch is that record's ordinary get, so a reader who may not see the
+// record gets the same refusal here as anywhere else. The pair's own row is not
+// permission to read what it points at.
+func (d attentionDuplicates) Describe(
+	ctx context.Context, entityType string, id ids.UUID,
+) (attention.RecordFace, error) {
+	switch entityType {
+	case flipObjectPerson:
+		row, err := d.store.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
+		if err != nil {
+			return attention.RecordFace{}, err
+		}
+		return personFace(row), nil
+	case flipObjectOrganization:
+		row, err := d.store.GetOrganization(ctx, ids.From[ids.OrganizationKind](id), storekit.LiveOnly)
+		if err != nil {
+			return attention.RecordFace{}, err
+		}
+		return organizationFace(row), nil
+	case flipObjectLead:
+		row, err := d.store.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
+		if err != nil {
+			return attention.RecordFace{}, err
+		}
+		return leadFace(row), nil
+	default:
+		return attention.RecordFace{}, apperrors.ErrNotFound
+	}
 }
 
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
@@ -201,4 +281,45 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 		attentionReceipts{svc: svc},
 		func() time.Time { return time.Now().UTC() },
 	))
+}
+
+// The three faces a merge decision compares.
+//
+// Each answers the same two questions in that record's own terms: which one is
+// this, and which side carries more. `detail` is the field a reader actually
+// uses to tell two near-identical records apart — a company's domain, a
+// person's address — never an id.
+
+func organizationFace(row crmcontracts.Organization) attention.RecordFace {
+	face := attention.RecordFace{
+		Label:        row.DisplayName,
+		CreatedAt:    &row.CreatedAt,
+		RelatedCount: row.ContactCount,
+	}
+	if row.Domains != nil && len(*row.Domains) > 0 {
+		face.Detail = (*row.Domains)[0].Domain
+	}
+	return face
+}
+
+func personFace(row crmcontracts.Person) attention.RecordFace {
+	face := attention.RecordFace{Label: row.FullName, CreatedAt: &row.CreatedAt}
+	if row.Emails != nil && len(*row.Emails) > 0 {
+		face.Detail = string((*row.Emails)[0].Email)
+	}
+	return face
+}
+
+func leadFace(row crmcontracts.Lead) attention.RecordFace {
+	face := attention.RecordFace{CreatedAt: &row.CreatedAt}
+	if row.FullName != nil {
+		face.Label = *row.FullName
+	}
+	switch {
+	case row.Email != nil:
+		face.Detail = string(*row.Email)
+	case row.CompanyName != nil:
+		face.Detail = *row.CompanyName
+	}
+	return face
 }

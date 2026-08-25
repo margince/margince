@@ -399,7 +399,7 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
       screen.getByRole("button", { name: "Send staged decisions" }),
     );
 
-    await waitFor(() => expect(window.location.hash).toBe("#/inbox"));
+    await waitFor(() => expect(window.location.hash).toBe("#/today"));
     expect(writes(calls)).toEqual([]);
   });
 

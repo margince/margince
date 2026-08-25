@@ -47,7 +47,7 @@ const CORE_SCREENS = [
   "contacts",
   "companies",
   "deals",
-  "inbox",
+  "today",
   "reports",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
@@ -150,24 +150,21 @@ function accountTrigger(page: Page) {
   });
 }
 
-// The canonical thirteen, in order: Home alone, then records / work /
-// intelligence. Not upstream's set: Duplicates is a destination here (the queue
-// had no address outside a home digest card) while Automations is not (it is
-// set-and-forget configuration on Settings → AI). Two labels differ from their
-// route ids on purpose — `deals` presents as Pipeline and `inbox` as Decisions
-// — so this asserts what a person reads, not what the router matches.
+// The canonical ten, in order: Home alone, then records / work / intelligence.
+// Not upstream's set: Automations is not a destination here (it is set-and-forget
+// configuration on Settings → AI). One label differs from its route id on
+// purpose — `deals` presents as Pipeline — so this asserts what a person reads,
+// not what the router matches.
 //
 // The count and the list are both spelled out on purpose. NAV_GROUPS in
 // src/app/nav.ts is the source of the rail; deriving this from it would assert
 // only that the rail renders itself, so a destination added there is meant to
 // fail here until somebody says what a person now reads and where.
 //
-// Heute is the answer for the row added most recently. It LEADS the work group
-// rather than joining the end of it: every other row there is one producer's
-// queue, and this one is the sum a reader opens when the question is "what
-// needs me?" instead of "show me the approvals". A summary placed under the
-// things it summarises reads as a footnote to them.
-test("AC-shell-1: the rail renders the canonical 13 items in order", async ({
+// Heute LEADS the work group and is the only door to the work that waits on a
+// person: decisions to answer, tasks to finish and duplicates to merge are lanes
+// inside it rather than rows of their own.
+test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
   page,
 }) => {
   await page.goto("/#/home");
@@ -176,7 +173,7 @@ test("AC-shell-1: the rail renders the canonical 13 items in order", async ({
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
   // while the foot's Settings door rides the same `.navitem` geometry without
   // being one of them.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(13);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
   const labels = await page
     .locator("nav.rail .navlevel a.navitem")
     .evaluateAll((links) =>
@@ -187,16 +184,10 @@ test("AC-shell-1: the rail renders the canonical 13 items in order", async ({
     "Kontakte",
     "Firmen",
     "Leads",
-    "Duplikate",
     "Filter & Ansichten",
     "Heute",
     "Pipeline",
     "Projekte",
-    "Aufgaben",
-    // Was "Freigaben". The surface is called Decisions now — it covers both
-    // halves of that screen, the pending work and the log of what was decided,
-    // and it names what the human does rather than how the system stages it.
-    "Entscheidungen",
     "Berichte",
     "Margince fragen",
   ]);
@@ -284,7 +275,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(13);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
 });
 
 // The account menu carries what belongs to the PERSON rather than to the page:
@@ -466,8 +457,12 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
+// The decision queue lives on Today now, one decision at a time: the focus lane
+// draws the staged proposal through the same ApprovalRow the retired Decisions
+// screen used, so the verb a person presses is unchanged and this asserts it
+// where a person now finds it.
 test("AC-inbox: approve and reject act on the staged row", async ({ page }) => {
-  await page.goto("/#/inbox");
+  await page.goto("/#/today");
   await expect(page.getByText("E-Mail senden", { exact: true })).toBeVisible();
   await expect(page.getByText("Automatisiert durch runner")).toBeVisible();
   await page.getByRole("button", { name: "Übernehmen" }).click();
@@ -1038,11 +1033,6 @@ test.describe("B-EP09.23: overlay mode", () => {
     ).toBeVisible();
     await expect(page.getByText(unavailable)).toHaveCount(4);
     await expect(page.getByText(errorBox)).toHaveCount(0);
-
-    // Tasks (nav.tasks): a defining `kind=task` filter the mirror can't honor.
-    await page.goto("/#/tasks");
-    await expect(page.getByText(unavailable)).toHaveCount(1);
-    await expect(page.getByText(errorBox)).toHaveCount(0);
   });
 });
 
@@ -1066,10 +1056,10 @@ test.describe("§3.8: 390px mobile", () => {
     });
   }
 
-  test("S-E11.2: the approval inbox is usable on mobile — approve works at 390px", async ({
+  test("S-E11.2: the approval queue is usable on mobile — approve works at 390px", async ({
     page,
   }) => {
-    await page.goto("/#/inbox");
+    await page.goto("/#/today");
     await expect(
       page.getByText("E-Mail senden", { exact: true }),
     ).toBeVisible();

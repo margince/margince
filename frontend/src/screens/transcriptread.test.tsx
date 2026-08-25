@@ -111,7 +111,7 @@ function stubReads(options: {
 }
 
 describe("reading a transcript for its next steps", () => {
-  it("starts a reading on click and shows what it staged, with a way into the inbox", async () => {
+  it("starts a reading on click and shows what it staged, with a way into Today", async () => {
     const user = userEvent.setup();
     const { calls } = stubReads({
       read: () =>
@@ -138,11 +138,11 @@ describe("reading a transcript for its next steps", () => {
     // The 🟡 tier is drawn, never spelled as an emoji.
     expect(screen.getByRole("img", { name: "confirm-first" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Open inbox" }));
-    expect(window.location.hash).toContain("inbox");
+    await user.click(screen.getByRole("button", { name: "Open Today" }));
+    expect(window.location.hash).toContain("today");
   });
 
-  it("says a transcript stated nothing, in the server's own words, and offers no inbox trip", async () => {
+  it("says a transcript stated nothing, in the server's own words, and offers no trip to Today", async () => {
     stubReads({
       stored: report({
         status_detail: "Nobody committed to anything in this call.",
@@ -157,7 +157,7 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByText("Done")).toBeTruthy();
     // A correct empty answer is not a queue of work: nothing to review, and
     // nowhere to go.
-    expect(screen.queryByRole("button", { name: "Open inbox" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Today" })).toBeNull();
     expect(screen.queryByRole("img", { name: "confirm-first" })).toBeNull();
   });
 
@@ -183,7 +183,7 @@ describe("reading a transcript for its next steps", () => {
         "Read in full. This conversation states no next steps.",
       ),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open inbox" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Today" })).toBeNull();
   });
 
   it("falls back to its own words when a terminal reading carries no detail", async () => {
@@ -210,7 +210,7 @@ describe("reading a transcript for its next steps", () => {
         "Read in full. This conversation states no next steps.",
       ),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open inbox" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Today" })).toBeNull();
   });
 
   it("shows a reading that finished after the rep navigated away", async () => {

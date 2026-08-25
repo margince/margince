@@ -73,7 +73,7 @@ function TranscriptReadOutcome({
               count: formatNumber(report.proposal_ids.length, locale),
             })}
       </span>
-      <Button small onClick={() => navigate({ screen: "inbox" })}>
+      <Button small onClick={() => navigate({ screen: "today" })}>
         {t("enrich.toInbox")}
       </Button>
     </p>
