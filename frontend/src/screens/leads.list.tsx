@@ -405,7 +405,9 @@ function LeadsWorkbench({
                   flexWrap: "wrap",
                 }}
               >
-                <Badge tone={scoreTone(lead.score)}>{lead.score}</Badge>
+                <Badge tone={scoreTone(lead.score)}>
+                  {formatNumber(lead.score, locale)}
+                </Badge>
                 <span className="t-caption">
                   {lead.score_reason
                     ? scoreFactorLabel(lead.score_reason, t)

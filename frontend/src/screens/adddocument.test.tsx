@@ -369,9 +369,11 @@ describe("adding a document from the account", () => {
 
     // An unfound deal and a deal that does not exist read identically, so the
     // control states its own reach rather than leaving the reader to conclude
-    // the account has no such deal.
+    // the account has no such deal. GROUPED: the reach is a magnitude, and this
+    // sentence sits on a surface whose every other figure is grouped, so an
+    // ungrouped 2000 here would be the one number written in another notation.
     expect(
-      screen.getByText(/covers this account's 2000 newest deals/),
+      screen.getByText(/covers this account's 2,000 newest deals/),
     ).toBeTruthy();
   });
 

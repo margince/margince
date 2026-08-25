@@ -163,7 +163,7 @@ function StrengthBody({
                 }}
               >
                 <span>{t(`strength.factor.${row.key}`)}</span>
-                <span className="t-mono">{pct}%</span>
+                <span className="t-mono">{formatNumber(pct, locale)}%</span>
               </div>
               <Meter
                 value={pct}

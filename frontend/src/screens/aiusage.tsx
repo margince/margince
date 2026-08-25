@@ -298,7 +298,10 @@ function AiUsageBody({
           {data.days.map((day) => (
             <p key={day.date} className="t-mono">
               {day.date} ·{" "}
-              {day.tasks.reduce((sum, task) => sum + task.calls, 0)}{" "}
+              {formatNumber(
+                day.tasks.reduce((sum, task) => sum + task.calls, 0),
+                locale,
+              )}{" "}
               {t("aiusage.col.calls")}
             </p>
           ))}

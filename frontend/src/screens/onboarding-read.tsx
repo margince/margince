@@ -701,6 +701,7 @@ function ReadActivity({
   refreshing,
 }: Readonly<{ read: CompanySiteRead; refreshing: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const latestPage = latestFetchedPage(read);
   const legalCount = read.legal_entities?.length ?? 0;
   const findingCount = read.profile_fields.length + read.facts.length;
@@ -715,13 +716,14 @@ function ReadActivity({
       )}
       <div>
         <span>
-          <b>{read.pages_read ?? 0}</b> {t("ob.pagesRead")}
+          <b>{formatNumber(read.pages_read ?? 0, locale)}</b>{" "}
+          {t("ob.pagesRead")}
         </span>
         <span>
-          <b>{legalCount}</b> {t("ob.legalEntitiesFound")}
+          <b>{formatNumber(legalCount, locale)}</b> {t("ob.legalEntitiesFound")}
         </span>
         <span>
-          <b>{findingCount}</b>{" "}
+          <b>{formatNumber(findingCount, locale)}</b>{" "}
           {t(findingCount === 1 ? "ob.ai.finding" : "ob.ai.findings")}
         </span>
       </div>
@@ -875,6 +877,7 @@ function readablePage(rawURL: string) {
 
 export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
   const t = useT();
+  const { locale } = useLocale();
   const legalEntities = read.legal_entities ?? [];
   const skippedPages = read.pages.filter((page) => page.status !== "fetched");
   if (
@@ -928,7 +931,9 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
               >
                 <div className="finding-label">
                   <Check aria-hidden /> {coldFieldLabel(field.field, t)}
-                  <span>{Math.round(field.confidence * 100)}%</span>
+                  <span>
+                    {formatNumber(Math.round(field.confidence * 100), locale)}%
+                  </span>
                 </div>
                 <strong>{field.value}</strong>
                 <blockquote>“{field.evidence_snippet}”</blockquote>
@@ -949,7 +954,9 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
               >
                 <div className="finding-label">
                   <Sparkles aria-hidden /> {coldFieldLabel(fact.field, t)}
-                  <span>{Math.round(fact.confidence * 100)}%</span>
+                  <span>
+                    {formatNumber(Math.round(fact.confidence * 100), locale)}%
+                  </span>
                 </div>
                 <strong>{fact.value}</strong>
                 <blockquote>“{fact.evidence_snippet}”</blockquote>

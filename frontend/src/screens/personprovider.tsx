@@ -9,7 +9,8 @@ import { Badge, Button } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import {
   canEnrichNow,
@@ -86,6 +87,7 @@ function RunWatch({
 
 function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
+  const { locale } = useLocale();
   const source = boughtFrom(profile);
   return (
     <>
@@ -123,7 +125,10 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
               {phone.confidence != null && (
                 <span className="t-caption">
                   {t("provider.profile.confidence", {
-                    percent: String(Math.round(phone.confidence * 100)),
+                    percent: formatNumber(
+                      Math.round(phone.confidence * 100),
+                      locale,
+                    ),
                   })}
                 </span>
               )}

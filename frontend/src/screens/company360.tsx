@@ -1023,7 +1023,7 @@ export function CommercialPanel({
       />
       <CommercialFigure
         label={t("co.commercial.lostFigure")}
-        value={String(deals.lost_count)}
+        value={formatNumber(deals.lost_count, locale)}
       />
     </PanelBody>
   );

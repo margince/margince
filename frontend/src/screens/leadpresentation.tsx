@@ -144,7 +144,7 @@ function LeadCard({
       )}
       <span className="deal-meta">
         <Badge tone={scoreTone(lead.score)}>
-          {t("lead.score")}: {lead.score}
+          {t("lead.score")}: {formatNumber(lead.score, locale)}
         </Badge>
         <SlaBadge state={lead.sla_state} />
         {lead.title && <span>{lead.title}</span>}

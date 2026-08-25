@@ -26,7 +26,7 @@ import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { ToastRegion, useToast } from "../design-system/toast";
 import { fiscalYearLabel } from "../format/fiscalyear";
-import { monthName } from "../format/format";
+import { identifierNumber, monthName } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import {
   problemFieldErrorsOf,
@@ -603,13 +603,13 @@ function InstallationProfileDialog({
               <Select
                 {...control}
                 aria-describedby={describe(control)}
-                value={String(draft.fiscal_year_start_month)}
+                value={identifierNumber(draft.fiscal_year_start_month)}
                 disabled={!canManage}
                 // Twelve months, each labelled with what a report would then be
                 // called — "April — FY2026/27". A bare number would make the
                 // admin work out the consequence of every option; this states it.
                 options={MONTHS.map((month) => ({
-                  value: String(month),
+                  value: identifierNumber(month),
                   label: fiscalYearStartSummary(
                     month,
                     locale,

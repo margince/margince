@@ -1,7 +1,7 @@
 import type { ChangeEvent, Dispatch, RefObject } from "react";
 import { useRef } from "react";
 import type { components } from "../../api/schema";
-import { formatNumber } from "../../format/format";
+import { formatNumber, ordinalNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import { useFileDrop } from "../use-file-drop";
@@ -88,10 +88,9 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
 
   // Where the journey stands, in the rail's own counting.
   const stops = railStops(state.memberPath);
-  // A position in the rail, not a magnitude: never grouped, in any locale.
   const eyebrow = t("ob.conv.scene.step", {
-    n: String(stops.findIndex((stop) => stop.key === "voice") + 1),
-    m: String(stops.length),
+    n: ordinalNumber(stops.findIndex((stop) => stop.key === "voice") + 1),
+    m: ordinalNumber(stops.length),
     label: t("ob.rail.voice"),
   });
 

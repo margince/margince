@@ -343,6 +343,7 @@ function CaptureFunnel({
   onSelect: (outcome: Outcome | null) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <StatStrip
       className="capture-activity__funnel"
@@ -360,7 +361,7 @@ function CaptureFunnel({
             label={t(`captureActivity.outcome.${funnelLabel(outcome)}`)}
             // Zero is a reading, not an absence: "no message was dropped as
             // internal today" is exactly what somebody comes here to confirm.
-            value={String(funnel[outcome] ?? 0)}
+            value={formatNumber(funnel[outcome] ?? 0, locale)}
           />
         </button>
       ))}

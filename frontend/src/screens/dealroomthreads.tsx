@@ -10,7 +10,8 @@ import {
 } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import "./dealroomthreads.css";
 
@@ -87,6 +88,7 @@ export function DocumentBoard({
   footer?: ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const byDocument = new Map<string, DealRoomThread[]>();
   for (const thread of threads) {
     if (thread.document_id) {
@@ -139,7 +141,7 @@ export function DocumentBoard({
       <Panel
         title={t("threads.roomTitle")}
         sub={t("threads.roomSub")}
-        titleAction={<Badge>{String(roomThreads.length)}</Badge>}
+        titleAction={<Badge>{formatNumber(roomThreads.length, locale)}</Badge>}
       >
         <PanelBody>
           {roomThreads.length === 0 ? (
@@ -170,6 +172,7 @@ function DocumentCard({
   verbs: ThreadVerbs;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <article className="board-doc" aria-label={doc.title}>
       <div className="room-doc">
@@ -188,7 +191,9 @@ function DocumentCard({
             <MessageSquare aria-hidden />
             {threads.length === 1
               ? t("threads.aboutThisOne")
-              : t("threads.aboutThis", { count: String(threads.length) })}
+              : t("threads.aboutThis", {
+                  count: formatNumber(threads.length, locale),
+                })}
           </span>
           <ThreadList threads={threads} verbs={verbs} />
         </div>

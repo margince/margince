@@ -2,7 +2,7 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { formatNumber, INTL_LOCALE, ordinalNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar } from "./atoms";
@@ -240,7 +240,7 @@ function StepRail({ steps }: Readonly<{ steps: readonly WorkbenchStep[] }>) {
           className={`mw-step is-${step.state}`}
           aria-current={step.state === "now" ? "step" : undefined}
         >
-          <b aria-hidden>{index + 1}</b>
+          <b aria-hidden>{ordinalNumber(index + 1)}</b>
           {step.label}
           <span className="sr-only">{t(STEP_STATE_WORD[step.state])}</span>
         </li>
@@ -421,7 +421,11 @@ function AiRuntimeChip({
           />
           <RuntimeRow
             label={labels.calls}
-            value={runtime ? String(runtime.call_attempts) : labels.unavailable}
+            value={
+              runtime
+                ? formatNumber(runtime.call_attempts, locale)
+                : labels.unavailable
+            }
           />
           <RuntimeRow
             label={labels.tokens}

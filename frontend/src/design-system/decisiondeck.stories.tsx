@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
-import { LocaleProvider } from "../i18n";
+import { formatNumber } from "../format/format";
+import { LocaleProvider, useLocale } from "../i18n";
 import { Badge } from "./atoms";
 import { Callout } from "./callout";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
@@ -291,6 +292,7 @@ export const ListView: Story = {
 function LiveQueue({
   start,
 }: Readonly<{ start: readonly DecisionDeckItem[] }>) {
+  const { locale } = useLocale();
   const [items, setItems] = useState(start);
   const send = (staged: readonly StagedDecision[]) => {
     const decided = new Set(staged.map((entry) => entry.id));
@@ -298,7 +300,9 @@ function LiveQueue({
   };
   return (
     <>
-      <Badge tone="accent">{items.length} left in the parent's list</Badge>
+      <Badge tone="accent">
+        {formatNumber(items.length, locale)} left in the parent's list
+      </Badge>
       <DecisionDeck {...BASE} items={items} onCommit={send} />
     </>
   );

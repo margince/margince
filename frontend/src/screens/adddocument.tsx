@@ -21,6 +21,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { foldForMatch } from "../format/collate";
+import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
@@ -456,8 +457,8 @@ export function AddDocumentDialog({
                   an answer belonged to. */}
               <p className="t-caption">
                 {t("docs.add.dealSearchReach", {
-                  deals: String(DEAL_SEARCH_REACH),
-                  matches: String(DEAL_MATCH_LIMIT),
+                  deals: formatNumber(DEAL_SEARCH_REACH, locale),
+                  matches: formatNumber(DEAL_MATCH_LIMIT, locale),
                 })}
               </p>
             </div>

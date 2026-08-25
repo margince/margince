@@ -56,7 +56,7 @@ export function HomeReadingsStrip({
         <StatCard
           numeric
           label={t("home.readings.decisions")}
-          value={String(decisions.pending)}
+          value={formatNumber(decisions.pending, locale)}
           // The tile is bad news only when something runs out TODAY. A queue
           // with work in it is the normal state of a morning; a queue with a
           // deadline in it is the one that changes what a reader does first.
@@ -78,7 +78,7 @@ export function HomeReadingsStrip({
         <StatCard
           numeric
           label={t("home.readings.openDeals")}
-          value={String(open.deals)}
+          value={formatNumber(open.deals, locale)}
           detail={t(
             open.currencies === 1
               ? "home.readings.currencies.one"
@@ -91,7 +91,7 @@ export function HomeReadingsStrip({
         <StatCard
           numeric
           label={t("home.readings.ranked")}
-          value={String(ranked.count)}
+          value={formatNumber(ranked.count, locale)}
           detail={
             ranked.topPct === null
               ? t("home.readings.noRun")
@@ -105,7 +105,7 @@ export function HomeReadingsStrip({
         <StatCard
           numeric
           label={t("home.readings.quiet")}
-          value={String(quiet)}
+          value={formatNumber(quiet, locale)}
           tone={quiet > 0 ? "warn" : "good"}
           dot={quiet > 0}
           detail={quiet === 0 ? t("home.readings.quietNone") : undefined}

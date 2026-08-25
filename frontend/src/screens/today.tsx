@@ -351,6 +351,7 @@ function Lane({
   onSnooze: (id: string, dueAt: string) => void;
   completing: boolean;
 }>) {
+  const { locale } = useLocale();
   const Icon = shape.icon;
   return (
     <Panel
@@ -360,7 +361,9 @@ function Lane({
           {shape.title}
         </span>
       }
-      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
+      titleAction={
+        total > 0 ? <Badge>{formatNumber(total, locale)}</Badge> : undefined
+      }
       tone={tone}
     >
       {withheld ? (

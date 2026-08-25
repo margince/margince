@@ -1,7 +1,7 @@
 import { FileText, Lightbulb, Quote } from "lucide-react";
 import type { components } from "../api/schema";
 import { Badge, Card } from "../design-system/atoms";
-import { formatNumber } from "../format/format";
+import { formatNumber, identifierNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import "./voice-dna.css";
 
@@ -161,9 +161,9 @@ export function VoiceInsights({
   return (
     <div className="vdna-insights">
       <div className="vdna-provenance t-small">
-        {/* The build's version is a name, not a magnitude: grouped, build 1234
-            would read as "1.234" and stop matching what it refers to. */}
-        {t("voice.insights.provenance", { n: String(profileVersion) })}
+        {t("voice.insights.provenance", {
+          n: identifierNumber(profileVersion),
+        })}
         {data.modelName && data.modelName !== "unrecorded"
           ? ` · ${data.modelName}`
           : ""}

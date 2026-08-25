@@ -9,7 +9,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 
 /**
  * What the agent surface knows about the person using the app, as opposed to
@@ -80,8 +81,11 @@ export function useAttention(): AttentionScope | null {
  */
 export function usePublishSelection(count: number): void {
   const t = useT();
+  const { locale } = useLocale();
   usePublishScope(
-    count > 0 ? t("attention.selected", { n: String(count) }) : null,
+    count > 0
+      ? t("attention.selected", { n: formatNumber(count, locale) })
+      : null,
   );
 }
 

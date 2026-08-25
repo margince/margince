@@ -20,7 +20,8 @@ import { navigate } from "../app/router";
 import { Badge, Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { useParticipants } from "./dealroomaccess";
@@ -76,6 +77,7 @@ export function DealRoomAside({
 
 function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
+  const { locale } = useLocale();
   const participants = useParticipants(room.id);
   const rows = participants.data?.data ?? [];
   const invited = rows.filter((p) => !p.revoked_at).length;
@@ -94,8 +96,8 @@ function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
         <p>{room.title}</p>
         <p className="t-small">
           {t("room.card.people", {
-            invited: String(invited),
-            active: String(active),
+            invited: formatNumber(invited, locale),
+            active: formatNumber(active, locale),
           })}
         </p>
         {lastSeen ? (

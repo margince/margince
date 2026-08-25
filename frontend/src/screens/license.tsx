@@ -8,7 +8,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { LicenseHolderCard } from "./licenseholder";
 
@@ -90,8 +91,15 @@ export function LicenseReading({
   entitlement,
 }: Readonly<{ entitlement: LicenseEntitlement }>) {
   const t = useT();
+  const { locale } = useLocale();
   const granted = entitlement.seats_granted;
   const capped = granted !== undefined && granted !== null;
+  // ONE spelling of "the grant, or the word for not having one". The callout,
+  // the slot and the meter's name all say it, and three readings of one absence
+  // is how a card ends up claiming two different things about one license.
+  const grantedText = capped
+    ? formatNumber(granted, locale)
+    : t("license.seats.uncapped");
 
   return (
     // A `Panel`, like every other card on every other settings page. This card
@@ -120,9 +128,15 @@ export function LicenseReading({
             icon={TriangleAlert}
             title={t("license.over.title")}
           >
+            {/* Gated on the server's verdict ALONE. `over_limit` is false
+                whenever nothing caps seats, so the contract already answers
+                this; re-deriving it here from `seats_granted` would be the
+                client reaching its own answer about the installation's
+                standing, and on a payload where the two disagreed it would
+                withdraw the one alert an admin has to act on. */}
             {t("license.over.body", {
-              used: String(entitlement.seats_used),
-              granted: String(granted),
+              used: formatNumber(entitlement.seats_used, locale),
+              granted: grantedText,
             })}
           </Callout>
         )}
@@ -145,7 +159,7 @@ export function LicenseReading({
                 <StatStrip>
                   <StatCard
                     label={t("license.seats.used")}
-                    value={String(entitlement.seats_used)}
+                    value={formatNumber(entitlement.seats_used, locale)}
                     // The slot itself is the bad news when the count is past the
                     // grant, so `alert` rather than `tone`, which would only
                     // colour the figure.
@@ -157,9 +171,7 @@ export function LicenseReading({
                     // unlicensed installation and a license that caps nothing
                     // both have no number here, and only the first is something
                     // an admin might want to change.
-                    value={
-                      capped ? String(granted) : t("license.seats.uncapped")
-                    }
+                    value={grantedText}
                   />
                 </StatStrip>
                 {capped && (
@@ -170,8 +182,8 @@ export function LicenseReading({
                     // beside it, so the reading is named here rather than by the
                     // row's own label.
                     label={t("license.meter.label", {
-                      used: String(entitlement.seats_used),
-                      granted: String(granted),
+                      used: formatNumber(entitlement.seats_used, locale),
+                      granted: grantedText,
                     })}
                   />
                 )}

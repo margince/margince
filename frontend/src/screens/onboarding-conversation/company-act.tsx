@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { formatNumber } from "../../format/format";
+import { formatNumber, ordinalNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -745,11 +745,9 @@ export function CompanyAct({
   // The scene eyebrow: where the journey stands, in the rail's own counting.
   // Both the decision and the review live on the CONFIRM stop.
   const stops = railStops(state.memberPath);
-  // "Step 3 of 5" is a POSITION in a fixed rail, not a magnitude: neither
-  // half is ever grouped or given a decimal separator, in any locale.
   const stepEyebrow = t("ob.conv.scene.step", {
-    n: String(stops.findIndex((stop) => stop.key === "confirm") + 1),
-    m: String(stops.length),
+    n: ordinalNumber(stops.findIndex((stop) => stop.key === "confirm") + 1),
+    m: ordinalNumber(stops.length),
     label: t("ob.rail.confirm"),
   });
 

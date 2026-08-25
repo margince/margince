@@ -5,7 +5,11 @@ import { useRecordZone } from "../app/recordzone";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { type Project360, stateOf } from "./projectsections";
 
@@ -55,7 +59,7 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
       />
       <StatCard
         label={t("project.rollups.openCommitments")}
-        value={String(rollups.open_commitments)}
+        value={formatNumber(rollups.open_commitments, locale)}
         numeric
       />
       <StatCard
@@ -68,7 +72,7 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
       />
       <StatCard
         label={t("project.rollups.activityCount")}
-        value={String(rollups.activity_count)}
+        value={formatNumber(rollups.activity_count, locale)}
         numeric
       />
     </StatStrip>

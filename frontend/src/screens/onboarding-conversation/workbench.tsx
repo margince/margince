@@ -9,6 +9,7 @@ import {
   MarginceWorkbench,
   type WorkbenchStep,
 } from "../../design-system/margince-workbench";
+import { ordinalNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem, useMe } from "../common";
 import {
@@ -146,11 +147,9 @@ export function ConversationWorkbench({
     ? t("ob.conv.scene.detour")
     : current < 0
       ? undefined
-      : // A position in the rail, not a magnitude: never grouped, in any
-        // locale.
-        t("ob.conv.scene.step", {
-          n: String(current + 1),
-          m: String(steps.length),
+      : t("ob.conv.scene.step", {
+          n: ordinalNumber(current + 1),
+          m: ordinalNumber(steps.length),
           label: steps[current].label,
         });
   return (

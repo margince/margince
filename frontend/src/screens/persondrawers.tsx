@@ -22,7 +22,7 @@ import {
 } from "../design-system/projectpicker";
 import { RichText } from "../design-system/richtext";
 import { Select } from "../design-system/select";
-import { formatNumber } from "../format/format";
+import { formatNumber, ordinalNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -975,7 +975,9 @@ export function PersonResearchDrawer({
             </p>
             {claims.map((claim) => (
               <article className="pe-claim" key={claim.ordinal}>
-                <span className="pe-claim-ordinal">{claim.ordinal}</span>
+                <span className="pe-claim-ordinal">
+                  {ordinalNumber(claim.ordinal)}
+                </span>
                 <div>
                   <p className="pe-claim-body">{claim.body}</p>
                   <div className="pe-chiprow">

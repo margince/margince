@@ -15,7 +15,7 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ExportScenarioDialog } from "./aiexport";
@@ -76,7 +76,9 @@ export function CallDetailPanel({
           <ol>
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
-                <span className="t-mono">#{attempt.attempt}</span>{" "}
+                <span className="t-mono">
+                  #{ordinalNumber(attempt.attempt)}
+                </span>{" "}
                 {attempt.attempt_reason || "—"} ·{" "}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),
@@ -354,11 +356,8 @@ function FragmentRow({
             )}
             {call.calls_attempted > 1 && (
               <Badge>
-                {/* An attempt counter, not a quantity: it names which try this
-                    call is on, and a grouped "1.234" would read as a figure
-                    rather than a position on the retry ladder. */}
                 {t("aicalls.badge.retries", {
-                  count: String(call.calls_attempted),
+                  count: formatNumber(call.calls_attempted, locale),
                 })}
               </Badge>
             )}

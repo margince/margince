@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { formatNumber } from "../format/format";
+import { useLocale } from "../i18n";
 import { MoneyInput } from "./moneyinput";
 
 const meta: Meta = {
@@ -11,6 +13,7 @@ export default meta;
 type Story = StoryObj;
 
 function MoneyDemo() {
+  const { locale } = useLocale();
   const [minor, setMinor] = useState(150_000);
   return (
     <div style={{ maxWidth: 200 }}>
@@ -20,7 +23,9 @@ function MoneyDemo() {
         onChangeMinor={setMinor}
         aria-label="Unit price"
       />
-      <p style={{ marginTop: 8 }}>minor units: {minor}</p>
+      <p style={{ marginTop: "var(--space-2)" }}>
+        minor units: {formatNumber(minor, locale)}
+      </p>
     </div>
   );
 }
