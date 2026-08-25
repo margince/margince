@@ -133,11 +133,14 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // account, exactly as the contact's are above.
   companies: 2,
   partners: WHOLE_ADDRESS,
-  leads: WHOLE_ADDRESS,
+  // #/leads/<lead>/<tab> — the lead's two tabs are a view of one lead.
+  leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
   today: WHOLE_ADDRESS,
-  reports: WHOLE_ADDRESS,
+  // #/reports/<report> — the picker chooses a view of one screen, so switching
+  // reports re-renders the panel instead of throwing the screen away.
+  reports: 1,
   ai: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.

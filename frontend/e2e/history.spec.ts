@@ -156,3 +156,23 @@ test("a linked tab opens on that tab, not on the overview", async ({
     "true",
   );
 });
+
+test("a report is an address, and Back steps between reports", async ({
+  page,
+}) => {
+  await page.goto("/#/reports");
+  await page.getByRole("button", { name: "Forecast" }).click();
+  await expect(page).toHaveURL(/#\/reports\/forecast$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/reports$/);
+});
+
+test("the decided inbox is an address", async ({ page }) => {
+  await page.goto("/#/inbox/decided");
+  // Addressed cold: the control reflects the address rather than the address
+  // being a note about what was clicked.
+  await expect(
+    page.getByRole("button", { name: "Entschieden", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+});

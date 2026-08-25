@@ -11,6 +11,7 @@
 // recount over a moving table.
 
 import { useState } from "react";
+import { navigate } from "../app/router";
 import {
   Badge,
   Card,
@@ -97,7 +98,11 @@ function tabFromRoute(id: string | undefined): ObjectTab {
 
 export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
   const t = useT();
-  const [tab, setTab] = useState<ObjectTab>(tabFromRoute(id));
+  // The ADDRESS is which object is being filtered. It was read once, on mount,
+  // and never written back — so pressing a tab moved the screen and left the
+  // URL naming the object the reader had left, which a reload or a Back press
+  // then restored over them.
+  const tab = tabFromRoute(id);
   // A fresh tree per object, because a clause naming a person's field means
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
@@ -108,7 +113,10 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
   const preview = useFilterPreview(resource, tree);
 
   const switchTab = (next: ObjectTab) => {
-    setTab(next);
+    // A PUSH: the object being filtered is what the reader came here for, so
+    // Back returns to the last one they looked at. The tree resets because the
+    // address changed, not beside it — `id` is what this screen renders from.
+    navigate({ screen: "filters", id: next });
     setTree(newGroup("and"));
   };
 
