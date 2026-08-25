@@ -5,7 +5,7 @@
 
 package backendarch
 
-// people.writeProfileField is the one writer of person_profile_field, and the
+// people.writePersonProfileField is the one writer of person_profile_field, and the
 // one place the precedence rule lives: a machine fill claims an unanswered
 // field, a human's acceptance replaces what is there.
 //
@@ -32,18 +32,18 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
 )
 
-// profileFieldInsert matches a write of the table, in either spelling the
+// personProfileFieldInsert matches a write of the table, in either spelling the
 // tree uses: the column list on the same line as the table, or on the next.
 // Whitespace-tolerant rather than line-based, because two of the five copies
 // wrapped after the table name and a line-keyed census would have seen three.
-var profileFieldInsert = regexp.MustCompile(`INSERT\s+INTO\s+person_profile_field`)
+var personProfileFieldInsert = regexp.MustCompile(`INSERT\s+INTO\s+person_profile_field`)
 
-// profileFieldOwner is where the one writer lives. Its own statement is the
-// definition rather than a copy of it.
-const profileFieldOwner = "internal/modules/people/profilefieldwrite.go"
+// personProfileFieldOwner is where the writer this census requires lives. Its
+// own statement is the definition rather than a copy of it.
+const personProfileFieldOwner = "internal/modules/people/personprofilefieldwrite.go"
 
 // bulkRelinkIsNotAFill ratifies the merge carry-over, which is the one write of
-// this table that writeProfileField cannot serve.
+// this table that writePersonProfileField cannot serve.
 //
 // Keyed by FILE, so a second statement appearing in mergerelink.go is still a
 // finding: the ratification covers the write that exists, not the topic.
@@ -60,11 +60,11 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 	var findings []string
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
-		if filepath.ToSlash(path) == profileFieldOwner {
+		if filepath.ToSlash(path) == personProfileFieldOwner {
 			continue
 		}
 		// PRODUCT writes, and the boundary is architectural rather than a
-		// shortcut: writeProfileField is unexported, so a fixture in another
+		// shortcut: writePersonProfileField is unexported, so a fixture in another
 		// package could not call it however much it wanted to, and a test that
 		// seeds a prior state is not answering the question this census asks —
 		// which production path writes the row, and under whose authority. The
@@ -78,15 +78,15 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		for _, decl := range file.Decls {
-			for _, sql := range profileFieldStatements(decl) {
+			for _, sql := range personProfileFieldStatements(decl) {
 				judged++
-				if !profileFieldInsert.MatchString(sql) {
+				if !personProfileFieldInsert.MatchString(sql) {
 					continue
 				}
 				if bulkRelinkIsNotAFill.Waived(t, filepath.ToSlash(path)) {
 					continue
 				}
-				findings = append(findings, fmt.Sprintf("%s: %s", path, firstProfileFieldLine(sql)))
+				findings = append(findings, fmt.Sprintf("%s: %s", path, firstPersonProfileFieldLine(sql)))
 			}
 		}
 	}
@@ -99,23 +99,23 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 		return
 	}
 	t.Errorf("these statements write person_profile_field by hand:\n  %s\n\n"+
-		"people.writeProfileField is the one writer, and the ON CONFLICT clause is not the "+
+		"people.writePersonProfileField is the one writer, and the ON CONFLICT clause is not the "+
 		"caller's to choose: it follows from WHO is writing — a machine fill claims an "+
 		"unanswered field (claimUnanswered), a human's acceptance replaces what is there "+
 		"(replaceOnAcceptance). A hand-written clause is a second answer to that question.",
 		strings.Join(findings, "\n  "))
 }
 
-// profileFieldStatements returns the SQL statements in a declaration that name
+// personProfileFieldStatements returns the SQL statements in a declaration that name
 // the table at all — the candidate set this census counts against.
-func profileFieldStatements(decl ast.Decl) []string {
+func personProfileFieldStatements(decl ast.Decl) []string {
 	var out []string
 	seen := map[ast.Node]bool{}
 	ast.Inspect(decl, func(n ast.Node) bool {
 		if seen[n] {
 			return false
 		}
-		text, ok := flattenSQL(n, seen, helperScope{names: map[string]bool{"writeProfileField": true}})
+		text, ok := flattenSQL(n, seen, helperScope{names: map[string]bool{"writePersonProfileField": true}})
 		if !ok || !strings.Contains(text, "person_profile_field") {
 			return true
 		}
@@ -125,9 +125,9 @@ func profileFieldStatements(decl ast.Decl) []string {
 	return out
 }
 
-// firstProfileFieldLine points the report at the offending line rather than
+// firstPersonProfileFieldLine points the report at the offending line rather than
 // dumping the statement.
-func firstProfileFieldLine(sql string) string {
+func firstPersonProfileFieldLine(sql string) string {
 	lines := strings.Split(sql, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "person_profile_field") {
@@ -139,7 +139,7 @@ func firstProfileFieldLine(sql string) string {
 
 // The census above passes identically over a clean tree and over a detector
 // that has stopped detecting. These read the detector directly.
-var profileFieldProbes = []struct {
+var personProfileFieldProbes = []struct {
 	name  string
 	fires bool
 	src   string
@@ -161,7 +161,7 @@ var profileFieldProbes = []struct {
 
 func TestTheProfileFieldWriteDetectorSeesWhatItClaimsTo(t *testing.T) {
 	fset := token.NewFileSet()
-	for _, tc := range profileFieldProbes {
+	for _, tc := range personProfileFieldProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			file, err := parser.ParseFile(fset, "probe.go", "package probe\n"+tc.src, 0)
 			if err != nil {
@@ -169,8 +169,8 @@ func TestTheProfileFieldWriteDetectorSeesWhatItClaimsTo(t *testing.T) {
 			}
 			hit := false
 			for _, decl := range file.Decls {
-				for _, sql := range profileFieldStatements(decl) {
-					if profileFieldInsert.MatchString(sql) {
+				for _, sql := range personProfileFieldStatements(decl) {
+					if personProfileFieldInsert.MatchString(sql) {
 						hit = true
 					}
 				}

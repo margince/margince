@@ -359,7 +359,8 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 // the FRAGMENT — the flag AND-ed with an archived test — which is the shape
 // that hid six copies from a census that only knew whole predicates.
 
-// currentPrimarySlotHelper is the one spelling the six sites now call.
+// currentPrimarySlotHelper names the helper this census requires, so the
+// report can point at it.
 const currentPrimarySlotHelper = "CurrentPrimarySlotSQL"
 
 // slotBlockedByTheModuleDAG ratifies the statement that cannot adopt the

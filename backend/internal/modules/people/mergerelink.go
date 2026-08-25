@@ -56,7 +56,7 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// would vanish at a merge nobody expected to lose it — and the row would
 	// then outlive the merged-away record's own archival.
 	//
-	// The one write of this table that is not writeProfileField, because it is
+	// The one write of this table that is not writePersonProfileField, because it is
 	// not a fill: it re-homes rows that already exist, whole and unexamined,
 	// and it moves ALL of a person's fields in one statement rather than
 	// deciding one. The precedence is the same rule stated there — a

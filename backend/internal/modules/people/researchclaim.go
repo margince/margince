@@ -115,7 +115,7 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 			// claim, its quote and the document behind it, and chose it.
 			// updated_at and version are the trigger's
 			// (trg_person_profile_field_updated), so nothing here names them.
-			if _, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+			if _, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 				Field: claim.Field, Value: claim.Value, EvidenceSnippet: claim.Quote,
 				SourceRef: claim.SourceURL, Source: researchSource, CapturedBy: by,
 			}, replaceOnAcceptance); err != nil {

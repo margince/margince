@@ -109,7 +109,7 @@ func fillDiscoveredFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		}
 		// A machine fill: a search result claims a field nobody has answered
 		// and never replaces one.
-		landed, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+		landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 			Field: f.Field, Value: value, EvidenceSnippet: snippet, SourceRef: f.SourceRef,
 			Source: searchFieldSource, CapturedBy: by,
 		}, claimUnanswered)

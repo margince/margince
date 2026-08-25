@@ -221,7 +221,7 @@ func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		}
 		// A machine fill: what a page published claims a field nobody has
 		// answered and never replaces one.
-		landed, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+		landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 			Field: field, Value: value, EvidenceSnippet: in.EvidenceSnippet, SourceRef: sourceRef,
 			Source: siteFieldSource, CapturedBy: by,
 		}, claimUnanswered)

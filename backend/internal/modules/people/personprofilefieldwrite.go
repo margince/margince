@@ -36,14 +36,14 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// profileFieldPrecedence is who is writing, and therefore what happens to a
+// personProfileFieldPrecedence is who is writing, and therefore what happens to a
 // row that is already there.
-type profileFieldPrecedence int
+type personProfileFieldPrecedence int
 
 const (
-	// claimUnanswered is every machine fill: the evidence row is an admission
-	// ticket, and one already issued for this field is the answer.
-	claimUnanswered profileFieldPrecedence = iota
+	// claimUnanswered is what a machine fill writes under: the evidence row is
+	// an admission ticket, and one already issued for this field is the answer.
+	claimUnanswered personProfileFieldPrecedence = iota
 	// replaceOnAcceptance is a human's decision, which outranks whatever a
 	// pass put there.
 	replaceOnAcceptance
@@ -54,7 +54,7 @@ const (
 // The whole row is replaced on acceptance, confidence included. Replacing the
 // value and keeping a confidence some earlier pass measured would leave the row
 // saying a human's answer had been scored by a model that never saw it.
-func (p profileFieldPrecedence) conflictClause() string {
+func (p personProfileFieldPrecedence) conflictClause() string {
 	if p == replaceOnAcceptance {
 		return `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,
@@ -66,7 +66,7 @@ func (p profileFieldPrecedence) conflictClause() string {
 	return "DO NOTHING"
 }
 
-// profileFieldRow is one evidence row: a fact about who this person is, and
+// personProfileFieldRow is one evidence row: a fact about who this person is, and
 // what it was read from.
 //
 // Evidence and SourceRef are both NOT NULL on the table, so a claim that lost
@@ -77,7 +77,7 @@ func (p profileFieldPrecedence) conflictClause() string {
 // Confidence is a pointer because most passes have none: a human's acceptance
 // and a page read are not scored, and storing a 0 for "unscored" would read as
 // "measured, and certainly wrong".
-type profileFieldRow struct {
+type personProfileFieldRow struct {
 	Field           string
 	Value           string
 	EvidenceSnippet string
@@ -87,7 +87,7 @@ type profileFieldRow struct {
 	Confidence      *float64
 }
 
-// writeProfileField writes one evidence row and reports whether it landed —
+// writePersonProfileField writes one evidence row and reports whether it landed —
 // false meaning the field was already answered and this writer defers to it.
 //
 // The subject's liveness rides the INSERT rather than only the probe the entry
@@ -97,7 +97,7 @@ type profileFieldRow struct {
 // straight back — in the window between two statements, not over the hours an
 // entry gate closes. A SELECT source rather than VALUES is what lets the
 // predicate travel with the row.
-func writeProfileField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, row profileFieldRow, precedence profileFieldPrecedence) (bool, error) {
+func writePersonProfileField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, row personProfileFieldRow, precedence personProfileFieldPrecedence) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO person_profile_field
 		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)

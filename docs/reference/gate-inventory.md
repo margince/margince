@@ -75,9 +75,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
+| `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `profilefieldreaders_test.go` | H2 | person\_profile\_field holds what a machine ASSERTED about a person, and ai\_feedback holds what a human then decided about that assertion. |
-| `profilefieldwriter_test.go` | H2 | people.writeProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |

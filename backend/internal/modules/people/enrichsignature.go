@@ -132,8 +132,8 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 	}
 
 	// A machine fill: the signature claims a field nobody has answered and
-	// never replaces one — writeProfileField carries that rule.
-	landed, err := writeProfileField(ctx, tx, personID, profileFieldRow{
+	// never replaces one — writePersonProfileField carries that rule.
+	landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 		Field: f.Name, Value: value, EvidenceSnippet: f.Evidence, SourceRef: sourceRef,
 		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
 	}, claimUnanswered)
