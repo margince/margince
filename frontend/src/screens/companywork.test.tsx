@@ -409,7 +409,11 @@ describe("whether the card holds the lead slot at all", () => {
   // the safe reading: "there is none" understates rather than inventing work.
   it("survives a payload that names no omissions at all", () => {
     const partial = view();
-    delete (partial as Partial<Organization360>).sections_omitted;
+    // Through `Reflect`, because the whole point is that the TYPE still says
+    // the field is there while the payload does not carry it — `delete` on a
+    // required property is a compile error, and asserting the type away to
+    // reach it would be the very claim under test.
+    Reflect.deleteProperty(partial, "sections_omitted");
     expect(() => hasWorkInFlight(partial)).not.toThrow();
     expect(hasWorkInFlight(partial)).toBe(false);
   });

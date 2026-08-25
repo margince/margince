@@ -167,12 +167,16 @@ function scannableSource(file: string, text: string): string {
  */
 function familiesIn(text: string): string[] {
   const found: string[] = [];
-  for (const [, declared, inline] of text.matchAll(
-    /font-family\s*:\s*([^;}]+)|fontFamily\s*:\s*["']([^"']+)["']/g,
+  for (const [, declared, quoted, templated] of text.matchAll(
+    /font-family\s*:\s*([^;}]+)|fontFamily\s*:\s*(?:["']([^"']+)["']|`([^`]+)`)/g,
   )) {
-    for (const family of (declared ?? inline ?? "").split(",")) {
-      const name = family.trim().replace(/^["']|["']$/g, "");
-      if (name !== "" && !name.startsWith("var(")) {
+    for (const family of (declared ?? quoted ?? templated ?? "").split(",")) {
+      const name = family.trim().replace(/^["'`]|["'`]$/g, "");
+      // A family assembled at run time names nothing this scan can judge, so
+      // reporting `${x}` as a font would be a false positive — the same reason
+      // a `var()` reference is skipped, and the same limit: neither spelling is
+      // checkable here, and both are checkable where the value comes from.
+      if (name !== "" && !name.startsWith("var(") && !name.includes("${")) {
         found.push(name);
       }
     }
@@ -219,6 +223,9 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(familiesIn("fontFamily: 'Comic Sans MS'")).toEqual([
       "Comic Sans MS",
     ]);
+    expect(familiesIn("fontFamily: `Comic Sans MS`")).toEqual([
+      "Comic Sans MS",
+    ]);
     // A stack names several, and every one of them is held to the rule.
     expect(familiesIn('font-family: Outfit, "DM Sans", sans-serif;')).toEqual([
       "Outfit",
@@ -226,8 +233,11 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       "sans-serif",
     ]);
     // A token reference is the ALLOWED spelling and names no family, so it
-    // must not be reported as one.
+    // must not be reported as one. Neither does a family assembled at run
+    // time: reporting the literal `${chosenFamily}` would be a finding about
+    // nothing.
     expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
+    expect(familiesIn("fontFamily: `${chosenFamily}`")).toEqual([]);
   });
 
   // B-EP09.16: no inline user-facing copy — every string the user reads comes
