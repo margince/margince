@@ -90,6 +90,15 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 		return
 	}
 
+	// ORDER IS THE CONTRACT. `steps` is declared as "every setup step, in the
+	// order a reader should complete them", and onboarding walks it in the order
+	// it arrives: AI models, then the Google app. That is not cosmetic — a
+	// person who has bound no model cannot be shown a cold start, and the Gmail
+	// step is the one they can skip past without the product being unusable. A
+	// client sorting these itself would be re-deciding a sequence the server
+	// already owns, so the sequence is pinned by
+	// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
+	//
 	// Both blocking, which is this installation's policy and the reason the
 	// field exists rather than being implied: a client that assumed "every step
 	// blocks" would have to be changed the day one of them stops.

@@ -417,3 +417,33 @@ func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.
 		t.Errorf("after the secret was lost the app reads %+v (status %d), want still configured", app, s)
 	}
 }
+
+// The steps arrive in the order onboarding walks them: AI models, then the
+// Google app.
+//
+// The contract calls `steps` "every setup step, in the order a reader should
+// complete them", so the sequence is the SERVER's to decide and a client that
+// sorted them itself would be re-deciding it. Pinned because the order is a
+// product decision rather than an accident of how the slice was typed: a person
+// who has bound no model cannot be shown a cold start at all, while the Gmail
+// step is the one they can leave until later. Swapping the two would walk them
+// into configuring a mailbox for a product that cannot yet think.
+func TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem(t *testing.T) {
+	e := setupGoogleAppHTTP(t)
+	var setup crmcontracts.InstallationSetup
+	if status := e.Call(t, "GET", "/v1/installation/setup", nil, nil, &setup); status != http.StatusOK {
+		t.Fatalf("GET installation/setup → %d, want 200", status)
+	}
+	want := []crmcontracts.InstallationSetupStepStep{
+		crmcontracts.InstallationSetupStepStepAiModels,
+		crmcontracts.InstallationSetupStepStepGoogleApp,
+	}
+	if len(setup.Steps) != len(want) {
+		t.Fatalf("the report carries %d steps, want %d: %+v", len(setup.Steps), len(want), setup.Steps)
+	}
+	for i, step := range want {
+		if setup.Steps[i].Step != step {
+			t.Errorf("step %d is %q, want %q — onboarding walks this slice in order", i, setup.Steps[i].Step, step)
+		}
+	}
+}
