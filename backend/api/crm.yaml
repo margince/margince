@@ -2166,6 +2166,11 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganizationBrief
+      # The company record page no longer renders a written account brief: its one
+      # card is now the account's work in flight, spelled from the records rather
+      # than around them. The operation stays for clients built against it, and
+      # because Ask about this account is served from the same assembly.
+      deprecated: true
       x-agent-access: human-only
       # Session cookie only. A human-only read is not reachable with a
       # passport bearer token, and saying so here keeps the declaration and
@@ -2212,6 +2217,11 @@ paths:
     post:
       tags: [Organizations]
       operationId: regenerateOrganizationBrief
+      # The company record page no longer renders a written account brief: its one
+      # card is now the account's work in flight, spelled from the records rather
+      # than around them. The operation stays for clients built against it, and
+      # because Ask about this account is served from the same assembly.
+      deprecated: true
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Regenerate this account's brief, ignoring the cached one.
@@ -19057,6 +19067,47 @@ components:
         deal_id: { type: string, format: uuid }
         role: { type: string, description: 'champion | economic_buyer | blocker | influencer | user; empty when the edge records no role.' }
 
+    Organization360WorkAttention:
+      type: object
+      description: |
+        The ONE fact that explains why a piece of work in flight needs a person, picked
+        by the server so every reader of the account gets the same answer.
+
+        Deterministic, not written. The card that renders this reads a template over the
+        typed fields below — it never asks a model to phrase them. A model could say them
+        more warmly; it could not make them checkable, and a wrong figure on this card is
+        exactly the defect it exists to replace.
+
+        At most one per deal or project, in this order: an overdue task beats an overdue
+        commitment they made to us, which beats the newest such commitment.
+      required: [kind, title]
+      properties:
+        kind:
+          type: string
+          enum: [overdue_task, commitment_theirs]
+          x-enum-varnames: [WorkAttentionOverdueTask, WorkAttentionCommitmentTheirs]
+          description: |
+            `overdue_task` — an open task on this work is past its due date.
+            `commitment_theirs` — they said in a captured conversation that they would do
+            something, and it is still open.
+        title:
+          type: string
+          description: The task's subject, or the claim's body verbatim. Never a paraphrase.
+        who:
+          type: [string, 'null']
+          description: >-
+            The assignee's or the debtor's display name. Null when the name is not this
+            caller's to read, or the row names nobody — the card then writes the sentence
+            without a name rather than showing an id.
+        due_at:
+          type: [string, 'null']
+          format: date-time
+          description: When it was due. Null on a commitment that named no date.
+        source_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The captured conversation the claim was read from — the receipt a reader opens to check it.
+
     Organization360Deal:
       type: object
       required: [deal_id, name, status, stalled]
@@ -19075,6 +19126,7 @@ components:
         amount: { $ref: '#/components/schemas/Money' }
         expected_close_date: { type: [string, 'null'], format: date }
         stalled: { type: boolean, description: No linked activity inside the 60-day stall window. }
+        attention: { $ref: '#/components/schemas/Organization360WorkAttention' }
 
     Organization360ProjectPhase:
       type: string
@@ -19099,6 +19151,20 @@ components:
         owner_name:
           type: [string, 'null']
           description: The owner's display name; null when the project has no owner or the owner is no longer an active member.
+        quiet:
+          type: boolean
+          description: >-
+            Nothing has been filed against this project for the module's quiet window, counted
+            from its last activity or, when it has none, from the day it was opened. Computed
+            server-side because the payload carries no created_at and the window is one number
+            the product spells in one place.
+        attention:
+          allOf: [{ $ref: '#/components/schemas/Organization360WorkAttention' }]
+          description: >-
+            Present on the company record page, which decorates the row from the account's own
+            tasks and captured commitments. The person page carries the same project row without
+            it — the question "why does this need a person" is asked of an account, not of a
+            contact.
 
     Organization360Deals:
       type: object
@@ -19340,6 +19406,19 @@ components:
             initiative, then closed), under the caller's project row scope. Absent when the
             caller has no project grant, named in `sections_omitted` as `projects`.
           items: { $ref: '#/components/schemas/Organization360Project' }
+        projects_page:
+          allOf: [{ $ref: '#/components/schemas/PageInfo' }]
+          description: >-
+            Whether `projects` was cut short. The list is capped, and a card that counted the
+            rows and said "3 in flight" would state a number the account does not have. Absent
+            exactly when `projects` is.
+        attention_withheld:
+          type: boolean
+          description: >-
+            The reader may not read this account's activities, so no `attention` was derived on
+            any deal or project row. The rows themselves are still listed and still true — this
+            says the reasons behind them are missing, which a card must show rather than let an
+            unexplained row read as a settled one.
         strength: { $ref: '#/components/schemas/OrganizationStrength' }
         activities: { $ref: '#/components/schemas/ActivityListResponse' }
         tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }

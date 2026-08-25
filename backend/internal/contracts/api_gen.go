@@ -6151,6 +6151,24 @@ func (e Organization360SuggestionSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for Organization360WorkAttentionKind.
+const (
+	WorkAttentionCommitmentTheirs Organization360WorkAttentionKind = "commitment_theirs"
+	WorkAttentionOverdueTask      Organization360WorkAttentionKind = "overdue_task"
+)
+
+// Valid indicates whether the value is a known member of the Organization360WorkAttentionKind enum.
+func (e Organization360WorkAttentionKind) Valid() bool {
+	switch e {
+	case WorkAttentionCommitmentTheirs:
+		return true
+	case WorkAttentionOverdueTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OrganizationBriefEvidenceEntityType.
 const (
 	OrganizationBriefEvidenceEntityTypeActivity     OrganizationBriefEvidenceEntityType = "activity"
@@ -18348,6 +18366,9 @@ type Organization360 struct {
 	// AsOf The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
 	AsOf time.Time `json:"as_of"`
 
+	// AttentionWithheld The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one.
+	AttentionWithheld *bool `json:"attention_withheld,omitempty"`
+
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Organization360Deals `json:"deals,omitempty"`
 
@@ -18406,6 +18427,9 @@ type Organization360 struct {
 
 	// Projects The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`.
 	Projects *[]Organization360Project `json:"projects,omitempty"`
+
+	// ProjectsPage Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
+	ProjectsPage *PageInfo `json:"projects_page,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
@@ -18531,12 +18555,24 @@ type Organization360ContactRoutes struct {
 // Organization360Deal defines model for Organization360Deal.
 type Organization360Deal struct {
 	// Amount Money as integer minor-units + ISO-4217 currency. Never a float.
-	Amount            *Money              `json:"amount,omitempty"`
-	DealId            openapi_types.UUID  `json:"deal_id"`
-	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
-	Name              string              `json:"name"`
-	StageId           *openapi_types.UUID `json:"stage_id,omitempty"`
-	StageName         *string             `json:"stage_name,omitempty"`
+	Amount *Money `json:"amount,omitempty"`
+
+	// Attention The ONE fact that explains why a piece of work in flight needs a person, picked
+	// by the server so every reader of the account gets the same answer.
+	//
+	// Deterministic, not written. The card that renders this reads a template over the
+	// typed fields below — it never asks a model to phrase them. A model could say them
+	// more warmly; it could not make them checkable, and a wrong figure on this card is
+	// exactly the defect it exists to replace.
+	//
+	// At most one per deal or project, in this order: an overdue task beats an overdue
+	// commitment they made to us, which beats the newest such commitment.
+	Attention         *Organization360WorkAttention `json:"attention,omitempty"`
+	DealId            openapi_types.UUID            `json:"deal_id"`
+	ExpectedCloseDate *openapi_types.Date           `json:"expected_close_date,omitempty"`
+	Name              string                        `json:"name"`
+	StageId           *openapi_types.UUID           `json:"stage_id,omitempty"`
+	StageName         *string                       `json:"stage_name,omitempty"`
 
 	// Stalled No linked activity inside the 60-day stall window.
 	Stalled bool `json:"stalled"`
@@ -18655,6 +18691,9 @@ type Organization360NextStep struct {
 
 // Organization360Project One body of work on the record page: enough to name it, say where it stands and who holds it. The full row is `GET /projects/{id}`. Shared by the company page and the person page, so a project reads the same on both.
 type Organization360Project struct {
+	// Attention Present on the company record page, which decorates the row from the account's own tasks and captured commitments. The person page carries the same project row without it — the question "why does this need a person" is asked of an account, not of a contact.
+	Attention *Organization360WorkAttention `json:"attention,omitempty"`
+
 	// Key The subject-line handle, when the project has one.
 	Key            *string             `json:"key,omitempty"`
 	LastActivityAt *time.Time          `json:"last_activity_at,omitempty"`
@@ -18665,9 +18704,12 @@ type Organization360Project struct {
 	OwnerName *string `json:"owner_name,omitempty"`
 
 	// Phase Where a project stands on the record page; the same ladder the project's own `phase` walks.
-	Phase         Organization360ProjectPhase `json:"phase"`
-	ProjectId     openapi_types.UUID          `json:"project_id"`
-	TargetEndDate *openapi_types.Date         `json:"target_end_date,omitempty"`
+	Phase     Organization360ProjectPhase `json:"phase"`
+	ProjectId openapi_types.UUID          `json:"project_id"`
+
+	// Quiet Nothing has been filed against this project for the module's quiet window, counted from its last activity or, when it has none, from the day it was opened. Computed server-side because the payload carries no created_at and the window is one number the product spells in one place.
+	Quiet         *bool               `json:"quiet,omitempty"`
+	TargetEndDate *openapi_types.Date `json:"target_end_date,omitempty"`
 }
 
 // Organization360ProjectPhase Where a project stands on the record page; the same ladder the project's own `phase` walks.
@@ -18885,6 +18927,40 @@ type Organization360SuggestionKind string
 
 // Organization360SuggestionSubjectType defines model for Organization360Suggestion.SubjectType.
 type Organization360SuggestionSubjectType string
+
+// Organization360WorkAttention The ONE fact that explains why a piece of work in flight needs a person, picked
+// by the server so every reader of the account gets the same answer.
+//
+// Deterministic, not written. The card that renders this reads a template over the
+// typed fields below — it never asks a model to phrase them. A model could say them
+// more warmly; it could not make them checkable, and a wrong figure on this card is
+// exactly the defect it exists to replace.
+//
+// At most one per deal or project, in this order: an overdue task beats an overdue
+// commitment they made to us, which beats the newest such commitment.
+type Organization360WorkAttention struct {
+	// DueAt When it was due. Null on a commitment that named no date.
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// Kind `overdue_task` — an open task on this work is past its due date.
+	// `commitment_theirs` — they said in a captured conversation that they would do
+	// something, and it is still open.
+	Kind Organization360WorkAttentionKind `json:"kind"`
+
+	// SourceActivityId The captured conversation the claim was read from — the receipt a reader opens to check it.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+
+	// Title The task's subject, or the claim's body verbatim. Never a paraphrase.
+	Title string `json:"title"`
+
+	// Who The assignee's or the debtor's display name. Null when the name is not this caller's to read, or the row names nobody — the card then writes the sentence without a name rather than showing an id.
+	Who *string `json:"who,omitempty"`
+}
+
+// Organization360WorkAttentionKind `overdue_task` — an open task on this work is past its due date.
+// `commitment_theirs` — they said in a captured conversation that they would do
+// something, and it is still open.
+type Organization360WorkAttentionKind string
 
 // OrganizationAnswer An answer to one prepared question, written from what the READER can see. Same
 // shape as the brief: every sentence carries the records it was written from, so
