@@ -116,12 +116,18 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 		personID, keep); err != nil {
 		return fmt.Errorf("archive person emails: %w", err)
 	}
-	// Only the addresses this person does not already hold are inserted: a held
-	// address would collide with its own live row on the unique index.
-	if err := insertPersonEmails(ctx, tx, wsID, personID, source, by, fresh); err != nil {
-		return err
-	}
-	// A held address whose placement changed is corrected in place.
+	// Retained rows are re-placed BEFORE the new addresses land, and that order is
+	// the whole correctness of this function.
+	//
+	// uq_person_email_primary allows one primary per (person_id, email_type). The
+	// ordinary correction — a person's work address changed, and the file carries
+	// the new one while this person's other stored addresses are carried through —
+	// produces two work rows where the stored one is still primary and the
+	// incoming one wants to be. Inserting first makes both live primaries of one
+	// type for the length of a statement, which the index refuses, and the whole
+	// run fails on the most common row a corrected export contains.
+	//
+	// Demoting first empties the slot the insert is about to claim.
 	for _, e := range emails {
 		if !held[strings.ToLower(e.Email)] {
 			continue
@@ -135,6 +141,11 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 			}
 			return fmt.Errorf("update person email placement: %w", err)
 		}
+	}
+	// Only the addresses this person does not already hold are inserted: a held
+	// address would collide with its own live row on the unique index.
+	if err := insertPersonEmails(ctx, tx, wsID, personID, source, by, fresh); err != nil {
+		return err
 	}
 	return nil
 }

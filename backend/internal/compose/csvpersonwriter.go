@@ -50,13 +50,55 @@ func (w *csvWriters) createPerson(ctx context.Context, row migration.Row) (migra
 	})
 	var dup *people.DuplicateEmailError
 	if errors.As(err, &dup) {
-		return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
+		// The same sentence the preview used, so an approval decided on
+		// "skipped, the address is held" is not answered by different words.
+		return migration.EnsureResult{Skipped: true, SkipReason: personEmailClaimedReason}, nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	return migration.EnsureResult{Created: true}, nil
 }
+
+// personEmailIsClaimed answers whether the estate already holds this row's
+// address, WITHOUT regard to who holds it.
+//
+// It is deliberately not visibility-filtered, and that is the opposite of the
+// rule the collision check below follows. The reason is that the two answer
+// different questions. A duplicate company NAME is a judgement — the commit
+// creates a twin and files a review pair — so telling a caller about an
+// incumbent they cannot see would disclose one. A duplicate email is not a
+// judgement: uq_person_email_dedupe is estate-wide, so the commit REFUSES the
+// row whoever holds the address, and a preview that promised a create would
+// simply be wrong.
+//
+// So the preview reports the skip that will happen. What it must not do is say
+// why, and it does not: the reason names the row's own address, which the caller
+// supplied, and never the incumbent or their existence beyond the fact that this
+// address is spoken for.
+func (w *csvWriters) personEmailAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
+	if w.object != migration.ObjectPerson {
+		return false, nil
+	}
+	email := strings.TrimSpace(textFields(row.Fields)[fieldEmail])
+	if email == "" {
+		return false, nil
+	}
+	var claimed bool
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM person_email WHERE email = lower($1) AND archived_at IS NULL)`,
+			email).Scan(&claimed)
+	}); err != nil {
+		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
+	}
+	return claimed, nil
+}
+
+// personEmailClaimedReason is what the report says for such a row. It names the
+// address the file supplied and nothing else — not the incumbent, not their
+// owner, not whether the caller could have seen them.
+const personEmailClaimedReason = "this email address is already held in the CRM, so the row cannot create a second person under it"
 
 // personCollides answers whether this row names someone the caller can already
 // see, running the same ladder the create path runs.

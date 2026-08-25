@@ -99,8 +99,14 @@ const personEmailTypeWork = "work"
 // It is addressMergedOnto's argument applied to child rows: replacePersonEmails
 // makes the live set mirror what it is given, which is right for a caller that
 // sends the whole set and wrong for a spreadsheet carrying one Email column. The
-// file's address becomes the primary; every stored address it did not name is
-// carried through, demoted from primary so exactly one row claims that slot.
+// file's address becomes the primary WORK address; every stored address it did
+// not name is carried through.
+//
+// Only same-type rows are demoted. uq_person_email_primary allows one primary
+// per (person_id, email_type), not one per person — so clearing the flag on
+// every retained row would strip a person's primary PERSONAL address because
+// the file named a work one, which is data the import was never given and had
+// no business changing.
 //
 // The bool reports whether the file carried an email at all. False means leave
 // the person's addresses alone rather than send an empty set, which
@@ -133,7 +139,11 @@ func emailsMergedOnto(current []byte, mapped []people.PersonEmailInput) ([]peopl
 		}
 		merged = append(merged, people.PersonEmailInput{
 			Email: held.Email, EmailType: kind,
-			IsPrimary: false, Position: len(merged) + 1,
+			// Demoted only if it competes with the incoming address for the
+			// same type's primary slot. A primary personal address keeps its
+			// flag when the file named a work one.
+			IsPrimary:              held.IsPrimary && kind != mapped[0].EmailType,
+			Position:               len(merged) + 1,
 			VouchedNotCorresponded: true,
 		})
 	}
@@ -160,17 +170,34 @@ func storedPrimaryEmail(current map[string]json.RawMessage) json.RawMessage {
 	}
 	var rows []struct {
 		Email     string `json:"email"`
+		EmailType string `json:"email_type"`
 		IsPrimary bool   `json:"is_primary"`
 	}
 	if err := json.Unmarshal(raw, &rows); err != nil || len(rows) == 0 {
 		return nil
 	}
-	chosen := rows[0].Email
+	// The primary WORK address, because that is what personEmailsFrom writes and
+	// so the only row the file's column can be compared against. A person may
+	// hold a primary personal address at the same time — the slot is per type —
+	// and matching on is_primary alone would let row order decide which one the
+	// comparison sees, reporting an update whenever it picked the other.
+	var chosen string
 	for _, row := range rows {
-		if row.IsPrimary {
+		if row.IsPrimary && row.EmailType == personEmailTypeWork {
 			chosen = row.Email
 			break
 		}
+	}
+	if chosen == "" {
+		for _, row := range rows {
+			if row.EmailType == personEmailTypeWork {
+				chosen = row.Email
+				break
+			}
+		}
+	}
+	if chosen == "" {
+		chosen = rows[0].Email
 	}
 	encoded, err := json.Marshal(chosen)
 	if err != nil {

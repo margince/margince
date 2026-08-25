@@ -82,28 +82,47 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 		return predictCreate, "", err
 	}
 	if !found {
-		// Not a row a previous run of THIS importer landed — but the CRM may
-		// hold the company anyway, captured from mail, created by hand or
-		// seeded. The identity map cannot see any of those, so the create the
-		// engine is about to report gets the same dedupe read the create path
-		// itself performs.
-		// Always disclosure-filtered: a PREVIEW reports what it found, whichever
-		// mode asked. Passing the mode through here reported invisible companies
-		// as duplicates on a `skip` run — an existence oracle over a colleague's
-		// owner-private capture, one CSV row at a time.
-		collides, err := w.collidesWithExisting(ctx, row)
-		if err != nil {
-			return predictCreate, "", err
-		}
-		if collides {
-			if w.onDuplicate == string(crmcontracts.Skip) {
-				return predictCollidesSkipped, "", nil
-			}
-			return predictCollides, "", nil
-		}
-		return predictCreate, "", nil
+		return w.predictCreatePath(ctx, row)
 	}
 	return w.reconcilePrediction(ctx, id, row)
+}
+
+// predictCreatePath is what the commit will do with a row no previous run of
+// this importer landed.
+//
+// Two questions, in this order and the order matters. First, whether a person's
+// address is already spoken for: uq_person_email_dedupe is estate-wide, so the
+// store refuses that row whoever holds the address, and a preview promising a
+// create would simply be wrong. It runs BEFORE the collision check and is not a
+// disclosure decision — the outcome is identical for an incumbent the caller can
+// see and one they cannot, which is what stops the commit's answer being an
+// existence oracle.
+//
+// Second, whether the estate holds a record this row would duplicate. The CRM
+// may hold it from mail, by hand or from a seed, none of which the identity map
+// can see, so the create gets the same dedupe read the create path performs.
+// That one IS disclosure-filtered, whichever mode asked: passing the mode
+// through reported invisible companies as duplicates on a `skip` run, one CSV
+// row at a time.
+func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
+	claimed, err := w.personEmailAlreadyHeld(ctx, row)
+	if err != nil {
+		return predictCreate, "", err
+	}
+	if claimed {
+		return predictUnwritable, personEmailClaimedReason, nil
+	}
+	collides, err := w.collidesWithExisting(ctx, row)
+	if err != nil {
+		return predictCreate, "", err
+	}
+	if !collides {
+		return predictCreate, "", nil
+	}
+	if w.onDuplicate == string(crmcontracts.Skip) {
+		return predictCollidesSkipped, "", nil
+	}
+	return predictCollides, "", nil
 }
 
 // predictReconcile is what reconcile would do to this record, without writing.

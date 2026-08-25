@@ -926,3 +926,63 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
 	}
 }
+
+// A row whose address a previous run of this importer already landed: preview
+// and commit must give the SAME answer, and here that answer is an update.
+//
+// The email is the source key, so the identity map recognises the row and the
+// person is corrected rather than duplicated — which is the whole point of
+// keying a person file on its addresses. What must never happen is the preview
+// promising one disposition and the commit producing another.
+func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
+	e := setupImportApp(t)
+
+	first, status := uploadCSV(t, e, "person", prospectCSV)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+	run, runStatus := createRunWithMapping(t, e, "person", first.SourceRef, mapping)
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var approved importRunDTO
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+
+	// A second file naming the SAME address under a different name. The source
+	// key is the email, so the identity map recognises the row and this is an
+	// update — which is the right answer, and the one the commit must also give.
+	const clash = "Email,Full Name,Title\n" +
+		"ada@lovelace.example,Ada Byron,Countess\n" +
+		"joan@clarke.example,Joan Clarke,Cryptanalyst\n"
+	second, secondStatus := uploadCSV(t, e, "person", clash)
+	if secondStatus != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", secondStatus)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "person", second.SourceRef, mapping)
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("create re-run → %d, want 202", rerunStatus)
+	}
+
+	var report importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &report); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Updated != 1 {
+		t.Fatalf("preview = %+v, want 1 create and 1 update for the address already held", report.Disposition)
+	}
+
+	var reapproved importRunDTO
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, &reapproved); s != http.StatusAccepted {
+		t.Fatalf("approve re-run → %d, want 202", s)
+	}
+	var after importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &after); s != http.StatusOK {
+		t.Fatalf("report after commit → %d, want 200", s)
+	}
+	if after.Disposition.Created != 1 || after.Disposition.Updated != 1 {
+		t.Fatalf("commit = %+v, want the same 1 create and 1 update the preview promised", after.Disposition)
+	}
+}

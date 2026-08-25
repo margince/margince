@@ -209,7 +209,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// happened would inflate both the disposition table and the audit log.
 		return migration.EnsureResult{Unchanged: true}, nil
 	}
-	if err := w.apply(ctx, id, changed, current); err != nil {
+	if err := w.apply(ctx, id, changed, current, w.provenanceOf(row.ExternalID)); err != nil {
 		// A corrected file moving an address onto a person who is not its owner
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
@@ -273,7 +273,7 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization | crmcontracts
 // archive every other address a human added by hand. The same rule applies: a
 // file whose columns are whatever the customer exported may not delete what it
 // never mentioned.
-func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte) error {
+func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte, source string) error {
 	switch w.object {
 	case migration.ObjectLead:
 		_, err := w.people.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
@@ -291,6 +291,9 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 		return err
 	case migration.ObjectPerson:
 		in := personUpdateFrom(changed)
+		// Emails added by an update carry the same provenance the create path
+		// stamps; without it person_email.source lands empty.
+		in.Source = source
 		merged, given, err := addressMergedOnto(current, in.Address)
 		if err != nil {
 			return err
