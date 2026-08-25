@@ -5305,6 +5305,106 @@ export interface paths {
         patch: operations["updateInstallationSettings"];
         trace?: never;
     };
+    "/installation/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What this installation still has to be configured with before it can be used.
+         * @description The onboarding gate's one question, answered in one place. A fresh installation cannot
+         *     read a company website until it can call a model, and cannot capture mail until it has a
+         *     Google app — so onboarding asks here rather than composing the answer out of several
+         *     surfaces and drifting from whatever the server actually requires.
+         *
+         *     `blocking` is the SERVER's policy, not the screen's. A step that is unconfigured and
+         *     blocking is one the installation may not proceed past; a step may be unconfigured and
+         *     non-blocking, which is how a posture that does not need it (a deployment serving no mail,
+         *     say) is expressed without the client having to know that rule. `complete` is exactly
+         *     "no blocking step is unconfigured", so a client never recomputes it.
+         *
+         *     Human session only. An agent never reads or completes an installation's setup.
+         */
+        get: operations["getInstallationSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/google-app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether this installation has a Google OAuth app, and which one.
+         * @description One Google app per installation, supplied by whoever operates it — every mailbox a rep
+         *     connects rides it, and Gmail capture cannot run without it.
+         *
+         *     Readable by any seat that may read capture settings, which is every seeded role: a rep
+         *     about to connect their mailbox needs to know whether the installation has an app at all.
+         *     WRITING one is admin/ops, on the same object's update verb.
+         *
+         *     The client SECRET is never returned, by any caller, at any time: it is sealed in the key
+         *     vault and this answers only whether one is held. The client ID **is** returned, because
+         *     it is not a secret — it travels in every authorization redirect a browser makes — and an
+         *     operator needs to see which app their installation is using to check it against the
+         *     Google console.
+         *
+         *     Human session only. An agent never reads the installation's OAuth app.
+         */
+        get: operations["getGoogleApp"];
+        /**
+         * Store the installation's Google OAuth app (admin/ops).
+         * @description Seals the client secret in the key vault and records the app. Sending a pair when one is
+         *     already stored ROTATES it: the new secret is sealed before the reference moves, and the
+         *     superseded one destroyed only after the move commits, so no window exists in which the
+         *     recorded reference names nothing.
+         *
+         *     204 and no body, deliberately: the only thing a caller could want back is the secret they
+         *     just sent, and echoing it would put it in a response body that proxies log and browsers
+         *     cache.
+         *
+         *     422 for a half-supplied pair, and for a client id that is not one — Google's ids end in
+         *     `.apps.googleusercontent.com`, and a value that does not is almost always the project
+         *     number or an API key copied from the same screen. Refusing it here names the mistake,
+         *     where accepting it would surface much later as an opaque `invalid_client` from Google on
+         *     somebody's first connect attempt.
+         *
+         *     Takes effect immediately: the connect transport resolves the stored app per request
+         *     rather than at boot, so a rotation reaches the next authorization without a restart.
+         *     Background polling of already-connected mailboxes is the exception — the worker composes
+         *     its registry at boot and picks the app up when it next restarts.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setGoogleApp"];
+        post?: never;
+        /**
+         * Remove the installation's Google OAuth app (admin/ops).
+         * @description Drops the app and destroys the sealed secret. An installation that holds none succeeds:
+         *     the caller asked for a state and that state already holds, which is why this is 204
+         *     rather than 404 — and why it is safe to retry.
+         *
+         *     Gmail stops being connectable immediately. Mailboxes already connected keep their own
+         *     stored tokens, which this does not touch — removing the app is not disconnecting anybody,
+         *     though their next token refresh will fail once the worker restarts without it.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteGoogleApp"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/license": {
         parameters: {
             query?: never;
@@ -10513,6 +10613,35 @@ export interface components {
              *     excluded (cold start reads it). Default is ON (the testing posture).
              */
             auto_enrich: boolean;
+        };
+        InstallationSetup: {
+            /** @description True when no BLOCKING step is unconfigured. Computed here so a client never has to recompute the installation's own policy from the step list. */
+            complete: boolean;
+            /** @description Every setup step, in the order a reader should complete them. */
+            steps: components["schemas"]["InstallationSetupStep"][];
+        };
+        InstallationSetupStep: {
+            /**
+             * @description Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+             * @enum {string}
+             */
+            step: "ai_models" | "google_app";
+            /** @description Whether this step is done. */
+            configured: boolean;
+            /** @description Whether leaving it unconfigured stops the installation being used. The server's policy, not the screen's — a posture that does not need a step reports it non-blocking rather than expecting the client to know the rule. */
+            blocking: boolean;
+        };
+        GoogleApp: {
+            /** @description Whether both the client id and a sealed client secret are held. */
+            configured: boolean;
+            /** @description Google's public identifier for the app, or empty when none is stored. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
+            client_id: string;
+        };
+        GoogleAppInput: {
+            /** @description Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen. */
+            client_id: string;
+            /** @description The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
+            client_secret: string;
         };
         AiProviderKeyList: {
             providers: components["schemas"]["AiProviderKeyStatus"][];
@@ -31144,6 +31273,122 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getInstallationSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every setup step, in the order a reader should complete them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationSetup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getGoogleApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The app, without its secret. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleApp"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no sealed secret to report. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setGoogleApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleAppInput"];
+            };
+        };
+        responses: {
+            /** @description Sealed. The secret is not echoed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+            /** @description This installation has no key vault, so the client secret cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteGoogleApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or there was nothing to remove. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This installation has no key vault, so there is no sealed secret to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getLicenseEntitlement: {

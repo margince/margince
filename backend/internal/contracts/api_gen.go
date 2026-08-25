@@ -5131,6 +5131,24 @@ func (e InstallationSettingsBaseLanguage) Valid() bool {
 	}
 }
 
+// Defines values for InstallationSetupStepStep.
+const (
+	InstallationSetupStepStepAiModels  InstallationSetupStepStep = "ai_models"
+	InstallationSetupStepStepGoogleApp InstallationSetupStepStep = "google_app"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSetupStepStep enum.
+func (e InstallationSetupStepStep) Valid() bool {
+	switch e {
+	case InstallationSetupStepStepAiModels:
+		return true
+	case InstallationSetupStepStepGoogleApp:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InviteUserRequestRole.
 const (
 	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
@@ -16899,6 +16917,24 @@ type FxRateListResponse struct {
 	Data         []FxRate `json:"data"`
 }
 
+// GoogleApp defines model for GoogleApp.
+type GoogleApp struct {
+	// ClientId Google's public identifier for the app, or empty when none is stored. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
+	ClientId string `json:"client_id"`
+
+	// Configured Whether both the client id and a sealed client secret are held.
+	Configured bool `json:"configured"`
+}
+
+// GoogleAppInput defines model for GoogleAppInput.
+type GoogleAppInput struct {
+	// ClientId Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen.
+	ClientId string `json:"client_id"`
+
+	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
+	ClientSecret *string `json:"client_secret,omitempty"`
+}
+
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
 // `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -17412,6 +17448,30 @@ type InstallationSettings struct {
 // the correspondence, so a German thread still gets a German reply, and a brief cached
 // for one reader keeps that reader's language.
 type InstallationSettingsBaseLanguage string
+
+// InstallationSetup defines model for InstallationSetup.
+type InstallationSetup struct {
+	// Complete True when no BLOCKING step is unconfigured. Computed here so a client never has to recompute the installation's own policy from the step list.
+	Complete bool `json:"complete"`
+
+	// Steps Every setup step, in the order a reader should complete them.
+	Steps []InstallationSetupStep `json:"steps"`
+}
+
+// InstallationSetupStep defines model for InstallationSetupStep.
+type InstallationSetupStep struct {
+	// Blocking Whether leaving it unconfigured stops the installation being used. The server's policy, not the screen's — a posture that does not need a step reports it non-blocking rather than expecting the client to know the rule.
+	Blocking bool `json:"blocking"`
+
+	// Configured Whether this step is done.
+	Configured bool `json:"configured"`
+
+	// Step Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+	Step InstallationSetupStepStep `json:"step"`
+}
+
+// InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+type InstallationSetupStepStep string
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
@@ -28892,6 +28952,9 @@ type CreateImportRunJSONRequestBody = CreateImportRunRequest
 // UploadImportSourceMultipartRequestBody defines body for UploadImportSource for multipart/form-data ContentType.
 type UploadImportSourceMultipartRequestBody UploadImportSourceMultipartBody
 
+// SetGoogleAppJSONRequestBody defines body for SetGoogleApp for application/json ContentType.
+type SetGoogleAppJSONRequestBody = GoogleAppInput
+
 // UpdateInstallationSettingsJSONRequestBody defines body for UpdateInstallationSettings for application/json ContentType.
 type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsRequest
 
@@ -37465,6 +37528,15 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Remove the installation's Google OAuth app (admin/ops).
+	// (DELETE /installation/google-app)
+	DeleteGoogleApp(w http.ResponseWriter, r *http.Request)
+	// Whether this installation has a Google OAuth app, and which one.
+	// (GET /installation/google-app)
+	GetGoogleApp(w http.ResponseWriter, r *http.Request)
+	// Store the installation's Google OAuth app (admin/ops).
+	// (PUT /installation/google-app)
+	SetGoogleApp(w http.ResponseWriter, r *http.Request)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
@@ -37474,6 +37546,9 @@ type ServerInterface interface {
 	// Update the installation's settings (admin/ops).
 	// (PATCH /installation/settings)
 	UpdateInstallationSettings(w http.ResponseWriter, r *http.Request)
+	// What this installation still has to be configured with before it can be used.
+	// (GET /installation/setup)
+	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -39475,6 +39550,24 @@ func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Remove the installation's Google OAuth app (admin/ops).
+// (DELETE /installation/google-app)
+func (_ Unimplemented) DeleteGoogleApp(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether this installation has a Google OAuth app, and which one.
+// (GET /installation/google-app)
+func (_ Unimplemented) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store the installation's Google OAuth app (admin/ops).
+// (PUT /installation/google-app)
+func (_ Unimplemented) SetGoogleApp(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The installation's entitlement and seat usage (admin/ops).
 // (GET /installation/license)
 func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
@@ -39490,6 +39583,12 @@ func (_ Unimplemented) GetInstallationSettings(w http.ResponseWriter, r *http.Re
 // Update the installation's settings (admin/ops).
 // (PATCH /installation/settings)
 func (_ Unimplemented) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this installation still has to be configured with before it can be used.
+// (GET /installation/setup)
+func (_ Unimplemented) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49357,6 +49456,66 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteGoogleApp operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGoogleApp(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGoogleApp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGoogleApp operation middleware
+func (siw *ServerInterfaceWrapper) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGoogleApp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetGoogleApp operation middleware
+func (siw *ServerInterfaceWrapper) SetGoogleApp(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetGoogleApp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetLicenseEntitlement operation middleware
 func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
 
@@ -49410,6 +49569,26 @@ func (siw *ServerInterfaceWrapper) UpdateInstallationSettings(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateInstallationSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInstallationSetup operation middleware
+func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInstallationSetup(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -63278,6 +63457,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/google-app", wrapper.DeleteGoogleApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/google-app", wrapper.GetGoogleApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/installation/google-app", wrapper.SetGoogleApp)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
 	})
 	r.Group(func(r chi.Router) {
@@ -63285,6 +63473,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/installation/settings", wrapper.UpdateInstallationSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)

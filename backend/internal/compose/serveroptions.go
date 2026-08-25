@@ -18,16 +18,19 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/gradionhq/margince/backend/internal/modules/capture"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/agentquota"
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
+	"github.com/gradionhq/margince/backend/internal/platform/config"
 	"github.com/gradionhq/margince/backend/internal/platform/httpserver"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/platform/mailer"
 	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // Option customizes the wiring for one process role; everything not
@@ -195,8 +198,40 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// seal a key. Wired here rather than in the AI block so a role that
 		// composes no vault serves 501 on those routes instead of recording a
 		// reference to a blob nothing wrote.
-		s.voiceHandlers = s.WithProviderKeys(
-			ai.NewProviderKeyStore(NewSettingsStore(pool), vault, s.log))
+		keys := ai.NewProviderKeyStore(NewSettingsStore(pool), vault, s.log)
+		s.voiceHandlers = s.WithProviderKeys(keys)
+		// The Google app rides the same reasoning: its client SECRET is sealed,
+		// so the surface exists only where there is somewhere to seal it.
+		googleApp := capture.NewGoogleAppStore(NewSettingsStore(pool), vault, s.log)
+		s.googleAppHandlers = googleAppHandlers{store: googleApp}
+		// And the connect transport resolves the STORED app per request, so an
+		// app set through Settings works without restarting the api.
+		//
+		// On a system principal: the caller is usually a rep connecting their own
+		// mailbox, who holds no capture grant, and the installation's own
+		// configuration is not theirs to be entitled to — it is what the server
+		// uses to do what they ARE entitled to. Same reasoning the model binding
+		// is resolved under, and it keeps the object gate rather than declaring
+		// the entry ungated.
+		s.googleAppResolver = func(ctx context.Context) (string, string, bool, error) {
+			ws, ok := principal.WorkspaceID(ctx)
+			if !ok {
+				// No workspace bound is a caller that has not authenticated; the
+				// transport's own gate judges that, and answering "no app" here
+				// would let it read as an unconfigured installation.
+				return "", "", false, nil
+			}
+			return googleApp.Credentials(bootCtx(ctx, ws, googleAppReadActor))
+		}
+		// And the setup surface, which reads all three. It is wired here rather
+		// than beside the AI block because the Google half only exists once the
+		// vault does — a setup answer composed from two of the three stores
+		// would report a step unconfigured for the wrong reason.
+		s.installationSetupHandlers = installationSetupHandlers{
+			routing:      ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS),
+			providerKeys: keys,
+			googleApp:    googleApp,
+		}
 		// Rebuild the capture registry with the vault so the connector-
 		// credential paths (Connect seals, Sync resolves) have their custodian.
 		// The standing IMAP connect rides this same registry and needs no
@@ -204,8 +239,9 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// gmail-carrying registry when the app is configured.
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers = connectorHandlers{
-				registry:  NewCaptureRegistry(pool, vault, s.captureConfig),
-				authority: identity.NewService(pool),
+				registry:          NewCaptureRegistry(pool, vault, s.captureConfig),
+				authority:         identity.NewService(pool),
+				googleCredentials: s.googleAppResolver,
 			}
 		}
 		// The overlay incumbent connection lifecycle needs the same

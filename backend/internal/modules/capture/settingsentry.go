@@ -22,6 +22,15 @@ import (
 // live), only admin/ops writes.
 const captureSettingsObject = "capture_settings"
 
+// SettingsObject is the same object, for compose.
+//
+// Exported because the Google-app transport has to take the gate BEFORE it can
+// see whether the store exists — a wiring check that answers first turns the
+// status code into an oracle for whether this installation has a vault. The
+// unexported spelling stays the one this package uses, so there is one value
+// rather than two that happen to agree.
+const SettingsObject = captureSettingsObject
+
 // AutoEnrich is the captured-organization auto-enrich posture (CAP-PARAM-7,
 // ADR-0072/A118).
 //
@@ -63,5 +72,5 @@ var MailSharing = settings.Define[bool](
 // such function, so this is opt-in rather than an interface every module must
 // satisfy.
 func Definitions() []settings.Definition {
-	return []settings.Definition{AutoEnrich, MailSharing}
+	return []settings.Definition{AutoEnrich, MailSharing, GoogleAppSetting}
 }
