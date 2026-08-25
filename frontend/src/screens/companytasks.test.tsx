@@ -191,11 +191,17 @@ describe("CompanyScreen — the Tasks tab", () => {
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
 
-    await waitFor(() =>
-      expect(
-        screen.getByText("Hidden — your role cannot read this"),
-      ).toBeTruthy(),
-    );
+    // Scoped to the tab BODY, which is the only thing this test is about. The
+    // header strip withholds its own facts under the same sentence, so an
+    // unscoped getByText matches several nodes and throws — and the obvious
+    // repair, getAllByText().length > 0, would be satisfied by the header
+    // alone and could no longer fail if the tab rendered nothing at all.
+    await waitFor(() => {
+      const inTabBody = screen
+        .getAllByText("Hidden — your role cannot read this")
+        .filter((node) => node.closest(".empty") !== null);
+      expect(inTabBody).toHaveLength(1);
+    });
     expect(screen.queryByText("No open task on this account.")).toBeNull();
   });
 
