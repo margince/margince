@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 57 |
 | Resources | 9 |
-| Tool catalog | 154.7 KB |
+| Tool catalog | 155.4 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 40469 |
+| Approx. wire tokens | 40663 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 72.9 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.7 KB | 23% | Yes, every step |
-| Input schemas | 33.9 KB | 21% | Yes, every step |
+| Output schemas | 73.0 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 35.9 KB | 23% | Yes, every step |
+| Input schemas | 34.4 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.1 KB | 7% | Partly |
-| **Description + input schema** | **69.6 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **70.3 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -72,7 +72,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 2.7 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 2.8 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
@@ -87,7 +87,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.1 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.2 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 3.4 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
@@ -114,10 +114,10 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
-| [`update_record`](#update_record) | Update a record |  |  | 3.6 KB |
+| [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.2 KB |
-| [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.5 KB |
+| [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
 ## Resources
 
@@ -2215,7 +2215,7 @@ Create a person, organization, deal, lead, project, activity or relationship tha
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -4809,6 +4809,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
   "additionalProperties": false,
   "properties": {
     "body": {
+      "description": "Prose a colleague reads. Same language rule as subject.",
       "type": "string"
     },
     "channel_provider": {
@@ -4883,6 +4884,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "subject": {
+      "description": "Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
       "type": "string"
     }
   },
@@ -10526,7 +10528,7 @@ Change stored field values on a record that already exists — a corrected title
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {
@@ -11039,7 +11041,7 @@ Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_
 
 **Who this passport acts for**
 
-Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for "me". Write stored prose in locale when it is set. (Governance: runs immediately; requires passport scope "read".)
+Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for "me". prose_language is the language every stored sentence is written in — a note, a description, a summary — whatever language the conversation itself is in; it is always answered, where locale is absent until this person chooses one. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -11073,6 +11075,9 @@ Name the human this passport acts for: their id, display name, email and languag
         "locale": {
           "type": "string"
         },
+        "prose_language": {
+          "type": "string"
+        },
         "timezone": {
           "type": "string"
         }
@@ -11080,7 +11085,8 @@ Name the human this passport acts for: their id, display name, email and languag
       "required": [
         "acting_user_id",
         "display_name",
-        "email"
+        "email",
+        "prose_language"
       ],
       "type": "object"
     },

@@ -7811,6 +7811,9 @@
           "locale": {
             "type": "string"
           },
+          "prose_language": {
+            "type": "string"
+          },
           "timezone": {
             "type": "string"
           }
@@ -7818,7 +7821,8 @@
         "required": [
           "acting_user_id",
           "display_name",
-          "email"
+          "email",
+          "prose_language"
         ]
       },
       "evidence": {

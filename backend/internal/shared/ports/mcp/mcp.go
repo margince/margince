@@ -73,7 +73,21 @@ type ToolSpec struct {
 	Description   string
 	Version       string
 	RequiredScope principal.Scope
-	Tier          RiskTier
+	// SelfDescribing marks a tool that answers who the CALLER is, which every
+	// passport may ask whatever else it is scoped to do.
+	//
+	// It does not relax RequiredScope, and must not: ReadOnly is derived from
+	// that field, so a tool that reads has to keep saying so. This is the
+	// separate question of whether the scope model applies at all, and for
+	// the caller's own identity it does not — the answer is the seat the
+	// passport was minted for, which its holder supplied and every write it
+	// makes already stamps into on_behalf_of.
+	//
+	// Without it a write-only passport is offered the writing tools and
+	// refused the identity they tell it to consult, so an instruction meant
+	// to remove a guess costs a failed call and then the guess anyway.
+	SelfDescribing bool
+	Tier           RiskTier
 	// TierResolver is non-nil iff Tier == TierDynamic; the admission gate
 	// calls it with the validated args plus the resolved pipeline context.
 	TierResolver TierResolver

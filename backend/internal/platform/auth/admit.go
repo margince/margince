@@ -91,7 +91,12 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 		return ctx, nil
 	}
 
-	if !p.Scopes.Has(spec.RequiredScope) {
+	// A tool that answers who the CALLER is passes the scope axis whatever the
+	// passport holds — mcp.ToolSpec.SelfDescribing carries the reason, and the
+	// listing filter reads the same flag, so what is offered is what is
+	// admitted. Every check below still applies: the seat, the re-derived
+	// RBAC and the quota are not waived by knowing whose seat it is.
+	if !spec.SelfDescribing && !p.Scopes.Has(spec.RequiredScope) {
 		return ctx, fmt.Errorf("gate: %s needs scope %q: %w", spec.Name, spec.RequiredScope, apperrors.ErrScopeExceeded)
 	}
 

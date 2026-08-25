@@ -24,7 +24,10 @@ type WhoamiResult struct {
 	DisplayName  string   `json:"display_name"`
 	Email        string   `json:"email"`
 	Locale       string   `json:"locale,omitempty"`
-	Timezone     string   `json:"timezone,omitempty"`
+	// ProseLanguage is what stored prose must be written in — always present,
+	// where locale is absent until somebody chooses one.
+	ProseLanguage string `json:"prose_language"`
+	Timezone      string `json:"timezone,omitempty"`
 }
 
 // ListColleaguesResult is the workspace roster. Empty is a real answer — a

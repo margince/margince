@@ -10,16 +10,16 @@
   "totals": {
     "tools": 57,
     "resources": 9,
-    "tool_catalog_bytes": 158363,
+    "tool_catalog_bytes": 159140,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 40469,
+    "approx_wire_tokens_total": 40663,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 36586,
-      "input_schema_bytes": 34709,
-      "output_schema_bytes": 74699,
-      "description_plus_input_schema_bytes": 71295
+      "description_bytes": 36775,
+      "input_schema_bytes": 35245,
+      "output_schema_bytes": 74751,
+      "description_plus_input_schema_bytes": 72020
     }
   },
   "tools": {
@@ -1832,7 +1832,7 @@
               "type": "string"
             },
             "fields": {
-              "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
+              "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
               "type": "object"
             },
             "idempotency_key": {
@@ -4276,6 +4276,7 @@
           "additionalProperties": false,
           "properties": {
             "body": {
+              "description": "Prose a colleague reads. Same language rule as subject.",
               "type": "string"
             },
             "channel_provider": {
@@ -4350,6 +4351,7 @@
               "type": "string"
             },
             "subject": {
+              "description": "Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
               "type": "string"
             }
           },
@@ -9744,7 +9746,7 @@
               "type": "string"
             },
             "fields": {
-              "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
+              "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
               "type": "object"
             },
             "id": {
@@ -10245,7 +10247,7 @@
           "readOnlyHint": true,
           "title": "Who this passport acts for"
         },
-        "description": "Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for \"me\". Write stored prose in locale when it is set. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for \"me\". prose_language is the language every stored sentence is written in — a note, a description, a summary — whatever language the conversation itself is in; it is always answered, where locale is absent until this person chooses one. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
@@ -10269,6 +10271,9 @@
                 "locale": {
                   "type": "string"
                 },
+                "prose_language": {
+                  "type": "string"
+                },
                 "timezone": {
                   "type": "string"
                 }
@@ -10276,7 +10281,8 @@
               "required": [
                 "acting_user_id",
                 "display_name",
-                "email"
+                "email",
+                "prose_language"
               ],
               "type": "object"
             },
