@@ -7,6 +7,11 @@
 -- x_overlay_iff_incumbent start judging the pair.
 SET LOCAL lock_timeout = '3s';
 
+-- Both tables, up front and for the whole migration, for the reason the up half
+-- gives in mirror: this reads overlay_mode and only later DROPs it, and a write
+-- committed into that window would be copied nowhere and then destroyed.
+LOCK TABLE workspace, overlay_mode IN ACCESS EXCLUSIVE MODE;
+
 ALTER TABLE workspace
     ADD COLUMN x_sor_mode  text NOT NULL DEFAULT 'native',
     ADD COLUMN x_incumbent text;

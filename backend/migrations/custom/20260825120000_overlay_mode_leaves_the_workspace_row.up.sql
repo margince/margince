@@ -20,10 +20,22 @@
 -- the mode NATIVE — CompleteFlip writes the mode and does not touch the
 -- connection — so three states are reachable: never connected, connected in
 -- overlay mode, and flipped to native with the connection still live.
--- Bounded before anything touches `workspace`: the read below takes ACCESS
--- SHARE on it and the ALTER at the end takes ACCESS EXCLUSIVE, on a table this
--- migration did not create. The down half bounds itself at the same point.
+-- Bounded before anything touches `workspace`, then held for the whole
+-- migration.
+--
+-- The bound alone is not enough, and the gap it leaves is a lost write rather
+-- than a stall: this transaction READS x_sor_mode, and only later does the
+-- ALTER take its own ACCESS EXCLUSIVE. In between, a request served by a build
+-- that still writes those columns can flip the mode and COMMIT — the ALTER
+-- waits for it, then drops the column it just wrote, and overlay_mode carries
+-- the value from before. The installation would come out of the migration
+-- routing reads at a store its live connection disagrees with, with nothing to
+-- report it.
+--
+-- Taking the lock up front closes that: no other transaction can write
+-- `workspace` between the read and the drop, because none can touch it at all.
 SET LOCAL lock_timeout = '3s';
+LOCK TABLE workspace IN ACCESS EXCLUSIVE MODE;
 
 CREATE TABLE overlay_mode (
     -- The singleton shape core uses for embed_store_binding, not the

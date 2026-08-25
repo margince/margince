@@ -459,7 +459,7 @@ func resetInstallationSingletons(ctx context.Context, tx execQuerier) error {
 	if _, err := tx.Exec(ctx, `
 		DO $$ BEGIN
 			IF to_regclass('public.overlay_mode') IS NOT NULL THEN
-				UPDATE overlay_mode SET sor_mode = DEFAULT, incumbent = DEFAULT;
+				UPDATE public.overlay_mode SET sor_mode = DEFAULT, incumbent = DEFAULT;
 			END IF;
 		END $$`); err != nil {
 		return fmt.Errorf("returning the installation's overlay mode to its default: %w", err)
