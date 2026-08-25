@@ -33,6 +33,10 @@ export const CORE_FRAG = `#version 300 es
 precision highp float;
 out vec4 outColor;
 
+/* How much of the ball's body a dark page gets, and how much of its bloom. */
+#define DARKBODY 0.62
+#define DARKGLOW 0.55
+
 uniform vec2  iResolution;
 uniform vec2  uMouse;      // -1..1, eased. zero at rail size: a 34px ball has
                            // no parallax to give and jitters if asked for one
@@ -331,8 +335,19 @@ void main(){
     float px = 1.5 / iResolution.y;
     float solid = 1.0 - smoothstep(sr - px, sr + px, bgr);
 
-    col   = mix(body, ball + body, uPaper);
-    alpha = mix(cov, solid, uPaper);
+    /* The body is not a paper dress. It used to be: on a dark surface the
+       ribbons hung in transparency with nothing behind them, so the Core was a
+       different OBJECT between the two themes rather than the same one lit
+       differently, and the indigo a reader is being taught to recognise was the
+       one thing missing exactly where the ball is most prominent.
+
+       Quieter on dark than on paper (DARKBODY), because a dark page is already
+       dark and a body at full weight there is a hole in it rather than a sphere
+       on it. The silhouette comes in with it: coverage taken from brightness
+       alone would show the body only where a ribbon happens to be bright, which
+       is a ball with gaps in it. */
+    col   = mix(body + ball * DARKBODY, ball + body, uPaper);
+    alpha = mix(max(cov, solid), solid, uPaper);
   }
 
   /* ---------- rim stroke and outer glow, analytic ---------- */
@@ -360,7 +375,11 @@ void main(){
      surface that packs the Core next to other things is a smudge on them rather
      than an atmosphere around it. */
   float glowA = (exp(-outer * 44.0) * 0.10 + exp(-outer * 14.0) * 0.018)
-              * (0.60 + 0.40 * uLevel);
+              * (0.60 + 0.40 * uLevel)
+  /* Less of it on dark. A bloom is light ADDED to what is behind it, so the same
+     amount that reads as a quiet atmosphere on paper reads as a smear on a dark
+     page, where there is nothing bright for it to fall off against. */
+              * mix(DARKGLOW, 1.0, uPaper);
   float lit = 1.0 - uPaper;
   col   = mix(col, mix(glowTint, vec3(0.030, 0.032, 0.075), uPaper), (1.0 - alpha) * glowA);
   alpha = max(alpha, glowA * mix(1.0, 0.35, uPaper));

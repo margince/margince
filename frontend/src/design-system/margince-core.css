@@ -128,6 +128,16 @@
  * both themes — it is the GLASS that is lit differently, which is also what
  * happens to real glass in a dark room.
  */
+/* A bloom is light ADDED to what is behind it, so the amount that reads as a
+   quiet atmosphere on paper reads as a smear on a dark page, where nothing
+   bright stands behind it for the falloff to work against. The shader reduces
+   its own glow the same way (DARKGLOW), so the live ball and the static dress
+   agree. */
+:root[data-theme="dark"] .core-glow,
+:root:not([data-theme="light"]) .core-glow {
+  --coreHaloPage: 0.55;
+}
+
 :root[data-theme="dark"] .core,
 :root:not([data-theme="light"]) .core {
   --coreSpecular: color-mix(in srgb, var(--overlayLight) 48%, transparent);
@@ -350,7 +360,12 @@
   /* How much halo this surface wants. A hero standing in a column is where the
      bloom belongs; a Core packed into the width of the rail spends it on its own
      neighbours, so the rail turns it down (app/agentrail.css). */
-  opacity: var(--coreHalo, 1);
+  opacity: calc(var(--coreHalo, 1) * var(--coreHaloPage, 1));
+  /* A caller says how much halo its layout can afford; --coreHaloPage says how
+     much the PAGE can, and the two multiply. The dark arm turns the second one
+     down rather than setting --coreHalo, which would throw away the rail's
+     answer to a different question. */
+  --coreHaloPage: 1;
   background:
     radial-gradient(
       circle,
