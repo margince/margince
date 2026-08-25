@@ -44,7 +44,7 @@ func TestTheVoiceVersionWriterCoversEveryColumnACallerChooses(t *testing.T) {
 	// has, is reported rather than quietly standing: an entry that matches
 	// nothing is an exemption still covering a column nobody looked at again.
 	defer databaseOwnedVersionColumns.AssertAllMatched(t)
-	assertWriterCoversTable(t, "voice_profile_version", voiceVersionWriteColumns, databaseOwnedVersionColumns)
+	assertWriterCoversTable(t, "voice_profile_version", voiceVersionWriteColumns(), databaseOwnedVersionColumns)
 }
 
 // The delta row's own list, held the same way: it is the second table this
@@ -59,7 +59,7 @@ var databaseOwnedDeltaColumns = gatekit.Waive(map[string]string{
 
 func TestTheVoiceDeltaWriterCoversEveryColumnACallerChooses(t *testing.T) {
 	defer databaseOwnedDeltaColumns.AssertAllMatched(t)
-	assertWriterCoversTable(t, "voice_profile_delta", voiceDeltaWriteColumns, databaseOwnedDeltaColumns)
+	assertWriterCoversTable(t, "voice_profile_delta", voiceDeltaWriteColumns(), databaseOwnedDeltaColumns)
 }
 
 func assertWriterCoversTable(t *testing.T, table string, written []string, databaseOwned *gatekit.Waivers[string]) {

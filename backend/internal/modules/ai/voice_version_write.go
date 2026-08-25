@@ -63,29 +63,27 @@ type voiceVersionRow struct {
 	now         time.Time
 }
 
-// voiceVersionWriteColumns is the column list this writer fills, in the order
-// voiceVersionArgs builds its arguments. Declared once so a statement's
-// columns, its placeholders and its bind list cannot disagree — nothing else
-// in this tree checks that they do, and the three hand-written INSERTs this
-// replaced each carried its own count.
+// boundColumn is one column and the value going into it, together.
+//
+// Together is the point. Two parallel slices — a column list and an argument
+// list — agree only because an author counted them twice and agreed with
+// themselves, and the failure that shape allows is invisible: swap two entries
+// of the same Go type and every count still matches, every gate still passes,
+// and the two strings land in each other's columns. A pair cannot be swapped
+// without moving the column name with it.
+type boundColumn struct {
+	name  string
+	value any
+}
+
+// voiceVersionBindings is every column this writer fills, with the value bound
+// to it. It is the single source the statement's column list, its placeholders
+// and its bind list are all derived from.
 //
 // Held by: TestTheVoiceVersionWriterBindsEveryColumnItNames (internal/modules/ai/voice_version_write_test.go)
 //
-// are written. Two of the twenty happen to spell the same word as a payload key
-// declared elsewhere in the package; naming only those two would make the list
-// read as if they were special, which is the opposite of what it is for.
-//
-//nolint:goconst // the entries are column NAMES, and this is the one place they
-var voiceVersionWriteColumns = []string{
-	"voice_profile_id", "profile_version", "status", "voice_profile_md",
-	"profile_json", "stats_json", "source_hash", "source_count", "reason",
-	"predecessor_version", "model_provider", "model_name", "builder_version",
-	"activation_policy_version", "evaluation_json", "review_reasons",
-	"activated_at", "source", "captured_by", "updated_at",
-}
-
-// voiceVersionArgs binds one row in voiceVersionWriteColumns' order.
-func voiceVersionArgs(row voiceVersionRow) []any {
+//nolint:goconst // the entries are column NAMES, and this is the one place they are written. Two of the twenty happen to spell the same word as a payload key declared elsewhere in the package; naming only those two would make the list read as if they were special, which is the opposite of what it is for.
+func voiceVersionBindings(row voiceVersionRow) []boundColumn {
 	reasons := row.reviewReasons
 	if reasons == nil {
 		// A path that means "nothing to review" still SAYS so. Left to the
@@ -94,22 +92,63 @@ func voiceVersionArgs(row voiceVersionRow) []any {
 		// close went unnoticed.
 		reasons = []string{}
 	}
-	return []any{
-		row.profileID, row.profileVersion, row.status, row.voiceProfileMD,
-		row.profileJSON, row.statsJSON, row.sourceHash, row.sourceCount, row.reason,
-		row.predecessorVersion, row.modelProvider, row.modelName, row.builderVersion,
-		row.activationPolicyVersion, row.evaluation, reasons,
-		row.activatedAt, row.source, row.capturedBy, row.now,
+	return []boundColumn{
+		{"voice_profile_id", row.profileID},
+		{"profile_version", row.profileVersion},
+		{"status", row.status},
+		{"voice_profile_md", row.voiceProfileMD},
+		{"profile_json", row.profileJSON},
+		{"stats_json", row.statsJSON},
+		{"source_hash", row.sourceHash},
+		{"source_count", row.sourceCount},
+		{"reason", row.reason},
+		{"predecessor_version", row.predecessorVersion},
+		{"model_provider", row.modelProvider},
+		{"model_name", row.modelName},
+		{"builder_version", row.builderVersion},
+		{"activation_policy_version", row.activationPolicyVersion},
+		{"evaluation_json", row.evaluation},
+		{"review_reasons", reasons},
+		{"activated_at", row.activatedAt},
+		{"source", row.source},
+		{"captured_by", row.capturedBy},
+		{"updated_at", row.now},
 	}
+}
+
+// voiceVersionWriteColumns is the column list, derived from the bindings so it
+// cannot fall out of step with them. The row is a zero value because only the
+// NAMES are read.
+func voiceVersionWriteColumns() []string {
+	return namesOf(voiceVersionBindings(voiceVersionRow{}))
+}
+
+// namesOf and valuesOf split a binding list into the two halves a statement
+// needs, at the moment it needs them and never before.
+func namesOf(bound []boundColumn) []string {
+	names := make([]string, 0, len(bound))
+	for _, column := range bound {
+		names = append(names, column.name)
+	}
+	return names
+}
+
+func valuesOf(bound []boundColumn) []any {
+	values := make([]any, 0, len(bound))
+	for _, column := range bound {
+		values = append(values, column.value)
+	}
+	return values
 }
 
 // insertVoiceVersion writes one version and reads it back through the same
 // column list every other reader of the table uses.
 func insertVoiceVersion(ctx context.Context, tx pgx.Tx, row voiceVersionRow) (VoiceProfileVersion, error) {
-	args := voiceVersionArgs(row)
+	bound := voiceVersionBindings(row)
+	args := valuesOf(bound)
 	return scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(
 		`INSERT INTO voice_profile_version (%s) VALUES (%s) RETURNING %s`,
-		strings.Join(voiceVersionWriteColumns, ", "), bindPlaceholders(len(args)), voiceVersionColumns),
+		strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args)), voiceVersionColumns),
 		args...))
 }
 
@@ -123,21 +162,30 @@ type voiceDeltaRow struct {
 	delta             map[string]any
 }
 
-// voiceDeltaWriteColumns is the delta row's column list, in the order
-// insertVoiceDelta binds it.
-var voiceDeltaWriteColumns = []string{
-	"voice_profile_id", "from_version", "to_version", "classification",
-	"activation_outcome", "delta_json",
+// voiceDeltaBindings is the delta row's columns with their values, paired for
+// the same reason the version's are.
+func voiceDeltaBindings(row voiceDeltaRow) []boundColumn {
+	return []boundColumn{
+		{"voice_profile_id", row.profileID},
+		{"from_version", row.fromVersion},
+		{"to_version", row.toVersion},
+		{"classification", row.classification},
+		{"activation_outcome", row.activationOutcome},
+		{"delta_json", storekit.JSONArg(row.delta)},
+	}
+}
+
+// voiceDeltaWriteColumns is the delta's column list, derived from its bindings.
+func voiceDeltaWriteColumns() []string {
+	return namesOf(voiceDeltaBindings(voiceDeltaRow{}))
 }
 
 // insertVoiceDelta writes one delta row.
 func insertVoiceDelta(ctx context.Context, tx pgx.Tx, row voiceDeltaRow) error {
-	args := []any{
-		row.profileID, row.fromVersion, row.toVersion, row.classification,
-		row.activationOutcome, storekit.JSONArg(row.delta),
-	}
+	bound := voiceDeltaBindings(row)
+	args := valuesOf(bound)
 	_, err := tx.Exec(ctx, storekit.SQLf(`INSERT INTO voice_profile_delta (%s) VALUES (%s)`,
-		strings.Join(voiceDeltaWriteColumns, ", "), bindPlaceholders(len(args))), args...)
+		strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args))), args...)
 	return err
 }
 

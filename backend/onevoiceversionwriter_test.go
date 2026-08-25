@@ -22,10 +22,12 @@ package backendarch
 // half and this is where it is held.
 //
 // WHAT THIS GATE CAN AND CANNOT SEE. It matches the INSERT in a Go string
-// literal, so a statement assembled from fragments that never spell
-// "INSERT INTO voice_profile_version" in one piece would escape. Every write
-// in this tree spells it whole, and the honest cost is stated rather than
-// implied.
+// literal, and in a `+` chain whose literal parts spell it between them — the
+// one that would otherwise escape is exactly the one a second writer reaches
+// for, because the first thing an author does to a copied statement is
+// parameterise a piece of it. What it still cannot see is a statement whose
+// verb and table arrive through a variable at run time. Nothing in this tree
+// builds SQL that way, and the honest cost is stated rather than implied.
 
 import (
 	"fmt"
@@ -97,15 +99,75 @@ func insertCounter(table string) func(*ast.File) int {
 	pattern := regexp.MustCompile(`(?is)INSERT\s+INTO\s+` + regexp.QuoteMeta(table) + `\b`)
 	return func(file *ast.File) int {
 		total := 0
+		// A `+` chain is nested: `a + b + c` is a BinaryExpr holding another,
+		// and joining both would count one statement twice. Only the OUTERMOST
+		// chain is read, and ast.Inspect reaches it first.
+		inner := map[ast.Node]bool{}
 		ast.Inspect(file, func(n ast.Node) bool {
-			lit, ok := n.(*ast.BasicLit)
-			if ok && lit.Kind == token.STRING {
-				total += len(pattern.FindAllString(lit.Value, -1))
+			switch node := n.(type) {
+			case *ast.BasicLit:
+				if node.Kind == token.STRING {
+					total += len(pattern.FindAllString(node.Value, -1))
+				}
+			case *ast.BinaryExpr:
+				if inner[node] {
+					return true
+				}
+				markNestedChains(node, inner)
+				// SQL assembled by concatenation, where no single literal
+				// holds the whole verb. Joining the chain's literal parts is
+				// what keeps `"INSERT INTO " + table + " (a) VALUES ($1)"`
+				// from being a writer the census cannot see. The chain's own
+				// literals are visited too, so a statement spelled whole
+				// inside one of them would be counted twice — which is why
+				// only chains that do NOT already hold the match are joined.
+				if node.Op == token.ADD && !holdsWholeMatch(node, pattern) {
+					total += len(pattern.FindAllString(literalsOf(node), -1))
+				}
 			}
 			return true
 		})
 		return total
 	}
+}
+
+// markNestedChains records every `+` expression BELOW this one, so the chain is
+// read once from its top rather than once per level.
+func markNestedChains(top *ast.BinaryExpr, inner map[ast.Node]bool) {
+	ast.Inspect(top, func(n ast.Node) bool {
+		if nested, ok := n.(*ast.BinaryExpr); ok && nested != top {
+			inner[nested] = true
+		}
+		return true
+	})
+}
+
+// literalsOf concatenates the string literals of an expression, dropping the
+// non-literal operands. What is dropped is a table alias or a format verb, and
+// the words on either side of it are what the pattern reads.
+func literalsOf(expr ast.Expr) string {
+	var parts []string
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+			parts = append(parts, strings.Trim(lit.Value, "`\""))
+		}
+		return true
+	})
+	return strings.Join(parts, "")
+}
+
+// holdsWholeMatch reports whether some single literal in the expression
+// already spells the match, in which case the BasicLit arm has counted it.
+func holdsWholeMatch(expr ast.Expr, pattern *regexp.Regexp) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		lit, ok := n.(*ast.BasicLit)
+		if ok && lit.Kind == token.STRING && pattern.MatchString(lit.Value) {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 // TestTheWriterCensusStillSeesItsSubject is the vacuity check: a census that
@@ -136,6 +198,23 @@ func TestTheWriterCensusStillSeesItsSubject(t *testing.T) {
 			"INSERT INTO "+table+" (b) VALUES ($2)`) }")
 		if got := insertCounter(table)(joined); got != 2 {
 			t.Errorf("two INSERTs into %s in one literal count as %d", table, got)
+		}
+		// A statement no single literal holds. Parameterising a piece of a
+		// copied INSERT is the first thing an author does to it, so this is
+		// the shape a second writer most plausibly arrives in.
+		assembled := parseGateFixture(t, "package p\nfunc f() { q(`INSERT INTO `+prefix+`"+table+
+			"` + ` (a) VALUES ($1)`) }")
+		if got := insertCounter(table)(assembled); got != 1 {
+			t.Errorf("an INSERT into %s assembled from fragments counts as %d; a second writer would only "+
+				"have to break the verb across a `+` to be invisible", table, got)
+		}
+		// A chain whose own literal already spells the statement is ONE
+		// writer, not two: the chain and the literal inside it must not both
+		// be counted.
+		trailing := parseGateFixture(t, "package p\nfunc f() { q(`INSERT INTO "+table+
+			" (a) VALUES ($1)` + suffix) }")
+		if got := insertCounter(table)(trailing); got != 1 {
+			t.Errorf("one INSERT into %s with a trailing fragment counts as %d", table, got)
 		}
 	}
 }

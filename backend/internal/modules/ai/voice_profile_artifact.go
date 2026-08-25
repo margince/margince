@@ -223,5 +223,5 @@ func emitDerivedProfileVersion(ctx context.Context, tx pgx.Tx, before, profile V
 	if err != nil {
 		return err
 	}
-	return emitVoiceVersion(ctx, tx, auditID, version, "routine", "manually_activated")
+	return emitVoiceVersion(ctx, tx, auditID, version, voiceClassificationRoutine, voiceOutcomeManuallyActivated)
 }
