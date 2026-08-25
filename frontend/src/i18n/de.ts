@@ -78,8 +78,9 @@ export const de = {
   "day.lead.ranOvernight":
     "Nichts wartet auf dich. Das ist über Nacht gelaufen.",
   "day.lead.clear": "Dein Tag ist frei.",
-  "day.withheld":
-    "Ein Teil dieser Seite ist für dein Konto nicht sichtbar — das hier ist also nicht alles.",
+  "day.lead.partial":
+    "Ein Teil deines Tages ist für dein Konto nicht sichtbar.",
+  "day.lane.withheld": "Für dein Konto nicht sichtbar.",
   "day.needsYou": "Wartet auf dich",
   "day.needsYou.empty": "Nichts zu entscheiden.",
   "day.planned": "Geplant",

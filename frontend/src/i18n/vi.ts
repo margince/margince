@@ -87,8 +87,8 @@ export const vi = {
   "day.lead.ranOvernight":
     "Không có gì cần bạn. Đây là những gì đã chạy qua đêm.",
   "day.lead.clear": "Ngày của bạn không có gì.",
-  "day.withheld":
-    "Một phần trang này bị ẩn với tài khoản của bạn, nên đây chưa phải toàn bộ.",
+  "day.lead.partial": "Một phần ngày của bạn bị ẩn với tài khoản của bạn.",
+  "day.lane.withheld": "Bị ẩn với tài khoản của bạn.",
   "day.needsYou": "Cần bạn",
   "day.needsYou.empty": "Không có gì cần quyết định.",
   "day.planned": "Theo kế hoạch",

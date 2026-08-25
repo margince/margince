@@ -36,6 +36,26 @@ func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQ
 	return rows, err
 }
 
+// CountPending is how many staged proposals this caller could decide.
+//
+// Counted by reading a page rather than with a COUNT, because decidability is a
+// per-row probe and no SQL count can apply it. approvals.PendingScanCap bounds
+// that read and its own comment states the contract this inherits: a full
+// result means "this many or more". The lane it feeds is bounded far below the
+// cap, so the number stops being exact only once it is already large enough to
+// mean the same thing to a reader.
+func (a attentionApprovals) CountPending(ctx context.Context) (int, error) {
+	status := "pending"
+	rows, _, err := a.svc.ListWire(ctx, approvals.ListInput{
+		Status: &status,
+		Limit:  approvals.PendingScanCap,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return len(rows), nil
+}
+
 // attentionDuplicates reads the dedupe queue through the people store, which
 // applies the both-sides-visible rule to the page and the count alike.
 type attentionDuplicates struct{ store *people.Store }

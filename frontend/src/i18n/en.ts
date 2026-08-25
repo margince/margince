@@ -81,8 +81,8 @@ export const en = {
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
   "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",
   "day.lead.clear": "Your day is clear.",
-  "day.withheld":
-    "Part of this page is hidden from your account, so this is not the whole picture.",
+  "day.lead.partial": "Part of your day is hidden from your account.",
+  "day.lane.withheld": "Hidden from your account.",
   "day.needsYou": "Needs you",
   "day.needsYou.empty": "Nothing needs a decision.",
   "day.planned": "Planned",

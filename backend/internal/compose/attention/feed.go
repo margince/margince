@@ -32,8 +32,13 @@ const plannedCap = 12
 const doneCap = 8
 
 // Approvals is the staged-proposal queue, read through its owning service.
+//
+// CountPending is separate from the page because the lane is bounded and the
+// count is not: a reader with forty decisions must be told forty, then shown
+// the nine worth one sitting.
 type Approvals interface {
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
+	CountPending(ctx context.Context) (int, error)
 }
 
 // ApprovalQuery is what this feed asks the approvals engine for. Narrower than
@@ -179,6 +184,10 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 	if err != nil {
 		return nil, laneCount{}, err
 	}
+	openStaged, err := s.approvals.CountPending(ctx)
+	if err != nil {
+		return nil, laneCount{}, err
+	}
 
 	items := make([]crmcontracts.AttentionItem, 0, len(pairs)+len(staged))
 	for _, pair := range pairs {
@@ -187,7 +196,7 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 	for _, approval := range staged {
 		items = append(items, approvalItem(approval))
 	}
-	total := openPairs + len(staged)
+	total := openPairs + openStaged
 	if len(items) > needsYouCap {
 		items = items[:needsYouCap]
 	}

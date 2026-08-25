@@ -35,6 +35,7 @@ import "./today.css";
 type LaneShape = Readonly<{
   title: string;
   empty: string;
+  withheld: string;
   icon: typeof Layers;
 }>;
 
@@ -42,6 +43,12 @@ type LaneShape = Readonly<{
 // on the server because the server has no language. A reader who reads only
 // this line should still know whether to worry.
 function leadLine(day: Attention, t: ReturnType<typeof useT>): string {
+  // A day with a lane missing from it is not a day this line may summarise:
+  // "your day is clear" and "part of it is hidden from you" cannot both be on
+  // one page, and the reader would believe the reassuring one.
+  if ((day.lanes_omitted ?? []).length > 0) {
+    return t("day.lead.partial");
+  }
   const decisions = day.counts.needs_you;
   if (decisions === 1) {
     return t("day.lead.oneDecision");
@@ -126,7 +133,13 @@ function openItem(item: AttentionItem): void {
       navigate({ screen: "tasks" });
       return;
     default:
-      navigate({ screen: "inbox" });
+      // A receipt is already decided, so it lives on the queue's Decided tab.
+      // Sending a reader to Pending to look for it would be sending them to
+      // the one list it is guaranteed not to be in.
+      navigate({
+        screen: "inbox",
+        id: item.actions.includes("open") ? "decided" : undefined,
+      });
   }
 }
 
@@ -203,12 +216,22 @@ function AttentionRow({
 function Lane({
   shape,
   items,
+  withheld,
+  total,
   tone,
   onComplete,
   completing,
 }: Readonly<{
   shape: LaneShape;
   items: readonly AttentionItem[];
+  // The reader may not read what this lane holds. Drawn in place of the rows,
+  // because an empty lane and a hidden one look identical and only one of them
+  // means "nothing here".
+  withheld: boolean;
+  // What the lane HOLDS, which is not what it shows: the lane is bounded so it
+  // stays finishable, and a badge counting the page would tell a reader with
+  // forty decisions that they have nine.
+  total: number;
   tone?: "accent";
   onComplete: (id: string) => void;
   completing: boolean;
@@ -222,10 +245,14 @@ function Lane({
           {shape.title}
         </span>
       }
-      titleAction={items.length > 0 ? <Badge>{items.length}</Badge> : undefined}
+      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
       tone={tone}
     >
-      {items.length === 0 ? (
+      {withheld ? (
+        <PanelBody>
+          <EmptyState>{shape.withheld}</EmptyState>
+        </PanelBody>
+      ) : items.length === 0 ? (
         <PanelBody>
           <EmptyState>{shape.empty}</EmptyState>
         </PanelBody>
@@ -247,10 +274,11 @@ function Lane({
 export function TodayScreen() {
   const t = useT();
   const day = useAttention();
-  // The SAME mutation the task queue and the record page use, handed the keys
-  // this surface needs refreshed. A second PATCH of the same activity would be
-  // a second place for a task's write rules to live.
-  const complete = useTaskUpdate([attentionKey, ["activities"]]);
+  // The SAME mutation the task queue and the record page use, handed every key
+  // that must forget what it cached. `["tasks"]` is the task queue's own key
+  // and is easy to miss: without it, completing something here leaves it
+  // sitting open on the Tasks screen until that query goes stale by itself.
+  const complete = useTaskUpdate([attentionKey, ["tasks"], ["activities"]]);
   // Read once per render so every lane on the page agrees what "now" is.
   useNow(60_000);
 
@@ -292,20 +320,16 @@ function TodayLanes({
   return (
     <>
       <p className="t-h2 today-lead">{leadLine(day, t)}</p>
-      {omitted.length > 0 && (
-        // Said out loud rather than left as a gap. A lane withheld looks
-        // exactly like a lane that is empty, and a reader told their day is
-        // clear when the server simply could not see it has been misled by
-        // the surface they trust most.
-        <p className="t-caption today-withheld">{t("day.withheld")}</p>
-      )}
       <Lane
         shape={{
           title: t("day.needsYou"),
           empty: t("day.needsYou.empty"),
+          withheld: t("day.lane.withheld"),
           icon: Layers,
         }}
         items={needsYou}
+        withheld={omitted.includes("needs_you")}
+        total={day.counts.needs_you}
         tone="accent"
         onComplete={onComplete}
         completing={complete.isPending}
@@ -314,9 +338,12 @@ function TodayLanes({
         shape={{
           title: t("day.planned"),
           empty: t("day.planned.empty"),
+          withheld: t("day.lane.withheld"),
           icon: CheckSquare,
         }}
         items={planned}
+        withheld={omitted.includes("planned")}
+        total={day.counts.planned}
         onComplete={onComplete}
         completing={complete.isPending}
       />
@@ -324,9 +351,12 @@ function TodayLanes({
         shape={{
           title: t("day.done"),
           empty: t("day.done.empty"),
+          withheld: t("day.lane.withheld"),
           icon: Sparkles,
         }}
         items={done}
+        withheld={omitted.includes("done_for_you")}
+        total={done.length}
         onComplete={onComplete}
         completing={complete.isPending}
       />

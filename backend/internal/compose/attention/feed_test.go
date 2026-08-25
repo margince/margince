@@ -25,11 +25,20 @@ func fixedClock() time.Time { return readInstant }
 
 type stubApprovals struct {
 	rows []crmcontracts.Approval
-	err  error
+	// pending is what the queue HOLDS, which the lane's cap may be well below.
+	pending int
+	err     error
 }
 
 func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, error) {
 	return s.rows, s.err
+}
+
+func (s stubApprovals) CountPending(context.Context) (int, error) {
+	if s.pending > 0 {
+		return s.pending, s.err
+	}
+	return len(s.rows), s.err
 }
 
 type stubDuplicates struct {
@@ -142,6 +151,27 @@ func TestTheCountReportsTheTotalThoughTheLaneIsBounded(t *testing.T) {
 	}
 	if out.Counts.NeedsYou != 40 {
 		t.Errorf("the count says %d; a bounded lane must still report the true total", out.Counts.NeedsYou)
+	}
+}
+
+func TestTheCountCoversStagedProposalsToo(t *testing.T) {
+	// The first version summed the true dedupe total with the LENGTH of the
+	// approvals page, so twenty pending decisions reported as nine — the lane's
+	// own cap, read back as if it were the queue.
+	staged := make([]crmcontracts.Approval, needsYouCap)
+	for i := range staged {
+		staged[i] = approval("Send something")
+	}
+	svc := NewService(
+		stubApprovals{rows: staged, pending: 20},
+		stubDuplicates{}, stubTasks{}, stubReceipts{}, fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.Counts.NeedsYou != 20 {
+		t.Errorf("the count says %d; the lane is bounded but the queue is not", out.Counts.NeedsYou)
 	}
 }
 

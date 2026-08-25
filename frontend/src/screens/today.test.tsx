@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { TodayScreen } from "./today";
@@ -120,15 +120,21 @@ describe("what the day's surface offers", () => {
     expect(screen.getByRole("button", { name: "Review" })).toBeTruthy();
   });
 
-  // A lane the reader may not see must SAY so. Reported as empty it would tell
-  // them their day is clear, which is the one lie a surface like this must not
-  // tell.
-  it("says so when part of the day is hidden from the reader", async () => {
+  // A lane the reader may not see must SAY so, and the page must stop claiming
+  // otherwise.
+  //
+  // The first version drew a warning banner and then carried on saying "Your
+  // day is clear" above a lane reading "Nothing needs a decision" — two
+  // reassurances and one warning, and a reader believes the reassuring ones.
+  // Asserting only that the warning EXISTS is what let that through.
+  it("never claims a clear day it cannot see", async () => {
     stub({ ...emptyDay, lanes_omitted: ["needs_you"] });
     renderToday();
-    await waitFor(() =>
-      expect(screen.getByText(/hidden from your account/i)).toBeTruthy(),
-    );
+    await screen.findByText("Part of your day is hidden from your account.");
+    // The lead no longer claims a clear day, and the withheld lane says why it
+    // is empty instead of asserting that it is.
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+    expect(screen.getByText("Hidden from your account.")).toBeTruthy();
   });
 
   it("leads with the count of what actually needs deciding", async () => {
