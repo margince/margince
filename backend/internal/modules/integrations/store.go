@@ -29,6 +29,13 @@ const (
 	auditKeyProvider = "provider"
 	auditKeyMode     = "mode"
 	auditKeyPreset   = "preset"
+	// The two toggles that decide whether an arrival is bought without anybody
+	// asking. They belong in the image for the same reason mode does: an
+	// investigation into why credits drained asks who switched automatic
+	// buying on, and an audit row that records neither answers that with two
+	// identical images.
+	auditKeyAutoCreate = "automatic_individual_create"
+	auditKeyAutoImport = "automatic_import"
 )
 
 // Store owns the four platform tables. Every exported method gates before it

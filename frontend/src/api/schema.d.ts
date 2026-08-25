@@ -11835,7 +11835,7 @@ export interface components {
             /** @default true */
             automatic_individual_create: boolean;
             /**
-             * @description Enrich every person a connector creates. Capture mints one person per external counterparty, so a mailbox sync spends a credit each time; off by default for that reason.
+             * @description Enrich every person a connector creates. A mailbox, channel or other connection mints one person per counterparty it sees, and each purchase spends credits; off by default for that reason.
              * @default false
              */
             automatic_import: boolean;

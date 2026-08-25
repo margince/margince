@@ -425,11 +425,11 @@ function PolicyRow({
           />
         )}
       />
-      {/* Capture's arrivals, decided separately from the ones a colleague
-          types. One mailbox sync mints a person per external counterparty, so
-          this switch spends a credit per sender where the one above spends one
-          per deliberate act — which is why the customer gets to answer them
-          apart, and why this one starts off. */}
+      {/* Arrivals from a connection, decided separately from the ones a
+          colleague types. Every connector — a mailbox, a channel, an extension
+          — mints a person per counterparty it sees, so this switch spends per
+          arrival where the one above spends per deliberate act. That is why
+          the customer answers them apart, and why this one starts off. */}
       <SettingRow
         label={t("provider.autoImport")}
         description={t("provider.autoImportHint")}

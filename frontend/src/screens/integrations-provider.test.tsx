@@ -159,7 +159,7 @@ describe("ProviderCard write posture", () => {
   const DISCONNECT = "Disconnect";
   const DELETE_DATA = "Delete bought data";
   const KEY_FIELD = "Replace the API key";
-  const AUTO_IMPORT = "Enrich contacts from connected mailboxes";
+  const AUTO_IMPORT = "Enrich contacts that arrive from a connection";
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
   // destroys purchased contact data. The trigger's presence is what the grant
