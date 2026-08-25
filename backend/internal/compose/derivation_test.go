@@ -201,9 +201,15 @@ func TestAggregateAliasCannotSquatOnDerivationURL(t *testing.T) {
 }
 
 // The forecast is a parameterized report over the shared engine
-// (B-E09.10): its weighted measure must divide by 100 with per-deal
+// (B-E09.10): its weighted measure must be the ENGINE's, with its per-deal
 // rounding, and its plan must aggregate the deal table alone — the
 // stage join is a to-one lookup, never a row multiplier.
+//
+// The measure is compared against weightedAmountMinorExpr rather than against
+// a copy of it. A copy here would be a second spelling of the arithmetic, in
+// the one place a reader trusts to be authoritative about it; what the
+// expression COMPUTES is held against the Go spelling of the same figure by
+// TestTheTwoSpellingsOfWeightedValueAgree.
 func TestForecastSpecShape(t *testing.T) {
 	spec, ok := prebuiltReports["forecast"]
 	if !ok {
@@ -216,8 +222,9 @@ func TestForecastSpecShape(t *testing.T) {
 	if got := spec.fromClause(); got != "deal t JOIN stage s ON s.id = t.stage_id" {
 		t.Errorf("fromClause = %q", got)
 	}
-	if spec.measures["weighted_amount_minor"] != "round((t.amount_minor::numeric * s.win_probability) / 100.0)::bigint" {
-		t.Errorf("weighted measure = %q", spec.measures["weighted_amount_minor"])
+	if spec.measures["weighted_amount_minor"] != weightedAmountMinorExpr {
+		t.Errorf("weighted measure = %q, want the engine's own %q",
+			spec.measures["weighted_amount_minor"], weightedAmountMinorExpr)
 	}
 	if spec.measures["amount_minor"] != "t.amount_minor" {
 		t.Errorf("unweighted measure = %q", spec.measures["amount_minor"])

@@ -9,7 +9,11 @@ package projects
 // spellings of "older than N days" would be three answers the first time one
 // of them changed.
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
+)
 
 // DefaultProjectQuietDays is how long a project in flight may go without a
 // filed activity before it counts as quiet, when the caller names no window.
@@ -35,13 +39,15 @@ func ProjectInFlightSQL(alias string) string {
 func ProjectQuietSQL(alias, nowSQL string, daysPos int) string {
 	// nowSQL is cast so a bound parameter is typed by the comparison rather
 	// than guessed as an interval from the subtraction beside it.
-	return fmt.Sprintf("coalesce(%[1]s.last_activity_at, %[1]s.created_at) < (%[2]s)::timestamptz - make_interval(days => $%[3]d)",
-		alias, nowSQL, daysPos)
+	return fmt.Sprintf("%[1]s < (%[2]s)::timestamptz - make_interval(days => $%[3]d)",
+		ProjectQuietAnchorSQL(alias), nowSQL, daysPos)
 }
 
 // ProjectQuietAnchorSQL is the instant the quiet rule measured from — the
-// same coalesce ProjectQuietSQL compares — so a caller reporting "quiet since"
-// or keying a finding to one quiet episode reads the value the rule used.
+// expression ProjectQuietSQL compares, which is why that predicate is built
+// from THIS function rather than from a second coalesce beside it. A caller
+// reporting "quiet since", or keying a finding to one quiet episode, reads the
+// value the rule used.
 func ProjectQuietAnchorSQL(alias string) string {
-	return fmt.Sprintf("coalesce(%[1]s.last_activity_at, %[1]s.created_at)", alias)
+	return idlebase.SQL(alias)
 }
