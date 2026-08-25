@@ -8682,31 +8682,31 @@ func (e SavedViewSharedScope) Valid() bool {
 
 // Defines values for SavedViewResource.
 const (
-	Activities    SavedViewResource = "activities"
-	Deals         SavedViewResource = "deals"
-	Leads         SavedViewResource = "leads"
-	Organizations SavedViewResource = "organizations"
-	Partners      SavedViewResource = "partners"
-	People        SavedViewResource = "people"
-	Projects      SavedViewResource = "projects"
+	SavedViewResourceActivities    SavedViewResource = "activities"
+	SavedViewResourceDeals         SavedViewResource = "deals"
+	SavedViewResourceLeads         SavedViewResource = "leads"
+	SavedViewResourceOrganizations SavedViewResource = "organizations"
+	SavedViewResourcePartners      SavedViewResource = "partners"
+	SavedViewResourcePeople        SavedViewResource = "people"
+	SavedViewResourceProjects      SavedViewResource = "projects"
 )
 
 // Valid indicates whether the value is a known member of the SavedViewResource enum.
 func (e SavedViewResource) Valid() bool {
 	switch e {
-	case Activities:
+	case SavedViewResourceActivities:
 		return true
-	case Deals:
+	case SavedViewResourceDeals:
 		return true
-	case Leads:
+	case SavedViewResourceLeads:
 		return true
-	case Organizations:
+	case SavedViewResourceOrganizations:
 		return true
-	case Partners:
+	case SavedViewResourcePartners:
 		return true
-	case People:
+	case SavedViewResourcePeople:
 		return true
-	case Projects:
+	case SavedViewResourceProjects:
 		return true
 	default:
 		return false

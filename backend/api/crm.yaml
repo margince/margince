@@ -24255,6 +24255,12 @@ components:
       type: string
       description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
       enum: [people, organizations, deals, activities, leads, partners, projects]
+      # Pinned: the generator prefixes a constant only to break a collision, so
+      # these names move when an UNRELATED schema gains or loses a value that
+      # collides with one of them. Adding `commitments` to the attention feed's
+      # lanes_omitted did exactly that once, silently unprefixing all seven and
+      # breaking every caller.
+      x-enum-varnames: [SavedViewResourcePeople, SavedViewResourceOrganizations, SavedViewResourceDeals, SavedViewResourceActivities, SavedViewResourceLeads, SavedViewResourcePartners, SavedViewResourceProjects]
 
     SavedView:
       type: object
