@@ -39,8 +39,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/authz"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -251,65 +249,6 @@ func TestDeepReadCrawlsExtractsStagesOneDeepReadProposalAndFinishesDone(t *testi
 	}
 	if updatedEvents != 1 {
 		t.Fatalf("%d organization.updated outbox events after accept, want exactly 1 for the whole delta", updatedEvents)
-	}
-}
-
-func TestDeepReadConcurrentStagingJoinsThePendingProposal(t *testing.T) {
-	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	ctx := deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
-		Workspace:   e.WS,
-		RequestedBy: "human:" + e.Rep1.String(),
-	})
-	readID := ids.NewV7()
-	claim := people.SiteReadClaim{OrganizationID: &org, SeedURL: seedURL}
-	facts := []people.DeepReadFact{{
-		Category: "offering", Field: "service", Value: "Implementation",
-		ValueKey: "implementation", EvidenceSnippet: "Guided implementation", SourceURL: seedURL, Confidence: 0.9,
-	}}
-	type result struct {
-		id  ids.ApprovalID
-		err error
-	}
-	ready := make(chan struct{}, 2)
-	start := make(chan struct{})
-	results := make(chan result, 2)
-	// One bundle for both passes: they are the same act racing itself, so what
-	// is under test is the join, not which act's grouping wins.
-	bundle := ids.NewV7()
-	for range 2 {
-		go func() {
-			ready <- struct{}{}
-			<-start
-			// Each pass in its own transaction, which is what makes them race:
-			// the staging path takes the identity lock inside whatever
-			// transaction it is handed, and one shared transaction would be one
-			// pass with two calls in it.
-			var id ids.ApprovalID
-			err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-				var err error
-				id, err = worker.stage(ctx, tx, readID, claim, nil, facts, 1, bundle)
-				return err
-			})
-			results <- result{id: id, err: err}
-		}()
-	}
-	<-ready
-	<-ready
-	close(start)
-	first, second := <-results, <-results
-	if first.err != nil || second.err != nil {
-		t.Fatalf("concurrent staging errors = %v, %v", first.err, second.err)
-	}
-	if first.id != second.id {
-		t.Fatalf("concurrent staging returned %s and %s, want the same pending proposal", first.id, second.id)
-	}
-	if n := deepReadApprovals(t, e); n != 1 {
-		t.Fatalf("concurrent staging created %d deepread approvals, want 1", n)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'approval.requested'`); n != 1 {
-		t.Fatalf("concurrent staging emitted %d approval.requested events, want 1", n)
 	}
 }
 
@@ -712,64 +651,4 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'deepread' AND on_behalf_of = $1`, e.Rep1); n != 0 {
 		t.Errorf("%d proposals attributed to the payload's requester — the row is the authority", n)
 	}
-}
-
-// A read's proposals become visible ALL AT ONCE, which is what makes its bundle
-// mean "this is what the read found".
-//
-// Staged one commit at a time, a human refreshing their inbox between commits
-// could see the bundle, decide it, and be told the read's question was answered
-// while the rest of it was still being written; a worker that died mid-way would
-// leave a permanently partial set. The proof is that a staging which fails
-// part-way leaves NOTHING — the company proposal succeeds first, so a lead that
-// cannot stage must take it back with it.
-//
-// The lead is made unstageable at a real seam rather than by a hook: the
-// already-on-file probe asks under the REQUESTING HUMAN's authority, which the
-// worker resolves through identity, and a resolver that cannot answer stops that
-// lead — the org's own proposal having already been written.
-func TestDeepReadStagesAllOfAReadsProposalsOrNoneOfThem(t *testing.T) {
-	e := integration.Setup(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	worker.authority = unresolvableAuthority{}
-	ctx := deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
-		Workspace:   e.WS,
-		RequestedBy: "human:" + e.Rep1.String(),
-	})
-	claim := people.SiteReadClaim{OrganizationID: &org, SeedURL: seedURL}
-	facts := []people.DeepReadFact{{
-		Category: "offering", Field: "service", Value: "Implementation",
-		ValueKey: "implementation", EvidenceSnippet: "Guided implementation", SourceURL: seedURL, Confidence: 0.9,
-	}}
-	published := sitePerson{
-		Name: "Anna Muster", Role: "CTO", PublishedEmail: "anna@acme.example",
-		EvidenceSnippet: "Anna Muster, CTO", SourceURL: seedURL,
-	}
-
-	if _, err := worker.stageProposals(ctx, ids.NewV7(), claim, nil, facts,
-		[]sitePerson{published}, 1); err == nil {
-		t.Fatal("staging a read whose lead cannot be staged succeeded, so this run proves nothing")
-	}
-	if n := deepReadApprovals(t, e); n != 0 {
-		t.Errorf("%d deepread proposals survived a read that could not stage all of itself, want 0 — "+
-			"a partial bundle is a whole question the inbox cannot answer", n)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE bundle_id IS NOT NULL`); n != 0 {
-		t.Errorf("%d bundled proposals survived, want 0", n)
-	}
-}
-
-// unresolvableAuthority is identity's RBAC seam when it cannot answer — not a
-// missing user (which probeCtx handles by narrowing nothing), but a resolver
-// that failed. The site-lead staging refuses to guess a human's scope, so the
-// lead cannot be staged.
-type unresolvableAuthority struct{}
-
-func (unresolvableAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
-	return authz.RBAC{}, errors.New("identity is unreachable")
-}
-
-func (unresolvableAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
-	return "", errors.New("identity is unreachable")
 }

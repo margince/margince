@@ -78,6 +78,44 @@ func (w *siteDeepReadWorker) fillMatchedPeople(ctx context.Context, orgID ids.Or
 // auto-enrich sweep rather than a human.
 func isAutoEnrichRequest(requestedBy string) bool { return requestedBy == systemAutoEnrichActor }
 
+// applyForRequester is the human lane's terminal step: the person asked for
+// this read, so its org fields and facts land directly rather than becoming a
+// proposal that asks them to confirm what they just requested.
+//
+// It is deliberately NOT autoApply: that one also moves the auto-enrich sweep
+// cursor, which is bookkeeping for reads nobody asked for. A human read has no
+// cursor to advance, and advancing one would tell the sweep it had already
+// enriched a company it never looked at.
+//
+// Site people still stage as leads, on the same NEVER-8 grounds the automatic
+// lane keeps them: a person the site published is a new record about a human
+// being, not a column on the company the requester named.
+func (w *siteDeepReadWorker) applyForRequester(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, mergedFields []evidencedField, mergedFacts []people.DeepReadFact, mergedPeople []sitePerson) ([]ids.UUID, error) {
+	orgID := ids.From[ids.OrganizationKind](*claim.OrganizationID)
+	// Staged first for the reason autoApply states: the leads were evidenced
+	// independently of the org columns, so an apply failure must not drop them.
+	proposalIDs, err := w.stageSiteLeads(ctx, args.SiteReadID, claim, w.fillMatchedPeople(ctx, orgID, mergedPeople), ids.NewV7())
+	if err != nil {
+		return nil, err
+	}
+	fields := deepReadFields(mergedFields)
+	if len(fields) == 0 && len(mergedFacts) == 0 {
+		return proposalIDs, nil
+	}
+	if err := w.people.ApplyDeepRead(ctx, people.DeepReadProposal{
+		OrganizationID: orgID,
+		SourceURL:      claim.SeedURL,
+		SiteReadID:     args.SiteReadID,
+		Fields:         fields,
+		Facts:          mergedFacts,
+	}); err != nil {
+		// The people are staged; surfacing the error finishes the read failed,
+		// which is what tells the human the company half did not land.
+		return proposalIDs, fmt.Errorf("applying the deep read: %w", err)
+	}
+	return proposalIDs, nil
+}
+
 // autoApply is the auto-enrich lane's terminal step: apply the org fields +
 // facts directly, stage site people as leads, and record the cursor outcome.
 func (w *siteDeepReadWorker) autoApply(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, mergedFields []evidencedField, mergedFacts []people.DeepReadFact, mergedPeople []sitePerson) ([]ids.UUID, error) {

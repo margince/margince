@@ -2125,19 +2125,11 @@ export const en = {
   "home.snooze": "Snooze",
   "home.snoozedState": "snoozed",
 
-  "enrich.title": "Read from the website",
-  "enrich.sub":
-    "evidence-or-omit — fills only empty fields, and only after your approval",
-  "enrich.cta": "Read now",
-  "enrich.reading": "Reading…",
-  "enrich.staged":
-    "Staged — nothing written yet. Accept it in your inbox; only empty fields fill.",
   "enrich.toInbox": "Open inbox",
-  "enrich.from": "read from {url}",
 
   "deepread.title": "Read the full site",
   "deepread.sub":
-    "Reads up to 12 pages of the company's website. Findings are staged for your review — nothing is written until you accept.",
+    "Reads the company's website and fills in what it finds. Only empty fields are filled, everything is marked as read from the site, and you can undo it.",
   "deepread.cta": "Read full site",
   "deepread.starting": "Starting…",
   "deepread.unavailable": "Site reading is not configured on this server.",
@@ -2158,13 +2150,6 @@ export const en = {
   "deepread.stopDeadline": "deadline",
   "deepread.factCount.one": "{count} evidenced fact staged",
   "deepread.factCount.other": "{count} evidenced facts staged",
-  "deepread.pagesRead": "Pages read",
-  "deepread.skippedPages": "Pages skipped",
-  "deepread.skipRobots": "robots.txt",
-  "deepread.skipOffDomain": "off domain",
-  "deepread.skipPageCap": "page cap",
-  "deepread.skipByteCap": "byte cap",
-  "deepread.skipUnreadable": "unreadable",
   "deepread.proposals": "{count} proposals waiting for your review",
   "deepread.proposalsOne": "1 proposal waiting for your review",
   "deepread.kindHome": "Home",
