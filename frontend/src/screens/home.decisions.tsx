@@ -128,8 +128,6 @@ function deckLabels(
 
 /** What a commit sent, and what came back for each item in it. */
 type CommitResult = Readonly<{
-  /** The first minted token, which is the one the modal can show. */
-  token: { approvalId: string; token: string } | null;
   /** At least one item had already been decided by somebody else. */
   alreadyDecided: boolean;
   /** Items the reader staged for editing: the deck cannot edit, the queue can. */
@@ -137,12 +135,10 @@ type CommitResult = Readonly<{
   /**
    * The first item that could not be sent, if any.
    *
-   * Carried in the RESULT rather than thrown, and that is the whole point of it
-   * being here: a throw from the third item took the first item's approval token
-   * with it. The token is minted once, it is the only copy the reader gets, and
-   * the effect it belongs to had already executed — so the commit reports what
-   * landed AND what did not, instead of reporting the failure and losing the
-   * rest.
+   * Carried in the RESULT rather than thrown: the items before the failure were
+   * decided, and their effects have already executed. A throw would report the
+   * failure and lose that, leaving the reader to guess which half of their tray
+   * landed.
    */
   failure: unknown | null;
 }>;
@@ -157,21 +153,21 @@ type CommitResult = Readonly<{
 async function sendOne(
   approval: Approval,
   verdict: "accept" | "reject",
-): Promise<{ token: string | null; alreadyDecided: boolean }> {
+): Promise<{ alreadyDecided: boolean }> {
   const path =
     verdict === "accept" ? "/approvals/{id}/approve" : "/approvals/{id}/reject";
   try {
-    const { data, error } = await api.POST(path, {
+    const { error } = await api.POST(path, {
       params: { path: { id: approval.id } },
       ...(verdict === "reject" ? { body: { reason: "" } } : {}),
     });
     if (error) {
       throwProblem(error);
     }
-    return { token: data?.approval_token ?? null, alreadyDecided: false };
+    return { alreadyDecided: false };
   } catch (error) {
     if (error instanceof ProblemError && isAlreadyDecided(error.problem)) {
-      return { token: null, alreadyDecided: true };
+      return { alreadyDecided: true };
     }
     throw error;
   }
@@ -187,17 +183,13 @@ async function sendOne(
 async function sendVerdict(
   approvals: readonly Approval[],
   verdict: "accept" | "reject",
-): Promise<Pick<CommitResult, "token" | "alreadyDecided">> {
-  let token: CommitResult["token"] = null;
+): Promise<Pick<CommitResult, "alreadyDecided">> {
   let alreadyDecided = false;
   for (const approval of approvals) {
     const outcome = await sendOne(approval, verdict);
-    if (outcome.token !== null && token === null) {
-      token = { approvalId: approval.id, token: outcome.token };
-    }
     alreadyDecided = alreadyDecided || outcome.alreadyDecided;
   }
-  return { token, alreadyDecided };
+  return { alreadyDecided };
 }
 
 /**
@@ -239,10 +231,10 @@ async function sendBundle(
 async function sendStaged(
   item: DecisionDeckItem,
   verdict: "accept" | "reject",
-): Promise<Pick<CommitResult, "token" | "alreadyDecided">> {
+): Promise<Pick<CommitResult, "alreadyDecided">> {
   if (item.kind === "bundle") {
     const outcome = await sendBundle(item.bundleId, verdict);
-    return { token: null, alreadyDecided: outcome.alreadyDecided };
+    return { alreadyDecided: outcome.alreadyDecided };
   }
   return sendVerdict(approvalsOf(item), verdict);
 }
@@ -260,7 +252,6 @@ async function commitTray(input: {
   items: readonly DecisionDeckItem[];
 }): Promise<CommitResult> {
   const byId = new Map(input.items.map((item) => [item.id, item]));
-  let token: CommitResult["token"] = null;
   let alreadyDecided = false;
   let edits = 0;
   let failure: unknown | null = null;
@@ -275,18 +266,17 @@ async function commitTray(input: {
     }
     try {
       const outcome = await sendStaged(item, decision.verdict);
-      token = token ?? outcome.token;
       alreadyDecided = alreadyDecided || outcome.alreadyDecided;
     } catch (error) {
       // The FIRST failure is kept and the loop stops: these are outbound
       // effects, and carrying on after one refusal sends the rest against
-      // whatever made this one fail. What already went, went — and its token
-      // travels back with the failure rather than being thrown away with it.
+      // whatever made this one fail. What already went, went, and the result
+      // says so rather than the throw erasing it.
       failure = error;
       break;
     }
   }
-  return { token, alreadyDecided, edits, failure };
+  return { alreadyDecided, edits, failure };
 }
 
 /** The deck and its tray: the staged verdicts, and the one act that sends them. */
@@ -294,7 +284,6 @@ export function DecisionsSection({
   items,
   nowMs,
   state,
-  onApproved,
   onAlreadyDecided,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
@@ -302,7 +291,6 @@ export function DecisionsSection({
   /** What the read behind the queue says. `ready` defers to what the deck can
    *  see; a failure or a wait is the deck's to draw, not the column's. */
   state: SectionState;
-  onApproved: (approvalId: string, token: string) => void;
   onAlreadyDecided: () => void;
 }>) {
   const t = useT();
@@ -312,7 +300,7 @@ export function DecisionsSection({
   const tierMap = useAgentTierMap();
   // What stopped a commit that had already sent something. Screen state rather
   // than the mutation's error, because the mutation SUCCEEDED — it carried the
-  // outcomes of the items that went, and one of them may be a token.
+  // outcomes of the items that did go.
   const [failure, setFailure] = useState<string | null>(null);
 
   const commit = useMutation({
@@ -322,12 +310,6 @@ export function DecisionsSection({
     // been invalidated.
     mutationFn: commitTray,
     onSuccess: (result) => {
-      // The token goes up FIRST: the invalidation below re-renders the deck, and
-      // a token shown by something that has just unmounted is a token nobody
-      // ever reads.
-      if (result.token) {
-        onApproved(result.token.approvalId, result.token.token);
-      }
       if (result.alreadyDecided) {
         onAlreadyDecided();
       }
@@ -339,15 +321,9 @@ export function DecisionsSection({
         return;
       }
       setFailure(null);
-      // The full queue is where an edit's form lives, so the reader is taken
-      // there rather than told the deck cannot do it — but NOT over the top of a
-      // token. A commit carrying both an approval and an edit mints a one-time
-      // token that is shown once and cannot be fetched again, and navigating
-      // unmounted the surface holding it before anybody could read it. With a
-      // token on screen the reader keeps it and the edit keeps its place in the
-      // queue, one click away in the sidebar: an edit deferred by a screen is
-      // recoverable, a token taken off the screen is not.
-      if (result.edits > 0 && !result.token) {
+      // The full queue is where an edit's form lives, so a tray carrying one
+      // takes the reader there rather than telling them the deck cannot do it.
+      if (result.edits > 0) {
         navigate({ screen: "inbox" });
       }
     },

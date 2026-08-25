@@ -4,7 +4,7 @@ import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
-import { ApprovalRow, useApprovalTokenSink } from "./inbox";
+import { ApprovalRow, useDecisionSink } from "./inbox";
 import { useTargetApprovals } from "./inbox.queries";
 
 // What is waiting on a decision FOR THIS ACCOUNT, where the account is being
@@ -78,7 +78,7 @@ export function CompanyApprovalsPanel({
 }>) {
   const t = useT();
   const titleId = useId();
-  const sink = useApprovalTokenSink();
+  const sink = useDecisionSink();
   // The panel reads the account's OWN queue rather than the capped page the
   // 360 carries for the chip count, so deciding through it cannot strand the
   // remainder behind a workspace-wide inbox the reader never asked for. The
@@ -120,14 +120,12 @@ export function CompanyApprovalsPanel({
             <ApprovalRow
               key={approval.id}
               approval={approval}
-              onApproved={sink.onApproved}
               onAlreadyDecided={sink.onAlreadyDecided}
               extraInvalidateKeys={extraInvalidateKeys}
             />
           ))}
         </section>
       ))}
-      {sink.tokenModal}
     </Modal>
   );
 }
