@@ -123,7 +123,20 @@ func (*CursorSortMismatchError) Error() string {
 }
 
 func DecodeCursor(token string) (Cursor, error) {
-	return DecodeOpaque[Cursor](token)
+	c, err := DecodeOpaque[Cursor](token)
+	if err != nil {
+		return Cursor{}, err
+	}
+	// Well-formed JSON is not yet a position. `null` and `{}` both unmarshal
+	// cleanly and leave the keyset at its zero value, which every caller reads
+	// as the TOP of the list — so a token nobody minted would silently restart
+	// the walk rather than being refused. Both halves of the tuple have to be
+	// there: an absent id is the tell on one side, and a zero instant on the
+	// other would order before every real row.
+	if c.CreatedAt.IsZero() || c.ID == (ids.UUID{}) {
+		return Cursor{}, &MalformedCursorError{}
+	}
+	return c, nil
 }
 
 // SQLf keeps store-side SQL assembly lines readable; arguments are

@@ -117,3 +117,38 @@ func TestAnInstantJSONCannotWriteIsAnErrorRatherThanAnEmptyToken(t *testing.T) {
 		t.Errorf("the failed mint returned %q, want no token at all", token)
 	}
 }
+
+// A generic keyset position needs BOTH halves of its tuple. `null` and `{}`
+// decode cleanly into a zero Cursor, and every caller reads a zero position as
+// the top of the list — so a token nobody minted would silently restart the
+// walk instead of being refused.
+func TestAGenericCursorMissingHalfItsTupleIsRefused(t *testing.T) {
+	at := time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
+	for name, position := range map[string]storekit.Cursor{
+		"no id at all":                {CreatedAt: at},
+		"no instant":                  {ID: ids.NewV7()},
+		"neither, as `{}` decodes to": {},
+	} {
+		token, err := storekit.EncodeOpaque(position)
+		if err != nil {
+			t.Fatalf("minting %s: %v", name, err)
+		}
+		if _, err := storekit.DecodeCursor(token); !errors.As(err, new(*storekit.MalformedCursorError)) {
+			t.Errorf("DecodeCursor(<%s>) = %v, want MalformedCursorError — a zero position reads as the "+
+				"top of the list and pages it from the start", name, err)
+		}
+	}
+	// And the whole tuple still round-trips.
+	whole := storekit.Cursor{CreatedAt: at, ID: ids.NewV7()}
+	token, err := storekit.EncodeOpaque(whole)
+	if err != nil {
+		t.Fatalf("minting a whole position: %v", err)
+	}
+	got, err := storekit.DecodeCursor(token)
+	if err != nil {
+		t.Fatalf("DecodeCursor(<a whole position>): %v", err)
+	}
+	if !got.CreatedAt.Equal(whole.CreatedAt) || got.ID != whole.ID {
+		t.Errorf("round trip = %+v, want %+v", got, whole)
+	}
+}
