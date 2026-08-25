@@ -93,6 +93,14 @@ function literalAttributeValue(initializer: ts.Node): string | undefined {
 // (#rgb, #rgba, #rrggbb, #rrggbbaa) or a raw colour function.
 const LITERAL_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
 
+// Blanks every span a pattern matches, keeping the newlines so a finding's
+// line number still points at the right line. Used for the languages whose
+// comments a regex CAN settle — CSS and HTML have one comment form each and no
+// line comment, so there is no `//`-inside-a-URL problem to parse around.
+function blankSpans(text: string, comment: RegExp): string {
+  return text.replace(comment, (span) => span.replace(/[^\n]/g, " "));
+}
+
 // The source the colour gate actually reads: TypeScript with its comments
 // blanked out. A comment is prose, and prose carries issue references — `#2463`
 // is four hex digits, which is exactly the `#rgba` short form, so a gate that
@@ -113,7 +121,15 @@ const LITERAL_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
 // file's whole suite as a side effect of the import.
 function scannableSource(file: string, text: string): string {
   if (!/\.tsx?$/.test(file)) {
-    return text;
+    // CSS and HTML carry prose too, and the same reference trips the same
+    // pattern there: `/* see #2463 */` is four hex digits to the colour rule,
+    // and a family named inside a comment is a family nobody ships. Neither
+    // language has a line comment, so one span each — blanked, not deleted,
+    // for the line numbers.
+    return blankSpans(
+      text,
+      file.endsWith(".css") ? /\/\*[\s\S]*?\*\//g : /<!--[\s\S]*?-->/g,
+    );
   }
   const parsed = ts.createSourceFile(
     file,
@@ -135,7 +151,11 @@ function scannableSource(file: string, text: string): string {
   // the code before it trailing, and reports it under that name only.
   const strip = (node: ts.Node): void => {
     ts.getLeadingCommentRanges(text, node.pos)?.forEach(blank);
-    ts.getTrailingCommentRanges(text, node.pos)?.forEach(blank);
+    // `node.end` is where a trailing comment can begin, which is what the
+    // API means by the name. It changes no outcome here — the walk reaches
+    // every token, so the same span is also leading trivia of the next one —
+    // and it is the spelling that says what it is doing.
+    ts.getTrailingCommentRanges(text, node.end)?.forEach(blank);
     for (const child of node.getChildren(parsed)) {
       strip(child);
     }
@@ -624,6 +644,37 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     // sitting in a comment — and the gate must still SEE the literal on the
     // line under the JSX one, or it has bought its silence by going blind.
     expect(flagged).toEqual([8]);
+  });
+
+  // The same rule in the languages the parser arm never sees. A stylesheet is
+  // where colours actually live, so a gate that reads its comments names the
+  // wrong line most often exactly where it matters most.
+  it("reads past a CSS comment without going blind to the rule beside it", () => {
+    const sample = [
+      '/* see #2463, and font-family: "Comic Sans MS" is discussed there */',
+      ".swatch {",
+      "  color: #ff0000;",
+      "}",
+    ].join("\n");
+    const scanned = scannableSource("sample.css", sample);
+    const flagged = scanned
+      .split("\n")
+      .flatMap((line, index) => (LITERAL_COLOUR.test(line) ? [index + 1] : []));
+    // Only the declaration. The comment names an issue and a family, and
+    // neither is something the file ships.
+    expect(flagged).toEqual([3]);
+    expect(familiesIn(scanned)).toEqual([]);
+  });
+
+  it("reads past an HTML comment the same way", () => {
+    const sample = [
+      "<!-- #2463: the meta colour cannot read a custom property -->",
+      '<meta name="theme-color" content="#0b1f17" />',
+    ].join("\n");
+    const flagged = scannableSource("sample.html", sample)
+      .split("\n")
+      .flatMap((line, index) => (LITERAL_COLOUR.test(line) ? [index + 1] : []));
+    expect(flagged).toEqual([2]);
   });
 });
 
