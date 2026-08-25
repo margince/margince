@@ -226,6 +226,30 @@ export function EvidenceChip({
   );
 }
 
+/**
+ * A wire confidence (0..1) as the level `ConfidenceMeter` draws. The ONE
+ * spelling of these bands: eight surfaces read it, and a screen that banded
+ * 0.55 as "med" while its neighbour called it "low" would be two answers to one
+ * number.
+ *
+ * Null in, null out. An unrecorded confidence is not a low one, and drawing it
+ * as low would put a claim on the screen the data never made.
+ */
+export function confidenceLevel(
+  confidence: number | null | undefined,
+): ConfidenceLevel | null {
+  if (confidence == null) {
+    return null;
+  }
+  if (confidence >= 0.8) {
+    return "high";
+  }
+  if (confidence >= 0.5) {
+    return "med";
+  }
+  return "low";
+}
+
 // Low confidence is shown as low, never hidden (§4.2) — there is no prop to
 // suppress the glyph.
 export function ConfidenceMeter({
@@ -241,11 +265,19 @@ export function ConfidenceMeter({
 }
 
 // Provenance is an agent (`agent:capture`), a connector (`connector:gmail`), a
-// job the installation ran itself (`system:person_auto_enrich`) or a human —
-// the shapes captured_by can take, plus the honest fifth for a row that records
-// none of them. A reader has to be able to tell WHICH KIND of thing produced a
-// value, so each is its own arm: a scheduled sweep announced as an AI agent
-// misdescribes both.
+// job the installation ran itself (`system:person_auto_enrich`), a human, or a
+// buyer — the shapes captured_by can take, plus the honest last arm for a row
+// that records none of them. A reader has to be able to tell WHICH KIND of
+// thing produced a value, so each is its own arm: a scheduled sweep announced
+// as an AI agent misdescribes both.
+//
+// `buyer` is the person on the other side of a Deal Room: outside the
+// organization, holding no seat and named in no member directory. It is its own
+// arm rather than a `human` one because a reader cannot ask a buyer the way
+// they can ask a colleague, and it is not `unknown` because that arm means
+// nobody recorded a source — here the source IS recorded, and it is a person.
+// Nothing to name today: a Deal Room participant resolves to no display name on
+// the read path, so the tag says the kind, the way `agent` and `system` do.
 //
 // `human` carries whether that human is the reader. "Typed by you" over a
 // colleague's entry is a false statement about who to ask, and it was also
@@ -261,6 +293,7 @@ export type Provenance =
   | { kind: "connector"; connector: string }
   | { kind: "system"; job?: string }
   | { kind: "human"; self: boolean; userId?: string }
+  | { kind: "buyer" }
   | { kind: "unknown" };
 
 export function ProvenanceTag({
@@ -294,6 +327,13 @@ export function ProvenanceTag({
     return (
       <span className="provenance provenance-agent">
         {t("trust.connectorTag", { connector: provenance.connector })}
+      </span>
+    );
+  }
+  if (provenance.kind === "buyer") {
+    return (
+      <span className="provenance provenance-buyer">
+        {t("trust.typedByBuyer")}
       </span>
     );
   }

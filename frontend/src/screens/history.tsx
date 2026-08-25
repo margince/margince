@@ -90,13 +90,12 @@ function provenanceOfEntry(
   entry: Pick<AuditHistoryEntry, "actor_type" | "actor_id">,
   viewerUserId?: string,
 ): Provenance {
-  // A buyer is a person, not a machine, and drawing them with the machine
-  // treatment is the mislabel the actor kind exists to prevent. Provenance has
-  // no buyer variant yet, so `unknown` is the honest placeholder: it says the
-  // source is not recorded rather than naming the wrong kind of source. Giving
-  // Provenance a buyer variant is a design-system change, tracked separately.
+  // A Deal Room participant: a person, and one from outside the organization,
+  // which is its own arm rather than the machine treatment or the colleague
+  // one. `actor_id` is `buyer:<participant uuid>` — an identifier no reader can
+  // look up and no lookup here resolves — so the tag says the kind and stops.
   if (entry.actor_type === "buyer") {
-    return { kind: "unknown" };
+    return { kind: "buyer" };
   }
   if (entry.actor_type !== "human") {
     return machineProvenance(entry.actor_type, entry.actor_id);
@@ -130,7 +129,7 @@ function provenanceOfEntry(
 // is put back from actor_type, so a row stamped with a bare id reads the same as
 // one stamped with the whole principal.
 function machineProvenance(
-  actorType: Exclude<AuditHistoryEntry["actor_type"], "human">,
+  actorType: Exclude<AuditHistoryEntry["actor_type"], "human" | "buyer">,
   actorId: string,
 ): Provenance {
   const prefix = `${actorType}:`;

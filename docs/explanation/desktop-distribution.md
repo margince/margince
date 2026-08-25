@@ -110,7 +110,6 @@ margince/
 │   └── pgsql/  the bus  api  worker  migrate  web/
 ├── margince.yaml                  ← the user's: company name, currency, timezone
 ├── margince.env                   ← the user's: every optional feature
-├── ai-routing.yaml                ← the user's, optional: binds tasks to models
 └── data/                          ← the user's: database, logs, uploads
 ```
 

@@ -846,6 +846,29 @@ describe("AuthScreen reset deep link", () => {
     );
   });
 
+  // The token no longer waits in the address bar for this screen to read it:
+  // app/router.tsx takes it as it reads the hash, which is what keeps it out of
+  // the history entry while a gate above this screen renders instead. Memory
+  // outlives a mount and the address did not, so the screen empties it as it
+  // takes the token in hand — a remount that found it there would put the reset
+  // form back over a reader who had gone back to sign-in.
+  //
+  // The REAL address, not the stubbed one the cases around this use: the scrub
+  // rewrites the URL, and a plain object cannot be rewritten.
+  it("does not reopen the reset form on a remount", async () => {
+    stubApi({ password: true, password_reset: true }, () => ok(204));
+    globalThis.location.hash = "#/reset-password?token=good-token";
+    const first = render(<AuthScreen onAuthed={vi.fn()} />);
+    await screen.findByLabelText("New password");
+    expect(globalThis.location.hash).toBe("#/reset-password");
+    first.unmount();
+
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByLabelText("Email")).toBeTruthy();
+    expect(screen.queryByLabelText("New password")).toBeNull();
+  });
+
   it("ignores a token in the server-visible query string", async () => {
     // The security property, asserted directly rather than implied by the happy
     // path: a query string is sent to servers, lands in access logs, is attached

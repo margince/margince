@@ -24,3 +24,31 @@ operations:
   # it, so the arming is stated in the posture's own file and every other posture
   # gets the compiled default, which is off.
   allow_data_reset: true
+
+seeds:
+  # The tier→model binding a dev stack is bootstrapped with — the same one
+  # config/ai-routing.example.yaml used to hand `make dev` through the retired
+  # `--ai-routing` flag. It lives HERE rather than in margince.example.yaml
+  # because a vanilla installation deliberately binds nothing: that file says so
+  # ("nothing guesses which vendor your text goes to"), and naming a cloud
+  # vendor in the artefact every deployment copies would be that guess.
+  #
+  # Consumed ONCE, at bootstrap, like every other seed — so editing this after a
+  # dev database exists changes nothing until `make dev-fresh`. To rebind a
+  # running stack, use Settings -> AI; that is the path a real operator has.
+  #
+  # A per-engineer override goes in config/margince.yaml, which is yours and is
+  # gitignored — but note the layering: this overlay is applied AFTER the base,
+  # so declaring `seeds.ai_routing` here wins over the same key there. Comment
+  # this block out to let your own file bind instead.
+  ai_routing:
+    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    tiers:
+      local_small: { provider: gemini, model: gemini-3.1-flash-lite }
+      cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
+      premium:     { provider: gemini, model: gemini-3.5-flash }
+      frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
+    embeddings:
+      provider: gemini
+      model: gemini-embedding-001
+      dimensions: 1536

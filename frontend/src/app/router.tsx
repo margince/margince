@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 // Hash routing: "#/deals/01J9ZK" → { screen: "deals", id: "01J9ZK" }.
 // Client routes live behind '#', so any static host serves index.html for
@@ -199,12 +199,127 @@ export function navigateReplacing(route: Route): void {
   globalThis.location.replace(routeHash(route));
 }
 
+// The one-time credentials an address may carry, and why they are taken HERE.
+//
+// Two emailed links land as a hash query: the Deal Room's buyer invitation and
+// the password reset. Each query is a bearer capability — one is worth a room,
+// the other a password — so it has to leave the address bar and the history
+// entry immediately, and neither screen can be what takes it out. App renders a
+// gate ahead of every route (a release skew, the session probe, the onboarding
+// redirect that rewrites the hash), and while such a gate holds, the screen that
+// would have scrubbed the credential never mounts. It then sits in the reader's
+// history for as long as the gate does, which on an installation mid-upgrade is
+// until somebody finishes the upgrade.
+//
+// Reading the address is the one thing every one of those gates is downstream
+// of, so taking it here makes "before the gate" a fact about the code rather
+// than an ordering somebody has to keep true in App.
+//
+// ONE table and one memory, because these were two copies of the scrub and the
+// second copy is how the first one's fix missed a password-reset token.
+//
+// What makes an address a carrier: its query IS a credential, so the screen can
+// be handed it in memory and still do its whole job. An address whose query is
+// the REQUEST — the authorize parameters a consent screen posts back — is not
+// one, and taking it would leave that screen with nothing to render.
+const HASH_CREDENTIALS: ReadonlyArray<{ screen: Screen; param: string }> = [
+  // The Deal Room's buyer invitation: `#/room?c=<credential>`.
+  { screen: "room", param: "c" },
+  // The emailed password reset: `#/reset-password?token=<token>`. The screen
+  // name is screens/auth.tsx's RESET_ROUTE, spelled as the literal here for the
+  // same reason SCREENS above spells it — importing a screen from the router
+  // would be a cycle, and the `Screen` type still fails a rename.
+  { screen: "reset-password", param: "token" },
+];
+
+const held = new Map<Screen, string>();
+
+// Moves whatever credential the CURRENT address carries into memory and
+// rewrites the address without it. Idempotent, because the address no longer
+// carries one afterwards.
+function takeFromHash(): void {
+  const hash = globalThis.location.hash;
+  const query = hash.indexOf("?");
+  if (query < 0) {
+    return;
+  }
+  const { screen } = parseHash(hash);
+  const carrier = HASH_CREDENTIALS.find((entry) => entry.screen === screen);
+  if (!carrier) {
+    return;
+  }
+  const carried = new URLSearchParams(hash.slice(query + 1)).get(carrier.param);
+  if (carried === null) {
+    return;
+  }
+  held.set(screen, carried);
+  // replaceState, not an assignment to location.hash: an assignment adds a
+  // history entry and leaves the credential in the one behind it, so the leak
+  // would survive a Back press. It fires no hashchange either, which is what
+  // lets the subscription below take the credential before it tells React the
+  // address moved — the snapshot React then reads is already the scrubbed one.
+  //
+  // The document's own query is kept: the credential is in the fragment, so
+  // nothing here needs `?…` gone, and rewriting it away discarded whatever else
+  // the URL was carrying (Storybook's `?id=<story>`, which left a reload of the
+  // canvas on no story at all).
+  const { pathname, search } = globalThis.location;
+  globalThis.history.replaceState(
+    null,
+    "",
+    `${pathname}${search}${hash.slice(0, query)}`,
+  );
+}
+
+/**
+ * The credential `screen`'s address carried, out of the address.
+ *
+ * Reading is what takes it: the first call that finds one moves it into memory
+ * and rewrites the address without it, and every call after that answers from
+ * memory. Non-destructive on the way out, so a replayed render (StrictMode) or
+ * one React discards cannot drop the credential on the floor in the gap between
+ * the router taking it and the screen that spends it asking for it.
+ */
+export function takeHashCredential(screen: Screen): string | null {
+  takeFromHash();
+  return held.get(screen) ?? null;
+}
+
+/**
+ * Forget a credential the screen has taken in hand.
+ *
+ * Memory is where the address used to hold it, and it has to empty the way the
+ * address did — the moment the screen has it — because memory outlives a mount
+ * and the address did not. A remount that found the credential still there
+ * would spend a single-use link twice, or put the reset form back over a reader
+ * who had gone back to login. Only the screen knows when it has it.
+ */
+export function forgetHashCredential(screen: Screen, credential: string): void {
+  if (held.get(screen) === credential) {
+    held.delete(screen);
+  }
+}
+
 function subscribe(onChange: () => void): () => void {
-  globalThis.addEventListener("hashchange", onChange);
-  return () => globalThis.removeEventListener("hashchange", onChange);
+  const addressChanged = () => {
+    // A second link pasted into an open tab is a hash change and nothing else:
+    // the screen does not remount for one, and whatever renders next is decided
+    // above the route. So the credential comes out of the new address before
+    // React is told there is one.
+    takeFromHash();
+    onChange();
+  };
+  globalThis.addEventListener("hashchange", addressChanged);
+  return () => globalThis.removeEventListener("hashchange", addressChanged);
 }
 
 export function useRoute(): Route {
+  // Taken during this component's FIRST render, ahead of the snapshot below, so
+  // the address React routes on is the scrubbed one and nothing can render with
+  // a credential still in the bar. An effect would be late by exactly the gate
+  // this exists for: it runs after that gate has rendered, and the gate is what
+  // stops the screen mounting to scrub it at all.
+  useState(takeFromHash);
   const hash = useSyncExternalStore(
     subscribe,
     () => globalThis.location.hash,

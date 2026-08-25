@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { render as rtlRender, cleanup, screen } from "@testing-library/react";
+import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../api/schema";
@@ -84,11 +84,23 @@ afterEach(cleanup);
 
 describe("the account's work in flight", () => {
   it("lists a deal and a project under their own subheads", () => {
-    draw(view({ deals: { data: [deal], page, won_lifetime: { amount_minor: 0, currency: "EUR" }, lost_count: 0 }, projects: [project] }));
+    draw(
+      view({
+        deals: {
+          data: [deal],
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+        projects: [project],
+      }),
+    );
 
     expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Projects" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Fleet retrofit 2026" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Fleet retrofit 2026" }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "DEP-12" })).toBeTruthy();
   });
 
@@ -146,7 +158,9 @@ describe("the account's work in flight", () => {
     // The sentence stands on its own rather than leaving a gap where a name
     // would go, and no stray "null" reaches the screen.
     expect(
-      screen.getByText(/‘Send the retrofit quote’ was due 02\/07\/2026 and is still open\./),
+      screen.getByText(
+        /‘Send the retrofit quote’ was due 02\/07\/2026 and is still open\./,
+      ),
     ).toBeTruthy();
     expect(screen.queryByText(/null/)).toBeNull();
   });
@@ -201,7 +215,9 @@ describe("the account's work in flight", () => {
       }),
     );
 
-    expect(screen.getByText(/Nothing has been filed against this project since/)).toBeTruthy();
+    expect(
+      screen.getByText(/Nothing has been filed against this project since/),
+    ).toBeTruthy();
   });
 
   it("shows the stall only when there is no reason that explains it", () => {
@@ -321,8 +337,12 @@ describe("a half of the card the reader may not have", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Fleet retrofit 2026" })).toBeTruthy();
-    expect(screen.getByText("Hidden — your role cannot read this")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Fleet retrofit 2026" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Hidden — your role cannot read this"),
+    ).toBeTruthy();
     // Never the empty state: "no projects in flight" is a claim about the
     // account that this reader's payload does not support.
     expect(screen.queryByText("No projects in flight.")).toBeNull();
@@ -341,7 +361,9 @@ describe("a half of the card the reader may not have", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Fleet retrofit 2026" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Fleet retrofit 2026" }),
+    ).toBeTruthy();
     expect(
       screen.getByText(
         "You cannot read this account’s conversations, so the rows above carry no reasons.",
@@ -377,5 +399,22 @@ describe("whether the card holds the lead slot at all", () => {
     expect(
       hasWorkInFlight(view({ projects: [{ ...project, phase: "closed" }] })),
     ).toBe(false);
+  });
+
+  // The contract marks `sections_omitted` required, and this card was the only
+  // reader in the tree that believed it — every other one guards the field.
+  // A payload without it took the WHOLE account page down through the error
+  // boundary, because this runs before the card renders and decides which card
+  // the slot gets. A read that names no omissions withholds nothing, which is
+  // the safe reading: "there is none" understates rather than inventing work.
+  it("survives a payload that names no omissions at all", () => {
+    const partial = view();
+    // Through `Reflect`, because the whole point is that the TYPE still says
+    // the field is there while the payload does not carry it — `delete` on a
+    // required property is a compile error, and asserting the type away to
+    // reach it would be the very claim under test.
+    Reflect.deleteProperty(partial, "sections_omitted");
+    expect(() => hasWorkInFlight(partial)).not.toThrow();
+    expect(hasWorkInFlight(partial)).toBe(false);
   });
 });

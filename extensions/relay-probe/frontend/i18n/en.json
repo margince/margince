@@ -1,6 +1,7 @@
 {
   "extRelayProbe.connection.absent": "Not connected",
   "extRelayProbe.connection.baseUrlLabel": "Relay URL",
+  "extRelayProbe.connection.baseUrlPlaceholder": "https://workspace.example.com",
   "extRelayProbe.connection.catchingUp": "Catching up from",
   "extRelayProbe.connection.connect": "Connect",
   "extRelayProbe.connection.connectFailed": "The account may not have been connected. Check the state above before trying again.",

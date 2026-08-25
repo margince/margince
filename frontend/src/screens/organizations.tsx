@@ -27,6 +27,7 @@ import {
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
 import type { ListChip } from "../design-system/listsurface";
+import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import {
   hasTimelineFilters,
@@ -38,6 +39,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import {
   AutonomyDot,
   ConfidenceMeter,
+  confidenceLevel,
   EvidenceChip,
 } from "../design-system/trust";
 import { formatDateTime, formatMoney } from "../format/format";
@@ -76,10 +78,9 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
+import { CompanyFacts } from "./companyfacts";
 import { CompanyFinanceCard } from "./companyfinance";
 import { GrowthFitPanel } from "./companygrowthfit";
-import { CompanyFacts } from "./companyfacts";
-import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
 import {
   CompanyActionBadges,
   CompanyDescription,
@@ -96,6 +97,7 @@ import {
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { TodayOnThisAccount } from "./companytoday";
+import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
 import {
   CreateAction,
@@ -112,7 +114,6 @@ import {
 } from "./evidenceverdict";
 import { type FactGroup, factFieldLabelKey, groupFacts } from "./factview";
 import { RecordHistoryTab } from "./history";
-import { confidenceLevel } from "./inbox";
 import {
   type ListPage,
   type ListQuery,
@@ -2765,7 +2766,17 @@ function CompanyTasksTab({
     sectionState(view, "next_steps", Boolean(view.next_steps), steps.length) ===
     "withheld"
   ) {
-    return <EmptyState>{t("co.section.restricted")}</EmptyState>;
+    // Same chrome as every other state of this tab. A refusal drawn as a bare
+    // plate names no section, and the account facts strip above says the same
+    // sentence about its own withheld halves — so a reader who lands on an
+    // unheaded one cannot tell which of the two they are being refused.
+    return (
+      <Panel title={t("co.next.title")}>
+        <PanelBody>
+          <p className="surfacestate-withheld">{t("co.section.restricted")}</p>
+        </PanelBody>
+      </Panel>
+    );
   }
   return (
     <NextSteps

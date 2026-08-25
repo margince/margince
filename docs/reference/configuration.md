@@ -38,8 +38,8 @@ configurable logger.
 | `--geocode-base-url` | `MARGINCE_GEOCODE_BASE_URL` | — | Nominatim base URL, on the worker role. Unset = no geocoding: company addresses keep no coordinates and every `within_radius` query answers unavailable. `public` uses OpenStreetMap's own service, which is POC-only — its terms hold a client that runs on a schedule to 4 requests a minute, single-threaded, with caching, so any real volume wants a self-hosted instance. |
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. This is the access control the fleet-wide-exposition note below calls for: unset (the default) `/metrics` answers **404**, rather than serving per-workspace job telemetry to anyone who asks. Set it wherever the scraper can present it |
 | `--hubspot-app-secret` | `MARGINCE_HUBSPOT_APP_SECRET` | — | the HubSpot app client secret. Verifies inbound overlay-webhook v3 signatures and, when set, mounts `/webhooks/hubspot`; unset, that route is absent rather than present-and-unverified |
-| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | path to a routing file, read **only** to seed an installation that has no stored model binding yet. The binding lives in the database once set and is changed through `PUT /v1/ai/routing` without a restart, so on a provisioned installation this flag is not read at all. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
-| `--ai-fake` | — | `false` | offline fake model (dev/test only); drives the same AI surfaces as `--ai-routing` |
+| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
+| `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback |
 | — (env-only) | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) so the on-connect/Connect-time seeding path sees the same cap the periodic sweep does |
 | — (env-only) | `MARGINCE_PROVIDER_SURFE` | `off` | which licensed-data-provider adapter this process carries: `off` registers none (every provider surface answers honestly and no code path can reach a vendor — PI-AC-9), `offline` the deterministic fake for a dev stack, `live` the real Surfe adapter. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent |
@@ -306,7 +306,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required for a marketing send originated by this role's Surface-B agent run — without it that send refuses rather than emit a forgeable link |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
-| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | path to a routing file, read **only** to seed an installation with no stored binding — see the api row. A bound installation runs the Surface-B runner + embeddings from the database, and this role re-reads it on an interval so it never serves a binding the api has replaced |
+| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns** — see the api row. A bound installation runs the Surface-B runner + embeddings from the database, and this role re-reads that stored binding on an interval so it never serves one the api has replaced |
 | `--ai-fake` | — | `false` | run the Surface-B runner on the offline fake model |
 | `--runner-interval` | — | `30s` | Surface-B scheduler tick — the River periodic schedule of the `agent_scheduler` dispatcher, which enqueues one `agent_scheduler_workspace` job per live workspace. It paces the fan-out, not an agent's own schedule: the catalog's daily due hour decides when a brief runs |
 | `--retention-interval` | — | `24h` | retention evaluator pass interval — the River periodic schedule of the `privacy_retention` dispatcher, which enqueues one `privacy_retention_workspace` job per workspace |
@@ -826,8 +826,7 @@ The **deployment configuration** (`--config`, default `margince.yaml`) is
 seeded the same way for local dev. The annotated reference is
 [`config/margince.example.yaml`](../../config/margince.example.yaml); `make dev`
 copies it to a gitignored `config/margince.yaml` on first run and then
-**leaves it** (create-if-missing / leave-if-exists, exactly like
-`config/ai-routing.yaml` below), so an engineer's edits — organization,
+**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — organization,
 `bootstrap_admin`, or the `ai.capture_payloads` posture — persist across
 `make dev-stop` / `make dev` rather than being regenerated each boot. The
 admin `password_file` it references (`config/margince-admin-password`) is
@@ -1038,21 +1037,35 @@ crawls and stages).
 | `model_pricing` | *(none)* | Maps a provider name to its pricing-page URL the model-cost refresh crawls and AI-extracts (the `rate_extract` task — `make e2e-ai-report` says what any binding has been certified to). A plain `GET` must yield the price text — Google's docs page does; many JS-rendered marketing pages yield none. |
 
 The **model-cost refresh** needs both a `model_pricing` entry **and** a bound
-`rate_extract` model (in `ai-routing.yaml`); absent either, it no-ops. The **FX
+`rate_extract` model (in the installation's stored binding); absent either, it
+no-ops. The **FX
 refresh**, by contrast, has no such dependency — `fx_source` and `fx_currencies`
 both default, so it always has something to do even on an absent `rates:` block.
 Neither refresh ever auto-applies — a rate is proposed from the live source and
 applied only on human approval, so a non-EUR deal with no approved rate still
 fails closed (never a silent `rate=1`).
 
-Model credentials (BYOK cloud tiers) are configured in
-`ai-routing.yaml`, not through binary flags. The annotated reference is
-[`config/ai-routing.example.yaml`](../../config/ai-routing.example.yaml)
-(kept parseable by the fitness test in
-`backend/internal/modules/ai/exampleconfig_test.go`). `make install` /
-`make dev` copy it to a gitignored `config/ai-routing.yaml` — the
-per-engineer local config each engineer edits to bind their own models;
-delete it and re-run either target to reset.
+Model credentials (BYOK cloud tiers) live in the **key vault**, put there by an
+admin under Settings → AI → Model provider keys. Neither is a binary flag, and
+neither is the routing file — a binding names providers and never a credential.
+
+A provider's conventional environment variable is a **seed** for a vault-backed
+role: a boot that resolves a binding may seal what it finds and record where,
+after which the variable can be unset — check the boot log said so before
+removing it. It remains the runtime source, read on every run, in two cases: an
+installation with **no vault** configured, and the DB-less debug and
+certification lanes, which open no vault. Removing the variable breaks those.
+
+The **binding** is a stored setting. A fresh installation declares it under
+`seeds.ai_routing` (see `config/margince.example.yaml`), and a running one is
+rebound from the UI. The routing FILE format survives for the lanes that probe a
+binding without opening a database — `worker siteread`, `worker aitask` and
+`make e2e-ai` — and its annotated reference is
+[`config/ai-routing.example.yaml`](../../config/ai-routing.example.yaml), kept
+parseable by the fitness test in
+`backend/internal/modules/ai/exampleconfig_test.go`. Nothing copies it to a
+per-engineer `config/ai-routing.yaml` any more; a dev stack is bound by
+`seeds.ai_routing` in `config/margince.dev.yaml`.
 
 The providers a binding may name, and what each requires. A cloud provider's
 BYOK key is **read from an environment variable** at boot — the routing file

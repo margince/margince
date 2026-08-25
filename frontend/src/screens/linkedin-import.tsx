@@ -11,6 +11,10 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import {
+  LINKEDIN_ACCOUNT_KEY,
+  useSaveLinkedInAccount,
+} from "./onboarding-conversation/use-linkedin-account";
 import "./linkedin-import.css";
 
 // The LinkedIn connections import (ADR-0078 §2.1b).
@@ -62,7 +66,7 @@ function useImportConnections() {
     // the queue beside it still shows the pre-import "nothing waiting" it
     // cached on load — the page contradicts itself and only a reload fixes it.
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ACCOUNT_KEY });
+      await client.invalidateQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
       await client.invalidateQueries({ queryKey: ["linkedin-connections"] });
       await client.invalidateQueries({ queryKey: ["linkedin-reach"] });
     },
@@ -71,11 +75,9 @@ function useImportConnections() {
 
 type LinkedInAccount = components["schemas"]["LinkedInAccount"];
 
-const ACCOUNT_KEY = ["linkedin-account"] as const;
-
 function useLinkedInAccount() {
   return useQuery({
-    queryKey: ACCOUNT_KEY,
+    queryKey: LINKEDIN_ACCOUNT_KEY,
     queryFn: async (): Promise<LinkedInAccount> => {
       const { data, error } = await api.GET("/me/linkedin-account", {});
       if (error) {
@@ -83,24 +85,6 @@ function useLinkedInAccount() {
       }
       return data;
     },
-  });
-}
-
-function useSaveLinkedInAccount() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: async (profileUrl: string): Promise<LinkedInAccount> => {
-      const { data, error } = await api.PUT("/me/linkedin-account", {
-        // connected:false never revokes — the store keeps an existing
-        // authorization. Editing a URL is not disconnecting.
-        body: { profile_url: profileUrl, connected: false },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (data) => client.setQueryData(ACCOUNT_KEY, data),
   });
 }
 
@@ -187,7 +171,13 @@ function LinkedInProfileRow() {
           onSubmit={(event) => {
             event.preventDefault();
             if (dirty) {
-              save.mutate(value.trim(), { onSuccess: () => setEditing(false) });
+              // Correcting the URL is not disconnecting: the save carries
+              // `connected: false` and the store keeps whatever authorization
+              // the member has already given.
+              save.mutate(
+                { profileUrl: value.trim(), connected: false },
+                { onSuccess: () => setEditing(false) },
+              );
             }
           }}
         >

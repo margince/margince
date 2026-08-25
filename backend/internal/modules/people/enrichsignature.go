@@ -131,26 +131,29 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		return false, nil
 	}
 
-	// The evidence row is the admission ticket: one row per (person, field),
-	// first verdict wins — a later pass can never overwrite it.
-	tag, err := tx.Exec(ctx, `
-		INSERT INTO person_profile_field (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (person_id, field) DO NOTHING`,
-		personID, f.Name, value, f.Evidence, sourceRef, f.Confidence, enrichSource, enrichCapturedBy)
-	if err != nil {
-		return false, fmt.Errorf("people: signature evidence row (%s): %w", f.Name, err)
-	}
-	if tag.RowsAffected() == 0 {
-		return false, nil
+	// A machine fill: the signature claims a field nobody has answered and
+	// never replaces one — writePersonProfileField carries that rule.
+	landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
+		Field: f.Name, Value: value, EvidenceSnippet: f.Evidence, SourceRef: sourceRef,
+		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
+	}, claimUnanswered)
+	if err != nil || !landed {
+		return false, err
 	}
 
 	switch f.Name {
 	case "title":
 		// Fill-only-empty: the NULL predicate is the CAS — an occupied
 		// title (human or otherwise) is never touched (GATE-AI-4).
+		//
+		// archived_at, for the same reason writePersonProfileField carries it:
+		// this column is the DISPLAY half of the evidence row above, and the
+		// two must refuse together. An erasure that commits between them would
+		// otherwise leave the evidence refused and the erased person's title
+		// written back — the fill split across two statements, and only one of
+		// them looking.
 		tag, err := tx.Exec(ctx, `
-			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL`, personID, value)
+			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, personID, value)
 		if err != nil {
 			return false, fmt.Errorf("people: signature title fill: %w", err)
 		}

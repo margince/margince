@@ -764,15 +764,15 @@
   display: none;
 }
 .rail .railfoot {
-  /* As the head: the reading and its rule keep their height whether the panel
-     scrolls or not. */
+  /* As the head: the reading keeps its height whether the panel scrolls or not. */
   flex: none;
-  margin: var(--space-3) calc(-1 * var(--space-2)) 0;
-  /* The same air above the row as the rail's own bottom padding leaves under it,
-     so the reading sits centred in the band the rule closes rather than riding
-     high in it. The rule itself is one of those pixels. */
-  padding: calc(var(--space-3) - 1px) var(--space-2) 0;
-  border-top: 1px solid var(--borderSubtle);
+  /* No rule and barely any air. This band held a rule and a `--space-3` on each
+     side of it back when it carried a bordered card that needed separating from
+     the destinations. The card is gone (app/agentrail.css): the orb is lit and
+     unmistakably a different kind of thing, so a line above it read as a lid, and
+     the air around it read as rail nobody uses. */
+  margin: var(--space-1) calc(-1 * var(--space-2)) 0;
+  padding: 0 var(--space-2);
 }
 .rail .raillicense {
   display: flex;

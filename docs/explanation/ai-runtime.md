@@ -13,10 +13,10 @@ the model runtime itself.
 ```
  WHAT (contract, a rebuild)            WHERE (config, runtime)          THE GATE (one path)
  ─────────────────────────            ─────────────────────           ───────────────────
- backend/api/ai-tasks.yaml            config/ai-routing.yaml           ai.Router
+ backend/api/ai-tasks.yaml            the `ai.routing` setting         ai.Router
    task  → ladder of tiers              tier → provider + model          • meter (workspace budget)
    + execution_mode                     profile (egress posture)         • inject company context
-   + on_budget_exhausted                BYOK key ← env var               • trace (ai_call rows)
+   + on_budget_exhausted                BYOK key ← key vault             • trace (ai_call rows)
         │                                     │                          • strip secrets
         │ make gen (drift-gated)              │                          • walk the ladder
         ▼                                     ▼                                 │
@@ -131,9 +131,19 @@ can't silently rot. Adding a task or a site is a checklist of its own:
 
 ## The routing config
 
-`config/ai-routing.yaml` is the **runtime binding** — it says which real provider
-and model serves each tier, and nothing about policy. It is seeded once by
-`make install` / `make dev` and then left alone (edit-and-persist).
+The **runtime binding** says which real provider and model serves each tier, and
+nothing about policy. It is the `ai.routing` **setting** — a row, not a file —
+read from the database by every SERVING role, so the api and the worker cannot
+drift onto different bindings and a change needs no restart. The DB-less lanes
+below are the exception by design: `worker siteread`, `worker aitask` and the
+certification runner open no database and take a routing file, because each
+probes a binding rather than serving one.
+
+A fresh installation declares it under `seeds.ai_routing` in `margince.yaml`
+(consumed once, at bootstrap); a running one is rebound under Settings → AI or
+through `PUT /v1/ai/routing`. The shape below is that binding's, and it is also
+the file format the debug and certification lanes still take — those probe a
+binding without opening a database, which is the one job a file is right for.
 
 ```yaml
 profile: eu_hosted            # WHERE inference may run (the egress posture)
@@ -148,9 +158,12 @@ embeddings:    {provider: gemini}
   model runs: `eu_hosted` (partner-operated EU inference, the default),
   `sovereign` (zero egress by construction), and so on. It constrains, it never
   leaks.
-- **No key ever lives in the file.** A provider names only itself; its BYOK key is
-  read from the environment at boot (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, …). A
-  stray `api_key:` in the config is a *boot error*, not a convenience.
+- **No key ever lives in the binding.** A provider names only itself, and a stray
+  `api_key:` is a *boot error* rather than a convenience. Where the key comes from
+  depends on who is asking: a served installation resolves it from the **key
+  vault**, while the DB-less lanes below — `worker siteread`, `worker aitask`, the
+  certification runner — open no vault and read the conventional environment
+  variable (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, …) on every run.
 - **A tier may be left unbound.** A deployment legitimately runs only some
   workloads. An unbound ladder isn't a startup error — but it is **loud**: boot
   warns per task (`task cold_start: no bound tier on ladder [cheap_cloud premium];
@@ -353,8 +366,8 @@ writing the case that certifies one:
 |---|---|
 | Task contract (tasks, tiers, ladders, budget posture, status/sites/context/cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (via `tools/gen-aitasks`, `make gen`) |
 | Invocation-site census (which sites this build ships, and the case certifying each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
-| Runtime binding (tier → provider/model, profile) | `config/ai-routing.yaml` (schema: `config/ai-routing.schema.json`) |
-| BYOK keys | environment only (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) |
+| Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Same shape as the file the debug lanes read (schema: `config/ai-routing.schema.json`) |
+| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
 | The gate | `internal/modules/ai` — `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |

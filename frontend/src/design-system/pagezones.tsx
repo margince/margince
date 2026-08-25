@@ -43,7 +43,7 @@ export function PageZones({
   // Required, because a page with only rails is a page with no subject.
   main: ReactNode;
   // Classes for the work column, on top of the one this component needs to
-  // identify it at the 1200px fold. For the composing page's own rhythm —
+  // place it in the grid. For the composing page's own rhythm —
   // `RecordView` marks it as an arrival stack so its blocks fade in one after
   // the next rather than as one plate.
   mainClassName?: string;
@@ -81,14 +81,29 @@ export function PageZones({
         className,
       )}
     >
+      {/* The work column is FIRST here at every width, and the rails follow it
+          in the order they read, because this order IS the order a screen
+          reader and the tab key take (WCAG 2.2 §1.3.2, meaningful sequence). A
+          grid draws its columns wherever the template puts them, so the left
+          rail still appears to the LEFT of this (pagezones.css) — and that is
+          the only place the two orders may differ. Nothing here may be
+          reordered to fold: a rail the eye meets second and the keyboard meets
+          first is a reader sent through the firmographics to reach the record
+          they opened. */}
+      <div className={cls("page-zones-main", mainClassName)}>{main}</div>
       {rail && (
-        <aside className={railClassName} aria-label={railLabel}>
+        <aside
+          className={cls("page-zones-rail-column", railClassName)}
+          aria-label={railLabel}
+        >
           {rail}
         </aside>
       )}
-      <div className={cls("page-zones-main", mainClassName)}>{main}</div>
       {aside && (
-        <aside className={asideClassName} aria-label={asideLabel}>
+        <aside
+          className={cls("page-zones-aside-column", asideClassName)}
+          aria-label={asideLabel}
+        >
           {aside}
         </aside>
       )}

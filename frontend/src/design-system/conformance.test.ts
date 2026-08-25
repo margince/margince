@@ -24,9 +24,27 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-const files = sourceFiles(join(frontendRoot, "src")).concat(
-  join(frontendRoot, "index.html"),
-);
+// A unit's screen is held to the same rules as core, so it is enrolled the same
+// way. The shell gates beside this file already sweep the tier, but they are
+// greps: the inline camelCase spelling of a type family is invisible to them
+// and visible only here. Leaving the tier out of THIS corpus is the census that
+// fails short — it reads a smaller tree, reports PASS, and nothing asserts.
+function extensionFrontends(): string[] {
+  const root = join(frontendRoot, "..", "extensions");
+  if (!existsSync(root)) {
+    return [];
+  }
+  return readdirSync(root, { withFileTypes: true }).flatMap((unit) => {
+    const frontend = join(root, unit.name, "frontend");
+    return unit.isDirectory() && existsSync(frontend)
+      ? sourceFiles(frontend)
+      : [];
+  });
+}
+
+const files = sourceFiles(join(frontendRoot, "src"))
+  .concat(join(frontendRoot, "index.html"))
+  .concat(extensionFrontends());
 
 const allowedFamilies = new Set([
   "Outfit",
@@ -71,25 +89,175 @@ function literalAttributeValue(initializer: ts.Node): string | undefined {
   return undefined;
 }
 
+// A colour written out rather than read from a token: any hex form CSS accepts
+// (#rgb, #rgba, #rrggbb, #rrggbbaa) or a raw colour function.
+const LITERAL_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
+
+// Blanks every span a pattern matches, keeping the newlines so a finding's
+// line number still points at the right line. Used for the languages whose
+// comments a regex CAN settle — CSS and HTML have one comment form each and no
+// line comment, so there is no `//`-inside-a-URL problem to parse around.
+function blankSpans(text: string, comment: RegExp): string {
+  return text.replace(comment, (span) => span.replace(/[^\n]/g, " "));
+}
+
+// The source the colour gate actually reads: TypeScript with its comments
+// blanked out. A comment is prose, and prose carries issue references — `#2463`
+// is four hex digits, which is exactly the `#rgba` short form, so a gate that
+// reads comments names an innocent line for the right shape in the wrong place.
+//
+// Which spans are comments comes from the parser rather than from a pattern,
+// because a comment opener is not something a pattern can settle: `//` sits
+// inside every URL and `/*` inside path strings. Blanked rather than deleted,
+// keeping the newlines, because the finding carries a line number.
+//
+// The walk descends to the TOKENS, and that is what reaches a JSX expression
+// comment: `{/* … */}` parses as a JsxExpression with no expression, and its
+// text is leading trivia of the closing brace — a walk over declaration
+// positions alone never asks that token anything.
+//
+// A second spelling of format/zone-by-purpose.test.ts's `code()`, deliberately:
+// that one lives inside a test file, and importing it here would run that
+// file's whole suite as a side effect of the import.
+function scannableSource(file: string, text: string): string {
+  if (!/\.tsx?$/.test(file)) {
+    // CSS and HTML carry prose too, and the same reference trips the same
+    // pattern there: `/* see #2463 */` is four hex digits to the colour rule,
+    // and a family named inside a comment is a family nobody ships. Neither
+    // language has a line comment, so one span each — blanked, not deleted,
+    // for the line numbers.
+    return blankSpans(
+      text,
+      file.endsWith(".css") ? /\/\*[\s\S]*?\*\//g : /<!--[\s\S]*?-->/g,
+    );
+  }
+  const parsed = ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    // Parent pointers, so the walk below can ask a node for its child tokens.
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const chars = text.split("");
+  const blank = ({ pos, end }: ts.CommentRange): void => {
+    for (let index = pos; index < end; index++) {
+      if (chars[index] !== "\n") {
+        chars[index] = " ";
+      }
+    }
+  };
+  // Leading AND trailing: the parser calls a comment that shares a line with
+  // the code before it trailing, and reports it under that name only.
+  const strip = (node: ts.Node): void => {
+    ts.getLeadingCommentRanges(text, node.pos)?.forEach(blank);
+    // `node.end` is where a trailing comment can begin, which is what the
+    // API means by the name. It changes no outcome here — the walk reaches
+    // every token, so the same span is also leading trivia of the next one —
+    // and it is the spelling that says what it is doing.
+    ts.getTrailingCommentRanges(text, node.end)?.forEach(blank);
+    for (const child of node.getChildren(parsed)) {
+      strip(child);
+    }
+  };
+  strip(parsed);
+  return chars.join("");
+}
+
+/**
+ * Every type family named in one source text, in either spelling.
+ *
+ * A stylesheet declares `font-family:` and a TSX style prop spells the same
+ * thing `fontFamily:`, so the pattern carries two alternatives — and only ONE
+ * capture group can fire on a given hit. Reading the first alone made every
+ * inline `fontFamily` a match whose families were `undefined` and silently
+ * skipped: the gate said PASS about a spelling it had never once looked at.
+ *
+ * The inline arm takes either quote, because the quote is the formatter's
+ * choice and not the author's, and the declared arm runs to the `;`/`}` rather
+ * than stopping at a quote — a CSS family whose name needs quoting is exactly
+ * the multi-word kind this rule is about, and stopping short made
+ * `font-family: "Comic Sans MS"` invisible while `font-family: Outfit, "DM
+ * Sans"` was read as naming only Outfit. A gate that only sees what biome happens to
+ * emit today stops seeing the day that changes — and it is the same shape of
+ * miss as the capture group: under-recognition, reported as PASS.
+ *
+ * Exported to the fixture test below rather than inlined in the scan, so the
+ * spellings this gate can see are asserted rather than assumed.
+ */
+function familiesIn(text: string): string[] {
+  const found: string[] = [];
+  for (const [, declared, quoted, templated] of text.matchAll(
+    /font-family\s*:\s*([^;}]+)|fontFamily\s*:\s*(?:["']([^"']+)["']|`([^`]+)`)/g,
+  )) {
+    for (const family of (declared ?? quoted ?? templated ?? "").split(",")) {
+      const name = family.trim().replace(/^["'`]|["'`]$/g, "");
+      // A family assembled at run time names nothing this scan can judge, so
+      // reporting `${x}` as a font would be a false positive — the same reason
+      // a `var()` reference is skipped, and the same limit: neither spelling is
+      // checkable here, and both are checkable where the value comes from.
+      if (name !== "" && !name.startsWith("var(") && !name.includes("${")) {
+        found.push(name);
+      }
+    }
+  }
+  return found;
+}
+
 describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   it("uses only the three §2 type families", () => {
     for (const file of files) {
-      const text = readFileSync(file, "utf8");
-      for (const [, families] of text.matchAll(
-        /font-family\s*:\s*([^;}"']+)|fontFamily\s*:\s*"([^"]+)"/g,
+      // `*.test.*` is fixture data, exactly as the colour arm below reads it
+      // and as scripts/check-font-lock.sh already excludes it: a test naming a
+      // forbidden family is the assertion, not the defect.
+      if (/\.test\.tsx?$/.test(file)) {
+        continue;
+      }
+      // Through `scannableSource`, the same as the colour arm: prose naming a
+      // family is discussing the rule, not breaking it, and a detector that
+      // strips comments for one rule and not the other is the inconsistency
+      // that made this pair hard to reason about.
+      for (const name of familiesIn(
+        scannableSource(file, readFileSync(file, "utf8")),
       )) {
-        for (const family of (families ?? "").split(",")) {
-          const name = family.trim().replace(/^["']|["']$/g, "");
-          if (name === "" || name.startsWith("var(")) {
-            continue;
-          }
-          expect(
-            allowedFamilies.has(name),
-            `${relative(frontendRoot, file)}: font-family "${name}" is outside the three-family rule (§2)`,
-          ).toBe(true);
-        }
+        expect(
+          allowedFamilies.has(name),
+          `${relative(frontendRoot, file)}: font-family "${name}" is outside the three-family rule (§2)`,
+        ).toBe(true);
       }
     }
+  });
+
+  // What the scan above can SEE, planted rather than assumed. Each spelling is
+  // one a real file uses, and a miss in any of them reads as a clean PASS.
+  it("reads a family in every spelling a source can carry", () => {
+    expect(familiesIn('font-family: "Comic Sans MS";')).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn("font-family: Comic Sans MS;")).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn('fontFamily: "Comic Sans MS"')).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn("fontFamily: 'Comic Sans MS'")).toEqual([
+      "Comic Sans MS",
+    ]);
+    expect(familiesIn("fontFamily: `Comic Sans MS`")).toEqual([
+      "Comic Sans MS",
+    ]);
+    // A stack names several, and every one of them is held to the rule.
+    expect(familiesIn('font-family: Outfit, "DM Sans", sans-serif;')).toEqual([
+      "Outfit",
+      "DM Sans",
+      "sans-serif",
+    ]);
+    // A token reference is the ALLOWED spelling and names no family, so it
+    // must not be reported as one. Neither does a family assembled at run
+    // time: reporting the literal `${chosenFamily}` would be a finding about
+    // nothing.
+    expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
+    expect(familiesIn("fontFamily: `${chosenFamily}`")).toEqual([]);
   });
 
   // B-EP09.16: no inline user-facing copy — every string the user reads comes
@@ -427,7 +595,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   });
 
   it("keeps literal colours in tokens.css only — everything else reads a token", () => {
-    const literalColour = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
     for (const file of files) {
       // tokens.css is where literals live (tests pin them); index.html's
       // meta theme-color cannot read a CSS custom property.
@@ -446,14 +613,68 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       ) {
         continue;
       }
-      const text = readFileSync(file, "utf8");
+      const text = scannableSource(file, readFileSync(file, "utf8"));
       for (const [index, line] of text.split("\n").entries()) {
         expect(
-          literalColour.test(line),
+          LITERAL_COLOUR.test(line),
           `${relative(frontendRoot, file)}:${index + 1} hard-codes a colour — read it from a token`,
         ).toBe(false);
       }
     }
+  });
+
+  it("reads a colour beside a comment, and not an issue reference inside one", () => {
+    const sample = [
+      'import "./x.css";',
+      "// the app-wide version lands with #2455",
+      "/* and #2456 with it */",
+      "export function Swatch() {",
+      "  return (",
+      '    <div className="t-small">',
+      "      {/* ... see #2463 for the app-wide version. */}",
+      '      <span style={{ color: "#ff0000" }} />',
+      "    </div>",
+      "  );",
+      "}",
+    ].join("\n");
+    const flagged = scannableSource("sample.tsx", sample)
+      .split("\n")
+      .flatMap((line, index) => (LITERAL_COLOUR.test(line) ? [index + 1] : []));
+    // Only the style attribute. Every other `#NNNN` above is an issue number
+    // sitting in a comment — and the gate must still SEE the literal on the
+    // line under the JSX one, or it has bought its silence by going blind.
+    expect(flagged).toEqual([8]);
+  });
+
+  // The same rule in the languages the parser arm never sees. A stylesheet is
+  // where colours actually live, so a gate that reads its comments names the
+  // wrong line most often exactly where it matters most.
+  it("reads past a CSS comment without going blind to the rule beside it", () => {
+    const sample = [
+      '/* see #2463, and font-family: "Comic Sans MS" is discussed there */',
+      ".swatch {",
+      "  color: #ff0000;",
+      "}",
+    ].join("\n");
+    const scanned = scannableSource("sample.css", sample);
+    const flagged = scanned
+      .split("\n")
+      .flatMap((line, index) => (LITERAL_COLOUR.test(line) ? [index + 1] : []));
+    // Only the declaration. The comment names an issue and a family, and
+    // neither is something the file ships.
+    expect(flagged).toEqual([3]);
+    expect(familiesIn(scanned)).toEqual([]);
+  });
+
+  it("reads past an HTML comment the same way", () => {
+    const sample = [
+      "<!-- #2463: the meta colour cannot read a custom property -->",
+      '<meta name="theme-color" content="#0b1f17" />',
+    ].join("\n");
+    const flagged = scannableSource("sample.html", sample)
+      .split("\n")
+      .flatMap((line, index) => (LITERAL_COLOUR.test(line) ? [index + 1] : []));
+    expect(flagged).toEqual([2]);
   });
 });
 

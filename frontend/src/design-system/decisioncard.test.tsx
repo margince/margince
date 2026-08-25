@@ -10,6 +10,10 @@ import {
   type DecisionApproval,
   DecisionCard,
   type DecisionCardLabels,
+  type DecisionDeadline,
+  DecisionStatusChip,
+  type DecisionStatusLabels,
+  DecisionToolChip,
   decisionUrgency,
 } from "./decisioncard";
 
@@ -272,5 +276,131 @@ describe("DecisionCard — the verbs", () => {
     expect(
       screen.queryByRole("button", { name: "Accept" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// The chip's own words, in the same shape a screen builds them: a countdown
+// sentence over the span, and one verdict word per decided state.
+const STATUS_LABELS: DecisionStatusLabels = {
+  expiresIn: (msRemaining) => `expires in ${Math.round(msRemaining / HOUR)}h`,
+  approved: "Approved",
+  rejected: "Rejected",
+  expired: "Expired",
+};
+
+// The chip reads a deadline, not a whole approval, so its fixture is one — and
+// that is what lets the "status this build has never heard of" case below be
+// written at all.
+function deadline(over: Partial<DecisionDeadline> = {}): DecisionDeadline {
+  return {
+    status: "pending",
+    expires_at: new Date(NOW + 9 * HOUR).toISOString(),
+    ...over,
+  };
+}
+
+function statusChip(
+  over: Partial<Parameters<typeof DecisionStatusChip>[0]> = {},
+) {
+  return (
+    <DecisionStatusChip
+      approval={deadline()}
+      decided={false}
+      now={NOW}
+      labels={STATUS_LABELS}
+      {...over}
+    />
+  );
+}
+
+describe("DecisionStatusChip", () => {
+  it("counts down in the caller's words while a proposal is still live", () => {
+    render(statusChip());
+    expect(screen.getByText("expires in 9h")).toBeInTheDocument();
+  });
+
+  // The tone comes off `decisionUrgency`, which is also what tints the card's
+  // edge. These two frames are the bands either side of the six-hour line, so a
+  // chip that grew its own thresholds fails here rather than on a screen.
+  it("escalates its tone through the same bands the card's edge reads", () => {
+    const { container } = render(
+      statusChip({
+        approval: deadline({
+          expires_at: new Date(NOW + 3 * HOUR).toISOString(),
+        }),
+      }),
+    );
+    expect(container.querySelector(".badge-warn")).toBeInTheDocument();
+    cleanup();
+
+    const urgent = render(
+      statusChip({
+        approval: deadline({
+          expires_at: new Date(NOW + 20 * 60 * 1000).toISOString(),
+        }),
+      }),
+    ).container;
+    expect(urgent.querySelector(".badge-danger")).toBeInTheDocument();
+  });
+
+  // Silence, not a second notice: the card this sits on already says it ran out
+  // of time where its verbs would have been.
+  it("draws nothing on a lapsed proposal that has not been answered", () => {
+    const { container } = render(
+      statusChip({
+        approval: deadline({ expires_at: new Date(NOW - HOUR).toISOString() }),
+      }),
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("draws nothing for a proposal that has no deadline at all", () => {
+    const { container } = render(
+      statusChip({ approval: deadline({ expires_at: null }) }),
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows the verdict rather than a countdown once it has been decided", () => {
+    render(
+      statusChip({ decided: true, approval: deadline({ status: "approved" }) }),
+    );
+    expect(screen.getByText("Approved")).toBeInTheDocument();
+    cleanup();
+
+    render(
+      statusChip({ decided: true, approval: deadline({ status: "rejected" }) }),
+    );
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+  });
+
+  // The status vocabulary grows on the server, so this build is always one
+  // deploy from a status it has no word for — the case `inbox.kinds.test.tsx`
+  // already settled for `kind`. A decided card with no badge says less about
+  // itself than a slightly imprecise one, so it falls back rather than vanishes.
+  it("falls back to the lapsed word for a status it has not learned", () => {
+    render(
+      statusChip({
+        decided: true,
+        approval: deadline({ status: "superseded" }),
+      }),
+    );
+    expect(screen.getByText("Expired")).toBeInTheDocument();
+  });
+});
+
+describe("DecisionToolChip", () => {
+  it("names the tool in the caller's words", () => {
+    render(<DecisionToolChip verb="send_email" label={(v) => `via ${v}`} />);
+    expect(screen.getByText("via send_email")).toBeInTheDocument();
+  });
+
+  // The kind→verb catalogue is the screen's; a kind it cannot map yields no
+  // verb, and naming a tool nobody can check would be worse than saying nothing.
+  it("stays silent when the caller could not map the kind to a verb", () => {
+    const { container } = render(
+      <DecisionToolChip verb={undefined} label={(v) => `via ${v}`} />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

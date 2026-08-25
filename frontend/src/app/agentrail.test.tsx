@@ -21,6 +21,7 @@ import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { clearAgentEdge, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 import { LABELS, REVIEW_ONLY, TASK_SAID, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
@@ -766,6 +767,25 @@ describe("AgentRail", () => {
       new URL(request.url).pathname.endsWith("/360"),
     );
     expect(askedFor360).toBe(false);
+  });
+
+  // The screen's margins draw what this component publishes, and they cannot
+  // work it out for themselves: the run, the switcher and the reads are all local
+  // here, so a margin that re-derived the state would report on a second agent.
+  it("publishes what the margins draw, and goes quiet when it unmounts", async () => {
+    clearAgentEdge();
+    stubAgentRailApi({
+      approvals: () =>
+        jsonResponse({ data: [APPROVAL("a-1")], page: emptyPage }),
+    });
+    const view = render(ROUTE);
+    await settlesOnLine(view.container, `1 ${LABELS.waiting}`);
+    expect(currentAgentEdge().waiting).toBe(true);
+
+    // Sign out mid-read and the login screen would otherwise inherit a lit
+    // margin belonging to a session that has ended.
+    view.unmount();
+    expect(currentAgentEdge()).toEqual({ reading: false, waiting: false });
   });
 
   // The Core's own tone rule is the only place a state's colour is declared

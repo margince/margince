@@ -30,6 +30,7 @@ export const vi = {
   "trust.save": "Lưu",
   "trust.typedByYou": "do bạn nhập",
   "trust.typedByHuman": "do người nhập",
+  "trust.typedByBuyer": "do người mua nhập",
   "trust.typedByPrefix": "nhập bởi",
   "trust.sourceUnknown": "không ghi nhận nguồn",
   "trust.agentTag": "Tự động bởi {agent}",
@@ -1057,29 +1058,39 @@ export const vi = {
   "co.facts.pipeline": "Pipeline \u0111ang m\u1edf",
   "co.facts.inFlight": "\u0110ang tri\u1ec3n khai",
   "co.facts.reading": "\u0110ang \u0111\u1ecdc\u2026",
-  "co.facts.noDeals": "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 \u0111ang m\u1edf",
+  "co.facts.noDeals":
+    "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 \u0111ang m\u1edf",
   "co.facts.unpriced": "Ch\u01b0a \u0111\u1ecbnh gi\u00e1",
   "co.facts.nothing": "Kh\u00f4ng c\u00f3 g\u00ec",
-  "co.facts.counts": "{deals} th\u01b0\u01a1ng v\u1ee5 \u00b7 {projects} d\u1ef1 \u00e1n",
+  "co.facts.counts":
+    "{deals} th\u01b0\u01a1ng v\u1ee5 \u00b7 {projects} d\u1ef1 \u00e1n",
   "co.facts.atLeast": "ho\u1eb7c h\u01a1n",
   "co.work.title": "\u0110ang tri\u1ec3n khai",
   "co.work.count": "{count} \u0111ang tri\u1ec3n khai",
   "co.work.countAtLeast": "{count}+ \u0111ang tri\u1ec3n khai",
   "co.work.deals": "Th\u01b0\u01a1ng v\u1ee5",
   "co.work.projects": "D\u1ef1 \u00e1n",
-  "co.work.noDeals": "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 n\u00e0o \u0111ang m\u1edf.",
-  "co.work.noProjects": "Kh\u00f4ng c\u00f3 d\u1ef1 \u00e1n n\u00e0o \u0111ang tri\u1ec3n khai.",
+  "co.work.noDeals":
+    "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 n\u00e0o \u0111ang m\u1edf.",
+  "co.work.noProjects":
+    "Kh\u00f4ng c\u00f3 d\u1ef1 \u00e1n n\u00e0o \u0111ang tri\u1ec3n khai.",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.work.targetEnd": "d\u1ef1 ki\u1ebfn k\u1ebft th\u00fac {date}",
-  "co.work.stalled": "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
-  "co.work.quiet": "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y t\u1eeb {when}.",
-  "co.work.neverTouched": "Ch\u01b0a t\u1eebng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y.",
-  "co.work.overdueTask": "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
-  "co.work.overdueTaskUnnamed": "\u2018{title}\u2019 \u0111\u1ebfn h\u1ea1n {date} v\u00e0 v\u1eabn c\u00f2n m\u1edf.",
+  "co.work.stalled":
+    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
+  "co.work.quiet":
+    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y t\u1eeb {when}.",
+  "co.work.neverTouched":
+    "Ch\u01b0a t\u1eebng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y.",
+  "co.work.overdueTask":
+    "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
+  "co.work.overdueTaskUnnamed":
+    "\u2018{title}\u2019 \u0111\u1ebfn h\u1ea1n {date} v\u00e0 v\u1eabn c\u00f2n m\u1edf.",
   "co.work.owesUs": "{who} n\u00f3i: \u2018{body}\u2019",
   "co.work.owesUsUnnamed": "H\u1ecd n\u00f3i: \u2018{body}\u2019",
   "co.work.wasDue": "\u2014 tr\u01b0\u1edbc {date}.",
-  "co.work.statusesWithheld": "B\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c \u0111\u1ecdc h\u1ed9i tho\u1ea1i c\u1ee7a kh\u00e1ch h\u00e0ng n\u00e0y, n\u00ean c\u00e1c d\u00f2ng tr\u00ean kh\u00f4ng k\u00e8m l\u00fd do.",
+  "co.work.statusesWithheld":
+    "B\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c \u0111\u1ecdc h\u1ed9i tho\u1ea1i c\u1ee7a kh\u00e1ch h\u00e0ng n\u00e0y, n\u00ean c\u00e1c d\u00f2ng tr\u00ean kh\u00f4ng k\u00e8m l\u00fd do.",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ dữ liệu của bạn",
   "co.brief.generatedAt": "tính đến {when}",
@@ -1386,8 +1397,12 @@ export const vi = {
   "co.deal.new": "Deal mới",
   "co.tags.apply": "Thêm tag",
   "co.tags.pick": "Tên tag",
+  "co.tags.overCap":
+    "Số tag nhiều hơn mức danh sách này hiển thị được, nên một tag không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt tag trước khi tạo tag mới.",
   "co.lists.add": "Thêm vào danh sách",
   "co.lists.pick": "Tên danh sách",
+  "co.lists.overCap":
+    "Số danh sách nhiều hơn mức hiển thị được, nên một danh sách không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt danh sách trước khi tạo danh sách mới.",
   "co.recent.title": "Hoạt động gần đây",
   "co.recent.empty": "Chưa ghi nhận trao đổi nào.",
   "co.recent.viewHistory": "Xem lịch sử",
@@ -2402,6 +2417,8 @@ export const vi = {
   "compose.scopedToCounted":
     "Giới hạn trong {key} · {inScope} trên {total} hoạt động",
   "compose.scopedTo": "Giới hạn trong {key}",
+  "compose.channelFiling":
+    "Sẽ được lưu vào {project}, cùng với cuộc trò chuyện đang được trả lời.",
   "compose.basedOn": "Dựa trên: {inputs}",
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
@@ -3262,22 +3279,24 @@ export const vi = {
   "ob.s4.googleUnverified":
     "Nếu Google báo “ứng dụng chưa xác minh”, chọn Nâng cao → Tiếp tục. Không gì được gửi nếu bạn chưa duyệt.",
   "dedupe.intro":
-    "Những cặp mà luồng thu thập đánh dấu là nhiều khả năng cùng một người hay cùng một công ty. Việc gộp giữ lại lịch sử của cả hai bản ghi; việc bỏ qua báo cho hệ thống đừng hỏi về cặp này nữa.",
+    "Những cặp được đánh dấu là nhiều khả năng cùng một người hay cùng một công ty. Việc gộp giữ lại mọi thứ của cả hai — mọi địa chỉ, số điện thoại, ghi chú và hoạt động đều chuyển sang bản ghi bạn giữ lại. Việc bỏ qua báo cho hệ thống đừng hỏi về cặp này nữa.",
   "dedupe.loading": "Đang tải hàng đợi rà soát…",
   "dedupe.empty": "Không có trùng lặp nào đang chờ — hàng đợi đã sạch.",
   "dedupe.confidence": "Độ tin cậy khi khớp:",
   "dedupe.field": "Trường",
   "dedupe.signal": "Tín hiệu",
   "dedupe.evidenceTable": "Bằng chứng theo từng trường",
+  "dedupe.keepsBoth":
+    "Cả hai giá trị đều được giữ. Việc chọn quyết định bản ghi nào tồn tại và giá trị nào hiển thị trước — không có gì bị xóa.",
   "dedupe.signalAgree": "trùng khớp",
   "dedupe.signalCollide": "xung đột",
   "dedupe.signalOneSided": "chỉ một bên",
-  "dedupe.left": "Giữ bên trái",
-  "dedupe.right": "Giữ bên phải",
+  "dedupe.left": "Giữ bản ghi bên trái",
+  "dedupe.right": "Giữ bản ghi bên phải",
   "dedupe.kindPerson": "Người",
   "dedupe.kindOrganization": "Công ty",
   "dedupe.kindLead": "Lead",
-  "dedupe.mergeCta": "Gộp vào bản đã chọn",
+  "dedupe.mergeCta": "Gộp, giữ lại tất cả",
   "dedupe.notDuplicateCta": "Không phải trùng lặp",
   "dedupe.decided": "Đã lưu quyết định.",
   "dedupe.undoCta": "Hoàn tác",
@@ -5768,6 +5787,7 @@ export const vi = {
   "person.loops.ours": "Bạn",
   "person.loops.question": "Câu hỏi mở",
   "person.loops.overdue": "quá hạn {count} ngày",
+  "person.loops.overdueUnderDay": "quá hạn chưa đến một ngày",
   "person.loops.due": "đến hạn {when}",
   "person.loops.dueToday": "hôm nay",
   "person.loops.dueTomorrow": "ngày mai",
@@ -6251,6 +6271,7 @@ export const vi = {
   "project.advance.reasonRequired": "Dự án đã đóng cần có lý do.",
   "deal.project": "Dự án",
   "deal.projectNew": "Dự án mới…",
+  "deal.projectWithheld": "Dự án bị ẩn",
   "deal.projectNeedsCompany":
     "Chọn công ty của thương vụ trước — dự án được khởi tạo trên một công ty.",
   "deal.projectUnnamed": "Dự án",

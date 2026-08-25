@@ -4,7 +4,11 @@ import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useAuthCapabilities } from "../app/capabilities";
-import { navigate } from "../app/router";
+import {
+  forgetHashCredential,
+  navigate,
+  takeHashCredential,
+} from "../app/router";
 import {
   previewedOidcProviders,
   previewedPasswordReset,
@@ -62,61 +66,21 @@ type View =
  * Exported so App.tsx can route this entry through the unauthenticated auth
  * flow even when a session cookie is already live — an existing session must
  * not hide the reset form behind the authenticated shell.
+ *
+ * The token rides the FRAGMENT (`#/reset-password?token=…`), not the document
+ * query, and that is the first defence rather than a formatting choice: a
+ * fragment is never sent to a server, so it cannot land in an access log or a
+ * Referer header, and it is not part of a Cache Storage key, so nothing that
+ * keys on a URL persists it to disk. Parsing it as this app's own hash route
+ * also means any static host serves index.html for `/` with no SPA fallback.
+ * What is left is the history entry, and app/router.tsx takes the token out of
+ * that before anything renders.
  */
 export const RESET_ROUTE = "reset-password";
 
-// resetTokenFromLocation reads the emailed deep link
-// (/#/reset-password?token=…): the unauthenticated gate renders this screen
-// wherever the link lands, so no route table entry is needed. The token is a
-// live single-use credential, so it is scrubbed from the address bar (and
-// browser history) the moment it is read — it lives on only in component state.
-function resetTokenFromLocation(): string | null {
-  if (typeof globalThis.location === "undefined") {
-    return null;
-  }
-  // The FRAGMENT, not the query string, and the whole point is that a fragment
-  // never leaves the browser: it is not sent to a server, so it cannot land in
-  // an access log or in a Referer header, and it is not part of a Cache Storage
-  // key, so nothing that keys on a URL can persist it to disk. The scrub below
-  // is still worth doing — it keeps the token out of the session's history
-  // entry — but it used to be the ONLY defence, and it ran after the first
-  // same-origin API call had already carried the token off the page.
-  //
-  // Parsed as the app's own hash route (`#/reset-password?token=…`) so the
-  // emailed link is a normal client route: `parseHash` strips a hash-local query
-  // before deriving the screen name, and any static host serves index.html for
-  // `/` without an SPA fallback.
-  const hash = globalThis.location.hash.replace(/^#\/?/, "");
-  const [route, query] = [
-    hash.split("?")[0],
-    hash.slice(hash.indexOf("?") + 1),
-  ];
-  if (route !== RESET_ROUTE || !hash.includes("?")) {
-    return null;
-  }
-  const token = new URLSearchParams(query).get("token");
-  if (token) {
-    // replaceState, not a hash assignment: assigning to location.hash fires
-    // hashchange and pushes an entry, which would put the token back in history
-    // — the exact thing this line exists to prevent.
-    // The QUERY is preserved. The token lives in the fragment, so nothing here
-    // needs the query gone — and rewriting it away threw out whatever else the
-    // URL was carrying. A reset link has no query of its own, so in the product
-    // this was invisible; in Storybook it silently discarded `?id=<story>` and a
-    // reload of the canvas landed on no story at all. A scrub should remove the
-    // one thing it is for.
-    globalThis.history?.replaceState?.(
-      null,
-      "",
-      `${globalThis.location.pathname}${globalThis.location.search}#/${RESET_ROUTE}`,
-    );
-  }
-  return token;
-}
-
 // clearResetHash drops a lingering `#/reset-password` from the address bar
-// once the reset entry is done with — the token itself is already scrubbed
-// by resetTokenFromLocation, but the bare route survives until this runs.
+// once the reset entry is done with — the token itself left with the router
+// (app/router.tsx), but the bare route survives until this runs.
 // Left in place, it would make LoginForm's "restore the originally requested
 // route" check see a non-empty hash and skip the post-login redirect to
 // home, stranding a completed reset on a screen this app never routes to.
@@ -141,10 +105,39 @@ export function AuthScreen({
   notice = null,
 }: Readonly<{ onAuthed: () => void | Promise<void>; notice?: AuthNotice }>) {
   const t = useT();
+  // The emailed deep link lands wherever the unauthenticated gate renders this
+  // screen, so no route table entry is needed. The token is already out of the
+  // address bar: app/router.tsx takes it as it reads the hash, ahead of every
+  // gate that can render instead of this screen, and hands it over in memory.
   const [view, setView] = useState<View>(() => {
-    const token = resetTokenFromLocation();
+    const token = takeHashCredential(RESET_ROUTE);
     return token ? { kind: "reset", token } : { kind: "login" };
   });
+  // A link pasted into a tab already on this screen changes the hash and
+  // nothing else — no remount, so the initializer above never runs again. The
+  // one view that sends a reader off to ask for a fresh link leaves them on
+  // #/reset-password, which is exactly the tab they paste it into.
+  useEffect(() => {
+    const onHashChange = () => {
+      const token = takeHashCredential(RESET_ROUTE);
+      if (token) {
+        setView({ kind: "reset", token });
+      }
+    };
+    globalThis.addEventListener("hashchange", onHashChange);
+    return () => globalThis.removeEventListener("hashchange", onHashChange);
+  }, []);
+  // The token is in this screen's state now, so memory empties the way the
+  // address did. Memory outlives a mount and the address did not: left there,
+  // it would put the reset form back over a reader who had gone back to login.
+  // Re-asserted on every view change rather than only on a new token, so the
+  // invariant is "the screen holds it, memory does not" rather than "it was
+  // emptied once".
+  useEffect(() => {
+    if (view.kind === "reset") {
+      forgetHashCredential(RESET_ROUTE, view.token);
+    }
+  }, [view]);
   const [authPhase, setAuthPhase] = useState<AuthPhase>("idle");
   usePageTitle(t("auth.pageTitle"));
 

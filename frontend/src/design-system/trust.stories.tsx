@@ -5,6 +5,7 @@ import {
   ApprovalGate,
   AutonomyDot,
   ConfidenceMeter,
+  confidenceLevel,
   EvidenceChip,
   FieldDiff,
   PassportChip,
@@ -79,10 +80,22 @@ export const Signals: Story = {
           <AutonomyDot tier="confirm" />
         </Specimen>
       </div>
+      {/* The bands as a wire value reads them. `confidenceLevel` is the ONE
+          spelling of the 0.8 / 0.5 thresholds, and an unrecorded confidence
+          gives no glyph at all rather than a low one — the frame shows both,
+          because "we do not know" and "we are not sure" are different claims. */}
       <div style={row}>
-        <ConfidenceMeter level="high" />
-        <ConfidenceMeter level="med" />
-        <ConfidenceMeter level="low" />
+        {[0.92, 0.8, 0.61, 0.5, 0.18, null].map((confidence) => {
+          const level = confidenceLevel(confidence);
+          return (
+            <Specimen
+              caption={confidence === null ? "unrecorded" : String(confidence)}
+              key={String(confidence)}
+            >
+              {level ? <ConfidenceMeter level={level} /> : <span>—</span>}
+            </Specimen>
+          );
+        })}
       </div>
     </div>
   ),
@@ -93,7 +106,8 @@ const DEMO_USERS: Record<string, string> = { usr_7f2: "Carol Wagner" };
 // Every shape `captured_by` can take, including the two the tag exists to keep
 // apart: a value the reader typed themselves and one a colleague typed. Both
 // used to read as the reader's own handiwork, which is a false statement about
-// who to ask. The unattributed row says so plainly rather than guessing.
+// who to ask. The unattributed row says so plainly rather than guessing, and it
+// says it about NOBODY else — a buyer has a source, so it has its own arm.
 export const Provenance: Story = {
   render: () => (
     <div style={stack}>
@@ -131,7 +145,11 @@ export const Provenance: Story = {
           provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
         />
       </div>
+      {/* A person from outside the organization, beside the unattributed row
+          on purpose: reading a buyer as "source not recorded" was the defect,
+          and only the wording and the ink tell the two apart. */}
       <div style={row}>
+        <ProvenanceTag provenance={{ kind: "buyer" }} />
         <ProvenanceTag provenance={{ kind: "unknown" }} />
       </div>
     </div>

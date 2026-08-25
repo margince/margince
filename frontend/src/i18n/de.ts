@@ -22,6 +22,7 @@ export const de = {
   "trust.save": "Speichern",
   "trust.typedByYou": "von dir eingetragen",
   "trust.typedByHuman": "von einer Person eingetragen",
+  "trust.typedByBuyer": "von einem Käufer eingetragen",
   "trust.typedByPrefix": "eingetragen von",
   "trust.sourceUnknown": "Herkunft nicht erfasst",
   "trust.agentTag": "Automatisiert durch {agent}",
@@ -1082,12 +1083,15 @@ export const de = {
   "co.work.stalled": "Zu diesem Deal wurde seit 60 Tagen nichts erfasst.",
   "co.work.quiet": "Zu diesem Projekt wurde seit {when} nichts erfasst.",
   "co.work.neverTouched": "Zu diesem Projekt wurde noch nie etwas erfasst.",
-  "co.work.overdueTask": "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
-  "co.work.overdueTaskUnnamed": "\u201a{title}\u2018 war am {date} f\u00e4llig und ist offen.",
+  "co.work.overdueTask":
+    "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
+  "co.work.overdueTaskUnnamed":
+    "\u201a{title}\u2018 war am {date} f\u00e4llig und ist offen.",
   "co.work.owesUs": "{who} sagte: \u201a{body}\u2018",
   "co.work.owesUsUnnamed": "Sie sagten: \u201a{body}\u2018",
   "co.work.wasDue": "\u2014 bis {date}.",
-  "co.work.statusesWithheld": "Du darfst die Konversationen dieses Accounts nicht lesen, deshalb tragen die Zeilen oben keine Begr\u00fcndungen.",
+  "co.work.statusesWithheld":
+    "Du darfst die Konversationen dieses Accounts nicht lesen, deshalb tragen die Zeilen oben keine Begr\u00fcndungen.",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus deinen Daten zusammengestellt",
   "co.brief.generatedAt": "Stand {when}",
@@ -1393,8 +1397,12 @@ export const de = {
   "co.deal.new": "Neuer Deal",
   "co.tags.apply": "Tag hinzufügen",
   "co.tags.pick": "Tag-Name",
+  "co.tags.overCap":
+    "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
   "co.lists.add": "Zu Liste hinzufügen",
   "co.lists.pick": "Listenname",
+  "co.lists.overCap":
+    "Es gibt mehr Listen, als angezeigt werden können; eine Liste, die hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Listen aufzuräumen, bevor eine neue angelegt wird.",
   "co.recent.title": "Letzte Aktivität",
   "co.recent.empty": "Noch nichts mit ihnen erfasst.",
   "co.recent.viewHistory": "Verlauf ansehen",
@@ -2428,6 +2436,8 @@ export const de = {
   "compose.scopedToCounted":
     "Bezogen auf {key} · {inScope} von {total} Aktivitäten",
   "compose.scopedTo": "Bezogen auf {key}",
+  "compose.channelFiling":
+    "Wird zusammen mit der beantworteten Konversation unter {project} abgelegt.",
   "compose.basedOn": "Grundlage: {inputs}",
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachricht",
@@ -3299,22 +3309,24 @@ export const de = {
   "ob.s4.googleUnverified":
     "Zeigt Google „nicht verifizierte App“, wähl Erweitert → Fortfahren. Ohne deine Freigabe geht nichts raus.",
   "dedupe.intro":
-    "Paare, die die Erfassung als vermutlich dieselbe Person oder Firma erkannt hat. Zusammenführen erhält die Historie beider Datensätze; Verwerfen bedeutet: nie wieder nach diesem Paar fragen.",
+    "Paare, die als vermutlich dieselbe Person oder Firma erkannt wurden. Zusammenführen behält alles aus beiden — jede Adresse, jede Nummer, jede Notiz und jede Aktivität wandert auf den Datensatz, den Sie behalten. Verwerfen bedeutet: nie wieder nach diesem Paar fragen.",
   "dedupe.loading": "Prüf-Warteschlange wird geladen…",
   "dedupe.empty": "Keine Duplikate offen — die Warteschlange ist leer.",
   "dedupe.confidence": "Übereinstimmung:",
   "dedupe.field": "Feld",
   "dedupe.signal": "Signal",
   "dedupe.evidenceTable": "Beleg je Feld",
+  "dedupe.keepsBoth":
+    "Beide Werte bleiben erhalten. Die Auswahl entscheidet, welcher Datensatz bestehen bleibt und welcher Wert zuerst angezeigt wird — gelöscht wird nichts.",
   "dedupe.signalAgree": "übereinstimmend",
   "dedupe.signalCollide": "Konflikt",
   "dedupe.signalOneSided": "nur eine Seite",
-  "dedupe.left": "Links behalten",
-  "dedupe.right": "Rechts behalten",
+  "dedupe.left": "Linken Datensatz behalten",
+  "dedupe.right": "Rechten Datensatz behalten",
   "dedupe.kindPerson": "Person",
   "dedupe.kindOrganization": "Firma",
   "dedupe.kindLead": "Lead",
-  "dedupe.mergeCta": "In Auswahl zusammenführen",
+  "dedupe.mergeCta": "Zusammenführen, alles behalten",
   "dedupe.notDuplicateCta": "Kein Duplikat",
   "dedupe.decided": "Entscheidung gespeichert.",
   "dedupe.undoCta": "Rückgängig",
@@ -5827,6 +5839,7 @@ export const de = {
   "person.loops.ours": "Sie",
   "person.loops.question": "Offene Frage",
   "person.loops.overdue": "{count} Tage überfällig",
+  "person.loops.overdueUnderDay": "seit weniger als einem Tag überfällig",
   "person.loops.due": "fällig {when}",
   "person.loops.dueToday": "heute",
   "person.loops.dueTomorrow": "morgen",
@@ -6309,6 +6322,7 @@ export const de = {
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
   "deal.projectNew": "Neues Projekt …",
+  "deal.projectWithheld": "Projekt nicht sichtbar",
   "deal.projectNeedsCompany":
     "Wähle zuerst das Unternehmen des Deals — ein Projekt wird an einem Unternehmen gestartet.",
   "deal.projectUnnamed": "Projekt",

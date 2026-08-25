@@ -20,6 +20,7 @@ export const en = {
   "trust.save": "Save",
   "trust.typedByYou": "typed by you",
   "trust.typedByHuman": "typed by a person",
+  "trust.typedByBuyer": "typed by a buyer",
   "trust.typedByPrefix": "typed by",
   "trust.sourceUnknown": "source not recorded",
   "trust.agentTag": "Automated by {agent}",
@@ -1116,15 +1117,19 @@ export const en = {
   "co.work.noProjects": "No projects in flight.",
   "co.work.closes": "closes {date}",
   "co.work.targetEnd": "due to end {date}",
-  "co.work.stalled": "Nothing has been filed against this deal in the last 60 days.",
+  "co.work.stalled":
+    "Nothing has been filed against this deal in the last 60 days.",
   "co.work.quiet": "Nothing has been filed against this project since {when}.",
   "co.work.neverTouched": "Nothing has ever been filed against this project.",
-  "co.work.overdueTask": "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
-  "co.work.overdueTaskUnnamed": "\u2018{title}\u2019 was due {date} and is still open.",
+  "co.work.overdueTask":
+    "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
+  "co.work.overdueTaskUnnamed":
+    "\u2018{title}\u2019 was due {date} and is still open.",
   "co.work.owesUs": "{who} said: \u2018{body}\u2019",
   "co.work.owesUsUnnamed": "They said: \u2018{body}\u2019",
   "co.work.wasDue": "\u2014 by {date}.",
-  "co.work.statusesWithheld": "You cannot read this account\u2019s conversations, so the rows above carry no reasons.",
+  "co.work.statusesWithheld":
+    "You cannot read this account\u2019s conversations, so the rows above carry no reasons.",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Assembled from your records",
   "co.brief.generatedAt": "as of {when}",
@@ -1429,8 +1434,12 @@ export const en = {
   "co.deal.new": "New deal",
   "co.tags.apply": "Add tag",
   "co.tags.pick": "Tag name",
+  "co.tags.overCap":
+    "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
   "co.lists.add": "Add to list",
   "co.lists.pick": "List name",
+  "co.lists.overCap":
+    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "Recent activity",
   "co.recent.empty": "Nothing logged with them yet.",
   "co.recent.viewHistory": "View history",
@@ -2444,6 +2453,11 @@ export const en = {
   "compose.scopedToCounted":
     "Scoped to {key} · {inScope} of {total} activities",
   "compose.scopedTo": "Scoped to {key}",
+  // A channel reply has no picker: its send carries no filing field, so the
+  // conversation's own project is inherited. This is the disclosure that
+  // replaces the choice.
+  "compose.channelFiling":
+    "Will be filed under {project}, with the conversation it answers.",
   "compose.basedOn": "Based on: {inputs}",
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
@@ -3316,22 +3330,30 @@ export const en = {
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, choose Advanced → Continue. Nothing sends without your approval.",
   "dedupe.intro":
-    "Pairs the capture pipeline flagged as likely the same person or company. Merging keeps both records' history; dismissing tells the system to never ask about this pair again.",
+    "Pairs flagged as likely the same person or company. Merging keeps everything from both — every address, number, note and activity moves onto the record you keep. Dismissing tells the system to never ask about this pair again.",
   "dedupe.loading": "Loading the review queue…",
   "dedupe.empty": "No duplicates waiting — the queue is clear.",
   "dedupe.confidence": "Match confidence:",
   "dedupe.field": "Field",
   "dedupe.signal": "Signal",
   "dedupe.evidenceTable": "Field-by-field evidence",
+  "dedupe.keepsBoth":
+    "Both values are kept. Choosing a record decides which one survives and which value is shown first — nothing is deleted.",
   "dedupe.signalAgree": "agree",
   "dedupe.signalCollide": "conflict",
   "dedupe.signalOneSided": "one side only",
-  "dedupe.left": "Keep left",
-  "dedupe.right": "Keep right",
+  // "Keep" NOT "Keep left": the radio sits in a column header over per-field
+  // values, and "keep left" there reads as "keep the left VALUE and drop the
+  // right one" — which is the opposite of what a merge does. It picks the
+  // surviving RECORD; every value from both moves onto it. The two labels
+  // stay distinguishable by side, because two identically-named radios in
+  // one group are unusable to a screen reader.
+  "dedupe.left": "Keep the left record",
+  "dedupe.right": "Keep the right record",
   "dedupe.kindPerson": "Person",
   "dedupe.kindOrganization": "Company",
   "dedupe.kindLead": "Lead",
-  "dedupe.mergeCta": "Merge into selected",
+  "dedupe.mergeCta": "Merge, keeping everything",
   "dedupe.notDuplicateCta": "Not a duplicate",
   "dedupe.decided": "Decision saved.",
   "dedupe.undoCta": "Undo",
@@ -5872,6 +5894,7 @@ export const en = {
   "person.loops.ours": "You",
   "person.loops.question": "Open question",
   "person.loops.overdue": "overdue {count} days",
+  "person.loops.overdueUnderDay": "overdue by less than a day",
   "person.loops.due": "due {when}",
   "person.loops.dueToday": "today",
   "person.loops.dueTomorrow": "tomorrow",
@@ -6373,6 +6396,7 @@ export const en = {
   "project.advance.reasonRequired": "A closed project needs a reason.",
   "deal.project": "Project",
   "deal.projectNew": "New project…",
+  "deal.projectWithheld": "Project withheld",
   "deal.projectNeedsCompany":
     "Choose the deal's company first — a project is started on a company.",
   "deal.projectUnnamed": "Project",

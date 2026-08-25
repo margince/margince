@@ -3,10 +3,10 @@
 
 import type { components } from "../../api/schema";
 import type { Evidence } from "../../design-system/trust";
+import { confidenceLevel } from "../../design-system/trust";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../common";
-import { confidenceLevel } from "../inbox";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {
   CUSTOMER_FIELDS,

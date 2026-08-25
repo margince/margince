@@ -170,7 +170,7 @@ func DedupePerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonReso
 	// A nameless captured contact never fuzzy-matches: with no name there
 	// is nothing to score, and org_match alone would collide every
 	// colleague onto one record.
-	if normalizeName(c.FullName) == "" {
+	if NormalizePersonName(c.FullName) == "" {
 		return PersonResolution{Decision: DecisionNoMatch}, nil
 	}
 	return fuzzyPerson(ctx, tx, c)
@@ -271,17 +271,20 @@ type personCandidateRow struct {
 // WHY THE CANDIDATE QUERY HAS THREE ARMS. The trigram arm and the employer arm
 // both narrow a set for a SCORE, and being approximate is fine there: a row they
 // miss was never going to win. The name-collision lane is not a score — it
-// decides on normalizeName equality — so a prefilter that is merely approximate
-// could hide a row that would have been exactly equal, and the employer arm
-// cannot rescue it because a manual create carries no employer at all.
+// decides on NormalizePersonName equality — so a prefilter that is merely
+// approximate could hide a row that would have been exactly equal, and the
+// employer arm cannot rescue it because a manual create carries no employer at
+// all.
 //
 // The third arm folds BOTH sides with SQL's own functions, exactly as the
 // trigram arm does. Computing one side in Go would move the divergence rather
 // than close it: SQL's lower+unaccent and Go's Unicode full folding are two
 // different normalizations, and the point is to stop relying on either being a
-// superset of the other. btrim because normalizeName trims and SQL does not —
-// "  Lucy Vo  " and "Lucy Vo" are equal in Go and unequal to a bare SQL
-// comparison, which is a real divergence today.
+// superset of the other. It is personNameKeySQL, which spells the two
+// properties NormalizePersonName has and a bare SQL comparison does not: the
+// trim, and the internal-whitespace collapse. Both are real divergences —
+// "  Lucy Vo  " and "Lucy Vo" are Go-equal, and so are "Éva  Ő" and "Éva Ő",
+// and a name reflowed across a line break is how the second one arrives.
 //
 // NO KNOWN PAIR NEEDS THAT ARM. Every case that could be constructed — case,
 // accents, ß, a trailing space — is already admitted by the trigram arm, and
@@ -310,7 +313,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 		 WHERE p.archived_at IS NULL
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.organization_id = $2)
-		        OR btrim(f_fold_apostrophes(lower(p.full_name))) = btrim(f_fold_apostrophes(lower($1))))`,
+		        OR `+personNameKeySQL("p.full_name")+` = `+personNameKeySQL("$1")+`)`,
 		c.FullName, c.CurrentPrimaryOrgID)
 	if err != nil {
 		return PersonResolution{}, fmt.Errorf("dedupe person candidate set: %w", err)
@@ -324,7 +327,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	// exact name with no employer known, so reading the name lane off `best`
 	// would lose exactly the pair it exists to catch.
 	sameName := PersonResolution{Decision: DecisionNoMatch}
-	candidateKey := normalizeName(c.FullName)
+	candidateKey := NormalizePersonName(c.FullName)
 	for rows.Next() {
 		var row personCandidateRow
 		if err := rows.Scan(&row.id, &row.fullName, &row.orgID, &row.orgDomain, &row.mailDomains); err != nil {
@@ -337,7 +340,7 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 			(confidence == best.Confidence && best.PersonID != (ids.PersonID{}) && row.id.String() < best.PersonID.String()) {
 			best.Confidence, best.PersonID = confidence, row.id
 		}
-		if normalizeName(row.fullName) == candidateKey {
+		if NormalizePersonName(row.fullName) == candidateKey {
 			// Same tie-break as above, and for the same reason: two incumbents
 			// spelled identically must not shuffle the queue between runs.
 			if confidence > sameName.Confidence ||

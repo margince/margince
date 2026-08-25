@@ -28,14 +28,17 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   DecisionCard,
   type DecisionCardLabels,
+  DecisionStatusChip,
+  type DecisionStatusLabels,
+  DecisionToolChip,
   decisionExpiryMs,
   decisionLapsed,
-  decisionUrgency,
+  decisionUrgencyTone,
 } from "../design-system/decisioncard";
 import { Select } from "../design-system/select";
 import {
   AutonomyDot,
-  type ConfidenceLevel,
+  confidenceLevel,
   EvidenceChip,
   ProvenanceTag,
 } from "../design-system/trust";
@@ -80,21 +83,6 @@ export { useDecidedApprovals, usePendingApprovals } from "./inbox.queries";
 // back as an honest "the world changed, re-stage" row error; a 409
 // already-decided drops the stale row instead of offering a re-stage retry
 // (Task 10, AC-1..7).
-
-export function confidenceLevel(
-  confidence: number | null | undefined,
-): ConfidenceLevel | null {
-  if (confidence == null) {
-    return null;
-  }
-  if (confidence >= 0.8) {
-    return "high";
-  }
-  if (confidence >= 0.5) {
-    return "med";
-  }
-  return "low";
-}
 
 // What the inline editor offers for one proposal.
 //
@@ -152,26 +140,6 @@ function EvidenceList({
       )}
     </>
   );
-}
-
-const STATUS_BADGE_KEY: Record<
-  string,
-  "inbox.status.approved" | "inbox.status.rejected" | "inbox.status.expired"
-> = {
-  approved: "inbox.status.approved",
-  rejected: "inbox.status.rejected",
-  expired: "inbox.status.expired",
-};
-
-const STATUS_BADGE_TONE: Record<string, "success" | "danger" | "warn"> = {
-  approved: "success",
-  rejected: "danger",
-  expired: "warn",
-};
-// An unexpected status must never yield tone={undefined} (mirrors the label
-// lookup's fallback) — an unknown decided state reads as a neutral warn.
-function statusTone(status: string): "success" | "danger" | "warn" {
-  return STATUS_BADGE_TONE[status] ?? "warn";
 }
 
 // AC-2: the row's "view everything" affordance — the full proposed_change
@@ -258,86 +226,6 @@ function ApprovalDetailModal({
       )}
     </Modal>
   );
-}
-
-// TTL as a chip that escalates as expiry nears (mockup's amber→red): warn
-// under 6h, danger under 1h, neutral beyond — never inert gray text.
-//
-// The HOURS are not spelled here: `decisionUrgency` owns them, and the card the
-// chip sits on paints its own edge from the same reading. Two copies of the
-// thresholds is how one deadline comes to read as urgent on the card and calm in
-// the badge beside it — which is worse than either reading alone.
-const URGENCY_TONE: Readonly<
-  Record<ReturnType<typeof decisionUrgency>, "danger" | "warn" | undefined>
-> = {
-  lapsed: "danger",
-  urgent: "danger",
-  soon: "warn",
-  calm: undefined,
-};
-
-function expiryTone(msRemaining: number): "danger" | "warn" | undefined {
-  return URGENCY_TONE[decisionUrgency(msRemaining)];
-}
-
-// The header chip: a status badge in the read-only Decided view, else the
-// live countdown that flips to the Expired badge at/after expires_at.
-// Exported because Home's deck draws the same chip on the same approvals: one
-// countdown, one set of expiry bands, one word for "expired". A second copy over
-// there would be a second answer to the same deadline — and the deck and this
-// row would drift the first time either moved. Its proper home is the design
-// system beside `decisionUrgency`, with the copy arriving as labels; that move
-// is tracked with the other stranded decision helpers.
-export function RowStatusChip({
-  decided,
-  status,
-  expiresAtMs,
-  isExpired,
-  now,
-}: Readonly<{
-  decided: boolean;
-  status: string;
-  expiresAtMs: number | null;
-  isExpired: boolean;
-  now: number;
-}>) {
-  const t = useT();
-  if (decided) {
-    return (
-      <Badge tone={statusTone(status)}>
-        {t(STATUS_BADGE_KEY[status] ?? "inbox.status.expired")}
-      </Badge>
-    );
-  }
-  if (expiresAtMs == null) {
-    return null;
-  }
-  // A lapsed pending row carries NO chip: the card it sits on says it expired
-  // where its verbs would have been, and a badge saying the same word one line
-  // above reads as two separate facts about the same deadline. Returning null
-  // here also keeps the countdown below from rendering a negative one.
-  if (isExpired) {
-    return null;
-  }
-  const remaining = expiresAtMs - now;
-  return (
-    <Badge tone={expiryTone(remaining)}>
-      {t("inbox.expiresIn", { countdown: formatCountdown(remaining, t) })}
-    </Badge>
-  );
-}
-
-// Surfaces the originating tool verb for a staged approval — kind is meta
-// (line above), this caption names the tool that actually produced the
-// stage so a human can tell "send_email" (the tool) from "advance_deal"
-// (the kind) without opening the detail modal. Silent for an unmapped kind.
-function OriginatingToolChip({ kind }: Readonly<{ kind: string }>) {
-  const t = useT();
-  const verb = KIND_TO_VERB[kind];
-  if (!verb) {
-    return null;
-  }
-  return <span className="t-caption">{t("inbox.viaTool", { verb })}</span>;
 }
 
 // The row-local decide outcomes that KEEP the row mounted: a generic error
@@ -524,6 +412,18 @@ function rowLabels(t: Translator): DecisionCardLabels {
     draftSubject: t("inbox.draftSubject"),
     draftBody: t("inbox.draftBody"),
     noContent: t("common.empty"),
+  };
+}
+
+// The status chip's words. Spelled per surface like every other label bag here:
+// what a countdown or a verdict is CALLED belongs to the screen showing it.
+function statusLabels(t: Translator): DecisionStatusLabels {
+  return {
+    expiresIn: (msRemaining) =>
+      t("inbox.expiresIn", { countdown: formatCountdown(msRemaining, t) }),
+    approved: t("inbox.status.approved"),
+    rejected: t("inbox.status.rejected"),
+    expired: t("inbox.status.expired"),
   };
 }
 
@@ -746,13 +646,15 @@ export function ApprovalRow({
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
           <span className="t-small">{approvalKindLabel(approval.kind, t)}</span>
-          <OriginatingToolChip kind={approval.kind} />
-          <RowStatusChip
+          <DecisionToolChip
+            verb={KIND_TO_VERB[approval.kind]}
+            label={(verb) => t("inbox.viaTool", { verb })}
+          />
+          <DecisionStatusChip
+            approval={approval}
             decided={!!decided}
-            status={approval.status}
-            expiresAtMs={decisionExpiryMs(approval)}
-            isExpired={decisionLapsed(approval, now)}
             now={now}
+            labels={statusLabels(t)}
           />
         </>
       }
@@ -923,7 +825,7 @@ function BundleExpiryChip({
   }
   const remaining = Math.min(...expiries) - now;
   return (
-    <Badge tone={expiryTone(remaining)}>
+    <Badge tone={decisionUrgencyTone(remaining)}>
       {t("inbox.bundle.expiresIn", {
         countdown: formatCountdown(remaining, t),
       })}

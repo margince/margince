@@ -83,9 +83,8 @@ func (l layout) appBin(name string) string { return filepath.Join(l.runtimeDir()
 func (l layout) webRoot() string           { return filepath.Join(l.runtimeDir(), "web") }
 
 // The user's, and never replaced by an update.
-func (l layout) configPath() string    { return filepath.Join(l.root, "margince.yaml") }
-func (l layout) envPath() string       { return filepath.Join(l.root, "margince.env") }
-func (l layout) aiRoutingPath() string { return filepath.Join(l.root, "ai-routing.yaml") }
+func (l layout) configPath() string { return filepath.Join(l.root, "margince.yaml") }
+func (l layout) envPath() string    { return filepath.Join(l.root, "margince.env") }
 
 func (l layout) data() string              { return filepath.Join(l.root, "data") }
 func (l layout) pgData() string            { return filepath.Join(l.data(), "pg") }

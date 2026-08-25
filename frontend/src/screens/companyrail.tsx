@@ -30,7 +30,7 @@ import { SectionSummary, sectionAnswered } from "./companyrailshared";
 import { TagsSection } from "./companyrailtags";
 import { byReach } from "./coverage";
 import { roleOf } from "./provider-status";
-import { signalKindLabel } from "./record360";
+import { signalKindLabel, signalTone } from "./record360";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,
@@ -374,25 +374,6 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
   );
 }
 
-// The severity vocabulary a signal's dot is drawn in, mirroring SignalsCard's
-// own SIGNAL_TONE (company360.tsx), copied rather than imported for the same
-// reason the health tables above are: this module is on the other side of
-// that one's import.
-const SIGNAL_DOT_TONE: Record<string, "warn" | "danger" | undefined> = {
-  info: undefined,
-  warn: "warn",
-  urgent: "danger",
-};
-
-// Own-property only: `severity` arrives as a wire string, and a value named
-// `toString` would otherwise find something on Object's prototype and type as
-// a tone.
-function signalDotTone(severity: string): "warn" | "danger" | undefined {
-  return Object.hasOwn(SIGNAL_DOT_TONE, severity)
-    ? SIGNAL_DOT_TONE[severity]
-    : undefined;
-}
-
 /**
  * SignalsSection reads the account-filtered signals, same endpoint and same
  * withheld/failed handling SignalsCard used. Signals are a separately
@@ -445,7 +426,7 @@ function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
         signals.map((signal) => (
           <PanelRow key={signal.id} className="co-signal-row">
             <span
-              className={`co-dot${signalDotTone(signal.severity) ? ` co-dot-${signalDotTone(signal.severity)}` : ""}`}
+              className={`co-dot${signalTone(signal.severity) ? ` co-dot-${signalTone(signal.severity)}` : ""}`}
               aria-hidden="true"
             />
             <span className="co-signal-body">

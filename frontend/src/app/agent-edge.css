@@ -1,0 +1,86 @@
+/* ===== The agent, in the margins of the screen =====
+ *
+ * Two marks, both drawn on the periphery of the whole window, both absent unless
+ * there is something to say. The window and not the content column: what they
+ * report is true of the workspace a person is working in, and a contour that
+ * stopped at the sidebar would read as a panel border. `fixed` for the same
+ * reason, so neither mark moves when a screen scrolls or the sidebar collapses.
+ *
+ * The rules they keep are the point of the design, so they are written here
+ * rather than left to be inferred:
+ *
+ * 1. **Rest is still.** No mark at all when nothing is happening. A light that is
+ *    always on is not a signal, it is trim, and a reader stops seeing it inside a
+ *    day.
+ * 2. **Movement means work.** Only the working mark moves, and only while work is
+ *    actually in flight. Nothing here loops for decoration.
+ * 3. **Waiting is the stillest state, not the loudest.** Something that cannot
+ *    proceed without a person holds a complete, motionless contour. A staged
+ *    action that looked busy would be lying about who it is waiting for.
+ *
+ * The working mark is a shader now (agent-edge.tsx, agent-edge-shader.ts), so what
+ * used to be most of this file has gone with it: the masked bands, the drifting
+ * bodies of light, the turbulence filter and the keyframes that drove them. The
+ * waves, the hues and the falloff are all computed per fragment.
+ */
+.agentedge {
+  position: fixed;
+  inset: 0;
+  /* Just above the chrome, and no higher. The top bar and the rail sit at 20
+     (topbar.css, shell.css) and were painting over the top edge of the glow,
+     which cropped the frame along one side. Everything that wants a reader's
+     attention is at 28 or above (sheets, scrims, menus, tooltips), so it keeps
+     its place over this. */
+  z-index: 21;
+  pointer-events: none;
+}
+
+/* The shader's canvas, over the whole window. No bleed and no oversize: the wave
+   moves the rim's THICKNESS inward from a fixed boundary rather than displacing a
+   raster across it, so nothing can be pulled off the screen edge and there is no
+   gap to guard against. That was a real bug in the technique this replaced. */
+.agentedge-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* What a host without WebGL2 wears: a plain lit rim, no waves. It says the agent
+   is working without claiming to show how, which is the honest fallback. */
+.agentedge-still {
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--orbJade) 80%, transparent);
+}
+
+/* ===== Waiting: the contour closes =====
+ *
+ * Complete, and completely still. No light and no waves: a drawn line rather than
+ * a lit one, which is what tells it apart from the working edge at a glance. This
+ * is the state where nothing happens until a person acts.
+ *
+ * It dissolves when the queue does, which is what makes it bearable on every
+ * screen: a contour that stayed after the last approval was answered would be an
+ * alarm with no switch.
+ */
+.agentedge-wait {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+.agentedge[data-waiting] .agentedge-wait {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The contour appears and goes rather than fading. Half a second of opacity is
+     a small animation, but a reader who asked for less movement asked for less of
+     exactly this, and nothing here needs the fade to be understood: the mark is
+     the statement, and its arrival is not part of the meaning. The shader's own
+     travel is held still separately, in the loop. */
+  .agentedge-wait {
+    transition: none;
+  }
+}

@@ -27,11 +27,16 @@ to add a task or a site rather than certify one that exists, see
 
 ## Prerequisites
 
-1. A **routing config** binding the task's tier to a real provider/model.
-   `make install` / `make dev` seed `config/ai-routing.yaml`; the shipped
-   default binds **gemini** on `cheap_cloud` + `premium`. The lane defaults
-   `MARGINCE_AI_ROUTING` to that file — override with `MARGINCE_AI_ROUTING=<path>`
-   to certify a different binding without touching your dev config.
+1. A **routing file** binding the task's tier to a real provider/model. This lane
+   is one of the few that still reads one deliberately: it opens no database, and
+   a verdict recorded against whatever each engineer happened to have bound would
+   not be comparable with anybody else's. So it defaults `MARGINCE_AI_ROUTING` to
+   the **tracked** `config/ai-routing.example.yaml`, which binds **gemini** on
+   `cheap_cloud` + `premium`. Override with `MARGINCE_AI_ROUTING=<path>` to
+   certify a different binding.
+
+   Note this is not the installation's binding — that is the `ai.routing`
+   setting, and nothing here reads or changes it.
 
    For a second, non-Gemini binding to certify against, the tree also ships
    `config/ai-routing.openrouter.example.yaml` — one OpenRouter key reaching

@@ -294,8 +294,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 			       OR right(split_part(pe.email, '@', 2), length($4) + 1) = '.' || $4))
 		  AND NOT EXISTS (
 			SELECT 1 FROM relationship r
-			WHERE r.kind = 'employment' AND r.person_id = p.id
-			  AND r.is_current_primary AND r.archived_at IS NULL)
+			WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING`,
 		orgID, domainTriageSource(domain), by, domain)
 	if err != nil {

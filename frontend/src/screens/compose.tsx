@@ -317,18 +317,6 @@ async function draftFromActivity({
   return { available: true as const, draft: data };
 }
 
-// Where a REPLY will be filed, said rather than chosen.
-//
-// A reply inherits its thread's project on its own — capture's stickiness rung,
-// "a conversation is about one body of work" — so a picker here would offer a
-// choice the product has already made, and offer it wrongly: filing ONE message
-// of a conversation under a different project is the split that rule exists to
-// prevent.
-//
-// What was missing is not the choice but the SENTENCE. A rep pressed "Draft a
-// reply", saw no project anywhere, and concluded the feature was not there.
-// This says where the message is going, and points at the one control that can
-// change it — which moves the whole conversation, not one message of it.
 /**
  * What survives clearing a subject: the project tag, and nothing else.
  *
@@ -406,6 +394,45 @@ function useThreadProject(activityId?: string): {
     // thread's own filing. Unsettled means say nothing.
     settled: !activityId || (!query.isPending && !query.isError),
   };
+}
+
+/**
+ * Where a CHANNEL reply will be filed, said rather than chosen.
+ *
+ * A channel send carries the words and the consent purpose and nothing else
+ * (SendMessageRequest has no links and no subject), so the server files the
+ * reply under the links of the conversation it answers. A picker here would
+ * collect an answer nothing could carry: mail keeps its choice in the subject
+ * tag, and a channel has no subject line to keep it in. So this states the
+ * filing rather than asking for one.
+ *
+ * It reads the ANCHOR's own project link rather than the picker's list, because
+ * that link is what the send inherits — a channel conversation hangs off a
+ * person, whose timeline reaches no project list at all, and it is filed all
+ * the same.
+ *
+ * Nothing renders while a read is unanswered, and nothing renders when the
+ * conversation names no project: an unsettled read is not "no project", and
+ * naming a project the send then contradicts is worse than the silence.
+ */
+function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
+  const t = useT();
+  const thread = useThreadProject(activityId);
+  const { project, settled } = useProjectRecord(thread.projectId);
+  if (!thread.settled || !settled || !project) {
+    return null;
+  }
+  return (
+    <p className="t-caption">
+      {t("compose.channelFiling", {
+        // The same shape the picker labels an option with, so the project a rep
+        // reads here and the one they read on a mail reply are one name.
+        project: project.key
+          ? `${project.key} · ${project.name}`
+          : project.name,
+      })}
+    </p>
+  );
 }
 
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
@@ -1810,9 +1837,14 @@ export function ComposeModal({
     >
       <div className="compose-fields">
         {accountContext}
-        {/* A reply says where it is going. The picker above is for the
-            account-started message, which has no thread to inherit from. */}
-        {!isChannelReply && (
+        {/* Every message says where it files. Mail ASKS — its answer travels
+            in the subject tag. A channel reply is TOLD: its send carries no
+            filing field, so the conversation's own links are inherited
+            whatever a control here collected. The condition is the
+            transport's own, not the mail-only branch below. */}
+        {isChannelReply ? (
+          <ChannelReplyFiling activityId={activityId} />
+        ) : (
           <ProjectFiling
             projects={reachableProjects}
             projectId={projectFiling.projectId}

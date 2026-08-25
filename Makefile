@@ -32,7 +32,7 @@ SEED_DSN ?= postgres://margince_owner:dev@localhost:15432/margince
 # every company renders as a placeholder initial.
 MINIO_PORT ?= 29000
 
-.PHONY: help install ai-routing-local dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -52,16 +52,8 @@ help:
 ## this by name): frontend deps + the Go gate binaries + the repo git hooks.
 ## Idempotent; extend here as new setup steps are needed. A fresh worktree can
 ## run `make check` / `make dev` immediately after.
-install: fe-install tools hooks ai-routing-local
-	@echo "install: worktree ready (frontend deps + gate tools + hooks + local ai-routing)"
-
-## ai-routing-local — seed the gitignored per-engineer config/ai-routing.yaml
-## from the committed template on first run; never clobbers an existing copy.
-ai-routing-local:
-	@test -f config/ai-routing.yaml || { \
-		cp config/ai-routing.example.yaml config/ai-routing.yaml; \
-		echo "ai-routing-local: seeded config/ai-routing.yaml from config/ai-routing.example.yaml — edit it to bind local models"; \
-	}
+install: fe-install tools hooks
+	@echo "install: worktree ready (frontend deps + gate tools + hooks)"
 
 ## check-backend — the backend half of the gate: the root deterministic script
 ## gates plus the backend gate (build, vet, lint, arch-lint, unit + fitness
@@ -356,6 +348,11 @@ frontend-check:
 
 ## fe-ds-gates — the design-system script gates on their own, so the CI job that
 ## wants only the cheap greps does not also pull a vitest run behind them.
+##
+## This recipe is also the list check-ext-frontend-walk.test.sh reads: it holds
+## that every gate here reads extensions/*/frontend and not frontend/src alone,
+## because a gate scanning a smaller tree than it claims reports PASS and
+## nothing notices. A gate added below is measured by that test or named in it.
 fe-ds-gates:
 	frontend/scripts/check-ds-purity.sh
 	frontend/scripts/check-font-lock.sh
@@ -363,6 +360,7 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 	frontend/scripts/check-space-tokens.sh
+	bash frontend/scripts/check-ext-frontend-walk.test.sh
 
 ## fe-drift — the TS type-drift gate on its own: regenerate from the contract
 ## and fail if the committed types moved.

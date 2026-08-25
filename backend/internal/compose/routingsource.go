@@ -11,12 +11,20 @@ package compose
 // can be running different bindings with nothing saying so. In the database
 // there is one answer and every role that asks gets the same one.
 //
-// The routing FILE keeps one job: seeding an installation that has no stored
-// binding yet. That is what carries an existing deployment across the move
-// without an operator doing anything, and it is why the file is read only when
-// the setting is unset — an installation that has been provisioned once never
-// consults it again, so a file left behind stale cannot quietly become the
-// authority.
+// The routing FILE no longer seeds it. It used to, and that is exactly why it
+// had to stop: `margince.yaml`'s `seeds.ai_routing` seeds the same setting, so
+// two files could plant one installation's binding with nothing deciding
+// between them and nothing saying which had. The boot file is the survivor
+// because it reaches every path that creates an installation — the claim flow,
+// the file bootstrap and a data reset all run the same seed inside the
+// creating transaction — where the flag only ever fired on a boot that found
+// the setting unset.
+//
+// A `--ai-routing` still on a command line is therefore ignored, loudly, and
+// the warning names both replacements. The flag stays REGISTERED so an
+// operator's existing command line does not die on an unknown flag; the file
+// FORMAT stays too, because the debug lanes and the certification runner read
+// it deliberately, with no database open.
 
 import (
 	"context"
@@ -28,12 +36,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/platform/settings"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -45,17 +51,15 @@ import (
 // human asked: the value was already this installation's, in a file.
 const routingSeedActor = "routing-seed"
 
-// ResolveRouting settles the binding this process runs on.
-//
-// An installation with a stored binding uses it and never opens the file. One
-// with none adopts the file's binding, stores it, and reads the stored copy
-// back — so what the Router runs on is always what the database holds, and a
-// second role booting concurrently reaches the same value rather than its own
-// copy of the file.
+// ResolveRouting settles the binding this process runs on: whatever the
+// database holds, and nothing else. Every role that asks gets the same answer,
+// which is the property a file read per-process cannot offer.
 //
 // A zero RoutingConfig means unconfigured, which is not an error: an
 // installation that has bound no models runs with its AI lanes absent, exactly
-// as one with no routing file did.
+// as one with no routing file did. It is reached from the UI without a restart,
+// so an unset binding is a state somebody can see and fix rather than a boot
+// this function has to guess its way out of.
 func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string, keys config.Lookup, log *slog.Logger) (ai.RoutingConfig, error) {
 	ws, err := singletonWorkspace(ctx, pool)
 	if err != nil {
@@ -65,6 +69,18 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 		// Unprovisioned (ADR-0105): the claim flow has not run, so there is no
 		// installation to hold a binding. Serving is the point — every tenant
 		// route answers 503 until it is claimed — so this is not a boot error.
+		//
+		// The ignored flag is still announced here, before the return. The flag
+		// help promises a warning whenever the path is ignored, and an
+		// unprovisioned boot is the one case that reached no warning at all —
+		// which is also the boot an operator is most likely to be watching,
+		// having just started a fresh installation with the flag they have
+		// always used.
+		if routingPath != "" {
+			log.WarnContext(ctx,
+				"--ai-routing is ignored: this installation is not provisioned yet, so nothing holds a model binding. Declare one under `seeds.ai_routing` in margince.yaml before the claim flow runs, or set it under Settings -> AI once the installation is claimed. Remove the flag; the file is read only by the debug and certification lanes now",
+				"file", routingPath)
+		}
 		return ai.RoutingConfig{}, nil
 	}
 	ctx = routingCtx(ctx, ws)
@@ -73,34 +89,8 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 	if err != nil {
 		return ai.RoutingConfig{}, err
 	}
-	if stored.Unconfigured() && routingPath != "" {
-		fromFile, err := ai.LoadRoutingFile(routingPath, keys)
-		if err != nil {
-			return ai.RoutingConfig{}, err
-		}
-		adopted, err := seedRouting(ctx, pool, fromFile)
-		if err != nil {
-			return ai.RoutingConfig{}, err
-		}
-		if !adopted {
-			// A row appeared between the Unconfigured() read above and this
-			// write — another replica booting at the same time. Saying "adopted"
-			// would name a binding that is not the one now stored.
-			log.Warn("the routing file was not adopted: a stored binding appeared while this boot was reading the file, and it wins",
-				"file", routingPath)
-		} else {
-			log.Info("adopted the routing file as this installation's stored binding; it is authoritative now and the file is no longer read",
-				"file", routingPath, "routing_version", fromFile.RoutingVersion())
-		}
-		// Re-read rather than returning what was just written. The seed is
-		// ON CONFLICT DO NOTHING, so a role that lost the race to another one
-		// stored nothing — and returning its own file copy would put two roles
-		// on two bindings, which is the failure this move exists to end. There
-		// is one return path for every case below, so no arm can hand back
-		// something the database does not hold.
-		if stored, err = readStoredRouting(ctx, pool); err != nil {
-			return ai.RoutingConfig{}, err
-		}
+	if routingPath != "" {
+		warnRoutingFileIgnored(ctx, routingPath, stored.Unconfigured(), log)
 	}
 	if stored.Unconfigured() {
 		return ai.RoutingConfig{}, nil
@@ -111,6 +101,32 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 		return ai.RoutingConfig{}, err
 	}
 	return cfg.WithCredentialVersion(credentials), nil
+}
+
+// warnRoutingFileIgnored says a `--ai-routing` was passed and did nothing.
+//
+// Two different situations, and an operator needs to be told which one they are
+// in. With a binding already stored the file is merely redundant — the flag can
+// come off the command line and nothing changes. With NO binding stored the
+// flag used to be what supplied one, so this boot is the one where the AI lanes
+// go absent, and saying only "ignored" would leave the operator to discover
+// that from a feature that stopped working.
+func warnRoutingFileIgnored(ctx context.Context, routingPath string, unconfigured bool, log *slog.Logger) {
+	if unconfigured {
+		// Says "and restart" deliberately. A process that boots with nothing
+		// bound wires no model path, and the watcher that would notice a later
+		// write is built from that path — so a binding set through the UI now is
+		// stored correctly and picked up on the next start, not on this one.
+		// Promising an immediate effect here would send an operator looking for
+		// a lane that was never going to light up.
+		log.WarnContext(ctx,
+			"--ai-routing is ignored and this installation has NO stored model binding, so its AI lanes are absent for the life of this process: declare the binding under `seeds.ai_routing` in margince.yaml before a fresh install's first boot, or set it through Settings -> AI and restart this role to pick it up",
+			"file", routingPath)
+		return
+	}
+	log.WarnContext(ctx,
+		"--ai-routing is ignored: this installation's model binding is a stored setting, changed through Settings -> AI or PUT /v1/ai/routing. Remove the flag; the file is read only by the debug and certification lanes now",
+		"file", routingPath)
 }
 
 // sealedKeys upgrades the environment lookup to one that resolves a provider's
@@ -202,22 +218,6 @@ func bootCtx(ctx context.Context, ws ids.UUID, actor string) context.Context {
 
 func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfig, error) {
 	return settings.Get(ctx, NewSettingsStore(pool), ai.Routing)
-}
-
-// seedRouting plants the file's binding, consumed exactly once: settings.Seed
-// inserts only when no row exists, so a restart never overwrites a binding an
-// admin has since changed.
-//
-// It answers whether the binding was STORED. "A restart" is the case the rule
-// was written for; a stored row that predates this file is the case it is silent
-// about, and an operator who edits ai-routing.yaml and sees no change deserves
-// to be told which of the two happened.
-func seedRouting(ctx context.Context, pool *pgxpool.Pool, cfg ai.RoutingConfig) (stored bool, err error) {
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		stored, err = settings.SeedValue(ctx, tx, ai.Routing, cfg)
-		return err
-	})
-	return stored, err
 }
 
 // singletonWorkspace resolves the one live workspace this installation is

@@ -16,14 +16,17 @@
 // the record it links to.
 
 import type { ReactNode } from "react";
-
-import { navigate } from "../app/router";
-import { useRecordZone } from "../app/recordzone";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
+import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { SurfaceState, sectionState } from "../design-system/surfacestate";
+import {
+  omitted,
+  SurfaceState,
+  sectionState,
+} from "../design-system/surfacestate";
 import {
   formatDate,
   formatMoneyOrAbsent,
@@ -130,7 +133,7 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
   const since = newActivities(view);
   const first = firstVisit(view);
-  const withheld = (view?.sections_omitted.length ?? 0) > 0;
+  const withheld = (view?.sections_omitted?.length ?? 0) > 0;
   if (!first && since === 0 && !withheld) {
     return null;
   }
@@ -159,7 +162,7 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
 // withheld section means nobody counted, and a counted zero means nothing
 // happened — reporting either as news would be a claim the page cannot make.
 function newActivities(view?: Organization360): number {
-  if (!view || view.sections_omitted.includes("since_last_visit")) {
+  if (!view || omitted(view, "since_last_visit")) {
     return 0;
   }
   return view.since_last_visit?.new_activities ?? 0;
@@ -169,7 +172,7 @@ function newActivities(view?: Organization360): number {
 // empty. Read off an absent section it would turn data a reader's grants
 // withheld into a claim about their own history.
 function firstVisit(view?: Organization360): boolean {
-  if (!view || view.sections_omitted.includes("since_last_visit")) {
+  if (!view || omitted(view, "since_last_visit")) {
     return false;
   }
   return Boolean(view.since_last_visit) && !view.since_last_visit?.baseline_at;
@@ -187,9 +190,7 @@ export function hasWorkInFlight(view?: Organization360): boolean {
   if (!view) {
     return false;
   }
-  const withheld =
-    view.sections_omitted.includes("deals") ||
-    view.sections_omitted.includes("projects");
+  const withheld = omitted(view, "deals") || omitted(view, "projects");
   return (
     withheld ||
     (view.deals?.data.length ?? 0) > 0 ||
@@ -249,7 +250,7 @@ function WorkGroup({
  */
 function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
-  if (!view || !view.deals || !view.projects) {
+  if (!view?.deals || !view.projects) {
     return null;
   }
   const count = view.deals.data.length + liveWork(view.projects).length;
@@ -386,7 +387,9 @@ function AttentionLine({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const due = attention.due_at ? formatDate(attention.due_at, locale, zone) : "";
+  const due = attention.due_at
+    ? formatDate(attention.due_at, locale, zone)
+    : "";
   if (attention.kind === "overdue_task") {
     return (
       <StatusLine tone="warn">

@@ -220,26 +220,56 @@
   background: var(--bgCard);
 }
 
-/* tone="accent" — the one card on a page asking for a move rather than
+/* The lead panel — the one card on a page asking for a move rather than
  * reporting state. Tinted, not shouted: the border and the header band carry
  * it, and the title comes up to reading size because it is the sentence a
- * reader is meant to land on first. */
-.panel-accent {
-  border-color: var(--accentMed);
-}
-.panel-accent > .panel-head {
+ * reader is meant to land on first.
+ *
+ * The geometry is the lead's, not the tone's, so it is stated once for both
+ * families and only the four tinted properties differ below. A lead that
+ * changed size when its finding turned bad would read as a different card. */
+.panel-accent > .panel-head,
+.panel-warn > .panel-head {
   gap: var(--space-2);
-  background: var(--accentLight);
-  border-bottom: 1px solid var(--accentMed);
 }
-.panel-accent > .panel-head h2 {
+.panel-accent > .panel-head h2,
+.panel-warn > .panel-head h2 {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
+}
+
+/* tone="accent": the ordinary ask. */
+.panel-accent {
+  border-color: var(--accentMed);
+}
+.panel-accent > .panel-head {
+  background: var(--accentLight);
+  border-bottom: 1px solid var(--accentMed);
+}
+.panel-accent > .panel-head h2 {
   color: var(--accent);
 }
 .panel-accent > .panel-foot {
   border-top-color: var(--accentMed);
+}
+
+/* tone="warn": the lead whose FINDING is the bad news. The warn family's own
+ * three tokens, the same pairing `Callout` draws — a title in `--warn` over
+ * `--warnBg` — so the two surfaces that say "this is the bad news" say it in
+ * one colour rather than each picking its own amber. */
+.panel-warn {
+  border-color: var(--warnBorder);
+}
+.panel-warn > .panel-head {
+  background: var(--warnBg);
+  border-bottom: 1px solid var(--warnBorder);
+}
+.panel-warn > .panel-head h2 {
+  color: var(--warn);
+}
+.panel-warn > .panel-foot {
+  border-top-color: var(--warnBorder);
 }

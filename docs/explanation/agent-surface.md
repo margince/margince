@@ -58,7 +58,7 @@ through the registry** — read-vs-write is governed by the gate, never by the l
 Behind the `ports/model` seam (`Client { Complete / Stream / Embed / Caps }`), **model choice is config,
 not architecture**. `internal/modules/ai/` owns it:
 
-- **`SelectBrain(cfg)`** turns one binding (from `ai-routing.yaml`) into a `Client` — "offline fake ↔
+- **`SelectBrain(cfg)`** turns one binding (the `ai.routing` setting) into a `Client` — "offline fake ↔
   API key ↔ local, one line." Providers:
   - **`anthropic`**, **`openai`**, **`gemini`** (the shipped cloud default), and **`openai_compatible`**
     (any vendor speaking the OpenAI wire shape, `base_url`-bound) — cloud **BYOK**: you supply the

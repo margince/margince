@@ -248,8 +248,11 @@ update. **On Windows, check the timezone**: Windows records its own zone
 identifier rather than the IANA name this field takes, so a Windows
 installation is created as `UTC` and the value is yours to correct once.
 
-For a real model, also add `ai-routing.yaml` next to them — the launcher
-detects it and stops using the offline fake. See
+For a real model, open **Settings → AI** in the running app: bind each tier, and
+put the provider's key under **Model provider keys**. Both halves are needed — a
+key with no tier bound to its vendor changes nothing. A servable stored binding
+outranks the launcher's offline fake, so it takes effect without a restart,
+within the routing refresh interval, and there is no file to place. See
 [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md).
 
 ## Update an installation
@@ -310,7 +313,7 @@ writes its own file.
 | Windows SmartScreen blocks the first launch | The build is unsigned. "More info" → "Run anyway" |
 | Windows: "VCRUNTIME140.dll was not found" | The [Microsoft Visual C++ redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) is not installed. It is not bundled |
 | Attachments or logos fail | No object storage. Set `MARGINCE_BLOBSTORE_*` |
-| AI answers look canned | No key or routing file, so the offline fake is driving the AI surfaces |
+| AI answers look canned | Nothing is bound, or the bound vendor holds no key — so the offline fake is driving the AI surfaces. Open **Settings → AI**: bind each tier, and put the vendor's key in under **Model provider keys**. Adding a file to this folder no longer changes it |
 | "no licence is configured and this installation is production" | `MARGINCE_ENV` was set to `production` in `margince.env` without a `MARGINCE_LICENSE` beside it. Supply the token, or remove the override and let the default `dev` posture stand |
 | Dates and times look wrong on Windows | The first run defaulted to `UTC`. Set `timezone` in `margince.yaml` |
 

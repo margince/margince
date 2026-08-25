@@ -526,7 +526,7 @@ describe("password-reset deep link", () => {
 
   it("reaches home on a sign-in from a bare reset link that never carried a token", async () => {
     // No query string at all — a stale or hand-typed "#/reset-password" with
-    // nothing to reset. resetTokenFromLocation finds no token, so this mounts
+    // nothing to reset. No token reaches the screen, so this mounts
     // straight into the ordinary login form (never ResetForm, and never the
     // "Back to sign in" step that would otherwise have cleared the hash) — the
     // hash stays exactly "#/reset-password" through the whole sign-in.

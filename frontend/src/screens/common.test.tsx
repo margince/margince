@@ -445,6 +445,27 @@ describe("provenanceOf", () => {
     });
   });
 
+  it("reads a Deal Room participant as a buyer, not as an unrecorded source", () => {
+    // A buyer's own write stamps `buyer:<participant uuid>` — the principal is
+    // the participant — and with no arm for it the string fell through to the
+    // fallback below, which says nobody recorded a source. The source IS
+    // recorded here, and it is a person: the two are one branch apart, so both
+    // are asserted together.
+    expect(provenanceOf("buyer:0192abcd-2222-4222-8222-222222222222")).toEqual({
+      kind: "buyer",
+    });
+    expect(provenanceOf("someone")).toEqual({ kind: "unknown" });
+  });
+
+  it("never carries a participant uuid into a buyer tag", () => {
+    // The half that made this worth fixing rather than a cosmetic gain: a
+    // participant uuid resolves to no name on this side, and a tag that
+    // printed it would attribute the change to a string. Asserted on the whole
+    // value, so a later field carrying the id fails here.
+    const uuid = "0192abcd-3333-4333-8333-333333333333";
+    expect(JSON.stringify(provenanceOf(`buyer:${uuid}`))).not.toContain(uuid);
+  });
+
   it("reports an unrecorded source as unknown rather than as the reader's own typing", () => {
     // The old fallback made every unattributed row read as "typed by you" —
     // the one attribution nobody can check.

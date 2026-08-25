@@ -159,12 +159,9 @@ function ConnectionCard() {
 
   const connect = useMutation({
     mutationFn: async (deposit: { baseURL: string; token: string }) => {
-      const { error, response } = await api.PUT(
-        "/ext/relay-probe/connect",
-        {
-          body: { base_url: deposit.baseURL, token: deposit.token },
-        },
-      );
+      const { error, response } = await api.PUT("/ext/relay-probe/connect", {
+        body: { base_url: deposit.baseURL, token: deposit.token },
+      });
       if (error || !response.ok) {
         throwProblem(error);
       }
@@ -223,9 +220,7 @@ function ConnectionCard() {
           />
         ) : (
           <p>
-            <Badge tone="warn">
-              {t("extRelayProbe.connection.absent")}
-            </Badge>
+            <Badge tone="warn">{t("extRelayProbe.connection.absent")}</Badge>
           </p>
         )}
       </QueryStates>
@@ -270,9 +265,7 @@ function ConnectionCard() {
               reader that is not on this element announces nothing and the
               member is left believing the account connected. */}
           {connect.isError ? (
-            <p role="alert">
-              {t("extRelayProbe.connection.connectFailed")}
-            </p>
+            <p role="alert">{t("extRelayProbe.connection.connectFailed")}</p>
           ) : null}
         </>
       ) : null}
@@ -374,7 +367,7 @@ function CredentialForm({
             {...control}
             value={baseURL}
             disabled={!depositing}
-            placeholder="https://workspace.example.com"
+            placeholder={t("extRelayProbe.connection.baseUrlPlaceholder")}
             onChange={(event) => setBaseURL(event.target.value)}
           />
         )}
@@ -382,9 +375,7 @@ function CredentialForm({
       <Field
         label={t("extRelayProbe.connection.tokenLabel")}
         hint={
-          depositing
-            ? undefined
-            : t("extRelayProbe.connection.tokenStored")
+          depositing ? undefined : t("extRelayProbe.connection.tokenStored")
         }
       >
         {(control) =>
@@ -476,9 +467,7 @@ function ConnectionState({
     <>
       <p>
         {parked ? (
-          <Badge tone="warn">
-            {t("extRelayProbe.connection.parked")}
-          </Badge>
+          <Badge tone="warn">{t("extRelayProbe.connection.parked")}</Badge>
         ) : (
           <Badge tone="success">
             {t("extRelayProbe.connection.connected")}

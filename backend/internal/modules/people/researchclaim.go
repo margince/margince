@@ -30,6 +30,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -111,23 +112,27 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 			return err
 		}
 		for _, claim := range claims {
-			// ON CONFLICT because the table holds one row per (person, field):
-			// accepting a newer claim about the same field REPLACES what was
-			// there, which is what a reader who just chose it expects.
+			// The one write in this table that REPLACES: somebody read the
+			// claim, its quote and the document behind it, and chose it.
 			// updated_at and version are the trigger's
-			// (trg_person_profile_field_updated), so the branch names neither.
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO person_profile_field (person_id, field, value, evidence_snippet, source_ref, source, captured_by)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)
-				ON CONFLICT (person_id, field) DO UPDATE
-				SET value = EXCLUDED.value,
-				    evidence_snippet = EXCLUDED.evidence_snippet,
-				    source_ref = EXCLUDED.source_ref,
-				    source = EXCLUDED.source,
-				    captured_by = EXCLUDED.captured_by`,
-				personID, claim.Field, claim.Value, claim.Quote,
-				claim.SourceURL, researchSource, by); err != nil {
+			// (trg_person_profile_field_updated), so nothing here names them.
+			landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
+				Field: claim.Field, Value: claim.Value, EvidenceSnippet: claim.Quote,
+				SourceRef: claim.SourceURL, Source: researchSource, CapturedBy: by,
+			}, replaceOnAcceptance)
+			if err != nil {
 				return fmt.Errorf("save the research claim %q: %w", claim.Field, err)
+			}
+			if !landed {
+				// An acceptance REPLACES, so the only way a row does not land
+				// is the writer's liveness predicate refusing it: an erasure
+				// committed between EnsureWritableLive above and this
+				// statement, which at READ COMMITTED is a fresh snapshot. The
+				// whole acceptance fails rather than counting a claim that is
+				// not there — the count rides the audit row and the outbox
+				// event, so a saved++ here would record a mutation that never
+				// happened, on the one table whose purpose is traceability.
+				return apperrors.ErrNotFound
 			}
 			saved++
 		}

@@ -240,7 +240,7 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 			SourceURL:       page.URL,
 			Confidence:      gatedConfidence,
 		}
-		key := normalizedPersonName(name)
+		key := sitePersonIdentity(name, publishedEmail)
 		if prior, dup := personIndex[key]; dup {
 			// Two claims for one person, and the reply's ORDER must not decide
 			// which survives. The tighter evidence wins: a role stated right

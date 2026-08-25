@@ -174,7 +174,7 @@ func (s *Store) CreateRelationship(ctx context.Context, in CreateRelationshipInp
 			in.PersonID != nil {
 			if _, err := tx.Exec(ctx, `
 				UPDATE relationship SET is_current_primary = false
-				WHERE kind = 'employment' AND person_id = $1 AND is_current_primary AND archived_at IS NULL
+				WHERE person_id = $1 AND `+CurrentPrimarySlotSQL("")+`
 				  AND `+EmploymentIsCurrentSQL("$2::date"),
 				*in.PersonID, in.EndedAt); err != nil {
 				return err
@@ -342,8 +342,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			current.Kind == "employment" && current.PersonID != nil {
 			if _, err := tx.Exec(ctx, `
 				UPDATE relationship SET is_current_primary = false
-				WHERE kind = 'employment' AND person_id = $1 AND is_current_primary
-				  AND archived_at IS NULL AND id <> $2
+				WHERE person_id = $1 AND id <> $2 AND `+CurrentPrimarySlotSQL("")+`
 				  AND EXISTS (
 					SELECT 1 FROM relationship patched
 					 WHERE patched.id = $2

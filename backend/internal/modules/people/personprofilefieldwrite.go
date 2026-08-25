@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package people
+
+// The one writer of person_profile_field, and the precedence rule it carries.
+//
+// Several passes fill this table — a mail signature, a public search result, a
+// site read, a human's acceptance of a research claim — and a conflict clause
+// chosen per pass makes the value a field holds depend on which pass ran last.
+//
+// The rule is not "first wins" or "last wins". It is about WHO is writing:
+//
+//   - A machine fill CLAIMS an unanswered field and never replaces one. It read
+//     a footer, a search snippet or a page; none of that outranks an answer
+//     already on the record, and a pass that overwrote one would undo a human's
+//     correction the next time it ran.
+//   - A HUMAN'S ACCEPTANCE replaces what is there. Somebody read the claim, the
+//     quote behind it and the document it came from, and chose it — that is the
+//     one input to this table that has weighed the evidence, and a row it could
+//     not replace would leave the reader looking at a value they had just
+//     rejected (ADR-0096 D4).
+//
+// So the argument below is the writer's authority, not the SQL verb.
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+)
+
+// personProfileFieldPrecedence is who is writing, and therefore what happens to a
+// row that is already there.
+type personProfileFieldPrecedence int
+
+const (
+	// claimUnanswered is what a machine fill writes under: the evidence row is
+	// an admission ticket, and one already issued for this field is the answer.
+	claimUnanswered personProfileFieldPrecedence = iota
+	// replaceOnAcceptance is a human's decision, which outranks whatever a
+	// pass put there.
+	replaceOnAcceptance
+)
+
+// conflictClause renders the precedence as the ON CONFLICT it means.
+//
+// The whole row is replaced on acceptance, confidence included. Replacing the
+// value and keeping a confidence some earlier pass measured would leave the row
+// saying a human's answer had been scored by a model that never saw it.
+func (p personProfileFieldPrecedence) conflictClause() string {
+	if p == replaceOnAcceptance {
+		return `DO UPDATE SET value = EXCLUDED.value,
+		    evidence_snippet = EXCLUDED.evidence_snippet,
+		    source_ref = EXCLUDED.source_ref,
+		    confidence = EXCLUDED.confidence,
+		    source = EXCLUDED.source,
+		    captured_by = EXCLUDED.captured_by`
+	}
+	return "DO NOTHING"
+}
+
+// personProfileFieldRow is one evidence row: a fact about who this person is, and
+// what it was read from.
+//
+// Evidence and SourceRef are both NOT NULL on the table, so a claim that lost
+// its quote or its source cannot be stored at all — that is what makes the
+// evidence guarantee enforceable rather than promised, and no caller here may
+// weaken it.
+//
+// Confidence is a pointer because most passes have none: a human's acceptance
+// and a page read are not scored, and storing a 0 for "unscored" would read as
+// "measured, and certainly wrong".
+type personProfileFieldRow struct {
+	Field           string
+	Value           string
+	EvidenceSnippet string
+	SourceRef       string
+	Source          string
+	CapturedBy      string
+	Confidence      *float64
+}
+
+// writePersonProfileField writes one evidence row and reports whether it landed —
+// false meaning the field was already answered and this writer defers to it.
+//
+// The subject's liveness rides the INSERT rather than only the probe the entry
+// point ran. person_profile_field is a declared PII table and Art. 17 erasure
+// clears its rows while stamping the person archived, so a fill decided before
+// that commit and applied after it would put the erased subject's details
+// straight back — in the window between two statements, not over the hours an
+// entry gate closes. A SELECT source rather than VALUES is what lets the
+// predicate travel with the row.
+//
+// FOR UPDATE, because the predicate alone only NARROWS that window. Reading the
+// person as live and inserting are one statement, but an erasure running
+// concurrently can still commit between this transaction's snapshot and its
+// own — and the foreign key would accept the parent it just archived, so the
+// row lands on an erased subject and nothing complains. The lock makes the two
+// take turns: an erasure in flight blocks here until it commits, and then this
+// statement finds no live row.
+//
+// Locking PERSON and not the field row: the field row may not exist yet, and
+// what has to be serialized is the subject's liveness. Every caller that goes
+// on to write a person COLUMN takes the same row next, so the order is
+// person-then-person and no new deadlock edge is introduced.
+func writePersonProfileField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, row personProfileFieldRow, precedence personProfileFieldPrecedence) (bool, error) {
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO person_profile_field
+		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
+		SELECT $1, $2, $3, $4, $5, $6, $7, $8
+		  FROM person
+		 WHERE person.id = $1 AND person.archived_at IS NULL
+		   FOR UPDATE
+		ON CONFLICT (person_id, field) `+precedence.conflictClause(),
+		personID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
+		row.Confidence, row.Source, row.CapturedBy)
+	if err != nil {
+		return false, fmt.Errorf("people: profile field evidence row (%s): %w", row.Field, err)
+	}
+	return tag.RowsAffected() > 0, nil
+}

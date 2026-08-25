@@ -44,8 +44,8 @@ numbers appear here when releases start.
   their consents that no client redeemed yet, alongside the connections
   that already exist — so reactivating them later cannot hand out a
   connection on authority an admin took away.
-- **AI surfaces**: model routing (`ai-routing.yaml` — BYOK cloud via the
-  native Anthropic / OpenAI / Gemini adapters or the generic
+- **AI surfaces**: model routing (the `ai.routing` setting — BYOK cloud via
+  the native Anthropic / OpenAI / Gemini adapters or the generic
   `openai_compatible` wire, local Ollama / vLLM, an offline fake), the
   Surface-B runner + scheduler, search (FTS + pgvector hybrid), capture
   connector seam, cold-start read-back.
@@ -205,6 +205,37 @@ numbers appear here when releases start.
   screen, which does not exist yet.
 
 ### Changed
+
+- **The AI routing file is retired: one binding, declared in one place.** The
+  installation's tier→model binding has been the `ai.routing` setting for a
+  while, but `--ai-routing <file>` still seeded it on any boot that found the
+  setting unset — and `seeds.ai_routing` in `margince.yaml` seeded the same
+  setting at bootstrap. Two files could plant one installation's binding, nothing
+  interlocked them, and nothing said which had. The boot file is the survivor,
+  because it reaches every path that creates an installation (the claim flow, the
+  file bootstrap and a data reset all run the same seed inside the creating
+  transaction) where the flag only ever fired at boot.
+
+  `--ai-routing` and `MARGINCE_AI_ROUTING` are now **ignored, and warn** — the
+  flag stays registered so an existing command line does not die on an unknown
+  one, and the warning distinguishes the two situations it can be in, because on
+  an installation with nothing stored this is the boot where the AI lanes go
+  absent. A dev stack is bound by `seeds.ai_routing` in
+  `config/margince.dev.yaml` rather than by a per-engineer `config/ai-routing.yaml`
+  that `make install` used to seed; `make e2e-ai` now defaults to the **tracked**
+  `config/ai-routing.example.yaml`, so a recorded verdict is comparable between
+  engineers instead of being about whatever each had bound.
+
+  The file FORMAT stays, and so does its schema: `worker siteread`, `worker
+  aitask` and the certification runner read one deliberately, with no database
+  open. Those probe a binding rather than serve one, which is the one job a file
+  is right for.
+
+  The desktop launcher no longer looks for `ai-routing.yaml` either. It passes
+  `--ai-fake` on every boot, which is not the same as forcing the fake on: a
+  stored binding outranks that flag, so a user binds real models under
+  Settings → AI — with the provider key beside them — and it takes effect without
+  a restart, instead of copying a YAML file into the app folder.
 
 - **The twelve settings pages speak the record page's language.** Settings and
   the company record were built from two different card primitives, and that was
