@@ -61,6 +61,16 @@ const (
 	// listing slot and an admission surface to display an answer the caller
 	// already has.
 	PipelineReviewURI = "ui://margince/pipeline-review.html"
+	// GeoProbeURI answers whether THIS host lets a view read the device's
+	// position. It renders no record and answers no tool.
+	//
+	// IT IS A PROBE AND IS MEANT TO BE DELETED. The extension says a host "MAY
+	// honor these permissions… but are not required to", so whether a coordinate
+	// is readable is a fact about claude.ai on web, on Android, on iOS and on
+	// desktop — four answers, none of them derivable from a document. Once the
+	// matrix is filled in, this view has told us the only thing it knows and
+	// should stop occupying a slot in resources/list.
+	GeoProbeURI = "ui://margince/geo-probe.html"
 )
 
 // view is one published document's identity. The document itself is not here:
@@ -109,6 +119,12 @@ var catalog = []view{
 		title:       "Pipeline review",
 		description: "The deals at risk this week, worst first, with the evidence each risk claim rests on.",
 	},
+	{
+		uri:         GeoProbeURI,
+		name:        "geo_probe_view",
+		title:       "Location check",
+		description: "Whether this host lets a view read the device's position, and the browser's own words when it does not.",
+	},
 }
 
 // DeclaredViews is every view this build declares, as URI → the title its
@@ -131,16 +147,35 @@ func DeclaredViews() map[string]string {
 // sandbox is the policy every view here declares, and the ONE place it is
 // stated.
 //
-// EVERY allowlist is left empty, and every permission unasked. That is the whole
-// security posture of these views: no fetch, no remote script, no nested frame,
-// no camera, no clipboard. See the package comment for why an empty list is the
-// promise rather than a placeholder.
+// EVERY allowlist is left empty, and every permission unasked EXCEPT
+// geolocation. That is the whole security posture of these views: no fetch, no
+// remote script, no nested frame, no camera, no clipboard. See the package
+// comment for why an empty list is the promise rather than a placeholder.
+//
+// WHY GEOLOCATION IS THE ONE EXCEPTION. Reading the device's own position is a
+// different act from letting a document reach the network, and the empty
+// allowlists are what keep the two apart. A view may learn where it is; it still
+// has no origin it may send that anywhere, so a coordinate can only travel back
+// the way every other answer does — through the host, into a tool call the user
+// sees. The permission widens what a view may KNOW, not what it may REACH.
+//
+// It is asked for on every view rather than one, because a host grants this per
+// iframe and a view that asks only when it expects to need the answer has
+// already lost the case it was for: the position is wanted at the moment
+// somebody hands over a business card, not one card later.
+//
+// A HOST MAY REFUSE, and that is the expected outcome until proven otherwise —
+// the extension says hosts "MAY honor these permissions… but are not required
+// to". Asking costs nothing when refused: the browser denies the call and the
+// view carries on without a position. So no view may treat a coordinate as
+// something it will get.
 //
 // It is one function because the policy reaches a host TWICE — on the catalogue
 // and on the read — and those are the two answers that must not be allowed to
 // differ. A second literal would be a second chance to widen one of them.
 func sandbox() *mcp.ResourceUI {
 	return &mcp.ResourceUI{
+		Permissions: mcp.ResourcePermissions{Geolocation: true},
 		// PrefersBorder, because these render as a panel of rows beside a
 		// conversation and read better with an edge than bleeding into it.
 		PrefersBorder: true,

@@ -33,7 +33,24 @@ const COPYRIGHT = "SPDX-FileCopyrightText: 2026 Gradion";
 
 /** The shared admission vocabulary. Read from disk rather than imported so this
  *  module works identically under vitest, under a vite build and under the dev
- *  server, none of which agree about JSON import assertions. */
+ *  server, none of which agree about JSON import assertions.
+ *
+ *  WHY `navigator.geolocation` IS NOT IN IT, since it was until the geolocation
+ *  permission landed and the vocabulary is JSON and cannot say so itself. It sat
+ *  under `offOrigin`, among the network reaches — `fetch(`, `WebSocket(`,
+ *  `navigator.sendBeacon`. It does not belong there: reading the device's
+ *  position sends nothing anywhere. It was swept in with the calls it resembles
+ *  rather than judged on what it does.
+ *
+ *  The promise `offOrigin` keeps is that a view has no origin to reach, and that
+ *  promise is untouched — every network token above still stands, and the
+ *  published CSP still names no origin at all. A view may now learn where it is,
+ *  and still has nowhere to send it: a coordinate leaves only the way every
+ *  other answer does, through the host and into a tool call the user sees.
+ *
+ *  The permission the host must grant is the second fence, and the one that
+ *  actually decides. See sandbox() in the api's apps package for the
+ *  declaration, and src/mcp-apps/geo.ts for the read. */
 const VOCABULARY: Record<string, string[]> = JSON.parse(
   readFileSync(resolve(HERE, "../src/mcp-apps/forbidden.json"), "utf8"),
 );

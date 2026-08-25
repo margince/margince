@@ -15,6 +15,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -300,8 +301,34 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	if contents.UI == nil {
 		t.Fatal("a view was read with no sandbox policy attached to the bytes")
 	}
-	if !contents.UI.CSP.Empty() || contents.UI.Permissions != (mcp.ResourcePermissions{}) {
-		t.Errorf("the read policy widens the sandbox: %+v", contents.UI)
+	if !contents.UI.CSP.Empty() {
+		t.Errorf("the read policy names an origin this view may reach: %+v", contents.UI.CSP)
+	}
+	// Geolocation is the one permission these views ask for, and asking for it is
+	// exactly why the CSP above still has to be empty: a view may learn where it
+	// is, and has nowhere to send that. Pinned member by member so a second
+	// permission added later fails here rather than riding in unnoticed.
+	if want := (mcp.ResourcePermissions{Geolocation: true}); contents.UI.Permissions != want {
+		t.Errorf("the read policy is not the declared one: got %+v, want %+v", contents.UI.Permissions, want)
+	}
+	// The claim this test carries: the two answers a host can get are the same
+	// one. A policy read from the catalogue would label the wrong document when
+	// two providers share a URI.
+	var listed *mcp.ResourceUI
+	for _, r := range p.Resources(context.Background()) {
+		if r.URI == AccountBriefURI {
+			listed = r.UI
+		}
+	}
+	if listed == nil {
+		t.Fatal("the view read above is not in the catalogue this provider publishes")
+	}
+	// reflect.DeepEqual rather than !=: ResourceCSP carries slices, so the whole
+	// policy is not a comparable type. The point is that the two answers agree in
+	// full, so comparing the whole value is what is wanted — field by field would
+	// stop covering a member added later, which is the drift this test exists for.
+	if !reflect.DeepEqual(*listed, *contents.UI) {
+		t.Errorf("the catalogue and the read disagree: listed %+v, read %+v", *listed, *contents.UI)
 	}
 }
 
