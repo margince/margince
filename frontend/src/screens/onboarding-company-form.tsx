@@ -14,6 +14,7 @@ import {
   type CompanyFieldName,
   CUSTOMER_FIELDS,
   type FieldGrounding,
+  isMultilineField,
   isRequired,
   LEGAL_IDENTITY_FIELDS,
   OFFER_FIELDS,
@@ -238,16 +239,6 @@ function CompanyFieldList({
       onBlur={onBlur}
     />
   ));
-}
-
-function isMultilineField(field: CompanyFieldName): boolean {
-  return !(
-    field === "display_name" ||
-    field === "legal_name" ||
-    field === "register_vat" ||
-    field === "industry" ||
-    field === "website"
-  );
 }
 
 // The legal-entity choice. A group's imprint states one block per company

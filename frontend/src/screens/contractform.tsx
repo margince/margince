@@ -11,6 +11,7 @@ import { MoneyInput } from "../design-system/moneyinput";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { uploadAttachment } from "./attachmentupload";
 import { problemMessageOf, throwProblem } from "./common";
 import { paperState, useContractPaper } from "./contractpaper";
 
@@ -115,7 +116,15 @@ export function ContractForm({
         // A SECOND request, which can fail on its own. The agreement is saved
         // by then, so a failure here says the FILE did not attach rather than
         // implying the whole thing was lost.
-        await uploadSignedFile(orgId, id, submitted.file);
+        //
+        // Filed against the COMPANY with the agreement named as an extra part,
+        // so the signed paper also appears in the account's own library rather
+        // than only under the contract.
+        await uploadAttachment(
+          { entityType: "organization", entityId: orgId },
+          submitted.file,
+          { contract_id: id },
+        );
       }
       return id;
     },
@@ -524,26 +533,6 @@ async function patchContract(
     throwProblem(error);
   }
   return contract.id;
-}
-
-// Sent as multipart by hand: the generated client serializes JSON bodies, and
-// this endpoint takes a file part. The document is filed against the agreement
-// AND against the company, so it also appears in the account's own library.
-async function uploadSignedFile(orgId: string, contractID: string, file: File) {
-  const body = new FormData();
-  body.append("entity_type", "organization");
-  body.append("entity_id", orgId);
-  body.append("contract_id", contractID);
-  body.append("file", file);
-  const response = await fetch("/v1/attachments", {
-    method: "POST",
-    body,
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => undefined);
-    throwProblem(payload);
-  }
 }
 
 // What the form refuses before the server has to.
