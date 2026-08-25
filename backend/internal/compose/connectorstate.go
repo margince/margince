@@ -62,7 +62,23 @@ type wireState struct {
 // stateSigner mints and verifies signed state tokens with an HMAC key.
 type stateSigner struct{ key []byte }
 
-func newStateSigner(key []byte) stateSigner { return stateSigner{key: key} }
+// newStateSigner refuses a key below the floor rather than trusting whoever
+// built it to have checked.
+//
+// The check lived only in the caller's mount condition, so a construction site
+// that forgot it produced a signer that HMACs with an empty key and verifies
+// anything — the exact failure minStateKeyLen exists to prevent, arriving
+// through the one path nobody was watching. A zero signer signs nothing and
+// verifies nothing, so the surface refuses instead of accepting forgeries.
+func newStateSigner(key []byte) stateSigner {
+	if len(key) < minStateKeyLen {
+		return stateSigner{}
+	}
+	return stateSigner{key: key}
+}
+
+// usable reports whether this signer holds a key that clears the floor.
+func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 
 // sign returns `base64url(payload).base64url(hmac(payload))`, binding the
 // tuple until exp.
