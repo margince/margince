@@ -735,7 +735,7 @@ function WebsiteComposer(
   const t = useT();
   return (
     <div className="ob-core-dialog">
-      <div className="ob-core-kicker">{t("ob.coreLegalKicker")}</div>
+      <div className="t-eyebrow ob-core-kicker">{t("ob.coreLegalKicker")}</div>
       <h1>{t("ob.coreWebsiteTitle")}</h1>
       <p>{t("ob.coreWebsiteBody")}</p>
       <CoreJourney active={0} />

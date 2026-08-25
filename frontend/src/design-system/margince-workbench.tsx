@@ -410,7 +410,7 @@ function AiRuntimeChip({
         <ChevronDown className="mw-aistat-caret" aria-hidden size={12} />
       </button>
       <div className="mw-aistat-pop" id={popoverId} hidden={!open}>
-        <p className="mw-aistat-h">{labels.answering}</p>
+        <p className="t-eyebrow mw-aistat-h">{labels.answering}</p>
         <dl className="mw-aistat-rows">
           <RuntimeRow label={labels.configured} value={configured} />
           <RuntimeRow

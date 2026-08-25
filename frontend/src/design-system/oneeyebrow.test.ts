@@ -27,6 +27,11 @@ import {
 // a copy that took three of the four had already made the type worse without
 // anybody choosing it.
 //
+// The `font:` shorthand is expanded before comparing, because it sets the
+// weight and the size in one declaration and a rule written that way carries
+// two of the four under a property name a longhand comparison never sees. A
+// complete copy stood in the conversation sheet exactly like that.
+//
 // WHAT IT DELIBERATELY DOES NOT CATCH. A rule that takes SOME of the quadruple
 // is a variant somebody decided on, not a duplicate a test can name — an
 // uppercase label at a different size is a design decision, and reporting it
@@ -50,9 +55,52 @@ const tokens = join(designSystem, "tokens.css");
  * roles — so requiring it would make the gate see almost nothing.
  */
 function eyebrowType(): readonly string[] {
-  return declarations(soleRule(eyebrowSource, ".t-eyebrow").body)
+  return typeOf(soleRule(eyebrowSource, ".t-eyebrow").body);
+}
+
+/**
+ * A rule's type declarations, with the `font:` shorthand expanded and every
+ * token resolved.
+ *
+ * The shorthand is not a nicety. `font: var(--fw-semibold) var(--fs-eyebrow) /
+ * var(--lh-normal) var(--f-body)` sets the weight and the size in one
+ * declaration, so a rule written that way carries two of the four under a
+ * property name the longhand comparison never sees — it reads as 2 of 4 and
+ * passes. A complete copy stood in the conversation sheet exactly like that,
+ * and the census that found the other twenty-seven could not see it.
+ * `onecard.test.ts` learned this for its own shorthands; the lesson belongs to
+ * whichever gate compares declaration text, which is both of them.
+ */
+function typeOf(body: string): readonly string[] {
+  return declarations(body)
+    .flatMap(fontLonghand)
     .filter((declaration) => !declaration.startsWith("color:"))
     .map(resolved);
+}
+
+/**
+ * `font: <weight> <size>/<line-height> <family>` as its parts.
+ *
+ * Only the one ordering this tree writes, expanded into the two properties this
+ * gate compares. A general shorthand parser is a different program, and one
+ * that guessed wrong would make the gate fire on rules that are not eyebrows —
+ * which costs more than what the narrow version misses, because a gate that
+ * fires on correct code teaches readers to skip it.
+ */
+function fontLonghand(declaration: string): readonly string[] {
+  if (!declaration.startsWith("font: ")) {
+    return [declaration];
+  }
+  const parts = declaration.slice("font: ".length).split(" ");
+  const [weight, sizeAndLeading] = parts;
+  if (weight === undefined || sizeAndLeading === undefined) {
+    return [declaration];
+  }
+  const size = sizeAndLeading.split("/")[0];
+  if (size === undefined || size === "") {
+    return [declaration];
+  }
+  return [`font-weight: ${weight}`, `font-size: ${size}`];
 }
 
 /**
@@ -131,7 +179,7 @@ describe("one eyebrow", () => {
         if (path === eyebrowSource && rule.selector === ".t-eyebrow") {
           continue;
         }
-        const declared = new Set(declarations(rule.body).map(resolved));
+        const declared = new Set(typeOf(rule.body));
         if (type.every((property) => declared.has(property))) {
           copies.push(`${relative(frontendRoot, path)}: ${rule.selector}`);
         }

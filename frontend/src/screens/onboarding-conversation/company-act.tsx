@@ -1198,7 +1198,7 @@ function AttentionGroup({
   const labelId = `ob-conv-attention-${groupKey}`;
   return (
     <div className="ob-conv-attention-group">
-      <p className="ob-conv-attention-group-label" id={labelId}>
+      <p className="t-eyebrow ob-conv-attention-group-label" id={labelId}>
         {label}
       </p>
       <ul className="ob-conv-attention-list" aria-labelledby={labelId}>
