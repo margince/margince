@@ -795,6 +795,18 @@ func (stubs) UndoImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id open
 	httperr.NotImplemented(w, r, "UndoImportRun")
 }
 
+func (stubs) DeleteGoogleApp(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteGoogleApp")
+}
+
+func (stubs) GetGoogleApp(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetGoogleApp")
+}
+
+func (stubs) SetGoogleApp(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetGoogleApp")
+}
+
 func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLicenseEntitlement")
 }
@@ -805,6 +817,10 @@ func (stubs) GetInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) UpdateInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UpdateInstallationSettings")
+}
+
+func (stubs) GetInstallationSetup(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetInstallationSetup")
 }
 
 func (stubs) ListLeadDisqualifyReasons(w nethttp.ResponseWriter, r *nethttp.Request) {

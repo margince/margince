@@ -18,7 +18,9 @@ import (
 )
 
 func TestMirrorCursorRoundTrips(t *testing.T) {
-	for _, externalID := range []string{"", "1", "100214862042"} {
+	// Not the empty string: an external id IS the mirror's key, so "" is not a
+	// position anything can page from — and the decoder refuses it below.
+	for _, externalID := range []string{"1", "100214862042"} {
 		encoded := encodeMirrorCursor(externalID)
 		got, err := decodeMirrorCursor(encoded)
 		if err != nil {
@@ -26,6 +28,23 @@ func TestMirrorCursorRoundTrips(t *testing.T) {
 		}
 		if got != externalID {
 			t.Errorf("round trip: encodeMirrorCursor(%q) -> decodeMirrorCursor = %q", externalID, got)
+		}
+	}
+}
+
+// A token that decodes to nothing is not the start of the list.
+//
+// `null` and `""` both unmarshal cleanly into an empty string, and an empty
+// string is how the caller spells "first page" — so without a refusal here a
+// token nobody minted silently RESTARTS the walk, and a client pages the mirror
+// from the top believing it resumed where it left off. The empty CURSOR is
+// still the start of paging; a token carrying emptiness is not.
+func TestATokenThatDecodesToNothingIsRefusedRatherThanRestartingTheWalk(t *testing.T) {
+	for _, token := range []string{"bnVsbA", "IiI"} { // null, ""
+		got, err := decodeMirrorCursor(token)
+		if !errors.As(err, new(*storekit.MalformedCursorError)) {
+			t.Errorf("decodeMirrorCursor(%q) = (%q, %v), want MalformedCursorError — an empty position "+
+				"reads as the first page and pages the mirror from the top", token, got, err)
 		}
 	}
 }

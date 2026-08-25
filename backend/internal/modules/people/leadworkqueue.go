@@ -5,8 +5,6 @@ package people
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -40,22 +38,29 @@ const (
 	leadQueueRankInactive
 )
 
+// encodeLeadQueueCursor renders the queue's position, and it can genuinely
+// fail: the position carries two instants read off rows, and a timestamp
+// outside year 0..9999 — which Postgres stores and this product never writes —
+// has no JSON form. The caller answers the read rather than paging past a
+// position it cannot name.
 func encodeLeadQueueCursor(cursor leadQueueCursor) (string, error) {
-	raw, err := json.Marshal(cursor)
-	if err != nil {
-		return "", fmt.Errorf("encode lead queue cursor: %w", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(raw), nil
+	return storekit.EncodeOpaque(cursor)
 }
 
 func decodeLeadQueueCursor(token string) (leadQueueCursor, error) {
-	var cursor leadQueueCursor
-	raw, err := base64.RawURLEncoding.DecodeString(token)
-	if err != nil || json.Unmarshal(raw, &cursor) != nil || cursor.AsOf.IsZero() || cursor.CreatedAt.IsZero() || cursor.ID.IsZero() {
-		return cursor, &storekit.MalformedCursorError{}
+	cursor, err := storekit.DecodeOpaque[leadQueueCursor](token)
+	if err != nil {
+		return leadQueueCursor{}, err
+	}
+	// The envelope proves the token is ours; these prove it names a position in
+	// THIS queue. A zero instant or id is `{}` unmarshalling cleanly, and a
+	// rank or score outside its range is a token edited by hand — both would
+	// otherwise page from a place no row occupies.
+	if cursor.AsOf.IsZero() || cursor.CreatedAt.IsZero() || cursor.ID.IsZero() {
+		return leadQueueCursor{}, &storekit.MalformedCursorError{}
 	}
 	if cursor.Rank < leadQueueRankBreached || cursor.Rank > leadQueueRankInactive || cursor.Score < 0 || cursor.Score > 100 {
-		return cursor, &storekit.MalformedCursorError{}
+		return leadQueueCursor{}, &storekit.MalformedCursorError{}
 	}
 	return cursor, nil
 }

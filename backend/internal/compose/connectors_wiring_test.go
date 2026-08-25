@@ -165,6 +165,37 @@ func TestGmailPollRegistryNilWhenUnconfigured(t *testing.T) {
 	}
 }
 
+// The stored-app resolver SURVIVES the option order cmd/api uses.
+//
+// It did not. WithKeyvault installed it and WithGmailCapture then replaced the
+// whole connectorHandlers struct with a composite literal that omitted the
+// field, so every composed installation fell back to the environment and the
+// feature was inert — while every test still passed, because none of them
+// applied both options in the order the api does.
+//
+// Asserted through the applied options rather than by reading the field on a
+// hand-built struct: the defect was in the WIRING, and a fixture that builds the
+// struct itself cannot see it.
+func TestTheStoredAppResolverSurvivesBothCaptureOptions(t *testing.T) {
+	var s Server
+	// The order cmd/api applies them in: keyvault first, gmail after.
+	WithKeyvault(fakeVault{})(&s, nil)
+	if s.googleAppResolver == nil {
+		t.Fatal("WithKeyvault installed no stored-app resolver")
+	}
+	if s.googleCredentials == nil {
+		t.Error("WithKeyvault did not carry the resolver into the connector handlers")
+	}
+
+	WithGmailCapture(GmailConfig{
+		ClientID: "id", ClientSecret: "sec",
+		StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://app",
+	}, CaptureConfig{})(&s, nil)
+	if s.googleCredentials == nil {
+		t.Error("WithGmailCapture dropped the stored-app resolver; an app set in Settings is unreachable and the installation silently keeps using the environment's")
+	}
+}
+
 func TestWithGmailCaptureWiresOrSkips(t *testing.T) {
 	full := GmailConfig{ClientID: "id", ClientSecret: "sec", StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://app"}
 
@@ -177,11 +208,20 @@ func TestWithGmailCaptureWiresOrSkips(t *testing.T) {
 	}
 	// The one Google app mounts BOTH connectors: gcal must resolve through the
 	// production wiring, not only through the manually-injected route tests.
-	if _, ok := s.oauthApp(providerGmail); !ok {
-		t.Error("WithGmailCapture(full) did not compose the gmail OAuth app")
-	}
-	if _, ok := s.oauthApp(providerGcal); !ok {
-		t.Error("WithGmailCapture(full) did not compose the gcal OAuth app")
+	// A background context, because the app is now resolved per call. This
+	// wiring composes no vault, so there is no resolver and both fall back to
+	// the environment-composed app — the case this asserts.
+	for _, provider := range []string{providerGmail, providerGcal} {
+		app, ok, err := s.oauthApp(context.Background(), provider)
+		if err != nil {
+			t.Errorf("resolving the %s OAuth app: %v", provider, err)
+		}
+		if !ok {
+			t.Errorf("WithGmailCapture(full) did not compose the %s OAuth app", provider)
+		}
+		if app.authCodeURL == nil {
+			t.Errorf("the %s app has no consent-URL builder", provider)
+		}
 	}
 
 	// Fully configured but NO vault → no-op (can't seal the refresh token).
@@ -252,6 +292,51 @@ func TestListAndDisconnectNotImplementedWhenUnwired(t *testing.T) {
 			tc.call(rec, httptest.NewRequest(http.MethodGet, "/v1/connectors", nil))
 			if rec.Code != http.StatusNotImplemented {
 				t.Fatalf("%s unwired = %d, want 501", tc.name, rec.Code)
+			}
+		})
+	}
+}
+
+// A stored-app installation — no Google app in the ENVIRONMENT, the deployment's
+// own state key and callback base present — mounts the transport and must still
+// refuse the connect verb, because the registry registers the Google connectors
+// only from the environment-composed app and Registry.Connect would have nothing
+// to hand the credential to.
+//
+// The refusal is the point. Before this was gated, the transport mounted and
+// gmailApp fell back to the env-composed client, which existed with an EMPTY
+// client id: the caller was redirected to Google's consent screen with
+// `client_id=` and the flow failed THERE, after they had already been sent away,
+// with nothing they could act on. A 501 at the gate is the honest answer while
+// serving a stored app end to end is still unbuilt.
+func TestAStoredAppInstallationRefusesConnectRatherThanSigningBlankCredentials(t *testing.T) {
+	var s Server
+	// cmd/api's order, and the stored-app shape: a vault to seal into, no
+	// MARGINCE_GMAIL_* in the environment, deployment prerequisites present.
+	WithKeyvault(fakeVault{})(&s, nil)
+	WithGmailCapture(GmailConfig{
+		StateKey:      "0123456789abcdef0123456789abcdef",
+		PublicBaseURL: "https://app.example",
+	}, CaptureConfig{})(&s, nil)
+
+	// Mounted: the registry is what the transport serves IMAP from, and IMAP
+	// needs no Google app at all — so this must not become an unmounted surface.
+	// (`wired()` is deliberately not the check: it also requires the
+	// env-composed Google client, which is exactly what a stored-app
+	// installation does not have.)
+	if s.connectorHandlers.registry == nil {
+		t.Fatal("the transport must mount on the deployment's own prerequisites: the app can arrive at runtime")
+	}
+	for _, provider := range []crmcontracts.CaptureProvider{
+		crmcontracts.Gmail, crmcontracts.Gcal,
+	} {
+		t.Run(string(provider), func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			s.ConnectConnector(
+				rec, httptest.NewRequest(http.MethodPost, "/v1/connectors/"+string(provider)+"/connect", nil), provider)
+			if rec.Code != http.StatusNotImplemented {
+				t.Fatalf("connect on a stored-app installation = %d, want 501: anything else means the request got PAST the gate that should have refused it, "+
+					"and on a real request with a signed-in human that is a redirect to Google carrying an empty client id", rec.Code)
 			}
 		})
 	}

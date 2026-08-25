@@ -154,3 +154,64 @@ func TestALookupWithNoEnvironmentAnswersEmpty(t *testing.T) {
 		t.Errorf("resolved %q with no environment and no vault entry, want empty", got)
 	}
 }
+
+// CloudProvidersBound is what the setup report gates onboarding on: it names the
+// vendors a binding uses that need a key. Getting it wrong in either direction
+// is a real stall — too many and a complete installation is told it is not, too
+// few and onboarding waves through a binding that cannot serve a single call.
+func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
+	// Derived from the owner rather than restated: a hard-coded list here would
+	// be a second copy of cloudKeyEnv and would go quietly short the day
+	// somebody adds a vendor — which is the one failure this cannot afford.
+	cloud := CloudProvidersNeedingKeys()
+	if len(cloud) < 2 {
+		t.Fatalf("CloudProvidersNeedingKeys() = %v; the tree carries several cloud vendors, so a near-empty list means the source moved", cloud)
+	}
+
+	t.Run("every cloud vendor a tier names is reported", func(t *testing.T) {
+		for _, provider := range cloud {
+			cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{"fast": {Provider: provider}}}
+			if got := cfg.CloudProvidersBound(); len(got) != 1 || got[0] != provider {
+				t.Errorf("a binding on %q reports %v, want exactly [%s]", provider, got, provider)
+			}
+		}
+	})
+
+	// The embeddings lane binds separately from the chat tiers, and a per-tier
+	// walk forgets it — an installation whose ONLY cloud vendor is its embedder
+	// would be called complete with no key for it.
+	t.Run("the embeddings lane counts even when every tier is local", func(t *testing.T) {
+		cfg := RoutingConfig{
+			Tiers:      map[Tier]ProviderConfig{"fast": {Provider: providerOllama}},
+			Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: cloud[0]}},
+		}
+		if got := cfg.CloudProvidersBound(); len(got) != 1 || got[0] != cloud[0] {
+			t.Errorf("an embeddings-only cloud binding reports %v, want [%s]", got, cloud[0])
+		}
+	})
+
+	// A sovereign installation is complete with no keys at all: local providers
+	// are absent by construction, and refusing them would block the deployment
+	// that most deliberately chose them.
+	t.Run("a fully local binding names nothing", func(t *testing.T) {
+		cfg := RoutingConfig{
+			Tiers:      map[Tier]ProviderConfig{"fast": {Provider: providerOllama}, "deep": {Provider: ProviderFake}},
+			Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOllama}},
+		}
+		if got := cfg.CloudProvidersBound(); len(got) != 0 {
+			t.Errorf("a fully local binding reports %v, want nothing", got)
+		}
+	})
+
+	// One vendor across several tiers is one entry, not three: the report asks
+	// which credentials are needed, and a duplicate would have onboarding
+	// waiting on a key it already holds.
+	t.Run("one vendor named by several tiers is reported once", func(t *testing.T) {
+		cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+			"fast": {Provider: cloud[0]}, "deep": {Provider: cloud[0]}, "vision": {Provider: cloud[0]},
+		}}
+		if got := cfg.CloudProvidersBound(); len(got) != 1 {
+			t.Errorf("three tiers on %q report %v, want one entry", cloud[0], got)
+		}
+	})
+}

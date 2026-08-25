@@ -125,6 +125,34 @@ func envOrEmpty(env config.Lookup, name string) string {
 	return env(name)
 }
 
+// CloudProvidersBound names the cloud vendors THIS binding actually calls, in a
+// stable order.
+//
+// The intersection of what the binding names and what needs a credential, which
+// is the only set worth asking about: a caller checking whether an installation
+// can serve its own binding must not demand a key for a vendor it never uses,
+// and must not miss the embeddings lane, which is bound separately from the
+// chat tiers and is the half a per-tier walk forgets.
+//
+// Local providers (ollama, vllm, the offline fake) are absent by construction —
+// they are not in cloudKeyEnv — so a fully local binding returns nothing and a
+// sovereign installation is complete with no keys at all.
+func (cfg RoutingConfig) CloudProvidersBound() []string {
+	named := make(map[string]bool, len(cfg.Tiers)+1)
+	for _, tier := range cfg.Tiers {
+		named[tier.Provider] = true
+	}
+	named[cfg.Embeddings.Provider] = true
+
+	out := make([]string, 0, len(named))
+	for _, provider := range CloudProvidersNeedingKeys() {
+		if named[provider] {
+			out = append(out, provider)
+		}
+	}
+	return out
+}
+
 // CloudProvidersNeedingKeys names the providers whose credential this module
 // holds, in a stable order so a log line reads the same on every boot.
 //

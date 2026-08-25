@@ -14,7 +14,6 @@ package people
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -89,24 +88,27 @@ type dedupeCursor struct {
 	ID         ids.UUID `json:"id"`
 }
 
+// encodeDedupeCursor renders the queue's position. It has no error channel to
+// a caller mid-page, and the position is a float and a uuid — nothing here can
+// fail to marshal. An empty token would be refused on the way back in.
 func encodeDedupeCursor(c dedupeCursor) string {
-	b, _ := json.Marshal(c) //nolint:errchkjson // fixed-shape struct never errors
-	return base64.RawURLEncoding.EncodeToString(b)
+	token, err := storekit.EncodeOpaque(c)
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 func decodeDedupeCursor(token string) (dedupeCursor, error) {
-	var c dedupeCursor
-	raw, err := base64.RawURLEncoding.DecodeString(token)
+	c, err := storekit.DecodeOpaque[dedupeCursor](token)
 	if err != nil {
-		return c, &storekit.MalformedCursorError{}
-	}
-	if err := json.Unmarshal(raw, &c); err != nil {
-		return c, &storekit.MalformedCursorError{}
+		return dedupeCursor{}, err
 	}
 	// Valid JSON is not yet a cursor. `null` and `{}` both unmarshal without
 	// error and leave the keyset at its zero value, which reads as a real
 	// position and pages from the top of the queue instead of refusing. Every
-	// token this encodes names a row, so an absent id is the tell.
+	// token this encodes names a row, so an absent id is the tell — and which
+	// field tells is what stays here rather than moving to the envelope.
 	if c.ID == (ids.UUID{}) {
 		return dedupeCursor{}, &storekit.MalformedCursorError{}
 	}

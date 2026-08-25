@@ -50,7 +50,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (45)
+## Census (46)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -82,6 +82,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
 | `oneconsentcarry_test.go` | H2 | The consent carry — what happens to a retiring record's consent when another record survives it — is spelled once inside the people module. |
+| `onecursorenvelope_test.go` | H2 | A keyset cursor travels in one envelope, storekit's. |
 | `onedownloadheader_test.go` | H2 | A download's headers are spelled once, in platform/httperr's Download. |
 | `oneidlebase_test.go` | H2 | The idle base — a record's newest activity when one is recorded, else the instant it was created — is spelled once, in shared/kernel/idlebase. |
 | `oneretryafter_test.go` | H2 | The Retry-After header is read in one place, shared/kernel/retryafter. |

@@ -88,6 +88,19 @@ type connectorHandlers struct {
 	// Empty for a same-origin deployment (the callback then rides
 	// publicBaseURL/v1); a split dev stack (SPA :5173, api :8080) sets it.
 	apiBaseURL string
+	// googleCredentials resolves the installation's STORED Google app, on each
+	// call rather than once at boot.
+	//
+	// It exists so an app set through Settings works without restarting the api.
+	// The boot-composed `oauth` below is the environment's copy, and it stays as
+	// the fallback: an installation that has always exported the pair keeps
+	// working with no action, exactly as provider keys did when they moved into
+	// the vault.
+	//
+	// A func rather than the store, so this file needs neither the pool nor the
+	// system-principal context the read runs on — compose binds both where it
+	// wires this, and a test can hand over a fake without a database.
+	googleCredentials func(ctx context.Context) (clientID, clientSecret string, ok bool, err error)
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -107,57 +120,6 @@ func (h connectorHandlers) callbackURL(provider string) string {
 type oauthApp struct {
 	authCodeURL  func(state, redirectURI string) string
 	authenticate func(ctx context.Context, code, redirectURI string) (connector.Auth, error)
-}
-
-// oauthApp resolves the composed OAuth app for a provider; false when this
-// deployment did not configure it (its surface stays the declared 501).
-func (h connectorHandlers) oauthApp(provider string) (oauthApp, bool) {
-	switch provider {
-	case providerGmail:
-		if h.oauth == nil {
-			return oauthApp{}, false
-		}
-		return oauthApp{
-			authCodeURL: h.oauth.AuthCodeURL,
-			authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-				req, err := gmail.AuthRequestFrom(code, redirectURI)
-				if err != nil {
-					return nil, err
-				}
-				return gmail.New(h.oauth, h.gmailAPI).Authenticate(ctx, req)
-			},
-		}, true
-	case providerGcal:
-		if h.gcalOAuth == nil {
-			return oauthApp{}, false
-		}
-		return oauthApp{
-			authCodeURL: h.gcalOAuth.AuthCodeURL,
-			authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-				req, err := gcal.AuthRequestFrom(code, redirectURI)
-				if err != nil {
-					return nil, err
-				}
-				return gcal.New(h.gcalOAuth, h.gcalAPI).Authenticate(ctx, req)
-			},
-		}, true
-	case providerGraph:
-		if h.graphOAuth == nil {
-			return oauthApp{}, false
-		}
-		return oauthApp{
-			authCodeURL: h.graphOAuth.AuthCodeURL,
-			authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-				req, err := graph.AuthRequestFrom(code, redirectURI)
-				if err != nil {
-					return nil, err
-				}
-				return graph.New(h.graphOAuth, h.graphAPI).Authenticate(ctx, req)
-			},
-		}, true
-	default:
-		return oauthApp{}, false
-	}
 }
 
 func (h connectorHandlers) ListConnectors(w http.ResponseWriter, r *http.Request) {
@@ -202,9 +164,20 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		})
 		return
 	}
-	app, ok := h.oauthApp(string(provider))
+	app, ok, err := h.oauthApp(r.Context(), string(provider))
+	if err != nil {
+		// A stored app that will not resolve is a different answer from one that
+		// was never configured: the installation HAS an app and cannot open its
+		// secret, and reporting 501 would send an operator to create a second.
+		//
+		// Classified rather than handed to httperr.Write raw — these are plain
+		// errors it does not recognise, so the caller would get a bare 500 with
+		// less to act on than the 501 this branch exists to avoid.
+		writeGoogleAppFailure(w, r, err)
+		return
+	}
 	if h.registry == nil || !ok {
-		// The OAuth app for this provider is not composed in this deployment —
+		// This installation has not configured an OAuth app for the provider —
 		// its surface keeps the declared 501.
 		httperr.NotImplemented(w, r, "ConnectConnector")
 		return
@@ -260,8 +233,11 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 }
 
 func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.ConnectorOAuthCallbackParams) {
-	app, ok := h.oauthApp(string(provider))
-	if h.registry == nil || !ok {
+	// Availability first, and it costs nothing: no database read, no unseal. It
+	// reveals exactly what the declared 501 always revealed — whether this
+	// deployment serves the provider at all — while the CREDENTIAL is resolved
+	// further down, after the signed state has authenticated the request.
+	if h.registry == nil || !h.providerWired(string(provider)) {
 		httperr.NotImplemented(w, r, "ConnectorOAuthCallback")
 		return
 	}
@@ -312,6 +288,23 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	if err := h.requireLiveGrantor(runCtx, st); err != nil {
 		slog.WarnContext(ctx, "connector callback: the granting human no longer holds live authority",
 			"err", err, "provider", string(provider))
+		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		return
+	}
+
+	// The credential is resolved HERE, after the signed state and the granting
+	// human have both been checked — not at the top of the handler.
+	//
+	// This route is deliberately session-less: its authentication IS the signed
+	// state. Resolving above would mean an anonymous request unseals a live
+	// client secret before anything has authenticated it, on a path with no rate
+	// limit. It also answers a browser redirect with a JSON error, where every
+	// other failure here lands the person back on a page that explains itself.
+	app, ok, err := h.oauthApp(ctx, string(provider))
+	if err != nil || !ok {
+		if err != nil {
+			logConnectFailure(ctx, string(provider), err)
+		}
 		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
 		return
 	}
