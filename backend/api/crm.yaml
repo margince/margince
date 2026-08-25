@@ -24255,6 +24255,12 @@ components:
       type: string
       description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
       enum: [people, organizations, deals, activities, leads, partners, projects]
+      # Pinned: the generator prefixes a constant only to break a collision, so
+      # these names move when an UNRELATED schema gains or loses a value that
+      # collides with one of them. Adding `commitments` to the attention feed's
+      # lanes_omitted did exactly that once, silently unprefixing all seven and
+      # breaking every caller.
+      x-enum-varnames: [SavedViewResourcePeople, SavedViewResourceOrganizations, SavedViewResourceDeals, SavedViewResourceActivities, SavedViewResourceLeads, SavedViewResourcePartners, SavedViewResourceProjects]
 
     SavedView:
       type: object
@@ -28460,13 +28466,26 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "Work already agreed: overdue first, then due today."
+        commitments:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Promises this rep made that are coming due, most overdue first — each with the
+            message it was read from, so the reader can check it against what was written.
+
+            Its own lane rather than rows in `planned`, because the two rest on different
+            records and answer different questions. A `planned` row is a TASK somebody
+            entered; a commitment is a claim extracted from a captured conversation, and it
+            carries the promise's own words and its evidence. Nothing appears in both.
+
+            Absent — not empty — on an installation whose feed does not read claims.
         done_for_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -28482,6 +28501,14 @@ components:
         needs_you: { type: integer, minimum: 0 }
         planned: { type: integer, minimum: 0 }
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+        commitments:
+          type: integer
+          minimum: 0
+          description: >-
+            How many promises this lane is CARRYING, which is the bounded page rather than every
+            promise due — the same bound `planned` reports under. A rep past the bound sees the
+            soonest-due ones, which is the order the lane is in.
+
 
     AttentionItem:
       type: object
@@ -28495,7 +28522,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

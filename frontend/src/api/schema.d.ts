@@ -21470,10 +21470,22 @@ export interface components {
             needs_you: components["schemas"]["AttentionItem"][];
             /** @description Work already agreed: overdue first, then due today. */
             planned: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Promises this rep made that are coming due, most overdue first — each with the
+             *     message it was read from, so the reader can check it against what was written.
+             *
+             *     Its own lane rather than rows in `planned`, because the two rest on different
+             *     records and answer different questions. A `planned` row is a TASK somebody
+             *     entered; a commitment is a claim extracted from a captured conversation, and it
+             *     carries the promise's own words and its evidence. Nothing appears in both.
+             *
+             *     Absent — not empty — on an installation whose feed does not read claims.
+             */
+            commitments?: components["schemas"]["AttentionItem"][];
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -21488,6 +21500,8 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
+            /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
+            commitments?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -21502,7 +21516,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

@@ -220,6 +220,43 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 	}
 }
 
+// commitmentItem renders one promise this rep made.
+//
+// It carries a title where a brief item and a duplicate pair do not, and the
+// difference is who wrote the words. Those two would need a sentence composed
+// here, in a product that ships three languages. A commitment already HAS its
+// sentence — the claim body, in the language it was captured in — so sending it
+// states what was promised rather than inventing a phrasing.
+//
+// The evidence rides in `detail` for the same reason the claim contract keeps
+// `source_quote` beside `body`: a reader has to be able to check the promise
+// against what was actually written, and a card showing only the paraphrase
+// asks them to trust the extractor instead.
+//
+// Its only verb is `open`. Marking a promise kept is the claim's own endpoint's
+// job, and this feed adds no authority the record does not already have.
+func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
+	body := promise.Body
+	quote := promise.Quote
+	due := promise.DueAt
+	past := deadline.Passed(&due, asOf)
+	item := crmcontracts.AttentionItem{
+		Id:      promise.ID.String(),
+		Source:  crmcontracts.AttentionItemSource("conversation_claim"),
+		Title:   &body,
+		Detail:  &quote,
+		Subject: subjectOf("person", promise.PersonID),
+		DueAt:   &due,
+		Overdue: &past,
+		Actions: []crmcontracts.AttentionItemActions{"open"},
+	}
+	if promise.SourceLabel != "" {
+		label := promise.SourceLabel
+		item.Kind = &label
+	}
+	return item
+}
+
 // receiptItem renders one thing the system did on its own.
 //
 // Its only verb is `open`. A receipt reports a finished act, and offering a

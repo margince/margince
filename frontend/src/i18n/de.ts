@@ -76,16 +76,22 @@ export const de = {
   "day.lead.oneDecision": "Eine Entscheidung wartet auf dich.",
   "day.lead.decisions": "{count} Entscheidungen warten auf dich.",
   "day.lead.plannedOnly": "Nichts zu entscheiden — {count} für heute geplant.",
+  "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.morningOnly":
     "Nichts wartet auf dich — die Nacht hat {count} zum Anfangen herausgesucht.",
   "day.lead.ranOvernight":
     "Nichts wartet auf dich. Das ist über Nacht gelaufen.",
+  "day.lead.clearOfWhatWasRead":
+    "In den Bahnen auf dieser Seite wartet nichts.",
   "day.lead.clear": "Dein Tag ist frei.",
   "day.lead.partial":
     "Ein Teil deines Tages ist für dein Konto nicht sichtbar.",
   "day.lane.withheld": "Für dein Konto nicht sichtbar.",
   "day.needsYou": "Wartet auf dich",
   "day.needsYou.empty": "Nichts zu entscheiden.",
+  "day.commitments": "Du hast zugesagt",
+  "day.commitments.empty": "Keine Zusagen werden f\u00e4llig.",
+  "day.commitment.detail": "\u201e{quote}\u201c \u00b7 f\u00e4llig {due}",
   "day.planned": "Geplant",
   "day.planned.empty": "Heute ist nichts fällig.",
   "day.done": "Für dich erledigt",

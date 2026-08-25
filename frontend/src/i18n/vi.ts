@@ -85,15 +85,21 @@ export const vi = {
   "day.lead.decisions": "{count} quyết định đang chờ bạn.",
   "day.lead.plannedOnly":
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
+  "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.morningOnly":
     "Không có gì chờ bạn — đêm qua đã chọn ra {count} việc để bắt đầu.",
   "day.lead.ranOvernight":
     "Không có gì cần bạn. Đây là những gì đã chạy qua đêm.",
+  "day.lead.clearOfWhatWasRead":
+    "Không có gì đang chờ trong các mục trên trang này.",
   "day.lead.clear": "Ngày của bạn không có gì.",
   "day.lead.partial": "Một phần ngày của bạn bị ẩn với tài khoản của bạn.",
   "day.lane.withheld": "Bị ẩn với tài khoản của bạn.",
   "day.needsYou": "Cần bạn",
   "day.needsYou.empty": "Không có gì cần quyết định.",
+  "day.commitments": "Bạn đã hứa",
+  "day.commitments.empty": "Không có lời hứa nào đến hạn.",
+  "day.commitment.detail": "\u201c{quote}\u201d \u00b7 đến hạn {due}",
   "day.planned": "Theo kế hoạch",
   "day.planned.empty": "Hôm nay không có gì đến hạn.",
   "day.done": "Đã làm cho bạn",
