@@ -91,6 +91,9 @@ func slaStateClause(policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaS
 // firstResponseColumn is the lead's §18.1 first-response stamp.
 const firstResponseColumn = "first_response_at"
 
+// slaBreachedColumn is the lead's at-most-once §18.2 breach mark.
+const slaBreachedColumn = "sla_breached_at"
+
 // firstResponseSet is the SET fragment every disposition write carries: the
 // first genuine response is recorded once and never moved.
 const firstResponseSet = firstResponseColumn + ` = COALESCE(` + firstResponseColumn + `, now())`
@@ -183,8 +186,16 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf("mark sla breach on %s: %w", b.LeadID, apperrors.ErrConflict)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "lead", b.LeadID.UUID,
-		nil, map[string]any{"sla_breached_at": now, "deadline": b.Deadline})
+	// sla_breached_at is the lead's own column and it is the whole change; the
+	// deadline that was missed is context ABOUT the breach and rides evidence,
+	// because a lead has no `deadline` column and field history would project
+	// one as a field of the record that nobody can find.
+	//
+	// The before-image is exact rather than read: the UPDATE above is the
+	// at-most-once CAS, so the single row it affected held nothing here.
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "lead", b.LeadID.UUID,
+		map[string]any{slaBreachedColumn: nil}, map[string]any{slaBreachedColumn: now},
+		map[string]any{"deadline": b.Deadline})
 	if err != nil {
 		return fmt.Errorf("audit sla breach: %w", err)
 	}

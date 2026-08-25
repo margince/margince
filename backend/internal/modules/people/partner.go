@@ -180,6 +180,13 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 		if _, err := storekit.LockRow(ctx, tx, "organization", in.OrganizationID.UUID, storekit.LiveOnly); err != nil {
 			return err
 		}
+		// Before the upsert and under the lock: the statement coalesces every
+		// absent field onto its current value, so what the request actually
+		// moved is only knowable by comparing against the standing row.
+		before, err := readPartnerImage(ctx, tx, in.OrganizationID)
+		if err != nil {
+			return err
+		}
 		fit, err := resolvePartnerFit(ctx, tx, in)
 		if err != nil {
 			return err
@@ -197,23 +204,13 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 			relationshipTypePartner, "system", capturedBy); err != nil {
 			return err
 		}
-		// Per-field keys, matching the upsert request's field names: the
-		// human-edit-precedence probe derives field ownership from this
-		// image, so a nested blob would make partner fields unownable.
-		auditImage := map[string]any{
-			"partner_role": in.PartnerRole, "cert_status": out.CertStatus,
-			"margin_tier": in.MarginTier, "certified_staff": in.CertifiedStaff,
-			"retention_rate": in.RetentionRate, "relationship_stage": out.RelationshipStage,
-			"next_step": in.NextStep, "next_step_due_at": in.NextStepDueAt,
-			"served_segments": in.ServedSegments,
-		}
-		// The fit pair enters the image only on an override gesture, so a
-		// plain lifecycle edit never claims ownership of the fit fields.
-		if in.FitScore != nil || in.FitOverrideReason != nil {
-			auditImage["partner_fit_score"] = fit.Score
-			auditImage["partner_fit_override_reason"] = fit.OverrideReason
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "organization", in.OrganizationID.UUID, nil, auditImage)
+		// The row as it now stands, not the request: an absent field coalesced
+		// onto its current value did not change, and an image built from the
+		// request would claim ownership of every field the caller left out.
+		// Narrowing to what moved is the same rule from the other side — it is
+		// what keeps a lifecycle edit from claiming the fit fields.
+		before, after := storekit.ChangedColumns(before, partnerAuditImage(out))
+		auditID, err := storekit.Audit(ctx, tx, "update", "organization", in.OrganizationID.UUID, before, after)
 		if err != nil {
 			return err
 		}
