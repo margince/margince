@@ -63,6 +63,7 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 	}
 	return agents.ReadBriefResult{
 		BriefID: run.ID, GeneratedAt: run.GeneratedAt, AsOf: run.AsOf,
+		LocalDay:       run.LocalDay.Format(time.DateOnly),
 		CandidateCount: run.CandidateCount, Items: items,
 	}
 }

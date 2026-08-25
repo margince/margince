@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "7d4fb22c1893eebf46f262abe414b0ba286f032bd6434cc8c08f9005e449bfcd"
+const JobContractHash = "1e473398d88deb309e6867e4ab19cb3222bbd8052b31c5c97a70b955d6fc23e0"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -77,6 +77,27 @@ var specs = map[string]Spec{
 		MaxAttempts: 1,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 5 * time.Minute},
+	},
+	"brief_generate": {
+		Kind:       "brief_generate",
+		GoType:     "BriefGenerateArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "brief_generate_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 1 * time.Hour},
+	},
+	"brief_generate_workspace": {
+		Kind:        "brief_generate_workspace",
+		GoType:      "BriefGenerateWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"capture_auto_enrich_sweep": {
 		Kind:       "capture_auto_enrich_sweep",

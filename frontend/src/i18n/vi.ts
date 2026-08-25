@@ -1962,9 +1962,9 @@ export const vi = {
   "home.asOf": "tính đến {at}",
   "home.refresh": "Làm mới tóm tắt",
   "home.refreshing": "Đang xếp hạng…",
-  "home.generate": "Tạo bản tóm tắt đầu tiên",
+  "home.generate": "Lấy tóm tắt hôm nay",
   "home.noneBody":
-    "Tóm tắt buổi sáng xếp hạng những deal đáng dành giờ đầu tiên — khả năng thắng, doanh thu, thời điểm, đà tiến và độ thân thiết, mỗi yếu tố kèm bằng chứng của nó. Hãy tạo lần chạy đầu tiên khi bạn đã có deal đang mở.",
+    "Tóm tắt buổi sáng xếp hạng những deal đáng dành giờ đầu tiên — khả năng thắng, doanh thu, thời điểm, đà tiến và độ thân thiết, mỗi yếu tố kèm bằng chứng của nó. Bản tóm tắt được dựng qua đêm nên sẽ sẵn sàng vào sáng mai, khi bạn đã có deal đang mở.",
   "home.honestShort":
     "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
   "home.overflow":

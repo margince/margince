@@ -1999,9 +1999,9 @@ export const en = {
   "home.asOf": "as of {at}",
   "home.refresh": "Refresh brief",
   "home.refreshing": "Ranking…",
-  "home.generate": "Generate my first brief",
+  "home.generate": "Get today's brief now",
   "home.noneBody":
-    "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. Generate the first run once you have open deals.",
+    "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. It is assembled overnight, so it is waiting for you tomorrow morning once you have open deals.",
   "home.honestShort":
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":

@@ -68,9 +68,15 @@ type ReadBriefResult struct {
 	BriefID ids.UUID `json:"brief_id"`
 	// GeneratedAt is when the run was assembled and AsOf its data cutoff. Both
 	// are on the wire because a queue is only as good as its age, and an agent
-	// reading a run from yesterday should be able to say so.
+	// reasoning about a stale queue should be able to say so.
 	GeneratedAt time.Time `json:"generated_at"`
 	AsOf        time.Time `json:"as_of"`
+	// LocalDay is the morning this run is for, as a calendar date in the
+	// installation's reporting zone. It is not derivable from the two instants
+	// above — those are UTC, and which local morning a 23:40Z assembly belongs
+	// to depends on a zone the agent cannot see — so an agent saying "your
+	// brief for today" needs the run's own answer rather than its own guess.
+	LocalDay string `json:"local_day"`
 	// CandidateCount is how many deals cleared the honest-short bar, which may
 	// exceed the queue: the difference is what the ranking left out.
 	//

@@ -18291,6 +18291,9 @@ type MorningBrief struct {
 	// Items The ranked queue, best-first, capped at the honest-short target (7).
 	Items []MorningBriefItem `json:"items"`
 
+	// LocalDay The morning this run is for, as a calendar date in the installation reporting timezone. A rep has exactly one run per local day, and the on-open read serves today's — never an older one dressed as today.
+	LocalDay *openapi_types.Date `json:"local_day,omitempty"`
+
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }
@@ -37153,7 +37156,7 @@ type ServerInterface interface {
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
 	// (GET /brief)
 	GetMorningBrief(w http.ResponseWriter, r *http.Request)
-	// Generate (refresh) the acting rep's brief now — ranks the candidate set and persists a new run.
+	// Assemble the acting rep's brief for today if the overnight pass has not already.
 	// (POST /brief)
 	GenerateMorningBrief(w http.ResponseWriter, r *http.Request)
 	// Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
@@ -38800,7 +38803,7 @@ func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Generate (refresh) the acting rep's brief now — ranks the candidate set and persists a new run.
+// Assemble the acting rep's brief for today if the overnight pass has not already.
 // (POST /brief)
 func (_ Unimplemented) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

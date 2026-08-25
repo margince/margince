@@ -717,7 +717,7 @@ describe("HomeScreen — the ranked queue", () => {
     expect(within(card).queryByText(/48,000/)).toBeNull();
   });
 
-  it("offers to make the first run when there is none, and renders the one it makes", async () => {
+  it("fetches today's brief on demand when the night has not left one, and renders it", async () => {
     let generated = false;
     stubApi({
       "GET /brief": () =>
@@ -735,7 +735,7 @@ describe("HomeScreen — the ranked queue", () => {
 
     await screen.findByText(/ranks the deals worth your first hour/);
     await user.click(
-      screen.getByRole("button", { name: /Generate my first brief/ }),
+      screen.getByRole("button", { name: /Get today's brief now/ }),
     );
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
   });

@@ -8576,11 +8576,16 @@ export interface paths {
         get: operations["getMorningBrief"];
         put?: never;
         /**
-         * Generate (refresh) the acting rep's brief now — ranks the candidate set and persists a new run.
-         * @description The on-open / explicit-refresh path (B-E05.3b): ranks the rep's open deals through the
-         *     §10.1 composite + the L2 re-order, and persists one `brief_run` with its ranked
-         *     `brief_item` rows. It reads and stages only — no deal field mutates and nothing is sent.
-         *     This is off the passive home GET; the home route re-reads the persisted run.
+         * Assemble the acting rep's brief for today if the overnight pass has not already.
+         * @description The catch-up path. The overnight pass owns generation: it assembles one run per rep per
+         *     local day, so on an ordinary morning the brief is already waiting and this route is never
+         *     called. It exists for the morning the night could not cover — a rep activated today, a
+         *     worker that was down — and for a reader who asks for it now rather than waiting.
+         *
+         *     A rep has exactly one run per local day (`uq_brief_run_user_day`), so this is idempotent
+         *     within the day rather than a second ranking: it returns `201` when it assembled today's
+         *     run and `200` when today's already existed. It reads and stages only — no deal field
+         *     mutates and nothing is sent.
          */
         post: operations["generateMorningBrief"];
         delete?: never;
@@ -21363,6 +21368,11 @@ export interface components {
              * @description The data cutoff this brief reflects; the next run derives "changed overnight" from it.
              */
             as_of: string;
+            /**
+             * Format: date
+             * @description The morning this run is for, as a calendar date in the installation reporting timezone. A rep has exactly one run per local day, and the on-open read serves today's — never an older one dressed as today.
+             */
+            local_day?: string;
             /** @description Deals that cleared the §10 honest-short bar (may exceed the queue length). */
             candidate_count: number;
             /**
@@ -37041,7 +37051,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The freshly generated brief run. */
+            /** @description Today's run already existed; this is it, unchanged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MorningBrief"];
+                };
+            };
+            /** @description Today's run did not exist and was assembled by this call. */
             201: {
                 headers: {
                     [name: string]: unknown;

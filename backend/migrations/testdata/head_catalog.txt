@@ -721,7 +721,9 @@ public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(i
 public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.brief_run.id uuid NOT NULL gen=- def=uuidv7()
+public.brief_run.local_day date NOT NULL gen=- def=-
 public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
+public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -3996,6 +3998,7 @@ public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_use
 public.uq_attachment_extraction_inflight CREATE UNIQUE INDEX uq_attachment_extraction_inflight ON public.attachment_extraction USING btree (attachment_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_brief_item_run_deal CREATE UNIQUE INDEX uq_brief_item_run_deal ON public.brief_item USING btree (brief_run_id, deal_id)
 public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON public.brief_item USING btree (brief_run_id, rank)
+public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public.brief_run USING btree (user_id, local_day)
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_capture_connection_ws_id CREATE UNIQUE INDEX uq_capture_connection_ws_id ON public.capture_connection USING btree (id)
 public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)
