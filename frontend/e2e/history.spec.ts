@@ -176,3 +176,19 @@ test("the decided inbox is an address", async ({ page }) => {
     page.getByRole("button", { name: "Entschieden", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
 });
+
+test("the deals board remembers its pipeline and its view in the address", async ({
+  page,
+}) => {
+  // The deals screen hand-rolls its own list query because it drives a board as
+  // well as a table, and none of it was addressable: the pipeline, the
+  // board/table choice and every filter were lost on a reload.
+  await page.goto("/#/deals?view=table&pipeline_id=pl-1");
+  await expect(page).toHaveURL(/view=table/);
+  await expect(page).toHaveURL(/pipeline_id=pl-1/);
+
+  await page.reload();
+
+  await expect(page).toHaveURL(/view=table/);
+  await expect(page).toHaveURL(/pipeline_id=pl-1/);
+});
