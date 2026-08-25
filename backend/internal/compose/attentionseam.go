@@ -234,12 +234,37 @@ const approvalStatusApproved = "approved"
 type attentionReceipts struct{ svc *approvals.Service }
 
 func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
-	status := approvalStatusApproved
-	rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
+	return recentReceipts(since, limit, func(scan int) ([]crmcontracts.Approval, error) {
+		status := approvalStatusApproved
+		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: scan})
+		return rows, err
+	})
+}
+
+// recentReceipts pages the approved queue and keeps what ran without asking.
+//
+// The read is WIDER than the lane shows, and that is the whole of this
+// function's reason to exist: the engine can only page approvals by status,
+// while `decided_by IS NULL` — the test for "nobody was asked" — is applied
+// afterwards. A read the size of the lane is filled by the reader's OWN recent
+// approvals and filters to nothing, so the lane reports a quiet night while
+// dozens of things ran. The same shape as the task lane's scan factor, and for
+// the same reason.
+//
+// The page reader is a parameter so a test can answer exactly the width it was
+// asked for; nothing else varies it.
+func recentReceipts(
+	since time.Time, limit int, page func(scan int) ([]crmcontracts.Approval, error),
+) ([]attention.Receipt, error) {
+	rows, err := page(approvals.PendingScanCap)
 	if err != nil {
 		return nil, err
 	}
-	return receiptsWithin(rows, since), nil
+	receipts := receiptsWithin(rows, since)
+	if len(receipts) > limit {
+		receipts = receipts[:limit]
+	}
+	return receipts, nil
 }
 
 // receiptsWithin keeps the decided rows this lane may claim: inside the window,
