@@ -180,12 +180,19 @@ export const NothingOpen: Story = { render: () => <Box view={base} /> };
 
 // The deal grant is missing. `state_strip` is still present — only its
 // `commercial` half is gone — so the absence is about the READER.
+//
+// ONE grant governs both halves, so the payload loses both together: the
+// deals section goes absent and is named in `sections_omitted`. A story that
+// dropped only `commercial` drew "pipeline hidden" beside a readable, empty
+// in-flight count, which the assembler cannot answer.
 export const PipelineWithheld: Story = {
   render: () => (
     <Box
       view={
         {
           ...base,
+          deals: undefined,
+          sections_omitted: ["deals"],
           state_strip: {
             account: { lifecycle: "customer", relationship_types: [] },
           },

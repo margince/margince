@@ -191,7 +191,16 @@ describe("what the in-flight count says", () => {
       />,
     );
 
-    expect(screen.queryByText(/deals ·/)).toBeNull();
+    // No DIGIT anywhere in the in-flight value, not merely no separator: an
+    // assertion that only rejects "2 deals · 1 project" still passes on a
+    // one-sided "1 project", which is the false statement this rule exists to
+    // prevent — it reads as an account whose deals are none rather than
+    // unreadable.
+    const inFlight = screen.getByText("In flight").closest("div");
+    if (!inFlight) {
+      throw new Error("the in-flight row has no wrapper to scope to");
+    }
+    expect(inFlight.textContent).not.toMatch(/\d/);
     expect(
       screen.getAllByText("Hidden — your role cannot read this").length,
     ).toBeGreaterThan(0);

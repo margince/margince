@@ -42,12 +42,16 @@ const base = {
   projects_page: page,
 } as unknown as View;
 
+// Shaped as Organization360Deal serves it: `status` is required, and the
+// money is a nested Money rather than two loose fields. The loose spelling
+// typechecked through the cast below and silently drew no figure at all —
+// the card reads `deal.amount.amount_minor`.
 const deal = {
   deal_id: "d-1",
   name: "Shopsystem-Migration — zweiter Mandant",
+  status: "open",
   stage_name: "Qualified",
-  amount_minor: 6_400_000,
-  currency: "EUR",
+  amount: { amount_minor: 6_400_000, currency: "EUR" },
   expected_close_date: "2026-09-28",
   stalled: false,
 };
@@ -193,6 +197,10 @@ export const StatusesWithheld: Story = {
           ...base,
           deals: { ...base.deals, data: [deal] },
           projects: [project],
+          // The refusal is recorded BOTH ways: the assembler names the section
+          // it could not read before it sets the flag, so a story carrying the
+          // flag alone is a payload the endpoint cannot emit.
+          sections_omitted: ["activities"],
           attention_withheld: true,
         } as unknown as View
       }
@@ -211,7 +219,10 @@ export const MoreThanFits: Story = {
           deals: {
             ...base.deals,
             data: [deal],
-            page: { has_more: true, next_cursor: "c" },
+            // `truncate` sets has_more and nothing else — a nested 360
+            // summary is not a paging surface, so there is no cursor to
+            // continue from.
+            page: { has_more: true, next_cursor: null },
           },
           projects: [project],
         } as unknown as View
