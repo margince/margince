@@ -265,7 +265,7 @@ expect_health "a failed publish with no range still files" \
 # and this script runs under `set -e`, so without it the suite dies at this line
 # having printed thirteen `ok:` lines and no reason — a gate that fails without
 # saying what it found is barely better than one that passes without looking.
-lanes="$(grep -oE '^if \[ "\$\{MAIN_[A-Z0-9_]+_RESULT:-\}" = "failure" \]' \
+lanes="$(grep -oE '^if \[\[ "\$\{MAIN_[A-Z0-9_]+_RESULT:-\}" = "failure" \]\]' \
 	"$root/scripts/scheduled-report.sh" |
 	grep -oE 'MAIN_[A-Z0-9_]+_RESULT' | sort -u || true)"
 if [ -z "$lanes" ]; then

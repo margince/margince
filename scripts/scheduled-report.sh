@@ -30,7 +30,7 @@ report() {
   existing="$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" |
     jq -rs --arg t "$title" '[.[][] | select(has("pull_request") | not)
       | select(.title == $t)] | min_by(.number) | .number // empty')"
-  if [ -n "$existing" ]; then
+  if [[ -n "$existing" ]]; then
     echo "already open as #$existing — commenting"
     gh issue comment "$existing" --repo "$REPO" \
       --body "Still failing on the $(date -u +%Y-%m-%d) scheduled run: $RUN_URL"
@@ -46,7 +46,7 @@ report() {
 # one failure and swallow two. Failures accumulate and surface at the end instead.
 unreported=0
 
-if [ "${VULN_RESULT:-}" = "failure" ]; then
+if [[ "${VULN_RESULT:-}" = "failure" ]]; then
   report "govulncheck reports a vulnerability reachable from main" security \
 "\`make vuln\` failed on the scheduled run of \`main\`: $RUN_URL
 
@@ -63,7 +63,7 @@ Reproduce locally with \`make vuln\`."\
     || unreported=1
 fi
 
-if [ "${GATE_RESULT:-}" = "failure" ]; then
+if [[ "${GATE_RESULT:-}" = "failure" ]]; then
   report "SonarCloud quality gate is not green on main" bug \
 "The quality gate on \`main\` read \`${GATE_STATUS:-unknown}\` on the scheduled
 run: $RUN_URL
@@ -81,7 +81,7 @@ above."\
     || unreported=1
 fi
 
-if [ "${LANE_RESULT:-}" = "failure" ]; then
+if [[ "${LANE_RESULT:-}" = "failure" ]]; then
   report "the backend merge gate is red on main" bug \
 "\`make check-backend\` failed on the scheduled run of \`main\`: $RUN_URL
 
@@ -103,7 +103,7 @@ fi
 # regression that never happened — which is the failure this whole lane keeps
 # learning about. PERF_OUTCOME is set by the step from the harness's own breach
 # message, so only a MEASURED breach is reported as one.
-if [ "${PERF_RESULT:-}" = "failure" ] && [ "${PERF_OUTCOME:-}" != "breach" ]; then
+if [[ "${PERF_RESULT:-}" = "failure" ]] && [[ "${PERF_OUTCOME:-}" != "breach" ]]; then
   report "the weekly PERF-3/PERF-7 run could not complete" bug \
 "\`make bench-perf-check\` failed on the weekly run of \`main\` WITHOUT reaching a
 budget verdict: $RUN_URL
@@ -123,7 +123,7 @@ page is untouched either way: this lane never sets MARGINCE_BENCH_RECORD."\
     || unreported=1
 fi
 
-if [ "${PERF_OUTCOME:-}" = "breach" ]; then
+if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
   report "a PERF-3/PERF-7 budget is breaching on main" bug \
 "\`make bench-perf-check\` failed on the weekly run of \`main\`: $RUN_URL
 
@@ -145,7 +145,7 @@ bisecting is the honest first move rather than assuming the newest commit."\
     || unreported=1
 fi
 
-if [ "${CLOCK_RESULT:-}" = "failure" ]; then
+if [[ "${CLOCK_RESULT:-}" = "failure" ]]; then
   report "the frontend suite's verdict depends on the calendar" bug \
 "\`make fe-clock-drift\` failed on the scheduled run of \`main\`: $RUN_URL
 
@@ -167,7 +167,7 @@ about the fixtures rather than about the components."\
     || unreported=1
 fi
 
-if [ "${CACHE_RESULT:-}" = "failure" ]; then
+if [[ "${CACHE_RESULT:-}" = "failure" ]]; then
   report "the Actions build-cache reaper is failing" bug \
 "\`scripts/reap-build-caches.sh\` failed on the scheduled run: $RUN_URL
 
@@ -202,7 +202,7 @@ fi
 # last green. Printed as-is rather than narrowed: a guessed culprit sends the wrong
 # person looking, which is worse than a dozen candidates and a failing test name.
 
-if [ "${MAIN_GATES_RESULT:-}" = "failure" ]; then
+if [[ "${MAIN_GATES_RESULT:-}" = "failure" ]]; then
   report "main is red: the backend gate fails on the tip" bug \
 "\`make check-backend\` failed against \`main\` on the two-hourly health check:
 $RUN_URL
@@ -218,7 +218,7 @@ Reproduce locally on \`main\` with \`make check-backend\`."\
     || unreported=1
 fi
 
-if [ "${MAIN_INTEGRATION_RESULT:-}" = "failure" ]; then
+if [[ "${MAIN_INTEGRATION_RESULT:-}" = "failure" ]]; then
   report "main is red: the integration lane fails on the tip" bug \
 "The real-Postgres lane failed against \`main\` on the two-hourly health check:
 $RUN_URL
@@ -236,7 +236,7 @@ commit and reads as red for a reason its author did not cause."\
     || unreported=1
 fi
 
-if [ "${MAIN_FRONTEND_RESULT:-}" = "failure" ]; then
+if [[ "${MAIN_FRONTEND_RESULT:-}" = "failure" ]]; then
   report "main is red: the frontend lane fails on the tip" bug \
 "The SPA lane (biome + vitest + tsc + build) failed against \`main\` on the
 two-hourly health check: $RUN_URL
@@ -263,7 +263,7 @@ not there."\
     || unreported=1
 fi
 
-if [ "${MAIN_UAT_RESULT:-}" = "failure" ]; then
+if [[ "${MAIN_UAT_RESULT:-}" = "failure" ]]; then
   report "main is red: the screen-acceptance UAT fails on the tip" bug \
 "The UAT lane (AC screens + axe WCAG 2.2 AA + the 390px sweep, against the built
 app over the seed mock) failed against \`main\` on the two-hourly health check:
@@ -288,7 +288,7 @@ no running stack — but it does need the browser: \`pnpm exec playwright instal
     || unreported=1
 fi
 
-if [ "${MAIN_SONAR_RESULT:-}" = "failure" ]; then
+if [[ "${MAIN_SONAR_RESULT:-}" = "failure" ]]; then
   report "main's SonarCloud analysis was not published" bug \
 "The \`sonarcloud (main)\` job failed on the two-hourly health check, with every
 lane it depends on green: $RUN_URL
@@ -314,7 +314,7 @@ than as a verdict."\
     || unreported=1
 fi
 
-if [ "$unreported" -ne 0 ]; then
+if [[ "$unreported" -ne 0 ]]; then
   echo "FAIL: at least one finding could not be filed — the run above names what was broken, but an issue for it does not exist" >&2
   exit 1
 fi
