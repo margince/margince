@@ -24,6 +24,14 @@ import (
 
 // relationshipImage is the edge as its own fields: every column
 // UpdateRelationship can move, plus the kind that says what those fields mean.
+//
+// Only a PATCH renders the wide image. A create keeps the two keys it always
+// recorded, because widening it would widen something else: field ownership is
+// decided from the latest audit image holding a key, so a create claiming the
+// dates and the primary-employer flag makes its author their owner, and an
+// agent's later patch of a flag nobody typed would stage for a human decision it
+// never used to need. What a create records is its own question, asked of every
+// record type at once, and it is not this one's to answer.
 func relationshipImage(rel relationshipRow) map[string]any {
 	return map[string]any{
 		relationshipKindField: rel.Kind,
@@ -31,6 +39,15 @@ func relationshipImage(rel relationshipRow) map[string]any {
 		"is_current_primary":  rel.IsCurrentPrimary,
 		"started_at":          rel.StartedAt,
 		"ended_at":            rel.EndedAt,
+	}
+}
+
+// relationshipCreateImage is what a create and an archive record: the edge named
+// and typed, which is what those verbs are about.
+func relationshipCreateImage(rel relationshipRow) map[string]any {
+	return map[string]any{
+		relationshipKindField: rel.Kind,
+		relationshipRoleField: rel.Role,
 	}
 }
 
@@ -56,9 +73,9 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 	default:
 		anchorID = rel.OrganizationID.UUID
 	}
-	after := relationshipImage(rel)
+	after := relationshipCreateImage(rel)
 	if !storekit.AbsentImage(before) {
-		before, after = storekit.ChangedColumns(before, after)
+		before, after = storekit.ChangedColumns(before, relationshipImage(rel))
 	}
 	auditID, err := storekit.Audit(ctx, tx, action, "relationship", rel.ID, before, after)
 	if err != nil {
