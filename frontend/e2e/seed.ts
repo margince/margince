@@ -1160,13 +1160,6 @@ export async function mockApi(
     if (path === "/organizations/o-brandt") {
       return json(brandt);
     }
-    // The company record page reads this, and nothing here answered it: the
-    // request fell through to the catch-all list shape at the bottom of this
-    // file, which carries no `sections_omitted`. That field is REQUIRED by the
-    // contract, so the page is right to read it without a guard — and did,
-    // throwing the whole record page into its error boundary while the axe
-    // sweep for that route reported only a missing <h1>.
-    //
     if (path === "/leads" && method === "GET") {
       return json(page([seededLead]));
     }
