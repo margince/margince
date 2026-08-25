@@ -109,7 +109,38 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 // Ratifying them is the only honest third answer. Failing them would make the
 // gate impossible to green over wrappers that are correct; merely counting them
 // would let a real defect through in silence.
-var unresolvableAuditActions = gatekit.Waive(map[string]string{})
+var unresolvableAuditActions = gatekit.Waive(map[string]string{
+	// The seam that routes an extension's own change, choosing the door from
+	// what the change carries rather than from a verb it cannot read.
+	"internal/compose/extledger.go:recordExtensionChange": "the verb is the unit's own, and the seam picks the door from whether the change declared a before-image, so an update either carries one or is recorded as the occurrence it says it is",
+
+	// Wrappers whose images are computed by the caller and handed in whole.
+	"internal/modules/capture/lifecycleaudit.go:auditLifecycle":             "both images are parameters, so the verb and what it changed arrive together from a caller that has the row",
+	"internal/modules/overlay/writeaudit.go:auditWriteBack":                 "both images are parameters, minimized for the entity before they land; a write-back that changed a field arrives holding what it replaced",
+	"internal/modules/overlay/usermapadmin.go:auditUserMapChange":           "both images are parameters built from the mapping row on either side of the change",
+	"internal/modules/overlay/activation.go:activateConnection":             "the images come from the connection row read in this transaction, whichever activation verb the caller resolved",
+	"internal/modules/identity/teams.go:recordTeamChange":                   "the verb spans create, update, archive and restore, and every one of them is handed the team row's own images",
+	"internal/modules/identity/onboarding.go:auditOnboardingState":          "create and update share one writer, and both pass the onboarding row as it stood before the step",
+	"internal/modules/people/coldstartprofile.go:applyColdStartTx":          "a created record diffs against an explicitly empty image and an existing one against its own columns, so both verbs carry a before-image by construction",
+	"internal/modules/people/company.go:SaveCompany":                        "the anchor's columns are read before the save and narrowed against what it wrote, so the update branch records what each one held",
+	"internal/modules/people/companysiteread.go:recordSiteReadConfirmation": "the confirmation shares the anchor's column images, so its update branch records what the record held before the read was applied",
+	"internal/modules/people/relationshipimage.go:emitRelationshipChange":   "create and archive carry the edge whole and update carries the columns that moved, narrowed against the row read under the lock",
+	"internal/modules/ai/voice_source_store.go:recordSourceIngest":          "a first ingest has no prior row and records none; a re-ingest records the corpus source it replaced",
+	"internal/modules/ai/voice_versions.go:recordVoiceVersionTransition":    "the image is the version's own status on either side, and the verb names which transition it was",
+	"internal/modules/ai/ratewrite.go:writeModelRate":                       "an upsert resolves to create or update, and the replaced rate is read and passed in either way",
+	"internal/modules/deals/fxrate_store.go:writeFxRate":                    "the same upsert shape as the model rate, carrying the rate row it superseded",
+	"internal/modules/capture/freemaildomain.go:Add":                        "a fresh carve-out and an amended one take different verbs, and the amended one carries the rule it replaced",
+	"internal/modules/commissions/decide.go:decideTx":                       "the verb names the decision and the images are the patch's own, so what the decision moved is recorded with it",
+	"internal/modules/commissions/decide.go:voidOne":                        "a void is spelled as its own verb and carries the patch images for the row it retired",
+	"internal/modules/consent/store.go:Record":                              "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
+	"internal/modules/dealrooms/lifecycle.go:moveRoom":                      "each room transition names its own verb and carries the patch images the move built",
+	"internal/modules/privacy/retentionpolicystore.go:Delete":               "the verb is an archive of the policy row, and the image is the policy as it stood",
+	"internal/platform/settings/store.go:SetRawTx":                          "each setting declares its own verb, and the value on either side is rendered by the same declaration",
+
+	// The one site no static reading could ever judge, and the reason the
+	// chokepoint is not optional.
+	"internal/modules/privacy/retentionactions.go:apply": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize and erase, so this site cannot reach update at all",
+})
 
 func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 	defer eventShapedUpdates.AssertAllMatched(t)
