@@ -289,6 +289,14 @@ function CandidateCard({
         {" · "}
         <EntityRef kind={candidate.entity_type} id={candidate.right_id} />
       </p>
+      {/* The sentence that answers the question this table provokes, next to the
+          table rather than only in the screen's intro. The radios sit in column
+          headers ABOVE per-field values, so the layout itself suggests the
+          choice discards the other column — and a reviewer who believes a merge
+          loses data does not merge. It does not: relinkPersonReferences moves
+          every email, phone, note and activity onto the survivor, and the only
+          thing the choice decides is which value stays primary. */}
+      <p className="t-caption dedupe-keeps-both">{t("dedupe.keepsBoth")}</p>
       {/* The design system's table, not a second one: DataTable cannot express
           either of the two things this table needs — a column header that IS
           the winner radio, and a row carrying the detector's signal — so the
