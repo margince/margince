@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LeadBoard, StatusBadge } from "./leadpresentation";
-import { LeadScreen, LeadsScreen } from "./leads";
+import { LeadScreen } from "./leads";
+import { LeadsScreen } from "./leads.list";
 import { LeadManualSignals } from "./leadsignals";
 import { standardViews } from "./recordlist";
 import {
@@ -39,6 +40,11 @@ const lead = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 
+// The queue reads its dials off the address, so each story that wants a
+// particular view names it as an address. Set before render, because the screen
+// derives the view during its first one — and set on EVERY such story rather
+// than only the ones that want a dial, so a story does not inherit whichever
+// address the story before it left behind.
 export const LeadsList: Story = {
   render: () => {
     installFetchStub({
@@ -49,6 +55,7 @@ export const LeadsList: Story = {
           page: { next_cursor: null, has_more: false },
         }),
     });
+    globalThis.location.hash = "#/leads";
     return (
       <StoryProviders>
         <LeadsScreen />
@@ -219,8 +226,9 @@ export const LeadPromotedAfterMerge: Story = {
 };
 
 // The board: the live leads in the two columns they can actually move between.
-// The story opens on the table, as the screen does, and the reader presses
-// "Board" — the toggle is part of what this story documents.
+// Opened by address rather than by pressing the toggle, because the address is
+// what carries the choice now — this is the surface a shared
+// "#/leads?view=board" link lands on, and a reload stays on it.
 // Terminal statuses get no column — a lead is promoted or disqualified through
 // its own audited verb, never by dragging a card.
 export const LeadsBoard: Story = {
@@ -248,6 +256,7 @@ export const LeadsBoard: Story = {
           teams: [],
         }),
     });
+    globalThis.location.hash = "#/leads?view=board";
     return (
       <StoryProviders>
         <LeadsScreen />
