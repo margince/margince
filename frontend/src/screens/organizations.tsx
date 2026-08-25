@@ -1589,7 +1589,7 @@ function FactsCard({
 
   return (
     <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-      {groupFacts(facts, locale).map((group) => (
+      {groupFacts(facts, t, locale).map((group) => (
         <FactCategory
           key={group.category}
           orgId={orgId}

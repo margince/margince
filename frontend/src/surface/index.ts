@@ -13,6 +13,7 @@
 //
 // `useT` reads the merged catalogue, so a unit's own copy resolves through the
 // same lookup as core's rather than through a second mechanism.
+import { useCallback } from "react";
 import {
   type ExtensionMessageKey,
   translate,
@@ -64,5 +65,7 @@ export function useT(): (
   // repo typechecks against, which is the worst place in the tree to hold a
   // claim by assertion. Same lookup, same merged catalogue, no `as`.
   const { locale } = useCoreLocale();
-  return (key, params) => translate(locale, key, params);
+  // Stable per locale, so a unit can put `t` in a dependency array without the
+  // memo it guards being recomputed on every render of the screen around it.
+  return useCallback((key, params) => translate(locale, key, params), [locale]);
 }
