@@ -29,6 +29,31 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
+// The bounds one sweep of the lane obeys. A caller that asks for nothing sane
+// gets the default rather than a refusal or, worse, an unbounded read: the
+// limit is formatted into the statement, so an unchecked zero or negative would
+// be a syntax error at the database and an unchecked large one a sweep nobody
+// asked for. The lane's own cap is well under the ceiling; the ceiling is here
+// so the NEXT caller cannot raise it by accident.
+const (
+	commitmentsDueDefaultLimit = 12
+	commitmentsDueMaxLimit     = 200
+)
+
+// commitmentsDueLimit bounds one sweep, the way the open-task read bounds its
+// own. Same shape deliberately: two spellings of one rule is how one of them
+// ends up without a ceiling.
+func commitmentsDueLimit(asked int) int {
+	switch {
+	case asked <= 0:
+		return commitmentsDueDefaultLimit
+	case asked > commitmentsDueMaxLimit:
+		return commitmentsDueMaxLimit
+	default:
+		return asked
+	}
+}
+
 // CommitmentDue is one promise this rep made, with the evidence behind it.
 type CommitmentDue struct {
 	ID ids.UUID
@@ -127,7 +152,7 @@ func openCommitmentsDue(
 		   AND (%[3]s) AND (%[4]s)
 		 ORDER BY c.due_at ASC, c.id
 		 LIMIT %[5]d`,
-		ownerPos, byPos, activityScope, personScope, limit), args...)
+		ownerPos, byPos, activityScope, personScope, commitmentsDueLimit(limit)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the rep's commitments coming due: %w", err)
 	}

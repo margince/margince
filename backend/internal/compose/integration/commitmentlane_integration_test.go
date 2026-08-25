@@ -228,3 +228,25 @@ func TestAPromiseWhoseEvidenceWasArchivedLeavesTheLane(t *testing.T) {
 		t.Fatalf("a promise outlived its evidence: %v", bodiesOf(rows))
 	}
 }
+
+// A caller that asks for no sensible bound gets the default rather than a
+// broken statement. The limit is formatted into the SQL, so zero and negative
+// are a syntax error at the database rather than an empty page — the failure
+// mode a bound exists to remove.
+func TestASweepWithNoSensibleBoundStillAnswers(t *testing.T) {
+	e := integration.Setup(t)
+	due := laneClock.Add(2 * time.Hour)
+	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	seedPromise(t, e, person, "Referenzliste schicken", &due)
+
+	store := people.NewStore(e.DB())
+	for _, asked := range []int{0, -1} {
+		rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), asked)
+		if err != nil {
+			t.Fatalf("a limit of %d failed the read: %v", asked, err)
+		}
+		if len(rows) != 1 {
+			t.Errorf("a limit of %d returned %d rows, want the one open promise", asked, len(rows))
+		}
+	}
+}
