@@ -132,7 +132,6 @@ backend/internal/modules/customfields/engine.go core 0171
 backend/internal/modules/customfields/fieldobjects_test.go core 0171
 backend/internal/modules/customfields/service.go core 0063
 backend/internal/modules/deals/offer.go core 0217
-backend/internal/modules/identity/internal/policy/policy.go migration 0068
 backend/internal/modules/identity/oauth_lend.go migration 0172
 backend/internal/modules/identity/roles.go migration 0211
 backend/internal/modules/identity/service.go migration 0268
