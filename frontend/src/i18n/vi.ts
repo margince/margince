@@ -1062,8 +1062,10 @@ export const vi = {
     "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 \u0111ang m\u1edf",
   "co.facts.unpriced": "Ch\u01b0a \u0111\u1ecbnh gi\u00e1",
   "co.facts.nothing": "Kh\u00f4ng c\u00f3 g\u00ec",
-  "co.facts.counts":
-    "{deals} th\u01b0\u01a1ng v\u1ee5 \u00b7 {projects} d\u1ef1 \u00e1n",
+  "co.facts.dealsOne": "1 th\u01b0\u01a1ng v\u1ee5",
+  "co.facts.dealsMany": "{count} th\u01b0\u01a1ng v\u1ee5",
+  "co.facts.projectsOne": "1 d\u1ef1 \u00e1n",
+  "co.facts.projectsMany": "{count} d\u1ef1 \u00e1n",
   "co.facts.atLeast": "ho\u1eb7c h\u01a1n",
   "co.work.title": "\u0110ang tri\u1ec3n khai",
   "co.work.count": "{count} \u0111ang tri\u1ec3n khai",
