@@ -1,0 +1,94 @@
+-- A corpus of user-uploaded documents, its documents, and the chunks the ask
+-- retrieves over.
+SET LOCAL lock_timeout = '5s';
+
+CREATE TABLE knowledge_corpus (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    name text NOT NULL,
+    description text,
+    topic_statement text NOT NULL,
+    min_similarity double precision DEFAULT 0.35 NOT NULL,
+    tuned_under_identity text,
+    default_ask boolean DEFAULT false NOT NULL,
+    reindexing boolean DEFAULT false NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    archived_at timestamptz,
+    CONSTRAINT knowledge_corpus_min_similarity_range CHECK (min_similarity >= 0 AND min_similarity <= 1)
+);
+
+ALTER TABLE knowledge_corpus ADD CONSTRAINT knowledge_corpus_pkey PRIMARY KEY (id);
+
+-- At most one default, held by the schema rather than by application code:
+-- two defaults is a palette that asks a different corpus depending on row
+-- order.
+CREATE UNIQUE INDEX knowledge_corpus_one_default
+    ON knowledge_corpus ((default_ask)) WHERE default_ask AND archived_at IS NULL;
+
+CREATE TABLE knowledge_document (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    corpus_id uuid NOT NULL,
+    filename text NOT NULL,
+    content_type text NOT NULL,
+    byte_size bigint NOT NULL,
+    storage_key text NOT NULL,
+    checksum text NOT NULL,
+    ingest_status text DEFAULT 'queued' NOT NULL,
+    ingest_detail text,
+    chunk_count integer DEFAULT 0 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    archived_at timestamptz,
+    CONSTRAINT knowledge_document_status_check
+        CHECK (ingest_status IN ('queued', 'running', 'done', 'failed')),
+    -- A failure that does not say why is a support ticket. A success that
+    -- explains itself is noise.
+    CONSTRAINT knowledge_document_detail_shape
+        CHECK ((ingest_status = 'failed') = (ingest_detail IS NOT NULL))
+);
+
+ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_pkey PRIMARY KEY (id);
+
+-- A document's audit image names its filename and audit_log is append-only, so
+-- a document may only die by a path that read it first: deleting a corpus that
+-- still has documents is refused rather than silently taking them with it.
+ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_corpus_fk
+    FOREIGN KEY (corpus_id) REFERENCES knowledge_corpus (id) ON DELETE RESTRICT;
+CREATE INDEX knowledge_document_by_corpus ON knowledge_document (corpus_id, archived_at);
+
+CREATE TABLE knowledge_chunk (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    corpus_id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    chunk_ix integer NOT NULL,
+    text text NOT NULL,
+    chunk_hash text NOT NULL,
+    embed_identity text,
+    embedding vector,
+    embedded_at timestamptz,
+    archived_at timestamptz,
+    -- The vector and the identity that produced it are written together or not
+    -- at all: a row carrying an identity and no vector is retrievable and
+    -- unrankable, which is worse than an unembedded row.
+    CONSTRAINT knowledge_chunk_embed_pairing
+        CHECK ((embed_identity IS NULL) = (embedding IS NULL))
+);
+
+ALTER TABLE knowledge_chunk ADD CONSTRAINT knowledge_chunk_pkey PRIMARY KEY (id);
+
+-- Chunks carry no audit image, so a cascade orphans nothing: they are derived
+-- text that only the document they were cut from gives meaning.
+ALTER TABLE knowledge_chunk ADD CONSTRAINT knowledge_chunk_document_fk
+    FOREIGN KEY (document_id) REFERENCES knowledge_document (id) ON DELETE CASCADE;
+
+-- The ask's hot path and the readiness count both key on this pair. There is
+-- deliberately no vector index: the column is unbounded width, so an index over
+-- it is unusable for the same reason search carries none.
+CREATE INDEX knowledge_chunk_retrieval
+    ON knowledge_chunk (corpus_id, embed_identity) WHERE archived_at IS NULL;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE knowledge_corpus TO margince_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE knowledge_document TO margince_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE knowledge_chunk TO margince_app;
