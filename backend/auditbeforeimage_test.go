@@ -73,6 +73,8 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/people/channelidentity.go:auditChannelIdentityChange": "binding an account to a person who had none replaces nothing: the question is which account reaches this human, and before the bind none did. A rebind takes the other branch and names the binding it moved",
+
 	// Three writes whose FIRST occurrence has no prior state and whose later
 	// ones do. Each routes on that, so the branch that replaced something says
 	// what, and the branch that replaced nothing says so rather than inventing
