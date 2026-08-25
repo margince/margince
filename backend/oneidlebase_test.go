@@ -248,7 +248,7 @@ func rederivesIdleBase(body *ast.BlockStmt) bool {
 		if comparison == token.EQL {
 			inBranch, outside = creationName, lastActivityName
 		}
-		if writesValueNaming(branch.Body, inBranch) && writesValueNaming(body, outside) {
+		if writesValueNaming(branch.Body, inBranch) && writesValueOutside(body, branch, outside) {
 			found = true
 		}
 		return !found
@@ -272,6 +272,32 @@ func nilComparison(cond ast.Expr) (subject ast.Expr, op token.Token, ok bool) {
 		return binary.Y, binary.Op, true
 	}
 	return nil, token.ILLEGAL, false
+}
+
+// writesValueOutside is writesValueNaming over everything in the function
+// EXCEPT the matching branch.
+//
+// The two halves have to come from opposite sides of the check, or a function
+// that nil-checks the activity and happens to read the creation instant in the
+// SAME branch is read as a fallback it never wrote. That is the
+// false-POSITIVE direction, and it is the one that gets a gate waived: a
+// finding that is wrong on inspection teaches the next author to stop reading
+// the findings.
+func writesValueOutside(body *ast.BlockStmt, branch *ast.IfStmt, column *regexp.Regexp) bool {
+	found := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if found || n == branch {
+			return false
+		}
+		switch n.(type) {
+		case *ast.AssignStmt, *ast.ReturnStmt, *ast.ValueSpec:
+			if writesValueNaming(n, column) {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
 }
 
 // writesValueNaming reports whether some assignment, declaration or return in
@@ -385,6 +411,8 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 			"func f() {\n\tif d.LastActivityAt != nil {\n\t\tout.Touched = *d.LastActivityAt\n\t}\n}",
 		"a creation read beside a nil check that writes no value": "" +
 			"func f() {\n\tbase := d.CreatedAt\n\tif d.LastActivityAt != nil {\n\t\tsource = \"activity\"\n\t}\n\t_ = base\n}",
+		"both reads inside the SAME branch, which is not a fallback": "" +
+			"func f() {\n\tif d.LastActivityAt != nil {\n\t\ttouched = *d.LastActivityAt\n\t\tage = now.Sub(d.CreatedAt)\n\t}\n}",
 		"a coalesce onto something that is not the creation instant": "" +
 			"func f() { q(`coalesce(last_activity_at, now())`) }",
 		"a coalesce naming one column twice, which pairs with nothing": "" +
