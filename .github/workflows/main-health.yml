@@ -306,8 +306,13 @@ jobs:
           fetch-depth: 0
       - name: Every commit on main since the baseline is signed off
         env:
-          # The first commit this gate covers.
-          DCO_MAIN_BASELINE: 250f692f7
+          # The last commit this gate does NOT cover — `A..B` excludes A, so a
+          # baseline naming the first COVERED commit would leave that commit
+          # itself unchecked. This names the unsigned commit instead, so
+          # everything after it is in range and it is not, which is exactly the
+          # boundary. It moves to the unsigned commit's own parent once that
+          # commit is remediated by its author.
+          DCO_MAIN_BASELINE: ab64ef038
         # The ancestry is asserted before the range is used, because
         # `git rev-list A..B` does not complain when A is not behind B — it
         # answers with whatever that range happens to mean. A baseline that has
