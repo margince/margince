@@ -532,8 +532,9 @@ beside the gate, deliberately outside it:
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
   `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
-  and `main`'s SonarCloud analysis published from the three coverage reports
-  they produce.
+  and `main`'s SonarCloud analysis published from the three coverage reports the
+  backend gate, the real-Postgres lane and the SPA lane produce between them.
+  The UAT produces none, which is why it is named here and absent there.
 
   The UAT lane runs **unconditionally** here, unlike on a pull request where it
   is gated on the change classifier. That gate is right on a PR and wrong on the
