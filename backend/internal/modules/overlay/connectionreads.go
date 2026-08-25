@@ -324,6 +324,10 @@ func ActiveConnection(ctx context.Context, pool *pgxpool.Pool) (DueOverlayConnec
 // that reports "nothing to do" is exactly the failure nobody sees.
 //
 // Spelled once because three callers asked the same question three ways.
+//
+// Held by: TestFleetEnumerationOnlyAtRatifiedSites (backend/jobfleetscan_test.go),
+// which counts the workspace-collection reads each file makes and ratifies them
+// by name — a second spelling in this package raises the count and fails.
 func overlayModeWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
 	var mode string
 	if err := pool.QueryRow(ctx, `SELECT sor_mode FROM overlay_mode`).Scan(&mode); err != nil {
