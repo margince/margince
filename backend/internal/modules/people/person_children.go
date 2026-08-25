@@ -97,23 +97,9 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 		return err
 	}
 
-	held := make(map[string]bool)
-	rows, err := tx.Query(ctx,
-		`SELECT email FROM person_email WHERE person_id = $1 AND archived_at IS NULL`, personID)
+	held, err := livePersonEmails(ctx, tx, personID)
 	if err != nil {
-		return fmt.Errorf("read person emails: %w", err)
-	}
-	for rows.Next() {
-		var email string
-		if err := rows.Scan(&email); err != nil {
-			rows.Close()
-			return fmt.Errorf("scan person email: %w", err)
-		}
-		held[email] = true
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("read person emails: %w", err)
+		return err
 	}
 
 	keep := make([]string, 0, len(emails))
@@ -151,6 +137,30 @@ func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 		}
 	}
 	return nil
+}
+
+// livePersonEmails answers the addresses a person currently holds, lowercased
+// as the column stores them. Archived rows are excluded: they are history, and
+// re-inserting one would collide with nothing while telling the caller it did.
+func livePersonEmails(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (map[string]bool, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT email FROM person_email WHERE person_id = $1 AND archived_at IS NULL`, personID)
+	if err != nil {
+		return nil, fmt.Errorf("read person emails: %w", err)
+	}
+	defer rows.Close()
+	held := map[string]bool{}
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, fmt.Errorf("scan person email: %w", err)
+		}
+		held[email] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read person emails: %w", err)
+	}
+	return held, nil
 }
 
 // parsePersonContacts is the parse-don't-validate seam for a person's

@@ -71,18 +71,6 @@ func (s *Store) WithConsumerMail(read ConsumerMailReader) *Store {
 	return s
 }
 
-// ConsumerMailMatcher is consumerMailMatcher for a caller outside this package.
-//
-// The CSV import's dry run has to score a person candidate exactly as the create
-// path will, and the ladder reads free-mail status off this matcher. Without it
-// the preview falls back to the shipped baseline and ignores the workspace's own
-// carve-outs, so a company that has asserted its domain is not free mail would
-// have its people scored as unrelated — and the preview would then disagree with
-// the commit, which is the one thing the import contract promises it will not do.
-func (s *Store) ConsumerMailMatcher(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
-	return s.consumerMailMatcher(ctx, tx)
-}
-
 // consumerMailMatcher builds the matcher for this transaction, or the bare
 // baseline when no reader was wired.
 func (s *Store) consumerMailMatcher(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {

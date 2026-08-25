@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/modules/capture"
 	"github.com/gradionhq/margince/backend/internal/modules/migration"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/jackc/pgx/v5"
 )
 
 // createPerson lands one row as a person, through the same CreatePersonTx seam
@@ -76,7 +78,12 @@ func (w *csvWriters) personCollides(ctx context.Context, row migration.Row) (boo
 		// without them a company that has asserted its domain is not free mail
 		// has its people scored as unrelated, and the preview then disagrees
 		// with the commit — the one thing this check exists to prevent.
-		consumerMail, err := w.people.ConsumerMailMatcher(ctx, tx)
+		//
+		// Read through capture.MatcherTx, which is what wires the same list into
+		// the people store (captureensurer.go). Going through the reader rather
+		// than exporting a store accessor keeps every exported store method
+		// RBAC-gated: this list is workspace configuration, not anyone's record.
+		consumerMail, err := capture.MatcherTx(ctx, tx)
 		if err != nil {
 			return err
 		}
