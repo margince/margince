@@ -3330,22 +3330,30 @@ export const en = {
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, choose Advanced → Continue. Nothing sends without your approval.",
   "dedupe.intro":
-    "Pairs the capture pipeline flagged as likely the same person or company. Merging keeps both records' history; dismissing tells the system to never ask about this pair again.",
+    "Pairs flagged as likely the same person or company. Merging keeps everything from both — every address, number, note and activity moves onto the record you keep. Dismissing tells the system to never ask about this pair again.",
   "dedupe.loading": "Loading the review queue…",
   "dedupe.empty": "No duplicates waiting — the queue is clear.",
   "dedupe.confidence": "Match confidence:",
   "dedupe.field": "Field",
   "dedupe.signal": "Signal",
   "dedupe.evidenceTable": "Field-by-field evidence",
+  "dedupe.keepsBoth":
+    "Both values are kept. Choosing a record decides which one survives and which value is shown first — nothing is deleted.",
   "dedupe.signalAgree": "agree",
   "dedupe.signalCollide": "conflict",
   "dedupe.signalOneSided": "one side only",
-  "dedupe.left": "Keep left",
-  "dedupe.right": "Keep right",
+  // "Keep" NOT "Keep left": the radio sits in a column header over per-field
+  // values, and "keep left" there reads as "keep the left VALUE and drop the
+  // right one" — which is the opposite of what a merge does. It picks the
+  // surviving RECORD; every value from both moves onto it. The two labels
+  // stay distinguishable by side, because two identically-named radios in
+  // one group are unusable to a screen reader.
+  "dedupe.left": "Keep the left record",
+  "dedupe.right": "Keep the right record",
   "dedupe.kindPerson": "Person",
   "dedupe.kindOrganization": "Company",
   "dedupe.kindLead": "Lead",
-  "dedupe.mergeCta": "Merge into selected",
+  "dedupe.mergeCta": "Merge, keeping everything",
   "dedupe.notDuplicateCta": "Not a duplicate",
   "dedupe.decided": "Decision saved.",
   "dedupe.undoCta": "Undo",

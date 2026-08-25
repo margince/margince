@@ -144,14 +144,37 @@ describe("the duplicate review queue", () => {
     expect(colliding).toBeTruthy();
   });
 
+  // The claim the screen makes has to be TRUE and has to be VISIBLE.
+  //
+  // True: relinkPersonReferences moves every email, phone, note and activity
+  // onto the survivor, and the winner choice decides only which value stays
+  // primary. Nothing is deleted.
+  //
+  // Visible: the radios sit in column headers ABOVE per-field values, so the
+  // layout itself suggests that picking a side discards the other column. A
+  // reviewer who believes a merge loses data does not merge — which leaves the
+  // duplicate in place and the queue growing.
+  it("says both values survive, beside the table that suggests otherwise", async () => {
+    backend([pair()]);
+    show();
+    expect(await screen.findByText(/both values are kept/i)).toBeTruthy();
+    // And the control names what it picks — a RECORD — rather than reading as a
+    // per-field choice between the two columns it sits over.
+    expect(
+      screen.getByRole("radio", { name: /keep the left record/i }),
+    ).toBeTruthy();
+  });
+
   it("merges into the record the reader picked, not the one listed first", async () => {
     const { sent } = backend([pair()]);
     show();
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("radio", { name: /keep right/i }));
     await user.click(
-      screen.getByRole("button", { name: /merge into selected/i }),
+      await screen.findByRole("radio", { name: /keep the right record/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /merge, keeping everything/i }),
     );
 
     await waitFor(() => expect(sent).toHaveLength(1));
@@ -205,7 +228,7 @@ describe("the duplicate review queue", () => {
     const user = userEvent.setup();
 
     const merges = await screen.findAllByRole("button", {
-      name: /merge into selected/i,
+      name: /merge, keeping everything/i,
     });
     await user.click(merges[0]);
 
@@ -220,7 +243,9 @@ describe("the duplicate review queue", () => {
     // Its sibling on the same pair, and the other pair entirely, are refused.
     expect(sibling.hasAttribute("disabled")).toBe(true);
     const other = (
-      await screen.findAllByRole("button", { name: /merge into selected/i })
+      await screen.findAllByRole("button", {
+        name: /merge, keeping everything/i,
+      })
     )[1];
     expect(other.hasAttribute("disabled")).toBe(true);
     expect(other.getAttribute("aria-busy")).not.toBe("true");
@@ -232,7 +257,7 @@ describe("the duplicate review queue", () => {
 
     expect(await screen.findByText(/No duplicates waiting/i)).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /merge into selected/i }),
+      screen.queryByRole("button", { name: /merge, keeping everything/i }),
     ).toBeNull();
   });
 });
