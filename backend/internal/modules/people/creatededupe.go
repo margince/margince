@@ -63,7 +63,13 @@ func manualDedupePerson(ctx context.Context, tx pgx.Tx, in CreatePersonInput) (P
 	if err := lockPhoneLane(ctx, tx, phones); err != nil {
 		return PersonResolution{}, err
 	}
-	return DedupePerson(ctx, tx, PersonCandidate{FullName: in.FullName, Emails: emails, Phones: phones})
+	// QueueNameCollisions, because this caller creates rather than routes. A
+	// pair it names goes on the review queue and nowhere else — no message is
+	// delivered on the strength of it, so the worst case is a row a human
+	// dismisses. See PersonCandidate for why the routing callers must not ask.
+	return DedupePerson(ctx, tx, PersonCandidate{
+		FullName: in.FullName, Emails: emails, Phones: phones, QueueNameCollisions: true,
+	})
 }
 
 // phoneLaneKeys is the request's numbers in the form the phone lane
@@ -148,11 +154,50 @@ func (m PersonResolution) recordIfReview(ctx context.Context, tx pgx.Tx, created
 		}
 		return recordNearMatch(ctx, tx, entityPerson, createdID.UUID, m.PersonID.UUID, m.Confidence,
 			nearMatchEvidence(fieldFullName, createdName, incumbent, m.Confidence), source, by)
+	case DecisionNameCollisionReview:
+		// One person, a second business card, a different address: the case a
+		// rep actually hits, and the one the fuzzy tier cannot reach because a
+		// create carries no employer for its org term to agree with.
+		//
+		// The incumbent's name is read back rather than reused from the request
+		// so the evidence shows the two SPELLINGS a human will compare. They are
+		// equal after folding — that is what the lane matched on — but not
+		// necessarily equal on screen, and "Lucy Vo" beside "LUCY VO" is a
+		// reviewer's first clue about where the second record came from.
+		var incumbent string
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM person WHERE id = $1`, m.PersonID).Scan(&incumbent); err != nil {
+			return fmt.Errorf("reading the person this name collides with: %w", err)
+		}
+		// The queue row only. No dedupe_near_match ledger line, because that
+		// ledger records the fuzzy tier's own scoring and this lane did not
+		// score: it compared two normalized strings. A line carrying a
+		// confidence would invite a reader to tune a threshold that had no part
+		// in the decision.
+		if _, err := recordDedupeCandidate(ctx, tx, entityPerson, createdID.UUID, m.PersonID.UUID,
+			m.Confidence, nameCollisionEvidence(createdName, incumbent, m.Confidence), source, by); err != nil {
+			return fmt.Errorf("record person name-collision candidate: %w", err)
+		}
+		return nil
 	case DecisionExactCollision:
 		return m.recordSharedPhone(ctx, tx, createdID, source, by)
 	default:
 		return nil
 	}
+}
+
+// nameCollisionEvidence names the axis this pair actually met on. The signal is
+// "collide" at its exact end — the two names are the same string once folded —
+// and the score carried is the fuzzy score the pair WOULD have had, which is
+// what sorts it in a queue beside genuinely fuzzy rows. It is evidence of how
+// little else agreed, not the reason the pair is here.
+func nameCollisionEvidence(created, incumbent string, confidence float64) []map[string]any {
+	return []map[string]any{{
+		evidenceFieldKey:  fieldFullName,
+		evidenceLeftKey:   created,
+		evidenceRightKey:  incumbent,
+		evidenceSignalKey: evidenceSignalCollide,
+		evidenceScoreKey:  confidence,
+	}}
 }
 
 // recordSharedPhone puts the pair behind an exact phone collision on the
