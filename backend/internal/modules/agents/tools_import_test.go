@@ -66,19 +66,19 @@ func TestUnmappedColumnsAreNamedRatherThanDroppedSilently(t *testing.T) {
 	}
 }
 
-// `object` takes lead or organization. Not person, and not deal.
+// `object` takes organization, person or lead. Not deal, and not activity.
 //
-// This is ADR-0008 in the schema: a bulk file of contacts lands as leads, which
-// a human promotes, so machine-sourced rows cannot enter as contacts by the
-// choice of an enum value. It also has to match the REST contract's own enum,
-// which is what TestEveryToolEnumMatchesTheContractItMirrors holds it to.
-func TestAFileOfPeopleCannotBeImportedAsContacts(t *testing.T) {
-	for _, object := range []string{"person", "deal", "activity", ""} {
+// The refused set is what has no import WRITER: offering it would advertise a
+// door that answers an error. The accepted set has to match the REST contract's
+// own enum, which is what TestEveryToolEnumMatchesTheContractItMirrors holds it
+// to.
+func TestOnlyTheThreeImportableObjectsAreAccepted(t *testing.T) {
+	for _, object := range []string{"deal", "activity", ""} {
 		if err := refuseUnimportableObject(object); err == nil {
-			t.Errorf("`object` accepted %q; a file imports as lead or organization", object)
+			t.Errorf("`object` accepted %q; nothing imports it", object)
 		}
 	}
-	for _, object := range []string{importObjectLead, importObjectOrganization} {
+	for _, object := range []string{importObjectLead, importObjectOrganization, importObjectPerson} {
 		if err := refuseUnimportableObject(object); err != nil {
 			t.Errorf("`object` refused %q: %v", object, err)
 		}

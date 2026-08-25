@@ -4781,6 +4781,7 @@ func (e HealthDimensionRating) Valid() bool {
 const (
 	ImportObjectLead         ImportObject = "lead"
 	ImportObjectOrganization ImportObject = "organization"
+	ImportObjectPerson       ImportObject = "person"
 )
 
 // Valid indicates whether the value is a known member of the ImportObject enum.
@@ -4789,6 +4790,8 @@ func (e ImportObject) Valid() bool {
 	case ImportObjectLead:
 		return true
 	case ImportObjectOrganization:
+		return true
+	case ImportObjectPerson:
 		return true
 	default:
 		return false
@@ -14884,12 +14887,31 @@ type CreateImportRunRequest struct {
 	// never created quietly under a new id.
 	Mapping map[string]string `json:"mapping"`
 
-	// Object What the file's rows are. `lead` — not `person` — is what a bulk
-	// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-	// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-	// asserts it by number (`0 person, N lead`). A file of people already
-	// known to the business is imported as leads and promoted, not smuggled
-	// past the qualification step by the choice of an enum value.
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `organization` creates companies.
+	//
+	// `lead` and `person` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as people would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `person` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `person` run runs the same identity
+	// ladder every other person create runs, refuses a row whose email
+	// already belongs to another person, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
 	Object ImportObject `json:"object"`
 
 	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
@@ -16599,12 +16621,31 @@ type ImportColumn struct {
 	Samples []string `json:"samples"`
 }
 
-// ImportObject What the file's rows are. `lead` — not `person` — is what a bulk
-// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-// asserts it by number (`0 person, N lead`). A file of people already
-// known to the business is imported as leads and promoted, not smuggled
-// past the qualification step by the choice of an enum value.
+// ImportObject What the file's rows are, and therefore what the run creates.
+//
+// `organization` creates companies.
+//
+// `lead` and `person` are two answers to one question about a file of
+// humans, and the caller picks the one that matches where the file came
+// from.
+//
+// `lead` is the right answer for a machine-sourced list — a scraped
+// export, a purchased list, a conference badge dump. Those rows land in
+// the unworked `new` status and a human promotes the ones worth keeping.
+// Landing them as people would put unqualified rows in the same table as
+// the contacts the business actually deals with.
+//
+// `person` is for a file of humans the business already knows — a
+// migration off another CRM, a re-import of a corrected export, a
+// customer list from a system being retired. Those rows were qualified
+// somewhere else, and routing them through the lead table would force a
+// human to re-approve records nobody doubts.
+//
+// Neither value bypasses anything. A `person` run runs the same identity
+// ladder every other person create runs, refuses a row whose email
+// already belongs to another person, and files a review pair for a near
+// match — so a file of duplicates produces a review queue, not a silent
+// merge.
 type ImportObject string
 
 // ImportOnDuplicate What to do with a row naming a record the estate ALREADY holds — found
@@ -16665,12 +16706,31 @@ type ImportRun struct {
 	Error *string            `json:"error,omitempty"`
 	Id    openapi_types.UUID `json:"id"`
 
-	// Object What the file's rows are. `lead` — not `person` — is what a bulk
-	// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-	// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-	// asserts it by number (`0 person, N lead`). A file of people already
-	// known to the business is imported as leads and promoted, not smuggled
-	// past the qualification step by the choice of an enum value.
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `organization` creates companies.
+	//
+	// `lead` and `person` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as people would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `person` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `person` run runs the same identity
+	// ladder every other person create runs, refuses a row whose email
+	// already belongs to another person, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
 	Object ImportObject `json:"object"`
 	Source string       `json:"source"`
 
@@ -16747,12 +16807,31 @@ type ImportRunStatus string
 type ImportSourceProfile struct {
 	Columns []ImportColumn `json:"columns"`
 
-	// Object What the file's rows are. `lead` — not `person` — is what a bulk
-	// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-	// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-	// asserts it by number (`0 person, N lead`). A file of people already
-	// known to the business is imported as leads and promoted, not smuggled
-	// past the qualification step by the choice of an enum value.
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `organization` creates companies.
+	//
+	// `lead` and `person` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as people would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `person` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `person` run runs the same identity
+	// ladder every other person create runs, refuses a row whose email
+	// already belongs to another person, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
 	Object ImportObject `json:"object"`
 
 	// RowsProfiled Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.
@@ -16782,12 +16861,31 @@ type ImportUndoReport struct {
 	Errored []struct {
 		Id openapi_types.UUID `json:"id"`
 
-		// Object What the file's rows are. `lead` — not `person` — is what a bulk
-		// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-		// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-		// asserts it by number (`0 person, N lead`). A file of people already
-		// known to the business is imported as leads and promoted, not smuggled
-		// past the qualification step by the choice of an enum value.
+		// Object What the file's rows are, and therefore what the run creates.
+		//
+		// `organization` creates companies.
+		//
+		// `lead` and `person` are two answers to one question about a file of
+		// humans, and the caller picks the one that matches where the file came
+		// from.
+		//
+		// `lead` is the right answer for a machine-sourced list — a scraped
+		// export, a purchased list, a conference badge dump. Those rows land in
+		// the unworked `new` status and a human promotes the ones worth keeping.
+		// Landing them as people would put unqualified rows in the same table as
+		// the contacts the business actually deals with.
+		//
+		// `person` is for a file of humans the business already knows — a
+		// migration off another CRM, a re-import of a corrected export, a
+		// customer list from a system being retired. Those rows were qualified
+		// somewhere else, and routing them through the lead table would force a
+		// human to re-approve records nobody doubts.
+		//
+		// Neither value bypasses anything. A `person` run runs the same identity
+		// ladder every other person create runs, refuses a row whose email
+		// already belongs to another person, and files a review pair for a near
+		// match — so a file of duplicates produces a review queue, not a silent
+		// merge.
 		Object ImportObject `json:"object"`
 
 		// Reason What kept it from reversing, in terms the operator can act on — never a database or driver message.
@@ -16798,12 +16896,31 @@ type ImportUndoReport struct {
 	Kept []struct {
 		Id openapi_types.UUID `json:"id"`
 
-		// Object What the file's rows are. `lead` — not `person` — is what a bulk
-		// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-		// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-		// asserts it by number (`0 person, N lead`). A file of people already
-		// known to the business is imported as leads and promoted, not smuggled
-		// past the qualification step by the choice of an enum value.
+		// Object What the file's rows are, and therefore what the run creates.
+		//
+		// `organization` creates companies.
+		//
+		// `lead` and `person` are two answers to one question about a file of
+		// humans, and the caller picks the one that matches where the file came
+		// from.
+		//
+		// `lead` is the right answer for a machine-sourced list — a scraped
+		// export, a purchased list, a conference badge dump. Those rows land in
+		// the unworked `new` status and a human promotes the ones worth keeping.
+		// Landing them as people would put unqualified rows in the same table as
+		// the contacts the business actually deals with.
+		//
+		// `person` is for a file of humans the business already knows — a
+		// migration off another CRM, a re-import of a corrected export, a
+		// customer list from a system being retired. Those rows were qualified
+		// somewhere else, and routing them through the lead table would force a
+		// human to re-approve records nobody doubts.
+		//
+		// Neither value bypasses anything. A `person` run runs the same identity
+		// ladder every other person create runs, refuses a row whose email
+		// already belongs to another person, and files a review pair for a near
+		// match — so a file of duplicates produces a review queue, not a silent
+		// merge.
 		Object ImportObject `json:"object"`
 	} `json:"kept"`
 
@@ -25440,12 +25557,31 @@ type UploadImportSourceMultipartBody struct {
 	// File The delimited file to import. UTF-8; the first row is the header.
 	File openapi_types.File `json:"file"`
 
-	// Object What the file's rows are. `lead` — not `person` — is what a bulk
-	// prospect file creates: ADR-0008's anti-pollution rule is that machine-
-	// sourced rows land as leads and are promoted by a human, and IEM-AC-7
-	// asserts it by number (`0 person, N lead`). A file of people already
-	// known to the business is imported as leads and promoted, not smuggled
-	// past the qualification step by the choice of an enum value.
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `organization` creates companies.
+	//
+	// `lead` and `person` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as people would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `person` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `person` run runs the same identity
+	// ladder every other person create runs, refuses a row whose email
+	// already belongs to another person, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
 	Object ImportObject `json:"object"`
 }
 

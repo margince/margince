@@ -42,6 +42,7 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 // predictPages walks the source and tallies what the commit would do with each
 // row, page by page, the same way the engine will walk it.
 func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
+	collision, skipReason := collisionWordingFor(object)
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
 		if err != nil {
@@ -74,7 +75,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				p.duplicates++
 				p.skipped = append(p.skipped, migration.SkippedRow{
 					ExternalID: row.ExternalID,
-					Reason:     duplicateSkipReason,
+					Reason:     skipReason,
 				})
 			case predictCollides:
 				p.duplicates++
@@ -87,7 +88,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				p.created++
 				p.collisions = append(p.collisions, migration.SkippedRow{
 					ExternalID: row.ExternalID,
-					Reason:     collisionDisclosure,
+					Reason:     collision,
 				})
 			}
 		}
@@ -108,6 +109,26 @@ const collisionDisclosure = "a company of this name is already in the CRM; " +
 // duplicateSkipReason is what the report says about a row the run chose to
 // leave alone, under `on_duplicate: skip`.
 const duplicateSkipReason = "a company of this name is already in the CRM, and this run was asked to skip duplicates"
+
+// The same two sentences for a person run, which must not tell its reader that a
+// company was found.
+//
+// The disclosure is not merely the company one with a noun swapped. An address
+// the estate already holds is REFUSED by the store — uq_person_email_dedupe is a
+// real key, where a company name is not — so promising "a second one is created"
+// would be false for the very case a reader is most likely to hit.
+const personCollisionDisclosure = "someone matching this row is already in the CRM; " +
+	"a row naming an address already held is refused, and a near match creates and files the pair for review"
+
+const personDuplicateSkipReason = "someone matching this row is already in the CRM, and this run was asked to skip duplicates"
+
+// collisionWordingFor names the sentences that match what this run imports.
+func collisionWordingFor(object string) (disclosure, skipReason string) {
+	if object == migration.ObjectPerson {
+		return personCollisionDisclosure, personDuplicateSkipReason
+	}
+	return collisionDisclosure, duplicateSkipReason
+}
 
 // prediction is what one walk of the source concluded: the three outcomes a
 // commit can have, plus the rows it will refuse outright.

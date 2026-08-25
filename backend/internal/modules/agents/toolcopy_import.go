@@ -3,18 +3,21 @@
 
 package agents
 
-// The copy for the import verbs. It carries one thing the schema cannot: that
-// a file of people becomes LEADS, not contacts. A caller picking `person` for
-// a prospect list would be picking a valid enum value and breaking ADR-0008's
-// anti-pollution rule at the same time.
+// The copy for the import verbs. It carries one thing the schema cannot: which
+// of `lead` and `person` a given file wants, since both are valid and the
+// difference is about where the file came from rather than what it contains.
 
 var previewImportCopy = toolCopy{
 	Purpose: "Bring a spreadsheet in: send the CSV as text and this checks every row " +
 		"against the workspace and reports what importing it would do.",
-	Limits: "Writes nothing. People arrive as leads, so `object` is lead or organization. " +
-		"A row naming a company already here is counted in `duplicates`, and created unless " +
-		"on_duplicate is skip. To CORRECT companies rather than add them, map a column to " +
-		"`id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add.",
+	Limits: "Writes nothing. `object` is organization, person or lead. Use `person` for a file " +
+		"the business already knows — a migration off another CRM, a corrected export coming back. " +
+		"Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a " +
+		"human promotes them. A row naming a record already here is counted in `duplicates`, and " +
+		"created unless on_duplicate is skip — except a person whose email is already held, which " +
+		"is always refused, because an email is a real key. To CORRECT companies rather than add " +
+		"them, map a column to `id`, then give a row the id of the company it corrects — read them " +
+		"out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add.",
 	Instead: "create_record for one record you already know.",
 	Retain:  "run_id, and `duplicates` — give the user both numbers before committing.",
 }

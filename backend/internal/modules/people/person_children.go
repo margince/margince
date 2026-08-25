@@ -67,6 +67,92 @@ func replacePersonSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, p
 	return nil
 }
 
+// replacePersonEmails makes the person's LIVE addresses mirror the given set.
+// nil means "not supplied": existing rows stand.
+//
+// It ARCHIVES rather than deletes, which is the one place this differs from
+// replacePersonSocial above. person_social carries no cross-record uniqueness
+// and no history; person_email carries both. uq_person_email_dedupe is what
+// makes an address name exactly one person, and the dedupe ladder, the merge
+// trail and every audit read filter on archived_at IS NULL. A hard DELETE would
+// erase the evidence that a person ever held an address — which is the thing a
+// merge dispute is settled by.
+//
+// Order is load-bearing: archive first, then insert. The reverse would put two
+// is_primary rows of one type on the record while both are live, which the
+// schema answers with a bare conflict.
+func replacePersonEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, personID ids.PersonID, source, by string, emails []PersonEmailInput) error {
+	if emails == nil {
+		return nil
+	}
+	if err := parsePersonContacts(emails, nil); err != nil {
+		return err
+	}
+	// The claim check runs before anything is written and skips this person's
+	// own rows, so re-stating an address the person already holds is not
+	// refused by that person's own row. Without it the unique index would still
+	// refuse the insert, but the aborted transaction cannot re-query — so the
+	// refusal would reach the caller with no incumbent id to name.
+	if err := ensurePersonEmailsUnclaimedExcept(ctx, tx, personID, emails); err != nil {
+		return err
+	}
+
+	held := make(map[string]bool)
+	rows, err := tx.Query(ctx,
+		`SELECT email FROM person_email WHERE person_id = $1 AND archived_at IS NULL`, personID)
+	if err != nil {
+		return fmt.Errorf("read person emails: %w", err)
+	}
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan person email: %w", err)
+		}
+		held[email] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read person emails: %w", err)
+	}
+
+	keep := make([]string, 0, len(emails))
+	fresh := make([]PersonEmailInput, 0, len(emails))
+	for _, e := range emails {
+		keep = append(keep, strings.ToLower(e.Email))
+		if !held[strings.ToLower(e.Email)] {
+			fresh = append(fresh, e)
+		}
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE person_email SET archived_at = now()
+		  WHERE person_id = $1 AND archived_at IS NULL AND email <> ALL($2)`,
+		personID, keep); err != nil {
+		return fmt.Errorf("archive person emails: %w", err)
+	}
+	// Only the addresses this person does not already hold are inserted: a held
+	// address would collide with its own live row on the unique index.
+	if err := insertPersonEmails(ctx, tx, wsID, personID, source, by, fresh); err != nil {
+		return err
+	}
+	// A held address whose placement changed is corrected in place.
+	for _, e := range emails {
+		if !held[strings.ToLower(e.Email)] {
+			continue
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE person_email SET email_type = $3, is_primary = $4, position = $5
+			  WHERE person_id = $1 AND email = lower($2) AND archived_at IS NULL`,
+			personID, e.Email, e.EmailType, e.IsPrimary, e.Position); err != nil {
+			if _, ok := storekit.UniqueViolation(err); ok {
+				return apperrors.ErrConflict
+			}
+			return fmt.Errorf("update person email placement: %w", err)
+		}
+	}
+	return nil
+}
+
 // parsePersonContacts is the parse-don't-validate seam for a person's
 // contact rows: addresses normalize to the lowercased form the dedupe
 // index compares (the SQL lower() below stays as defense in depth) and
@@ -133,12 +219,20 @@ func insertPersonPhones(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, pe
 // caller could read that row; the conflict itself is still answered
 // (existence-hiding survives the 409).
 func ensurePersonEmailsUnclaimed(ctx context.Context, tx pgx.Tx, emails []PersonEmailInput) error {
+	return ensurePersonEmailsUnclaimedExcept(ctx, tx, ids.PersonID{}, emails)
+}
+
+// ensurePersonEmailsUnclaimedExcept is the same probe, ignoring one person's
+// own rows. An update that re-states an address the person already holds must
+// not be refused by that person's own row, which is the only difference between
+// the create case (nothing to exclude) and the replace case.
+func ensurePersonEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids.PersonID, emails []PersonEmailInput) error {
 	for _, e := range emails {
 		var existing ids.PersonID
 		err := tx.QueryRow(ctx,
 			`SELECT person_id FROM person_email
-			  WHERE email = lower($1) AND archived_at IS NULL`,
-			e.Email).Scan(&existing)
+			  WHERE email = lower($1) AND archived_at IS NULL AND person_id <> $2`,
+			e.Email, self.UUID).Scan(&existing)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}

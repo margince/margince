@@ -127,119 +127,6 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 	return id, found, nil
 }
 
-// predictedOutcome is what a commit would do with one row, decided exactly the
-// way Ensure decides it — same lookup, same comparison — so the dry run cannot
-// promise something the commit then does differently.
-type predictedOutcome int
-
-const (
-	predictCreate predictedOutcome = iota
-	predictUpdate
-	predictUnchanged
-	// predictUnwritable is a row the commit will refuse. It is counted apart
-	// from the three outcomes above because a dry run that folds it into
-	// `created` promises work that cannot happen.
-	predictUnwritable
-	// predictCollides is a row naming a company the CRM ALREADY holds, found
-	// by the same PO-F-2 ladder the create path runs. The commit still lands
-	// it — and files a review pair — so this is a disclosure, not a refusal:
-	// the preview's job is to say a duplicate is coming while a human can
-	// still fix the file.
-	predictCollides
-	// predictCollidesSkipped is a duplicate this run will NOT land, because it
-	// asked for on_duplicate: skip. Separate from predictCollides so the
-	// preview reports the same outcome the commit will produce.
-	predictCollidesSkipped
-)
-
-// Predict answers what Ensure would do, without writing.
-//
-// The unwritable check comes FIRST, before the identity lookup: a row the
-// store will refuse is refused whether it would have created or updated, and
-// discovering that only on the create branch would let the same bad value pass
-// silently on a re-import.
-func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedOutcome, error) {
-	outcome, _, err := w.predictRow(ctx, row)
-	return outcome, err
-}
-
-// predict answers what the commit will do AND, when it will refuse, the sentence
-// the report shows for it.
-//
-// The reason travels with the outcome rather than being recomputed by the
-// caller. It used to be recomputed — from unwritableReason, which knows about
-// the size_band vocabulary and nothing else — so a refusal from any other source
-// reached the report as a skip with an EMPTY reason, and the person reading it
-// was told a row would not land without being told why.
-func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
-	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
-		return predictUnwritable, reason, nil
-	}
-	// Mirrors Ensure, in the same order: a named record first, then the identity
-	// map. The two must answer alike or an approval decides one thing and the
-	// commit does another.
-	target := w.targetIDOf(ctx, row)
-	if target.named {
-		if target.reason != "" {
-			return predictUnwritable, target.reason, nil
-		}
-		return w.reconcilePrediction(ctx, target.id, row)
-	}
-	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
-	if err != nil {
-		return predictCreate, "", err
-	}
-	if !found {
-		// Not a row a previous run of THIS importer landed — but the CRM may
-		// hold the company anyway, captured from mail, created by hand or
-		// seeded. The identity map cannot see any of those, so the create the
-		// engine is about to report gets the same dedupe read the create path
-		// itself performs.
-		// Always disclosure-filtered: a PREVIEW reports what it found, whichever
-		// mode asked. Passing the mode through here reported invisible companies
-		// as duplicates on a `skip` run — an existence oracle over a colleague's
-		// owner-private capture, one CSV row at a time.
-		collides, err := w.collidesWithExisting(ctx, row)
-		if err != nil {
-			return predictCreate, "", err
-		}
-		if collides {
-			if w.onDuplicate == string(crmcontracts.Skip) {
-				return predictCollidesSkipped, "", nil
-			}
-			return predictCollides, "", nil
-		}
-		return predictCreate, "", nil
-	}
-	return w.reconcilePrediction(ctx, id, row)
-}
-
-// predictReconcile is what reconcile would do to this record, without writing.
-//
-// Shared by both ways a row reaches an existing record — the identity map, and
-// an `id` column naming it — so the preview cannot answer one thing for a row
-// the file identified and another for a row the importer remembered.
-func (w *csvWriters) reconcilePrediction(
-	ctx context.Context, id ids.UUID, row migration.Row,
-) (predictedOutcome, string, error) {
-	current, err := w.read(ctx, id)
-	if err != nil {
-		return predictCreate, "", err
-	}
-	changed, err := changedFields(current, textFields(row.Fields))
-	if err != nil {
-		return predictCreate, "", err
-	}
-	if len(changed) == 0 {
-		return predictUnchanged, "", nil
-	}
-	return predictUpdate, "", nil
-}
-
-// collidesWithExisting asks whether the CRM already holds the company this row
-// names, through the SAME ladder the create path runs (PO-F-2). It reads and
-// writes nothing.
-//
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
@@ -291,7 +178,8 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 			return migration.EnsureResult{}, err
 		}
 		if collides {
-			return migration.EnsureResult{Skipped: true, SkipReason: duplicateSkipReason}, nil
+			_, skipReason := collisionWordingFor(object)
+			return migration.EnsureResult{Skipped: true, SkipReason: skipReason}, nil
 		}
 	}
 	switch object {
@@ -299,6 +187,8 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		return w.createLead(ctx, row)
 	case migration.ObjectOrganization:
 		return w.createOrganization(ctx, row)
+	case migration.ObjectPerson:
+		return w.createPerson(ctx, row)
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
@@ -320,6 +210,14 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		return migration.EnsureResult{Unchanged: true}, nil
 	}
 	if err := w.apply(ctx, id, changed, current); err != nil {
+		// A corrected file moving an address onto a person who is not its owner
+		// is one bad row, not a failed run: skip it with the reason and let the
+		// rest of the file land. Unhandled, this error aborts the whole
+		// migration, which is the wrong answer to a typo in a spreadsheet.
+		var dup *people.DuplicateEmailError
+		if errors.As(err, &dup) {
+			return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
+		}
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
@@ -342,14 +240,20 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 			return nil, err
 		}
 		return encodeRecord(org)
+	case migration.ObjectPerson:
+		person, err := w.people.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
+		if err != nil {
+			return nil, err
+		}
+		return encodeRecord(person)
 	default:
 		return nil, fmt.Errorf("import: %q is not an importable object", w.object)
 	}
 }
 
-// encodeRecord renders one stored record as JSON. Generic so neither wire type
+// encodeRecord renders one stored record as JSON. Generic so no wire type
 // is widened to an empty interface on the way through.
-func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization](record T) ([]byte, error) {
+func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization | crmcontracts.Person](record T) ([]byte, error) {
 	encoded, err := json.Marshal(record)
 	if err != nil {
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
@@ -358,11 +262,17 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization](record T) ([]
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which
-// the organization path needs because an address patch is all-or-nothing: the
-// store assigns all six address columns whenever an Address is given, so a file
-// carrying only a City would blank the street, postal code and country a human
-// entered. The mapped components are merged onto what is stored, and only then
-// sent.
+// the organization and person paths need because an address patch is
+// all-or-nothing: the store assigns all six address columns whenever an Address
+// is given, so a file carrying only a City would blank the street, postal code
+// and country a human entered. The mapped components are merged onto what is
+// stored, and only then sent.
+//
+// The person path carries a second version of the same hazard. Its emails are
+// child rows and the patch REPLACES them, so a file naming one address would
+// archive every other address a human added by hand. The same rule applies: a
+// file whose columns are whatever the customer exported may not delete what it
+// never mentioned.
 func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte) error {
 	switch w.object {
 	case migration.ObjectLead:
@@ -378,6 +288,24 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 			in.Address = merged
 		}
 		_, err = w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), in)
+		return err
+	case migration.ObjectPerson:
+		in := personUpdateFrom(changed)
+		merged, given, err := addressMergedOnto(current, in.Address)
+		if err != nil {
+			return err
+		}
+		if given {
+			in.Address = merged
+		}
+		mergedEmails, given, err := emailsMergedOnto(current, in.Emails)
+		if err != nil {
+			return err
+		}
+		if given {
+			in.Emails = mergedEmails
+		}
+		_, err = w.people.UpdatePerson(ctx, ids.From[ids.PersonKind](id), in)
 		return err
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
@@ -481,6 +409,20 @@ func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UU
 		}
 		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil); err != nil {
 			return fmt.Errorf("import undo: reversing organization %s: %w", nativeID, err)
+		}
+		return nil
+	case migration.ObjectPerson:
+		person, err := w.people.GetPerson(ctx, ids.From[ids.PersonKind](nativeID), storekit.IncludeArchived)
+		if err != nil {
+			return fmt.Errorf("import undo: reading person %s: %w", nativeID, err)
+		}
+		if person.ArchivedAt != nil {
+			return nil
+		}
+		// The archive cascades to person_email, person_phone and the person's
+		// relationships, so the child rows this run created go with it.
+		if _, err := w.people.ArchivePerson(ctx, ids.From[ids.PersonKind](nativeID), nil); err != nil {
+			return fmt.Errorf("import undo: reversing person %s: %w", nativeID, err)
 		}
 		return nil
 	default:

@@ -70,22 +70,26 @@ func RegisterImportTools(r *Registry, imports Imports) {
 	r.Register(commitImport{imports: imports})
 }
 
-// importObjectEnum is what a file's rows may be, and it is SHORT on purpose.
+// importObjectEnum is what a file's rows may be.
 //
-// `person` and `deal` are not here, and the omission IS ADR-0008: a bulk file
-// of contacts lands as leads, which a human promotes, so machine-sourced rows
-// cannot be smuggled past the qualification step by picking an enum value. The
-// first cut of this tool listed all four, which would have advertised a door
-// the REST contract does not have — TestEveryToolEnumMatchesTheContractItMirrors
-// caught it, which is what that gate is for.
-var importObjectEnum = []string{importObjectOrganization, importObjectLead}
+// `deal` and `activity` are not here: no import writer exists for either, so
+// offering them would advertise a door the REST contract does not have. The
+// first cut of this tool listed all four and
+// TestEveryToolEnumMatchesTheContractItMirrors caught it, which is what that
+// gate is for.
+//
+// `lead` and `person` are BOTH here and the caller picks per run: a
+// machine-sourced list lands as leads for a human to promote, a file the
+// business already knows lands as people. Neither skips the identity ladder.
+var importObjectEnum = []string{importObjectOrganization, importObjectLead, importObjectPerson}
 
-// The two things a file's rows may be, spelled once. They mirror the
+// The three things a file's rows may be, spelled once. They mirror the
 // contract's ImportObject enum, and the tool's schema is built from them so
 // the two cannot drift.
 const (
 	importObjectOrganization = "organization"
 	importObjectLead         = "lead"
+	importObjectPerson       = "person"
 )
 
 // maxImportCSVBytes caps the pasted file.
@@ -111,12 +115,12 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{
-			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `"]},
+			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `","` + importObjectPerson + `"]},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A company already here: create (default) lands a second; skip leaves the incumbent."}},
+			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For people an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}

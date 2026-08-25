@@ -2750,10 +2750,13 @@ export const en = {
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
   "import.object.organization": "Companies",
+  "import.object.person": "Contacts",
   "import.objectHint.lead":
-    "Bulk prospects land as leads for a human to qualify — never as contacts.",
+    "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
   "import.objectHint.organization":
     "Companies are matched by the name you map, so a re-upload corrects rather than duplicates.",
+  "import.objectHint.person":
+    "For people you already deal with. Matched by email, so a re-upload corrects rather than duplicates, and an address already held is left alone.",
   "import.fileLabel": "The CSV to import",
   "import.choose": "Choose a file",
   "import.chooseAnother": "Choose a different file",

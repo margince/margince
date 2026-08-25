@@ -2722,10 +2722,13 @@ export const de = {
   "import.objectLabel": "Was die Zeilen sind",
   "import.object.lead": "Interessenten",
   "import.object.organization": "Firmen",
+  "import.object.person": "Kontakte",
   "import.objectHint.lead":
-    "Massenhaft importierte Interessenten landen als Leads zur Qualifizierung — nie als Kontakte.",
+    "Eine unbearbeitete Liste landet als Leads zur Qualifizierung, bevor sie jemand als Kontakte behandelt.",
   "import.objectHint.organization":
     "Firmen werden über den zugeordneten Namen erkannt, ein erneuter Upload korrigiert also statt zu duplizieren.",
+  "import.objectHint.person":
+    "Für Personen, mit denen Sie bereits zu tun haben. Erkennung über die E-Mail-Adresse: Ein erneuter Upload korrigiert statt zu duplizieren, und eine bereits vergebene Adresse bleibt unangetastet.",
   "import.fileLabel": "Die zu importierende CSV",
   "import.choose": "Datei wählen",
   "import.chooseAnother": "Andere Datei wählen",
