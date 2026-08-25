@@ -92,7 +92,7 @@ type relationshipRow struct {
 }
 
 func scanRelationship(r pgx.Row) (relationshipRow, error) {
-	return scanRelationshipWithPrior(r, nil)
+	return scanRelationshipWithPrior(r, nil, nil)
 }
 
 // scanRelationshipWithPrior reads an edge, and optionally one trailing column: a
@@ -102,13 +102,17 @@ func scanRelationship(r pgx.Row) (relationshipRow, error) {
 //
 // prior is a **string because the column is nullable twice over: there may have
 // been no prior row at all, which is exactly the case the caller reads it for.
-func scanRelationshipWithPrior(r pgx.Row, prior **string) (relationshipRow, error) {
+// inserted takes the statement's own answer to which branch of an upsert ran.
+func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relationshipRow, error) {
 	var out relationshipRow
 	targets := []any{&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
 		&out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
 		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt}
 	if prior != nil {
 		targets = append(targets, prior)
+	}
+	if inserted != nil {
+		targets = append(targets, inserted)
 	}
 	return out, r.Scan(targets...)
 }

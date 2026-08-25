@@ -87,6 +87,16 @@ func (s *Store) ApplyEnrichment(ctx context.Context, orgID ids.OrganizationID, i
 		if err := auth.EnsureWritableLive(ctx, tx, "organization", orgID.UUID); err != nil {
 			return err
 		}
+		// The name lock before the row lock the image read takes, and only when a
+		// name is coming — the ordering readColdStartColumnImages names as its
+		// caller's obligation, and the one every other writer of an
+		// organization name follows. Taken the other way round, an enrichment
+		// carrying a legal name deadlocks against a human rename.
+		if carriesOrgName(in.Fields) {
+			if err := lockOrgNameWrites(ctx, tx); err != nil {
+				return err
+			}
+		}
 		before, err := readColdStartColumnImages(ctx, tx, orgID)
 		if err != nil {
 			return err

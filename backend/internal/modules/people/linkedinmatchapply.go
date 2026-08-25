@@ -193,8 +193,16 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 type matchImagePair struct{ before, after map[string]any }
 
 func matchImages(wasStatus string, wasPerson *ids.UUID, personID ids.UUID) matchImagePair {
+	// Dereferenced, because the two sides are compared by value: a *ids.UUID and
+	// an ids.UUID never read as equal however they point, so a re-confirm of the
+	// same contact would publish matched_person_id moving to what it already
+	// held — which is the change this narrowing exists to leave out.
+	var wasPersonValue any
+	if wasPerson != nil {
+		wasPersonValue = *wasPerson
+	}
 	before, after := storekit.ChangedColumns(
-		map[string]any{"match_status": wasStatus, "matched_person_id": wasPerson},
+		map[string]any{"match_status": wasStatus, "matched_person_id": wasPersonValue},
 		map[string]any{"match_status": matchConfirmed, "matched_person_id": personID},
 	)
 	return matchImagePair{before: before, after: after}

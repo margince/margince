@@ -237,6 +237,7 @@ func setCompanyRoleTx(
 	// 42P10, "no unique or exclusion constraint matching the ON CONFLICT
 	// specification", and every attach fails.
 	var priorRole *string
+	var inserted bool
 	scan := tx.QueryRow(ctx,
 		`WITH was AS (
 		   SELECT role FROM relationship
@@ -248,9 +249,9 @@ func setCompanyRoleTx(
 		 ON CONFLICT (project_id, organization_id)
 		   WHERE kind = '`+ProjectCompanyKind+`' AND archived_at IS NULL
 		   DO UPDATE SET role = EXCLUDED.role, version = relationship.version + 1, updated_at = now()
-		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was)`,
+		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was), xmax = 0`,
 		projectID, organizationID, role, projectCompanySource, by)
-	row, err := scanRelationshipWithPrior(scan, &priorRole)
+	row, err := scanRelationshipWithPrior(scan, &priorRole, &inserted)
 	if err != nil {
 		return fmt.Errorf("put the company on the project: %w", err)
 	}
@@ -269,20 +270,19 @@ func setCompanyRoleTx(
 	}
 	// An attach that found no edge MADE one, and saying "update" of a row that
 	// did not exist puts a change into the project's history that never
-	// happened. The prior role is the only thing this write moves, so it is the
-	// whole of the before-image when there was one.
-	if priorRole == nil {
+	// happened. xmax answers which branch ran, from the statement itself: the
+	// CTE's snapshot cannot, because an edge another transaction committed
+	// after it was taken is one this insert still resolves as a conflict.
+	if inserted {
 		return emitRelationshipChange(ctx, tx, "create", nil, row)
 	}
-	before, after := storekit.ChangedColumns(
-		map[string]any{relationshipRoleField: *priorRole},
-		map[string]any{relationshipRoleField: row.Role},
-	)
-	if len(after) == 0 {
-		// The same company in the same role: nothing moved, so nothing is
-		// recorded as having moved.
-		return nil
-	}
+	// The edge as it stood: every column this write leaves alone still holds
+	// what the returned row holds, and role is the one it moved. Handed over
+	// whole so the seam narrows ONCE — a pair pre-narrowed to role alone would
+	// be diffed again against the full image, and the columns missing from it
+	// would read as changes from nothing.
+	before := relationshipImage(row)
+	before[relationshipRoleField] = priorRole
 	return emitRelationshipChange(ctx, tx, "update", before, row)
 }
 
