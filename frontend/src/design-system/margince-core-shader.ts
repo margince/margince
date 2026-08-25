@@ -79,7 +79,7 @@ bool hitSphere(vec3 ro, vec3 rd, float r, out float t0, out float t1){
    rho is anchored so every loop passes exactly through a shared focus F, which
    is what makes them all cross at one bright point. */
 float band(vec3 u, vec3 C, vec3 F, float phase, float width,
-           float wob1, float wob2, out float rim){
+           float wob1, float wob2, float wob3, out float rim){
   rim = 0.0;
 
   vec3 e1 = F - dot(F, C) * C;
@@ -92,11 +92,29 @@ float band(vec3 u, vec3 C, vec3 F, float phase, float width,
   float rho  = acos(clamp(dot(u, C), -1.0, 1.0)); // angle out from C
   float rho0 = acos(clamp(dot(F, C), -1.0, 1.0)); // ... at the focus
 
-  float target = rho0 + wob1 * cos(phi + phase) + wob2 * cos(2.0 * phi - 1.7 * phase);
+  /* The ribbon's path.
+     Two harmonics at 1x and 2x are rationally related, so the path closed on
+     itself every lap and the eye learned it: a machined loop rather than
+     something alive. The third term sits at an irrational-ish 1.618x on a phase
+     of its own, so the three never come back into register and the shape a
+     reader sees is never quite the one they saw before.
+
+     And the wobble BREATHES. A fixed amplitude is the other half of why this
+     read as mechanism: a real thing is not equally agitated all the time. The
+     amplitude is seeded off this loop's own geometry (dot(C, F)), so five
+     ribbons breathe out of step with each other rather than pulsing together. */
+  float life = 0.78 + 0.22 * sin(phase * 0.37 + dot(C, F) * 3.1);
+  float target = rho0 + life * (wob1 * cos(phi + phase)
+                              + wob2 * cos(2.0 * phi - 1.7 * phase)
+                              + wob3 * cos(1.618 * phi + 0.73 * phase));
   float tn = abs(rho - target);
 
-  /* paddle: wide over part of the sweep, gone over the rest */
-  float swell = 0.5 + 0.5 * sin(phi + phase * 0.6);
+  /* paddle: wide over part of the sweep, gone over the rest.
+     The sweep is phase-MODULATED rather than a plain sine: a sine is symmetric,
+     so the paddle opened and closed at the same rate and the ribbon looked like
+     it was being driven. This leans the opening away from the closing. */
+  float swell = 0.5 + 0.5 * sin(phi + phase * 0.6
+                                + 0.35 * sin(2.0 * phi - phase * 0.31));
   float sw4 = swell * swell * swell * swell;
   float w = width * (0.18 + 0.82 * sw4);
   float gate = smoothstep(0.02, 0.30, sw4);   // the band simply ends
@@ -150,7 +168,7 @@ void main(){
 
   /* ---------- ribbons ---------- */
   vec3 CEN[5], COL[5];
-  float SHELL[5], WIDTH[5], WOB1[5], WOB2[5], PHASE[5], GAIN[5];
+  float SHELL[5], WIDTH[5], WOB1[5], WOB2[5], WOB3[5], PHASE[5], GAIN[5];
   float FADE[5];   // ingest: how present each ribbon is on its way in
 
   /* The working palette, mirroring the orb family in tokens.css: deep indigo,
@@ -165,15 +183,15 @@ void main(){
   vec3 BASE[5];
   BASE[0] = vec3(0.310, 0.330, 0.760);
   BASE[1] = vec3(0.706, 0.722, 0.969);
-  BASE[2] = vec3(0.941, 0.663, 0.231);
+  BASE[2] = vec3(0.902, 0.560, 0.160);
   BASE[3] = vec3(0.706, 0.722, 0.969);
   BASE[4] = vec3(0.541, 0.502, 1.000);
 
-  SHELL[0]=0.78; WIDTH[0]=0.310; WOB1[0]= 0.26; WOB2[0]= 0.11; GAIN[0]=3.3;
-  SHELL[1]=0.90; WIDTH[1]=0.250; WOB1[1]=-0.31; WOB2[1]= 0.08; GAIN[1]=2.7;
-  SHELL[2]=0.66; WIDTH[2]=0.350; WOB1[2]= 0.34; WOB2[2]=-0.13; GAIN[2]=2.9;
-  SHELL[3]=0.92; WIDTH[3]=0.215; WOB1[3]=-0.22; WOB2[3]= 0.09; GAIN[3]=3.2;
-  SHELL[4]=0.84; WIDTH[4]=0.180; WOB1[4]= 0.29; WOB2[4]=-0.10; GAIN[4]=1.8;
+  SHELL[0]=0.78; WIDTH[0]=0.310; WOB1[0]= 0.26; WOB2[0]= 0.11; WOB3[0]= 0.07; GAIN[0]=3.3;
+  SHELL[1]=0.90; WIDTH[1]=0.250; WOB1[1]=-0.31; WOB2[1]= 0.08; WOB3[1]=-0.09; GAIN[1]=2.7;
+  SHELL[2]=0.66; WIDTH[2]=0.350; WOB1[2]= 0.34; WOB2[2]=-0.13; WOB3[2]= 0.11; GAIN[2]=2.9;
+  SHELL[3]=0.92; WIDTH[3]=0.215; WOB1[3]=-0.22; WOB2[3]= 0.09; WOB3[3]= 0.06; GAIN[3]=3.2;
+  SHELL[4]=0.84; WIDTH[4]=0.180; WOB1[4]= 0.29; WOB2[4]=-0.10; WOB3[4]=-0.08; GAIN[4]=1.8;
 
   /* the shared focus every loop is threaded through. it drifts, so the crossing
      wanders around the middle instead of being pinned to it */
@@ -250,7 +268,7 @@ void main(){
 
         float rim;
         float v = band(u, CEN[j], FOCUS, PHASE[j], WIDTH[j] * (1.0 + 0.45 * uLevel),
-                       WOB1[j], WOB2[j], rim);
+                       WOB1[j], WOB2[j], WOB3[j], rim);
         if(v <= 0.0 && rim <= 0.0) continue;
 
         /* the far side of the shell shows through the near side, dimmer */

@@ -39,7 +39,10 @@ export type CoreBehaviour = Readonly<{
 }>;
 
 /** Amber for a thing that wants a look, red for a thing that broke. */
-const AMBER: readonly [number, number, number] = [0.98, 0.68, 0.16];
+// Emissive, so it runs hotter than the token it mirrors (--orbAmber). Walked
+// down from gold: at hue 40 the warning state read as a colour somebody chose
+// for looks, and the point of it is that a person is being asked for something.
+const AMBER: readonly [number, number, number] = [0.98, 0.55, 0.13];
 const RED: readonly [number, number, number] = [1.0, 0.24, 0.14];
 
 export const BEHAVIOUR: Readonly<Record<MarginceCoreState, CoreBehaviour>> = {
