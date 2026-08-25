@@ -150,16 +150,13 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"consent_qualifying_event.person_id":       "gated: the event is recorded only on a path that already holds the person — a captured inbound activity, an inquiry, or a named human typing an exchange on the record's own surface, each of which took the person read before it could name them",
 	"consent_existing_customer_flag.person_id": "gated: the §7(3) flag is set only from the person's own consent surface, whose handler resolves the person through the consent store's gated read before any row is written",
 	"lead_manual_signal.lead_id":               "gated: auth.EnsureVisibleLive on the lead runs in the SAME transaction as the insert (people/leadmanualsignal.go) — recording a judgement signal against a lead the caller cannot read would confirm it exists",
-	// conversation_claim's table shipped ahead of its writer (ADR-0097 D1):
-	// the DDL exists so the page's reads and the demo seed have a shape to
-	// bind to, and the extraction task that fills it is still to come. These
-	// three entries record that the gate has judged NOTHING yet — the claim
-	// writer must take the person read and the activity read when it lands,
-	// and this classification is what makes that obligation impossible to
-	// forget rather than a decision already taken.
-	"conversation_claim.person_id":          "PENDING WRITER: no code writes this table yet. The production writer must open with auth.Require(person, read) + auth.EnsureVisibleLive before it may name a person, and this entry is replaced with the gate it actually takes",
-	"conversation_claim.source_activity_id": "PENDING WRITER: no code writes this table yet. A claim cites the activity it was read from, so the writer must gate that activity read (auth.EnsureLinkTarget or the activity scope clause) — citing a message the caller cannot open would disclose it",
-	"conversation_claim.task_activity_id":   "PENDING WRITER: no code writes this table yet. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
+	// conversation_claim's writer LANDED (people/conversationclaim.go,
+	// RecordConversationClaim), so the first two entries below now state the
+	// gates it actually takes rather than the ones it owed. The third is still
+	// a promise: nothing writes task_activity_id.
+	"conversation_claim.person_id":          "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(person, update), then auth.EnsureWritableLive on the person inside the write's own transaction — a claim may only be recorded against a person the caller could already change",
+	"conversation_claim.source_activity_id": "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
+	"conversation_claim.task_activity_id":   "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
 	"organization_geocode_state.organization_id": "child row: the sidecar for an organization's own coordinate lookup, and no caller ever names the organization it keys on. " +

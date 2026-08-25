@@ -146,6 +146,36 @@ type BriefEntry struct {
 	Rank   int
 }
 
+// Commitments is the rep's own outstanding promises, soonest-due first.
+//
+// Read from the claims extracted out of captured conversations rather than from
+// the task list, because a commitment card has to show BOTH halves — when it is
+// due, and where it was promised. An open task carries the date and no
+// provenance; a message labelled as a commitment carries the provenance and no
+// date. Only the claim carries both.
+//
+// An installation that reads no claims binds nothing here, and the lane is then
+// absent rather than empty: nil means "this feed does not do commitments",
+// which is a different fact from "you owe nobody anything today".
+type Commitments interface {
+	DueBy(ctx context.Context, by time.Time, limit int) ([]Commitment, error)
+}
+
+// Commitment is one promise this rep made, with the evidence behind it.
+//
+// Body and Quote both travel: the claim contract's rule is that a claim is
+// checkable against what was actually written, and a card that showed only the
+// paraphrase would be asking the reader to trust the extractor.
+type Commitment struct {
+	ID          ids.UUID
+	PersonID    ids.UUID
+	Body        string
+	Quote       string
+	SourceLabel string
+	OccurredAt  time.Time
+	DueAt       time.Time
+}
+
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
 type Clock func() time.Time
@@ -158,12 +188,16 @@ type Service struct {
 	tasks      Tasks
 	receipts   Receipts
 	briefing   Briefing
-	now        Clock
+	// commitments is OPTIONAL: nil means this feed serves no commitments lane,
+	// and Assemble then leaves the field unset rather than sending an empty
+	// array. The contract makes the lane optional for exactly that reason.
+	commitments Commitments
+	now         Clock
 }
 
 // NewService binds the feed to its readers.
-func NewService(a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing, now Clock) *Service {
-	return &Service{approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b, now: now}
+func NewService(a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing, c Commitments, now Clock) *Service {
+	return &Service{approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b, commitments: c, now: now}
 }
 
 // Assemble reads every lane and returns the day.
@@ -221,6 +255,25 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	default:
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
+	}
+
+	// Absent, not empty, when no reader is bound: see the Commitments doc.
+	if s.commitments != nil {
+		commitments, err := s.commitments.DueBy(ctx, endOfDay(asOf), plannedCap)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied):
+			omitted = append(omitted, crmcontracts.AttentionLanesOmitted("commitments"))
+		case err != nil:
+			return crmcontracts.Attention{}, err
+		default:
+			items := make([]crmcontracts.AttentionItem, 0, len(commitments))
+			for _, promise := range commitments {
+				items = append(items, commitmentItem(promise, asOf))
+			}
+			out.Commitments = &items
+			count := len(items)
+			out.Counts.Commitments = &count
+		}
 	}
 
 	done, err := s.done(ctx, asOf)
@@ -332,10 +385,15 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 	return out
 }
 
+// endOfDay is the boundary both due-dated lanes stop at, so a promise and a
+// task falling on the same afternoon are judged against the same instant.
+func endOfDay(asOf time.Time) time.Time {
+	return asOf.Truncate(24 * time.Hour).Add(24 * time.Hour)
+}
+
 // planned is today's agreed work, overdue first.
 func (s *Service) planned(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
-	endOfDay := asOf.Truncate(24 * time.Hour).Add(24 * time.Hour)
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay, plannedCap)
+	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap)
 	if err != nil {
 		return nil, err
 	}

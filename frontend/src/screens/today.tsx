@@ -1,4 +1,10 @@
-import { CheckSquare, GitMerge, Sparkles, Sunrise } from "lucide-react";
+import {
+  CheckSquare,
+  GitMerge,
+  Handshake,
+  Sparkles,
+  Sunrise,
+} from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -126,6 +132,16 @@ function itemDetail(
   locale: Locale,
   zone: string,
 ): string | null {
+  // A promise is the one item whose supporting line carries TWO facts, and it
+  // needs both: the words it was read from are what make the claim checkable,
+  // and the deadline is why it is on today's page at all. Showing only the
+  // quote would drop the date the lane is ordered by.
+  if (item.source === "conversation_claim" && item.detail && item.due_at) {
+    return t("day.commitment.detail", {
+      quote: item.detail,
+      due: formatDateTime(item.due_at, locale, zone),
+    });
+  }
   if (item.detail) {
     return item.detail;
   }
@@ -462,6 +478,9 @@ function TodayLanes({
   const { locale } = useLocale();
   const needsYou = day.needs_you ?? [];
   const planned = day.planned ?? [];
+  // Absent means this installation serves no commitments lane; empty means the
+  // rep owes nothing today. The two draw differently, so they stay apart.
+  const commitments = day.commitments;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
   // How many decisions this reader has answered since the page opened, and
@@ -528,6 +547,22 @@ function TodayLanes({
         onSnooze={onSnooze}
         completing={complete.isPending}
       />
+      {(commitments !== undefined || omitted.includes("commitments")) && (
+        <Lane
+          shape={{
+            title: t("day.commitments"),
+            empty: t("day.commitments.empty"),
+            withheld: t("day.lane.withheld"),
+            icon: Handshake,
+          }}
+          items={commitments ?? []}
+          withheld={omitted.includes("commitments")}
+          total={day.counts.commitments ?? 0}
+          onComplete={onComplete}
+          onSnooze={onSnooze}
+          completing={complete.isPending}
+        />
+      )}
       <Lane
         shape={{
           title: t("day.done"),

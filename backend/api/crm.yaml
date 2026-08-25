@@ -28460,13 +28460,26 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "Work already agreed: overdue first, then due today."
+        commitments:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Promises this rep made that are coming due, most overdue first — each with the
+            message it was read from, so the reader can check it against what was written.
+
+            Its own lane rather than rows in `planned`, because the two rest on different
+            records and answer different questions. A `planned` row is a TASK somebody
+            entered; a commitment is a claim extracted from a captured conversation, and it
+            carries the promise's own words and its evidence. Nothing appears in both.
+
+            Absent — not empty — on an installation whose feed does not read claims.
         done_for_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -28482,6 +28495,7 @@ components:
         needs_you: { type: integer, minimum: 0 }
         planned: { type: integer, minimum: 0 }
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+        commitments: { type: integer, minimum: 0, description: "Promises this rep made that are due by the end of today and still open." }
 
     AttentionItem:
       type: object
@@ -28495,7 +28509,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

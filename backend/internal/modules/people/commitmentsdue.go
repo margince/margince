@@ -1,0 +1,148 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package people
+
+// The promises WE made that are coming due (ADR-0097 D1), for the attention
+// feed's own lane.
+//
+// WHY THIS READ RATHER THAN THE OPEN-TASK SWEEP. A commitment needs two halves
+// on screen: the deadline, and where the promise was made. Only this table
+// carries both — an open task has a due date and no provenance, and a
+// `capture_label = 'commitment'` email has provenance and no due date. The
+// attention feed's `planned` lane already reads open tasks, so a producer over
+// those would print the same row twice under two headings.
+//
+// The claim is the evidence, so the sentence a reader gets is the promise in
+// their own words with the message it was read from beside it, rather than a
+// task subject somebody retyped.
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+)
+
+// CommitmentDue is one promise this rep made, with the evidence behind it.
+type CommitmentDue struct {
+	ID ids.UUID
+	// PersonID is who it was promised to, so the surface can route a reader to
+	// the record the promise lives on.
+	PersonID ids.PersonID
+	// Body is the promise in the reader's language; SourceQuote is the
+	// verbatim excerpt it was read from. Both travel because the claim
+	// contract's whole rule is that a claim is checkable against what was
+	// actually written.
+	Body        string
+	SourceQuote string
+	PersonName  string
+	// SourceLabel names the conversation in a chip — the thread subject or the
+	// meeting title — and OccurredAt is when it was said. Together they are the
+	// "on 18 August, in the call" half of the sentence.
+	SourceLabel string
+	OccurredAt  time.Time
+	DueAt       time.Time
+}
+
+// OpenCommitmentsDue reads the acting rep's own promises falling due by the
+// given instant, most overdue first.
+//
+// WHOSE PROMISES. A claim carries no assignee of its own, so ownership rides
+// the PERSON it was made to: person.owner_id is the rep who holds that
+// relationship, and a promise made in their own captured conversation is
+// theirs. A claim on an unowned person therefore reaches nobody's lane, which
+// is the honest answer — no rep is on the hook for it.
+//
+// UNDATED CLAIMS ARE EXCLUDED. "Coming due" is unanswerable without a date. An
+// undated promise is real work and it is not TODAY's, which is the same call
+// the planned lane already makes for an undated task.
+//
+// The two gates CommitmentsTheirsForProjects keeps, for its reasons. The
+// activity join with auth.ActivityContentClause stops a claim outliving or
+// outreaching the message it cites. The person row scope is filtered on rather
+// than selected here — unlike that read, this one returns a LIST rather than
+// one row per project, so an invisible person's claim is simply not this
+// caller's to see and dropping it hides nothing they were owed.
+//
+// status = 'open' AND NOT needs_review, for the reason the sibling read states:
+// a settled claim is done with, and a disputed one presented as a fact would
+// state as true the very thing the extractor flagged as contested.
+func (s *Store) OpenCommitmentsDue(ctx context.Context, owner ids.UserID, by time.Time, limit int) ([]CommitmentDue, error) {
+	// The claim names a person and quotes a message, so both objects are
+	// required before either row is read.
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var out []CommitmentDue
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = openCommitmentsDue(ctx, tx, owner, by, limit)
+		return err
+	})
+	return out, err
+}
+
+func openCommitmentsDue(
+	ctx context.Context, tx pgx.Tx, owner ids.UserID, by time.Time, limit int,
+) ([]CommitmentDue, error) {
+	var out []CommitmentDue
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	ownerPos := arg(owner)
+	byPos := arg(by)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	if activityScope == "" {
+		activityScope = sqlAlwaysVisible
+	}
+	personScope, err := auth.ScopeClauseFor(ctx, "person", "pr", arg)
+	if err != nil {
+		return nil, err
+	}
+	if personScope == "" {
+		personScope = sqlAlwaysVisible
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT c.id, c.person_id, c.body, c.source_quote,
+		       coalesce(pr.full_name, ''), coalesce(a.subject, ''),
+		       a.occurred_at, c.due_at
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
+		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		   AND c.archived_at IS NULL
+		   AND c.due_at IS NOT NULL AND c.due_at <= $%[2]d
+		   AND pr.owner_id = $%[1]d
+		   AND (%[3]s) AND (%[4]s)
+		 ORDER BY c.due_at ASC, c.id
+		 LIMIT %[5]d`,
+		ownerPos, byPos, activityScope, personScope, limit), args...)
+	if err != nil {
+		return nil, fmt.Errorf("read the rep's commitments coming due: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var due CommitmentDue
+		if err := rows.Scan(&due.ID, &due.PersonID, &due.Body, &due.SourceQuote,
+			&due.PersonName, &due.SourceLabel, &due.OccurredAt, &due.DueAt); err != nil {
+			return nil, fmt.Errorf("scan a commitment coming due: %w", err)
+		}
+		out = append(out, due)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read the rep's commitments coming due: %w", err)
+	}
+	return out, nil
+}

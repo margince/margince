@@ -1224,22 +1224,25 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
-	DoneForYou  AttentionLanesOmitted = "done_for_you"
-	NeedsYou    AttentionLanesOmitted = "needs_you"
-	Planned     AttentionLanesOmitted = "planned"
-	ThisMorning AttentionLanesOmitted = "this_morning"
+	AttentionLanesOmittedCommitments AttentionLanesOmitted = "commitments"
+	AttentionLanesOmittedDoneForYou  AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedNeedsYou    AttentionLanesOmitted = "needs_you"
+	AttentionLanesOmittedPlanned     AttentionLanesOmitted = "planned"
+	AttentionLanesOmittedThisMorning AttentionLanesOmitted = "this_morning"
 )
 
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
 func (e AttentionLanesOmitted) Valid() bool {
 	switch e {
-	case DoneForYou:
+	case AttentionLanesOmittedCommitments:
 		return true
-	case NeedsYou:
+	case AttentionLanesOmittedDoneForYou:
 		return true
-	case Planned:
+	case AttentionLanesOmittedNeedsYou:
 		return true
-	case ThisMorning:
+	case AttentionLanesOmittedPlanned:
+		return true
+	case AttentionLanesOmittedThisMorning:
 		return true
 	default:
 		return false
@@ -1284,10 +1287,11 @@ func (e AttentionItemActions) Valid() bool {
 
 // Defines values for AttentionItemSource.
 const (
-	AttentionItemSourceApproval        AttentionItemSource = "approval"
-	AttentionItemSourceBriefItem       AttentionItemSource = "brief_item"
-	AttentionItemSourceDedupeCandidate AttentionItemSource = "dedupe_candidate"
-	AttentionItemSourceTask            AttentionItemSource = "task"
+	AttentionItemSourceApproval          AttentionItemSource = "approval"
+	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
+	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
+	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceTask              AttentionItemSource = "task"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemSource enum.
@@ -1296,6 +1300,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceApproval:
 		return true
 	case AttentionItemSourceBriefItem:
+		return true
+	case AttentionItemSourceConversationClaim:
 		return true
 	case AttentionItemSourceDedupeCandidate:
 		return true
@@ -8676,31 +8682,31 @@ func (e SavedViewSharedScope) Valid() bool {
 
 // Defines values for SavedViewResource.
 const (
-	SavedViewResourceActivities    SavedViewResource = "activities"
-	SavedViewResourceDeals         SavedViewResource = "deals"
-	SavedViewResourceLeads         SavedViewResource = "leads"
-	SavedViewResourceOrganizations SavedViewResource = "organizations"
-	SavedViewResourcePartners      SavedViewResource = "partners"
-	SavedViewResourcePeople        SavedViewResource = "people"
-	SavedViewResourceProjects      SavedViewResource = "projects"
+	Activities    SavedViewResource = "activities"
+	Deals         SavedViewResource = "deals"
+	Leads         SavedViewResource = "leads"
+	Organizations SavedViewResource = "organizations"
+	Partners      SavedViewResource = "partners"
+	People        SavedViewResource = "people"
+	Projects      SavedViewResource = "projects"
 )
 
 // Valid indicates whether the value is a known member of the SavedViewResource enum.
 func (e SavedViewResource) Valid() bool {
 	switch e {
-	case SavedViewResourceActivities:
+	case Activities:
 		return true
-	case SavedViewResourceDeals:
+	case Deals:
 		return true
-	case SavedViewResourceLeads:
+	case Leads:
 		return true
-	case SavedViewResourceOrganizations:
+	case Organizations:
 		return true
-	case SavedViewResourcePartners:
+	case Partners:
 		return true
-	case SavedViewResourcePeople:
+	case People:
 		return true
-	case SavedViewResourceProjects:
+	case Projects:
 		return true
 	default:
 		return false
@@ -13020,6 +13026,17 @@ type Attention struct {
 	// AsOf The instant every lane below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// Commitments Promises this rep made that are coming due, most overdue first — each with the
+	// message it was read from, so the reader can check it against what was written.
+	//
+	// Its own lane rather than rows in `planned`, because the two rest on different
+	// records and answer different questions. A `planned` row is a TASK somebody
+	// entered; a commitment is a claim extracted from a captured conversation, and it
+	// carries the promise's own words and its evidence. Nothing appears in both.
+	//
+	// Absent — not empty — on an installation whose feed does not read claims.
+	Commitments *[]AttentionItem `json:"commitments,omitempty"`
+
 	// Counts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 	// queue's own count under its both-sides-visible rule, kept separate because the
 	// lane shows a bounded slice of it.
@@ -13059,6 +13076,9 @@ type AttentionLanesOmitted string
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
 type AttentionCounts struct {
+	// Commitments Promises this rep made that are due by the end of today and still open.
+	Commitments *int `json:"commitments,omitempty"`
+
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
 	NeedsYou       int  `json:"needs_you"`
