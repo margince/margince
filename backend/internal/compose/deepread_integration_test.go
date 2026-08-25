@@ -131,10 +131,10 @@ func deepReadApprovals(t *testing.T, e *integration.Env) int {
 	return e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'deepread'`)
 }
 
-func TestDeepReadCrawlsExtractsStagesOneDeepReadProposalAndFinishesDone(t *testing.T) {
+func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.T) {
 	e := integration.Setup(t)
 	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	worker, svc := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
+	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
 	read, args := startDeepRead(t, e, org)
 
 	if err := worker.run(context.Background(), args); err != nil {
@@ -156,41 +156,25 @@ func TestDeepReadCrawlsExtractsStagesOneDeepReadProposalAndFinishesDone(t *testi
 	if len(done.Pages) != 2 || done.Pages[0].Kind != "home" || done.Pages[1].Kind != "impressum" {
 		t.Fatalf("pages = %+v, want [home, impressum] in crawl order", done.Pages)
 	}
-	if len(done.ProposalIDs) != 1 {
-		t.Fatalf("proposal_ids = %v, want exactly the one staged bundle", done.ProposalIDs)
+	// Nobody is asked to confirm a read they pressed the button for, so the
+	// dossier stages nothing. The authority the apply needs was checked when
+	// the read was commissioned.
+	if len(done.ProposalIDs) != 0 || deepReadApprovals(t, e) != 0 {
+		t.Fatalf("proposal_ids = %v and %d deepread approvals, want the read to have applied its own findings",
+			done.ProposalIDs, deepReadApprovals(t, e))
+	}
+	// The human's authority rides the audit spine instead: the agent did the
+	// writing, on behalf of the person who asked.
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE actor_id = 'agent:deepread' AND on_behalf_of = $1`,
+		e.Rep1); n == 0 {
+		t.Fatal("no audit row on behalf of the requesting human")
 	}
 
-	// The staged row is ONE "deepread" proposal carrying the human's
-	// authority: bound to the org, on behalf of the requester.
-	var kind, status string
-	var onBehalf ids.UUID
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT kind, status, on_behalf_of FROM approval WHERE id = $1`,
-			done.ProposalIDs[0]).Scan(&kind, &status, &onBehalf)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if kind != "deepread" || status != "pending" || onBehalf != e.Rep1 {
-		t.Fatalf("approval = %s/%s on behalf of %s, want deepread/pending on behalf of the requesting human", kind, status, onBehalf)
-	}
-
-	// A River retry after the terminal outcome no-ops on the Begin CAS:
-	// no second crawl, no second proposal.
+	// A River retry after the terminal outcome no-ops on the Begin CAS: no
+	// second crawl, and — now that the findings land rather than stage —
+	// nothing written twice.
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after done: %v", err)
-	}
-	if n := deepReadApprovals(t, e); n != 1 {
-		t.Fatalf("retry staged again: %d deepread approvals, want 1", n)
-	}
-
-	// Acceptance lands BOTH halves in one transaction: the profile fields
-	// as agent:deepread evidence rows, the category facts in
-	// organization_fact linked back to the dossier, and ONE
-	// organization.updated event on the outbox carrying the whole delta.
-	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](done.ProposalIDs[0]), true, nil); err != nil {
-		t.Fatalf("accept: %v", err)
 	}
 	var profileRows, factRows, updatedEvents int
 	var capturedBy, legalName, factCapturedBy string
@@ -252,29 +236,27 @@ func TestDeepReadCrawlsExtractsStagesOneDeepReadProposalAndFinishesDone(t *testi
 	}
 }
 
+// An effect that fails must leave its approval APPROVED and unconsumed, so the
+// decision can be retried rather than silently lost. The subject is a proposal
+// staged before reads began applying directly; the read is not run, because it
+// would apply its findings and stage nothing for this to be about.
 func TestDeepReadApplyFailureLeavesTheApprovedProposalUnconsumed(t *testing.T) {
 	e := integration.Setup(t)
 	org := insertOrg(t, e, e.Rep1, "acme.example", "")
-	worker, svc := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	read, args := startDeepRead(t, e, org)
-	if err := worker.run(context.Background(), args); err != nil {
-		t.Fatal(err)
-	}
-	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), orgIDOf(org), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, svc := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
+	read, _ := startDeepRead(t, e, org)
+	proposal := stageLegacyDeepReadProposal(t, e, svc, org, read.ID, nil, servicesOfferings())
 	broken := []byte(`{"organization_id":"` + org.String() + `","source_url":"` + seedURL + `","site_read_id":"` + read.ID.String() + `","fields":[],"facts":[{"category":"unknown","field":"service","value":"X","value_key":"x","evidence_snippet":"X","source_url":"` + seedURL + `","confidence":0.9}]}`)
 	digest := sha256.Sum256(broken)
 	hash := hex.EncodeToString(digest[:])
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE approval
-			SET proposed_change = $2, diff_hash = $3 WHERE id = $1`, done.ProposalIDs[0], broken, hash)
+			SET proposed_change = $2, diff_hash = $3 WHERE id = $1`, proposal, broken, hash)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](done.ProposalIDs[0]), true, nil)
+	_, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](proposal), true, nil)
 	if err == nil {
 		t.Fatal("invalid deep-read effect unexpectedly applied")
 	}
@@ -282,7 +264,7 @@ func TestDeepReadApplyFailureLeavesTheApprovedProposalUnconsumed(t *testing.T) {
 	var consumed bool
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT status, consumed_at IS NOT NULL
-			FROM approval WHERE id = $1`, done.ProposalIDs[0]).Scan(&status, &consumed)
+			FROM approval WHERE id = $1`, proposal).Scan(&status, &consumed)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -428,8 +410,15 @@ func TestDeepReadModelFailureMidwayKeepsWhatWasReadAsPartial(t *testing.T) {
 	// signal fact. The legal_name is WITHHELD — the failed imprint call
 	// left the entity census incomplete, and an unread legal page must
 	// never default to "one entity, the trio stands".
-	if partial.FactCount != 2 || len(partial.ProposalIDs) != 1 {
-		t.Fatalf("fact_count = %d proposals = %v, want the surviving lanes staged and the legal trio withheld", partial.FactCount, partial.ProposalIDs)
+	//
+	// A partial read APPLIES what it evidenced, exactly as a complete one
+	// does. The status is the honest report that a lane died; it is not a
+	// reason to discard the lanes that did not.
+	if partial.FactCount != 2 || len(partial.ProposalIDs) != 0 {
+		t.Fatalf("fact_count = %d proposals = %v, want the surviving lanes landed and the legal trio withheld", partial.FactCount, partial.ProposalIDs)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM organization_fact WHERE organization_id = $1`, org); n != 1 {
+		t.Errorf("%d organization_fact rows, want the home page's surviving signal landed", n)
 	}
 }
 
@@ -470,8 +459,8 @@ func runServicesDeepRead(t *testing.T, e *integration.Env, org ids.UUID) (people
 	if err != nil {
 		t.Fatal(err)
 	}
-	if done.FactCount != 2 || len(done.ProposalIDs) != 1 {
-		t.Fatalf("dossier = %+v, want the 2 deduped offerings staged as one proposal", done)
+	if done.FactCount != 2 || len(done.ProposalIDs) != 0 {
+		t.Fatalf("dossier = %+v, want the 2 deduped offerings landed and nothing staged", done)
 	}
 	return done, svc
 }
@@ -639,16 +628,24 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 	read, args := startDeepRead(t, e, org)
 
 	// The row says Rep2 asked; the payload still says Rep1. If the worker
-	// believes the payload, the staged proposal carries the wrong human.
+	// believes the payload, the rows it writes carry the wrong human.
 	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, "human:"+e.Rep2.String(), read.ID)
 
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'deepread' AND on_behalf_of = $1`, e.Rep2); n != 1 {
-		t.Errorf("%d proposals on behalf of the requester the row names, want 1", n)
+	// The read applies its findings itself now, so the question is asked of the
+	// audit spine the writes left behind rather than of a proposal nobody
+	// stages any more. The spine is where a human's name lands: the actor is
+	// the agent that did the writing, and `on_behalf_of` is the person it did
+	// it for — which is the pair `withClaimedRequester` builds, and the whole
+	// reason the dossier row outranks the payload.
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE actor_id = 'agent:deepread' AND on_behalf_of = $1`,
+		e.Rep2); n == 0 {
+		t.Errorf("no audit row on behalf of the requester the site_read row names")
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'deepread' AND on_behalf_of = $1`, e.Rep1); n != 0 {
-		t.Errorf("%d proposals attributed to the payload's requester — the row is the authority", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE actor_id = 'agent:deepread' AND on_behalf_of = $1`,
+		e.Rep1); n != 0 {
+		t.Errorf("%d audit rows on behalf of the payload's requester — the row is the authority", n)
 	}
 }
