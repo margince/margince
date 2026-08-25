@@ -21,6 +21,14 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
+// The split-name columns this fill writes, so its statement, its image and its
+// event read the same names. person.go and merge.go still spell them inline;
+// bringing those onto these is a wider change than this one.
+const (
+	columnFirstName = "first_name"
+	columnLastName  = "last_name"
+)
+
 // fillMissingPersonName completes a person the ladder landed on by exact
 // address, and completes ONLY what is missing.
 //
@@ -33,13 +41,6 @@ import (
 //
 // Unconfident parses write nothing: `schluepmann` is not evidence of a surname
 // with no given name, it is evidence that the local part did not say.
-// columnFirstName and columnLastName are the split-name columns this fill
-// writes, named once so the statement, the image and the event agree.
-const (
-	columnFirstName = "first_name"
-	columnLastName  = "last_name"
-)
-
 func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, parsed ParsedName, res *EnsureCounterpartyResult) error {
 	if !parsed.Confident {
 		return nil

@@ -100,7 +100,7 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		if superseded {
 			return &FactorAutoSourcedError{Factor: in.Factor}
 		}
-		prior, replaced, err := replaceLiveManualSignal(ctx, tx, leadID, in.Factor)
+		before, err := replaceLiveManualSignal(ctx, tx, leadID, in.Factor)
 		if err != nil {
 			return err
 		}
@@ -117,10 +117,6 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		// of the row it withdrew, not re-queried, so the two describe one
 		// transaction. A factor nobody had answered records an explicit null:
 		// "there was no input" and "nobody looked" are different answers.
-		before := map[string]any{auditKeyManualSignal: nil}
-		if replaced {
-			before[auditKeyManualSignal] = prior
-		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "lead", leadID.UUID,
 			before,
 			map[string]any{auditKeyManualSignal: manualSignalImage(in.Factor, in.Band, points, in.Reason)})
@@ -147,19 +143,22 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 // The prior state comes back from the DELETE itself rather than from a read
 // before it: a separate SELECT would describe the row as some other statement
 // left it, and the audit row would then claim a transition that never happened.
-func replaceLiveManualSignal(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, factor string) (map[string]any, bool, error) {
+func replaceLiveManualSignal(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, factor string) (map[string]any, error) {
 	var band, reason string
 	var points int
 	err := tx.QueryRow(ctx,
 		`DELETE FROM lead_manual_signal WHERE lead_id = $1 AND factor = $2 AND superseded_at IS NULL
 		 RETURNING band, points, reason`, leadID, factor).Scan(&band, &points, &reason)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, false, nil
+		// A factor nobody had answered records an explicit null: "there was no
+		// input" and "nobody looked" are different answers, and only the first
+		// is what this branch means.
+		return map[string]any{auditKeyManualSignal: nil}, nil
 	}
 	if err != nil {
-		return nil, false, fmt.Errorf("replace manual signal: %w", err)
+		return nil, fmt.Errorf("replace manual signal: %w", err)
 	}
-	return manualSignalImage(factor, band, points, reason), true, nil
+	return map[string]any{auditKeyManualSignal: manualSignalImage(factor, band, points, reason)}, nil
 }
 
 // manualSignalImage is the audit shape of one human-supplied factor, spelled

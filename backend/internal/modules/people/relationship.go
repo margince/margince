@@ -31,16 +31,25 @@ import (
 // relationshipAnchor names the endpoint whose lifecycle a kind
 // annotates — the entity whose .updated event a mutation emits and
 // whose RBAC object gates it.
+//
+// The four anchor objects are named here because this is what produces them:
+// every switch that reads an anchor is reading one of these four answers.
+const (
+	anchorPerson = "person"
+	anchorDeal   = "deal"
+	anchorOrg    = "organization"
+)
+
 func relationshipAnchor(kind string) (object, column string) {
 	switch kind {
 	case "employment":
-		return "person", "person_id"
+		return anchorPerson, "person_id"
 	case "deal_stakeholder":
-		return "deal", "deal_id"
+		return anchorDeal, "deal_id"
 	case ProjectStakeholderKind, ProjectCompanyKind:
 		return projectObjectName, "project_id"
 	default: // partner_of, referred_by, co_sell_with
-		return "organization", "organization_id"
+		return anchorOrg, "organization_id"
 	}
 }
 
@@ -247,10 +256,10 @@ func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelati
 		table string
 		id    *ids.UUID
 	}{
-		{"person", untypedPtr(in.PersonID)},
+		{anchorPerson, untypedPtr(in.PersonID)},
 		{"organization", untypedPtr(in.OrganizationID)},
 		{"organization", untypedPtr(in.CounterpartyOrgID)},
-		{"deal", untypedPtr(in.DealID)},
+		{anchorDeal, untypedPtr(in.DealID)},
 		{projectObjectName, untypedPtr(in.ProjectID)},
 	} {
 		if ref.id == nil {
@@ -395,7 +404,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			// update. current.Kind, because a patch cannot change the kind.
 			return mapRelationshipConstraint(err, current.Kind)
 		}
-		return emitRelationshipChange(ctx, tx, "update", relationshipImage(current), out)
+		return emitRelationshipChange(ctx, tx, "update", relationshipFieldImage(current), out)
 	})
 	return out, err
 }
@@ -476,11 +485,11 @@ func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion 
 //nolint:ireturn // dispatches to one of PublicEventDeal/Project/Person/OrganizationUpdated by anchorObject; tested directly via the interface in person_organization_payload_test.go
 func relationshipUpdatedPayload(anchorObject string, changedFields map[string]any) events.Payload {
 	switch anchorObject {
-	case "deal":
+	case anchorDeal:
 		return crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}
 	case projectObjectName:
 		return crmcontracts.PublicEventProjectUpdated{ChangedFields: changedFields}
-	case "person":
+	case anchorPerson:
 		return crmcontracts.PublicEventPersonUpdated{ChangedFields: changedFields}
 	default: // organization
 		return crmcontracts.PublicEventOrganizationUpdated{ChangedFields: changedFields}

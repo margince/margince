@@ -236,7 +236,7 @@ func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
 
 	before, after := auditImagesHolding(ctx, t, e.store, entityPerson, personID.UUID, "title")
 	wantImage(t, before, "before", "title", nil)
-	wantImage(t, after, "after", "title", "Head of Platform")
+	wantImage(t, after, "after", "title", signatureFieldFilled)
 	if _, folded := after[auditKeyFields]; folded {
 		t.Errorf("the after image carries a bookkeeping key instead of the column: %v", after)
 	}
@@ -276,7 +276,7 @@ func TestASitePersonFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 		t.Fatalf("%d audit rows claim role, want only the signature's — the site fill declined", n)
 	}
 	_, after := auditImagesHolding(ctx, t, e.store, entityPerson, personID.UUID, "role")
-	wantImage(t, after, "after", "role", "Chief Platform Officer")
+	wantImage(t, after, "after", "role", signatureFieldFilled)
 }
 
 // The breach mark is the lead's own column and carries an image; the deadline
@@ -351,6 +351,8 @@ func TestASignatureFillRecordsTheEmptySidecarFields(t *testing.T) {
 	before, after := auditImagesHolding(ctx, t, e.store, entityPerson, personID.UUID, "role")
 	wantImage(t, before, "before", "role", nil)
 	wantImage(t, before, "before", "linkedin", nil)
-	wantImage(t, after, "after", "role", "Head of Platform")
-	wantImage(t, after, "after", "linkedin", profile)
+	// Named, not quoted: this pass parses a message, and audit_log outlives the
+	// erasure that clears what it parsed.
+	wantImage(t, after, "after", "role", signatureFieldFilled)
+	wantImage(t, after, "after", "linkedin", signatureFieldFilled)
 }

@@ -281,7 +281,7 @@ func setCompanyRoleTx(
 	// whole so the seam narrows ONCE — a pair pre-narrowed to role alone would
 	// be diffed again against the full image, and the columns missing from it
 	// would read as changes from nothing.
-	before := relationshipImage(row)
+	before := relationshipFieldImage(row)
 	before[relationshipRoleField] = priorRole
 	return emitRelationshipChange(ctx, tx, "update", before, row)
 }

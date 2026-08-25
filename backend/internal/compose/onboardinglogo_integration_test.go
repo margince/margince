@@ -220,9 +220,9 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	if capturedBy != "agent:site-read" {
 		t.Fatalf("logo captured_by = %q, want the site read", capturedBy)
 	}
-	// The mark is a column on the organization, so it is named in the image
-	// itself; the source vocabulary that used to wrap it is context about the
-	// write and rides evidence, where field history will not read it as a field.
+	// The mark is a column on the organization, so the image names it directly.
+	// The source vocabulary is context about the write and rides evidence, where
+	// field history will not read it as a field of the record.
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log
 		WHERE entity_type = 'organization' AND entity_id = $1 AND after ? 'logo'`,
 		company.OrganizationID); n != 1 {

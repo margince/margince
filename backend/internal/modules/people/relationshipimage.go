@@ -22,7 +22,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// relationshipImage is the edge as its own fields: every column
+// relationshipFieldImage is the edge as its own fields: every column
 // UpdateRelationship can move, plus the kind that says what those fields mean.
 //
 // Only a PATCH renders the wide image. A create keeps the two keys it always
@@ -32,11 +32,7 @@ import (
 // agent's later patch of a flag nobody typed would stage for a human decision it
 // never used to need. What a create records is its own question, asked of every
 // record type at once, and it is not this one's to answer.
-// relationshipAnchorDeal names the deal anchor, so the switch below and any
-// later reader share one spelling of it.
-const relationshipAnchorDeal = "deal"
-
-func relationshipImage(rel relationshipRow) map[string]any {
+func relationshipFieldImage(rel relationshipRow) map[string]any {
 	return map[string]any{
 		relationshipKindField: rel.Kind,
 		relationshipRoleField: rel.Role,
@@ -46,9 +42,10 @@ func relationshipImage(rel relationshipRow) map[string]any {
 	}
 }
 
-// relationshipCreateImage is what a create and an archive record: the edge named
-// and typed, which is what those verbs are about.
-func relationshipCreateImage(rel relationshipRow) map[string]any {
+// relationshipIdentityImage is the edge named and typed, which is what a create
+// and an archive are about: neither moved a field, and both are answerable by
+// which edge they were.
+func relationshipIdentityImage(rel relationshipRow) map[string]any {
 	return map[string]any{
 		relationshipKindField: rel.Kind,
 		relationshipRoleField: rel.Role,
@@ -68,18 +65,18 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 	anchorObject, _ := relationshipAnchor(rel.Kind)
 	var anchorID ids.UUID
 	switch anchorObject {
-	case entityPerson:
+	case anchorPerson:
 		anchorID = rel.PersonID.UUID
-	case relationshipAnchorDeal:
+	case anchorDeal:
 		anchorID = rel.DealID.UUID
 	case projectObjectName:
 		anchorID = rel.ProjectID.UUID
 	default:
 		anchorID = rel.OrganizationID.UUID
 	}
-	after := relationshipCreateImage(rel)
+	after := relationshipIdentityImage(rel)
 	if !storekit.AbsentImage(before) {
-		before, after = storekit.ChangedColumns(before, relationshipImage(rel))
+		before, after = storekit.ChangedColumns(before, relationshipFieldImage(rel))
 	}
 	auditID, err := storekit.Audit(ctx, tx, action, "relationship", rel.ID, before, after)
 	if err != nil {

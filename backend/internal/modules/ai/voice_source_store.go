@@ -155,21 +155,12 @@ func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profi
 	return source, prior, err
 }
 
-// The two corpus COLUMNS both images carry, named so each is spelled once.
-// Distinct from voiceKeyProfileID, which is the payload's "profile_id" — the
-// column is voice_profile_id, and collapsing the two would change what the
-// image says.
-const (
-	voiceColumnProfileID = "voice_profile_id"
-	voiceColumnWordCount = "word_count"
-)
-
 func (s *VoiceStore) recordSourceIngest(ctx context.Context, tx pgx.Tx, profile VoiceProfile, source VoiceCorpusSource, prior priorVoiceSource) (CorpusSummary, error) {
 	auditAction, eventAction, wordDelta := sourceIngestChange(source, prior)
 	auditID, err := storekit.Audit(ctx, tx, auditAction, "voice_corpus_source", source.ID,
 		priorSourceImage(profile, source, prior), map[string]any{
 			voiceColumnProfileID: profile.ID, voiceKeyKind: source.Kind, voiceKeyRegister: source.Register,
-			"source_ref": source.SourceRef, voiceColumnWordCount: source.WordCount,
+			voiceKeySourceRef: source.SourceRef, voiceColumnWordCount: source.WordCount,
 			voiceKeyExcluded: source.Excluded,
 		})
 	if err != nil {
@@ -208,7 +199,7 @@ func priorSourceImage(profile VoiceProfile, source VoiceCorpusSource, prior prio
 	}
 	return map[string]any{
 		voiceColumnProfileID: profile.ID, voiceKeyKind: prior.kind, voiceKeyRegister: prior.register,
-		"source_ref": source.SourceRef, voiceColumnWordCount: prior.wordCount,
+		voiceKeySourceRef: source.SourceRef, voiceColumnWordCount: prior.wordCount,
 		voiceKeyExcluded: prior.excluded,
 	}
 }

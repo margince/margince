@@ -11,9 +11,9 @@ package people
 // compose.HumanOwnedConflicts decides ownership per field by taking the LATEST
 // audit row whose after image holds that key, and staging an agent's patch when
 // its actor was human. An enrichment that records real column names therefore
-// becomes the latest writer of the columns it fills — where before it recorded
-// `{source, source_url, fields: {...}}`, held no column key at all, and could
-// not appear in that query however it wrote.
+// becomes the latest writer of the columns it fills. An image that named only
+// its own bookkeeping would hold no column key at all, and could not appear in
+// that query however it wrote.
 //
 // So the protection can no longer rest on the image being uninformative. It
 // rests on the writer: applyUnclaimedOrgColumn fills only a column nobody has

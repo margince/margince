@@ -76,13 +76,18 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 			}
 			res.Applied++
 			appliedFields = append(appliedFields, f.Name)
-			// Fill-only-empty: the evidence row lands on ON CONFLICT DO
-			// NOTHING and each column write carries its own emptiness
-			// predicate, so a field this pass filled is one that held nothing.
-			// The image states that rather than leaving a reader to re-derive
-			// it from the statement.
+			// Named, not quoted. This pass parses its values out of a message
+			// somebody sent, and one of the fields it can fill is a phone
+			// number; audit_log is append-only, so a value written here outlives
+			// the erasure that clears the record it came from. The same refusal
+			// the bought-claim writers make, for the same reason and the same
+			// closed vocabulary of field names.
+			//
+			// Fill-only-empty: the evidence row lands on ON CONFLICT DO NOTHING
+			// and each column write carries its own emptiness predicate, so a
+			// field this pass filled is one that held nothing.
 			before[f.Name] = nil
-			after[f.Name] = verdict.value
+			after[f.Name] = signatureFieldFilled
 		}
 		if len(appliedFields) == 0 {
 			return nil
@@ -153,6 +158,10 @@ type signatureVerdict struct {
 	applied bool
 	value   string
 }
+
+// signatureFieldFilled marks a field this pass answered. The image says WHICH
+// field moved and does not carry what it moved to.
+const signatureFieldFilled = "filled"
 
 func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef string, f SignatureField) (signatureVerdict, error) {
 	value, readable := readSignatureValue(f)

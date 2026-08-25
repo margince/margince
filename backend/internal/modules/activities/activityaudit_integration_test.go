@@ -44,9 +44,16 @@ func auditImagesFor(t *testing.T, e *sendEnv, activityID ids.UUID) (before, afte
 	return before, after
 }
 
+// The note these tests edit. Its subject and body are named here because every
+// test below changes one of them and asserts on what it was.
+const (
+	noteSubject = "Kickoff"
+	noteBody    = "the original text"
+)
+
 func loggedNote(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Activity {
 	t.Helper()
-	subject, body := "Kickoff", "the original text"
+	subject, body := noteSubject, noteBody
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind: "note", Subject: &subject, Body: &body, Source: "ui",
 	})
@@ -60,9 +67,9 @@ func loggedNote(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Acti
 	return activity
 }
 
-// The body is the field a reader most often wants back, and it was the one the
-// image never held: it was recorded as the literal `true`, so the row said
-// somebody edited the body and could not say what it had been.
+// The body is the field a reader most often wants back, so the image carries the
+// text the patch replaced rather than a flag that it changed. A flag says an
+// edit happened and leaves nobody able to say what it undid.
 func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
@@ -75,7 +82,7 @@ func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
 	}
 
 	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
-	if before["body"] != "the original text" {
+	if before["body"] != noteBody {
 		t.Errorf("before[body] = %v, want the text the edit replaced", before["body"])
 	}
 	if after["body"] != revised {
@@ -91,14 +98,14 @@ func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
 	ctx := e.as(principal.RowScopeAll)
 	activity := loggedNote(ctx, t, e)
 
-	renamed := "Kickoff, revised"
+	renamed := noteSubject + ", revised"
 	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
 		UpdateActivityInput{Subject: &renamed}); err != nil {
 		t.Fatalf("UpdateActivity: %v", err)
 	}
 
 	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
-	if before["subject"] != "Kickoff" {
+	if before["subject"] != noteSubject {
 		t.Errorf("before[subject] = %v, want the replaced subject", before["subject"])
 	}
 	if _, carried := before["body"]; carried {
@@ -181,9 +188,9 @@ func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
 }
 
 // An audience write moves two things — the column on the activity row and the
-// member rows that qualify it — and the images have to say what both held.
-// Setting an audience used to record only what it became, so the row could not
-// say who lost sight of the conversation.
+// member rows that qualify it — so the images say what both held. Recording only
+// what the audience became would leave the row unable to say who lost sight of
+// the conversation.
 func TestAnAudienceChangeRecordsWhatItNarrowedFrom(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
