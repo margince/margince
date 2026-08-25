@@ -10,22 +10,25 @@
 // last_activity_at maintained from the timeline, and the created_at that is
 // always there. Every surface that measures silence — the stalled-deal rule,
 // the gone-quiet project report, an account's coverage view, the ranked
-// what's-slipping set — falls back from the first to the second, and five of
-// them derived that fallback for themselves. Two carried a comment CLAIMING
-// to match the stalled rule, which is the shape this repository's rulebook
-// forbids: a comment may not claim to be the only implementation unless a test
-// holds it. Nothing held either.
+// what's-slipping set, the deal board's age — falls back from the first to the
+// second.
 //
 // The fallback is not a formatting detail. Reading an untouched record as "no
 // data" would hide exactly the records every one of those surfaces exists to
 // find: the ones nobody has spoken to since the day they were written down.
-// So the two spellings are here together — the Go one a caller applies to
+// And its column ORDER is invisible: created_at is never null, so a fallback
+// written the other way round silently answers "created" for everything while
+// reading, to a person, like the same rule.
+//
+// So both spellings live here together — the Go one a caller applies to
 // scanned values, the SQL one a caller embeds in an ORDER BY, a WHERE or a
-// projection — rather than in the module that first needed them.
+// projection. The frontend's copy is a declared mirror of SQL's column order,
+// held by TestTheDealBoardMeasuresIdleTheWayTheServerDoes
+// (backend/frontendidlebase_test.go).
 //
 // Stdlib-only and in kernel because the callers are three different modules
-// plus two compose subpackages, and a module never imports a sibling (ADR-0054
-// §3). Putting it in deals, which is where it was first spelled, would have
+// plus two compose subpackages, and a module never imports a sibling
+// (ADR-0054). Putting it in deals, the first module that needed it, would have
 // left projects reaching across that line.
 package idlebase
 

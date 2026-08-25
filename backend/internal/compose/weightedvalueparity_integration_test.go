@@ -8,9 +8,8 @@ package compose
 // Weighted value (formulas §6, AC-F1) is computed TWICE and the two are not
 // interchangeable. The report engine folds it into an SQL aggregate, because
 // deals-by-stage has no per-deal rows on the client to round; the account
-// roll-up computes it in Go over big.Int, because amount_minor is a
-// contract-unbounded bigint and a native multiply wraps before the ÷100 ever
-// runs. Neither can become the other.
+// roll-up computes it in Go over big.Int, because amount_minor may reach the
+// bigint bounds and a native multiply wraps before the ÷100 ever widens it. Neither can become the other.
 //
 // So the obligation is not one implementation — it is that the two ANSWER THE
 // SAME, and that they refuse the same input rather than one of them wrapping.
@@ -67,6 +66,19 @@ func TestTheTwoSpellingsOfWeightedValueAgree(t *testing.T) {
 		// two sides must agree about which way the last minor unit goes.
 		{"half of the largest amount, where the last unit is decided by rounding", math.MaxInt64, 50},
 		{"half of the smallest amount, the same decision mirrored", math.MinInt64, 50},
+		// The case that separates exact scaling from a numeric DIVISION, which
+		// computes to a selected scale and rounds there. The exact product is
+		// 4230000000000000016.45; a quotient this large is rendered at one
+		// decimal as …16.5, and round() then lifts it to …17 — a minor unit
+		// above the truth, on a figure a forecast puts in front of a buyer.
+		// Every case above has a quotient exact at one decimal, so this is the
+		// only one that can see the difference.
+		{"a quotient too large for a division's selected scale to hold two decimals", 9_000_000_000_000_000_035, 47},
+		{"the same quotient mirrored below zero", -9_000_000_000_000_000_035, 47},
+		// Its neighbour on the other side of the halfway point, so a scaling
+		// that rounded the wrong way ROUTINELY is caught too, not only one
+		// that double-rounds.
+		{"a quotient just past the halfway point at the same magnitude", 9_000_000_000_000_000_055, 47},
 	}
 
 	for _, tc := range cases {
@@ -103,8 +115,12 @@ func TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit(t *testing.T
 		weightedAmountMinorExpr)
 
 	const beyondTheColumn = 300
-	if _, err := weightedValue(math.MaxInt64, beyondTheColumn); err == nil {
-		t.Error("the Go spelling returned a weighted value that cannot fit int64 instead of refusing")
+	// errWeightedValueOutOfRange specifically, not any error: a domain guard
+	// added in front of the multiply would refuse this input too, and the test
+	// would stay green with the overflow check itself deleted.
+	if _, err := weightedValue(math.MaxInt64, beyondTheColumn); !errors.Is(err, errWeightedValueOutOfRange) {
+		t.Errorf("the Go spelling answered %v for a weighted value that cannot fit int64; expected its own "+
+			"out-of-range refusal, so what is proven is the arithmetic and not a guard in front of it", err)
 	}
 
 	var got int64

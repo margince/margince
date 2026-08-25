@@ -12,6 +12,7 @@ package compose
 // handler arrives with the transport slice.
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -134,11 +135,17 @@ func weightedValue(baseMinor int64, winProbability int) (int64, error) {
 	product := new(big.Int).Mul(big.NewInt(baseMinor), big.NewInt(int64(winProbability)))
 	rounded := bigDivRoundHalfAwayFromZero(product, big.NewInt(100))
 	if !rounded.IsInt64() {
-		return 0, fmt.Errorf("weighted pipeline value for a %d-minor-unit amount at %d%% exceeds the representable money range; correct the deal amount before retrying the rollup",
-			baseMinor, winProbability)
+		return 0, fmt.Errorf("%w: a %d-minor-unit amount at %d%%; correct the deal amount before retrying the rollup",
+			errWeightedValueOutOfRange, baseMinor, winProbability)
 	}
 	return rounded.Int64(), nil
 }
+
+// errWeightedValueOutOfRange marks the ARITHMETIC's own refusal, as distinct
+// from a caller rejecting an input before the multiply ever runs. A test that
+// accepted any error here would keep passing with the overflow check deleted,
+// as long as something else refused first.
+var errWeightedValueOutOfRange = errors.New("weighted pipeline value exceeds the representable money range")
 
 // convertToBase rounds amountMinor × rate half away from zero, in EXACT
 // decimal arithmetic over the rate's stored numeric digits (Int × 10^Exp)

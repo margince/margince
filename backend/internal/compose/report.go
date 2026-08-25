@@ -55,8 +55,17 @@ const (
 	// roll-up over it equals the sum of its own rows exactly. Shared by every
 	// spec that joins stage for win_probability, so the forecast report and any
 	// other per-stage weighted figure read this one expression. The multiply casts to
-	// numeric first — amount_minor is an unbounded bigint, and bigint × smallint
-	// overflows before the /100.0 below would otherwise widen it.
+	// numeric first — the contract puts no ceiling on amount_minor below the
+	// bigint bounds, and bigint × smallint overflows before the scaling below
+	// would otherwise widen it.
+	//
+	// It scales by ×0.01 rather than ÷100, and that is not a style choice.
+	// Numeric multiplication is EXACT — the result scale is the sum of the
+	// operands' — while numeric division computes to a selected scale and
+	// rounds there. A quotient large enough that the selected scale falls
+	// short of two decimals is therefore rounded TWICE: 9000000000000000035 at
+	// 47% is 4230000000000000016.45, which ÷100 renders as …16.5 and round()
+	// then lifts to …17, one minor unit above the exactly-rounded …16.
 	//
 	// The account roll-up computes the same figure in Go (weightedValue, in
 	// orgrollup.go), over converted per-deal amounts it holds in memory with no
@@ -67,7 +76,7 @@ const (
 	// TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit
 	// (weightedvalueparity_integration_test.go), which embed this constant so
 	// an edit here is what runs there.
-	weightedAmountMinorExpr = "round((t.amount_minor::numeric * s.win_probability) / 100.0)::bigint"
+	weightedAmountMinorExpr = "round((t.amount_minor::numeric * s.win_probability) * 0.01)::bigint"
 	// fieldWeightedAmountMinor is the API-facing measure name every spec that
 	// defines weightedAmountMinorExpr registers it under.
 	fieldWeightedAmountMinor = "weighted_amount_minor"

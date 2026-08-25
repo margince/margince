@@ -57,6 +57,7 @@ import {
   formatMoney,
   formatMoneyOrAbsent,
 } from "../format/format";
+import { idleSince } from "../format/idlebase";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -437,7 +438,7 @@ function dealCompany(
 }
 
 export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
-  const since = deal.last_activity_at ?? deal.created_at;
+  const since = idleSince(deal);
   return {
     id: deal.id,
     name: deal.name,
