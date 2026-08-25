@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   Merge,
   Sparkles,
+  Sun,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -94,6 +95,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.work",
     items: [
+      // The day's own surface, and the first row of the group it summarises:
+      // every other row here is one producer's queue, and this one is what a
+      // reader opens when the question is "what needs me?" rather than "show me
+      // the approvals". It leads the group for that reason — a summary placed
+      // under the things it summarises is a footnote.
+      { screen: "today", labelKey: "nav.today", icon: Sun },
       // The board, not a bullseye: this route opens a column per stage with the
       // deals standing in them, and `Target` drew a goal — which is what a quota
       // surface would be. A reader scanning five glyphs on a phone bar with no

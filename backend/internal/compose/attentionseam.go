@@ -22,6 +22,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -64,7 +65,7 @@ func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 type attentionTasks struct{ store *activities.Store }
 
 func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limit int) ([]attention.Task, error) {
-	kind := "task"
+	kind := activityKindTask
 	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{Kind: &kind, Limit: &limit})
 	if err != nil {
 		return nil, err
@@ -76,8 +77,9 @@ func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limi
 		}
 		// A task with no due date is still work somebody agreed to, but it is
 		// not work for TODAY, and a queue that promised today's list would be
-		// lying if it carried the undated backlog too.
-		if row.DueAt == nil || row.DueAt.After(until) {
+		// lying if it carried the undated backlog too. `until` is the end of
+		// the day, so anything not yet past it is still ahead of the reader.
+		if row.DueAt == nil || !deadline.Passed(row.DueAt, until) {
 			continue
 		}
 		due := *row.DueAt
@@ -100,19 +102,27 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 	return "(untitled task)"
 }
 
+// approvalStatusApproved is the decided status a receipt is read from. Spelled
+// once here because the receipt lane asks for it by name and a typo would
+// quietly return an empty lane rather than an error.
+const approvalStatusApproved = "approved"
+
 // attentionReceipts reads what ran without asking: approvals a system actor
 // decided, which is exactly the set a human never chose.
 type attentionReceipts struct{ svc *approvals.Service }
 
 func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
-	status := "approved"
+	status := approvalStatusApproved
 	rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
-		if row.DecidedAt == nil || row.DecidedAt.Before(since) {
+		// Inside the window, not before it: `since` is the receipt lane's own
+		// horizon, and the same authority answers "is this behind that" here as
+		// answers it for a task's due date.
+		if row.DecidedAt == nil || deadline.Passed(row.DecidedAt, since) {
 			continue
 		}
 		summary := ""

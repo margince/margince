@@ -9,6 +9,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,8 +64,12 @@ func approvalItem(approval crmcontracts.Approval) crmcontracts.AttentionItem {
 	return item
 }
 
-// taskItem renders one open task, resolving overdue server-side so the queue,
-// the record page and the badge cannot disagree about where today ends.
+// taskItem renders one open task.
+//
+// Overdue is resolved here rather than in the browser, through deadline.Passed
+// — the one place that decides whether a due moment is behind now.
+// Held by: TestOnlyOnePlaceDecidesWhetherSomethingIsLate
+// (backend/overdueboundary_test.go).
 func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
@@ -76,7 +81,7 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due
-		past := due.Before(asOf)
+		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
 	}
 	return item
