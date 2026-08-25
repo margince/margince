@@ -94,15 +94,9 @@ type Ctx = {
 // twelve rows to find the gap has lost the one thing the shape is for.
 function spineStops(view: Organization360, ctx: Ctx): Stop[] {
   const stops: Stop[] = [];
-  const meeting = view.health?.last_meeting_at ?? view.last_outbound_at;
-  if (meeting) {
-    stops.push({
-      key: "spoke",
-      tone: "past",
-      when: on(meeting, ctx),
-      title: ctx.t("co.spine.lastSpoke"),
-      detail: lastConversationSubject(view),
-    });
+  const spoke = lastExchange(view, ctx);
+  if (spoke) {
+    stops.push(spoke);
   }
   const waiting = silence(view, ctx);
   if (waiting) {
@@ -123,8 +117,29 @@ function spineStops(view: Organization360, ctx: Ctx): Stop[] {
 //
 // Never drawn on an account we heard from more recently than we wrote: that
 // is a conversation in progress, not a silence.
+// The instant the waiting is counted from: the last thing WE sent.
+//
+// Not the last meeting, which is a different question. An account we met in
+// June and wrote to in July has been waiting since July, and counting from
+// the meeting would report six weeks of silence that did not happen. The
+// meeting date is only the fallback, for an account whose outbound is
+// withheld or has none.
+//
+// One reading, shared by the stop that dates the thread's head and the gap
+// that measures from it — two copies let the thread say one date above a gap
+// counted from another.
+function silenceSince(view: Organization360): string | undefined {
+  return view.last_outbound_at ?? view.health?.last_meeting_at ?? undefined;
+}
+
+// Whether they have answered the last thing we sent.
+//
+// Compared against our own last outbound rather than against whatever
+// `silenceSince` fell back to: a reply that came BEFORE our latest message
+// does not answer it, and an account whose last word is ours is waiting on
+// them however long ago they last wrote.
 function silence(view: Organization360, ctx: Ctx): Stop | undefined {
-  const since = view.health?.last_meeting_at ?? view.last_outbound_at;
+  const since = silenceSince(view);
   if (!since || (view.last_inbound_at && view.last_inbound_at > since)) {
     return undefined;
   }
@@ -185,14 +200,47 @@ function on(at: string, ctx: Ctx): string {
   return formatDateAbbrev(at, ctx.locale, ctx.zone);
 }
 
-// The subject of the conversation the thread starts from, so the reader can
-// tell WHICH call it was without opening the history.
-function lastConversationSubject(view: Organization360): ReactNode {
-  const logged = view.activities?.data ?? [];
-  const spoken = logged.find(
-    (entry) => entry.kind === "meeting" || entry.kind === "call",
+// The kinds that are an EXCHANGE with the account. The timeline section is
+// unfiltered — it carries tasks from the same table — and a task is something
+// we wrote to ourselves rather than something that was said.
+const EXCHANGE_KINDS: ReadonlySet<string> = new Set([
+  "email",
+  "call",
+  "meeting",
+  "note",
+  "message",
+]);
+
+// The last thing that was actually SAID, and when.
+//
+// Dated off the exchange itself rather than off `health.last_meeting_at`,
+// because those are two different facts and the thread states one of them: a
+// meeting date beside an email's subject reads as a meeting about that
+// subject. Falls back to the meeting/outbound date only when the timeline is
+// withheld or empty — a date with no subject is still the start of the
+// thread, and losing it would leave the gap below measuring from nothing.
+function lastExchange(view: Organization360, ctx: Ctx): Stop | undefined {
+  const said = (view.activities?.data ?? []).find(
+    (entry) =>
+      EXCHANGE_KINDS.has(entry.kind) &&
+      Boolean(entry.subject) &&
+      // Already happened, as of the read the rest of the card describes: an
+      // `occurred_at DESC` list sorts a meeting booked for next week to the
+      // top, and it has not been said yet.
+      Boolean(entry.occurred_at) &&
+      (entry.occurred_at as string) <= view.as_of,
   );
-  return spoken?.subject ?? undefined;
+  const at = said?.occurred_at ?? silenceSince(view);
+  if (!at) {
+    return undefined;
+  }
+  return {
+    key: "spoke",
+    tone: "past",
+    when: on(at, ctx),
+    title: ctx.t("co.spine.lastSpoke"),
+    detail: said?.subject ?? undefined,
+  };
 }
 
 // What is riding on the close date. An unpriced pipeline says so rather than

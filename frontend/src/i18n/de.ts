@@ -2234,7 +2234,6 @@ export const de = {
   "today.route.ofThoseShown": "von den gezeigten Kontakten",
   "today.tile.meeting": "Nächster Termin",
   "today.tile.route": "Bester Weg hinein",
-  "today.tile.lastInteraction": "Letzter echter Austausch",
   "today.exchange.subjectWhen": "{subject} · {when}",
   "today.tile.risk": "Risiko",
   "today.tile.signal": "Gut zu wissen",

@@ -1276,6 +1276,15 @@
   color: var(--textContent);
   overflow-wrap: anywhere;
 }
+/* The route reading is two NAMES and the separator between them, so it wraps as
+   one run rather than breaking a name off its link. `inline` (not flex) because
+   the pair sits inside a `<dd>` that already wraps its text, and a flex box
+   there would stop the arrow ever falling to the second line with the name it
+   points at. */
+.today-route {
+  display: inline;
+}
+
 /* What the reading could not see before making its claim, trailing the answer
    it qualifies. */
 .today-reading-note {

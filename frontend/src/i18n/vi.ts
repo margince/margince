@@ -2222,7 +2222,6 @@ export const vi = {
   "today.route.ofThoseShown": "trong số liên hệ đang hiển thị",
   "today.tile.meeting": "Cuộc họp kế tiếp",
   "today.tile.route": "Đường tiếp cận tốt nhất",
-  "today.tile.lastInteraction": "Trao đổi gần nhất",
   "today.exchange.subjectWhen": "{subject} · {when}",
   "today.tile.risk": "Rủi ro",
   "today.tile.signal": "Đáng lưu ý",

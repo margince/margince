@@ -2258,7 +2258,6 @@ export const en = {
   "today.route.ofThoseShown": "of the contacts shown",
   "today.tile.meeting": "Next meeting",
   "today.tile.route": "Best route",
-  "today.tile.lastInteraction": "Last exchange",
   "today.exchange.subjectWhen": "{subject} · {when}",
   "today.tile.risk": "Risk",
   "today.tile.signal": "Worth knowing",

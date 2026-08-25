@@ -174,3 +174,142 @@ describe("what the thread says is coming", () => {
     expect(screen.queryByText(/€0/)).toBeNull();
   });
 });
+
+// What the thread's head says, and what it refuses to say it about.
+//
+// These rules moved here with the fact itself: the day's brief used to carry a
+// "Last exchange" reading beside a thread that already dated the same
+// conversation, so the card printed one exchange twice. The thread kept the
+// fact and the brief lost the reading — and these are the three ways picking
+// the wrong row goes wrong.
+describe("the last thing that was actually said", () => {
+  // The 360 serves activities newest-first (ORDER BY occurred_at DESC), so the
+  // head of the list is the most recent and the thread makes no ordering
+  // decision of its own.
+  function activities(
+    rows: readonly { id: string; kind: string; subject: string; at: string }[],
+  ) {
+    return {
+      data: rows.map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        is_done: false,
+        subject: row.subject,
+        occurred_at: row.at,
+        source: "manual",
+        captured_by: "human:test",
+        created_at: row.at,
+        updated_at: row.at,
+      })),
+      page,
+    };
+  }
+
+  it("names the newest exchange, not an older one", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "a-1", kind: "email", subject: "Where we landed", at: SPOKE },
+          {
+            id: "a-2",
+            kind: "email",
+            subject: "An older thread",
+            at: "2026-07-01T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("Where we landed")).toBeTruthy();
+    expect(screen.queryByText("An older thread")).toBeNull();
+  });
+
+  // The timeline is unfiltered: tasks live in the same table and sort by the
+  // same column. A task is something we wrote to ourselves, not something that
+  // was said to the account.
+  it("skips a task when picking what was last said", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "a-task",
+            kind: "task",
+            subject: "Chase the signature",
+            at: "2026-08-20T09:00:00Z",
+          },
+          { id: "a-mail", kind: "email", subject: "About capacity", at: SPOKE },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("About capacity")).toBeTruthy();
+    expect(screen.queryByText("Chase the signature")).toBeNull();
+  });
+
+  // `occurred_at DESC` sorts a meeting booked for next week to the head of the
+  // list. It has not been said yet, and dating the thread's head from it would
+  // put the account's last word in the future.
+  it("skips an activity that has not happened yet", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "a-future",
+            kind: "meeting",
+            subject: "Executive alignment",
+            at: "2026-09-20T09:00:00Z",
+          },
+          { id: "a-past", kind: "email", subject: "About scope", at: SPOKE },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("About scope")).toBeTruthy();
+    expect(screen.queryByText("Executive alignment")).toBeNull();
+  });
+});
+
+// The gap is counted from the last thing WE sent, and from nothing else.
+//
+// An account met in June, written to in July, whose only reply came in
+// between: the meeting date would report six weeks of silence that did not
+// happen, and comparing the reply against the MEETING would report no silence
+// at all on an account that has been waiting a month.
+describe("what the waiting is measured from", () => {
+  const MET = "2026-06-26T09:00:00Z";
+  const THEY_WROTE = "2026-07-26T09:00:00Z";
+  const WE_WROTE = "2026-07-29T09:00:00Z";
+
+  it("counts from our last message, not from the older meeting", () => {
+    draw(
+      view({
+        last_outbound_at: WE_WROTE,
+        last_inbound_at: THEY_WROTE,
+        health: { last_meeting_at: MET, single_threaded: false },
+      }),
+    );
+
+    // 29 July to 25 August, not 26 June to 25 August.
+    expect(screen.getByText("27 days")).toBeTruthy();
+    expect(screen.queryByText("60 days")).toBeNull();
+    // They answered once, so this is a thread that stalled rather than one
+    // that never started.
+    expect(screen.getByText("Silence since then")).toBeTruthy();
+  });
+
+  it("draws no gap once they have answered our latest message", () => {
+    draw(
+      view({
+        last_outbound_at: MET,
+        last_inbound_at: WE_WROTE,
+        health: { last_meeting_at: MET },
+      }),
+    );
+
+    expect(screen.queryByText("Silence since then")).toBeNull();
+    expect(screen.queryByText("They have never written back")).toBeNull();
+  });
+});
