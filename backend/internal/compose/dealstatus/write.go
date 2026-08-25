@@ -37,7 +37,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	out := crmcontracts.DealStatusCard{
 		DealId:      f.deal.Id,
 		GeneratedAt: f.now,
-		GeneratedBy: crmcontracts.WrittenByDeterministic,
+		GeneratedBy: crmcontracts.Deterministic,
 		Story:       crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
 	}
 	if blocker := blockerLines(f); len(blocker) > 0 {
@@ -144,7 +144,7 @@ func foldWritten(
 	floor crmcontracts.DealStatusCard, w WrittenStatus, f facts, mv crmcontracts.DealStatusCardMove,
 ) crmcontracts.DealStatusCard {
 	out := floor
-	out.GeneratedBy = crmcontracts.WrittenByModel
+	out.GeneratedBy = crmcontracts.Model
 	out.Story = crmcontracts.DealStatusCardSection{Sentences: wire(w.Story, f)}
 	out.Blocker = optionalSection(w.Blocker, f)
 	out.Buyer = optionalSection(w.Buyer, f)

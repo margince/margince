@@ -75,7 +75,7 @@ func DossierRequest(in Input, lang string) model.Request {
 func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([]Section, crmcontracts.WrittenBy, bool) {
 	floor := keepGrounded(Deterministic(in), in)
 	if lane == nil {
-		return floor, crmcontracts.WrittenByDeterministic, false
+		return floor, crmcontracts.Deterministic, false
 	}
 	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
@@ -89,9 +89,9 @@ func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([
 		// Without it one transient outage replaces a written dossier with the
 		// floor under the CURRENT fingerprint — which then reads as a cache
 		// hit forever, until a fact moves or a human asks for a rewrite.
-		return floor, crmcontracts.WrittenByDeterministic, true
+		return floor, crmcontracts.Deterministic, true
 	}
-	return written, crmcontracts.WrittenByModel, false
+	return written, crmcontracts.Model, false
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {

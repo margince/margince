@@ -116,7 +116,7 @@ func Answer(
 	}
 	deterministic := deterministicAnswer(question, orgID, in)
 	if lane == nil {
-		return deterministic, crmcontracts.WrittenByDeterministic, nil
+		return deterministic, crmcontracts.Deterministic, nil
 	}
 	written, modelErr := answerWithModel(ctx, lane, question, orgID, in, lang)
 	if modelErr != nil {
@@ -125,9 +125,9 @@ func Answer(
 		// the answer down with it, and generated_by reports which the reader
 		// got.
 		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
-		return deterministic, crmcontracts.WrittenByDeterministic, nil
+		return deterministic, crmcontracts.Deterministic, nil
 	}
-	return written, crmcontracts.WrittenByModel, nil
+	return written, crmcontracts.Model, nil
 }
 
 func answerWithModel(

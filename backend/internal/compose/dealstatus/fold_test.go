@@ -146,11 +146,11 @@ func TestTheModelWritesTheReasonAndNeverTheVerb(t *testing.T) {
 func TestAFoldedCardSaysTheModelWroteIt(t *testing.T) {
 	f, id := factsCitingOneRow(t)
 	floor := composeDeterministic(f, moveNone())
-	if floor.GeneratedBy != crmcontracts.WrittenByDeterministic {
+	if floor.GeneratedBy != crmcontracts.Deterministic {
 		t.Fatalf("the floor says %q wrote it", floor.GeneratedBy)
 	}
 	written := WrittenStatus{Story: []WrittenLine{{Text: "It went out.", Evidence: []string{id}}}}
-	if got := foldWritten(floor, written, f, moveNone()).GeneratedBy; got != crmcontracts.WrittenByModel {
+	if got := foldWritten(floor, written, f, moveNone()).GeneratedBy; got != crmcontracts.Model {
 		t.Fatalf("a model-written card says %q wrote it", got)
 	}
 }

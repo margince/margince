@@ -77,7 +77,7 @@ func (s *Service) Run(ctx context.Context, personID ids.PersonID) (crmcontracts.
 
 	out := crmcontracts.PersonResearchRun{
 		PersonId:    openapi_types.UUID(personID.UUID),
-		State:       crmcontracts.PersonResearchRunStateNotConnected,
+		State:       crmcontracts.NotConnected,
 		GeneratedAt: s.now().UTC(),
 		Claims:      []crmcontracts.PersonResearchClaim{},
 	}
@@ -95,7 +95,7 @@ func (s *Service) Run(ctx context.Context, personID ids.PersonID) (crmcontracts.
 		}
 		return crmcontracts.PersonResearchRun{}, fmt.Errorf("run person research: %w", err)
 	}
-	out.State = crmcontracts.PersonResearchRunStateReady
+	out.State = crmcontracts.Ready
 	out.SourcesRead = ptr(result.SourcesRead)
 	out.Claims = wireClaims(result.Claims)
 	out.ProviderName = ptr(s.provider.ProviderName())
