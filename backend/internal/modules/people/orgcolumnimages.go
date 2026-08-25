@@ -79,19 +79,3 @@ func emptyColdStartColumnImages() map[string]any {
 		"size_band":            nil,
 	}
 }
-
-// changedColumnsOnly narrows the two images to the columns that actually moved.
-// A field-history projection reads every key in the pair, so carrying an
-// untouched column through would publish "industry: Automotive → Automotive"
-// as a change on a run that only filled the legal name.
-func changedColumnsOnly(before, after map[string]any) (map[string]any, map[string]any) {
-	b, a := map[string]any{}, map[string]any{}
-	for column, afterValue := range after {
-		if before[column] == afterValue {
-			continue
-		}
-		b[column] = before[column]
-		a[column] = afterValue
-	}
-	return b, a
-}

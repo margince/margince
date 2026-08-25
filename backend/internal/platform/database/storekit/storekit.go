@@ -423,11 +423,24 @@ func JSONArg(m map[string]any) any {
 //
 //craft:ignore naked-any marshals the audit seam's schemaless before/after images (see Audit)
 func marshalOrNil(v any) ([]byte, error) {
-	if v == nil || isNilValue(v) {
+	if AbsentImage(v) {
 		return nil, nil
 	}
 	return json.Marshal(v)
 }
+
+// AbsentImage reports whether an audit image says nothing — the one spelling of
+// the question, because three readers ask it and a second spelling would let
+// them disagree about the same value. It answers what the COLUMN will hold: an
+// image this is true of reaches audit_log as SQL NULL.
+//
+// Both halves are load-bearing. An untyped nil is the obvious absence; a typed
+// one is the dangerous absence, because a caller that builds its image in a
+// map[string]any and leaves it nil hands this an interface holding a typed nil,
+// which `v == nil` reads as present.
+//
+//craft:ignore naked-any the same audit-seam value marshalOrNil renders
+func AbsentImage(v any) bool { return v == nil || isNilValue(v) }
 
 // isNilValue reports whether v carries a typed nil of a kind that can be one.
 // Kinds that cannot be are answered false without inspecting their contents,
