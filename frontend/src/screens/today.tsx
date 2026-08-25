@@ -72,6 +72,16 @@ function leadLine(
       count: formatNumber(day.counts.planned, locale),
     });
   }
+  // Before "clear", because the briefing lane is on this page: a line reading
+  // "your day is clear" above two items the night picked out is the one thing
+  // this line exists to prevent. It sits below decisions and planned work,
+  // which are things that wait on the reader, where a briefing item only
+  // suggests where to start.
+  if (day.counts.this_morning > 0) {
+    return t("day.lead.morningOnly", {
+      count: formatNumber(day.counts.this_morning, locale),
+    });
+  }
   if (day.done_for_you && day.done_for_you.length > 0) {
     return t("day.lead.ranOvernight");
   }
@@ -278,21 +288,39 @@ function MorningLane({
   total: number;
 }>) {
   const t = useT();
-  const nowMs = useNow();
-  const brief = useMorningBrief();
-  const deals = useHomeDeals();
-  const mark = useBriefItemMark();
-  // The feed decides which entries are in the lane and in what order; the
-  // brief's own read supplies each one's content. An id the brief has not
-  // caught up with is dropped rather than drawn empty — the two reads settle
-  // independently, and half a card is worse than one card fewer.
-  const queued = (brief.data?.items ?? []).filter((item) =>
-    items.some((row) => row.id === item.id),
-  );
-  const ordered = items.flatMap((row) => {
-    const found = queued.find((item) => item.id === row.id);
-    return found ? [found] : [];
-  });
+  // Withheld or empty is answered from the FEED alone, before the brief and the
+  // deals reads are mounted at all. Those two exist to draw cards, so asking for
+  // them when the feed has already said there are none is two requests for a
+  // panel that will show a sentence — and on a withheld lane one of them is a
+  // 403 the reader was never going to see the answer to.
+  if (withheld) {
+    return (
+      <MorningPanel total={total}>
+        <PanelBody>
+          <EmptyState>{t("day.lane.withheld")}</EmptyState>
+        </PanelBody>
+      </MorningPanel>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <MorningPanel total={total}>
+        <PanelBody>
+          <EmptyState>{t("day.thisMorning.empty")}</EmptyState>
+        </PanelBody>
+      </MorningPanel>
+    );
+  }
+  return <MorningCards items={items} total={total} />;
+}
+
+// The lane's chrome, shared by the three readings so the heading, the icon and
+// the badge cannot come to differ between them.
+function MorningPanel({
+  total,
+  children,
+}: Readonly<{ total: number; children: React.ReactNode }>) {
+  const t = useT();
   return (
     <Panel
       title={
@@ -303,28 +331,90 @@ function MorningLane({
       }
       titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
     >
-      {withheld ? (
+      {children}
+    </Panel>
+  );
+}
+
+// The lane with entries in it: the feed's ids joined to the brief's own items.
+function MorningCards({
+  items,
+  total,
+}: Readonly<{ items: readonly AttentionItem[]; total: number }>) {
+  const t = useT();
+  // Pinned rather than ticking: nothing this lane DRAWS depends on the clock,
+  // and the instant is read only after a click, to work out when a set-aside
+  // item comes back. A one-second interval here would re-render every card on
+  // the lane sixty times a minute to change nothing.
+  const nowMs = useNow(0);
+  const brief = useMorningBrief();
+  const deals = useHomeDeals();
+  const mark = useBriefItemMark();
+  // The feed decides which entries are in the lane and in what order; the
+  // brief's own read supplies each one's content. An id the brief has not
+  // caught up with is dropped rather than drawn empty — half a card is worse
+  // than one card fewer.
+  //
+  // An item the brief already reports as answered leaves immediately, without
+  // waiting for the feed to agree. The mark patches the brief cache straight
+  // away and the feed catches up on its own refetch, so trusting the feed alone
+  // would leave a just-answered card sitting in a lane whose whole rule is that
+  // it holds only unanswered work — visibly settled, for as long as the network
+  // takes.
+  const ordered = items.flatMap((row) => {
+    const found = (brief.data?.items ?? []).find((item) => item.id === row.id);
+    return found && found.state === "new" ? [found] : [];
+  });
+  // Named by the feed but not yet drawable — which is not the same as answered.
+  // An item the reader just answered is legitimately gone from the lane and the
+  // quiet plate is the honest thing to show once the last one goes; an item the
+  // brief has simply not delivered is still coming.
+  const undrawable = items.filter(
+    (row) => !(brief.data?.items ?? []).some((item) => item.id === row.id),
+  );
+  if (undrawable.length > 0 && ordered.length === 0) {
+    // The feed named entries this lane cannot draw yet. That is NOT a quiet
+    // morning, and saying so is the whole difference: the two reads settle
+    // independently, so a lane that showed the quiet plate here would tell a
+    // rep the night found nothing on a morning it found work.
+    return (
+      <MorningPanel total={total}>
         <PanelBody>
-          <EmptyState>{t("day.lane.withheld")}</EmptyState>
+          <SurfaceState
+            state={brief.isError ? "failed" : "loading"}
+            loadingLabel={t("day.loading")}
+            emptyLabel={t("day.thisMorning.empty")}
+            detail={{ onRetry: () => void brief.refetch() }}
+          >
+            {null}
+          </SurfaceState>
         </PanelBody>
-      ) : ordered.length === 0 ? (
+      </MorningPanel>
+    );
+  }
+  if (ordered.length === 0) {
+    return (
+      <MorningPanel total={total}>
         <PanelBody>
           <EmptyState>{t("day.thisMorning.empty")}</EmptyState>
         </PanelBody>
-      ) : (
-        <PanelBody className="today-morning-list">
-          {ordered.map((item) => (
-            <BriefQueueItem
-              key={item.id}
-              item={item}
-              deals={deals.data ?? []}
-              nowMs={nowMs}
-              mark={mark}
-            />
-          ))}
-        </PanelBody>
-      )}
-    </Panel>
+      </MorningPanel>
+    );
+  }
+  return (
+    <MorningPanel total={total}>
+      <PanelBody className="today-morning-list">
+        {ordered.map((item) => (
+          <BriefQueueItem
+            key={item.id}
+            item={item}
+            deals={deals.data ?? []}
+            nowMs={nowMs}
+            mark={mark}
+          />
+        ))}
+      </PanelBody>
+    </MorningPanel>
   );
 }
 

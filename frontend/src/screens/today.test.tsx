@@ -455,4 +455,151 @@ describe("what the night left on the worklist", () => {
       screen.queryByText(/found nothing worth your first hour/),
     ).toBeNull();
   });
+  // Caught in the browser, not by a test: the lead line was written before this
+  // lane existed, so it read "Your day is clear" directly above two items the
+  // night had picked out. A summary that contradicts the page under it is worse
+  // than no summary, because a reader who reads only the line believes it.
+  it("never calls a day clear when the night left something on it", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-1",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-1" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      {
+        id: "run-1",
+        generated_at: "2026-08-25T05:02:00Z",
+        as_of: "2026-08-25T05:02:00Z",
+        local_day: "2026-08-25",
+        candidate_count: 1,
+        items: [
+          {
+            id: "bi-1",
+            deal_id: "deal-1",
+            rank: 1,
+            composite: 0.72,
+            feature_vector: {
+              winnability: 0.8,
+              revenue: 0.61,
+              timing: 0.9,
+              momentum: 0.55,
+              warmth: 0.74,
+            },
+            evidence_ids: ["ev-1"],
+            state: "new",
+          },
+        ],
+      },
+    );
+    renderToday();
+
+    await screen.findByTestId("brief-item-bi-1");
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+    expect(screen.getByText(/the night picked out/)).toBeTruthy();
+  });
+  // Found in the browser, not by a test. The lane intersects the feed's item
+  // ids with the brief's own items, and the two reads settle independently — so
+  // a feed naming two entries against a brief that has not caught up produced an
+  // EMPTY intersection, and the lane drew "the night found nothing" over a
+  // morning that had work in it. The reader was told the opposite of the truth.
+  it("does not call a morning quiet while the items it names are still arriving", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-9",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-9" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      // The brief read answers a run that does not carry the id the feed named.
+      {
+        id: "run-old",
+        generated_at: "2026-08-24T05:02:00Z",
+        as_of: "2026-08-24T05:02:00Z",
+        local_day: "2026-08-24",
+        candidate_count: 0,
+        items: [],
+      },
+    );
+    renderToday();
+
+    await screen.findByText("This morning");
+    expect(
+      screen.queryByText(/found nothing worth your first hour/),
+    ).toBeNull();
+  });
+  // The lane holds unanswered work, and the two reads settle at different
+  // speeds: a mark patches the brief cache at once while the feed catches up on
+  // its own refetch. Trusting the feed alone left a card the reader had just
+  // answered sitting in the lane, drawn in its settled state, for as long as the
+  // network took.
+  it("drops an item the brief already reports as answered", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-7",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-7" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      {
+        id: "run-1",
+        generated_at: "2026-08-25T05:02:00Z",
+        as_of: "2026-08-25T05:02:00Z",
+        local_day: "2026-08-25",
+        candidate_count: 1,
+        items: [
+          {
+            id: "bi-7",
+            deal_id: "deal-7",
+            rank: 1,
+            composite: 0.72,
+            feature_vector: {
+              winnability: 0.8,
+              revenue: 0.61,
+              timing: 0.9,
+              momentum: 0.55,
+              warmth: 0.74,
+            },
+            evidence_ids: ["ev-1"],
+            // Answered, though the feed has not dropped it yet.
+            state: "acted",
+            state_at: "2026-08-25T09:01:00Z",
+          },
+        ],
+      },
+    );
+    renderToday();
+
+    await screen.findByText("This morning");
+    expect(screen.queryByTestId("brief-item-bi-7")).toBeNull();
+    // And the lane says the quiet thing rather than the still-arriving thing:
+    // an answered item is legitimately gone, not late.
+    expect(
+      await screen.findByText(/found nothing worth your first hour/),
+    ).toBeTruthy();
+  });
 });

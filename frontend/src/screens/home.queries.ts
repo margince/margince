@@ -25,6 +25,13 @@ export type Deal = components["schemas"]["Deal"];
 export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
   return useQuery({
     queryKey: ["brief"],
+    // On the same schedule as the attention feed, because the Worklist's
+    // briefing lane is BOTH of them: the feed says which entries are still
+    // waiting and this says what each one is. Refreshing one without the other
+    // leaves the lane intersecting a fresh list of ids against a stale set of
+    // items, and an intersection that finds nothing draws the quiet-morning
+    // plate over a morning that has work in it.
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<MorningBrief | null> => {
       const { data, error, response } = await api.GET("/brief");
       // No run yet is not a failure: it is a page that offers to make one.
