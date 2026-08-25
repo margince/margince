@@ -129,6 +129,7 @@ readonly INTEGRATION_TITLE="main is red: the integration lane fails on the tip"
 readonly FRONTEND_TITLE="main is red: the frontend lane fails on the tip"
 readonly UAT_TITLE="main is red: the screen-acceptance UAT fails on the tip"
 readonly SONAR_TITLE="main's SonarCloud analysis was not published"
+readonly DCO_TITLE="main carries a commit with no Signed-off-by"
 readonly SUSPECTS="- \`deadbeef\` Some Author — the commit that did it"
 
 # What the cases below actually exercised, recorded as they run rather than
@@ -236,6 +237,15 @@ expect_health "a failed publish of main's analysis is filed with its suspect ran
 expect_health "a failed publish with no range still files" \
 	MAIN_SONAR_RESULT "$SONAR_TITLE" ""
 
+# The provenance arm. It exists because the PR-side `dco` job checks the
+# BRANCH's commits and main takes the squash, so an unsigned commit on main is
+# invisible from main once the branch is gone.
+expect_health "an unsigned commit on main is filed with its suspect range" \
+	MAIN_DCO_RESULT "$DCO_TITLE" "$SUSPECTS"
+
+expect_health "an unsigned commit with no range still files" \
+	MAIN_DCO_RESULT "$DCO_TITLE" ""
+
 # --- the census -----------------------------------------------------------------
 #
 # Derived from the reporter, not from a list here. Every MAIN_*_RESULT arm it
@@ -287,6 +297,51 @@ for lane in $lanes; do
 		failures=$((failures + 1))
 		;;
 	esac
+done
+
+# --- the other half of the same invariant ---------------------------------------
+#
+# An arm in the reporter is only reachable if main-health both RUNS the report
+# job for that lane and passes the lane's result in. Those are two lines in a
+# different file, and the reporter's own test cannot see them — which is how a
+# `dco` lane was added with its arm, its env line and both cases, and still
+# filed nothing: the report job's `if:` did not select it, so a DCO-only failure
+# skipped the job entirely and the arm was never reached.
+#
+# One invariant spelled on both sides of a wire is one item. So the census asks
+# the workflow the same question it asks the reporter, and fails in the
+# direction that was missed rather than only the one that was covered.
+health="$root/.github/workflows/main-health.yml"
+# The REPORT JOB's own block, not the whole file. Searching the file would let
+# any other job's matching line stand in for the one that was removed — the
+# gate would go on passing while the job it is about lost the wiring, which is
+# the same "matched something, therefore fine" mistake it exists to catch.
+#
+# The slice runs from the job key at two-space indent to the next one; an empty
+# slice means the job was renamed or removed, and that fails rather than
+# silently checking nothing.
+#
+# The boundary matches every id GitHub Actions accepts — uppercase and digits
+# included — because a boundary NARROWER than its subject is how this check
+# would reacquire the hole it was written to close: a job the pattern does not
+# recognise never ends the slice, so the slice swallows it and that job's wiring
+# can satisfy the census on the report job's behalf.
+report_job="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$health")"
+if [ -z "$report_job" ]; then
+	echo "FAIL: no 'report' job found in main-health.yml — the wiring checks below would pass by scanning nothing"
+	failures=$((failures + 1))
+fi
+for lane in $lanes; do
+	# MAIN_UAT_RESULT -> uat
+	job="$(printf '%s' "$lane" | sed -E 's/^MAIN_(.+)_RESULT$/\1/' | tr '[:upper:]' '[:lower:]')"
+	if ! printf '%s' "$report_job" | grep -qE "needs\.${job}\.result == 'failure'"; then
+		echo "FAIL: $lane has a reporter arm, but main-health's report job does not run for a failing '${job}' — the arm is unreachable"
+		failures=$((failures + 1))
+	fi
+	if ! printf '%s' "$report_job" | grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}"; then
+		echo "FAIL: $lane has a reporter arm, but main-health never passes needs.${job}.result in as $lane"
+		failures=$((failures + 1))
+	fi
 done
 
 if [ "$failures" -ne 0 ]; then
