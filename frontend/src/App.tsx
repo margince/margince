@@ -820,6 +820,15 @@ function AuthedApp({
   // splash after the first would read as two loads of one page. Holding here
   // is what lets every screen below take the zone as a settled value — paint
   // first and the day headings on an open timeline renumber under the reader.
+  //
+  // What makes holding here safe is that the wait is BOUNDED: every request
+  // through api/client.ts carries a deadline, so a read that opens and never
+  // answers becomes a rejection rather than an eternal `isPending`. Without
+  // one, this splash is a screen with no error, no retry and no explanation
+  // that only a reload leaves — and it covers routes that need neither read,
+  // onboarding and OAuth consent among them. A read that FAILS falls through
+  // to the shell, where each screen renders its own error state and its own
+  // retry; the splash is for waiting, not for having waited.
   if (company.isPending || recordZone.pending) {
     return (
       <RaillessFrame>

@@ -71,6 +71,61 @@ function literalAttributeValue(initializer: ts.Node): string | undefined {
   return undefined;
 }
 
+// A colour written out rather than read from a token: any hex form CSS accepts
+// (#rgb, #rgba, #rrggbb, #rrggbbaa) or a raw colour function.
+const LITERAL_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
+
+// The source the colour gate actually reads: TypeScript with its comments
+// blanked out. A comment is prose, and prose carries issue references — `#2463`
+// is four hex digits, which is exactly the `#rgba` short form, so a gate that
+// reads comments names an innocent line for the right shape in the wrong place.
+//
+// Which spans are comments comes from the parser rather than from a pattern,
+// because a comment opener is not something a pattern can settle: `//` sits
+// inside every URL and `/*` inside path strings. Blanked rather than deleted,
+// keeping the newlines, because the finding carries a line number.
+//
+// The walk descends to the TOKENS, and that is what reaches a JSX expression
+// comment: `{/* … */}` parses as a JsxExpression with no expression, and its
+// text is leading trivia of the closing brace — a walk over declaration
+// positions alone never asks that token anything.
+//
+// A second spelling of format/zone-by-purpose.test.ts's `code()`, deliberately:
+// that one lives inside a test file, and importing it here would run that
+// file's whole suite as a side effect of the import.
+function scannableSource(file: string, text: string): string {
+  if (!/\.tsx?$/.test(file)) {
+    return text;
+  }
+  const parsed = ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    // Parent pointers, so the walk below can ask a node for its child tokens.
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const chars = text.split("");
+  const blank = ({ pos, end }: ts.CommentRange): void => {
+    for (let index = pos; index < end; index++) {
+      if (chars[index] !== "\n") {
+        chars[index] = " ";
+      }
+    }
+  };
+  // Leading AND trailing: the parser calls a comment that shares a line with
+  // the code before it trailing, and reports it under that name only.
+  const strip = (node: ts.Node): void => {
+    ts.getLeadingCommentRanges(text, node.pos)?.forEach(blank);
+    ts.getTrailingCommentRanges(text, node.pos)?.forEach(blank);
+    for (const child of node.getChildren(parsed)) {
+      strip(child);
+    }
+  };
+  strip(parsed);
+  return chars.join("");
+}
+
 describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   it("uses only the three §2 type families", () => {
     for (const file of files) {
@@ -427,7 +482,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   });
 
   it("keeps literal colours in tokens.css only — everything else reads a token", () => {
-    const literalColour = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
     for (const file of files) {
       // tokens.css is where literals live (tests pin them); index.html's
       // meta theme-color cannot read a CSS custom property.
@@ -446,14 +500,37 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       ) {
         continue;
       }
-      const text = readFileSync(file, "utf8");
+      const text = scannableSource(file, readFileSync(file, "utf8"));
       for (const [index, line] of text.split("\n").entries()) {
         expect(
-          literalColour.test(line),
+          LITERAL_COLOUR.test(line),
           `${relative(frontendRoot, file)}:${index + 1} hard-codes a colour — read it from a token`,
         ).toBe(false);
       }
     }
+  });
+
+  it("reads a colour beside a comment, and not an issue reference inside one", () => {
+    const sample = [
+      'import "./x.css";',
+      "// the app-wide version lands with #2455",
+      "/* and #2456 with it */",
+      "export function Swatch() {",
+      "  return (",
+      '    <div className="t-small">',
+      "      {/* ... see #2463 for the app-wide version. */}",
+      '      <span style={{ color: "#ff0000" }} />',
+      "    </div>",
+      "  );",
+      "}",
+    ].join("\n");
+    const flagged = scannableSource("sample.tsx", sample)
+      .split("\n")
+      .flatMap((line, index) => (LITERAL_COLOUR.test(line) ? [index + 1] : []));
+    // Only the style attribute. Every other `#NNNN` above is an issue number
+    // sitting in a comment — and the gate must still SEE the literal on the
+    // line under the JSX one, or it has bought its silence by going blind.
+    expect(flagged).toEqual([8]);
   });
 });
 

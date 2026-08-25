@@ -100,8 +100,8 @@ export {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 // Select and its option type, because a unit offering a CLOSED choice has no
-// other way to: check-native-controls refuses a bare <select> in
-// extensions/*/frontend exactly as it does in core, and a unit left with only
+// other way to: design-system/native-controls.test.ts refuses a bare <select>
+// in extensions/*/frontend exactly as it does in core, and a unit left with only
 // TextInput has to accept free text where the contract declares an enum.
 export { Select, type SelectOption } from "../design-system/select";
 // TokenInput, because a unit collecting a LIST of short values has otherwise to

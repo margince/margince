@@ -77,7 +77,7 @@ export const SourcedAndAlerting: Story = {
 export const FoldsWithoutAnOrphan: Story = {
   parameters: { viewport: { defaultViewport: "tablet" } },
   render: () => (
-    <div style={{ display: "grid", gap: 24 }}>
+    <div style={{ display: "grid", gap: "var(--space-6)" }}>
       <StatStrip>
         <StatCard label="The ask" value="€95k" />
         <StatCard label="The date" value="14 Mar" />
