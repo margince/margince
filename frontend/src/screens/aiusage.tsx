@@ -62,9 +62,10 @@ function adjacentMonth(month: Month | null, offset: number): Month {
   };
 }
 
-// "This month" is the reader's month, not UTC's. On the last evening of a month
-// east of UTC the two disagree, and the page then refuses the Next arrow for a
-// month the reader has already left.
+// "This month" is the reader's month, not UTC's. In the first hours of a month
+// east of UTC the two disagree — the reader has turned the page and UTC has not
+// — and the page then refuses the Next arrow for a month they have already
+// left.
 function isCurrentMonth(month: Month | null): boolean {
   if (month === null) return true;
   return month.from.slice(0, 7) >= calendarMonth(new Date(), viewerZone());

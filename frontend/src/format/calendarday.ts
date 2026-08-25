@@ -64,10 +64,10 @@ export function calendarDay(at: Date, zone: string): string {
 // Derived from calendarDay rather than assembled again, so the two granularities
 // cannot answer about different months. It exists because the day rule was
 // spelled at month granularity by hand — `new Date().toISOString().slice(0, 7)`
-// — and a census looking for the day-length slice could not see it: for a
-// reader east of UTC late on the last evening of a month, that answers about
-// UTC's month rather than the one on their calendar, and a usage page opens on
-// a month they are no longer in.
+// — and a census looking for the day-length slice could not see it: in the
+// first hours of a new month east of UTC, where the reader has turned the page
+// and UTC has not, that answers about UTC's month rather than the one on their
+// calendar, and a usage page opens on a month they are no longer in.
 export function calendarMonth(at: Date, zone: string): string {
   return calendarDay(at, zone).slice(0, "yyyy-mm".length);
 }

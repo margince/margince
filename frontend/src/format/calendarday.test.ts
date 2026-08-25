@@ -125,15 +125,15 @@ describe("middayInstant", () => {
 });
 
 describe("calendarMonth", () => {
-  // The case the day rule was respelled for, at month granularity: the last
-  // evening of a month in a zone east of UTC is still the previous month in
-  // UTC, and a page that read UTC's month opens on one the reader has left.
-  it("is the reader's month, not UTC's, on the last evening of one", () => {
-    const lastEveningInSaigon = new Date("2026-08-31T20:00:00Z");
-    expect(calendarMonth(lastEveningInSaigon, "Asia/Ho_Chi_Minh")).toBe(
+  // The case the day rule was respelled for, at month granularity: the first
+  // hours of a month in a zone east of UTC are still the previous month in UTC,
+  // and a page that read UTC's month opens on one the reader has left.
+  it("is the reader's month, not UTC's, in its first hours", () => {
+    const firstHoursInSaigon = new Date("2026-08-31T20:00:00Z");
+    expect(calendarMonth(firstHoursInSaigon, "Asia/Ho_Chi_Minh")).toBe(
       "2026-09",
     );
-    expect(calendarMonth(lastEveningInSaigon, "UTC")).toBe("2026-08");
+    expect(calendarMonth(firstHoursInSaigon, "UTC")).toBe("2026-08");
   });
 
   // And its mirror, west of UTC: the first hours of a month in UTC are still
