@@ -6128,6 +6128,9 @@ export const en = {
   "provider.autoEnrich": "Enrich new contacts automatically",
   "provider.autoEnrichHint":
     "When somebody adds a contact by hand, buy their details straight away.",
+  "provider.autoImport": "Enrich contacts that arrive from a connection",
+  "provider.autoImportHint":
+    "Every mailbox, channel and other connection adds a contact for each person it sees, and buying one spends credits.",
   "provider.credits": "Credits left with the provider",
   "provider.credits.none": "The provider has not told us a balance yet.",
   "provider.credits.notConnected":

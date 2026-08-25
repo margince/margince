@@ -102,8 +102,14 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 			}
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "provider_connection", uuidOf(current.id),
-			map[string]any{auditKeyMode: current.Mode, auditKeyPreset: current.Preset},
-			map[string]any{auditKeyMode: merged.Mode, auditKeyPreset: merged.Preset}); err != nil {
+			map[string]any{
+				auditKeyMode: current.Mode, auditKeyPreset: current.Preset,
+				auditKeyAutoCreate: current.AutomaticCreate, auditKeyAutoImport: current.AutomaticImport,
+			},
+			map[string]any{
+				auditKeyMode: merged.Mode, auditKeyPreset: merged.Preset,
+				auditKeyAutoCreate: merged.AutomaticCreate, auditKeyAutoImport: merged.AutomaticImport,
+			}); err != nil {
 			return err
 		}
 		conns, err := s.loadConnections(ctx, tx)

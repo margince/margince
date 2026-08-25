@@ -6021,6 +6021,9 @@ export const vi = {
   "provider.autoEnrich": "Tự động làm giàu liên hệ mới",
   "provider.autoEnrichHint":
     "Khi ai đó thêm một liên hệ thủ công, mua luôn thông tin của họ.",
+  "provider.autoImport": "Làm giàu liên hệ đến từ kết nối",
+  "provider.autoImportHint":
+    "Mỗi hộp thư, kênh và kết nối khác đều thêm một liên hệ cho từng người nó thấy, và mỗi lần mua đều tốn tín dụng.",
   "provider.credits": "Tín dụng còn lại ở nhà cung cấp",
   "provider.credits.none": "Nhà cung cấp chưa cho biết số dư.",
   "provider.credits.notConnected":

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -83,8 +83,16 @@ const ME_CONNECT_ONLY = meResponse("full", {
 
 function backend(principal: Me) {
   return vi.fn(async (input: RequestInfo | URL) => {
-    const path = new URL(String(input instanceof Request ? input.url : input))
-      .pathname;
+    const request = input instanceof Request ? input : undefined;
+    const path = new URL(String(request ? request.url : input)).pathname;
+    // A PATCH answers with the row it just wrote, which is what the card folds
+    // back into its cache. Routed by METHOD as well as path: the same path
+    // serves the list this card reads on the way in.
+    if (request?.method === "PATCH") {
+      return new Response(JSON.stringify(CONNECTION), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const body = routeBody(path, principal);
     return new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
@@ -135,6 +143,11 @@ const SETTLE_MS = 10_000;
 // was slow (issue 1144).
 const RENDER_TEST_MS = SETTLE_MS + SLOWEST_MEASURED_TEST_MS;
 
+// A case that also waits on a WRITE settles twice, so it carries both waiters'
+// budgets. Derived from the same two constants rather than stated as a number,
+// so raising either moves this with it.
+const WRITE_TEST_MS = SETTLE_MS + RENDER_TEST_MS;
+
 // The card sits on the Settings → Integrations entry, whose predicate opens for
 // all five roles, and the reads behind it are granted to all five. The writes
 // are not: connecting spends money and destroying the data is irreversible, and
@@ -146,6 +159,7 @@ describe("ProviderCard write posture", () => {
   const DISCONNECT = "Disconnect";
   const DELETE_DATA = "Delete bought data";
   const KEY_FIELD = "Replace the API key";
+  const AUTO_IMPORT = "Enrich contacts that arrive from a connection";
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
   // destroys purchased contact data. The trigger's presence is what the grant
@@ -157,7 +171,8 @@ describe("ProviderCard write posture", () => {
   }
 
   async function renderAs(principal: Me) {
-    vi.stubGlobal("fetch", backend(principal));
+    const fetch = backend(principal);
+    vi.stubGlobal("fetch", fetch);
     render(
       <Providers>
         <ProviderCard />
@@ -171,6 +186,7 @@ describe("ProviderCard write posture", () => {
       { name: CONNECTION.provider },
       { timeout: SETTLE_MS },
     );
+    return fetch;
   }
 
   it(
@@ -223,6 +239,47 @@ describe("ProviderCard write posture", () => {
       expect(screen.queryByText(READ_ONLY)).toBeNull();
     },
     RENDER_TEST_MS,
+  );
+
+  it(
+    "buys captured contacts only once the import switch is flipped",
+    async () => {
+      const user = userEvent.setup();
+      const fetch = await renderAs(ME_OPERATOR);
+
+      const importSwitch = screen.getByRole("switch", { name: AUTO_IMPORT });
+      // The fixture has it off, which is the state the server defaults to: a
+      // mailbox sync mints a person per counterparty, so nobody is billed for
+      // capture until somebody says so here.
+      expect(importSwitch.getAttribute("aria-checked")).toBe("false");
+      await user.click(importSwitch);
+
+      // Waited on rather than read straight after the click: the write leaves
+      // on a promise, so the call is recorded a tick later than the event. The
+      // client hands fetch a Request, so the method, body and headers are on
+      // that rather than on an init argument.
+      const patched = () =>
+        fetch.mock.calls
+          .map(([input]) => (input instanceof Request ? input : undefined))
+          .find((request) => request?.method === "PATCH");
+      await waitFor(() => expect(patched()).toBeTruthy(), {
+        timeout: SETTLE_MS,
+      });
+      const request = patched() as Request;
+      expect(await request.clone().json()).toEqual({
+        // Only the switch that moved. Sending the whole configuration would
+        // carry a stale copy of the OTHER switch back to the server, so one
+        // reader's flip would silently revert a colleague's.
+        configuration: { automatic_import: true },
+      });
+      // The row it overwrites is pinned, so a colleague's concurrent edit is a
+      // 409 rather than a silent loss.
+      expect(request.headers.get("If-Match")).toBe(String(CONNECTION.version));
+    },
+    // Two waiters, not one: the card has to settle before the switch exists,
+    // and the write it sends is awaited after. The ceiling covers the sum, or
+    // the second can still be inside its own budget when the test is killed.
+    WRITE_TEST_MS,
   );
 
   it(

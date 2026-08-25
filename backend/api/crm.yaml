@@ -17524,7 +17524,10 @@ components:
         automatic_import:
           type: boolean
           default: false
-          description: Still requires import preview, maximum-credit estimate and explicit confirmation.
+          description: >-
+            Enrich every person a connector creates. A mailbox, channel or
+            other connection mints one person per counterparty it sees, and
+            each purchase spends credits; off by default for that reason.
         categories: { $ref: '#/components/schemas/ProviderCategorySelection' }
         refresh_after_days: { type: [integer, 'null'], minimum: 1 }
         daily_run_limit: { type: [integer, 'null'], minimum: 1 }
