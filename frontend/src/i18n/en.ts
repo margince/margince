@@ -2232,6 +2232,15 @@ export const en = {
 
   "dedupe.viewExisting": "View existing record",
 
+  "co.spine.lastSpoke": "You last spoke",
+  "co.spine.days": "{count} days",
+  "co.spine.quietSince": "Silence since then",
+  "co.spine.neverReplied": "They have never written back",
+  "co.spine.singleThreaded": "One contact, and no reply from them",
+  "co.spine.overdue": "Past its date",
+  "co.spine.expectedClose": "Expected close",
+  "co.spine.worth": "{amount} riding on it",
+  "co.spine.unpriced": "{count} open, none priced yet",
   "co.360.title": "Company 360",
   "today.title": "Today on this account",
   "today.failed":

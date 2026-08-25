@@ -108,6 +108,7 @@ export function TodayOnThisAccount({
   onOpenTasks,
   sections,
   foot,
+  spine,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
@@ -128,6 +129,10 @@ export function TodayOnThisAccount({
   // Where the footer's commitment reading leads. Absent for a caller with no
   // Tasks tab of its own.
   onOpenTasks?: () => void;
+  // The account's story as a thread, above everything else in the card: where
+  // it stands is the question a reader opens the record with, and four
+  // labelled sections answered it only after they had read all four.
+  spine?: ReactNode;
   // What the card's footer carries BESIDE the day's own countdown: what moved
   // on the account since the reader was last here. It belongs to the account
   // rather than to any one section, so it rides in the card's footer band
@@ -178,6 +183,7 @@ export function TodayOnThisAccount({
         className="co-lead"
         footer={foot}
       >
+        {spine}
         {subhead}
         <PanelBody>
           <Skeleton width="100%" height={64} />
@@ -194,6 +200,7 @@ export function TodayOnThisAccount({
         className="co-lead"
         footer={foot}
       >
+        {spine}
         {subhead}
         <PanelBody>
           <EmptyState>{t("today.failed")}</EmptyState>
@@ -237,6 +244,7 @@ export function TodayOnThisAccount({
         )
       }
     >
+      {spine}
       {subhead}
       {!hasContext && !hasMoves ? (
         // Not "nothing to do": the brief read everything it can read and

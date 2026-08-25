@@ -97,6 +97,7 @@ import {
 } from "./companylookups";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
+import { CompanySpine } from "./companyspine";
 import { TodayOnThisAccount } from "./companytoday";
 import {
   CompanyWorkCard,
@@ -2641,6 +2642,7 @@ function CompanyOverviewStack({
           onPerform={onPerform}
           onOpenTasks={onOpenTasks}
           foot={sinceLastVisitFooter(view)}
+          spine={<CompanySpine view={view} />}
           sections={
             <>
               {/* What is moving, and for each piece the one reason it wants a
