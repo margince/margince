@@ -28,6 +28,7 @@ package backendarch
 // implied.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"regexp"
@@ -50,34 +51,51 @@ func TestVoiceVersionsHaveOneWriter(t *testing.T) {
 				Subject: insertsInto(table),
 				Exempt:  gatekit.Waive(map[string]string{}),
 			}
-			inside := scope.Files(t)
-			if len(inside) > 1 {
-				var where []string
-				for _, f := range inside {
-					where = append(where, f.Path)
-				}
-				t.Errorf("%s is written from %d files:\n\t%s\n\nOne writer owns the column list, so a column "+
+			count := insertCounter(table)
+			total := 0
+			var where []string
+			for _, f := range scope.Files(t) {
+				n := count(f.File)
+				total += n
+				where = append(where, fmt.Sprintf("%s (%d)", f.Path, n))
+			}
+			if total > 1 {
+				t.Errorf("%s is written by %d INSERTs:\n\t%s\n\nOne writer owns the column list, so a column "+
 					"added to the table is a field nobody fills rather than a default nobody notices",
-					table, len(inside), strings.Join(where, "\n\t"))
+					table, total, strings.Join(where, "\n\t"))
 			}
 		})
 	}
 }
 
-// insertsInto builds the subject predicate for one table.
+// insertsInto builds the subject predicate for one table. It is the counter
+// below asked whether the answer is nonzero, so the sweep that locates the
+// writers and the count that judges them cannot come to differ about what an
+// INSERT is.
 func insertsInto(table string) func(string, *ast.File) bool {
+	count := insertCounter(table)
+	return func(_ string, file *ast.File) bool { return count(file) > 0 }
+}
+
+// insertCounter counts the INSERTs into one table in a file.
+//
+// It counts STATEMENTS, not files and not literals. A file is the wrong unit:
+// two INSERTs into the same table in one file are two writers of the column
+// list, and a gate that reported the file once would let the second in
+// silently. A literal is the wrong unit for the same reason one step down —
+// nothing stops a caller putting two statements in one raw string.
+func insertCounter(table string) func(*ast.File) int {
 	pattern := regexp.MustCompile(`(?is)INSERT\s+INTO\s+` + regexp.QuoteMeta(table) + `\b`)
-	return func(_ string, file *ast.File) bool {
-		found := false
+	return func(file *ast.File) int {
+		total := 0
 		ast.Inspect(file, func(n ast.Node) bool {
 			lit, ok := n.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING || !pattern.MatchString(lit.Value) {
-				return !found
+			if ok && lit.Kind == token.STRING {
+				total += len(pattern.FindAllString(lit.Value, -1))
 			}
-			found = true
-			return false
+			return true
 		})
-		return found
+		return total
 	}
 }
 
@@ -95,6 +113,20 @@ func TestTheWriterCensusStillSeesItsSubject(t *testing.T) {
 		read := parseGateFixture(t, "package p\nfunc f() { q(`SELECT id FROM "+table+" WHERE id = $1`) }")
 		if subject("x.go", read) {
 			t.Errorf("the census counts a READ of %s as a writer", table)
+		}
+		// The unit is the statement. One file holding two INSERTs is the shape
+		// a file-counting gate reports as one writer and waves through.
+		twice := parseGateFixture(t, "package p\nfunc f() { q(`INSERT INTO "+table+" (a) VALUES ($1)`)\n"+
+			"\tq(`INSERT INTO "+table+" (b) VALUES ($1)`) }")
+		if got := insertCounter(table)(twice); got != 2 {
+			t.Errorf("two INSERTs into %s in one file count as %d; the census is counting files, so a second "+
+				"writer added beside the first is invisible", table, got)
+		}
+		// And two statements inside ONE literal are still two.
+		joined := parseGateFixture(t, "package p\nfunc f() { q(`INSERT INTO "+table+" (a) VALUES ($1); "+
+			"INSERT INTO "+table+" (b) VALUES ($2)`) }")
+		if got := insertCounter(table)(joined); got != 2 {
+			t.Errorf("two INSERTs into %s in one literal count as %d", table, got)
 		}
 	}
 }

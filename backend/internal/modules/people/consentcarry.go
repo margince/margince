@@ -94,6 +94,15 @@ type consentCarrySpec struct {
 	// FALSE for promotion, and deliberately. The lead-scoped events ARE the
 	// evidence that the consent predates the promotion; re-keying them to the
 	// person would destroy the only record of when it was given and to whom.
+	//
+	// What makes that safe rather than merely principled is that the lead arm
+	// cannot hold the one kind of proof the delivery gate reads: a double
+	// opt-in grant on a lead subject is REFUSED at the writer, because the
+	// round-trip is person-keyed (consent.Store.resolveDOIConfirmation — "promote
+	// the lead before granting it"). So there is no DOI confirmation on a lead
+	// to strand behind on the archived record. Held by
+	// TestLeadScopedDOIGrantIsRefused; if that refusal is ever lifted, this
+	// answer to question 4 has to be revisited in the same change.
 	rehomeProof bool
 }
 

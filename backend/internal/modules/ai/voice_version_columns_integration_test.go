@@ -22,7 +22,6 @@ package ai
 import (
 	"context"
 	"os"
-	"slices"
 	"sort"
 	"testing"
 
@@ -69,13 +68,17 @@ func assertWriterCoversTable(t *testing.T, table string, written []string, datab
 	if len(inTable) == 0 {
 		t.Fatalf("%s reports no columns at all, so this census is reading an empty tree", table)
 	}
-	for _, column := range inTable {
-		if slices.Contains(written, column) || databaseOwned.Waived(t, column) {
-			continue
-		}
+	waived := func(column string) bool { return databaseOwned.Waived(t, column) }
+	for _, column := range columnsNothingWrites(inTable, written, waived) {
 		t.Errorf("%s.%s is a column of the table and nothing writes it. A caller that means \"none\" must "+
 			"say so; leaving it to the column default makes a writer that forgot it indistinguishable "+
 			"from one that chose it. Add it to the writer, or record here why the database owns it",
+			table, column)
+	}
+	for _, column := range columnsTheTableDoesNotHave(inTable, written) {
+		t.Errorf("%s.%s is in the writer's column list and is not a column of the table. The INSERT will "+
+			"fail at runtime for every caller; the writer is a column behind a migration that dropped or "+
+			"renamed it, or the name is misspelled",
 			table, column)
 	}
 }
