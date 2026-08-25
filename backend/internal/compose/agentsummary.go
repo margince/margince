@@ -59,7 +59,7 @@ func restSummary(pol agentPolicy, r *http.Request, body []byte) string {
 	// old head carried it by accident, inside the path; naming it is what keeps
 	// an approver able to tell which deal they are pricing.
 	if pol.Tool == toolCreateRecord {
-		if parent := chi.URLParam(r, "id"); parent != "" {
+		if parent := createdUnder(r); parent != "" {
 			fields = append([]string{"under=" + parent}, fields...)
 		}
 	}
@@ -67,6 +67,28 @@ func restSummary(pol agentPolicy, r *http.Request, body []byte) string {
 		return head
 	}
 	return head + ": " + strings.Join(fields, ", ")
+}
+
+// createdUnder is the record a nested create hangs off.
+//
+// The INNERMOST routed id, not `{id}`: a deal-room comment is posted to
+// /deal-rooms/{id}/threads/{threadId}/comments and belongs to the THREAD, so
+// naming the room would tell a reader which conversation it was in and not
+// which exchange. A flat create names no parent and returns empty.
+func createdUnder(r *http.Request) string {
+	rctx := chi.RouteContext(r.Context())
+	if rctx == nil {
+		return ""
+	}
+	// chi appends params in the order the pattern declares them, so the last
+	// one is the deepest.
+	keys := rctx.URLParams.Keys
+	for i := len(keys) - 1; i >= 0; i-- {
+		if value := rctx.URLParams.Values[i]; value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // actPhrase names the act in words: "Update a deal", "Send an email".
@@ -77,6 +99,14 @@ func restSummary(pol agentPolicy, r *http.Request, body []byte) string {
 func actPhrase(pol agentPolicy, method, path string) string {
 	if pol.Tool == "" {
 		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path)
+	}
+	// Some verbs cover two acts a reader must tell apart. `enrich` is both a
+	// one-page read and a whole-site crawl; `update_record` on a custom field
+	// is both retiring the field and changing what it offers. The verb cannot
+	// distinguish them — only the operation can, so where one is named here it
+	// wins.
+	if phrase, named := opPhrases[pol.Op]; named {
+		return phrase
 	}
 	verb := strings.ReplaceAll(pol.Tool, "_", " ")
 	// Only the GENERIC verbs need the record type to mean anything: "update
@@ -94,6 +124,32 @@ func actPhrase(pol agentPolicy, method, path string) string {
 func recordNoun(record agentRecordType) string {
 	return strings.ReplaceAll(string(record), "_", " ")
 }
+
+// opPhrases names the acts whose VERB is not enough to tell them apart.
+//
+// Deliberately keyed by operation rather than by route: the operation is what
+// the contract declares and what the policy carries, and a route pattern would
+// be a second spelling of it. Held by TestNoTwoStageableActsShareAHeadline,
+// which fails when a new pair collides.
+var opPhrases = map[string]string{
+	opScrapeCompany:            "Read this company's website",
+	opDeepReadCompany:          "Read this company's whole site",
+	opRetireCustomField:        "Retire a custom field",
+	opUpdateCustomFieldOptions: "Change a custom field's options",
+}
+
+// The operations whose headline this file names.
+//
+// A typo here leaves an act sharing a headline with its sibling, which is the
+// exact defect opPhrases exists to prevent — so the names are checked against
+// the generated policy table rather than trusted.
+// Held by: TestNoTwoStageableActsShareAHeadline (this package).
+const (
+	opScrapeCompany            = "scrapeCompany"
+	opDeepReadCompany          = "deepReadCompany"
+	opRetireCustomField        = "retireCustomField"
+	opUpdateCustomFieldOptions = "updateCustomFieldOptions"
+)
 
 // genericVerbs are the tools whose name carries no record: they act on
 // whatever the route points at, so the record type is the other half of what

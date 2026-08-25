@@ -224,13 +224,13 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 // about it.
 //
 // Only the target is taken from the resolver. The line the human reads stays
-// this door's own (restSummary), because a REST summary names the concrete
-// method, path and body fields that this door's diff_hash actually binds.
-// Adopting the resolver's line on this door as well is blocked on the six types
-// the record seam does not serve: it can label those by id alone, so the change
-// would put "Archive tag 0195c3…" in front of an approver where the operation
-// and path stand today (margince/margince#1021 is where those types get
-// a name).
+// this door's own (restSummary), which now names the ACT — the contract's tool
+// verb and record type — plus the body fields this door's diff_hash binds. The
+// method and path it used to print are gone: a uuid names a record the reader
+// cannot open from it, and an operationId is the contract's word rather than
+// theirs. Adopting the resolver's line here instead is still blocked on the six
+// types the record seam does not serve: it labels those by id alone, which is
+// the same defect one layer over.
 //
 // It writes the refusal itself and reports ok=false, so a caller that cannot
 // name a target stages nothing.

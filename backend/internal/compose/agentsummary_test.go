@@ -9,16 +9,57 @@ package compose
 // operation, and the values the call would actually write.
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
 )
 
-// summaryRequest is the request shape restSummary reads: the method, the path,
-// and the routed {id} a nested create is posted under.
-func summaryRequest(method, path string) *http.Request {
-	return httptest.NewRequest(method, path, nil)
+// summaryRequest is the request shape restSummary reads. `params` are the
+// routed values in the order the pattern declares them — chi keeps that order,
+// and a nested create reads the LAST of them.
+func summaryRequest(method, path string, params ...[2]string) *http.Request {
+	req := httptest.NewRequest(method, path, nil)
+	rctx := chi.NewRouteContext()
+	for _, p := range params {
+		rctx.URLParams.Add(p[0], p[1])
+	}
+	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+}
+
+// A nested create names the record it hangs off, and it is the INNERMOST one.
+//
+// A deal-room comment is posted to /deal-rooms/{id}/threads/{threadId}/comments
+// and belongs to the thread. Naming `{id}` would tell a reader which
+// conversation it was in and not which exchange — two comments with the same
+// body on different threads in one room would read identically. The first
+// version of this did exactly that, and no test caught it because none of them
+// installed a route context at all.
+func TestANestedCreateNamesTheRecordItHangsOff(t *testing.T) {
+	pol := agentPolicy{Op: "replyDealRoomThread", Tool: "create_record", RecordType: recordTypeDealRoomComment}
+	req := summaryRequest("POST", "/v1/deal-rooms/room-1/threads/thread-9/comments",
+		[2]string{"id", "room-1"}, [2]string{"threadId", "thread-9"})
+
+	got := restSummary(pol, req, []byte(`{"body":"Sounds good"}`))
+	if !strings.Contains(got, "under=thread-9") {
+		t.Errorf("summary %q does not name the thread the comment attaches to", got)
+	}
+	if strings.Contains(got, "under=room-1") {
+		t.Errorf("summary %q names the room, which does not identify the exchange", got)
+	}
+}
+
+// A flat create has no parent, and inventing one would be worse than silence.
+func TestAFlatCreateNamesNoParent(t *testing.T) {
+	pol := agentPolicy{Op: "createCustomField", Tool: "create_record", RecordType: recordTypeCustomField}
+	got := restSummary(pol, summaryRequest("POST", "/v1/custom-fields"), []byte(`{"key":"industry"}`))
+	if strings.Contains(got, "under=") {
+		t.Errorf("summary %q claims a parent a top-level create does not have", got)
+	}
 }
 
 func TestRestSummaryNamesTheValuesTheCallWouldWrite(t *testing.T) {
@@ -153,14 +194,61 @@ func TestRestSummaryDistinguishesNullFromEmpty(t *testing.T) {
 	}
 }
 
-// Every verb that can actually reach a decision card reads as a sentence.
+// No two acts a human can be asked to decide share a headline.
 //
-// The corpus is derived rather than listed: a tool is stageable only when the
-// contract gives it a tier other than auto_execute, and it is exactly those
-// nine pairs whose summary a human ever sees. A verb added to that set with a
-// name that does not carry its own record — and no entry in genericVerbs —
-// would put "Do thing" on a card and drop which record it was about.
-func TestEveryStageableVerbNamesWhatItActsOn(t *testing.T) {
+// This is the property the whole change exists for. A verb often covers more
+// than one operation — `enrich` is both a one-page read and a whole-site crawl,
+// `update_record` on a custom field is both retiring it and changing what it
+// offers — and where two of those are BOTH confirm-first, one headline for two
+// acts asks somebody to approve a thing they cannot identify.
+//
+// Derived from the policy table rather than listed, so a contract change that
+// creates a new collision fails here instead of reaching a card.
+func TestNoTwoStageableActsShareAHeadline(t *testing.T) {
+	byPhrase := map[string][]string{}
+	// A verb covering several stageable operations must name each of them, or
+	// the ones it does not name collapse together. Checking only for identical
+	// phrases is not enough: naming ONE of a colliding pair separates them
+	// while leaving the other reading "Enrich organization", which still does
+	// not say which enrichment a reader is approving.
+	byVerb := map[string]map[string]bool{}
+	for _, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.Tier == tierAutoExecute {
+			continue
+		}
+		phrase := actPhrase(pol, "POST", "/v1/x")
+		byPhrase[phrase] = append(byPhrase[phrase], pol.Op)
+		// Keyed by verb AND record, because the generic verbs already separate
+		// two acts that differ only by what they act on: "Create record custom
+		// field" and "Create record webhook subscription" are distinct without
+		// naming either operation. What needs naming is two acts the headline
+		// cannot separate at all.
+		act := pol.Tool + "/" + string(pol.RecordType)
+		if byVerb[act] == nil {
+			byVerb[act] = map[string]bool{}
+		}
+		byVerb[act][pol.Op] = true
+	}
+	for phrase, ops := range byPhrase {
+		if len(ops) > 1 {
+			sort.Strings(ops)
+			t.Errorf("%q is the headline for %v — a reader cannot tell which they are approving", phrase, ops)
+		}
+	}
+	for act, ops := range byVerb {
+		if len(ops) < 2 {
+			continue
+		}
+		for op := range ops {
+			if _, named := opPhrases[op]; !named {
+				t.Errorf("%s covers %d stageable acts and %q is not named in opPhrases — its headline cannot identify it", act, len(ops), op)
+			}
+		}
+	}
+}
+
+// Every headline a human can meet is words, never a wire identifier.
+func TestEveryStageableActReadsAsWords(t *testing.T) {
 	for key, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.Tier == tierAutoExecute {
 			continue
@@ -169,13 +257,6 @@ func TestEveryStageableVerbNamesWhatItActsOn(t *testing.T) {
 		if phrase == "" {
 			t.Errorf("%s: staged calls render an empty headline", key)
 			continue
-		}
-		// Either the verb names its own object, or the record type is appended.
-		namesRecord := strings.Contains(phrase, recordNoun(pol.RecordType))
-		verbCarriesIt := pol.RecordType == "" ||
-			strings.Contains(strings.ReplaceAll(pol.Tool, "_", " "), string(pol.RecordType))
-		if !namesRecord && !verbCarriesIt && genericVerbs[pol.Tool] {
-			t.Errorf("%s: %q names neither the verb's object nor its record type", key, phrase)
 		}
 		if strings.Contains(phrase, "_") {
 			t.Errorf("%s: %q still carries a wire identifier", key, phrase)
