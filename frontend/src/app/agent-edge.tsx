@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
+import { readHue } from "../design-system/margince-core-gl";
 import { usePrefersReducedMotion } from "../design-system/motion";
-import { type EdgeHues, readHue } from "./agent-edge-gl";
+import type { EdgeHues } from "./agent-edge-gl";
 import { type EdgeLoop, runEdgeLoop } from "./agent-edge-loop";
 import { useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";

@@ -164,12 +164,16 @@ function flatten(
  *
  * The tokens are the one source for colour in this tree, and a shader cannot
  * read a custom property, so this is the seam that carries a value from
- * `tokens.css` into a uniform. Mirrors `agent-edge-gl.ts`'s reader of the same
- * name: kept here rather than imported from it because that file sits in
- * `app/`, one tier above this one, and a design-system primitive does not
- * reach upward for a utility this small to duplicate. A token that resolves to
- * nothing gets mid-grey rather than black, so a missing hue looks wrong rather
- * than looking like a hole.
+ * `tokens.css` into a uniform. It lives HERE, in the lower tier, and the lit
+ * window edge in `app/` imports it: every shader in this tree needs the same
+ * seam, and a second copy of it drifts the moment one of them learns about a
+ * colour format the other does not.
+ *
+ * A token that resolves to nothing gets mid-grey rather than black, so a
+ * missing hue looks wrong rather than looking like a hole. Six-digit hex only:
+ * a named colour, or one written in a wider gamut notation, is not a parse
+ * failure to paper over with a channel-wise guess. It means the token moved,
+ * and this seam has to be told about it.
  */
 export function readHue(name: string): readonly [number, number, number] {
   const raw = getComputedStyle(document.documentElement)

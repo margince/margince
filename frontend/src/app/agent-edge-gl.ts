@@ -209,27 +209,3 @@ export function createEdgeRenderer(
     },
   };
 }
-
-/**
- * Reads a colour token off the document and hands back linear-ish 0..1 floats.
- *
- * The tokens are the one source for colour in this tree, and a shader cannot read
- * a custom property, so this is the seam. A token that resolves to nothing gets
- * mid-grey rather than black: a missing hue should look wrong, not look like a
- * hole.
- */
-export function readHue(name: string): readonly [number, number, number] {
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-  const hex = /^#([0-9a-f]{6})$/i.exec(raw);
-  if (!hex) {
-    return [0.5, 0.5, 0.5];
-  }
-  const value = Number.parseInt(hex[1], 16);
-  return [
-    ((value >> 16) & 255) / 255,
-    ((value >> 8) & 255) / 255,
-    (value & 255) / 255,
-  ];
-}
