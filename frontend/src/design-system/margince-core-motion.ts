@@ -42,7 +42,26 @@ export type CoreBehaviour = Readonly<{
 // Emissive, so it runs hotter than the token it mirrors (--orbAmber). Walked
 // down from gold: at hue 40 the warning state read as a colour somebody chose
 // for looks, and the point of it is that a person is being asked for something.
-const AMBER: readonly [number, number, number] = [0.98, 0.55, 0.13];
+// Chosen from where it LANDS, not from where it looks amber in a swatch.
+//
+// This triple is multiplied by a ribbon's GAIN (up to 3.3) and then run through
+// the exposure tonemap, which clips red long before green and so walks the hue
+// upward on the way to the screen. A swatch-plausible amber at [0.98, 0.55,
+// 0.13] arrives at hue 47deg, which is gold, and two rounds of nudging the
+// swatch moved the rendered hue by five degrees in total.
+//
+// Solved backwards instead, and pinned by TWO constraints rather than one: it
+// has to read amber, and it has to stay clear of RED below. A first pass at
+// green 0.19 rendered 25deg on the brightest ribbon and 18deg on the faintest,
+// and red renders 17deg: on half the ribbons the warning state and the failed
+// state were the same colour. Green 0.38 lands 42deg and 34deg against red's
+// 17deg and 12deg, which holds the gap at every gain in the set while staying
+// under the 47deg that read as gold.
+//
+// Nothing in the tree checks this, and a swatch comparison cannot: these two
+// only collide AFTER the gain and the tonemap. Move either constant and the
+// arithmetic above is what has to be redone.
+const AMBER: readonly [number, number, number] = [0.98, 0.38, 0.03];
 const RED: readonly [number, number, number] = [1.0, 0.24, 0.14];
 
 export const BEHAVIOUR: Readonly<Record<MarginceCoreState, CoreBehaviour>> = {
