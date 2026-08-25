@@ -56,7 +56,17 @@ const (
 )
 
 // secretRef matches the two accepted forms and captures which and what.
-var secretRef = regexp.MustCompile(`^\$\{(env|file):([^}]+)\}$`)
+// SecretRefPattern is the shape a secret reference must have.
+//
+// Exported so the margince.yaml schema can carry the same pattern an editor
+// checks against, without writing the regex a second time — a schema that
+// accepted what the loader refuses would let an operator paste a literal
+// secret, see no complaint, and find out at boot.
+//
+//nolint:gosec // G101: a regex describing the SHAPE of a reference, not a credential — it is precisely what refuses one
+const SecretRefPattern = `^\$\{(env|file):([^}]+)\}$`
+
+var secretRef = regexp.MustCompile(SecretRefPattern)
 
 // Secret is a reference to a value held somewhere else.
 //

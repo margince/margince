@@ -11,6 +11,36 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **The schema describes margince.yaml, not just the routing block.**
+  `config/ai-routing.schema.json` is gone; `config/margince.schema.json` takes
+  its place and covers the whole file — all fifteen sections — with the model
+  binding under `$defs.aiRouting`, where `seeds.ai_routing` points.
+
+  The old file was right while a routing FILE existed. Once the binding moved
+  into margince.yaml and the database, a schema for one subtree left the other
+  fourteen sections unchecked: an editor validating the smallest part of the
+  file and saying nothing about the rest.
+
+  **Generated, because a hand-written one would be a second copy of
+  `deployconfig.Config`** — and the copy goes stale silently, reporting a new
+  field as an error against last quarter's shape. `tools/gen-configschema`
+  reflects over the struct the loader decodes into and reads the field
+  descriptions from the Go doc comments, so hover text is the explanation that
+  sits beside the code rather than a second one free to disagree.
+  `additionalProperties: false` throughout mirrors the loader's
+  `KnownFields(true)`.
+
+  Two gates hold it, both derived rather than listed: every field the struct
+  declares is a field the schema accepts, and every config this repo ships
+  validates against the schema this repo ships. The routing shape keeps the
+  enum-parity gate it already had, following it into `$defs`.
+
+  The shipped configs now carry a `# yaml-language-server:` line, so an editor
+  picks the schema up without being told.
+
+
+### Changed
+
 - **The AI routing FILE is gone, format and all.** The binding moved to the
   database earlier; what stayed behind was a file format three DB-less lanes
   still read, and the example yamls that fed them. Those lanes are now TOLD

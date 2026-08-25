@@ -37,8 +37,9 @@ const (
 const defaultEmbedDimensions = 1536
 
 // maxEmbedDimensions bounds an operator-set `dimensions` from above (spec
-// ai-operational-spec.md §1.4); config/ai-routing.schema.json's generated
-// embeddingsBinding $def carries the same bound.
+// ai-operational-spec.md §1.4); the routing shape under $defs in
+// config/margince.schema.json carries the same bound on its
+// embeddingsBinding, so an editor refuses what the parser would.
 const maxEmbedDimensions = 2000
 
 // EmbeddingsConfig is the embeddings-lane binding: the shared ProviderConfig
