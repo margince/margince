@@ -33,6 +33,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -170,14 +171,31 @@ func filesComposingTheSharedRules(t *testing.T) []string {
 
 // dotImportsDraftRules reports the shape the census cannot read.
 func dotImportsDraftRules(file *ast.File) bool {
-	const path = "internal/compose/draftrules"
 	for _, imported := range file.Imports {
-		if strings.HasSuffix(strings.Trim(imported.Path.Value, `"`), path) &&
-			imported.Name != nil && imported.Name.Name == "." {
+		if importsDraftRules(imported) && imported.Name != nil && imported.Name.Name == "." {
 			return true
 		}
 	}
 	return false
+}
+
+// importsDraftRules reads one import's path, UNQUOTED.
+//
+// Trimming double quotes is not unquoting: go/parser keeps the literal as
+// written, and a raw-string import — “ `…/draftrules` “ — is valid Go that a
+// quote-trim leaves with its backticks on. The suffix then never matches, the
+// file drops out of the census, and its prompt is governed by nothing. Nothing
+// in this tree writes one; that is exactly why a reader would not think of it.
+func importsDraftRules(imported *ast.ImportSpec) bool {
+	const path = "internal/compose/draftrules"
+	unquoted, err := strconv.Unquote(imported.Path.Value)
+	if err != nil {
+		// An import path the parser accepted but strconv cannot unquote is a
+		// shape this reader does not understand, and guessing either way is
+		// worse than saying so.
+		return false
+	}
+	return strings.HasSuffix(unquoted, path)
 }
 
 // readsTheSharedRules reports whether the file holds a `draftrules.Shared`
@@ -208,9 +226,8 @@ func readsTheSharedRules(file *ast.File) bool {
 // localNameForDraftRules returns the name this file calls the draftrules
 // package by, and whether it imports it at all.
 func localNameForDraftRules(file *ast.File) (string, bool) {
-	const path = "internal/compose/draftrules"
 	for _, imported := range file.Imports {
-		if !strings.HasSuffix(strings.Trim(imported.Path.Value, `"`), path) {
+		if !importsDraftRules(imported) {
 			continue
 		}
 		if imported.Name != nil {

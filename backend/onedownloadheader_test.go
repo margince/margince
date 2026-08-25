@@ -23,6 +23,12 @@ package backendarch
 // different thing, and a gate that reported those would be waived into
 // uselessness within a week.
 //
+// It reads the RESPONSE's header map only. `*http.Request` carries a `Header()`
+// method too, writing the request's own headers — the opposite direction, and
+// not a download — so the receiver is matched by name as well as the method.
+// A writer under a name this tree does not use is outside the net, which is the
+// cost of a syntactic census having no types to ask.
+//
 // WHAT IT CANNOT SEE. A download that carries no filename sets no
 // Content-Disposition, so a handler serving inline bytes under Content-Type
 // alone is outside this net (the organization logo is such a response, and it
@@ -116,15 +122,33 @@ func headerMapsIn(file *ast.File) map[string]bool {
 	return named
 }
 
-// isHeaderCall matches `<expr>.Header()`.
+// isHeaderCall matches `<w>.Header()` on a RESPONSE writer.
+//
+// The receiver has to be named, not merely have the method. `*http.Request`
+// carries `Header()` too — reading and writing the REQUEST's headers, which is
+// the opposite direction and not a download at all. A census that matched the
+// method alone would report `r.Header().Set("Content-Disposition", …)` as a
+// second spelling of the response trio, and a gate that fires on the wrong
+// direction is one nobody reads twice.
+//
+// Named rather than type-checked: a census over syntax has no types, and every
+// response writer in this tree is called `w` or `rw`. The cost is stated in the
+// header — a writer under another name is outside the net.
 func isHeaderCall(expr ast.Expr) bool {
 	call, ok := expr.(*ast.CallExpr)
 	if !ok || len(call.Args) != 0 {
 		return false
 	}
 	accessor, ok := call.Fun.(*ast.SelectorExpr)
-	return ok && accessor.Sel.Name == "Header"
+	if !ok || accessor.Sel.Name != "Header" {
+		return false
+	}
+	receiver, ok := accessor.X.(*ast.Ident)
+	return ok && responseWriterNames[receiver.Name]
 }
+
+// responseWriterNames are what a response writer is called in this tree.
+var responseWriterNames = map[string]bool{"w": true, "rw": true, "writer": true}
 
 // isResponseHeaderSet matches `<expr>.Header().Set("<name>", …)`.
 //
@@ -189,6 +213,10 @@ func TestTheDownloadHeaderCensusStillSeesItsSubject(t *testing.T) {
 			"func f(w http.ResponseWriter) { w.Header().Set(\"Content-Type\", \"application/json\") }",
 		"a read of the request's own disposition": "" +
 			"func f(r *http.Request) string { return r.Header.Get(\"Content-Disposition\") }",
+		"a WRITE to the request's headers, which is the other direction": "" +
+			"func f(r *http.Request) { r.Header().Set(\"Content-Disposition\", d) }",
+		"the same through a local, which is how an outbound request is built": "" +
+			"func f(r *http.Request) {\n\th := r.Header()\n\th.Set(\"Content-Disposition\", d)\n}",
 		"a Set on a local that holds a MIME part, not a response's map": "" +
 			"func f(part textproto.MIMEHeader) { part.Set(\"Content-Disposition\", d) }",
 	}

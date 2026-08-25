@@ -37,7 +37,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -70,7 +69,11 @@ func TestTheCallerPredicateBudgetIsDeclaredOnce(t *testing.T) {
 	total := 0
 	var where []string
 	for _, f := range callerPredicateBudgetScope.Files(t) {
-		n := countCallerPredicateBudgets(f.File)
+		n, unreadable := countCallerPredicateBudgets(f.File)
+		for _, why := range unreadable {
+			t.Errorf("%s declares %s — this census cannot judge it either way, so it would be counted as "+
+				"absent. Write the duration in a form the reader understands", f.Path, why)
+		}
 		total += n
 		where = append(where, fmt.Sprintf("%s (%d)", f.Path, n))
 	}
@@ -98,13 +101,15 @@ func TestTheGateAgreesWithTheConstantItGuards(t *testing.T) {
 // declaresACallerPredicateBudget reports whether a file declares a duration
 // constant worth the caller-predicate ceiling under a name that says budget.
 func declaresACallerPredicateBudget(_ string, file *ast.File) bool {
-	return countCallerPredicateBudgets(file) > 0
+	total, _ := countCallerPredicateBudgets(file)
+	return total > 0
 }
 
 // countCallerPredicateBudgets counts them, because the file is the wrong unit:
 // two in one file are two numbers that can drift apart.
-func countCallerPredicateBudgets(file *ast.File) int {
+func countCallerPredicateBudgets(file *ast.File) (int, []string) {
 	total := 0
+	var unreadable []string
 	ast.Inspect(file, func(n ast.Node) bool {
 		spec, ok := n.(*ast.ValueSpec)
 		if !ok {
@@ -114,23 +119,28 @@ func countCallerPredicateBudgets(file *ast.File) int {
 			if !strings.Contains(strings.ToLower(name.Name), "budget") || at >= len(spec.Values) {
 				continue
 			}
-			if d, ok := durationOf(spec.Values[at]); ok && d == callerPredicateBudget {
+			d, ok, err := durationOf(spec.Values[at])
+			if err != nil {
+				unreadable = append(unreadable, fmt.Sprintf("%s: %v", name.Name, err))
+				continue
+			}
+			if ok && d == callerPredicateBudget {
 				total++
 			}
 		}
 		return true
 	})
-	return total
+	return total, unreadable
 }
 
 // durationOf evaluates `<n> * time.<Unit>` — the only shape a duration constant
 // is written in here — and reports the duration it names. Evaluating rather
 // than matching is what makes 5000*time.Millisecond the same subject as
 // 5*time.Second; a text comparison loses to the equivalent spelling.
-func durationOf(expr ast.Expr) (time.Duration, bool) {
+func durationOf(expr ast.Expr) (time.Duration, bool, error) {
 	product, ok := expr.(*ast.BinaryExpr)
 	if !ok || product.Op != token.MUL {
-		return 0, false
+		return 0, false, nil
 	}
 	count, unit := product.X, product.Y
 	if _, isLiteral := count.(*ast.BasicLit); !isLiteral {
@@ -138,21 +148,22 @@ func durationOf(expr ast.Expr) (time.Duration, bool) {
 	}
 	literal, ok := count.(*ast.BasicLit)
 	if !ok || literal.Kind != token.INT {
-		return 0, false
+		return 0, false, nil
 	}
-	// A literal too large for an int64 is not "not a duration" — it is a
-	// duration this reader cannot judge, and answering false would let it
-	// through as a non-subject. Nothing in this tree writes one, so the honest
-	// answer is to treat it as a subject and let the count report the file.
 	n, err := strconv.ParseInt(literal.Value, 0, 64)
 	if err != nil {
-		return time.Duration(math.MaxInt64), true
+		// A literal too large for an int64 is not "not a duration" — it is a
+		// duration this reader cannot judge, and either answer it could give
+		// is a lie. Returning MaxInt64 was the first attempt and was worse
+		// than false: the count compares against five seconds, so the
+		// declaration was excluded anyway and the census reported it ABSENT.
+		return 0, false, fmt.Errorf("a duration literal this reader cannot judge: %q: %w", literal.Value, err)
 	}
 	scale, ok := durationUnit(unit)
 	if !ok {
-		return 0, false
+		return 0, false, nil
 	}
-	return time.Duration(n) * scale, true
+	return time.Duration(n) * scale, true, nil
 }
 
 // durationUnit reads `time.Second` and its neighbours off the selector.
