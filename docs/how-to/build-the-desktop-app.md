@@ -222,7 +222,7 @@ none is needed.
 default they are inside `data/`, so a copy of that directory is the whole
 installation's records; point `MARGINCE_BLOBSTORE_PATH` somewhere else and a copy
 of `data/` is a database whose attachment rows name bytes it does not contain.
-`margince.yaml`, `margince.env` and any `ai-routing.yaml` sit beside `data/` and
+`margince.yaml` and `margince.env` sit beside `data/` and
 are part of a restore too — they are not regenerated, and `margince.yaml` decides
 the organization this database belongs to.
 

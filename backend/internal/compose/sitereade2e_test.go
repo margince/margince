@@ -44,16 +44,14 @@ const e2eSeedURL = "https://gradion.com"
 
 // e2eBrain builds the model under judgment from the environment — the
 // test names no vendor (§1.4): MARGINCE_E2E_MODEL carries provider:model
-// (e.g. anthropic:claude-sonnet-4-6), or MARGINCE_AI_ROUTING a full
-// routing file. Missing both fails loudly: a quality gate that silently
-// skips looks exactly like one that passed.
+// (e.g. anthropic:claude-sonnet-4-6). Missing it fails loudly: a quality
+// gate that silently skips looks exactly like one that passed.
 func e2eBrain(t *testing.T) (profile, facts, triage completer, banner string) {
 	t.Helper()
 	modelSpec := os.Getenv("MARGINCE_E2E_MODEL")
-	routing := os.Getenv("MARGINCE_AI_ROUTING")
-	profile, facts, triage, banner, err := SiteReadDebugBrain(routing, modelSpec, false)
+	profile, facts, triage, banner, err := SiteReadDebugBrain(modelSpec, false)
 	if err != nil {
-		t.Fatalf("e2e-siteread needs a model: set MARGINCE_E2E_MODEL=provider:model (plus the provider's BYOK env key) or MARGINCE_AI_ROUTING: %v", err)
+		t.Fatalf("e2e-siteread needs a model: set MARGINCE_E2E_MODEL=provider:model (plus the provider's BYOK env key): %v", err)
 	}
 	return profile, facts, triage, banner
 }

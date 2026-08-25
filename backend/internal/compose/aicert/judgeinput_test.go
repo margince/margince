@@ -105,7 +105,8 @@ func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 
 	sc := testScenarioOnSite("basic", mintedIDVariant, wideBands)
 	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
-		ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		}); err != nil {

@@ -27,26 +27,33 @@ to add a task or a site rather than certify one that exists, see
 
 ## Prerequisites
 
-1. A **routing file** binding the task's tier to a real provider/model. This lane
-   is one of the few that still reads one deliberately: it opens no database, and
-   a verdict recorded against whatever each engineer happened to have bound would
-   not be comparable with anybody else's. So it defaults `MARGINCE_AI_ROUTING` to
-   the **tracked** `config/ai-routing.example.yaml`, which binds **gemini** on
-   `cheap_cloud` + `premium`. Override with `MARGINCE_AI_ROUTING=<path>` to
-   certify a different binding.
+1. **Two models**, named outright. `MODEL=provider:model` is the candidate the
+   run certifies; `JUDGE=provider:model` is the second model that grades it.
+   Both are required, and the run refuses them being equal before it pays for a
+   single call — a model grading itself is certified by construction.
+
+   There is no routing file and no default. This lane opens no database, so it
+   cannot read the installation's binding, and inheriting one from a file on
+   whichever machine ran it was never comparable between engineers anyway. The
+   record names the model it measured.
 
    Note this is not the installation's binding — that is the `ai.routing`
    setting, and nothing here reads or changes it.
 
-   For a second, non-Gemini binding to certify against, the tree also ships
-   `config/ai-routing.openrouter.example.yaml` — one OpenRouter key reaching
-   every open-weight model, with three candidates per tier ordered
-   EU → China → USA:
+   For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
+   model — add the endpoint, which `openai_compatible` fails closed without:
 
    ```bash
    make e2e-ai TASK=cold_start \
-     MARGINCE_AI_ROUTING=$PWD/config/ai-routing.openrouter.example.yaml
+     MODEL=openai_compatible:z-ai/glm-5.2 \
+     BASE_URL=https://openrouter.ai/api \
+     JUDGE=gemini:gemini-3.1-pro
    ```
+
+   `PROFILE=` names the environment class a record is filed under (`eu_hosted`,
+   the default, `sovereign` or `cloud_frontier`). It is enforced, not a label: a
+   cloud vendor under `sovereign` is refused rather than run.
+
 2. The provider's **BYOK key in the environment** — e.g. `GEMINI_API_KEY`,
    `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY` (the
    OpenRouter example reads that last one). Keys live in the env, never in the
@@ -55,13 +62,16 @@ to add a task or a site rather than certify one that exists, see
 3. No database. The lane runs on the DB-less local router, so `make db-up` is
    not required.
 
-## 1. Certify the task you run today
+## 1. Certify a task
 
 ```bash
-make e2e-ai TASK=cold_start
+make e2e-ai TASK=cold_start \
+  MODEL=gemini:gemini-3.1-flash-lite \
+  JUDGE=anthropic:claude-sonnet-4-6
 ```
 
-This certifies **the task's current binding** in your routing config. It runs
+This certifies **the model you name**, not any binding this installation holds —
+the lane opens no database and reads none. It runs
 every scenario in the task's corpus `N` times (an odd number, with response
 caching off so every run is a fresh model call), judges each answer, and prints
 the verdict:
@@ -102,33 +112,37 @@ a task's result back down per site.
 
 ## 2. Benchmark a candidate swap
 
-Certify a *different* model against the same corpus, without editing your
-routing config:
+Certify a *different* model against the same corpus — change `MODEL=`, leave
+`JUDGE=` where it is, so the two runs differ in exactly one thing:
 
 ```bash
-make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.1-flash-lite
+make e2e-ai TASK=cold_start \
+  MODEL=gemini:gemini-3.5-flash \
+  JUDGE=anthropic:claude-sonnet-4-6
 ```
 
-`MODEL=provider:model` overrides only the candidate; the **judge stays on its
-own pinned `cert_judge` binding** (never the candidate's), so a cheaper
+`MODEL=` is the candidate and `JUDGE=` the model that grades it. They must
+differ — the run refuses them being equal before paying for a call, because a
+model grading itself is certified by construction — so a cheaper
 candidate can't grade itself lenient. Certify both the incumbent and the
 candidate, then compare their records before you change the binding.
 
-An override that names the tier's OWN provider keeps that tier's `base_url`, so
-an `openai_compatible` candidate is a one-liner against a routing file already
-pointed at the vendor:
+The binding carries its own endpoint, so an `openai_compatible` candidate is a
+one-liner — `BASE_URL` is required there and empty for a native vendor, which
+uses its own default:
 
 ```bash
-make e2e-ai TASK=cold_start MODEL=openai_compatible:z-ai/glm-5.2 \
-  MARGINCE_AI_ROUTING=$PWD/config/ai-routing.openrouter.example.yaml
+make e2e-ai TASK=cold_start \
+  MODEL=openai_compatible:z-ai/glm-5.2 BASE_URL=https://openrouter.ai/api \
+  JUDGE=gemini:gemini-3.1-pro
 ```
 
-An override that switches provider inherits no endpoint — one vendor's host
-root addresses no other — so a cross-vendor candidate needs its own routing
-file.
+A broker slug may carry its own variant suffix (`:free`, `:batch`,
+`:thinking`); the provider/model split cuts at the FIRST colon, so
+`openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
-Other knobs: `RUNS=5` (odd repeat count), `MARGINCE_AI_ROUTING=<path>` (a scratch
-routing file).
+Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
+`JUDGE_BASE_URL=` when the judge is itself on a broker.
 
 ## 3. Read the readiness report
 
@@ -200,7 +214,9 @@ doesn't tell you *why*. Turn on the payload trace to read exactly what each
 model saw and said:
 
 ```bash
-make e2e-ai TASK=enrich          # trace is ON by default
+make e2e-ai TASK=enrich \
+  MODEL=gemini:gemini-3.1-flash-lite \
+  JUDGE=anthropic:claude-sonnet-4-6   # trace is ON by default
 ```
 
 Every candidate **and** judge call is dumped to a JSONL file under the

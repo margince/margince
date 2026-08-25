@@ -9,6 +9,52 @@ numbers appear here when releases start.
 
 ## [Unreleased]
 
+### Changed
+
+- **The AI routing FILE is gone, format and all.** The binding moved to the
+  database earlier; what stayed behind was a file format three DB-less lanes
+  still read, and the example yamls that fed them. Those lanes are now TOLD
+  their model instead: `worker siteread` and `worker aitask` already took
+  `--model provider:model` or `--ai-fake`, so `--ai-routing` was a redundant
+  third arm and is gone from both; `make e2e-ai` takes `MODEL=` and `JUDGE=`.
+  `ai.LoadRoutingFile` and `config/ai-routing.*.example.yaml` are deleted.
+  `ai.ParseRouting` stays — it is what reads `seeds.ai_routing` and the stored
+  setting — and so does `config/ai-routing.schema.json`, which still describes
+  that shape for an editor validating a seeds block.
+
+  Three things the file had been supplying quietly, which had to become
+  explicit rather than disappear:
+
+  **The judge.** The certification runner graded a candidate with a SECOND
+  model, and it got that model by having the judge ride the file's own binding
+  while `MODEL=` moved only the candidate. Deleting the file with nothing in
+  its place would have collapsed the two, and a model grading itself passes by
+  construction. `JUDGE=` is now required and the run refuses the two being
+  equal before it pays for a single call.
+
+  **The endpoint.** `openai_compatible` fails closed without a `base_url`, so
+  the file was the only thing making broker certification runnable at all.
+  `BASE_URL=` carries it, on every rung of the ladder rather than the first.
+
+  **The profile.** It is part of a record's identity — its path and its sort
+  key — and it is enforced, not a label: `PROFILE=sovereign` with a cloud
+  vendor is refused rather than run, through the same rule a parsed config
+  meets. That rule is now `ai.ValidateTierBinding`, shared rather than spelled
+  a second time in the cert lane.
+
+  Two smaller corrections fell out. The runner binds EVERY tier, not just the
+  task's ladder — the router demotes under budget pressure onto tiers a ladder
+  does not name, and an unbound one surfaces as "no bound tier can serve",
+  which reads like an unsupported task rather than a partial binding. And
+  `RoutingConfig.Validate` is unexported again: it was exported for exactly one
+  caller, the override path this change replaces.
+
+  The pricing gate moved with its subject. It asserted that every binding the
+  shipped EXAMPLES named was priced by `SeedModelRates`; with the examples gone
+  it now reads `seeds.ai_routing` out of the shipped Margince YAML files, which is
+  what a fresh installation actually boots bound to.
+
+
 ### Added
 
 - **Foundation (WP0)**: the full core data model as reversible
