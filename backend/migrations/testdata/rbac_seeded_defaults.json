@@ -115,6 +115,18 @@
         "read": true,
         "update": true
       },
+      "knowledge_corpus": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "knowledge_document": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "lead": {
         "create": true,
         "delete": true,
@@ -349,6 +361,18 @@
         "update": false
       },
       "integrations": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "knowledge_corpus": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "knowledge_document": {
         "create": false,
         "delete": false,
         "read": true,
@@ -593,6 +617,18 @@
         "read": true,
         "update": false
       },
+      "knowledge_corpus": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "knowledge_document": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "lead": {
         "create": true,
         "delete": true,
@@ -827,6 +863,18 @@
         "update": true
       },
       "integrations": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "knowledge_corpus": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "knowledge_document": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1071,6 +1119,18 @@
         "read": true,
         "update": false
       },
+      "knowledge_corpus": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "knowledge_document": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "lead": {
         "create": false,
         "delete": false,
@@ -1305,6 +1365,18 @@
         "update": false
       },
       "integrations": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "knowledge_corpus": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "knowledge_document": {
         "create": false,
         "delete": false,
         "read": true,

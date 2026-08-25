@@ -22,7 +22,7 @@ import (
 // (features/04 §1). A policy naming anything else is rejected — a typo'd
 // object would otherwise silently grant nothing and read as a bug in the
 // role, not the document.
-var coreObjects = []string{"person", "organization", "deal", "lead", "activity", "pipeline", "list", "tag", "relationship", "partner", "automation", "voice_profile", "product", "offer", "signal", "saved_view", "custom_field", "computed_field", "quota", "offer_template", "overlay_connection", "embedding_reindex", "webhook_subscription", "fx_rate", "ai_model_rate", "capture_settings", "project", "channel_connection", "import_run", "installation_settings", "finance", "integrations", "retention_policy", "capture_trace", "license", "contract", "ai_routing", "commission", "deal_room"}
+var coreObjects = []string{"person", "organization", "deal", "lead", "activity", "pipeline", "list", "tag", "relationship", "partner", "automation", "voice_profile", "product", "offer", "signal", "saved_view", "custom_field", "computed_field", "quota", "offer_template", "overlay_connection", "embedding_reindex", "webhook_subscription", "fx_rate", "ai_model_rate", "capture_settings", "project", "channel_connection", "import_run", "installation_settings", "finance", "integrations", "retention_policy", "capture_trace", "license", "contract", "ai_routing", "commission", "deal_room", "knowledge_corpus", "knowledge_document"}
 
 // IsCoreObject reports whether an RBAC object is in the closed set a role
 // document may grant. Parse enforces it on stored documents; it is also the
@@ -114,11 +114,11 @@ var (
 // and migrate-in screens are admin surfaces.
 // managerObjects is the grid a team lead (`manager`) and the whole-organization
 // `management` seat share; only their row scope differs.
-var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud)
+var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly)
 
 var defaults = map[string]Document{
 	"admin": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud),
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
@@ -226,7 +226,16 @@ var defaults = map[string]Document{
 			// deal_room — a rep opens and runs the room on their own deal:
 			// create, publish, invite, revoke. Deleting one stays manager/admin,
 			// the same posture every other record the rep works carries.
-			grant{Create: true, Read: true, Update: true}),
+			grant{Create: true, Read: true, Update: true},
+			// knowledge_corpus — the ask itself is this read, so a rep holds it
+			// or the help bot is an admin tool. The floor that decides what the
+			// product refuses to answer is not theirs to move.
+			readOnly,
+			// knowledge_document — a rep who receives a cited answer can open
+			// what it cited; an answer whose source is unreadable is not a
+			// citation. Uploading third-party prose every seat then asks, and
+			// deleting it for good, stay with admin/ops.
+			readOnly),
 		// Own scope, not team: membership of a team is not by itself permission
 		// to rewrite a teammate's records. Writing somebody else's customer
 		// record takes an explicit share — a record_grant naming the user or
@@ -242,11 +251,11 @@ var defaults = map[string]Document{
 		// A read-only role still owns its personal view state: saved views
 		// are P1-exempt per-user prefs (runtime-config-surface.md §3), not
 		// shared records, so full self-service is correct even here.
-		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly),
+		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly, readOnly, readOnly),
 		RowScope: principal.RowScopeAll,
 	},
 	"ops": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud),
 		RowScope: principal.RowScopeAll,
 	},
 }
@@ -259,7 +268,7 @@ var defaults = map[string]Document{
 // and rbacfixture_test.go holds the result to the matrix the server seeds. Five
 // map literals of every key is what this replaced. Shortening it is a refactor of
 // the seed rather than of this call.
-func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, quota, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
+func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, quota, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom, knowledgeCorpus, knowledgeDocument grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
 	return map[string]grant{
 		"person": person, "organization": organization, "deal": deal,
 		"lead": lead, "activity": activity, "pipeline": pipeline,
@@ -356,6 +365,21 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		// The retain-only posture setting is gated by this same object, so whoever may
 		// author a policy may also suspend every destructive one.
 		"retention_policy": retentionPolicy,
+		// A named body of uploaded documents a person asks free-text questions
+		// of. READ IS THE ASK: the ask returns corpus content, and anything that
+		// returns a record is a read — so every role that reads records holds it,
+		// or the help bot is an admin tool. Defining a corpus, editing its words
+		// and moving its grounding floor are workspace config in the
+		// installation_settings sense: the floor decides what the product will
+		// refuse to answer for everyone, so it is admin/ops.
+		"knowledge_corpus": knowledgeCorpus,
+		// The uploaded files themselves. Read is broad for the same reason the
+		// corpus read is — a person who gets a cited answer must be able to open
+		// what it cited, and an answer whose source is unreadable is not a
+		// citation. Uploading and deleting are admin/ops: an upload puts third-
+		// party prose into the corpus every seat then asks, and the delete is a
+		// hard one that takes the chunks, the vectors and the stored file.
+		"knowledge_document": knowledgeDocument,
 	}
 }
 
