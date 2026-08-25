@@ -78,6 +78,29 @@ describe("what the day's surface offers", () => {
     expect(screen.getByRole("button", { name: "View" })).toBeTruthy();
   });
 
+  // A queue whose only verbs are "done" and nothing teaches a reader to leave
+  // it open. The backend advertises `snooze` on every task; the first version
+  // of this screen advertised it and rendered nothing.
+  it("offers a task the day after, not only done", async () => {
+    stub({
+      ...emptyDay,
+      planned: [
+        {
+          id: "t-1",
+          source: "task",
+          title: "Call Anna about the renewal",
+          due_at: "2026-08-25T10:00:00Z",
+          actions: ["complete", "snooze"],
+        },
+      ],
+      counts: { needs_you: 0, planned: 1 },
+    });
+    renderToday();
+    await screen.findByText("Call Anna about the renewal");
+    expect(screen.getByRole("button", { name: "Tomorrow" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+  });
+
   it("asks for a decision on something staged", async () => {
     stub({
       ...emptyDay,

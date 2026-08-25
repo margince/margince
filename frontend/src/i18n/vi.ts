@@ -97,6 +97,7 @@ export const vi = {
   "day.done.empty": "Không có gì tự chạy.",
   "day.overdue": "Quá hạn",
   "day.complete": "Xong",
+  "day.snooze": "Ngày mai",
   "day.decide": "Quyết định",
   "day.merge": "Hợp nhất",
   "day.open": "Xem",

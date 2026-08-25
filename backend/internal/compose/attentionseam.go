@@ -80,13 +80,29 @@ func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 	return d.store.CountOpenDedupeCandidates(ctx)
 }
 
+// taskScanFactor is how much wider than the lane the task read goes.
+//
+// The store returns tasks by recency regardless of whether they are done or
+// due, and this seam filters afterwards, so the scan has to carry enough rows
+// for the filter to still find today's work under a pile of finished ones. Ten
+// times the lane is a guess with a floor rather than a measurement: what it
+// must not be is EQUAL to the lane, which is what silently dropped overdue
+// work.
+const taskScanFactor = 10
+
 // attentionTasks reads open tasks through the activities store. A task is an
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct{ store *activities.Store }
 
 func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limit int) ([]attention.Task, error) {
 	kind := activityKindTask
-	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{Kind: &kind, Limit: &limit})
+	// Read WIDER than the lane shows, because the store cannot filter on
+	// "open and due by now" and this does the filtering afterwards. Asking for
+	// exactly the lane's size let a dozen completed or future-dated tasks fill
+	// the page and push a genuinely overdue one off it — the day would read
+	// clear while the task queue still showed the promise it had missed.
+	scan := limit * taskScanFactor
+	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{Kind: &kind, Limit: &scan})
 	if err != nil {
 		return nil, err
 	}

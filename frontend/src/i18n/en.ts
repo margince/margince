@@ -91,6 +91,7 @@ export const en = {
   "day.done.empty": "Nothing ran on its own.",
   "day.overdue": "Overdue",
   "day.complete": "Done",
+  "day.snooze": "Tomorrow",
   "day.decide": "Decide",
   "day.merge": "Review",
   "day.open": "View",

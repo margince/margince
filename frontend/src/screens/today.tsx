@@ -8,7 +8,7 @@ import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
-import { useTaskUpdate } from "./taskactions";
+import { snoozedDueAt, useTaskUpdate } from "./taskactions";
 import {
   type Attention,
   type AttentionItem,
@@ -168,10 +168,12 @@ function verbLabel(
 function AttentionRow({
   item,
   onComplete,
+  onSnooze,
   completing,
 }: Readonly<{
   item: AttentionItem;
   onComplete: (id: string) => void;
+  onSnooze: (id: string, dueAt: string) => void;
   completing: boolean;
 }>) {
   const t = useT();
@@ -188,13 +190,27 @@ function AttentionRow({
       <div className="today-row-verbs">
         {item.overdue && <Badge tone="danger">{t("day.overdue")}</Badge>}
         {canComplete ? (
-          <Button
-            small
-            onClick={() => onComplete(item.id)}
-            disabled={completing}
-          >
-            {t("day.complete")}
-          </Button>
+          <>
+            {/* Not now, rather than not at all: a task pushed a day is still
+                agreed work, and a queue whose only verbs are "done" and
+                nothing teaches a reader to leave it open forever. */}
+            {item.actions.includes("snooze") && item.due_at && (
+              <Button
+                small
+                onClick={() => onSnooze(item.id, item.due_at ?? "")}
+                disabled={completing}
+              >
+                {t("day.snooze")}
+              </Button>
+            )}
+            <Button
+              small
+              onClick={() => onComplete(item.id)}
+              disabled={completing}
+            >
+              {t("day.complete")}
+            </Button>
+          </>
         ) : (
           <Button
             small
@@ -220,6 +236,7 @@ function Lane({
   total,
   tone,
   onComplete,
+  onSnooze,
   completing,
 }: Readonly<{
   shape: LaneShape;
@@ -234,6 +251,7 @@ function Lane({
   total: number;
   tone?: "accent";
   onComplete: (id: string) => void;
+  onSnooze: (id: string, dueAt: string) => void;
   completing: boolean;
 }>) {
   const Icon = shape.icon;
@@ -262,6 +280,7 @@ function Lane({
             key={`${item.source}-${item.id}`}
             item={item}
             onComplete={onComplete}
+            onSnooze={onSnooze}
             completing={completing}
           />
         ))
@@ -317,6 +336,14 @@ function TodayLanes({
   const omitted = day.lanes_omitted ?? [];
   const onComplete = (id: string) =>
     complete.mutate({ id, body: { is_done: true } });
+  // One day later, through the same helper the task queue snoozes with, so the
+  // two surfaces cannot come to mean different things by the word.
+  const onSnooze = (id: string, dueAt: string) => {
+    const next = snoozedDueAt(dueAt);
+    if (next) {
+      complete.mutate({ id, body: { due_at: next } });
+    }
+  };
   return (
     <>
       <p className="t-h2 today-lead">{leadLine(day, t)}</p>
@@ -332,6 +359,7 @@ function TodayLanes({
         total={day.counts.needs_you}
         tone="accent"
         onComplete={onComplete}
+        onSnooze={onSnooze}
         completing={complete.isPending}
       />
       <Lane
@@ -345,6 +373,7 @@ function TodayLanes({
         withheld={omitted.includes("planned")}
         total={day.counts.planned}
         onComplete={onComplete}
+        onSnooze={onSnooze}
         completing={complete.isPending}
       />
       <Lane
@@ -358,6 +387,7 @@ function TodayLanes({
         withheld={omitted.includes("done_for_you")}
         total={done.length}
         onComplete={onComplete}
+        onSnooze={onSnooze}
         completing={complete.isPending}
       />
       {day.counts.duplicates_open != null && day.counts.duplicates_open > 0 && (

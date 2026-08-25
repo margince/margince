@@ -114,7 +114,16 @@ func NewService(a Approvals, d Duplicates, t Tasks, r Receipts, now Clock) *Serv
 // must not read as a clear day.
 func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
 	asOf := s.now().UTC()
-	out := crmcontracts.Attention{AsOf: asOf}
+	// Every lane starts as an empty slice, never nil. The contract declares
+	// them as arrays, and a withheld lane leaves its field unset — which
+	// serialises as `null` and breaks a generated client that iterates what the
+	// schema promised was a list.
+	out := crmcontracts.Attention{
+		AsOf:       asOf,
+		NeedsYou:   []crmcontracts.AttentionItem{},
+		Planned:    []crmcontracts.AttentionItem{},
+		DoneForYou: []crmcontracts.AttentionItem{},
+	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
 	needsYou, count, err := s.decisions(ctx)

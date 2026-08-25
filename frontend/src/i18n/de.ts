@@ -89,6 +89,7 @@ export const de = {
   "day.done.empty": "Es lief nichts von allein.",
   "day.overdue": "Überfällig",
   "day.complete": "Erledigt",
+  "day.snooze": "Morgen",
   "day.decide": "Entscheiden",
   "day.merge": "Zusammenführen",
   "day.open": "Ansehen",
