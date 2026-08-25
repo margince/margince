@@ -79,6 +79,8 @@ the workspace but changes none of them.
 | `import_run` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `installation_settings` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |
 | `integrations` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `knowledge_corpus` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `knowledge_document` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `lead` | CRUD | CRUD | CRUD | CRUD | -R-- | CRUD |
 | `license` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `list` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
