@@ -109,6 +109,17 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	// Both of these ARE compare-and-set writes; what this gate cannot see is the
+	// shape they check the outcome in. It witnesses RowsAffected on a tx.Exec,
+	// and these send the same conditional UPDATE through QueryRow so the value
+	// the write replaced comes back from the statement that replaced it —
+	// reading it separately would name whatever the next writer had put there,
+	// and the audit row would describe two transactions as one. A zero-row
+	// result arrives as pgx.ErrNoRows, which each caller handles as the decline
+	// it is rather than as a failure.
+	"internal/modules/people:fillMissingPersonName": "the fill is conditioned on first_name IS NULL AND last_name IS NULL, and ErrNoRows means the row already carried a name that is not this call's to replace",
+	"internal/modules/people:bindSiteReadLogo":      "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+
 	// Archive is an absolute idempotent transition: the write sets
 	// archived_at unconditionally (no state derived from a pre-read),
 	// so concurrent archives converge on the same terminal row and the

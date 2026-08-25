@@ -214,7 +214,7 @@ func TestCompanySaveEventPayload_Updated(t *testing.T) {
 func TestSiteReadConfirmationPayload_Created(t *testing.T) {
 	read := SiteRead{ID: ids.NewV7(), SeedURL: "https://acme.example"}
 	confirmation := siteReadConfirmation{
-		created:      true,
+		target:       anchorTarget{created: true},
 		appliedSite:  map[string]any{"legal_name": "Acme GmbH"},
 		appliedHuman: map[string]any{},
 		appliedFacts: []map[string]any{{"category": "contact"}},
@@ -258,7 +258,7 @@ func TestSiteReadConfirmationPayload_Created(t *testing.T) {
 func TestSiteReadConfirmationPayload_Updated(t *testing.T) {
 	read := SiteRead{ID: ids.NewV7(), SeedURL: "https://acme.example"}
 	confirmation := siteReadConfirmation{
-		created:      false,
+		target:       anchorTarget{created: false},
 		appliedSite:  map[string]any{"legal_name": "Acme GmbH"},
 		appliedHuman: map[string]any{},
 		appliedFacts: []map[string]any{{"category": "contact"}},

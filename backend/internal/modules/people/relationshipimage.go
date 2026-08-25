@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package people
+
+// What an edge mutation records about the edge, and the write shape that
+// carries it.
+//
+// The image is the row's own field values and nothing else: an edge carries
+// role, dates and the primary-employer flag, and a patch that moves any of them
+// is only answerable later if the row says what they held. The anchor the edge
+// annotates is addressed by the event, not by the image — operation context
+// belongs in evidence, because field history projects an image key as a change
+// to a field of that name (storekit.AuditWithEvidence).
+
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+)
+
+// relationshipImage is the edge as its own fields: every column
+// UpdateRelationship can move, plus the kind that says what those fields mean.
+func relationshipImage(rel relationshipRow) map[string]any {
+	return map[string]any{
+		relationshipKindField: rel.Kind,
+		relationshipRoleField: rel.Role,
+		"is_current_primary":  rel.IsCurrentPrimary,
+		"started_at":          rel.StartedAt,
+		"ended_at":            rel.EndedAt,
+	}
+}
+
+// emitRelationshipChange lands the write shape on the edge's anchor:
+// audit on the relationship row, event on the anchor entity (an
+// employment change IS a person change to every consumer).
+//
+// before is the edge as it stood before the write, and a patch is the only
+// verb that has one — a create had no prior row, and an archive moves
+// archived_at, which none of these fields describes. Given one, the pair is
+// narrowed to what actually moved, so a role edit does not present the kind
+// and the dates as changes nobody made.
+func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, before map[string]any, rel relationshipRow) error {
+	anchorObject, _ := relationshipAnchor(rel.Kind)
+	var anchorID ids.UUID
+	switch anchorObject {
+	case "person":
+		anchorID = rel.PersonID.UUID
+	case "deal":
+		anchorID = rel.DealID.UUID
+	case projectObjectName:
+		anchorID = rel.ProjectID.UUID
+	default:
+		anchorID = rel.OrganizationID.UUID
+	}
+	after := relationshipImage(rel)
+	if !storekit.AbsentImage(before) {
+		before, after = storekit.ChangedColumns(before, after)
+	}
+	auditID, err := storekit.Audit(ctx, tx, action, "relationship", rel.ID, before, after)
+	if err != nil {
+		return err
+	}
+	changedFields := map[string]any{
+		"delta": map[string]any{"relationship": map[string]any{"id": rel.ID, "kind": rel.Kind, "action": action}},
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, anchorID, relationshipUpdatedPayload(anchorObject, changedFields))
+}

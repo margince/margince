@@ -92,11 +92,25 @@ type relationshipRow struct {
 }
 
 func scanRelationship(r pgx.Row) (relationshipRow, error) {
+	return scanRelationshipWithPrior(r, nil)
+}
+
+// scanRelationshipWithPrior reads an edge, and optionally one trailing column: a
+// value the same statement carried out of the row as it stood BEFORE the write.
+// An upsert cannot be asked afterwards whether it inserted or replaced — the row
+// looks identical either way — so the answer has to travel with it.
+//
+// prior is a **string because the column is nullable twice over: there may have
+// been no prior row at all, which is exactly the case the caller reads it for.
+func scanRelationshipWithPrior(r pgx.Row, prior **string) (relationshipRow, error) {
 	var out relationshipRow
-	err := r.Scan(&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
+	targets := []any{&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
 		&out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
-		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt)
-	return out, err
+		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt}
+	if prior != nil {
+		targets = append(targets, prior)
+	}
+	return out, r.Scan(targets...)
 }
 
 type CreateRelationshipInput struct {
@@ -214,7 +228,7 @@ func (s *Store) CreateRelationship(ctx context.Context, in CreateRelationshipInp
 		if out, err = scanRelationship(row); err != nil {
 			return mapRelationshipConstraint(err, in.Kind)
 		}
-		return emitRelationshipChange(ctx, tx, "create", out)
+		return emitRelationshipChange(ctx, tx, "create", nil, out)
 	})
 	return out, err
 }
@@ -375,7 +389,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			// update. current.Kind, because a patch cannot change the kind.
 			return mapRelationshipConstraint(err, current.Kind)
 		}
-		return emitRelationshipChange(ctx, tx, "update", out)
+		return emitRelationshipChange(ctx, tx, "update", relationshipImage(current), out)
 	})
 	return out, err
 }
@@ -440,37 +454,9 @@ func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion 
 		} else if err != nil {
 			return err
 		}
-		return emitRelationshipChange(ctx, tx, "archive", out)
+		return emitRelationshipChange(ctx, tx, "archive", nil, out)
 	})
 	return out, err
-}
-
-// emitRelationshipChange lands the write shape on the edge's anchor:
-// audit on the relationship row, event on the anchor entity (an
-// employment change IS a person change to every consumer).
-func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, rel relationshipRow) error {
-	anchorObject, _ := relationshipAnchor(rel.Kind)
-	var anchorID ids.UUID
-	switch anchorObject {
-	case "person":
-		anchorID = rel.PersonID.UUID
-	case "deal":
-		anchorID = rel.DealID.UUID
-	case projectObjectName:
-		anchorID = rel.ProjectID.UUID
-	default:
-		anchorID = rel.OrganizationID.UUID
-	}
-	auditID, err := storekit.Audit(ctx, tx, action, "relationship", rel.ID, nil, map[string]any{
-		"kind": rel.Kind, "role": rel.Role,
-	})
-	if err != nil {
-		return err
-	}
-	changedFields := map[string]any{
-		"delta": map[string]any{"relationship": map[string]any{"id": rel.ID, "kind": rel.Kind, "action": action}},
-	}
-	return storekit.EmitEvent(ctx, tx, auditID, anchorID, relationshipUpdatedPayload(anchorObject, changedFields))
 }
 
 // relationshipUpdatedPayload builds the anchor's .updated event for a

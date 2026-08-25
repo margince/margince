@@ -59,7 +59,13 @@ func (s *VoiceStore) PreviewSource(ctx context.Context, profileID ids.UUID, form
 	return PreviewCorpusText(format, content)
 }
 
+// priorVoiceSource is the manifest row a re-ingest replaces — the fields the
+// upsert overwrites, read before it runs, so the audit row can say what the
+// replaced source held. exists separates "there was no such source" from a
+// source whose every field happened to read as a zero value.
 type priorVoiceSource struct {
+	kind      string
+	register  string
 	wordCount int
 	excluded  bool
 	exists    bool
@@ -68,10 +74,10 @@ type priorVoiceSource struct {
 func loadPriorVoiceSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, sourceRef string) (priorVoiceSource, error) {
 	var prior priorVoiceSource
 	err := tx.QueryRow(ctx, `
-			SELECT word_count, excluded
+			SELECT kind, register, word_count, excluded
 			FROM voice_corpus_source
 			WHERE voice_profile_id = $1 AND source_ref = $2 AND archived_at IS NULL`,
-		profileID, sourceRef).Scan(&prior.wordCount, &prior.excluded)
+		profileID, sourceRef).Scan(&prior.kind, &prior.register, &prior.wordCount, &prior.excluded)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return prior, nil
@@ -153,10 +159,12 @@ func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profi
 
 func (s *VoiceStore) recordSourceIngest(ctx context.Context, tx pgx.Tx, profile VoiceProfile, source VoiceCorpusSource, prior priorVoiceSource) (CorpusSummary, error) {
 	auditAction, eventAction, wordDelta := sourceIngestChange(source, prior)
-	auditID, err := storekit.Audit(ctx, tx, auditAction, "voice_corpus_source", source.ID, nil, map[string]any{
-		"voice_profile_id": profile.ID, voiceKeyKind: source.Kind, voiceKeyRegister: source.Register,
-		"source_ref": source.SourceRef, "word_count": source.WordCount,
-	})
+	auditID, err := storekit.Audit(ctx, tx, auditAction, "voice_corpus_source", source.ID,
+		priorSourceImage(profile, source, prior), map[string]any{
+			"voice_profile_id": profile.ID, voiceKeyKind: source.Kind, voiceKeyRegister: source.Register,
+			"source_ref": source.SourceRef, "word_count": source.WordCount,
+			voiceKeyExcluded: source.Excluded,
+		})
 	if err != nil {
 		return CorpusSummary{}, err
 	}
@@ -178,6 +186,24 @@ func (s *VoiceStore) recordSourceIngest(ctx context.Context, tx pgx.Tx, profile 
 		return CorpusSummary{}, err
 	}
 	return summary, nil
+}
+
+// priorSourceImage is the replaced source as the after image describes the new
+// one — the same keys, so a reader diffs field against field. A first ingest
+// replaced nothing and records no image; re-ingesting an excluded source is an
+// explicit opt back in, which is a transition only this pair can show.
+//
+// The identity keys are carried unchanged because they are what the upsert
+// conflicts on: a re-ingest is by definition the same profile and source_ref.
+func priorSourceImage(profile VoiceProfile, source VoiceCorpusSource, prior priorVoiceSource) map[string]any {
+	if !prior.exists {
+		return nil
+	}
+	return map[string]any{
+		"voice_profile_id": profile.ID, voiceKeyKind: prior.kind, voiceKeyRegister: prior.register,
+		"source_ref": source.SourceRef, "word_count": prior.wordCount,
+		voiceKeyExcluded: prior.excluded,
+	}
 }
 
 func sourceIngestChange(source VoiceCorpusSource, prior priorVoiceSource) (string, string, int) {

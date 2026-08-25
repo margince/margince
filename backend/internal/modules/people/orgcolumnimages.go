@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -78,4 +79,22 @@ func emptyColdStartColumnImages() map[string]any {
 		fieldOfferSummary:      nil,
 		"size_band":            nil,
 	}
+}
+
+// anchorSaveImages is the pair of images a company save records: the columns as
+// the resolve found them, against the row as the save leaves it, narrowed to
+// what actually moved so a re-sent form does not present every field it echoed
+// back as an edit. A save that MINTED the row has no before-image, and its
+// after image stays whole — every column the create wrote is a change from
+// nothing.
+func anchorSaveImages(ctx context.Context, tx pgx.Tx, target anchorTarget) (map[string]any, map[string]any, error) {
+	after, err := readColdStartColumnImages(ctx, tx, target.id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if storekit.AbsentImage(target.before) {
+		return nil, after, nil
+	}
+	before, changed := storekit.ChangedColumns(target.before, after)
+	return before, changed, nil
 }
