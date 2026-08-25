@@ -33,6 +33,15 @@ export const FADE = 0.45;
 export type EdgeLoop = Readonly<{
   /** Stops the loop and releases the GPU objects. Safe to call twice. */
   stop: () => void;
+  /**
+   * Asks for the light, or asks for it back.
+   *
+   * Separate from `stop` because leaving is a picture and not just a teardown: a
+   * caller that unmounted the canvas the moment the work finished would cut the
+   * edge off mid-glow, and a light that vanishes reads as a fault where a light
+   * that dims reads as finishing. The caller keeps this mounted until `onDark`.
+   */
+  setLit: (lit: boolean) => void;
 }>;
 
 export type EdgeLoopOptions = Readonly<{
@@ -41,6 +50,8 @@ export type EdgeLoopOptions = Readonly<{
   reduced: boolean;
   /** Told when the context is lost, so the caller can wear the static rim. */
   onLost: () => void;
+  /** Told once the light has finished going out, so the caller may unmount. */
+  onDark?: () => void;
   /** Swapped in tests. The GPU is the one true boundary this file has. */
   makeRenderer?: (
     canvas: HTMLCanvasElement,
@@ -73,7 +84,14 @@ export function runEdgeLoop(
   let handle = 0;
   let drawnAt = 0;
   let born = 0;
+  let lastAt = 0;
   let stopped = false;
+  // The light is integrated toward a target rather than read off the loop's age,
+  // which is what lets it come back DOWN. Reading it off age can only ever go one
+  // way, and the way it could not go is the one a reader notices.
+  let level = 0;
+  let target = 1;
+  let wentDark = false;
 
   const measure = () => {
     renderer.resize(
@@ -113,19 +131,32 @@ export function runEdgeLoop(
     handle = requestAnimationFrame(tick);
     if (born === 0) {
       born = now;
+      lastAt = now;
     }
-    // The budget covers the DRAW. There is nothing to advance between frames
-    // here: the wave's phase is a function of the clock rather than of a step
-    // count, so a skipped frame costs a frame and never changes the motion.
+    // The budget covers the DRAW. The wave's phase is a function of the clock
+    // rather than of a step count, so a skipped frame costs a frame and never
+    // changes the motion; the light moves by ELAPSED time for the same reason,
+    // which is what keeps the fade the same length on any display.
     if (now - drawnAt < FRAME_MS) {
       return;
     }
+    const step = (now - lastAt) / 1000 / FADE;
+    lastAt = now;
     drawnAt = now;
-    const age = (now - born) / 1000;
+    level = Math.min(Math.max(level + (target === 1 ? step : -step), 0), 1);
     renderer.draw({
-      time: options.reduced ? 0 : age,
-      level: Math.min(age / FADE, 1),
+      time: options.reduced ? 0 : (now - born) / 1000,
+      level,
+      // Holding the clock still parks the travelling head in a corner rather
+      // than stopping it, so the head has to be turned off explicitly.
+      beam: options.reduced ? 0 : 1,
     });
+    if (target === 0 && level === 0 && !wentDark) {
+      // Once. The caller unmounts on this, and a second call would arrive after
+      // the canvas it refers to is gone.
+      wentDark = true;
+      options.onDark?.();
+    }
   };
 
   const onContextLost = (event: Event) => {
@@ -168,5 +199,15 @@ export function runEdgeLoop(
   measure();
   handle = requestAnimationFrame(tick);
 
-  return { stop };
+  return {
+    stop,
+    setLit(lit) {
+      target = lit ? 1 : 0;
+      // Asking for the light back after it has gone out is a fresh arrival, so
+      // the report is armed again rather than being spent for the loop's life.
+      if (lit) {
+        wentDark = false;
+      }
+    },
+  };
 }

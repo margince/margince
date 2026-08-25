@@ -26,6 +26,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
 )
 
@@ -361,9 +362,9 @@ func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string,
 func classifyStatus(resp *http.Response, op string, body []byte) error {
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests:
-		return &connector.RateLimitedError{RetryAfter: retryAfter(resp)}
+		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
 	case resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
-		return &connector.RateLimitedError{RetryAfter: retryAfter(resp)}
+		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return &connector.ProviderError{
 			Op: op, Status: resp.StatusCode, Reason: googleconn.Reason(body), Class: ErrAuthRejected,
@@ -374,18 +375,6 @@ func classifyStatus(resp *http.Response, op string, body []byte) error {
 		}
 	}
 	return nil
-}
-
-// retryAfter parses the provider's Retry-After (delta-seconds form; Google
-// does not send HTTP-dates here). Zero when absent — the caller's own backoff
-// takes over.
-func retryAfter(resp *http.Response) time.Duration {
-	if s := resp.Header.Get("Retry-After"); s != "" {
-		if secs, err := strconv.Atoi(s); err == nil && secs > 0 {
-			return time.Duration(secs) * time.Second
-		}
-	}
-	return 0
 }
 
 // Read caps for the Gmail JSON responses. The metadata calls (profile, id

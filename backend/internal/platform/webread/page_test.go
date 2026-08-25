@@ -101,6 +101,46 @@ func TestFetchPageKeepsTheTextContractAndHarvestsLinks(t *testing.T) {
 	if page.Bytes != len(pageHTML) {
 		t.Fatalf("Page.Bytes = %d, want the raw size %d", page.Bytes, len(pageHTML))
 	}
+	// An unredirected page came from where it was asked.
+	if page.FinalURL != srv.URL+"/" {
+		t.Fatalf("Page.FinalURL = %q, want the requested %q", page.FinalURL, srv.URL+"/")
+	}
+}
+
+func TestFetchPageReportsWhereARedirectedBodyCameFrom(t *testing.T) {
+	// A crawler that only knows the requested URL treats every link on a
+	// redirected page as off-site; the final URL is what the boundary and the
+	// evidence must be judged by, so FetchPage has to carry it out.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			http.NotFound(w, r)
+		case "/old-home":
+			http.Redirect(w, r, "/new-home", http.StatusMovedPermanently)
+		case "/new-home":
+			//craft:ignore swallowed-errors httptest handler write; a failed write fails the test through the assertions below
+			_, _ = w.Write([]byte(`<html><body><a href="team">Team</a>The company.</body></html>`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	page, err := testFetcher().FetchPage(context.Background(), srv.URL+"/old-home")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.URL != srv.URL+"/old-home" {
+		t.Fatalf("Page.URL = %q, want the requested spelling kept", page.URL)
+	}
+	if page.FinalURL != srv.URL+"/new-home" {
+		t.Fatalf("Page.FinalURL = %q, want the redirect destination %q", page.FinalURL, srv.URL+"/new-home")
+	}
+	// Relative links resolve against where the body came from, not where it
+	// was asked for.
+	if want := []string{srv.URL + "/team"}; !reflect.DeepEqual(page.Links, want) {
+		t.Fatalf("Page.Links = %v, want %v", page.Links, want)
+	}
 }
 
 func TestSitemapLocParsing(t *testing.T) {

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { calendarDay } from "../format/calendarday";
+import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { bandTone } from "../screens/aiusage";
 import { throwProblem } from "../screens/common";
@@ -26,7 +28,16 @@ export function EconomyBanner() {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      // A one-day window, and the day is the reader's own.
+      //
+      // The window is here to keep the response small — this banner reads only
+      // `budget.band`, and an unbounded query returns every day of the month
+      // with its per-task rows. It does NOT decide the band: that is a
+      // month-to-date figure the server computes for itself (ai.Meter's
+      // MonthTokens), and `from`/`to` never reach it. So the reader's day
+      // rather than UTC's is honesty about what the word "today" means here,
+      // not a fix for a wrong band — the band was never wrong.
+      const today = calendarDay(new Date(), viewerZone());
       const { data, error } = await api.GET("/ai/usage", {
         params: { query: { from: today, to: today } },
       });
