@@ -299,6 +299,32 @@ for lane in $lanes; do
 	esac
 done
 
+# --- the other half of the same invariant ---------------------------------------
+#
+# An arm in the reporter is only reachable if main-health both RUNS the report
+# job for that lane and passes the lane's result in. Those are two lines in a
+# different file, and the reporter's own test cannot see them — which is how a
+# `dco` lane was added with its arm, its env line and both cases, and still
+# filed nothing: the report job's `if:` did not select it, so a DCO-only failure
+# skipped the job entirely and the arm was never reached.
+#
+# One invariant spelled on both sides of a wire is one item. So the census asks
+# the workflow the same question it asks the reporter, and fails in the
+# direction that was missed rather than only the one that was covered.
+health="$root/.github/workflows/main-health.yml"
+for lane in $lanes; do
+	# MAIN_UAT_RESULT -> uat
+	job="$(printf '%s' "$lane" | sed -E 's/^MAIN_(.+)_RESULT$/\1/' | tr '[:upper:]' '[:lower:]')"
+	if ! grep -qE "needs\.${job}\.result == 'failure'" "$health"; then
+		echo "FAIL: $lane has a reporter arm, but main-health's report job does not run for a failing '${job}' — the arm is unreachable"
+		failures=$((failures + 1))
+	fi
+	if ! grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}" "$health"; then
+		echo "FAIL: $lane has a reporter arm, but main-health never passes needs.${job}.result in as $lane"
+		failures=$((failures + 1))
+	fi
+done
+
 if [ "$failures" -ne 0 ]; then
 	echo "FAIL: $failures case(s)" >&2
 	exit 1

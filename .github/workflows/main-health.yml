@@ -306,11 +306,25 @@ jobs:
           fetch-depth: 0
       - name: Every commit on main since the baseline is signed off
         env:
-          # The first commit this gate covers. A SHA that has left the history
-          # makes `git rev-list` fail loudly rather than check nothing, which is
-          # the failure mode a baseline has to avoid.
+          # The first commit this gate covers.
           DCO_MAIN_BASELINE: 250f692f7
-        run: ./scripts/check-dco.sh "$DCO_MAIN_BASELINE" "${{ github.sha }}"
+        # The ancestry is asserted before the range is used, because
+        # `git rev-list A..B` does not complain when A is not behind B — it
+        # answers with whatever that range happens to mean. A baseline that has
+        # left the history fails loudly on rev-parse, but one that RESOLVES and
+        # is not an ancestor is the dangerous case: if it sits ahead of the tip
+        # the range is empty and this gate reports a clean main having read
+        # nothing. A census that can fail short has already failed, so it is
+        # checked rather than assumed.
+        run: |
+          set -eu
+          git rev-parse --verify "$DCO_MAIN_BASELINE^{commit}" >/dev/null
+          if ! git merge-base --is-ancestor "$DCO_MAIN_BASELINE" "${{ github.sha }}"; then
+            echo "DCO: baseline $DCO_MAIN_BASELINE is not an ancestor of ${{ github.sha }} —" >&2
+            echo "the range would not cover main's history. Update DCO_MAIN_BASELINE." >&2
+            exit 1
+          fi
+          ./scripts/check-dco.sh "$DCO_MAIN_BASELINE" "${{ github.sha }}"
 
   report:
     name: report
@@ -329,7 +343,8 @@ jobs:
       || needs.integration.result == 'failure'
       || needs.frontend.result == 'failure'
       || needs.uat.result == 'failure'
-      || needs.sonar.result == 'failure')
+      || needs.sonar.result == 'failure'
+      || needs.dco.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
       contents: read
