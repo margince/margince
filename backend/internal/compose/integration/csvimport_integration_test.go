@@ -9,7 +9,7 @@ package integration
 // approve it — and the promises that make it safe to hand a customer's estate
 // to. Every assertion here is one the chapter makes by number:
 //
-//	IEM-AC-7  — the dry run writes NOTHING, and bulk rows land as leads, not people
+//	IEM-AC-7  — the dry run writes NOTHING, and each object writes its own table
 //	IEM-AC-9  — a re-run creates no duplicates
 //	IEM-WIRE-5 — approval is valid only from awaiting_approval
 //
@@ -197,9 +197,14 @@ const prospectCSV = "Email,Full Name,Title\n" +
 	"grace@hopper.example,Grace Hopper,Rear Admiral\n" +
 	"katherine@johnson.example,Katherine Johnson,Mathematician\n"
 
-// IEM-AC-7 and AC-M5, the two promises that make an import safe to run against
-// a real estate: the dry run writes NOTHING, and what the commit writes are
-// LEADS — not people (ADR-0008 anti-pollution).
+// The two promises that make an import safe to run against a real estate: the
+// dry run writes NOTHING, and a `lead` run writes LEADS — it does not reach the
+// person table at all.
+//
+// That second half is scoped to `object: lead` deliberately. A file the business
+// already knows imports as `object: person` and creates people, which
+// TestCSVImportOfKnownPeopleCreatesPeople below asserts. What must never happen
+// is one object quietly writing the other's table.
 func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	e := setupImportApp(t)
 	peopleBefore := importedPersonCount(t, e)
@@ -251,7 +256,78 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 		t.Fatalf("leads after approval = %d, want 3", got)
 	}
 	if got := importedPersonCount(t, e); got != peopleBefore {
-		t.Fatalf("people = %d, was %d — a bulk import creates leads, never people (ADR-0008)", got, peopleBefore)
+		t.Fatalf("people = %d, was %d — a `lead` run writes leads and does not reach the person table", got, peopleBefore)
+	}
+}
+
+// The other half of the same promise: a file of people the business already
+// knows imports as PEOPLE, through the same dry-run-then-approve flow.
+//
+// Three things are asserted together because each one failing alone would still
+// look like a working import: the dry run writes nothing, the commit creates
+// people rather than leads, and re-running the identical file converges instead
+// of reporting an update forever. That last one is the defect a person object
+// introduces on its own — an email is a child row, so a comparison that reads
+// the record's flat fields finds no `email` and calls every row changed.
+func TestCSVImportOfKnownPeopleCreatesPeople(t *testing.T) {
+	e := setupImportApp(t)
+	peopleBefore := importedPersonCount(t, e)
+	leadsBefore := leadCount(t, e)
+
+	profile, status := uploadCSV(t, e, "person", prospectCSV)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	if profile.RowsProfiled != 3 {
+		t.Fatalf("profile = %+v, want 3 rows", profile)
+	}
+
+	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef,
+		map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	if got := importedPersonCount(t, e); got != peopleBefore {
+		t.Fatalf("the dry run created %d people; a validation pass writes nothing", got-peopleBefore)
+	}
+
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 3 {
+		t.Fatalf("report = %+v, want 3 rows the commit will create", report)
+	}
+
+	var approved importRunDTO
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	if got := importedPersonCount(t, e); got != peopleBefore+3 {
+		t.Fatalf("people = %d, was %d — a `person` run creates people", got, peopleBefore)
+	}
+	if got := leadCount(t, e); got != leadsBefore {
+		t.Fatalf("leads = %d, was %d — a `person` run does not reach the lead table", got, leadsBefore)
+	}
+
+	// The same file again: every row is already here and unchanged, so the
+	// commit has nothing to do. An `email` the comparison cannot read would
+	// report three updates instead.
+	second, secondStatus := uploadCSV(t, e, "person", prospectCSV)
+	if secondStatus != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", secondStatus)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "person", second.SourceRef,
+		map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"})
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("create re-run → %d, want 202", rerunStatus)
+	}
+	var rereport importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &rereport); status != http.StatusOK {
+		t.Fatalf("re-report → %d, want 200", status)
+	}
+	if rereport.Disposition.Created != 0 || rereport.Disposition.Updated != 0 {
+		t.Fatalf("re-run = %+v, want nothing created and nothing updated — the file is unchanged", rereport.Disposition)
 	}
 }
 
