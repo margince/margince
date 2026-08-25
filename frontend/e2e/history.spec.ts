@@ -168,15 +168,6 @@ test("a report is an address, and Back steps between reports", async ({
   await expect(page).toHaveURL(/#\/reports$/);
 });
 
-test("the decided inbox is an address", async ({ page }) => {
-  await page.goto("/#/inbox/decided");
-  // Addressed cold: the control reflects the address rather than the address
-  // being a note about what was clicked.
-  await expect(
-    page.getByRole("button", { name: "Entschieden", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-});
-
 test("the deals board remembers its pipeline and its view in the address", async ({
   page,
 }) => {

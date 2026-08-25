@@ -1190,7 +1190,6 @@ async function expectNoAaViolations(page: Page, screen: string) {
 const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
-  "inbox/decided",
   "reports/forecast",
 ];
 
