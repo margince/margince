@@ -50,21 +50,13 @@ MINIO_PORT ?= 29000
 # that refusal into an empty database name and seed the wrong place anyway. Each
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
-# An override is all three or none, checked BEFORE anything is resolved: naming
-# one of them and letting the other two resolve from this worktree is how one
-# seed lands in two stacks, and it fails silently because each half succeeds.
+# An override is all three or none, and `dev_seed_override` refuses in between
+# before anything here is resolved — `set -e` and the command substitution carry
+# that refusal out. The rule is stated in the library rather than spelled in this
+# recipe, so it has one writer and a gate can reach it without a seeder.
 SEED_STACK = set -e; . scripts/lib-devstate.sh; \
-  seed_given=0; \
-  for given in "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)"; do \
-    [ -z "$$given" ] || seed_given=$$((seed_given + 1)); \
-  done; \
-  if [ "$$seed_given" -gt 0 ] && [ "$$seed_given" -lt 3 ]; then \
-    echo "FAIL: SEED_DSN, SEED_API and SEED_BUCKET name ONE stack — set all three or none." >&2; \
-    echo "  Given: DSN='$(SEED_DSN)' API='$(SEED_API)' BUCKET='$(SEED_BUCKET)'" >&2; \
-    echo "  A partial override sends this seed's records to one stack and its rows to another." >&2; \
-    exit 1; \
-  fi; \
-  if [ "$$seed_given" -eq 3 ]; then \
+  seed_override="$$(dev_seed_override "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)")"; \
+  if [ "$$seed_override" = "all" ]; then \
     seed_api="$(SEED_API)"; \
     seed_bucket="$(SEED_BUCKET)"; \
     seed_dsn="$(SEED_DSN)"; \

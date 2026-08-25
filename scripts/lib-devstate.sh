@@ -193,3 +193,34 @@ dev_database_name() {
   fi
   printf 'margince_dev_%s' "$slug"
 }
+
+# dev_seed_override — is an override of this worktree's stack complete?
+#
+# A stack is three things: the API base a seed's records go through, the database
+# its SQL half writes, and the bucket its objects land in. Naming one of them and
+# letting the other two resolve from this worktree splits one seed across two
+# stacks — the same defect dev_app_base_url and dev_database_name exist to close,
+# arriving by the front door, and silent because each half succeeds on its own.
+#
+# Prints "all" when all three are given, "none" when none is, and refuses in
+# between. Lives here rather than in the Makefile recipe that calls it so the
+# rule has one writer and can be tested without a seeder, a dataset or a network.
+dev_seed_override() { # dsn api bucket
+  local given=0
+  local value
+  for value in "$1" "$2" "$3"; do
+    [[ -z "$value" ]] || given=$((given + 1))
+  done
+  if (( given == 0 )); then
+    printf 'none'
+    return 0
+  fi
+  if (( given == 3 )); then
+    printf 'all'
+    return 0
+  fi
+  echo "FAIL: SEED_DSN, SEED_API and SEED_BUCKET name ONE stack — set all three or none." >&2
+  echo "  Given: DSN='$1' API='$2' BUCKET='$3'" >&2
+  echo "  A partial override sends this seed's records to one stack and its rows to another." >&2
+  return 1
+}

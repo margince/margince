@@ -177,33 +177,31 @@ planted="$(printf 'seed-demo:\n\tBASE_URL=http://localhost:8080 pnpm e2e\n' \
 check "1" "$planted" \
       "the scan recognises a hardcoded :8080 in a recipe — otherwise the clean result above means nothing"
 
-echo "Makefile: reaching another stack is all three of it or none"
+echo "reaching another stack is all three of it or none"
 
 # A stack is an API base, a database and a bucket. Overriding one and letting the
 # other two resolve from this worktree is the same split the scan above exists to
 # catch, arriving by the front door: each half succeeds, so nothing reports it.
-partial="$(make -s -C "$root" verify-demo SEED_DSN=postgres://x@localhost:15432/margince 2>&1 || true)"
-case "$partial" in
-    *"set all three or none"*) refused=1 ;;
-    *)                         refused="accepted a partial override: $partial" ;;
-esac
-check "1" "$refused" \
-      "a DSN on its own is refused, rather than sending records to one stack and rows to another"
+#
+# The rule is tested where it LIVES, not through `make seed-demo`: a check that
+# drove the recipe needed the demo dataset and a reachable API, so in CI it died
+# before reaching the rule and reported the rule broken.
+check "none" "$(dev_seed_override "" "" "")" \
+      "no override at all resolves this worktree's stack, as every seed does by default"
+check "all" "$(dev_seed_override "postgres://x/other" "http://localhost:9" "other-bucket")" \
+      "all three together name the stack they say — the flags exist to be used"
+for partial in "dsn:::" ":api::" "::bucket:"; do
+    dsn="$(printf '%s' "$partial" | cut -d: -f1)"
+    api="$(printf '%s' "$partial" | cut -d: -f2)"
+    bucket="$(printf '%s' "$partial" | cut -d: -f3)"
+    check "1" "$(dev_seed_override "$dsn" "$api" "$bucket" >/dev/null 2>&1; echo $?)" \
+          "a partial override ($partial) is refused rather than splitting one seed across two stacks"
+done
 
-# And a COMPLETE override is still honoured, or the refusal above would just be a
-# way of forbidding what the variables exist to do.
-complete="$(make -s -C "$root" verify-demo \
-    SEED_DSN=postgres://x@localhost:15432/other \
-    SEED_API=http://localhost:9 \
-    SEED_BUCKET=other-bucket 2>&1 || true)"
-# Matched on the host it actually CONTACTED rather than on the flag it printed:
-# the flag proves the recipe composed a URL, the dial proves the seeder used it.
-case "$complete" in
-    *"http://localhost:9/v1/"*) honoured=1 ;;
-    *)                          honoured="did not reach the named API: $complete" ;;
-esac
-check "1" "$honoured" \
-      "all three together name the stack they say, so the refusal is about split writes and not about the flags"
+# And the Makefile still ASKS. The rule refusing in a library nothing calls is
+# the same as no rule, and this is the seam the recipes go through.
+check "1" "$(grep -q 'seed_override=.*dev_seed_override' "$root/Makefile" && echo 1 || echo 0)" \
+      "the seed prelude asks the library, so the refusal reaches the recipes"
 
 lift port_listeners
 lift read_registry
