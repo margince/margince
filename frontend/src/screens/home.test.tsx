@@ -446,8 +446,9 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
     ]);
   });
 
-  // The token is minted by the approve and the row that triggered it unmounts on
-  // the invalidation, so it has to be caught at SCREEN level to be readable.
+  // The approve still mints a token — an agent redeems its own staging with
+  // one — and the surface it used to be shown on is exactly where a reader
+  // would still look, so the absence is asserted at SCREEN level.
   it("shows no approval token after the commit re-reads the queue", async () => {
     const queue = [proposal("ap-1", "Send the Weber follow-up")];
     const decided = new Set<string>();

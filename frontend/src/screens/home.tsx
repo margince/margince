@@ -274,9 +274,9 @@ export function HomeScreen() {
   const nowMs = useNow(60_000);
   const me = useMe();
 
-  // Approving mints an approval token and can 409 already-decided; both must
-  // outlive the deck's re-render on invalidation, so Home uses the same shared
-  // sink the Decisions screen does.
+  // Approving can 409 already-decided, and that note must outlive the deck's
+  // re-render on invalidation, so Home uses the same shared sink the Decisions
+  // screen does.
   const { onAlreadyDecided, decidedNote } = useDecisionSink();
   const approvalsQuery = usePendingApprovals();
   const briefQuery = useMorningBrief();

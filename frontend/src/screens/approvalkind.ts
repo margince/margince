@@ -7,13 +7,17 @@ import type { MessageKey } from "../i18n/en";
 // to accept twenty-five of something needs to know what that something is, and
 // snake_case in the German UI is not a translation of anything.
 //
-// The authoritative set is the approvals module's grant maps — a kind absent
-// from those cannot be staged at all — so this one is pinned against them by
-// backend/frontendapprovalkinds_test.go, which DERIVES the corpus rather than
-// restating it. The gate this replaced compared against a list hand-copied
-// into the frontend's own test, and a mirror of a mirror agrees with itself:
-// eleven stageable kinds had no label and two labels named kinds the server
-// had already dropped.
+// The set is the approvals module's grant maps, and this map is pinned against
+// them by backend/frontendapprovalkinds_test.go, which DERIVES the corpus
+// rather than restating it. The gate this replaced compared against a list
+// hand-copied into the frontend's own test, and a mirror of a mirror agrees
+// with itself: eleven stageable kinds had no label and two labels named kinds
+// the server had already dropped.
+//
+// What holds a kind to those maps is the compose-side census over every
+// production staging site, not the staging writer itself — that one inserts
+// the kind it is handed. So this map covers what the product stages, and the
+// fallback below is what a kind reaching a reader some other way gets.
 //
 // A kind that still slips through falls back to its own words rather than its
 // identifier: it must degrade to "site lead", never to a token that only makes

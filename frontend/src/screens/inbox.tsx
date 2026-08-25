@@ -228,10 +228,10 @@ function ApprovalDetailModal({
 }
 
 // The row-local decide outcomes that KEEP the row mounted: a generic error
-// and the version-skew re-stage state. The success token (AC-4) and the
-// already-decided note (AC-6) are deliberately NOT here — both fire a pending
-// invalidation that unmounts this row, so they are surfaced at screen level
-// (InboxScreen) where they survive the refetch.
+// and the version-skew re-stage state. The already-decided note (AC-6) is
+// deliberately NOT here — it fires a pending invalidation that unmounts this
+// row, so it is surfaced at screen level (InboxScreen) where it survives the
+// refetch.
 function DecideOutcome({
   decide,
   skew,
@@ -436,9 +436,9 @@ export function ApprovalRow({
 }: Readonly<{
   approval: Approval;
   decided?: boolean;
-  // Lift the just-minted token / the already-decided signal to a surface that
-  // survives this row's unmount (the pending invalidation drops it). Optional
-  // so HomeScreen can reuse the row without a screen-level surface.
+  // Lift the already-decided signal to a surface that survives this row's
+  // unmount (the pending invalidation drops it). Optional so HomeScreen can
+  // reuse the row without a screen-level surface.
   onAlreadyDecided?: () => void;
   // Reads outside the approvals list that a decision also changes. A record
   // page carrying its own count of what is waiting has to re-read it, and only
@@ -1021,8 +1021,8 @@ function outcomeTone(decision: BundleDecision): "danger" | "warn" | "success" {
 
 // What the decision actually did, member by member.
 //
-// Screen-level, like the minted token, because the decision invalidates the
-// pending list and unmounts the card that made it.
+// Screen-level, like the already-decided note, because the decision
+// invalidates the pending list and unmounts the card that made it.
 function BundleOutcomeNote({
   result,
   onDismiss,
@@ -1089,10 +1089,9 @@ function PendingList({
 export function InboxScreen() {
   const t = useT();
   const [tab, setTab] = useState<"pending" | "decided">("pending");
-  // Screen-level surfaces that must outlive the row that triggered them (a
-  // decide invalidates the pending list, unmounting the row): the once-shown
-  // approval token (AC-4, via the shared sink) and the "already decided by
-  // someone else" note (AC-6).
+  // A screen-level surface that must outlive the row that triggered it (a
+  // decide invalidates the pending list, unmounting the row): the "already
+  // decided by someone else" note (AC-6).
   const { onAlreadyDecided, decidedNote } = useDecisionSink();
   // The per-member report of a bundle decision, held here for the same reason:
   // the decision unmounts the card that made it.
