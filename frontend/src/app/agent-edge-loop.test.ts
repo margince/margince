@@ -199,6 +199,31 @@ describe("the edge's draw loop", () => {
     expect(renderer.frames.at(-1)?.level).toBe(1);
   });
 
+  it("re-measures when the window changes size", () => {
+    const paint = clock();
+    const renderer = recorder();
+    start(renderer);
+    const measured = renderer.sizes.length;
+
+    window.dispatchEvent(new Event("resize"));
+    expect(renderer.sizes.length).toBe(measured + 1);
+    expect(paint.parked()).toBe(false);
+  });
+
+  it("hears nothing once it has stopped", () => {
+    // Every listener this loop adds outlives the component unless `stop` takes
+    // it back: a resize after a screen change would otherwise resize a buffer
+    // whose GPU objects have already been released.
+    clock();
+    const renderer = recorder();
+    const { loop } = start(renderer);
+    loop?.stop();
+    const measured = renderer.sizes.length;
+
+    window.dispatchEvent(new Event("resize"));
+    expect(renderer.sizes.length).toBe(measured);
+  });
+
   it("gives the GPU objects back when it stops, once", () => {
     const paint = clock();
     const renderer = recorder();

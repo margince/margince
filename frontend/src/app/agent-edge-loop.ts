@@ -83,6 +83,32 @@ export function runEdgeLoop(
     );
   };
 
+  /**
+   * Device pixel ratio changes without the page changing size.
+   *
+   * Drag a window between a laptop panel and an external monitor and the CSS
+   * viewport is identical either side of the move, so no box changed and a
+   * ResizeObserver has nothing to report — but the buffer this loop asked for is
+   * now the wrong scale, and the rim renders soft or gritty until something else
+   * happens to resize it.
+   *
+   * A media query on the CURRENT ratio is the one thing that does fire: it stops
+   * matching the moment the ratio moves. It has to be re-armed each time, because
+   * the query names the ratio it was built for.
+   */
+  let ratioWatch: MediaQueryList | null = null;
+  const onRatio = () => {
+    measure();
+    watchRatio();
+  };
+  function watchRatio() {
+    ratioWatch?.removeEventListener("change", onRatio);
+    ratioWatch = window.matchMedia(
+      `(resolution: ${window.devicePixelRatio || 1}dppx)`,
+    );
+    ratioWatch.addEventListener("change", onRatio);
+  }
+
   const tick = (now: number) => {
     handle = requestAnimationFrame(tick);
     if (born === 0) {
@@ -122,6 +148,8 @@ export function runEdgeLoop(
       handle = 0;
     }
     observer.disconnect();
+    window.removeEventListener("resize", measure);
+    ratioWatch?.removeEventListener("change", onRatio);
     canvas.removeEventListener("webglcontextlost", onContextLost);
     renderer.dispose();
   }
@@ -130,6 +158,12 @@ export function runEdgeLoop(
   // watching it would be watching this loop's own output.
   const observer = new ResizeObserver(measure);
   observer.observe(document.documentElement);
+  // Three ways the buffer can go stale, and they catch different things: the
+  // observer sees layout change the root's box, `resize` sees the window itself
+  // change, and the ratio watch above sees a move to a display with a different
+  // pixel density, which changes neither box.
+  window.addEventListener("resize", measure);
+  watchRatio();
   canvas.addEventListener("webglcontextlost", onContextLost);
   measure();
   handle = requestAnimationFrame(tick);

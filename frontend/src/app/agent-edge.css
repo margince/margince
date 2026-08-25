@@ -73,3 +73,14 @@
 .agentedge[data-waiting] .agentedge-wait {
   opacity: 1;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  /* The contour appears and goes rather than fading. Half a second of opacity is
+     a small animation, but a reader who asked for less movement asked for less of
+     exactly this, and nothing here needs the fade to be understood: the mark is
+     the statement, and its arrival is not part of the meaning. The shader's own
+     travel is held still separately, in the loop. */
+  .agentedge-wait {
+    transition: none;
+  }
+}
