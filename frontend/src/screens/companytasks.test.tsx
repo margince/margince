@@ -8,6 +8,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
@@ -191,12 +192,22 @@ describe("CompanyScreen — the Tasks tab", () => {
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
 
+    // Scoped to the tab's own panel: the account facts strip says the same
+    // sentence about a withheld deal or project count, and a page-wide match
+    // would pass on either of those while this tab drew nothing at all.
+    const heading = await screen.findByRole("heading", { name: "Next steps" });
+    const tasks = heading.closest("section");
+    if (!tasks) {
+      throw new Error("the tasks tab has no section wrapper");
+    }
     await waitFor(() =>
       expect(
-        screen.getByText("Hidden — your role cannot read this"),
+        within(tasks).getByText("Hidden — your role cannot read this"),
       ).toBeTruthy(),
     );
-    expect(screen.queryByText("No open task on this account.")).toBeNull();
+    expect(
+      within(tasks).queryByText("No open task on this account."),
+    ).toBeNull();
   });
 
   it("shows no task-completing verb on an archived account", async () => {

@@ -27,6 +27,7 @@ import {
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
 import type { ListChip } from "../design-system/listsurface";
+import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import {
   hasTimelineFilters,
@@ -2765,7 +2766,17 @@ function CompanyTasksTab({
     sectionState(view, "next_steps", Boolean(view.next_steps), steps.length) ===
     "withheld"
   ) {
-    return <EmptyState>{t("co.section.restricted")}</EmptyState>;
+    // Same chrome as every other state of this tab. A refusal drawn as a bare
+    // plate names no section, and the account facts strip above says the same
+    // sentence about its own withheld halves — so a reader who lands on an
+    // unheaded one cannot tell which of the two they are being refused.
+    return (
+      <Panel title={t("co.next.title")}>
+        <PanelBody>
+          <p className="surfacestate-withheld">{t("co.section.restricted")}</p>
+        </PanelBody>
+      </Panel>
+    );
   }
   return (
     <NextSteps
