@@ -576,7 +576,6 @@ internal/platform/httperr/decoderefusal_test.go#var block at var intoAdvanceDeal
 internal/platform/httperr/decoderefusal_test.go#var decodeRefusalCases
 internal/platform/httperr/faulttest/faulttest.go#package faulttest
 internal/platform/httperr/httperr.go#func Classify
-internal/platform/httperr/wire.go#func StreamObject
 internal/platform/jobs/composed.go#var composed
 internal/platform/jobs/fault.go#func faultFor
 internal/platform/jobs/fault.go#func faultLogAttrs

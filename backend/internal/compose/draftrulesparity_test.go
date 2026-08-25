@@ -52,6 +52,10 @@ import (
 // A surface may assemble more than one prompt — the reply drafter has a voiced
 // and an unvoiced turn, and they are two chances to drop the block — so each
 // entry is a slice.
+//
+// Held by: TestTheParityTableCoversEveryFileThatComposesTheSharedRules
+// (this file) — "every surface" is a claim about the tree, and the sweep below
+// is what makes it one rather than a description of this table.
 func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 	return map[string][]string{
 		"replydraftmodel.go": {
