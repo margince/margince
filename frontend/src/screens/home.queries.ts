@@ -10,6 +10,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
+import { attentionKey } from "./today.queries";
 
 // Home's reads, in one place. The screen fans out to five of them and each is
 // gated on its own, deliberately: a transient failure in the decisions queue
@@ -24,6 +25,13 @@ export type Deal = components["schemas"]["Deal"];
 export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
   return useQuery({
     queryKey: ["brief"],
+    // On the same schedule as the attention feed, because the Worklist's
+    // briefing lane is BOTH of them: the feed says which entries are still
+    // waiting and this says what each one is. Refreshing one without the other
+    // leaves the lane intersecting a fresh list of ids against a stale set of
+    // items, and an intersection that finds nothing draws the quiet-morning
+    // plate over a morning that has work in it.
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<MorningBrief | null> => {
       const { data, error, response } = await api.GET("/brief");
       // No run yet is not a failure: it is a page that offers to make one.
@@ -254,6 +262,11 @@ export function useBriefItemMark() {
             }
           : current,
       );
+      // The Worklist draws the same queue as its own lane, and an answered item
+      // leaves that lane rather than settling in place. Patching only the brief
+      // cache would leave the row on screen until the next refetch, which reads
+      // exactly like a click that did nothing.
+      void queryClient.invalidateQueries({ queryKey: attentionKey });
     },
   });
 }

@@ -11,28 +11,45 @@ import { TodayScreen } from "./today";
 // not being shown all of.
 
 type Attention = components["schemas"]["Attention"];
+type MorningBrief = components["schemas"]["MorningBrief"];
 
 const quiet: Attention = {
   as_of: "2026-08-25T09:00:00Z",
+  this_morning: [],
   needs_you: [],
   planned: [],
   done_for_you: [],
-  counts: { needs_you: 0, planned: 0 },
+  counts: { this_morning: 0, needs_you: 0, planned: 0 },
 };
 
-function stubAttention(day: Attention) {
+// The briefing lane takes its item ids from the feed and their CONTENT from the
+// brief's own read, so a story that shows the lane has to stub both — one
+// without the other draws an empty panel, which is a different story.
+const noBrief: MorningBrief = {
+  id: "run-1",
+  generated_at: "2026-08-25T05:02:00Z",
+  as_of: "2026-08-25T05:02:00Z",
+  local_day: "2026-08-25",
+  candidate_count: 0,
+  items: [],
+};
+
+function stubDay(day: Attention, brief: MorningBrief) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.includes("/attention")) {
       return jsonResponse(day);
     }
+    if (url.includes("/brief")) {
+      return jsonResponse(brief);
+    }
     return jsonResponse({ data: [] });
   }) as typeof fetch;
 }
 
-function today(day: Attention) {
+function today(day: Attention, brief: MorningBrief = noBrief) {
   return () => {
-    stubAttention(day);
+    stubDay(day, brief);
     return (
       <StoryProviders>
         <TodayScreen />
@@ -101,7 +118,7 @@ export const AFullDay: Story = {
         actions: ["open"],
       },
     ],
-    counts: { needs_you: 2, planned: 2, duplicates_open: 6 },
+    counts: { this_morning: 0, needs_you: 2, planned: 2, duplicates_open: 6 },
   }),
 };
 
@@ -120,7 +137,7 @@ export const NothingToDecide: Story = {
         actions: ["complete", "snooze"],
       },
     ],
-    counts: { needs_you: 0, planned: 1 },
+    counts: { this_morning: 0, needs_you: 0, planned: 1 },
   }),
 };
 
@@ -133,4 +150,63 @@ export const ClearDay: Story = { render: today(quiet) };
 // would report a clear day it cannot actually see.
 export const PartlyHidden: Story = {
   render: today({ ...quiet, lanes_omitted: ["needs_you"] }),
+};
+
+// The overnight brief, waiting. This is the lane the whole feature exists for:
+// a reader opens the page and the night has already picked where to start.
+// Plain rather than tinted, because the decisions panel below is the one move
+// the page asks for — a briefing item is a suggestion.
+export const TheMorningBriefIsWaiting: Story = {
+  render: today(
+    {
+      ...quiet,
+      this_morning: [
+        {
+          id: "bi-1",
+          source: "brief_item",
+          rank: 1,
+          subject: { type: "deal", id: "deal-1" },
+          actions: ["act", "set_aside", "dismiss"],
+        },
+      ],
+      counts: { this_morning: 1, needs_you: 0, planned: 0 },
+    },
+    {
+      ...noBrief,
+      candidate_count: 4,
+      items: [
+        {
+          id: "bi-1",
+          deal_id: "deal-1",
+          rank: 1,
+          composite: 0.72,
+          feature_vector: {
+            winnability: 0.8,
+            revenue: 0.61,
+            timing: 0.9,
+            momentum: 0.55,
+            warmth: 0.74,
+          },
+          evidence_ids: ["ev-1", "ev-2"],
+          state: "new",
+        },
+      ],
+    },
+  ),
+};
+
+// A morning the night looked at and found nothing in. The lane says so out
+// loud: a quiet morning is an answer, and an empty panel with no words reads
+// like a page that failed to load.
+export const AQuietMorning: Story = {
+  render: today({
+    ...quiet,
+    counts: { this_morning: 0, needs_you: 0, planned: 0 },
+  }),
+};
+
+// The briefing lane withheld. Same rule as any other lane: "you may not see
+// this" and "there is none" are different answers.
+export const TheMorningIsHidden: Story = {
+  render: today({ ...quiet, lanes_omitted: ["this_morning"] }),
 };

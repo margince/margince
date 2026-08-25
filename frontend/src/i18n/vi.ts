@@ -75,13 +75,18 @@ export const vi = {
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
   "nav.deals": "Pipeline",
-  "nav.today": "Hôm nay",
-  "day.title": "Hôm nay",
+  "nav.today": "Danh sách việc",
+  "day.title": "Danh sách việc",
+  "day.thisMorning": "Sáng nay",
+  "day.thisMorning.empty":
+    "Bản tóm tắt qua đêm không tìm thấy gì đáng dành giờ đầu tiên. Đó là câu trả lời, không phải thiếu sót.",
   "day.loading": "Đang đọc ngày của bạn…",
   "day.lead.oneDecision": "Một quyết định đang chờ bạn.",
   "day.lead.decisions": "{count} quyết định đang chờ bạn.",
   "day.lead.plannedOnly":
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
+  "day.lead.morningOnly":
+    "Không có gì chờ bạn — đêm qua đã chọn ra {count} việc để bắt đầu.",
   "day.lead.ranOvernight":
     "Không có gì cần bạn. Đây là những gì đã chạy qua đêm.",
   "day.lead.clear": "Ngày của bạn không có gì.",
@@ -2074,7 +2079,7 @@ export const vi = {
   "home.snooze": "Tạm hoãn",
   "home.snoozedState": "đã tạm hoãn",
 
-  "enrich.toInbox": "Mở Hôm nay",
+  "enrich.toInbox": "Mở danh sách việc",
 
   "deepread.title": "Đọc toàn bộ website",
   "deepread.sub":

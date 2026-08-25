@@ -2,22 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { RefreshCw } from "lucide-react";
-import { navigate } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
-import {
-  BriefItemCard,
-  type BriefItemLabels,
-} from "../design-system/briefitem";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import {
-  formatDateTime,
-  formatMoneyOrAbsent,
-  formatNumber,
-} from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { BriefQueueItem } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import {
   type Deal,
@@ -28,40 +20,6 @@ import {
 
 // The ranked half of Home: what the run thinks the day is for, and the three
 // verbs that move an entry off it.
-
-/** One brief card's vocabulary. */
-function briefLabels(
-  t: (key: MessageKey, params?: Record<string, string>) => string,
-  evidenceCount: number,
-  locale: Parameters<typeof formatNumber>[1],
-): BriefItemLabels {
-  return {
-    rank: t("home.brief.rank"),
-    composite: t("home.brief.composite"),
-    factors: {
-      winnability: t("home.factorWinnability"),
-      revenue: t("home.factorRevenue"),
-      timing: t("home.factorTiming"),
-      momentum: t("home.factorMomentum"),
-      warmth: t("home.factorWarmth"),
-    },
-    evidence:
-      evidenceCount === 1
-        ? t("home.evidenceOne")
-        : t("home.evidence", {
-            count: formatNumber(evidenceCount, locale),
-          }),
-    evidenceNone: t("home.evidenceNone"),
-    openDeal: t("home.openDeal"),
-    act: t("home.act"),
-    dismiss: t("home.dismiss"),
-    snooze: t("home.snooze"),
-    acted: t("home.actedState"),
-    dismissed: t("home.dismissedState"),
-    snoozed: t("home.snoozedState"),
-    resurfaces: t("home.brief.resurfaces"),
-  };
-}
 
 /** The ranked queue: what the run thinks the day is for. */
 export function TodaySection({
@@ -151,7 +109,6 @@ function TodayBody({
   mark: ReturnType<typeof useBriefItemMark>;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   // Anything but a served read is the state vocabulary's to draw. A failure used
   // to fall through the `ready` guard and render nothing, so a queue nobody
   // could read looked exactly like a morning with nothing in it.
@@ -175,46 +132,12 @@ function TodayBody({
   return (
     <>
       {brief.items.map((item) => (
-        <BriefItemCard
+        <BriefQueueItem
           key={item.id}
           item={item}
-          labels={briefLabels(t, item.evidence_ids.length, locale)}
-          // `revenueBasisNote` is deliberately not passed. The run carries
-          // `revenue_norm_minor` but not the currency it is in, and the base
-          // currency lives on a settings read this page does not make — a sixth
-          // request for a footnote. A bare figure with no currency is not a
-          // reading, so the card says nothing rather than something
-          // unverifiable.
-          dealName={deals.find((deal) => deal.id === item.deal_id)?.name}
-          amount={amountOf(item.deal_id, deals, locale)}
-          formatPercent={(fraction) =>
-            t("home.pct", {
-              pct: formatNumber(Math.round(fraction * 100), locale),
-            })
-          }
-          formatInstant={(utcIso) =>
-            formatDateTime(utcIso, locale, viewerZone())
-          }
-          pending={
-            mark.isPending && mark.variables?.itemId === item.id
-              ? mark.variables.mark
-              : undefined
-          }
-          error={
-            mark.isError && mark.variables?.itemId === item.id
-              ? problemMessageOf(mark.error, t)
-              : undefined
-          }
-          onOpenDeal={(dealId) => navigate({ screen: "deals", id: dealId })}
-          onAct={(itemId) => mark.mutate({ itemId, mark: "act" })}
-          onDismiss={(itemId) => mark.mutate({ itemId, mark: "dismiss" })}
-          onSnooze={(itemId) =>
-            mark.mutate({
-              itemId,
-              mark: "snooze",
-              snoozedUntil: tomorrowMorning(nowMs),
-            })
-          }
+          deals={deals}
+          nowMs={nowMs}
+          mark={mark}
         />
       ))}
     </>
@@ -236,32 +159,4 @@ function honestCountLine(
   return t("home.honestShort", {
     count: formatNumber(brief.candidate_count, locale),
   });
-}
-
-/** One deal's money, or nothing where the page has not read the deal. */
-function amountOf(
-  dealId: string,
-  deals: readonly Deal[],
-  locale: Parameters<typeof formatMoneyOrAbsent>[2],
-): string | null {
-  const deal = deals.find((candidate) => candidate.id === dealId);
-  if (!deal) {
-    return null;
-  }
-  return formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale);
-}
-
-/**
- * When a snoozed item comes back: tomorrow morning in the reader's own zone.
- *
- * The contract requires a future instant and the product has no snooze picker
- * yet, so this is the policy written once, where a reader can be told it — "back
- * tomorrow" is a promise a morning surface can keep, and the card renders the
- * instant it was given rather than inventing its own.
- */
-function tomorrowMorning(nowMs: number): string {
-  const back = new Date(nowMs);
-  back.setDate(back.getDate() + 1);
-  back.setHours(8, 0, 0, 0);
-  return back.toISOString();
 }

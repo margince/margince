@@ -5,6 +5,7 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -89,6 +90,15 @@ func (s stubReceipts) Recent(context.Context, time.Time, int) ([]Receipt, error)
 	return s.rows, s.err
 }
 
+type stubBriefing struct {
+	rows []BriefEntry
+	err  error
+}
+
+func (s stubBriefing) Queue(context.Context) ([]BriefEntry, error) {
+	return s.rows, s.err
+}
+
 func approval(summary string) crmcontracts.Approval {
 	return crmcontracts.Approval{
 		Id:      openapi_types.UUID(ids.NewV7()),
@@ -101,7 +111,7 @@ func TestADuplicateOutranksAnApprovalBecauseAMergeCannotBeUndone(t *testing.T) {
 	svc := NewService(
 		stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}},
 		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "person", Confidence: 0.9}}, open: 1},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -120,7 +130,7 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 		stubApprovals{},
 		stubDuplicates{err: apperrors.ErrPermissionDenied},
 		stubTasks{rows: []Task{{ID: ids.NewV7(), Subject: "Call Anna"}}},
-		stubReceipts{}, fixedClock,
+		stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -143,7 +153,7 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{err: fmt.Errorf("the database is unreachable")},
-		stubDuplicates{}, stubTasks{}, stubReceipts{}, fixedClock,
+		stubDuplicates{}, stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a lane that FAILED was reported as an empty day")
@@ -158,7 +168,7 @@ func TestTheCountReportsTheTotalThoughTheLaneIsBounded(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{pairs: pairs, open: 40},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -182,7 +192,7 @@ func TestTheCountCoversStagedProposalsToo(t *testing.T) {
 	}
 	svc := NewService(
 		stubApprovals{rows: staged, pending: 20},
-		stubDuplicates{}, stubTasks{}, stubReceipts{}, fixedClock,
+		stubDuplicates{}, stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -202,7 +212,7 @@ func TestAnOverdueTaskLeadsThePlannedLane(t *testing.T) {
 			{ID: ids.NewV7(), Subject: "Due later today", DueAt: &later},
 			{ID: ids.NewV7(), Subject: "Was due yesterday", DueAt: &yesterday},
 		}},
-		stubReceipts{}, fixedClock,
+		stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -226,7 +236,7 @@ func TestAReceiptOffersNoDecision(t *testing.T) {
 			ID: ids.NewV7(), Kind: "close_date_correction",
 			Summary: "Moved the Acme close date to 27 Sep", OccurredAt: readInstant.Add(-time.Hour),
 		}}},
-		fixedClock,
+		stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -246,7 +256,7 @@ func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.92}}, open: 1},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -283,7 +293,7 @@ func TestAFloodOfDuplicatesDoesNotBuryTheStagedDecisions(t *testing.T) {
 	svc := NewService(
 		stubApprovals{rows: staged, pending: 79},
 		stubDuplicates{pairs: pairs, open: len(pairs)},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -312,7 +322,7 @@ func TestADuplicateCardNamesBothRecords(t *testing.T) {
 			LeftID: left, RightID: right,
 			Evidence: []FieldComparison{{Field: "display_name", Signal: "collide"}},
 		}}},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -338,7 +348,7 @@ func TestAnUnreadableSideCostsTheMergeVerbRatherThanLeakingTheRecord(t *testing.
 			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: hidden,
 		}}},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -370,7 +380,7 @@ func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 				{Field: "org", Signal: "collide"},
 			},
 		}}},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -396,7 +406,7 @@ func TestARecordReadThatBrokeIsNotReportedAsWithheld(t *testing.T) {
 			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a record read that FAILED was rendered as a pair the reader may not see")
@@ -418,7 +428,7 @@ func TestAnIdentityConflictKeepsTheOneRowThatExplainsIt(t *testing.T) {
 				{Field: "matched_lane", Signal: "exact_conflict", Left: &lane},
 			},
 		}}},
-		stubTasks{}, stubReceipts{}, fixedClock,
+		stubTasks{}, stubReceipts{}, stubBriefing{}, fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -430,5 +440,119 @@ func TestAnIdentityConflictKeepsTheOneRowThatExplainsIt(t *testing.T) {
 	}
 	if rows[0].Signal != "exact_conflict" {
 		t.Errorf("signal is %q, want the verdict the detector recorded", rows[0].Signal)
+	}
+}
+
+func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
+	deal := ids.NewV7()
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, stubTasks{}, stubReceipts{},
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}},
+		fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if len(out.ThisMorning) != 1 {
+		t.Fatalf("this_morning carries %d items, want 1", len(out.ThisMorning))
+	}
+	// The partition rule, and it is not cosmetic: the focus lane fetches every
+	// non-dedupe needs_you item as an approval, so a brief item smuggled in
+	// there renders a failed card rather than a brief.
+	if len(out.NeedsYou) != 0 {
+		t.Fatalf("needs_you carries %d items, want none — a briefing item is a suggestion, not a decision", len(out.NeedsYou))
+	}
+	if out.Counts.ThisMorning != 1 {
+		t.Errorf("this_morning count = %d, want 1", out.Counts.ThisMorning)
+	}
+	item := out.ThisMorning[0]
+	if item.Source != "brief_item" {
+		t.Errorf("source = %q, want brief_item — it is how the client knows which endpoint answers it", item.Source)
+	}
+	if item.Subject == nil || ids.UUID(item.Subject.Id) != deal {
+		t.Errorf("subject = %+v, want the deal the item is about", item.Subject)
+	}
+	if item.Title != nil {
+		t.Errorf("title = %q; the sentence is the client's to write, in the reader's own language", *item.Title)
+	}
+}
+
+func TestAMorningWithNoRunIsEmptyRatherThanWithheld(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, stubTasks{}, stubReceipts{},
+		stubBriefing{}, fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.ThisMorning == nil {
+		t.Fatal("this_morning is null; the contract promises a list, and a generated client iterates it")
+	}
+	if len(out.ThisMorning) != 0 {
+		t.Fatalf("this_morning carries %d items, want none", len(out.ThisMorning))
+	}
+	// "The night found nothing" is not "this was hidden from you". Naming it
+	// omitted would tell a rep something was withheld when nothing was.
+	if out.LanesOmitted != nil {
+		t.Errorf("lanes_omitted = %v, want none for a morning that simply has no run", *out.LanesOmitted)
+	}
+}
+
+func TestABriefingLaneRefusedIsNamedRatherThanReportedQuiet(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, stubTasks{}, stubReceipts{},
+		stubBriefing{err: apperrors.ErrPermissionDenied}, fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.LanesOmitted == nil {
+		t.Fatal("a refused briefing lane was reported as an empty morning")
+	}
+	if got := *out.LanesOmitted; len(got) != 1 || got[0] != "this_morning" {
+		t.Fatalf("lanes_omitted = %v, want [this_morning]", got)
+	}
+}
+
+func TestABrokenBriefingLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, stubTasks{}, stubReceipts{},
+		stubBriefing{err: errors.New("the brief read fell over")}, fixedClock,
+	)
+	if _, err := svc.Assemble(context.Background()); err == nil {
+		t.Fatal("a broken briefing read was reported as a quiet morning")
+	}
+}
+
+func TestABriefingItemOffersItsOwnThreeVerbs(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, stubTasks{}, stubReceipts{},
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}},
+		fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	got := out.ThisMorning[0].Actions
+	want := []crmcontracts.AttentionItemActions{"act", "set_aside", "dismiss"}
+	if len(got) != len(want) {
+		t.Fatalf("actions = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("actions = %v, want %v", got, want)
+		}
+	}
+	// set_aside, not snooze: a task's snooze moves a due date the rep agreed
+	// to, and this hides a suggestion. One word for both would send a client
+	// that handles snooze generically to the wrong endpoint.
+	for _, action := range got {
+		if action == "snooze" {
+			t.Error("a briefing item offers snooze, which is the task verb and a different write")
+		}
 	}
 }

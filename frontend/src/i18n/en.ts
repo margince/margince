@@ -71,12 +71,17 @@ export const en = {
   "nav.companies": "Companies",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
-  "nav.today": "Today",
-  "day.title": "Today",
+  "nav.today": "Worklist",
+  "day.title": "Worklist",
+  "day.thisMorning": "This morning",
+  "day.thisMorning.empty":
+    "The overnight brief found nothing worth your first hour. That is the answer, not an omission.",
   "day.loading": "Reading your day…",
   "day.lead.oneDecision": "One decision is waiting on you.",
   "day.lead.decisions": "{count} decisions are waiting on you.",
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
+  "day.lead.morningOnly":
+    "Nothing waiting on you — the night picked out {count} to start with.",
   "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",
   "day.lead.clear": "Your day is clear.",
   "day.lead.partial": "Part of your day is hidden from your account.",
@@ -2111,7 +2116,7 @@ export const en = {
   "home.snooze": "Snooze",
   "home.snoozedState": "snoozed",
 
-  "enrich.toInbox": "Open Today",
+  "enrich.toInbox": "Open the Worklist",
 
   "deepread.title": "Read the full site",
   "deepread.sub":

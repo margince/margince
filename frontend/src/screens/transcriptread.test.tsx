@@ -138,7 +138,7 @@ describe("reading a transcript for its next steps", () => {
     // The 🟡 tier is drawn, never spelled as an emoji.
     expect(screen.getByRole("img", { name: "confirm-first" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Open Today" }));
+    await user.click(screen.getByRole("button", { name: "Open the Worklist" }));
     expect(window.location.hash).toContain("today");
   });
 
@@ -157,7 +157,9 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByText("Done")).toBeTruthy();
     // A correct empty answer is not a queue of work: nothing to review, and
     // nowhere to go.
-    expect(screen.queryByRole("button", { name: "Open Today" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Open the Worklist" }),
+    ).toBeNull();
     expect(screen.queryByRole("img", { name: "confirm-first" })).toBeNull();
   });
 
@@ -183,7 +185,9 @@ describe("reading a transcript for its next steps", () => {
         "Read in full. This conversation states no next steps.",
       ),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Today" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Open the Worklist" }),
+    ).toBeNull();
   });
 
   it("falls back to its own words when a terminal reading carries no detail", async () => {
@@ -210,7 +214,9 @@ describe("reading a transcript for its next steps", () => {
         "Read in full. This conversation states no next steps.",
       ),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Today" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Open the Worklist" }),
+    ).toBeNull();
   });
 
   it("shows a reading that finished after the rep navigated away", async () => {

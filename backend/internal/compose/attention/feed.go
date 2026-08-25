@@ -117,6 +117,35 @@ type Receipt struct {
 	OccurredAt time.Time
 }
 
+// Briefing is the overnight brief's queue for the acting rep, best-ranked
+// first.
+//
+// No run for today is NOT a refusal: the night has simply not produced one, or
+// there was nothing worth ranking, and both are honestly an empty lane. The
+// implementation therefore answers an empty slice rather than an error for that
+// case, and reserves apperrors.ErrPermissionDenied for a caller who may not
+// read the queue at all.
+type Briefing interface {
+	Queue(ctx context.Context) ([]BriefEntry, error)
+}
+
+// BriefEntry is one UNANSWERED queue entry: what it is about, and where it
+// ranks.
+//
+// It carries the item id and the deal, not the factor vector or the evidence.
+// The card that draws those reads the brief's own endpoint, which the screen
+// already calls — copying the ranking payload through this feed would put the
+// same numbers on two wires and let them disagree.
+//
+// There is no state field, because the seam has already dropped the answered
+// entries. The brief owns what its states mean and what each spells; a copy of
+// that vocabulary here would be a second place to keep it right.
+type BriefEntry struct {
+	ID     ids.UUID
+	DealID ids.UUID
+	Rank   int
+}
+
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
 type Clock func() time.Time
@@ -128,12 +157,13 @@ type Service struct {
 	duplicates Duplicates
 	tasks      Tasks
 	receipts   Receipts
+	briefing   Briefing
 	now        Clock
 }
 
 // NewService binds the feed to its readers.
-func NewService(a Approvals, d Duplicates, t Tasks, r Receipts, now Clock) *Service {
-	return &Service{approvals: a, duplicates: d, tasks: t, receipts: r, now: now}
+func NewService(a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing, now Clock) *Service {
+	return &Service{approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b, now: now}
 }
 
 // Assemble reads every lane and returns the day.
@@ -148,12 +178,24 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	// serialises as `null` and breaks a generated client that iterates what the
 	// schema promised was a list.
 	out := crmcontracts.Attention{
-		AsOf:       asOf,
-		NeedsYou:   []crmcontracts.AttentionItem{},
-		Planned:    []crmcontracts.AttentionItem{},
-		DoneForYou: []crmcontracts.AttentionItem{},
+		AsOf:        asOf,
+		ThisMorning: []crmcontracts.AttentionItem{},
+		NeedsYou:    []crmcontracts.AttentionItem{},
+		Planned:     []crmcontracts.AttentionItem{},
+		DoneForYou:  []crmcontracts.AttentionItem{},
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
+
+	morning, err := s.thisMorning(ctx)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		omitted = append(omitted, crmcontracts.AttentionLanesOmitted("this_morning"))
+	case err != nil:
+		return crmcontracts.Attention{}, err
+	default:
+		out.ThisMorning = morning
+		out.Counts.ThisMorning = len(morning)
+	}
 
 	needsYou, count, err := s.decisions(ctx)
 	switch {
@@ -201,6 +243,27 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 type laneCount struct {
 	items      int
 	duplicates int
+}
+
+// thisMorning is the briefing lane: the overnight run's unanswered queue, in
+// its own rank order.
+//
+// No cap here. The brief is already honest-short — its own ranking bounds the
+// queue and refuses to pad — so a second bound would hide items the engine had
+// decided were worth the morning. The seam drops the answered ones, because
+// this lane is a worklist that must be finishable and a row that cannot be
+// removed is the opposite of finishing. Home still shows what was answered,
+// which is where a rep looks to see what she did.
+func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem, error) {
+	queue, err := s.briefing.Queue(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]crmcontracts.AttentionItem, 0, len(queue))
+	for _, entry := range queue {
+		items = append(items, briefItem(entry))
+	}
+	return items, nil
 }
 
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,

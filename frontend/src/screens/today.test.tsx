@@ -23,13 +23,18 @@ function jsonResponse(body: unknown): Response {
 // The feed sends a lane's worth of each item; deciding a staged proposal needs
 // the rest of it, so the lane reads the single approval it is showing. A test
 // that served only the feed would render a card stuck loading forever.
-function stub(day: Attention, approval?: unknown) {
+function stub(day: Attention, approval?: unknown, brief?: unknown) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/attention")) {
         return jsonResponse(day);
+      }
+      // The briefing lane takes its ids from the feed and each item's CONTENT
+      // from the brief's own read, so a test that shows the lane serves both.
+      if (brief && /\/brief$/.test(url.split("?")[0])) {
+        return jsonResponse(brief);
       }
       if (approval && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
         return jsonResponse(approval);
@@ -54,10 +59,11 @@ function renderToday(locale: Locale = "en") {
 
 const emptyDay: Attention = {
   as_of: "2026-08-25T09:00:00Z",
+  this_morning: [],
   needs_you: [],
   planned: [],
   done_for_you: [],
-  counts: { needs_you: 0, planned: 0 },
+  counts: { this_morning: 0, needs_you: 0, planned: 0 },
 };
 
 afterEach(() => {
@@ -113,7 +119,7 @@ describe("what the day's surface offers", () => {
           actions: ["complete", "snooze"],
         },
       ],
-      counts: { needs_you: 0, planned: 1 },
+      counts: { this_morning: 0, needs_you: 0, planned: 1 },
     });
     renderToday();
     await screen.findByText("Call Anna about the renewal");
@@ -137,7 +143,7 @@ describe("what the day's surface offers", () => {
             actions: ["decide"],
           },
         ],
-        counts: { needs_you: 1, planned: 0 },
+        counts: { this_morning: 0, needs_you: 1, planned: 0 },
       },
       // The whole approval, as `GET /approvals/{id}` answers it. Every field
       // the contract marks required is here on purpose: a stub that omits one
@@ -198,7 +204,7 @@ describe("what the day's surface offers", () => {
           },
         },
       ],
-      counts: { needs_you: 1, planned: 0, duplicates_open: 1 },
+      counts: { this_morning: 0, needs_you: 1, planned: 0, duplicates_open: 1 },
     });
     renderToday();
     // The two records, by name — the thing the old row could not say. Each
@@ -251,7 +257,12 @@ describe("what the day's surface offers", () => {
   it("writes the day's figures in the reader's own notation", async () => {
     stub({
       ...emptyDay,
-      counts: { needs_you: 1234, planned: 0, duplicates_open: 5678 },
+      counts: {
+        this_morning: 0,
+        needs_you: 1234,
+        planned: 0,
+        duplicates_open: 5678,
+      },
       needs_you: [
         {
           id: "dc-1",
@@ -285,7 +296,10 @@ describe("what the day's surface offers", () => {
   // when nothing needs deciding — so the test above cannot enter it, and a
   // fourth site would otherwise be ruled by the compiler and by nobody else.
   it("writes the planned figure in the reader's notation too", async () => {
-    stub({ ...emptyDay, counts: { needs_you: 0, planned: 4321 } });
+    stub({
+      ...emptyDay,
+      counts: { this_morning: 0, needs_you: 0, planned: 4321 },
+    });
     renderToday("de");
     await screen.findByText("Nichts zu entscheiden — 4.321 für heute geplant.");
   });
@@ -297,7 +311,7 @@ describe("what the day's surface offers", () => {
         { id: "a", source: "approval", title: "One", actions: ["decide"] },
         { id: "b", source: "approval", title: "Two", actions: ["decide"] },
       ],
-      counts: { needs_you: 2, planned: 0 },
+      counts: { this_morning: 0, needs_you: 2, planned: 0 },
     });
     renderToday();
     await screen.findByText("2 decisions are waiting on you.");
@@ -333,7 +347,7 @@ describe("what the day's surface does when the server says no", () => {
         if (url.includes("/attention")) {
           return jsonResponse({
             ...emptyDay,
-            counts: { needs_you: 1, planned: 0 },
+            counts: { this_morning: 0, needs_you: 1, planned: 0 },
             needs_you: [
               {
                 id: "dc-9",
@@ -360,5 +374,232 @@ describe("what the day's surface does when the server says no", () => {
     await user.click(screen.getByRole("button", { name: "Merge them" }));
     // The server's own words, not a generic apology.
     expect(await screen.findByText(/workspace's own company/)).toBeTruthy();
+  });
+});
+
+describe("what the night left on the worklist", () => {
+  // The partition rule, from the reader's side. The focus lane fetches every
+  // non-dedupe decision as an approval, so a brief item routed there renders a
+  // card stuck on a failed fetch. It has to be its own lane, and this is the
+  // test that would catch it moving.
+  it("shows the overnight brief in its own lane, not as a decision", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-1",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-1" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      {
+        id: "run-1",
+        generated_at: "2026-08-25T05:02:00Z",
+        as_of: "2026-08-25T05:02:00Z",
+        local_day: "2026-08-25",
+        candidate_count: 3,
+        items: [
+          {
+            id: "bi-1",
+            deal_id: "deal-1",
+            rank: 1,
+            composite: 0.72,
+            feature_vector: {
+              winnability: 0.8,
+              revenue: 0.61,
+              timing: 0.9,
+              momentum: 0.55,
+              warmth: 0.74,
+            },
+            evidence_ids: ["ev-1"],
+            state: "new",
+          },
+        ],
+      },
+    );
+    renderToday();
+
+    // The lane is drawn, and the card inside it is the brief's own card rather
+    // than a decision row that would have gone looking for an approval.
+    await screen.findByText("This morning");
+    expect(await screen.findByTestId("brief-item-bi-1")).toBeTruthy();
+    // The decision lane says the day is clear, because it is: a briefing item
+    // is a suggestion about where to start and never a decision.
+    expect(screen.queryByText("Decide")).toBeNull();
+  });
+
+  it("says a quiet morning out loud rather than drawing an empty box", async () => {
+    stub(emptyDay);
+    renderToday();
+
+    await screen.findByText("This morning");
+    expect(
+      await screen.findByText(/found nothing worth your first hour/),
+    ).toBeTruthy();
+  });
+
+  it("never reports a withheld morning as a quiet one", async () => {
+    stub({ ...emptyDay, lanes_omitted: ["this_morning"] });
+    renderToday();
+
+    await screen.findByText("This morning");
+    // The withheld line, not the quiet one: "you may not see this" and "there
+    // is none" are different answers and the reader must be told which.
+    expect(
+      screen.queryByText(/found nothing worth your first hour/),
+    ).toBeNull();
+  });
+  // Caught in the browser, not by a test: the lead line was written before this
+  // lane existed, so it read "Your day is clear" directly above two items the
+  // night had picked out. A summary that contradicts the page under it is worse
+  // than no summary, because a reader who reads only the line believes it.
+  it("never calls a day clear when the night left something on it", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-1",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-1" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      {
+        id: "run-1",
+        generated_at: "2026-08-25T05:02:00Z",
+        as_of: "2026-08-25T05:02:00Z",
+        local_day: "2026-08-25",
+        candidate_count: 1,
+        items: [
+          {
+            id: "bi-1",
+            deal_id: "deal-1",
+            rank: 1,
+            composite: 0.72,
+            feature_vector: {
+              winnability: 0.8,
+              revenue: 0.61,
+              timing: 0.9,
+              momentum: 0.55,
+              warmth: 0.74,
+            },
+            evidence_ids: ["ev-1"],
+            state: "new",
+          },
+        ],
+      },
+    );
+    renderToday();
+
+    await screen.findByTestId("brief-item-bi-1");
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+    expect(screen.getByText(/the night picked out/)).toBeTruthy();
+  });
+  // Found in the browser, not by a test. The lane intersects the feed's item
+  // ids with the brief's own items, and the two reads settle independently — so
+  // a feed naming two entries against a brief that has not caught up produced an
+  // EMPTY intersection, and the lane drew "the night found nothing" over a
+  // morning that had work in it. The reader was told the opposite of the truth.
+  it("does not call a morning quiet while the items it names are still arriving", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-9",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-9" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      // The brief read answers a run that does not carry the id the feed named.
+      {
+        id: "run-old",
+        generated_at: "2026-08-24T05:02:00Z",
+        as_of: "2026-08-24T05:02:00Z",
+        local_day: "2026-08-24",
+        candidate_count: 0,
+        items: [],
+      },
+    );
+    renderToday();
+
+    await screen.findByText("This morning");
+    expect(
+      screen.queryByText(/found nothing worth your first hour/),
+    ).toBeNull();
+  });
+  // The lane holds unanswered work, and the two reads settle at different
+  // speeds: a mark patches the brief cache at once while the feed catches up on
+  // its own refetch. Trusting the feed alone left a card the reader had just
+  // answered sitting in the lane, drawn in its settled state, for as long as the
+  // network took.
+  it("drops an item the brief already reports as answered", async () => {
+    stub(
+      {
+        ...emptyDay,
+        this_morning: [
+          {
+            id: "bi-7",
+            source: "brief_item",
+            rank: 1,
+            subject: { type: "deal", id: "deal-7" },
+            actions: ["act", "set_aside", "dismiss"],
+          },
+        ],
+        counts: { this_morning: 1, needs_you: 0, planned: 0 },
+      },
+      undefined,
+      {
+        id: "run-1",
+        generated_at: "2026-08-25T05:02:00Z",
+        as_of: "2026-08-25T05:02:00Z",
+        local_day: "2026-08-25",
+        candidate_count: 1,
+        items: [
+          {
+            id: "bi-7",
+            deal_id: "deal-7",
+            rank: 1,
+            composite: 0.72,
+            feature_vector: {
+              winnability: 0.8,
+              revenue: 0.61,
+              timing: 0.9,
+              momentum: 0.55,
+              warmth: 0.74,
+            },
+            evidence_ids: ["ev-1"],
+            // Answered, though the feed has not dropped it yet.
+            state: "acted",
+            state_at: "2026-08-25T09:01:00Z",
+          },
+        ],
+      },
+    );
+    renderToday();
+
+    await screen.findByText("This morning");
+    expect(screen.queryByTestId("brief-item-bi-7")).toBeNull();
+    // And the lane says the quiet thing rather than the still-arriving thing:
+    // an answered item is legitimately gone, not late.
+    expect(
+      await screen.findByText(/found nothing worth your first hour/),
+    ).toBeTruthy();
   });
 });

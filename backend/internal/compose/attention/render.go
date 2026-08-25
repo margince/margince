@@ -199,6 +199,27 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 	return item
 }
 
+// briefItem renders one entry of the overnight brief's queue.
+//
+// No title, for the reason a duplicate pair carries none (see duplicateItem):
+// the sentence would have to be composed here, and the product ships three
+// languages. What the client gets is the deal as a typed subject and the rank,
+// which is enough to draw the row in the reader's own language and to fetch the
+// full card from the brief's own endpoint.
+//
+// The three verbs route to /brief/items/{itemId}/… — the same endpoints Home
+// already calls, so this lane adds no second way to answer a brief item.
+func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
+	rank := entry.Rank
+	return crmcontracts.AttentionItem{
+		Id:      entry.ID.String(),
+		Source:  crmcontracts.AttentionItemSource("brief_item"),
+		Rank:    &rank,
+		Subject: subjectOf("deal", entry.DealID),
+		Actions: []crmcontracts.AttentionItemActions{"act", "set_aside", "dismiss"},
+	}
+}
+
 // receiptItem renders one thing the system did on its own.
 //
 // Its only verb is `open`. A receipt reports a finished act, and offering a

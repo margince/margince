@@ -1224,9 +1224,10 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
-	DoneForYou AttentionLanesOmitted = "done_for_you"
-	NeedsYou   AttentionLanesOmitted = "needs_you"
-	Planned    AttentionLanesOmitted = "planned"
+	DoneForYou  AttentionLanesOmitted = "done_for_you"
+	NeedsYou    AttentionLanesOmitted = "needs_you"
+	Planned     AttentionLanesOmitted = "planned"
+	ThisMorning AttentionLanesOmitted = "this_morning"
 )
 
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
@@ -1238,6 +1239,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 		return true
 	case Planned:
 		return true
+	case ThisMorning:
+		return true
 	default:
 		return false
 	}
@@ -1245,23 +1248,32 @@ func (e AttentionLanesOmitted) Valid() bool {
 
 // Defines values for AttentionItemActions.
 const (
+	AttentionItemActionsAct      AttentionItemActions = "act"
 	AttentionItemActionsComplete AttentionItemActions = "complete"
 	AttentionItemActionsDecide   AttentionItemActions = "decide"
+	AttentionItemActionsDismiss  AttentionItemActions = "dismiss"
 	AttentionItemActionsMerge    AttentionItemActions = "merge"
 	AttentionItemActionsOpen     AttentionItemActions = "open"
+	AttentionItemActionsSetAside AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze   AttentionItemActions = "snooze"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
 func (e AttentionItemActions) Valid() bool {
 	switch e {
+	case AttentionItemActionsAct:
+		return true
 	case AttentionItemActionsComplete:
 		return true
 	case AttentionItemActionsDecide:
 		return true
+	case AttentionItemActionsDismiss:
+		return true
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
 		return true
@@ -13028,6 +13040,16 @@ type Attention struct {
 
 	// Planned Work already agreed: overdue first, then due today.
 	Planned []AttentionItem `json:"planned"`
+
+	// ThisMorning The overnight brief's queue, best-ranked first — what the night found worth
+	// the rep's first hour.
+	//
+	// Its own lane rather than rows in `needs_you`, because the two ask different
+	// things. A `needs_you` item is a decision a person must make before something
+	// proceeds; a briefing item is a suggestion about where to start, and answering
+	// it is optional. Merging them would put "nothing is waiting on you" and
+	// "nothing was worth flagging" behind one number.
+	ThisMorning []AttentionItem `json:"this_morning"`
 }
 
 // AttentionLanesOmitted defines model for Attention.LanesOmitted.
@@ -13041,6 +13063,9 @@ type AttentionCounts struct {
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
 	NeedsYou       int  `json:"needs_you"`
 	Planned        int  `json:"planned"`
+
+	// ThisMorning Briefing items still unanswered in the rep's run for today.
+	ThisMorning int `json:"this_morning"`
 }
 
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -13051,6 +13076,12 @@ type AttentionItem struct {
 	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
 	// person must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
+	//
+	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
+	// to `/brief/items/{itemId}/…`. `set_aside` rather than reusing `snooze`: a task's
+	// snooze moves a due date the rep agreed to, while a brief item's hides a
+	// suggestion until later in the day. One word for both would make a client that
+	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
@@ -13083,6 +13114,9 @@ type AttentionItem struct {
 	// BOTH sides — the queue's own both-sides-visible rule decides that, and an
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
+
+	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
+	Rank *int `json:"rank,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`

@@ -1,4 +1,4 @@
-import { CheckSquare, GitMerge, Sparkles } from "lucide-react";
+import { CheckSquare, GitMerge, Sparkles, Sunrise } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -8,6 +8,12 @@ import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
+import { BriefQueueItem } from "./briefqueue";
+import {
+  useBriefItemMark,
+  useHomeDeals,
+  useMorningBrief,
+} from "./home.queries";
 import { snoozedDueAt, useTaskUpdate } from "./taskactions";
 import { FocusLane } from "./today.focus";
 import {
@@ -64,6 +70,16 @@ function leadLine(
   if (day.counts.planned > 0) {
     return t("day.lead.plannedOnly", {
       count: formatNumber(day.counts.planned, locale),
+    });
+  }
+  // Before "clear", because the briefing lane is on this page: a line reading
+  // "your day is clear" above two items the night picked out is the one thing
+  // this line exists to prevent. It sits below decisions and planned work,
+  // which are things that wait on the reader, where a briefing item only
+  // suggests where to start.
+  if (day.counts.this_morning > 0) {
+    return t("day.lead.morningOnly", {
+      count: formatNumber(day.counts.this_morning, locale),
     });
   }
   if (day.done_for_you && day.done_for_you.length > 0) {
@@ -246,6 +262,162 @@ function Lane({
   );
 }
 
+// The overnight brief's lane: what the night thought the day was for.
+//
+// It draws the same card Home does, through the same connected component, so
+// there is one answer to "what does a brief item look like and what happens
+// when you press its buttons".
+//
+// The lane's ITEMS come from the feed and their CONTENT from the brief's own
+// read, which is two requests for one lane and is deliberate. The alternative
+// is copying the ranking payload — five factors, the composite, the evidence —
+// through the attention contract as well, and then two wires carry the same
+// numbers and can disagree. The feed says WHICH entries are still waiting; the
+// brief says what each one is.
+//
+// Plain rather than `tone="accent"`: the decisions lane below is the one panel
+// that asks for a move, and a second tinted panel would leave the page with no
+// lead at all. A briefing item is a suggestion about where to start.
+function MorningLane({
+  items,
+  withheld,
+  total,
+}: Readonly<{
+  items: readonly AttentionItem[];
+  withheld: boolean;
+  total: number;
+}>) {
+  const t = useT();
+  // Withheld or empty is answered from the FEED alone, before the brief and the
+  // deals reads are mounted at all. Those two exist to draw cards, so asking for
+  // them when the feed has already said there are none is two requests for a
+  // panel that will show a sentence — and on a withheld lane one of them is a
+  // 403 the reader was never going to see the answer to.
+  if (withheld) {
+    return (
+      <MorningPanel total={total}>
+        <PanelBody>
+          <EmptyState>{t("day.lane.withheld")}</EmptyState>
+        </PanelBody>
+      </MorningPanel>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <MorningPanel total={total}>
+        <PanelBody>
+          <EmptyState>{t("day.thisMorning.empty")}</EmptyState>
+        </PanelBody>
+      </MorningPanel>
+    );
+  }
+  return <MorningCards items={items} total={total} />;
+}
+
+// The lane's chrome, shared by the three readings so the heading, the icon and
+// the badge cannot come to differ between them.
+function MorningPanel({
+  total,
+  children,
+}: Readonly<{ total: number; children: React.ReactNode }>) {
+  const t = useT();
+  return (
+    <Panel
+      title={
+        <span className="today-lane-title">
+          <Sunrise size={16} aria-hidden />
+          {t("day.thisMorning")}
+        </span>
+      }
+      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
+    >
+      {children}
+    </Panel>
+  );
+}
+
+// The lane with entries in it: the feed's ids joined to the brief's own items.
+function MorningCards({
+  items,
+  total,
+}: Readonly<{ items: readonly AttentionItem[]; total: number }>) {
+  const t = useT();
+  // Pinned rather than ticking: nothing this lane DRAWS depends on the clock,
+  // and the instant is read only after a click, to work out when a set-aside
+  // item comes back. A one-second interval here would re-render every card on
+  // the lane sixty times a minute to change nothing.
+  const nowMs = useNow(0);
+  const brief = useMorningBrief();
+  const deals = useHomeDeals();
+  const mark = useBriefItemMark();
+  // The feed decides which entries are in the lane and in what order; the
+  // brief's own read supplies each one's content. An id the brief has not
+  // caught up with is dropped rather than drawn empty — half a card is worse
+  // than one card fewer.
+  //
+  // An item the brief already reports as answered leaves immediately, without
+  // waiting for the feed to agree. The mark patches the brief cache straight
+  // away and the feed catches up on its own refetch, so trusting the feed alone
+  // would leave a just-answered card sitting in a lane whose whole rule is that
+  // it holds only unanswered work — visibly settled, for as long as the network
+  // takes.
+  const ordered = items.flatMap((row) => {
+    const found = (brief.data?.items ?? []).find((item) => item.id === row.id);
+    return found && found.state === "new" ? [found] : [];
+  });
+  // Named by the feed but not yet drawable — which is not the same as answered.
+  // An item the reader just answered is legitimately gone from the lane and the
+  // quiet plate is the honest thing to show once the last one goes; an item the
+  // brief has simply not delivered is still coming.
+  const undrawable = items.filter(
+    (row) => !(brief.data?.items ?? []).some((item) => item.id === row.id),
+  );
+  if (undrawable.length > 0 && ordered.length === 0) {
+    // The feed named entries this lane cannot draw yet. That is NOT a quiet
+    // morning, and saying so is the whole difference: the two reads settle
+    // independently, so a lane that showed the quiet plate here would tell a
+    // rep the night found nothing on a morning it found work.
+    return (
+      <MorningPanel total={total}>
+        <PanelBody>
+          <SurfaceState
+            state={brief.isError ? "failed" : "loading"}
+            loadingLabel={t("day.loading")}
+            emptyLabel={t("day.thisMorning.empty")}
+            detail={{ onRetry: () => void brief.refetch() }}
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+      </MorningPanel>
+    );
+  }
+  if (ordered.length === 0) {
+    return (
+      <MorningPanel total={total}>
+        <PanelBody>
+          <EmptyState>{t("day.thisMorning.empty")}</EmptyState>
+        </PanelBody>
+      </MorningPanel>
+    );
+  }
+  return (
+    <MorningPanel total={total}>
+      <PanelBody className="today-morning-list">
+        {ordered.map((item) => (
+          <BriefQueueItem
+            key={item.id}
+            item={item}
+            deals={deals.data ?? []}
+            nowMs={nowMs}
+            mark={mark}
+          />
+        ))}
+      </PanelBody>
+    </MorningPanel>
+  );
+}
+
 // The day, assembled.
 export function TodayScreen() {
   const t = useT();
@@ -329,6 +501,11 @@ function TodayLanes({
   return (
     <>
       <p className="t-h2 today-lead">{leadLine(day, t, locale)}</p>
+      <MorningLane
+        items={day.this_morning ?? []}
+        withheld={omitted.includes("this_morning")}
+        total={day.counts.this_morning}
+      />
       <FocusLane
         items={queue}
         total={day.counts.needs_you}

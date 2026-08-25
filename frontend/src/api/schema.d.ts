@@ -5220,6 +5220,9 @@ export interface paths {
          *
          *     The tier is derived from what the item COSTS, not from which producer raised it:
          *
+         *     * `this_morning` — the overnight brief's ranked queue: where to start, not what must
+         *       be answered. Optional by construction, which is why it is not folded into the lane
+         *       below.
          *     * `needs_you` — a decision only a person can make: an outbound send, a merge that
          *       cannot be undone, a proposal against a record. Bounded, and ordered
          *       highest-stakes-first.
@@ -21455,6 +21458,17 @@ export interface components {
              *     Absent when there is nothing to lead with, which is itself the honest answer.
              */
             lead?: string;
+            /**
+             * @description The overnight brief's queue, best-ranked first — what the night found worth
+             *     the rep's first hour.
+             *
+             *     Its own lane rather than rows in `needs_you`, because the two ask different
+             *     things. A `needs_you` item is a decision a person must make before something
+             *     proceeds; a briefing item is a suggestion about where to start, and answering
+             *     it is optional. Merging them would put "nothing is waiting on you" and
+             *     "nothing was worth flagging" behind one number.
+             */
+            this_morning: components["schemas"]["AttentionItem"][];
             /** @description Decisions only a person can make, highest-stakes first. */
             needs_you: components["schemas"]["AttentionItem"][];
             /** @description Work already agreed: overdue first, then due today. */
@@ -21462,7 +21476,7 @@ export interface components {
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("needs_you" | "planned" | "done_for_you")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -21471,6 +21485,8 @@ export interface components {
          *     lane shows a bounded slice of it.
          */
         AttentionCounts: {
+            /** @description Briefing items still unanswered in the rep's run for today. */
+            this_morning: number;
             needs_you: number;
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
@@ -21502,6 +21518,8 @@ export interface components {
             title?: string;
             /** @description One supporting line: what changed, or what the evidence said. */
             detail?: string;
+            /** @description Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first. */
+            rank?: number;
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
             confidence?: number;
             subject?: components["schemas"]["AttentionSubject"];
@@ -21522,8 +21540,14 @@ export interface components {
              * @description What this item offers. `decide` and `merge` mean the verb is irreversible and a
              *     person must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
+             *
+             *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
+             *     to `/brief/items/{itemId}/…`. `set_aside` rather than reusing `snooze`: a task's
+             *     snooze moves a due date the rep agreed to, while a brief item's hides a
+             *     suggestion until later in the day. One word for both would make a client that
+             *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time

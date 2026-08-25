@@ -271,7 +271,9 @@ describe("company-360 deep read", () => {
     expect(screen.queryByText("Pages read")).toBeNull();
     expect(screen.queryByText("brandt.example/team")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Open Today" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open the Worklist" }),
+    );
     expect(window.location.hash).toBe("#/today");
   });
 
