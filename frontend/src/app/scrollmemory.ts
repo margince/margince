@@ -93,6 +93,12 @@ export function useScrollMemory(
   // already the next entry's.
   const [entry, setEntry] = useState(historyEntryId);
   const wanted = useRef<number | null>(null);
+  // `address` is the TRIGGER and not a value the body reads: a move is what
+  // makes the entry worth asking about again, and `history.state` is where the
+  // answer lives. Reading the address instead would key the memory on the URL,
+  // which a screen rewrites in place whenever a reader turns a dial — and that
+  // is not leaving the page.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep
   useEffect(() => {
     setEntry(historyEntryId());
   }, [address]);
