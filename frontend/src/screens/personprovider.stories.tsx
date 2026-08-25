@@ -1,0 +1,182 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../api/schema";
+import { PersonProviderSection } from "./personprovider";
+import {
+  completedProviderRun,
+  providerCompletedProfile,
+} from "./personprovider.fixtures";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+
+type Profile = components["schemas"]["PersonProviderProfile"];
+
+// What a person's page shows about data BOUGHT from a provider: the values, how
+// sure the provider was of each, and the run they came from.
+//
+// The section's states are RUN states, not layout states — the `state` field is
+// a lifecycle, and the card's header badge is where it is reported. That is why
+// the stories below are named for postures a run is genuinely in rather than
+// for arrangements of the same content: an expired credential and a person the
+// provider simply does not know are different sentences, and only one of them
+// is something an operator can act on.
+//
+// The completed snapshot is `personprovider.fixtures.ts`, shared with the
+// research drawer's stories. A second copy would be a second claim about what
+// the provider returned.
+
+function profile(overrides: Partial<Profile> = {}): Profile {
+  return { ...providerCompletedProfile, ...overrides };
+}
+
+const meta: Meta<typeof PersonProviderSection> = {
+  title: "Records/Person/Bought data",
+  component: PersonProviderSection,
+  parameters: { layout: "padded" },
+};
+export default meta;
+type Story = StoryObj<typeof PersonProviderSection>;
+
+// The buy verb is gated on the RUN's state (`canEnrichNow`) rather than on a
+// grant, so this card reads no session and the stories route none. The run read
+// is routed because the section polls it while a run is moving, and an unrouted
+// request would leave the page instead of answering.
+function section(value: Profile | undefined) {
+  return () => {
+    installFetchStub({
+      "GET /people/p-1/enrichment-runs/run-1": () =>
+        jsonResponse(completedProviderRun),
+    });
+    return (
+      <StoryProviders>
+        <PersonProviderSection personId="p-1" profile={value} />
+      </StoryProviders>
+    );
+  };
+}
+
+/** A completed purchase: an address, a mobile with the provider's confidence
+ *  in it, the employment, and the run behind them. */
+export const Completed: Story = { render: section(profile()) };
+
+/** The same purchase in German — the confidence sentence is where a figure and
+ *  a translated sentence meet, so it is the line worth reading here. */
+export const CompletedGerman: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /people/p-1/enrichment-runs/run-1": () =>
+        jsonResponse(completedProviderRun),
+    });
+    return (
+      <StoryProviders locale="de">
+        <PersonProviderSection personId="p-1" profile={profile()} />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * Several values, each at a different confidence. A provider that is 41% sure
+ * of a number and 97% sure of another has said two different things, and a card
+ * that printed both without the figure would be passing its own uncertainty off
+ * as our claim.
+ */
+export const MixedConfidence: Story = {
+  render: section(
+    profile({
+      mobile_phones: [
+        { value: "+491701234567", confidence: 0.97 },
+        { value: "+498912345678", confidence: 0.41 },
+        // No confidence at all is a third answer, and it is not zero: the
+        // provider returned the number and said nothing about it.
+        { value: "+4915112345678" },
+      ],
+    }),
+  ),
+};
+
+/**
+ * A run that finished and matched nobody. The card keeps its place and says so
+ * — an absent card would read as "this person has nothing to buy", which is a
+ * claim about the person rather than about the run.
+ */
+export const NoMatch: Story = {
+  render: section(
+    profile({
+      state: "no_match",
+      emails: [],
+      mobile_phones: [],
+      linkedin_url: null,
+      current_employment: undefined,
+      job_history: [],
+    }),
+  ),
+};
+
+/** Nothing has been bought yet. The values are absent because none was asked
+ *  for, which is the one state where an empty card is the true report. */
+export const NeverRun: Story = {
+  render: section(
+    profile({
+      state: "never_run",
+      retrieved_at: null,
+      emails: [],
+      mobile_phones: [],
+      linkedin_url: null,
+      current_employment: undefined,
+      job_history: [],
+      latest_run: undefined,
+    }),
+  ),
+};
+
+/** A run in flight. The badge carries the lifecycle and the section polls the
+ *  run rather than the page, so a purchase lands without a reload. */
+export const InProgress: Story = {
+  render: section(profile({ state: "in_progress" })),
+};
+
+/**
+ * The credential the provider was bought through has expired. An operator
+ * fault rather than a data one, so it says which — a generic failure here would
+ * send somebody looking at the person instead of at the connection.
+ */
+export const InvalidCredentials: Story = {
+  render: section(profile({ state: "invalid_credentials" })),
+};
+
+/** Out of credits: the run did not run, and nothing about the person changed.
+ *  The distinction from a provider error is what an operator needs. */
+export const InsufficientCredits: Story = {
+  render: section(profile({ state: "insufficient_credits" })),
+};
+
+/**
+ * Only one category was asked for. `categories_not_requested` is how a card
+ * says a mobile is missing because nobody bought one — the alternative reads as
+ * a provider that had none.
+ */
+export const CategoryNotRequested: Story = {
+  render: section(
+    profile({
+      categories_not_requested: ["mobile"],
+      mobile_phones: [],
+    }),
+  ),
+};
+
+/**
+ * The section WITHHELD. `person360` names it in `sections_omitted` and hands
+ * down no profile, and the card is then absent rather than empty — the one
+ * place that is right, because a card holding no fact cannot be misread as
+ * "nothing was found".
+ */
+export const Withheld: Story = { render: section(undefined) };
+
+/** At 390px the values stack under their eyebrows and the header badge sits
+ *  beside a title that has to wrap rather than truncate. */
+export const Phone: Story = {
+  tags: ["uat-phone"],
+  render: section(profile()),
+};
