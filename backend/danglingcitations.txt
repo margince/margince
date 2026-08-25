@@ -5,31 +5,40 @@
 # citation named none, so it was checked against every namespace at once.
 #
 # The migrations these name were mostly deleted by the 2026-08 baseline
-# consolidation, and MOST of them still resolve through git history — so they are
-# stale prose rather than defects, and rewriting them mechanically would cost
-# more than it buys: a citation is usually the only thing in a sentence saying
-# where the reasoning lives. Two on this list named versions that never existed
-# on ANY ref, and were repaired in the change that added this file.
+# consolidation, and most still resolve through git history — so they are stale
+# prose rather than defects, and rewriting them mechanically would cost more
+# than it buys: a citation is usually the only thing in a sentence saying where
+# the reasoning lives.
 #
-# What the register prevents is the backlog GROWING. A citation written today
-# against a version that never existed is a dead end from birth.
+# What this holds is narrower than "the backlog cannot grow", and the difference
+# matters: a file acquires no citation of a version it does not ALREADY cite. A
+# second citation of a version already listed for that file is invisible.
 #
-# Per FILE, not a total, and that is the point: a total let a deletion anywhere
-# fund a new dead citation elsewhere and net to green — STATUS.md alone carries
-# dozens and is edited at the end of every session.
+# Per FILE rather than a total, because a total lets a deletion anywhere fund a
+# new dead citation elsewhere: the two net and the gate reports green over a
+# tree that got worse.
 #
 # Line numbers are deliberately absent: editing a file above a citation is not a
 # new citation, and a register that churned on every edit would be ignored.
 #
-# TO FIX ONE: state the invariant so the sentence stands alone, or say the
-# migration is in git history rather than in the tree — then DELETE its line
-# here. The gate fails on a line whose citation is gone, so the register cannot
-# drift from the tree in either direction.
+# A test harness that WRITES fixture migration paths lands here too — the string
+# is citation-shaped and this gate cannot tell it from prose. Those entries are
+# noise rather than debt, and they are left in rather than skipped by name: a
+# skip-list in front of a census is the thing that makes one quietly go short.
 #
-# TO REGENERATE: go test ./... -run TestEveryCitedMigrationExists -update-citations
+# TO FIX ONE: state the invariant so the sentence stands alone, or say the
+# migration is in git history rather than in the tree — then prune the line.
+#
+# TO PRUNE, from backend/:
+#   go test . -run TestEveryCitedMigrationExists -update-citations
+#
+# That command only REMOVES entries. Adding one is a hand edit on purpose:
+# regenerating to absorb a citation you just wrote is not a fix, and the added
+# line has to be one a reviewer agreed to.
 .github/workflows/_lane-integration.yml migration 0015
 Makefile core 0240
 README.md migration 0019
+backend/api/crm.yaml core 0131
 backend/api/crm.yaml migration 0099
 backend/api/crm.yaml migration 0114
 backend/api/crm.yaml migration 0287
@@ -42,6 +51,7 @@ backend/internal/compose/agenttaskretention.go migration 0201
 backend/internal/compose/captureverdict_integration_test.go migration 0137
 backend/internal/compose/captureverdictnoise_integration_test.go migration 0137
 backend/internal/compose/channelprovider_migration_integration_test.go migration 0240
+backend/internal/compose/channelproviderfacts.go migration 0247
 backend/internal/compose/channelproviderfacts_test.go migration 0247
 backend/internal/compose/commsscheduled.go core 0260
 backend/internal/compose/datareset_integration_test.go migration 1787032690
@@ -53,6 +63,7 @@ backend/internal/compose/embedreindextransport.go migration 0115
 backend/internal/compose/erasurequotations_integration_test.go core 0244
 backend/internal/compose/extruntimetx.go core 0217
 backend/internal/compose/idempotencyretention.go migration 0033
+backend/internal/compose/integration/activitycontext_integration_test.go core 0038
 backend/internal/compose/integration/agentaccess/oauth_lend_integration_test.go migration 0172
 backend/internal/compose/integration/capture/capture_auto_enrich_sweep_integration_test.go migration 0121
 backend/internal/compose/integration/capture/capture_settings_integration_test.go migration 0121
@@ -75,6 +86,7 @@ backend/internal/compose/org360/dismissal.go core 0225
 backend/internal/compose/org360/viewbaseline.go core 0225
 backend/internal/compose/orgbrief/service.go core 0225
 backend/internal/compose/orgdossier/evidence.go migration 0099
+backend/internal/compose/orgdossier/growthfit.go migration 0194
 backend/internal/compose/orgrollup_test.go core 0006
 backend/internal/compose/participantbackfilljob.go migration 0157
 backend/internal/compose/person360/handlers.go migration 0184
@@ -87,6 +99,7 @@ backend/internal/modules/activities/commitments.go core 0008
 backend/internal/modules/activities/lasttouch.go migration 1787032690
 backend/internal/modules/activities/lifecycle.go migration 1787320003
 backend/internal/modules/activities/participantbackfill.go migration 0157
+backend/internal/modules/activities/relinkbatch.go migration 0008
 backend/internal/modules/activities/scheduledsendfire.go core 0217
 backend/internal/modules/activities/scheduledsendfire.go core 0242
 backend/internal/modules/activities/scheduledsendprovenance.go core 0260
@@ -101,12 +114,15 @@ backend/internal/modules/automation/catalog_actions.go core 0008
 backend/internal/modules/automation/engine_blocked.go migration 0061
 backend/internal/modules/automation/gate.go migration 0061
 backend/internal/modules/automation/rundetail.go migration 0079
+backend/internal/modules/automation/rundetail_test.go migration 0077
 backend/internal/modules/capture/backfillyields.go core 0217
+backend/internal/modules/capture/channelconn.go migration 0151
 backend/internal/modules/capture/channelsend.go core 0217
 backend/internal/modules/capture/pending.go migration 0222
 backend/internal/modules/capture/pendingsweeps.go migration 0137
 backend/internal/modules/capture/projectkeytoken.go migration 0131
 backend/internal/modules/capture/sink.go migration 0137
+backend/internal/modules/collections/vocab.go core 0217
 backend/internal/modules/collections/vocab_test.go migration 0228
 backend/internal/modules/comms/store_test.go core 0136
 backend/internal/modules/consent/preference.go core 0217
@@ -116,6 +132,8 @@ backend/internal/modules/customfields/engine.go core 0171
 backend/internal/modules/customfields/fieldobjects_test.go core 0171
 backend/internal/modules/customfields/service.go core 0063
 backend/internal/modules/deals/offer.go core 0217
+backend/internal/modules/identity/internal/policy/policy.go migration 0068
+backend/internal/modules/identity/oauth_lend.go migration 0172
 backend/internal/modules/identity/roles.go migration 0211
 backend/internal/modules/identity/service.go migration 0268
 backend/internal/modules/overlay/freshness_integration_test.go core 0217
@@ -144,15 +162,21 @@ backend/internal/modules/quotas/quotas.go core 0228
 backend/internal/modules/search/binding.go migration 0114
 backend/internal/modules/search/graph.go core 0038
 backend/internal/modules/search/graphactivity.go core 0038
+backend/internal/modules/search/graphactivity.go migration 0157
 backend/internal/modules/search/pending.go migration 0114
 backend/internal/modules/search/queryjoins.go core 0007
 backend/internal/modules/search/queryjoins.go core 0008
+backend/internal/modules/search/queryjoins.go core 0038
+backend/internal/modules/search/queryjoins.go core 0131
 backend/internal/modules/search/queryjoins.go core 0195
 backend/internal/modules/search/queryjoins.go core 0217
 backend/internal/modules/search/queryjoins_test.go core 0007
 backend/internal/modules/search/queryjoins_test.go core 0008
+backend/internal/modules/search/queryjoins_test.go core 0038
+backend/internal/modules/search/queryjoins_test.go core 0131
 backend/internal/modules/search/queryjoins_test.go core 0195
 backend/internal/modules/search/querysql_test.go core 0007
+backend/internal/modules/search/querysql_test.go core 0131
 backend/internal/modules/search/querystorage.go migration 0051
 backend/internal/modules/search/store.go migration 0077
 backend/internal/modules/signals/audiencerescope.go migration 0208
@@ -172,12 +196,15 @@ backend/internal/platform/events/bus_integration_test.go core 0015
 backend/internal/platform/events/relay.go migration 0016
 backend/internal/platform/httperr/constraintfault.go migration 0289
 backend/internal/platform/jobs/jobs_integration_test.go core 0015
+backend/internal/platform/jobs/migrate.go migration 0015
 backend/internal/platform/testdb/reset.go migration 0240
 backend/internal/platform/testdb/reset_integration_test.go migration 0240
 backend/internal/shared/kernel/pipelinetrace/registry.go migration 0258
 backend/internal/shared/ports/datasource/datasource.go core 0171
 backend/internal/shared/ports/extraction/extraction.go core 0252
 backend/migrations/schema_fitness_integration_test.go core 1787047322
+backend/migrations/schema_integration_test.go migration 0213
+backend/piicoverage_test.go core 0244
 backend/piicoverage_test.go core 0245
 backend/rbacgate_test.go core 0217
 backend/rlsclaims_test.go core 0217
@@ -187,11 +214,14 @@ backend/tableownership_test.go migration 0219
 backend/tools/extmigrategate/role.go core 0213
 backend/tools/extmigrategate/role.go migration 0206
 backend/tools/gen-composition/extmigrations.go core 0213
+backend/tools/gen-composition/scan_test.go migration 0002
 backend/tools/seed-demo/apiclient.go migration 0273
 backend/tools/seed-demo/comms.go migration 0282
 desktop/build/build-postgres.sh core 0032
 desktop/build/build-postgres.sh core 0052
 docs/deployment.md migration 0015
+docs/evidence/extension-tier/DESIGN.md migration 0014
+docs/evidence/extension-tier/DESIGN.md migration 0213
 docs/explanation/ai-runtime.md migration 0088
 docs/explanation/ai-runtime.md migration 0100
 docs/explanation/ai-runtime.md migration 0102
@@ -200,6 +230,7 @@ docs/explanation/company-context.md migration 0102
 docs/explanation/company-context.md migration 0103
 docs/explanation/company-context.md migration 0105
 docs/explanation/custom-fields.md core 0063
+docs/explanation/custom-fields.md migration 0064
 docs/explanation/desktop-distribution.md core 0022
 docs/explanation/desktop-distribution.md core 0032
 docs/explanation/desktop-distribution.md core 0052
@@ -208,6 +239,7 @@ docs/explanation/outbound-messaging.md migration 0155
 docs/explanation/outbound-webhooks.md core 0113
 docs/explanation/rbac-roles-and-teams.md core 0002
 docs/explanation/relationship-graph.md core 0157
+docs/explanation/relationship-graph.md migration 0157
 docs/explanation/relationship-graph.md migration 0158
 docs/explanation/search-and-retrieval.md migration 0004
 docs/explanation/search-and-retrieval.md migration 0022
@@ -218,11 +250,15 @@ docs/explanation/write-backbone.md core 0012
 docs/explanation/write-backbone.md core 0013
 docs/explanation/write-backbone.md core 0015
 docs/how-to/add-an-extension.md migration 0003
+docs/how-to/add-an-rbac-object.md migration 0183
 docs/how-to/apply-migrations.md core 0240
 docs/how-to/connect-telegram.md core 0251
 docs/how-to/connect-telegram.md core 0282
 docs/reference/make-targets.md core 0240
 extensions/notes/migrations/0001_note.up.sql core 0213
+extensions/notes/notes_test.go migration 0002
+extensions/notes/notes_test.go migration 0003
+extensions/notes/notes_test.go migration 0004
 frontend/e2e/leads.spec.ts migration 0038
 frontend/e2e/seed.ts migration 0042
 frontend/src/design-system/recordtimeline.ts migration 0038
@@ -232,6 +268,7 @@ frontend/src/screens/companyraildetails.tsx core 0203
 frontend/src/screens/embedreindex.stories.tsx migration 0115
 frontend/src/screens/embedreindex.test.tsx migration 0115
 frontend/src/screens/embedreindex.tsx migration 0115
+frontend/src/screens/leads.tsx migration 0038
 frontend/src/screens/persondrawers.tsx migration 0188
 frontend/src/screens/relationships.test.tsx migration 0007
 frontend/src/screens/relationships.tsx migration 0007
