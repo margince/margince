@@ -17,10 +17,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
 )
 
@@ -414,18 +414,10 @@ const maxRetryAfter = 5 * time.Minute
 // backoff — which is the one case where guessing is better than waiting
 // forever.
 func retryAfterOf(resp *http.Response, env envelope) time.Duration {
-	seconds := env.Parameters.RetryAfter
-	if seconds <= 0 {
-		header, err := strconv.Atoi(strings.TrimSpace(resp.Header.Get("Retry-After")))
-		if err != nil {
-			return 0
-		}
-		seconds = header
+	if seconds := env.Parameters.RetryAfter; seconds > 0 {
+		return min(time.Duration(seconds)*time.Second, maxRetryAfter)
 	}
-	if seconds <= 0 {
-		return 0
-	}
-	return min(time.Duration(seconds)*time.Second, maxRetryAfter)
+	return min(retryafter.Of(resp), maxRetryAfter)
 }
 
 // classify is the ONE status verdict for every Bot API call, so the connect

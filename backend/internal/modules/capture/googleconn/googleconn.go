@@ -20,12 +20,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
@@ -83,10 +83,10 @@ func Get(ctx context.Context, client *http.Client, base, accessToken, path strin
 	// and let the registry back off rather than parking the connection. Google
 	// signals quota/rate limits as 429, or as 403 with a rate/quota reason.
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return resp.StatusCode, &connector.RateLimitedError{RetryAfter: retryAfter(resp)}
+		return resp.StatusCode, &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
 	}
 	if resp.StatusCode == http.StatusForbidden && RateLimitBody(body) {
-		return resp.StatusCode, &connector.RateLimitedError{RetryAfter: retryAfter(resp)}
+		return resp.StatusCode, &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
 	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return resp.StatusCode, &connector.ProviderError{
@@ -274,18 +274,6 @@ func RateLimitBody(body []byte) bool {
 		}
 	}
 	return limit
-}
-
-// retryAfter parses the provider's Retry-After (delta-seconds form; Google does
-// not send HTTP-dates here). Zero when absent — the registry's own backoff then
-// takes over.
-func retryAfter(resp *http.Response) time.Duration {
-	if s := resp.Header.Get("Retry-After"); s != "" {
-		if secs, err := strconv.Atoi(s); err == nil && secs > 0 {
-			return time.Duration(secs) * time.Second
-		}
-	}
-	return 0
 }
 
 // Descriptor is the shared static metadata for a read-only Google capture
