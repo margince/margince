@@ -48,6 +48,7 @@ type BriefRun struct {
 	UserID           ids.UUID
 	GeneratedAt      time.Time
 	AsOf             time.Time
+	LocalDay         time.Time
 	CandidateCount   int
 	RevenueNormMinor int64
 	Items            []BriefRunItem
@@ -71,14 +72,45 @@ type BriefRunItem struct {
 // events.md §5 catalog defines no brief.* type, so the run — like voice
 // DNA and lists — is audit-only by the closed-verb law (see the
 // writeshape gate's ratified waivers).
+//
+// A rep has ONE run per local day, and uq_brief_run_user_day is what makes
+// that true rather than hoped for: the overnight dispatcher and the boot pass
+// that backfills a missed night can reach the same rep in the same morning,
+// and so can a rep pressing refresh while the night's job is still running.
+// The loser of that race READS the winner instead of failing — a duplicate is
+// not an error the caller should see, it is the constraint doing its job — so
+// the job that lost still reports success and the rep still gets a brief.
 func (e *BriefEngine) SnapshotRun(ctx context.Context, now time.Time) (BriefRun, error) {
+	run, _, err := e.SnapshotRunForDay(ctx, now)
+	return run, err
+}
+
+// SnapshotRunForDay is SnapshotRun, additionally reporting whether this call is
+// the one that assembled the day's run. The transport needs the distinction to
+// answer 201 versus 200; nothing else does.
+//
+// The day's existing run is looked for BEFORE ranking, not after. Ranking is
+// the expensive half — the candidate SQL plus, on the api role, a model call —
+// and once the night has assembled the morning that work is thrown away by the
+// insert's conflict clause. Paying for it to discard it also made the answer
+// worse than useless on the api role: the caller waited for a model re-order
+// and was then served the deterministic run the worker had already stored.
+func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (BriefRun, bool, error) {
+	existing, err := e.LatestRun(ctx, now)
+	switch {
+	case err == nil:
+		return existing, false, nil
+	case !errors.Is(err, apperrors.ErrNotFound):
+		return BriefRun{}, false, err
+	}
+
 	ranking, err := e.Rank(ctx, now)
 	if err != nil {
-		return BriefRun{}, err
+		return BriefRun{}, false, err
 	}
 	userID, err := briefUser(ctx)
 	if err != nil {
-		return BriefRun{}, err
+		return BriefRun{}, false, err
 	}
 
 	run := BriefRun{
@@ -90,40 +122,39 @@ func (e *BriefEngine) SnapshotRun(ctx context.Context, now time.Time) (BriefRun,
 		RevenueNormMinor: ranking.RevenueNormMinor,
 	}
 	queueDeals := make([]ids.UUID, 0, len(ranking.Queue))
+	var joinedExisting bool
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO brief_run (id, user_id, generated_at, as_of, candidate_count, revenue_norm_minor)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			run.ID, run.UserID, run.GeneratedAt, run.AsOf, run.CandidateCount, run.RevenueNormMinor); err != nil {
+		day, err := localDay(ctx, tx, now)
+		if err != nil {
 			return err
 		}
-		for i, item := range ranking.Queue {
-			features, err := json.Marshal(item.Features)
-			if err != nil {
-				return err
-			}
-			persisted := BriefRunItem{
-				ID:          ids.NewV7(),
-				DealID:      item.DealID,
-				Rank:        i + 1,
-				Composite:   item.Composite,
-				Features:    item.Features,
-				EvidenceIDs: item.EvidenceIDs,
-				State:       briefStateNew,
-			}
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO brief_item (id, brief_run_id, deal_id, rank, composite, feature_vector, evidence_ids, state)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-				persisted.ID, run.ID, persisted.DealID, persisted.Rank,
-				persisted.Composite, features, persisted.EvidenceIDs, briefStateNew); err != nil {
-				return err
-			}
-			run.Items = append(run.Items, persisted)
+		run.LocalDay = day
+		// This, not the read above, is what makes one run per day true: the read
+		// is an optimisation that skips the ranking when the answer is already
+		// there, and two callers can still pass it together.
+		//
+		// DO NOTHING rather than DO UPDATE: the run already there was assembled
+		// from the same day's facts and the rep may already have marked its
+		// items, so replacing it would silently discard those marks.
+		inserted, err := insertRunIfDayFree(ctx, tx, run)
+		if err != nil {
+			return err
+		}
+		if !inserted {
+			joinedExisting = true
+			return nil
+		}
+		run.Items, err = insertRunItems(ctx, tx, run.ID, ranking.Queue)
+		if err != nil {
+			return err
+		}
+		for _, item := range run.Items {
 			queueDeals = append(queueDeals, item.DealID)
 		}
-		_, err := storekit.Audit(ctx, tx, "create", "brief_run", run.ID, nil, map[string]any{
+		_, err = storekit.Audit(ctx, tx, "create", "brief_run", run.ID, nil, map[string]any{
 			"user_id":            run.UserID,
 			"as_of":              run.AsOf,
+			"local_day":          run.LocalDay.Format(time.DateOnly),
 			"candidate_count":    run.CandidateCount,
 			"revenue_norm_minor": run.RevenueNormMinor,
 			"queue_deal_ids":     queueDeals,
@@ -131,13 +162,59 @@ func (e *BriefEngine) SnapshotRun(ctx context.Context, now time.Time) (BriefRun,
 		return err
 	})
 	if err != nil {
-		return BriefRun{}, err
+		return BriefRun{}, false, err
 	}
-	return run, nil
+	if joinedExisting {
+		// The winner is read through the ordinary day read, so the caller gets a
+		// run scoped and snooze-resolved exactly as an on-open read would give
+		// it — not the half-built one this call was assembling.
+		existing, err := e.LatestRun(ctx, now)
+		return existing, false, err
+	}
+	return run, true, nil
 }
 
-// LatestRun re-reads the acting rep's most recent persisted brief — the
-// on-open path that must not re-rank. No run yet reads as not-found.
+// insertRunItems writes the ranked queue as this run's items, in rank order,
+// and returns them as persisted.
+//
+// Rank comes from the queue's position rather than from the composite: the L2
+// re-order is allowed to disagree with the deterministic score, and what the
+// rep sees is the order the queue arrived in.
+func insertRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID, queue []BriefQueueItem) ([]BriefRunItem, error) {
+	items := make([]BriefRunItem, 0, len(queue))
+	for i, item := range queue {
+		features, err := json.Marshal(item.Features)
+		if err != nil {
+			return nil, err
+		}
+		persisted := BriefRunItem{
+			ID:          ids.NewV7(),
+			DealID:      item.DealID,
+			Rank:        i + 1,
+			Composite:   item.Composite,
+			Features:    item.Features,
+			EvidenceIDs: item.EvidenceIDs,
+			State:       briefStateNew,
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO brief_item (id, brief_run_id, deal_id, rank, composite, feature_vector, evidence_ids, state)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			persisted.ID, runID, persisted.DealID, persisted.Rank,
+			persisted.Composite, features, persisted.EvidenceIDs, briefStateNew); err != nil {
+			return nil, err
+		}
+		items = append(items, persisted)
+	}
+	return items, nil
+}
+
+// LatestRun re-reads the acting rep's brief FOR THE CURRENT LOCAL DAY — the
+// on-open path that must not re-rank. No run for today reads as not-found.
+//
+// Today's, not the newest: a rep back from a week's holiday would otherwise
+// open Home to last Monday's ranking presented as this morning's, with an
+// as-of line she has no reason to disbelieve. A brief that is stale is worse
+// than one that is absent, because absence is visible and staleness is not.
 // This read is where a snooze resolves (A77/AC-home-6): an expired
 // snooze flips back to actionable inside the read's own transaction,
 // and a still-running one keeps its item hidden — so the returned run
@@ -160,13 +237,15 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 
 	var run BriefRun
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			SELECT id, user_id, generated_at, as_of, candidate_count, revenue_norm_minor
+		day, err := localDay(ctx, tx, now)
+		if err != nil {
+			return err
+		}
+		err = tx.QueryRow(ctx, `
+			SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor
 			FROM brief_run
-			WHERE user_id = $1
-			ORDER BY generated_at DESC, id DESC
-			LIMIT 1`, userID).
-			Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.CandidateCount, &run.RevenueNormMinor)
+			WHERE user_id = $1 AND local_day = $2`, userID, day).
+			Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay, &run.CandidateCount, &run.RevenueNormMinor)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

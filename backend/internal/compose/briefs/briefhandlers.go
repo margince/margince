@@ -52,16 +52,24 @@ func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, briefRunToWire(run))
 }
 
-// GenerateMorningBrief ranks the rep's open deals (§10.1 composite + the
-// L2 re-order) and persists a fresh run. It reads and stages only — no
-// deal field mutates and nothing is sent.
+// GenerateMorningBrief assembles today's run if the overnight pass has not.
+//
+// The night owns generation, so on an ordinary morning this route finds the
+// day's run already there and returns it with 200 rather than ranking a second
+// time. 201 is reserved for the call that actually assembled one — the rep
+// activated today, or the morning a worker was down for. It reads and stages
+// only: no deal field mutates and nothing is sent.
 func (h Handlers) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
-	run, err := h.engine.SnapshotRun(r.Context(), time.Now().UTC())
+	run, assembled, err := h.engine.SnapshotRunForDay(r.Context(), time.Now().UTC())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusCreated, briefRunToWire(run))
+	status := http.StatusOK
+	if assembled {
+		status = http.StatusCreated
+	}
+	httperr.WriteJSON(w, status, briefRunToWire(run))
 }
 
 // MarkBriefItemActed records that the rep acted on a queue item; the next
@@ -114,10 +122,12 @@ func briefRunToWire(run BriefRun) crmcontracts.MorningBrief {
 		items = append(items, briefItemToWire(item))
 	}
 	norm := run.RevenueNormMinor
+	day := openapi_types.Date{Time: run.LocalDay}
 	return crmcontracts.MorningBrief{
 		Id:               openapi_types.UUID(run.ID),
 		GeneratedAt:      run.GeneratedAt,
 		AsOf:             run.AsOf,
+		LocalDay:         &day,
 		CandidateCount:   run.CandidateCount,
 		RevenueNormMinor: &norm,
 		Items:            items,

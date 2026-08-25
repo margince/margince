@@ -45,6 +45,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	snoozedUntil := time.Date(2026, 8, 9, 8, 44, 0, 0, time.UTC)
 	run := briefs.BriefRun{
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
+		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
 		CandidateCount: 17, RevenueNormMinor: 918_273,
 		Items: []briefs.BriefRunItem{{
 			ID: itemID, DealID: dealID, Rank: 3, Composite: 0.815,
@@ -69,6 +70,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"ID": `"brief_id":"` + runID.String(), "UserID": userID.String(),
 		"GeneratedAt":    `"generated_at":"2026-08-08T06:11:00Z"`,
 		"AsOf":           `"as_of":"2026-08-08T05:22:00Z"`,
+		"LocalDay":       `"local_day":"2026-08-08"`,
 		"CandidateCount": `"candidate_count":17`,
 		// Withheld — so the probe is what a LEAK would look like: the value
 		// itself, which must appear nowhere in what the tool served.

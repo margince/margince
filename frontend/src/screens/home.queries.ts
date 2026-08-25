@@ -177,8 +177,9 @@ export function openDeals(deals: readonly Deal[]): Deal[] {
 }
 
 /**
- * Re-rank the brief. A human-only refresh: the nightly run owns the schedule,
- * this is the reader saying "again, now".
+ * Ask for today's brief now. The overnight pass owns generation and a rep has
+ * one run per local day, so this is a catch-up rather than a re-rank: it
+ * returns the day's run, assembling it only if the night could not.
  */
 export function useBriefRefresh() {
   const queryClient = useQueryClient();

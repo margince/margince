@@ -103,13 +103,18 @@ func TestBriefSnoozedItemHidesUntilExpiryThenResurfaces(t *testing.T) {
 		t.Fatal(err)
 	}
 	itemA := run.Items[0]
-	until := briefClock.Add(48 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, until, briefClock.Add(2*time.Hour)); err != nil {
+	// The snooze runs out INSIDE the run's own local day, because a run is a
+	// morning: the read serves the day's run and only the day's, so a window
+	// reaching into tomorrow would be re-surfaced by tomorrow's run rather
+	// than by this one. Hours are what a rep snoozes for anyway — "not before
+	// the afternoon" — and the flip this test is about is the same flip.
+	until := briefClock.Add(8 * time.Hour)
+	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, until, briefClock.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 
 	// While now < snoozed_until: the home read hides the item…
-	during := briefClock.Add(24 * time.Hour)
+	during := briefClock.Add(4 * time.Hour)
 	hidden, err := b.engine.LatestRun(b.repCtx, during)
 	if err != nil {
 		t.Fatal(err)

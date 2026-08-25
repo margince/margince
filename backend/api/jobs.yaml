@@ -412,6 +412,37 @@ kinds:
       holds no model lane at all, which is also why it fans out onto default
       rather than ai_capture.
 
+  brief_generate:
+    role: dispatcher
+    go_type: BriefGenerateArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1h
+    fans_out_to: brief_generate_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Hourly, not daily, because the morning it aims at is the installation's
+      local one — an hourly tick crosses the briefing hour in every zone the
+      setting can name, and the per-rep day uniqueness is what keeps
+      twenty-four ticks from producing twenty-four runs. The same property
+      backfills a night the worker was down for.
+
+  brief_generate_workspace:
+    role: worker
+    go_type: BriefGenerateWorkspaceArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+    reason: >-
+      One deterministic ranking pass per full-seat rep whose local morning has
+      arrived — database-only, so it fans out onto default rather than a model
+      lane. Ten minutes covers a large team's serial passes; a rep whose pass
+      failed is retried with the rest, and the day uniqueness makes that safe.
+
   capture_enrich:
     role: dispatcher
     go_type: CaptureEnrichArgs

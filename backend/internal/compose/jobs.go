@@ -20,12 +20,14 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/gradionhq/margince/backend/internal/compose/briefs"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
 	"github.com/gradionhq/margince/backend/internal/modules/capture"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/telegram"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/geocode"
@@ -369,6 +371,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
 		periodicFor(cfg, OrgNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
+		periodicFor(cfg, BriefGenerateArgs{}),
 		periodicFor(cfg, GmailSyncArgs{}),
 		periodicFor(cfg, GmailWatchArgs{}),
 		periodicFor(cfg, OverlayReconcileArgs{}),
@@ -439,6 +442,26 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
 	addAIActivitySweepJobs(reg, pool, log)
+	addBriefGenerateJobs(reg, pool, log)
+}
+
+// addBriefGenerateJobs registers the overnight Morning-Brief assembly. Its own
+// function because the workspace worker needs the brief engine and the identity
+// service, neither of which the group's other members carry.
+//
+// The engine is built WITHOUT WithL2Ranker, and that is the declared posture
+// rather than an omission: this role holds no brief_ranking model lane, so the
+// overnight run is the deterministic composite order. The model re-order stays
+// what the api role adds on a rep's explicit refresh.
+func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
+	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{pool: pool})
+	addDeclaredWorker[BriefGenerateWorkspaceArgs](reg, &briefGenerateWorkspaceWorker{
+		engine: briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool))),
+		pool:   pool,
+		users:  identity.NewService(pool),
+		now:    time.Now,
+		log:    log,
+	})
 }
 
 // addAIActivitySweepJobs registers the AI-activity projection's two passes. It

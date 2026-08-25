@@ -4953,6 +4953,9 @@
                 "state"
               ]
             }
+          },
+          "local_day": {
+            "type": "string"
           }
         },
         "required": [
@@ -4960,7 +4963,8 @@
           "brief_id",
           "candidate_count",
           "generated_at",
-          "items"
+          "items",
+          "local_day"
         ]
       },
       "evidence": {

@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "7d4fb22c1893eebf46f262abe414b0ba286f032bd6434cc8c08f9005e449bfcd"
+const jobContractHash = "1e473398d88deb309e6867e4ab19cb3222bbd8052b31c5c97a70b955d6fc23e0"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -31,6 +31,8 @@ type declaredJobArgs interface {
 		AIActivityRetentionArgs |
 		AiModelRateRefreshArgs |
 		ApprovalExpiryArgs |
+		BriefGenerateArgs |
+		BriefGenerateWorkspaceArgs |
 		CaptureAutoEnrichSweepArgs |
 		CaptureAutoEnrichWorkspaceArgs |
 		CaptureBackfillArgs |
@@ -125,6 +127,7 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // The declared dispatchers: each enumerates the fleet and enqueues, and does
 // no tenant work of its own.
 var (
+	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
 	_ jobs.FleetWide = CaptureClassifyArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
@@ -154,6 +157,7 @@ var (
 // in its own args.
 var (
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
+	_ jobs.WorkspaceScoped = BriefGenerateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureAutoEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureClassifyWorkspaceArgs{}
