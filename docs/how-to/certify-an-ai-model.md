@@ -113,11 +113,11 @@ a task's result back down per site.
 ## 2. Benchmark a candidate swap
 
 Certify a *different* model against the same corpus — change `MODEL=`, leave
-`JUDGE=` where it is:
+`JUDGE=` where it is, so the two runs differ in exactly one thing:
 
 ```bash
 make e2e-ai TASK=cold_start \
-  MODEL=gemini:gemini-3.1-flash-lite \
+  MODEL=gemini:gemini-3.5-flash \
   JUDGE=anthropic:claude-sonnet-4-6
 ```
 
