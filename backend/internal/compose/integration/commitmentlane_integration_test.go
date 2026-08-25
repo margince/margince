@@ -14,12 +14,14 @@ package integration_test
 // lane in a stub and can be wrong here.
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -248,5 +250,40 @@ func TestASweepWithNoSensibleBoundStillAnswers(t *testing.T) {
 		if len(rows) != 1 {
 			t.Errorf("a limit of %d returned %d rows, want the one open promise", asked, len(rows))
 		}
+	}
+}
+
+// A reader with no activity grant is REFUSED, not handed an empty lane. Every
+// row this read returns quotes a message, so a caller who may not read messages
+// may not read promises either — and the feed turns that refusal into a named
+// omitted lane rather than a clear day.
+//
+// The admit case runs beside it deliberately: a refusal test alone passes just
+// as well against a read that refuses everybody, which is how three security
+// tests in this tree once went green against an authority that admitted nobody.
+func TestAReaderWithoutTheActivityGrantIsRefusedRatherThanShownNothing(t *testing.T) {
+	e := integration.Setup(t)
+	due := laneClock.Add(2 * time.Hour)
+	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	seedPromise(t, e, person, "Referenzliste schicken", &due)
+	store := people.NewStore(e.DB())
+	by := laneClock.Add(24 * time.Hour)
+	owner := ids.From[ids.UserKind](e.Rep1)
+
+	// REFUSE: read-only holds person but not activity.
+	readOnly := e.As(e.Rep1, nil, integration.ReadOnlyPerms)
+	if _, err := store.OpenCommitmentsDue(readOnly, owner, by, 20); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a reader with no activity grant got %v, want permission denied", err)
+	}
+
+	// ADMIT: the same seat with the activity grant reads its own promise. Without
+	// this the test above would pass against a read that refused everyone.
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	rows, err := store.OpenCommitmentsDue(rep, owner, by, 20)
+	if err != nil {
+		t.Fatalf("a rep with the activity grant was refused: %v", err)
+	}
+	if got := bodiesOf(rows); len(got) != 1 || got[0] != "Referenzliste schicken" {
+		t.Fatalf("the rep's lane = %v, want their own promise", got)
 	}
 }
