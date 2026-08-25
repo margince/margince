@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import {
   ConfidenceMeter,
+  confidenceLevel,
   EvidenceChip,
   formatSourceLines,
   type Proposal,
@@ -298,5 +299,27 @@ describe("narrowing a contract value to evidence", () => {
     ]) {
       expect(toEvidence(raw)).toBeNull();
     }
+  });
+});
+
+describe("confidenceLevel", () => {
+  it("maps numeric confidence onto the three-glyph vocabulary", () => {
+    expect(confidenceLevel(0.9)).toBe("high");
+    expect(confidenceLevel(0.6)).toBe("med");
+    expect(confidenceLevel(0.2)).toBe("low");
+  });
+
+  it("bands on the boundary values themselves", () => {
+    // The thresholds are inclusive, and eight surfaces read them: a 0.8 that
+    // banded "med" here and "high" on the next screen is the drift this one
+    // home exists to prevent.
+    expect(confidenceLevel(0.8)).toBe("high");
+    expect(confidenceLevel(0.5)).toBe("med");
+    expect(confidenceLevel(0.499)).toBe("low");
+  });
+
+  it("reads an unrecorded confidence as no reading, never as a low one", () => {
+    expect(confidenceLevel(null)).toBeNull();
+    expect(confidenceLevel(undefined)).toBeNull();
   });
 });

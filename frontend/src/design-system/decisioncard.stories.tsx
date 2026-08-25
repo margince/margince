@@ -3,11 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
-import { Badge } from "./atoms";
 import {
   type DecisionApproval,
   DecisionCard,
   type DecisionCardLabels,
+  DecisionStatusChip,
+  type DecisionStatusLabels,
+  DecisionToolChip,
 } from "./decisioncard";
 import { AutonomyDot } from "./trust";
 
@@ -101,12 +103,48 @@ function approval(over: Partial<DecisionApproval> = {}): DecisionApproval {
   };
 }
 
+// The words the chips draw, in the shape a screen builds them. A story spells
+// them in English because the catalog is read in English; a screen spells them
+// through `t()`.
+const STATUS_LABELS: DecisionStatusLabels = {
+  expiresIn: (msRemaining) => `expires in ${hoursMinutes(msRemaining)}`,
+  approved: "Approved",
+  rejected: "Rejected",
+  expired: "Expired",
+};
+
+// The catalog's own countdown rendering. A screen reads `formatCountdown` out of
+// the message catalogue instead — the units are copy, which is exactly why the
+// chip takes the span and not a rendered string.
+function hoursMinutes(msRemaining: number): string {
+  const minutes = Math.floor(msRemaining / 60000);
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
 const META = (
   <>
     <AutonomyDot tier="confirm" />
     <span className="t-small">Send an email</span>
+    <DecisionToolChip verb="send_email" label={(verb) => `via ${verb}`} />
   </>
 );
+
+// The chips a real surface draws on the meta line, over the card's OWN
+// approval — the countdown and the card's edge read one deadline, so a frame
+// where the two disagree is a bug the catalog can show.
+function chips(over: DecisionApproval, decided = false) {
+  return (
+    <>
+      {META}
+      <DecisionStatusChip
+        approval={over}
+        decided={decided}
+        now={NOW}
+        labels={STATUS_LABELS}
+      />
+    </>
+  );
+}
 
 const DETAIL_LINK = (
   <button type="button" className="link-button">
@@ -124,7 +162,7 @@ export const Deck: Story = {
     labels: LABELS,
     provenance: { kind: "agent", agent: "mailroom" },
     confidence: "high",
-    meta: META,
+    meta: chips(approval()),
     aside: DETAIL_LINK,
     onAccept: () => undefined,
     onEdit: () => undefined,
@@ -150,11 +188,8 @@ export const ExpiringSoon: Story = {
   args: {
     ...Deck.args,
     approval: approval({ expires_at: new Date(NOW + 3 * HOUR).toISOString() }),
-    meta: (
-      <>
-        {META}
-        <Badge tone="warn">expires in 3h 0m</Badge>
-      </>
+    meta: chips(
+      approval({ expires_at: new Date(NOW + 3 * HOUR).toISOString() }),
     ),
   },
 };
@@ -167,11 +202,8 @@ export const Urgent: Story = {
     approval: approval({
       expires_at: new Date(NOW + 20 * 60 * 1000).toISOString(),
     }),
-    meta: (
-      <>
-        {META}
-        <Badge tone="danger">expires in 20m</Badge>
-      </>
+    meta: chips(
+      approval({ expires_at: new Date(NOW + 20 * 60 * 1000).toISOString() }),
     ),
   },
 };
@@ -183,6 +215,10 @@ export const Expired: Story = {
   args: {
     ...Deck.args,
     approval: approval({ expires_at: new Date(NOW - HOUR).toISOString() }),
+    // The chip draws NOTHING here, and that is the frame's subject: the card
+    // already says it ran out of time where its verbs were, and a badge
+    // repeating the word one line above reads as two facts about one deadline.
+    meta: chips(approval({ expires_at: new Date(NOW - HOUR).toISOString() })),
   },
 };
 
@@ -209,6 +245,9 @@ export const FieldChange: Story = {
       <>
         <AutonomyDot tier="confirm" />
         <span className="t-small">Move an account's stage</span>
+        {/* An unmapped kind gives the caller no verb, and the tool chip stays
+            silent rather than naming a tool nobody could check. */}
+        <DecisionToolChip verb={undefined} label={(verb) => `via ${verb}`} />
       </>
     ),
   },
@@ -228,7 +267,12 @@ export const Decided: Story = {
     meta: (
       <>
         <span className="t-small">Send an email</span>
-        <Badge tone="success">Approved</Badge>
+        <DecisionStatusChip
+          approval={approval({ status: "approved" })}
+          decided
+          now={NOW}
+          labels={STATUS_LABELS}
+        />
       </>
     ),
     onAccept: undefined,
@@ -263,5 +307,30 @@ export const ContentFailed: Story = {
   args: {
     ...Deck.args,
     state: "failed",
+  },
+};
+
+// A rejected decision, which is the other half of the decided pair: same chip,
+// same words, the tone the verdict earns. Drawn as its own frame because the
+// two verdicts are the states a reader scanning history has to tell apart at a
+// glance, and one of them being right proves nothing about the other.
+export const DecidedRejected: Story = {
+  args: {
+    ...Decided.args,
+    approval: approval({
+      status: "rejected",
+      decided_at: "2026-08-24T08:12:00.000Z",
+    }),
+    meta: (
+      <>
+        <span className="t-small">Send an email</span>
+        <DecisionStatusChip
+          approval={approval({ status: "rejected" })}
+          decided
+          now={NOW}
+          labels={STATUS_LABELS}
+        />
+      </>
+    ),
   },
 };

@@ -3,7 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
-import { Button } from "./atoms";
+import { Badge, Button } from "./atoms";
 import { type Fact, FactList } from "./factlist";
 import type { SectionState } from "./surfacestate";
 import { SurfaceState } from "./surfacestate";
@@ -84,6 +84,137 @@ export function decisionLapsed(
   return (
     approval.status === "expired" || (expiresAtMs != null && now >= expiresAtMs)
   );
+}
+
+/**
+ * The countdown's tone, from the milliseconds left: warn under six hours,
+ * danger under one, and nothing beyond — never inert grey text. The HOURS are
+ * not spelled here either; `decisionUrgency` owns them, and the card the chip
+ * sits on tints its own edge from the same reading. Two copies of the
+ * thresholds is how one deadline comes to read urgent on the card and calm in
+ * the badge beside it, which is worse than either reading alone.
+ */
+export function decisionUrgencyTone(
+  msRemaining: number,
+): "danger" | "warn" | undefined {
+  return URGENCY_TONE[decisionUrgency(msRemaining)];
+}
+
+const URGENCY_TONE: Readonly<
+  Record<DecisionUrgency, "danger" | "warn" | undefined>
+> = {
+  lapsed: "danger",
+  urgent: "danger",
+  soon: "warn",
+  calm: undefined,
+};
+
+/** What a decided proposal ended up as. */
+export type DecisionVerdict = "approved" | "rejected" | "expired";
+
+const VERDICT_TONE: Readonly<
+  Record<DecisionVerdict, "success" | "danger" | "warn">
+> = {
+  approved: "success",
+  rejected: "danger",
+  expired: "warn",
+};
+
+// A wire status this tier has not learned yet reads as `expired`: a decided card
+// with no badge says less about itself than a slightly imprecise one, and every
+// status the contract can add to the decided set is still something nobody can
+// act on any more.
+function verdictOf(status: string): DecisionVerdict {
+  if (status === "approved") {
+    return "approved";
+  }
+  return status === "rejected" ? "rejected" : "expired";
+}
+
+/**
+ * The status chip's words, on the same terms as `DecisionCardLabels`: this tier
+ * knows when a deadline has passed, not what the reader's locale calls an hour.
+ */
+export type DecisionStatusLabels = Readonly<{
+  /**
+   * How long is left. It takes the SPAN rather than an already-rendered
+   * countdown because the units are copy too — "3h 0m" comes out of the message
+   * catalogue like every other string — and because the chip is the thing that
+   * knows whether a countdown is being drawn at all, so a caller formatting one
+   * up front would be formatting spans nobody sees.
+   */
+  expiresIn: (msRemaining: number) => string;
+  /** The verdict word, one per state a decided proposal can be in. */
+  approved: string;
+  rejected: string;
+  expired: string;
+}>;
+
+/**
+ * The decision's header chip: a verdict badge once it has been answered, else
+ * the live countdown to its deadline.
+ *
+ * Every decision surface draws this one — the inbox's Decisions row and Home's
+ * deck both — because a second countdown is a second answer to one deadline,
+ * and the two drift the first time either moves.
+ */
+export function DecisionStatusChip({
+  approval,
+  decided,
+  now,
+  labels,
+}: Readonly<{
+  approval: DecisionApproval;
+  /** History rather than a question: the verdict, not the time it had left. */
+  decided: boolean;
+  now: number;
+  labels: DecisionStatusLabels;
+}>) {
+  if (decided) {
+    const verdict = verdictOf(approval.status);
+    return <Badge tone={VERDICT_TONE[verdict]}>{labels[verdict]}</Badge>;
+  }
+  const expiresAtMs = decisionExpiryMs(approval);
+  if (expiresAtMs == null) {
+    return null;
+  }
+  // A lapsed pending decision carries NO chip: the card it sits on already says
+  // it ran out of time, where its verbs would have been, and a badge repeating
+  // that word one line above reads as two separate facts about one deadline.
+  // Returning null here also keeps the countdown below off a negative span.
+  if (decisionLapsed(approval, now)) {
+    return null;
+  }
+  const remaining = expiresAtMs - now;
+  return (
+    <Badge tone={decisionUrgencyTone(remaining)}>
+      {labels.expiresIn(remaining)}
+    </Badge>
+  );
+}
+
+/**
+ * Names the tool that actually staged the proposal. The kind is meta on the
+ * line above; this caption is what lets a reader tell "send_email" (the tool)
+ * from "advance_deal" (the kind) without opening the detail.
+ *
+ * The verb arrives already looked up, and the words to wrap it in arrive with
+ * it: the kind→verb catalogue is the product's vocabulary, not this tier's, and
+ * a primitive that held a copy of it would be a second author of it. An unmapped
+ * kind gives no verb and the chip stays silent rather than naming a tool nobody
+ * can check.
+ */
+export function DecisionToolChip({
+  verb,
+  label,
+}: Readonly<{
+  verb: string | undefined;
+  label: (verb: string) => string;
+}>) {
+  if (!verb) {
+    return null;
+  }
+  return <span className="t-caption">{label(verb)}</span>;
 }
 
 /**

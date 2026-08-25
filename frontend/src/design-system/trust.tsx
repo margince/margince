@@ -226,6 +226,30 @@ export function EvidenceChip({
   );
 }
 
+/**
+ * A wire confidence (0..1) as the level `ConfidenceMeter` draws. The ONE
+ * spelling of these bands: eight surfaces read it, and a screen that banded
+ * 0.55 as "med" while its neighbour called it "low" would be two answers to one
+ * number.
+ *
+ * Null in, null out. An unrecorded confidence is not a low one, and drawing it
+ * as low would put a claim on the screen the data never made.
+ */
+export function confidenceLevel(
+  confidence: number | null | undefined,
+): ConfidenceLevel | null {
+  if (confidence == null) {
+    return null;
+  }
+  if (confidence >= 0.8) {
+    return "high";
+  }
+  if (confidence >= 0.5) {
+    return "med";
+  }
+  return "low";
+}
+
 // Low confidence is shown as low, never hidden (§4.2) — there is no prop to
 // suppress the glyph.
 export function ConfidenceMeter({

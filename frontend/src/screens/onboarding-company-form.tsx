@@ -3,12 +3,12 @@ import type { components } from "../api/schema";
 import { Textarea, TextInput } from "../design-system/atoms";
 import {
   ConfidenceMeter,
+  confidenceLevel,
   EvidenceChip,
   ProvenanceTag,
 } from "../design-system/trust";
 import { useLocale, useT } from "../i18n";
 import { coldFieldLabel } from "./common";
-import { confidenceLevel } from "./inbox";
 import {
   type CompanyDraft,
   type CompanyFieldName,

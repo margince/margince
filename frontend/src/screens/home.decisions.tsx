@@ -5,12 +5,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { navigate } from "../app/router";
-import type { DecisionCardLabels } from "../design-system/decisioncard";
 import {
-  decisionExpiryMs,
-  decisionLapsed,
+  approvalDotTier,
+  KIND_TO_VERB,
+  useAgentTierMap,
+} from "../app/autonomy";
+import { navigate } from "../app/router";
+import type {
+  DecisionCardLabels,
+  DecisionStatusLabels,
+} from "../design-system/decisioncard";
+import {
+  DecisionStatusChip,
+  DecisionToolChip,
 } from "../design-system/decisioncard";
 import {
   DecisionDeck,
@@ -19,8 +26,9 @@ import {
   type StagedDecision,
 } from "../design-system/decisiondeck";
 import type { SectionState } from "../design-system/surfacestate";
-import { AutonomyDot } from "../design-system/trust";
+import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
+import { formatCountdown } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -33,7 +41,6 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import { confidenceLevel, RowStatusChip } from "./inbox";
 
 // The decisions half of Home: the deck, its tray, and the one act that sends
 // what is in it.
@@ -48,6 +55,22 @@ type Approval = components["schemas"]["Approval"];
 /** Every approval one deck item answers for. */
 function approvalsOf(item: DecisionDeckItem): readonly Approval[] {
   return item.kind === "single" ? [item.approval] : item.members;
+}
+
+// The status chip's words, in this surface's own voice. Spelled here rather
+// than shared with the Decisions row for the same reason `deckLabels` is: what a
+// countdown is CALLED belongs to the screen showing it, and the deck's own
+// vocabulary is already divergent ("Later" is a verdict only it offers).
+function statusLabels(
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+): DecisionStatusLabels {
+  return {
+    expiresIn: (msRemaining) =>
+      t("inbox.expiresIn", { countdown: formatCountdown(msRemaining, t) }),
+    approved: t("inbox.status.approved"),
+    rejected: t("inbox.status.rejected"),
+    expired: t("inbox.status.expired"),
+  };
 }
 
 /** The deck's vocabulary, in this surface's own words. */
@@ -359,11 +382,11 @@ export function DecisionsSection({
           notice ? <p className="home-error t-caption">{notice}</p> : undefined
         }
         onCommit={(staged) => commit.mutate({ staged, items })}
-        // The three facts a reader needs BEFORE they say yes, and none of them
+        // The four facts a reader needs BEFORE they say yes, and none of them
         // is the deck's to know: which agent tier staged this, what kind of act
-        // it is, and how long it has left. `RowStatusChip` is the same chip the
-        // Decisions row draws, so the two surfaces cannot disagree about a
-        // deadline.
+        // it is, which tool produced it, and how long it has left. The chips are
+        // the design system's, so the deck and the Decisions row cannot disagree
+        // about a deadline.
         chips={(approval) => ({
           meta: (
             <>
@@ -371,12 +394,15 @@ export function DecisionsSection({
               <span className="t-small">
                 {approvalKindLabel(approval.kind, t)}
               </span>
-              <RowStatusChip
+              <DecisionToolChip
+                verb={KIND_TO_VERB[approval.kind]}
+                label={(verb) => t("inbox.viaTool", { verb })}
+              />
+              <DecisionStatusChip
+                approval={approval}
                 decided={false}
-                status={approval.status}
-                expiresAtMs={decisionExpiryMs(approval)}
-                isExpired={decisionLapsed(approval, nowMs)}
                 now={nowMs}
+                labels={statusLabels(t)}
               />
             </>
           ),

@@ -3,9 +3,9 @@
 
 import { useMemo } from "react";
 import type { components } from "../api/schema";
+import { confidenceLevel } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
-import { confidenceLevel } from "./inbox";
 import { MAX_SELECTED_FACTS } from "./onboarding";
 import "./onboarding-facts.css";
 
