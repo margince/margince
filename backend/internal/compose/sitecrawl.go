@@ -230,6 +230,7 @@ func (c *siteCrawler) CrawlStream(ctx context.Context, seedURL string, onPage fu
 	defer cancel()
 	pacer := c.newPacer()
 
+	requestedSeed := seedURL
 	seedURL, seedPage, err := c.fetchSeed(ctx, pacer, seedURL)
 	if err != nil {
 		return siteCrawl{}, err
@@ -240,6 +241,9 @@ func (c *siteCrawler) CrawlStream(ctx context.Context, seedURL string, onPage fu
 	}
 
 	run := newCrawlRun(c, pacer, seedURL, seedPage)
+	// The seed may have answered from another URL than the one asked for; a
+	// nav link back to the requested spelling is still the page already read.
+	run.markVisited(requestedSeed)
 	run.onPage = onPage
 	if onPage != nil {
 		onPage(run.crawl.Pages[0]) // the seed page is committed already
@@ -346,12 +350,11 @@ func untakenCandidates(queue []crawlCandidate, taken []bool) []crawlCandidate {
 	return rest
 }
 
-// fetchPaced is one polite fetch: pacer slot in, fetch, slot out.
 func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webread.Page) *crawlRun {
+	// Nav links back to the landing page arrive normalized; both spellings
+	// of the seed are the page already read.
 	visited := map[string]bool{seedURL: true}
 	if normalizedSeed, ok := normalizeCandidate(seedURL); ok {
-		// Nav links back to the landing page arrive normalized; both
-		// spellings of the seed are the page already read.
 		visited[normalizedSeed] = true
 	}
 	return &crawlRun{
@@ -396,6 +399,15 @@ func (r *crawlRun) discover(ctx context.Context, origin string, seedPage webread
 		r.queue = append(r.queue, crawlCandidate{url: loc})
 	}
 	r.queue = append(r.queue, linkCandidates(seedPage.Links)...)
+}
+
+// markVisited records a URL as already read, under both its literal and its
+// normalized spelling — the two forms a later candidate can arrive in.
+func (r *crawlRun) markVisited(rawURL string) {
+	r.visited[rawURL] = true
+	if normalized, ok := normalizeCandidate(rawURL); ok {
+		r.visited[normalized] = true
+	}
 }
 
 func (r *crawlRun) skip(candURL string, reason crmcontracts.SiteReadSkipReason) {

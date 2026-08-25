@@ -37,6 +37,7 @@ func (c *siteCrawler) ReadSeed(ctx context.Context, seedURL string) (crawlPage, 
 	}, nil
 }
 
+// fetchPaced is one polite fetch: pacer slot in, fetch, slot out.
 func (c *siteCrawler) fetchPaced(ctx context.Context, pacer crawlPacer, rawURL string) (webread.Page, error) {
 	if err := pacer.Wait(ctx); err != nil {
 		return webread.Page{}, err
