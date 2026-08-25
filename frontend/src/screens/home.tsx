@@ -9,6 +9,7 @@ import { formatMoneyOrAbsent } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useDecisionSink } from "./approvalrow";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
 import {
@@ -30,7 +31,7 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
-import { useDecisionSink, usePendingApprovals } from "./inbox";
+import { usePendingApprovals } from "./inbox.queries";
 import "./home.css";
 
 // Home — the morning handover.
@@ -336,7 +337,7 @@ export function HomeScreen() {
         stalled={dealsQuery.isSuccess ? quiet.length : null}
         onGoToDecisions={() => goToSection("home-decisions")}
         onGoToToday={() => goToSection("home-today")}
-        onGoToDuplicates={() => navigate({ screen: "dedupe" })}
+        onGoToDuplicates={() => navigate({ screen: "today" })}
         onGoToWatch={() => goToSection("home-watch")}
       />
       <HomeReadingsStrip

@@ -20,7 +20,7 @@ import "./decisioncard.css";
 // DecisionCard — the ONE way this product asks a person to decide something an
 // automation staged.
 //
-// It was `ApprovalRow` in `screens/inbox.tsx`, imported by seven screens, which
+// It was `ApprovalRow` in a screen file, imported by seven screens, which
 // is the shape the design-system README names as a defect: "a screen file is not
 // a place to keep a primitive". Two things changed in the move, and both are the
 // reason the move was worth making.
@@ -45,8 +45,8 @@ export type DecisionApproval = components["schemas"]["Approval"];
 
 /**
  * How near the deadline is — the card's own reading of `expires_at`, and the
- * one spelling of these thresholds in the product. `screens/inbox.tsx` maps it
- * onto its countdown badge's tone rather than carrying a second copy of the
+ * one spelling of these thresholds in the product. A countdown badge takes its
+ * tone from this function rather than carrying a second copy of the
  * hours: a deadline that reads urgent on the card and calm in the chip beside
  * it is worse than either reading on its own.
  */
@@ -72,7 +72,7 @@ export function decisionUrgency(msRemaining: number): DecisionUrgency {
  *
  * The status vocabulary lives on the server and grows there, so a build is
  * always one deploy from meeting a status it has no word for. This tree already
- * settled that argument for `kind` (`screens/inbox.kinds.test.tsx`), and the
+ * settled that argument for `kind` (`screens/approvalkind.ts`), and the
  * answer was the same: render what arrived rather than drop it. Held to the
  * closed union, the fallback in `verdictOf` would be unreachable to the compiler
  * and dead by the letter of the rule, while still being the branch that runs the
@@ -534,7 +534,7 @@ export type DecisionCardProps = Readonly<{
   /**
    * Who staged it, and how sure they were. Both computed by the caller: the
    * provenance reading needs the signed-in viewer's id, and the confidence
-   * banding has one home in `screens/inbox.tsx` that eight surfaces read.
+   * banding has one home in `design-system/trust.tsx` that eight surfaces read.
    */
   provenance?: Provenance;
   confidence?: ConfidenceLevel;

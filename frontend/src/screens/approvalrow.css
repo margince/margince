@@ -1,0 +1,21 @@
+/* The interval between one decision card and the next.
+ *
+ * It rode on an inline `marginBottom: 10` on the row itself until the row became
+ * `DecisionCard`. A class, and on the CALLER's side of the seam, because a
+ * primitive should carry no opinion about what sits under it — the same card is
+ * a member inside a bundle, a row in this queue and a row on a record page, and
+ * only the surface knows what the gap between two of them means. Every screen
+ * that draws an ApprovalRow gets it from here.
+ */
+.approval-row {
+  margin-bottom: var(--space-3);
+}
+
+/* The inline staged-draft editor, inside the card it edits: the fields stacked,
+   with air between them and above the gate that submits them. */
+.approval-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}

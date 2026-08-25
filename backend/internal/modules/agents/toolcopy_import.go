@@ -15,7 +15,9 @@ var previewImportCopy = toolCopy{
 		"Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a " +
 		"human promotes them. A row naming a record already here is counted in `duplicates`, and " +
 		"created unless on_duplicate is skip — except a person whose email is already held, which " +
-		"is always refused, because an email is a real key. To link people to their employers, map the company column to " +
+		"is always refused, because an email is a real key. A company's Website or Domain column maps to " +
+		"`domain`, which is what identifies a company — import it and dedupe stops guessing from names. " +
+		"To link people to their employers, map the company column to " +
 		"`organization_name` — import the companies FIRST, because a name that matches nothing links " +
 		"nothing and says so. To CORRECT companies rather than add " +
 		"them, map a column to `id`, then give a row the id of the company it corrects — read them " +

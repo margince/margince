@@ -47,7 +47,7 @@ const srcRoot = join(here, "..");
 const zoneModule = join(here, "timezone.ts");
 
 // The IANA areas every zone name starts with. Anchoring on them is what keeps
-// `"screens/tasks"` and `"design-system/composed"` out of the findings while
+// `"screens/settings"` and `"design-system/composed"` out of the findings while
 // `"Asia/Ho_Chi_Minh"` stays in: a bare `Word/Word` shape would report half the
 // module paths in the tree and be turned off within a week.
 const IANA_AREAS =
@@ -260,10 +260,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same `me` fixture across the board suite's five scenarios: a stored user setting, not a formatting decision.",
   },
   {
-    file: "screens/inbox.test.tsx",
-    why: "groupTask takes the zone that decides which day a task falls on, and the boundary cases are only writable against zones the test names — one at UTC, one west of it.",
-  },
-  {
     file: "screens/installation-settings.stories.tsx",
     why: "The Admin settings card DISPLAYS the configured organization timezone; the story needs a configured value.",
   },
@@ -322,14 +318,6 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "screens/scheduledsends.test.tsx",
     why: "Same pair, asserted: the row must state the picked zone when it differs from the reader's.",
-  },
-  {
-    file: "screens/tasks.stories.tsx",
-    why: "A task's `scheduled_tz` is the zone the human picked it in — wire data the story supplies.",
-  },
-  {
-    file: "screens/tasks.test.tsx",
-    why: "Asserts a due time does NOT read on a fixed zone's calendar, which needs that zone named to compare against.",
   },
   {
     file: "screens/users-admin.stories.tsx",
@@ -425,7 +413,7 @@ describe("a zone is named in one module", () => {
     // A module path is the shape's near neighbour and is not a zone. Reporting
     // these is how a gate gets switched off rather than fixed.
     for (const path of [
-      '"screens/tasks"',
+      '"screens/settings"',
       '"../format/timezone"',
       '"/v1/me"',
     ]) {

@@ -408,14 +408,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // both files are correct on their own. Hence a gate over the tree rather than a
   // rule someone has to remember while editing either sheet.
   it("declares each screen's class namespace in exactly one stylesheet", () => {
-    const namespaces = [
-      { prefix: "auth-", home: "screens/auth.css" },
-      // Registered the day dedupe.css was created, because this namespace is
-      // what the rule was written about: the whole `dedupe-*` block lived in
-      // onboarding.css, a sheet the screen that draws it never imports, so it
-      // was styled by accident in the app and not at all in an isolated render.
-      { prefix: "dedupe-", home: "screens/dedupe.css" },
-    ];
+    const namespaces = [{ prefix: "auth-", home: "screens/auth.css" }];
     const violations: string[] = [];
     for (const file of files) {
       if (!file.endsWith(".css")) {
@@ -520,7 +513,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   //
   // Narrow, so it states its own exception. It matches the `card` and
   // `card-inset` BASE tokens only: a component class that merely contains the
-  // word (`auth-card`, `staging-card`, `digest-card`, `co-card`, `dedupe-card`)
+  // word (`auth-card`, `staging-card`, `digest-card`, `co-card`)
   // is a different surface, exactly as `iconbtn` is a different control. And it
   // spares an element that declares a role `Card` cannot express: the component
   // admits `role="status"` and nothing else, on purpose — a card must not be
