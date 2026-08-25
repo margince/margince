@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import {
   ConfidenceMeter,
+  confidenceLevel,
   EvidenceChip,
   formatSourceLines,
   type Proposal,
@@ -131,6 +132,24 @@ describe("ProvenanceTag", () => {
 
   it("reads an unrecorded source as unknown, not as the reader", () => {
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
+    expect(screen.getByText("source not recorded").className).toContain(
+      "provenance-unknown",
+    );
+  });
+
+  // A buyer and an unrecorded source are one branch apart, and collapsing the
+  // first into the second is what put "source not recorded" on a row whose
+  // source was a person. The two are asserted together because that is the
+  // distinction: `unknown` still has to mean nobody recorded a source.
+  it("reads a buyer as a person from outside, never as an unrecorded source", () => {
+    render(<ProvenanceTag provenance={{ kind: "buyer" }} />);
+    render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
+
+    const buyer = screen.getByText("typed by a buyer");
+    expect(buyer.className).toContain("provenance-buyer");
+    // Not the colleague arm either: a buyer holds no seat, and "typed by a
+    // person" would send a reader looking for them in the member directory.
+    expect(buyer.className).not.toContain("provenance-human");
     expect(screen.getByText("source not recorded").className).toContain(
       "provenance-unknown",
     );
@@ -298,5 +317,27 @@ describe("narrowing a contract value to evidence", () => {
     ]) {
       expect(toEvidence(raw)).toBeNull();
     }
+  });
+});
+
+describe("confidenceLevel", () => {
+  it("maps numeric confidence onto the three-glyph vocabulary", () => {
+    expect(confidenceLevel(0.9)).toBe("high");
+    expect(confidenceLevel(0.6)).toBe("med");
+    expect(confidenceLevel(0.2)).toBe("low");
+  });
+
+  it("bands on the boundary values themselves", () => {
+    // The thresholds are inclusive, and eight surfaces read them: a 0.8 that
+    // banded "med" here and "high" on the next screen is the drift this one
+    // home exists to prevent.
+    expect(confidenceLevel(0.8)).toBe("high");
+    expect(confidenceLevel(0.5)).toBe("med");
+    expect(confidenceLevel(0.499)).toBe("low");
+  });
+
+  it("reads an unrecorded confidence as no reading, never as a low one", () => {
+    expect(confidenceLevel(null)).toBeNull();
+    expect(confidenceLevel(undefined)).toBeNull();
   });
 });

@@ -30,6 +30,7 @@ export const vi = {
   "trust.save": "Lưu",
   "trust.typedByYou": "do bạn nhập",
   "trust.typedByHuman": "do người nhập",
+  "trust.typedByBuyer": "do người mua nhập",
   "trust.typedByPrefix": "nhập bởi",
   "trust.sourceUnknown": "không ghi nhận nguồn",
   "trust.agentTag": "Tự động bởi {agent}",
@@ -1396,8 +1397,12 @@ export const vi = {
   "co.deal.new": "Deal mới",
   "co.tags.apply": "Thêm tag",
   "co.tags.pick": "Tên tag",
+  "co.tags.overCap":
+    "Số tag nhiều hơn mức danh sách này hiển thị được, nên một tag không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt tag trước khi tạo tag mới.",
   "co.lists.add": "Thêm vào danh sách",
   "co.lists.pick": "Tên danh sách",
+  "co.lists.overCap":
+    "Số danh sách nhiều hơn mức hiển thị được, nên một danh sách không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt danh sách trước khi tạo danh sách mới.",
   "co.recent.title": "Hoạt động gần đây",
   "co.recent.empty": "Chưa ghi nhận trao đổi nào.",
   "co.recent.viewHistory": "Xem lịch sử",
@@ -2412,6 +2417,8 @@ export const vi = {
   "compose.scopedToCounted":
     "Giới hạn trong {key} · {inScope} trên {total} hoạt động",
   "compose.scopedTo": "Giới hạn trong {key}",
+  "compose.channelFiling":
+    "Sẽ được lưu vào {project}, cùng với cuộc trò chuyện đang được trả lời.",
   "compose.basedOn": "Dựa trên: {inputs}",
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
@@ -5778,6 +5785,7 @@ export const vi = {
   "person.loops.ours": "Bạn",
   "person.loops.question": "Câu hỏi mở",
   "person.loops.overdue": "quá hạn {count} ngày",
+  "person.loops.overdueUnderDay": "quá hạn chưa đến một ngày",
   "person.loops.due": "đến hạn {when}",
   "person.loops.dueToday": "hôm nay",
   "person.loops.dueTomorrow": "ngày mai",
@@ -6261,6 +6269,7 @@ export const vi = {
   "project.advance.reasonRequired": "Dự án đã đóng cần có lý do.",
   "deal.project": "Dự án",
   "deal.projectNew": "Dự án mới…",
+  "deal.projectWithheld": "Dự án bị ẩn",
   "deal.projectNeedsCompany":
     "Chọn công ty của thương vụ trước — dự án được khởi tạo trên một công ty.",
   "deal.projectUnnamed": "Dự án",

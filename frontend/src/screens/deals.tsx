@@ -2675,14 +2675,9 @@ function ReopenAction({
   );
 }
 
-// The status badge plus the edit/archive affordances — split out of
-// DealScreen's render so the record-view callback stays readably small. An
-// archived deal is read-only (no edit/archive/advance path exists server-side
-// for a non-live row), so its verbs render REFUSED rather than missing: the
-// page's one sentence about the archive says why, and each of them points at
-// The edit form's project fields, or none when the reader may not see which
-// project this deal names. Named rather than inlined so `DealBadges` stays
-// under the complexity ceiling, and so the masked case reads as one decision.
+// The edit form's project fields, in the two readings a stored project has.
+// Named rather than inlined so `DealBadges` stays under the complexity ceiling,
+// and so the masked case reads as one decision.
 function editProjectFields(
   t: (key: MessageKey) => string,
   opts: Readonly<{
@@ -2693,7 +2688,21 @@ function editProjectFields(
   }>,
 ): CreateField[] {
   if (opts.masked.includes("project_id")) {
-    return [];
+    // One entry, naming the field as withheld — the same reading the company
+    // and partner pickers carry, for the same reason. Dropping the field said
+    // nothing at all, and a form with no project row reads as a deal on no
+    // project rather than one this reader was not shown. `mapDealUpdate`
+    // leaves the field out of the patch either way, and neither a project to
+    // pick nor the "start a new one" option is offered: both would re-point
+    // the deal off a project the reader never saw.
+    return [
+      {
+        key: "project_id",
+        label: "deal.project",
+        type: "select",
+        options: [{ value: "", label: t("deal.projectWithheld") }],
+      },
+    ];
   }
   return dealProjectFields(
     t,
@@ -2704,6 +2713,11 @@ function editProjectFields(
   );
 }
 
+// The status badge plus the edit/archive affordances — split out of
+// DealScreen's render so the record-view callback stays readably small. An
+// archived deal is read-only (no edit/archive/advance path exists server-side
+// for a non-live row), so its verbs render REFUSED rather than missing: the
+// page's one sentence about the archive says why, and each of them points at
 // it (STATE-4a). A missing control says nothing about the deal, while a
 // refused one names the reason.
 function DealBadges({

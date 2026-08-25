@@ -348,6 +348,11 @@ frontend-check:
 
 ## fe-ds-gates — the design-system script gates on their own, so the CI job that
 ## wants only the cheap greps does not also pull a vitest run behind them.
+##
+## This recipe is also the list check-ext-frontend-walk.test.sh reads: it holds
+## that every gate here reads extensions/*/frontend and not frontend/src alone,
+## because a gate scanning a smaller tree than it claims reports PASS and
+## nothing notices. A gate added below is measured by that test or named in it.
 fe-ds-gates:
 	frontend/scripts/check-ds-purity.sh
 	frontend/scripts/check-font-lock.sh
@@ -355,6 +360,7 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 	frontend/scripts/check-space-tokens.sh
+	bash frontend/scripts/check-ext-frontend-walk.test.sh
 
 ## fe-drift — the TS type-drift gate on its own: regenerate from the contract
 ## and fail if the committed types moved.

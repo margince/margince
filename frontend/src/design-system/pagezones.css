@@ -10,15 +10,32 @@
   gap: 16px;
   align-items: start;
 }
-/* The story always gets the largest share, whichever rails exist. */
+/* The story always gets the largest share, whichever rails exist — and it is
+   FIRST in the DOM (pagezones.tsx), so this template is what draws the left
+   rail to its left. Named areas rather than a bare column list, because the
+   only other way to place a column ahead of its source position is `order`, and
+   an `order` is exactly what makes reading order and visual order disagree
+   (WCAG 2.2 §1.3.2). Nothing in this file may use one. */
 .page-zones-both {
   grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 3fr);
+  grid-template-areas: "rail main aside";
 }
 .page-zones-rail {
   grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+  grid-template-areas: "rail main";
 }
 .page-zones-aside {
   grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  grid-template-areas: "main aside";
+}
+.page-zones > .page-zones-main {
+  grid-area: main;
+}
+.page-zones > .page-zones-rail-column {
+  grid-area: rail;
+}
+.page-zones > .page-zones-aside-column {
+  grid-area: aside;
 }
 /* Every column is a grid item that has to be allowed to be NARROWER than its
    widest child: a table, a long URL or an unbroken word otherwise pushes its
@@ -31,12 +48,25 @@
 @media (max-width: 1200px) {
   .page-zones {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* No template once the columns fold: source order IS the folded order, so
+       the rails place themselves under the work column in the order they read.
+       The desktop areas have to be dropped explicitly, or a column keeps the
+       track its name reserved on a grid that no longer declares one. */
+    grid-template-areas: none;
+  }
+  /* Spelled column by column rather than as `> *`, because each of these has
+     to OUT-WEIGH the placement above: a named area left standing on a grid that
+     declares none resolves against implicit lines and grows tracks nobody
+     asked for. */
+  .page-zones > .page-zones-main,
+  .page-zones > .page-zones-rail-column,
+  .page-zones > .page-zones-aside-column {
+    grid-area: auto;
   }
   /* The story stays first and full width once the rails sit under it:
      a rep opening an account reads what is happening, not the firmographics. */
   .page-zones > .page-zones-main {
     grid-column: 1 / -1;
-    order: -1;
   }
 }
 @media (max-width: 720px) {

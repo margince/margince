@@ -10,6 +10,11 @@ import { Panel, PanelBody } from "./panel";
 // Narrow the Storybook viewport past 1200px and then past 720px to see the two
 // folds — the work column jumps to full width and stays FIRST, then the rails
 // stack under it in one column.
+//
+// The work column is first in the DOM at every width, so what folds is only
+// where the rails are DRAWN. `Folded` below is the width that used to disagree
+// with that, and it is a rendered story rather than an instruction to resize
+// because a fold nobody has a picture of is a fold nobody checks.
 
 const meta: Meta<typeof PageZones> = {
   title: "Design System/PageZones",
@@ -89,5 +94,40 @@ export const Single: Story = {
   args: {
     shape: "single",
     main: work,
+  },
+};
+
+/**
+ * Both rails at the first fold: the work column goes full width and the two
+ * rails sit under it, side by side.
+ *
+ * Declared here rather than in the shared preview config, and named after the
+ * RULE rather than a device: 1024px is a width inside `max-width: 1200px`,
+ * which is where the columns fold. Storybook's viewport tool resizes the
+ * preview iframe from the manager outside it, so the frame is honest here — and
+ * honest under `fe-uat` too, which drives every non-phone story at exactly this
+ * width.
+ */
+const FOLDED_VIEWPORT = {
+  viewport: {
+    options: {
+      folded: {
+        name: "Folded (max 1200px)",
+        styles: { width: "1024px", height: "900px" },
+      },
+    },
+  },
+};
+
+export const Folded: Story = {
+  parameters: FOLDED_VIEWPORT,
+  globals: { viewport: { value: "folded" } },
+  args: {
+    shape: "both",
+    main: work,
+    rail: context,
+    railLabel: "Profile",
+    aside: business,
+    asideLabel: "Context",
   },
 };

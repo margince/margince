@@ -46,17 +46,22 @@ export function Panel({
   // Rendered right-aligned in the header, beside the title — a badge, a
   // button, a count. Absent leaves the title alone in its row.
   titleAction?: ReactNode;
-  // "accent" is the one card on a page that ASKS FOR A MOVE rather than
-  // reporting state: an accent border, a tinted header band, and the title at
-  // reading size so a reader finds it before the panels around it. There is
-  // exactly one tone and it is not a palette — a second tinted panel on the
-  // same page is two leads, which is none.
+  // The LEAD panel's tint: the one card on a page that ASKS FOR A MOVE rather
+  // than reporting state, drawn with a tinted border, a tinted header band and
+  // the title at reading size so a reader finds it before the panels around
+  // it. This is not a palette — a second tinted panel on the same page is two
+  // leads, which is none.
+  //
+  // The two tones are the two kinds of lead, not two colours to choose from:
+  // "accent" is the ordinary ask, "warn" is a lead whose FINDING is the bad
+  // news — a relationship that went quiet, a promise that is late — where the
+  // tone is the reading rather than decoration on it.
   //
   // It is a prop rather than a class a screen sheet adds because the tint has
   // to reach `.panel-head` and `.panel-foot`, which are this component's own
   // internals: a screen reaching into them is a second author for a rhythm
   // this file owns, and the two drift the first time either moves.
-  tone?: "accent";
+  tone?: "accent" | "warn";
   // Verbs that CHANGE this panel, in their own band under the body — not one
   // more row, and not a footer, which reports rather than acts. A caller
   // renders them only when the panel's content is real: an "add a deal"
@@ -72,11 +77,7 @@ export function Panel({
 }>) {
   return (
     <section
-      className={[
-        "panel",
-        tone === "accent" ? "panel-accent" : "",
-        className ?? "",
-      ]
+      className={["panel", tone ? `panel-${tone}` : "", className ?? ""]
         .filter(Boolean)
         .join(" ")}
     >

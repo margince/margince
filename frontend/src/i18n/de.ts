@@ -22,6 +22,7 @@ export const de = {
   "trust.save": "Speichern",
   "trust.typedByYou": "von dir eingetragen",
   "trust.typedByHuman": "von einer Person eingetragen",
+  "trust.typedByBuyer": "von einem Käufer eingetragen",
   "trust.typedByPrefix": "eingetragen von",
   "trust.sourceUnknown": "Herkunft nicht erfasst",
   "trust.agentTag": "Automatisiert durch {agent}",
@@ -1396,8 +1397,12 @@ export const de = {
   "co.deal.new": "Neuer Deal",
   "co.tags.apply": "Tag hinzufügen",
   "co.tags.pick": "Tag-Name",
+  "co.tags.overCap":
+    "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
   "co.lists.add": "Zu Liste hinzufügen",
   "co.lists.pick": "Listenname",
+  "co.lists.overCap":
+    "Es gibt mehr Listen, als angezeigt werden können; eine Liste, die hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Listen aufzuräumen, bevor eine neue angelegt wird.",
   "co.recent.title": "Letzte Aktivität",
   "co.recent.empty": "Noch nichts mit ihnen erfasst.",
   "co.recent.viewHistory": "Verlauf ansehen",
@@ -2431,6 +2436,8 @@ export const de = {
   "compose.scopedToCounted":
     "Bezogen auf {key} · {inScope} von {total} Aktivitäten",
   "compose.scopedTo": "Bezogen auf {key}",
+  "compose.channelFiling":
+    "Wird zusammen mit der beantworteten Konversation unter {project} abgelegt.",
   "compose.basedOn": "Grundlage: {inputs}",
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachricht",
@@ -5830,6 +5837,7 @@ export const de = {
   "person.loops.ours": "Sie",
   "person.loops.question": "Offene Frage",
   "person.loops.overdue": "{count} Tage überfällig",
+  "person.loops.overdueUnderDay": "seit weniger als einem Tag überfällig",
   "person.loops.due": "fällig {when}",
   "person.loops.dueToday": "heute",
   "person.loops.dueTomorrow": "morgen",
@@ -6312,6 +6320,7 @@ export const de = {
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
   "deal.projectNew": "Neues Projekt …",
+  "deal.projectWithheld": "Projekt nicht sichtbar",
   "deal.projectNeedsCompany":
     "Wähle zuerst das Unternehmen des Deals — ein Projekt wird an einem Unternehmen gestartet.",
   "deal.projectUnnamed": "Projekt",

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { TagAction } from "./companyactions";
+import { ListAction, TagAction } from "./companyactions";
 
 // How a typed tag name resolves to ONE tag. The interesting behaviour is the
 // request sequence — which reads happen before the write, and what the action
@@ -51,15 +51,21 @@ function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
+/** Fills one of these single-field actions in and submits it. */
+async function submitName(verb: string, action: ReactNode, name: string) {
+  const user = userEvent.setup();
+  render(<Wrapper>{action}</Wrapper>);
+  await user.click(screen.getByRole("button", { name: verb }));
+  await user.type(screen.getByRole("textbox"), name);
+  await user.click(screen.getByRole("button", { name: "Create" }));
+}
+
 async function addTagNamed(name: string) {
-  render(
-    <Wrapper>
-      <TagAction orgId="o-1" />
-    </Wrapper>,
-  );
-  await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
-  await userEvent.type(screen.getByRole("textbox"), name);
-  await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  await submitName("Add tag", <TagAction orgId="o-1" />, name);
+}
+
+async function addToListNamed(name: string) {
+  await submitName("Add to list", <ListAction orgId="o-1" />, name);
 }
 
 afterEach(() => {
@@ -112,6 +118,50 @@ describe("Add tag resolves a typed name to one tag", () => {
     expect(calls.at(-1)?.path).toContain("/tags/t-9/apply");
   });
 
+  // The overflow signal, in the two directions it has. `page.has_more` on a
+  // bounded catalog says the read was CUT, so a name it does not carry cannot
+  // be told apart from one past the cap — and creating on that guess is what
+  // hands the rep a 409 about a tag the same cap hides from them.
+  it("refuses a create the catalog could not have ruled out", async () => {
+    const calls = stub((call) => {
+      if (call.path.endsWith("/tags") && call.method === "GET") {
+        return json({
+          data: [{ id: "t-1", name: "Other" }],
+          page: { has_more: true },
+        });
+      }
+      return json({ id: "tg-1" }, 201);
+    });
+
+    await addTagNamed("Landlord");
+
+    expect(
+      await screen.findByText(/more tags than this list can show/i),
+    ).toBeTruthy();
+    expect(
+      calls.some((c) => c.method === "POST" && c.path.endsWith("/tags")),
+    ).toBe(false);
+  });
+
+  it("creates the new tag while the catalog fits inside its cap", async () => {
+    const calls = stub((call) => {
+      if (call.path.endsWith("/tags") && call.method === "GET") {
+        return json({ data: [{ id: "t-1", name: "Other" }], page });
+      }
+      if (call.path.endsWith("/tags") && call.method === "POST") {
+        return json({ id: "t-9", name: "Landlord" }, 201);
+      }
+      return json({ id: "tg-1" }, 201);
+    });
+
+    await addTagNamed("Landlord");
+
+    expect(
+      calls.some((c) => c.method === "POST" && c.path.endsWith("/tags")),
+    ).toBe(true);
+    expect(calls.at(-1)?.path).toContain("/tags/t-9/apply");
+  });
+
   it("treats an already-applied tag as the state the rep asked for", async () => {
     const calls = stub((call) => {
       if (call.path.endsWith("/tags") && call.method === "GET") {
@@ -126,5 +176,54 @@ describe("Add tag resolves a typed name to one tag", () => {
     // company, which is what was asked for.
     expect(calls.some((c) => c.path.includes("/apply"))).toBe(true);
     expect(screen.queryByText(/conflict/i)).toBeNull();
+  });
+});
+
+// The same shape one catalog over: `/lists` is bounded and cursorless too, and
+// `list` carries no uniqueness on its name — so an over-cap create there gets
+// no 409 at all, just a second list nobody asked for under a name the page
+// could not show.
+describe("Add to list reads the same overflow signal", () => {
+  it("refuses a create the catalog could not have ruled out", async () => {
+    const calls = stub((call) => {
+      if (call.path.endsWith("/lists") && call.method === "GET") {
+        return json({
+          data: [{ id: "l-1", name: "Other", list_type: "static" }],
+          page: { has_more: true },
+        });
+      }
+      return json({ id: "l-9" }, 201);
+    });
+
+    await addToListNamed("Key accounts");
+
+    expect(
+      await screen.findByText(/more lists than can be shown/i),
+    ).toBeTruthy();
+    expect(
+      calls.some((c) => c.method === "POST" && c.path.endsWith("/lists")),
+    ).toBe(false);
+  });
+
+  it("creates the new list while the catalog fits inside its cap", async () => {
+    const calls = stub((call) => {
+      if (call.path.endsWith("/lists") && call.method === "GET") {
+        return json({
+          data: [{ id: "l-1", name: "Other", list_type: "static" }],
+          page,
+        });
+      }
+      if (call.path.endsWith("/lists") && call.method === "POST") {
+        return json({ id: "l-9" }, 201);
+      }
+      return json({ id: "m-1" }, 201);
+    });
+
+    await addToListNamed("Key accounts");
+
+    expect(
+      calls.some((c) => c.method === "POST" && c.path.endsWith("/lists")),
+    ).toBe(true);
+    expect(calls.at(-1)?.path).toContain("/lists/l-9/members");
   });
 });

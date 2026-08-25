@@ -22,6 +22,7 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Adding a document to the record the dialog was opened from — an account's
@@ -92,13 +93,8 @@ const UPLOADABLE_CATEGORIES = (Object.keys(CATEGORY_KEYS) as Category[]).filter(
  * be a mapping table with nothing to map.
  */
 export type DocumentAnchor = Readonly<{
-  record: "organization" | "person" | "deal";
+  record: AttachmentParent["entityType"];
   id: string;
-}>;
-
-type Parent = Readonly<{
-  entityType: DocumentAnchor["record"];
-  entityId: string;
 }>;
 
 // Which record the file hangs off: the one this dialog was opened from, or one
@@ -118,7 +114,7 @@ function parentOf(
   anchor: DocumentAnchor,
   filing: Filing,
   deal: RecordPickerCandidate | null,
-): Parent | null {
+): AttachmentParent | null {
   if (filing === "deal") {
     return deal ? { entityType: "deal", entityId: deal.id } : null;
   }
@@ -126,42 +122,11 @@ function parentOf(
 }
 
 type Submission = {
-  parent: Parent;
+  parent: AttachmentParent;
   category: Category;
   title: string;
   file: File;
 };
-
-// The bytes go up as multipart because the endpoint takes a file part and the
-// generated client only serializes JSON. Everything else about the request —
-// the cookie, the problem-document shape of a refusal — is unchanged.
-//
-// Returns the stored document's id, or undefined when the server accepted the
-// bytes and the response body could not be read. Those are different facts and
-// the caller needs both: the second one is a stored document whose id we do not
-// know, so its metadata cannot be written — but reporting it as a failed upload
-// would be a lie about a file that is on the record.
-async function uploadFile(submitted: Submission): Promise<string | undefined> {
-  const body = new FormData();
-  body.append("entity_type", submitted.parent.entityType);
-  body.append("entity_id", submitted.parent.entityId);
-  body.append("file", submitted.file);
-  const response = await fetch("/v1/attachments", {
-    method: "POST",
-    body,
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => undefined);
-    throwProblem(payload);
-  }
-  // Not thrown. Past the status check the bytes are stored, and nothing a
-  // failed parse tells us changes that.
-  const stored: Attachment | undefined = await response
-    .json()
-    .catch(() => undefined);
-  return stored?.id;
-}
 
 // Only what the reader actually chose is sent. A PATCH that also wrote the
 // defaults back would overwrite a category the server may have derived for
@@ -333,7 +298,7 @@ export function AddDocumentDialog({
   // dialog checks follows the CHOICE rather than the record it was opened from.
   // With "a deal" chosen and none picked yet there is no parent, and the grant
   // that governs the press is still the deal one.
-  const writable: Readonly<Record<Parent["entityType"], boolean>> = {
+  const writable: Readonly<Record<AttachmentParent["entityType"], boolean>> = {
     organization: canWriteOrg,
     person: canWritePerson,
     deal: canWriteDeal,
@@ -355,7 +320,11 @@ export function AddDocumentDialog({
   // over `file` or `parent` would submit whatever the previous render held.
   const upload = useMutation({
     mutationFn: async (submitted: Submission) => {
-      const id = await uploadFile(submitted);
+      const stored = await uploadAttachment(submitted.parent, submitted.file);
+      // The stored row, or undefined when the bytes landed and the body could
+      // not be read: a document whose id we never learned has nowhere to send
+      // its metadata, which the partial-success arm below reports as such.
+      const id = stored?.id;
       const patch = metadataFor(submitted);
       if (Object.keys(patch).length === 0) {
         return { filed: true };
@@ -590,7 +559,7 @@ function uploadRefusal({
   maxBytes,
 }: Readonly<{
   file: File | undefined;
-  parent: Parent | null;
+  parent: AttachmentParent | null;
   permitted: boolean;
   pending: boolean;
   maxBytes: number | undefined;

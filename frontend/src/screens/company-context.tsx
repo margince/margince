@@ -33,7 +33,7 @@ import {
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { FieldDiff } from "../design-system/trust";
+import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -45,7 +45,6 @@ import {
   throwProblem,
   useMe,
 } from "./common";
-import { confidenceLevel } from "./inbox";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];

@@ -90,7 +90,9 @@ default.
 - **`src/design-system/README.md` is the catalog — read it before hand-rolling a
   control.** Every interactive control comes from that directory; a native
   `<select>` or a hand-rolled dropdown is a defect, and
-  `make native-controls` refuses one. `pnpm storybook` shows them all.
+  `src/design-system/native-controls.test.ts` — a TypeScript-AST vitest gate,
+  run on its own by `make native-controls` — refuses one. `pnpm storybook`
+  shows them all.
 - `src/design-system/` — tokens (Ledger Green canon, pinned by
   `tokens.test.ts`) plus `brand.css`, the DERIVED layer: every value there is a
   `color-mix()` of a canonical token, never a new hex, so it follows the dark

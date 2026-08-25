@@ -348,14 +348,16 @@ export function QueryGate<Data>({
   );
 }
 
-// captured_by is server-stamped and carries one of the four kinds the contract
-// enumerates: "human:<uuid> | agent:<id> | connector:<name> | system:<id>".
+// captured_by is server-stamped from the authenticated principal, so it carries
+// whichever kind that principal is: the four the contract enumerates
+// ("human:<uuid> | agent:<id> | connector:<name> | system:<id>") and
+// `buyer:<participant uuid>`, which a Deal Room participant's own writes stamp.
 // Each reads as the kind of actor it IS — a connector as a connector, a
-// background job as the system, an agent as an agent — because telling those
-// apart is the whole reason a provenance tag is on the screen. A kind this app
-// does not know is `unknown` rather than any of them: naming the wrong kind of
-// actor is a claim about who to ask, and "not recorded" is the only thing still
-// true when the string is unreadable.
+// background job as the system, an agent as an agent, a buyer as a buyer —
+// because telling those apart is the whole reason a provenance tag is on the
+// screen. A kind this app does not know is `unknown` rather than any of them:
+// naming the wrong kind of actor is a claim about who to ask, and "not
+// recorded" is the only thing still true when the string is unreadable.
 //
 // A human is only "you" when the id is the reader's. Without a viewer id the
 // human branch stays unnamed rather than guessing: a caller that cannot say
@@ -394,6 +396,14 @@ export function provenanceOf(
       self: Boolean(viewerUserId) && userId === viewerUserId,
       userId,
     };
+  }
+  if (source === "buyer") {
+    // The other side of a Deal Room: a person, outside the organization and in
+    // no member directory, so neither the human arm (which would send a reader
+    // looking them up) nor `unknown` (which says nobody recorded a source) is
+    // true of them. What follows the kind is the participant uuid — opaque, and
+    // dropped here for the same reason a passport id is.
+    return { kind: "buyer" };
   }
   if (source === "connector") {
     return { kind: "connector", connector: connectorLabel(rest) || source };

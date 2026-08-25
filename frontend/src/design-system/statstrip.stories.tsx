@@ -66,3 +66,36 @@ export const SourcedAndAlerting: Story = {
     </StatStrip>
   ),
 };
+
+// The fold, at the width where it happens. Four readings over three columns and
+// five over three are the two counts on record pages today, and neither divides
+// — the last slot takes the rest of its row rather than sitting alone beside
+// empty cells under a stub of rule.
+//
+// Narrow the Storybook viewport below 68rem to see it fold; at full width both
+// strips are one even row and nothing is stretched.
+export const FoldsWithoutAnOrphan: Story = {
+  parameters: { viewport: { defaultViewport: "tablet" } },
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-6)" }}>
+      <StatStrip>
+        <StatCard label="The ask" value="€95k" />
+        <StatCard label="The date" value="14 Mar" />
+        <StatCard label="The room" value="3 of 5 roles" />
+        <StatCard
+          label="The momentum"
+          value="Stalled 11 days"
+          tone="warn"
+          dot
+        />
+      </StatStrip>
+      <StatStrip>
+        <StatCard label="Budget" value="€240k" />
+        <StatCard label="Spent" value="€181k" />
+        <StatCard label="Remaining" value="€59k" />
+        <StatCard label="Burn" value="€12k / wk" />
+        <StatCard label="Runway" value="5 weeks" tone="warn" dot />
+      </StatStrip>
+    </div>
+  ),
+};

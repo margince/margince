@@ -20,6 +20,7 @@ export const en = {
   "trust.save": "Save",
   "trust.typedByYou": "typed by you",
   "trust.typedByHuman": "typed by a person",
+  "trust.typedByBuyer": "typed by a buyer",
   "trust.typedByPrefix": "typed by",
   "trust.sourceUnknown": "source not recorded",
   "trust.agentTag": "Automated by {agent}",
@@ -1433,8 +1434,12 @@ export const en = {
   "co.deal.new": "New deal",
   "co.tags.apply": "Add tag",
   "co.tags.pick": "Tag name",
+  "co.tags.overCap":
+    "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
   "co.lists.add": "Add to list",
   "co.lists.pick": "List name",
+  "co.lists.overCap":
+    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "Recent activity",
   "co.recent.empty": "Nothing logged with them yet.",
   "co.recent.viewHistory": "View history",
@@ -2448,6 +2453,11 @@ export const en = {
   "compose.scopedToCounted":
     "Scoped to {key} · {inScope} of {total} activities",
   "compose.scopedTo": "Scoped to {key}",
+  // A channel reply has no picker: its send carries no filing field, so the
+  // conversation's own project is inherited. This is the disclosure that
+  // replaces the choice.
+  "compose.channelFiling":
+    "Will be filed under {project}, with the conversation it answers.",
   "compose.basedOn": "Based on: {inputs}",
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
@@ -5876,6 +5886,7 @@ export const en = {
   "person.loops.ours": "You",
   "person.loops.question": "Open question",
   "person.loops.overdue": "overdue {count} days",
+  "person.loops.overdueUnderDay": "overdue by less than a day",
   "person.loops.due": "due {when}",
   "person.loops.dueToday": "today",
   "person.loops.dueTomorrow": "tomorrow",
@@ -6377,6 +6388,7 @@ export const en = {
   "project.advance.reasonRequired": "A closed project needs a reason.",
   "deal.project": "Project",
   "deal.projectNew": "New project…",
+  "deal.projectWithheld": "Project withheld",
   "deal.projectNeedsCompany":
     "Choose the deal's company first — a project is started on a company.",
   "deal.projectUnnamed": "Project",

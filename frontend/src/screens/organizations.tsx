@@ -39,6 +39,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import {
   AutonomyDot,
   ConfidenceMeter,
+  confidenceLevel,
   EvidenceChip,
 } from "../design-system/trust";
 import { formatDateTime, formatMoney } from "../format/format";
@@ -113,7 +114,6 @@ import {
 } from "./evidenceverdict";
 import { type FactGroup, factFieldLabelKey, groupFacts } from "./factview";
 import { RecordHistoryTab } from "./history";
-import { confidenceLevel } from "./inbox";
 import {
   type ListPage,
   type ListQuery,

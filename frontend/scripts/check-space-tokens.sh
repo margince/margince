@@ -20,7 +20,25 @@
 # app shell that defines it).
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+# The unit trees are swept too. A unit's screen is shipped UI in the same
+# bundle, rendered on the same page, and a `var(--x)` nothing defines drops its
+# declaration there exactly as it does in core. Custom properties are global to
+# the document, so one tree may legitimately use what the other declares — which
+# is why both trees feed BOTH sides of the comparison, not just the used side.
+# EXT_DIR is overridable so the gate's own test can point it at a fixture.
+EXT_DIR="${MARGINCE_EXT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)/extensions}"
+
+# A unit ships no frontend at all in a backend-only downstream, so an empty
+# result here is a true statement about an empty tree rather than a miswiring —
+# the emptiness that matters is checked below, over both trees together.
+ext_frontend() {
+  find "$EXT_DIR" -type f \( "$@" \) \
+    -path "*/frontend/*" \
+    -not -path "*/node_modules/*" 2>/dev/null || true
+}
 
 TOKENS="src/design-system/tokens.css"
 if [[ ! -f "$TOKENS" ]]; then
@@ -28,8 +46,14 @@ if [[ ! -f "$TOKENS" ]]; then
   exit 1
 fi
 
-styles=$(find src -type f -name '*.css')
-sources=$(find src -type f \( -name '*.css' -o -name '*.tsx' -o -name '*.ts' \))
+styles=$(
+  find src -type f -name '*.css'
+  ext_frontend -name '*.css'
+)
+sources=$(
+  find src -type f \( -name '*.css' -o -name '*.tsx' -o -name '*.ts' \)
+  ext_frontend -name '*.css' -o -name '*.tsx' -o -name '*.ts'
+)
 if [[ -z "$styles" || -z "$sources" ]]; then
   echo "FAIL: scanned no files — the gate is miswired"
   exit 1

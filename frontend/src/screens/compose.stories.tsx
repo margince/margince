@@ -257,6 +257,71 @@ export const SendUnavailable: Story = {
   },
 };
 
+// The channel reply, over the conversation it answers. A channel send carries
+// only the words and the consent purpose, so the server files the reply under
+// the conversation's own links — which is why this composer STATES its filing
+// where the mail one above offers a picker.
+function channelReplyStory(conversation: RouteMap[string]) {
+  return () => {
+    installFetchStub({
+      "GET /consent-purposes": () => jsonResponse(PURPOSES),
+      "GET /activities/act-1": conversation,
+      "GET /projects/proj-1": () =>
+        jsonResponse({ id: "proj-1", name: "ERP rollout", key: "ERP-27" }),
+    });
+    return (
+      <StoryProviders>
+        <ComposeModal
+          activityId="act-1"
+          entityType="person"
+          entityId="p-1"
+          personId="p-1"
+          kind="message"
+          open
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  };
+}
+
+const CHANNEL_CONVERSATION = {
+  id: "act-1",
+  kind: "message",
+  channel_provider: "telegram",
+  subject: null,
+};
+
+// The filed conversation: the reply says where it lands, and offers no choice
+// about it — nothing on the wire could carry one.
+export const ChannelReplyFiled: Story = {
+  render: channelReplyStory(() =>
+    jsonResponse({
+      ...CHANNEL_CONVERSATION,
+      links: [
+        { entity_type: "person", entity_id: "p-1" },
+        { entity_type: "project", entity_id: "proj-1" },
+      ],
+    }),
+  ),
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByText(/Will be filed under ERP-27 · ERP rollout/);
+  },
+};
+
+// The unfiled conversation: no project to name, so the line stays away rather
+// than announcing a filing that is not happening.
+export const ChannelReplyUnfiled: Story = {
+  render: channelReplyStory(() =>
+    jsonResponse({ ...CHANNEL_CONVERSATION, links: [] }),
+  ),
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByPlaceholderText("Body");
+  },
+};
+
 // The relink dialog: a cross-object /search returns a few candidates that the
 // RecordPicker lists once the user types a query.
 export const Default: Story = {

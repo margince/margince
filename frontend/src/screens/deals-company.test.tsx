@@ -111,6 +111,8 @@ function stubBackend(opts: {
   // the board asked for while that read was still out.
   pageGate?: Promise<void>;
   single?: Deal;
+  // The project a deal names, as its own per-id read answers it.
+  project?: { id: string; name: string };
   // Puts the screen on the overlay mirror, which forces the flat table.
   overlay?: boolean;
 }) {
@@ -155,6 +157,10 @@ function stubBackend(opts: {
         data: opts.page ?? [],
         page: { next_cursor: null },
       });
+    }
+    const projectById = /\/projects\/([^/?]+)/.exec(url);
+    if (projectById && opts.project?.id === projectById[1]) {
+      return jsonResponse(opts.project);
     }
     if (url.includes("/me")) {
       return jsonResponse({
@@ -508,11 +514,12 @@ describe("a deal's edit form over a withheld reference", () => {
     single: Deal,
     page: OrgRow[],
     byId?: Record<string, OrgRow>,
+    project?: { id: string; name: string },
   ) => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
-      stubBackend({ deals: [single], single, page, byId }),
+      stubBackend({ deals: [single], single, page, byId, project }),
     );
     render(<DealScreen id={single.id} />);
     await user.click(await screen.findByTestId("edit-record"));
@@ -574,6 +581,44 @@ describe("a deal's edit form over a withheld reference", () => {
       expect(
         screen.getByRole("combobox", { name: "Company" }).textContent,
       ).toContain("Northgate Systems"),
+    );
+  });
+
+  // The third reference the wire can withhold, and the one the form used to
+  // drop entirely: a missing project row says the deal is on no project, which
+  // is the opposite of what `masked_fields` said.
+  it("offers the project field as withheld rather than dropping it", async () => {
+    const user = await openEdit(
+      deal({
+        organization_id: "o1",
+        project_id: null,
+        masked_fields: ["project_id"],
+      }),
+      [{ id: "o1", display_name: "Acme Corp" }],
+    );
+
+    const picker = screen.getByRole("combobox", { name: "Project" });
+    expect(picker.textContent).toContain("Project withheld");
+    await user.click(picker);
+    const options = within(screen.getByRole("listbox")).getAllByRole("option");
+    expect(options).toHaveLength(1);
+    // Not even the "start a new one" entry: saving it would re-point the deal
+    // off a project the reader never saw.
+    expect(screen.queryByRole("option", { name: /New project/ })).toBeNull();
+  });
+
+  it("names the project a reader may see", async () => {
+    await openEdit(
+      deal({ organization_id: "o1", project_id: "p1" }),
+      [{ id: "o1", display_name: "Acme Corp" }],
+      undefined,
+      { id: "p1", name: "Depot rollout" },
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", { name: "Project" }).textContent,
+      ).toContain("Depot rollout"),
     );
   });
 

@@ -470,8 +470,11 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // #/preferences/<token> — anonymous; the token in the path is the
     // whole capability (security: [] in the contract).
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
-    // #/room?c=<credential> — the Deal Room's buyer, anonymous; the credential
-    // rides the hash's query and the screen scrubs it on first read.
+    // #/room?c=<credential> — the Deal Room's buyer, anonymous. The credential
+    // is already out of the address by the time this table is reached: the
+    // router takes it as it reads the hash (app/router.tsx), because a gate
+    // above this dispatch can render instead of the route and this screen would
+    // then never mount to scrub it.
     room: () => <BuyerRoomScreen />,
     // reached only via the server's redirect off GET /oauth/authorize
     // (#/oauth-consent?…&consent=<nonce>) — never a rail destination.
@@ -612,6 +615,10 @@ const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 export function App() {
+  // Ahead of every gate below, and that ordering is load-bearing rather than
+  // tidy: reading the address is also what takes a one-time credential out of
+  // it (app/router.tsx), and a credential must leave the bar whatever this
+  // function decides to render instead of the route.
   const route = useRoute();
   // BEFORE every other gate, the public screens included. A bundle and an api
   // from different releases disagree about the contract between them, so nothing
@@ -820,6 +827,15 @@ function AuthedApp({
   // splash after the first would read as two loads of one page. Holding here
   // is what lets every screen below take the zone as a settled value — paint
   // first and the day headings on an open timeline renumber under the reader.
+  //
+  // What makes holding here safe is that the wait is BOUNDED: every request
+  // through api/client.ts carries a deadline, so a read that opens and never
+  // answers becomes a rejection rather than an eternal `isPending`. Without
+  // one, this splash is a screen with no error, no retry and no explanation
+  // that only a reload leaves — and it covers routes that need neither read,
+  // onboarding and OAuth consent among them. A read that FAILS falls through
+  // to the shell, where each screen renders its own error state and its own
+  // retry; the splash is for waiting, not for having waited.
   if (company.isPending || recordZone.pending) {
     return (
       <RaillessFrame>

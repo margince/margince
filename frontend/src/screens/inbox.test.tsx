@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { confidenceLevel, InboxScreen } from "./inbox";
+import { InboxScreen } from "./inbox";
 import { groupTask, TasksScreen } from "./tasks";
 
 // B-EP09.12a/b/d + Task 10 (AC-1..7) acceptance: approve/reject/edit from the
@@ -971,14 +971,5 @@ describe("TasksScreen (B-EP09.12d)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => expect(patches).toHaveLength(1));
     expect(patches[0]).toMatchObject({ is_done: true });
-  });
-});
-
-describe("confidenceLevel mapping", () => {
-  it("maps numeric confidence to the three-glyph vocabulary", () => {
-    expect(confidenceLevel(0.9)).toBe("high");
-    expect(confidenceLevel(0.6)).toBe("med");
-    expect(confidenceLevel(0.2)).toBe("low");
-    expect(confidenceLevel(null)).toBeNull();
   });
 });

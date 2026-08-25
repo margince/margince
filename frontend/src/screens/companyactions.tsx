@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
 
@@ -139,20 +140,45 @@ export function NewDealAction({
 }
 
 /**
- * TagAction puts a tag on this company, creating the tag when the name is new.
+ * The one entry of a bounded catalog that carries a typed name, or nothing —
+ * and a refusal where the catalog could not answer the question at all.
  *
- * One field, one name typed. Splitting it into "pick an existing tag" and
- * "make a new one" makes the rep answer a question about the workspace's tag
- * table before they can answer the one they actually have — and on a fresh
- * workspace the pick-only version has nothing to offer, so the control
- * disappears exactly when it is first needed.
+ * `/tags` and `/lists` are bounded VOCABULARIES rather than paged lists: the
+ * server answers up to a governed cap and offers no cursor, so `page.has_more`
+ * is an overflow signal a person has to act on and not a page to walk. A caller
+ * matching a name against what it was handed therefore cannot read a miss as
+ * "no such word" once that flag is set — the word may be one of the ones past
+ * the cap. Creating on that guess is the exact failure reading the vocabulary
+ * exists to prevent: a near-duplicate word where the name is free, and where it
+ * is unique per installation (`uq_tag_name`) a collision with a row nobody can
+ * see, which reaches the rep as a 409 about a tag the same cap hides from them.
  *
- * Matching is case-insensitive on the trimmed name, because "VIP" and "vip"
- * are one tag to everyone except the database.
+ * Both catalog readers on this page share it. A caller that reads a bounded
+ * catalog and ignores the overflow is a shape rather than a one-off, and two
+ * copies of the decision are two answers to one question.
  */
+function matchInCatalog<Entry>(
+  catalog: Readonly<{
+    data: readonly Entry[];
+    page: Readonly<{ has_more: boolean }>;
+  }>,
+  carriesTheName: (entry: Entry) => boolean,
+  overflow: MessageKey,
+  t: (key: MessageKey) => string,
+): Entry | undefined {
+  const found = catalog.data.find(carriesTheName);
+  if (found) {
+    return found;
+  }
+  if (catalog.page.has_more) {
+    throwProblem({ title: t(overflow) });
+  }
+  return undefined;
+}
+
 /**
  * resolveTagId turns a typed name into the id of the ONE tag that carries it,
- * creating it when the workspace has none.
+ * creating it when there is none.
  *
  * Two collisions are resolved rather than reported, because neither is
  * something the rep did or can act on:
@@ -171,9 +197,8 @@ async function resolveTagId(
   name: string,
   t: ReturnType<typeof useT>,
 ): Promise<string> {
-  const matching = (tags: readonly { id: string; name: string }[]) =>
-    tags.find((tag) => tag.name.trim().toLowerCase() === name.toLowerCase())
-      ?.id;
+  const carriesTheName = (tag: { name: string }) =>
+    tag.name.trim().toLowerCase() === name.toLowerCase();
 
   const { data: known, error: readError } = await api.GET("/tags", {
     params: { query: {} },
@@ -181,9 +206,9 @@ async function resolveTagId(
   if (readError) {
     throwProblem(readError, t);
   }
-  const existing = matching(known.data);
+  const existing = matchInCatalog(known, carriesTheName, "co.tags.overCap", t);
   if (existing) {
-    return existing;
+    return existing.id;
   }
 
   const { data, error, response } = await api.POST("/tags", { body: { name } });
@@ -200,17 +225,16 @@ async function resolveTagId(
   if (afterError) {
     throwProblem(afterError, t);
   }
-  const winner = matching(after.data);
+  const winner = matchInCatalog(after, carriesTheName, "co.tags.overCap", t);
   if (!winner) {
-    // The name collided but no readable row carries it. Two ways to get here,
-    // and the rep can act on neither: the collision was about something other
-    // than the name, or the workspace holds more tags than one listTags page
-    // returns and the winner sits past the cap. listTags takes no name filter,
-    // so a client cannot ask about that row directly — the reach for it is a
-    // contract gap, open in issue 2473, rather than looped around here.
+    // The name collided, the catalog is inside its cap, and no readable row
+    // carries the name: the collision was about something other than the name
+    // this rep typed — an archived row, which the live read does not carry,
+    // holds it. The server's own answer is the honest one here; the overflow
+    // reading above is not, because there is no cap to blame.
     throwProblem(error, t);
   }
-  return winner;
+  return winner.id;
 }
 
 /**
@@ -283,10 +307,18 @@ export function ListAction({ orgId }: Readonly<{ orgId: string }>) {
     if (readError) {
       throwProblem(readError, t);
     }
-    const existing = known.data.find(
+    // `/lists` is the same bounded catalog `/tags` is — a cap and no cursor —
+    // so a name missing from it is only "new" while the read fits under that
+    // cap. Over it, the create would add a second list carrying a name the
+    // page could not show, and `list` has no uniqueness for the server to
+    // refuse it with.
+    const existing = matchInCatalog(
+      known,
       (list) =>
         list.list_type === "static" &&
         list.name.trim().toLowerCase() === name.toLowerCase(),
+      "co.lists.overCap",
+      t,
     );
     let listId = existing?.id;
     if (!listId) {

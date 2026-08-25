@@ -14,6 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDateTime } from "../format/format";
+import { daysPast } from "../format/lateness";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import {
@@ -49,7 +50,11 @@ export function groupTask(task: Activity, now: Date, zone: string): TaskGroup {
     return "undated";
   }
   const due = new Date(task.due_at);
-  if (due.getTime() < now.getTime()) {
+  // Lateness is decided in format/lateness, the one place that answers it for
+  // every screen — the bucket boundary and the person card's overdue label are
+  // the same question, and they were two spellings that disagreed for a whole
+  // day after a task fell due.
+  if (daysPast(due.getTime(), now.getTime()).late) {
     return "overdue";
   }
   return calendarDay(due, zone) === calendarDay(now, zone)

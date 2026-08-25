@@ -170,6 +170,28 @@ describe("BuyerRoomScreen", () => {
     );
   });
 
+  // The credential no longer waits in the address bar for the screen to read
+  // it — the router takes it as it reads the hash and holds it in memory, which
+  // is what keeps it out of history while a gate above the route renders
+  // instead. Memory outlives a mount, so the screen has to empty it as it
+  // spends it: a link is single-use, and a remount that sent it again would be
+  // refused and would put the dead-link page over the session it had just
+  // opened.
+  it("spends a link once, however often the screen mounts", async () => {
+    globalThis.location.hash = "#/room?c=mdr_once";
+    const sent = stubRoom();
+    const first = render(<BuyerRoomScreen />);
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    first.unmount();
+
+    render(<BuyerRoomScreen />);
+
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    expect(
+      sent.filter((s) => s.key === "POST /public/rooms/exchange"),
+    ).toHaveLength(1);
+  });
+
   it("the buyer reads the seller's question and answers it with the Bearer", async () => {
     globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     const sent = stubRoom();
