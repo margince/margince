@@ -25,24 +25,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
 )
-
-// retryAfter parses the provider's Retry-After (delta-seconds form; Graph's
-// throttling responses use it). Zero when absent — the caller's own backoff
-// takes over.
-func retryAfter(resp *http.Response) time.Duration {
-	if s := resp.Header.Get("Retry-After"); s != "" {
-		if secs, err := strconv.Atoi(s); err == nil && secs > 0 {
-			return time.Duration(secs) * time.Second
-		}
-	}
-	return 0
-}
 
 // messageOp names the raw-MIME fetch in a ProviderError. Its sibling calls carry
 // their URL path as the op; this one is a hand-built request whose URL embeds the
@@ -94,7 +81,7 @@ func graphReason(body []byte) string {
 func classifyStatus(resp *http.Response, op string, body []byte) error {
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests:
-		return &connector.RateLimitedError{RetryAfter: retryAfter(resp)}
+		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return &connector.ProviderError{
 			Op: op, Status: resp.StatusCode, Reason: graphReason(body), Class: ErrAuthRejected,

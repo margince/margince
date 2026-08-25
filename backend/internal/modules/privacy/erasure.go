@@ -47,10 +47,14 @@ const evidenceKeyRetentionAction = "retention_action"
 // behind it, and — for a controller's decision — the stated reason. Spelled
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
-	evidenceKeyCause  = "cause"
-	evidenceKeyClass  = "class"
-	evidenceKeyBasis  = "basis"
-	evidenceKeyReason = "reason"
+	evidenceKeyCause = "cause"
+	// The two causes a collateral tombstone can carry: an Art. 17 erasure of a
+	// subject, or a retention sweep clearing a record on its own schedule.
+	causePersonErasure = "person_erasure"
+	causeRetention     = "retention"
+	evidenceKeyClass   = "class"
+	evidenceKeyBasis   = "basis"
+	evidenceKeyReason  = "reason"
 )
 
 // Eraser executes the shared erase path both the DSR surface and the
@@ -143,7 +147,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err != nil {
 			return err
 		}
-		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason); err != nil {
+		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causePersonErasure); err != nil {
 			return err
 		}
 		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason); err != nil {
@@ -153,7 +157,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		// the body before any activity exists, so nothing above this line can
 		// reach them — and a scheduled one would otherwise fire the morning
 		// after this erasure certified the data destroyed.
-		if err := redactScheduledSends(ctx, tx, emails); err != nil {
+		if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life
@@ -178,7 +182,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		// transaction (objects first). A failure here — including a
 		// misconfigured store — rolls the whole erasure back, so it stays
 		// retryable and never commits a half-erasure.
-		if err := e.eraseAttachments(ctx, tx, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
+		if err := e.eraseAttachments(ctx, tx, reason, causePersonErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
 			return err
 		}
 		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, emails, identities)
@@ -249,7 +253,7 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 			return err
 		}
 	}
-	if err := tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason); err != nil {
+	if err := tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causePersonErasure); err != nil {
 		return err
 	}
 	// The readings of those rows, which describe a body that is now gone. The
@@ -417,10 +421,13 @@ func deleteSubjectIdentifierRows(ctx context.Context, tx pgx.Tx, personID ids.Pe
 // paired outbox event on purpose: the erasure's single retention.applied
 // on the person is the bus-visible fact, and the collateral scrubs have
 // never announced themselves per record.
-func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID, reason string) error {
+// cause is the caller's, because this path is no longer the Art. 17 erasure's
+// alone: retention reaches it too, and a tombstone stamped person_erasure for a
+// record a retention sweep cleared says the wrong thing about why the data went.
+func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID, reason, cause string) error {
 	for _, id := range records {
 		if _, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{
-			evidenceKeyReason: reason, evidenceKeyCause: "person_erasure",
+			evidenceKeyReason: reason, evidenceKeyCause: cause,
 		}); err != nil {
 			return fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
 		}

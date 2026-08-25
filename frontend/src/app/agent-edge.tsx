@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
+import { readHue } from "../design-system/margince-core-gl";
 import { usePrefersReducedMotion } from "../design-system/motion";
-import { type EdgeHues, readHue } from "./agent-edge-gl";
-import { runEdgeLoop } from "./agent-edge-loop";
+import type { EdgeHues } from "./agent-edge-gl";
+import { type EdgeLoop, runEdgeLoop } from "./agent-edge-loop";
 import { useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
 
@@ -36,6 +37,17 @@ import "./agent-edge.css";
  */
 export function AgentEdge() {
   const { reading, waiting } = useAgentEdge();
+  // The edge outlives the reading that lit it, by exactly as long as it takes to
+  // go out. Unmounting on `reading` alone cut the light dead the instant the work
+  // finished, and a light that vanishes reads as something breaking; the shader
+  // owns the dimming (its own level uniform), so what this holds is only the
+  // canvas it dims on.
+  const [lingering, setLingering] = useState(false);
+  useEffect(() => {
+    if (reading) {
+      setLingering(true);
+    }
+  }, [reading]);
   return (
     <div
       className="agentedge"
@@ -44,7 +56,9 @@ export function AgentEdge() {
       data-waiting={waiting ? "" : undefined}
       aria-hidden="true"
     >
-      {reading && <LitEdge />}
+      {(reading || lingering) && (
+        <LitEdge lit={reading} onDark={() => setLingering(false)} />
+      )}
       <span className="agentedge-wait" />
     </div>
   );
@@ -72,10 +86,23 @@ export function AgentEdge() {
  * test can reach it. What stays here is the mounting: read the hues off the
  * document, start the loop, and wear the static rim if the host cannot run it.
  */
-function LitEdge() {
+function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const loop = useRef<EdgeLoop | null>(null);
   const [live, setLive] = useState(false);
   const reduced = usePrefersReducedMotion();
+  // Read through a ref so a caller's new closure does not restart the loop:
+  // rebuilding the GL program on every render of the parent would throw away the
+  // light this component exists to keep. Declared here because the effect below
+  // reads it, and a const is not hoisted.
+  const onDarkRef = useRef(onDark);
+  onDarkRef.current = onDark;
+  // `lit` is read by the effect that BUILDS the loop, and that effect must not
+  // rebuild when `lit` changes: rebuilding the GL program is the one thing this
+  // component exists to avoid. A ref is how the builder sees the current value
+  // without taking it as a dependency.
+  const litRef = useRef(lit);
+  litRef.current = lit;
 
   useEffect(() => {
     const element = canvas.current;
@@ -85,23 +112,66 @@ function LitEdge() {
     // Read once per mount rather than per frame: a theme change remounts this
     // (the signal clears on unmount), and `getComputedStyle` is a layout read
     // with no business in a draw loop.
+    // The AI hue and the orb's own working tones, so the lit window and the orb
+    // inside it are one object rather than two decorations. --teal used to open
+    // this run and cannot any more: trust.css spends it on HUMAN provenance, and
+    // an edge that says a machine is working has no business starting there.
+    // Amber stays as the one warm stop, for the same reason the orb keeps it.
+    // Literal tokens only, no --orbBody: that one is declared as var(--ai) and a
+    // hue this seam cannot parse draws mid-grey rather than failing.
     const hues: EdgeHues = [
-      readHue("--teal"),
-      readHue("--orbJade"),
-      readHue("--orbMint"),
-      readHue("--orbLime"),
+      readHue("--ai"),
+      readHue("--orbMid"),
+      readHue("--orbGlow"),
+      readHue("--orbBright"),
       readHue("--orbAmber"),
     ];
-    const loop = runEdgeLoop(element, hues, {
+    const started = runEdgeLoop(element, hues, {
       reduced,
       // A context lost to a GPU reset is not recoverable in place: the program
       // and the buffer went with it, so the honest picture of what this machine
       // can draw is the static rim.
-      onLost: () => setLive(false),
+      onLost: () => {
+        // The handle goes too. A stopped loop still referenced here would be
+        // asked to setLit(false) later, would do nothing, and would never report
+        // going dark, which leaves the canvas mounted for the life of the page.
+        loop.current = null;
+        setLive(false);
+      },
+      onDark: () => onDarkRef.current(),
     });
-    setLive(loop !== null);
-    return () => loop?.stop();
+    loop.current = started;
+    // A fresh loop opens with its light asked for. When this rebuild happened
+    // while the edge was already on its way out (a motion-preference change
+    // mid-fade), the replacement relit and stayed lit, because the effect below
+    // only runs when `lit` CHANGES and it had not.
+    started?.setLit(litRef.current);
+    setLive(started !== null);
+    return () => {
+      started?.stop();
+      loop.current = null;
+    };
   }, [reduced]);
+
+  // `live` is a dependency, not decoration: losing the context clears the loop
+  // while `lit` may already be false, and without re-running here nothing would
+  // ever report the edge dark and the static rim would outlive the work.
+  useEffect(() => {
+    const running = loop.current;
+    // Gated on `live` as well as the handle, which is what makes the dependency
+    // real rather than a nudge: `live` IS the answer to "is there a shader to
+    // dim", and it turns false the moment the context is lost.
+    if (live && running) {
+      running.setLit(lit);
+      return;
+    }
+    // No shader to dim, either because this host has none or because the context
+    // was just lost. Holding the rim would leave it on screen after the work
+    // stopped, so report at once and let the caller unmount.
+    if (!lit) {
+      onDarkRef.current();
+    }
+  }, [lit, live]);
 
   return (
     <canvas

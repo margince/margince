@@ -36,13 +36,13 @@
  * file, so a sixth state cannot be added and silently draw green.
  */
 .arblock {
-  --arTone: var(--accent);
+  --arTone: var(--orbBody);
 }
 .arblock[data-core-state="ingest"] {
-  --arTone: var(--orbJade);
+  --arTone: var(--orbMid);
 }
 .arblock[data-core-state="working"] {
-  --arTone: var(--orbLime);
+  --arTone: var(--orbBright);
 }
 /* Amber is the fault that can wait, red is not connected. Nothing else takes a
    colour, and a passing failed request takes none at all: a corner that flashes
@@ -71,7 +71,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
+  /* No gap. The ball's own box already carries the air around it (the halo is
+     drawn inside it), so a gap here is a second helping of the same space and it
+     read as the caption belonging to something else. */
+  gap: 0;
   width: 100%;
   /* Tight. The ball is the biggest thing in the chrome and it needs room to be
      read, not room around the room: with no card to hold, air above and below it
@@ -137,7 +140,7 @@
      width in one axis and the viewport in the other would give the ball two
      different diameters. 232px is the width the card can give it, and 24vh is
      what a short window can, whichever is smaller. */
-  --coreSize: min(232px, 24vh);
+  --coreSize: min(196px, 20vh);
   --coreGlass: calc(var(--coreSize) - 6px);
   /* The viewport cap is for a hero standing in a content column; the rail's own
      width and height are the only caps this one needs. */
@@ -358,10 +361,10 @@
   --arTone: var(--accent);
 }
 .arloose[data-core-state="ingest"] {
-  --arTone: var(--orbJade);
+  --arTone: var(--orbMid);
 }
 .arloose[data-core-state="working"] {
-  --arTone: var(--orbLime);
+  --arTone: var(--orbBright);
 }
 .arloose[data-core-state="warning"] {
   --arTone: var(--orbAmber);

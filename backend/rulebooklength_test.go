@@ -46,8 +46,12 @@ var ceilings = map[string]int{
 	// rule pays for itself in a diff a reviewer can see; the alternative — trimming
 	// unrelated lines elsewhere to stay under a fixed number — buys the number and
 	// loses the rule.
-	"AGENTS.md":          322,
-	"frontend/AGENTS.md": 160,
+	"AGENTS.md": 322,
+	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
+	// and a reader who does not know that paints the meaning onto a decoration.
+	// The reasoning lives in the design-system README; what is here is the twelve
+	// lines a caller has to obey.
+	"frontend/AGENTS.md": 172,
 }
 
 func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {

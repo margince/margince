@@ -96,7 +96,6 @@ func (r *crawlRun) fetchWave(ctx context.Context, admitted []admission) []fetchR
 	return results
 }
 
-// commit files one fetched result — a page, a recorded skip, a silent
 // legalCensusOpen reports whether an Impressum candidate may still bypass
 // the one-language-per-document rule. The bypass exists because a group's
 // per-locale legal pages can name DIFFERENT legal entities, and the entity
@@ -144,6 +143,15 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		return
 	}
 	page := res.page
+	if page.FinalURL != "" && !webread.SameRegistrableDomain(r.seedURL, page.FinalURL) {
+		// The candidate was on-site but its server answered from another
+		// site. An off-site redirect is the same boundary crossing as an
+		// off-site link, discovered one fetch later — the body is discarded
+		// unread, links and all. Only the SEED's redirect may move the
+		// boundary (siteseed.go); a later page's never widens it.
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonOffDomain)
+		return
+	}
 	if utf8.RuneCountInString(page.Text) < crawlMinRunes {
 		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
 		return
@@ -165,16 +173,29 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		return
 	}
 
+	servedURL, kind := adm.url, adm.kind
+	if page.FinalURL != "" && page.FinalURL != adm.url {
+		// The page's evidence names the URL that actually served it, and that
+		// URL counts as read: a second candidate redirecting to the same
+		// place must not buy another fetch. The kind was read off the URL we
+		// asked for, so it is reclassified too — a guessed /impressum
+		// forwarding to a careers page is not a legal notice.
+		servedURL = page.FinalURL
+		r.markVisited(servedURL)
+		kind = classifyKind(servedURL)
+	}
 	r.seenText[page.Text] = true
 	r.canonicalDone[localeCanonical(adm.url)] = true
-	if adm.kind == crmcontracts.SiteReadPageKindImpressum {
+	if kind == crmcontracts.SiteReadPageKindImpressum {
 		r.impressumRead++
 	}
 	r.totalBytes += page.Bytes
-	if adm.cand.probe {
+	if adm.cand.probe && kind == adm.cand.kind {
+		// A probe whose redirect landed on another kind of page did not find
+		// what it guessed at; its kind stays open for the next guess.
 		r.probeKindDone[adm.cand.kind] = true
 	}
-	committed := crawlPage{URL: adm.url, Kind: adm.kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
+	committed := crawlPage{URL: servedURL, Kind: kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
 	r.crawl.Pages = append(r.crawl.Pages, committed)
 	if r.onPage != nil {
 		r.onPage(committed)
