@@ -7928,6 +7928,9 @@ paths:
 
         The tier is derived from what the item COSTS, not from which producer raised it:
 
+        * `this_morning` — the overnight brief's ranked queue: where to start, not what must
+          be answered. Optional by construction, which is why it is not folded into the lane
+          below.
         * `needs_you` — a decision only a person can make: an outbound send, a merge that
           cannot be undone, a proposal against a record. Bounded, and ordered
           highest-stakes-first.
@@ -28432,7 +28435,7 @@ components:
         let a badge be drawn without paging the lanes. Every count here is scoped the way
         its lane is scoped: a number a caller cannot page to would report the existence of
         records they may not read.
-      required: [as_of, needs_you, planned, done_for_you, counts]
+      required: [as_of, needs_you, planned, done_for_you, counts, this_morning]
       properties:
         as_of: { type: string, format: date-time, description: "The instant every lane below was read at." }
         lead:
@@ -28440,6 +28443,18 @@ components:
           description: |
             One sentence naming what the day actually holds, in the reader's language.
             Absent when there is nothing to lead with, which is itself the honest answer.
+        this_morning:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            The overnight brief's queue, best-ranked first — what the night found worth
+            the rep's first hour.
+
+            Its own lane rather than rows in `needs_you`, because the two ask different
+            things. A `needs_you` item is a decision a person must make before something
+            proceeds; a briefing item is a suggestion about where to start, and answering
+            it is optional. Merging them would put "nothing is waiting on you" and
+            "nothing was worth flagging" behind one number.
         needs_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -28454,7 +28469,7 @@ components:
           description: "What the system did on its own, most recent first. Receipts, not questions."
         lanes_omitted:
           type: array
-          items: { type: string, enum: [needs_you, planned, done_for_you] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -28464,8 +28479,9 @@ components:
         How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
         queue's own count under its both-sides-visible rule, kept separate because the
         lane shows a bounded slice of it.
-      required: [needs_you, planned]
+      required: [needs_you, planned, this_morning]
       properties:
+        this_morning: { type: integer, minimum: 0, description: "Briefing items still unanswered in the rep's run for today." }
         needs_you: { type: integer, minimum: 0 }
         planned: { type: integer, minimum: 0 }
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
@@ -28494,6 +28510,7 @@ components:
             three languages, so a duplicate pair sends its `kind` and `confidence`
             and the client writes the line in the reader's own.
         detail: { type: string, description: "One supporting line: what changed, or what the evidence said." }
+        rank: { type: integer, minimum: 1, description: "Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first." }
         confidence:
           type: number
           minimum: 0
@@ -28508,11 +28525,17 @@ components:
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             person must choose; `complete` and `snooze` are a task's own verbs; `open` is
             the read-only fallback for a receipt.
+
+            `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
+            to `/brief/items/{itemId}/…`. `set_aside` rather than reusing `snooze`: a task's
+            snooze moves a due date the rep agreed to, while a brief item's hides a
+            suggestion until later in the day. One word for both would make a client that
+            handles `snooze` generically write the wrong endpoint.
 
     AttentionPair:
       type: object

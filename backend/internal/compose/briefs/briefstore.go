@@ -434,6 +434,24 @@ func (e *BriefEngine) markItem(ctx context.Context, itemID ids.UUID, state strin
 	return item, nil
 }
 
+// Unanswered says whether this item is still waiting on the rep, as a run READ
+// hands it back.
+//
+// It takes no instant, unlike briefItemActionable below, and the difference is
+// which question is being asked. That one guards a MARK against a stale screen,
+// so it must admit a snooze whose window has passed but whose row a read has
+// not yet flipped. This one describes an item LatestRun has already returned,
+// and that read resurfaces expired snoozes inside its own transaction — so a
+// still-snoozed item here is genuinely still set aside, and re-deciding that
+// against a second clock could only disagree with the read that produced it.
+//
+// Exported because the worklist lane asks it. What a brief state means belongs
+// to this package; a lane spelling `state == "new"` for itself would be a
+// second copy of that vocabulary.
+func Unanswered(item BriefRunItem) bool {
+	return item.State == briefStateNew
+}
+
 // briefItemActionable says whether a rep may still mark this item: fresh,
 // or snoozed past its snoozed_until (the re-surface may not have been
 // materialized by a read yet, but the item is already actionable again).

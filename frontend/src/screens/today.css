@@ -34,6 +34,15 @@
   gap: var(--space-2);
 }
 
+/* The briefing lane stacks whole cards rather than rows: a brief item carries a
+ * factor decomposition and its evidence, which is not a thing that fits on one
+ * line beside a verb. */
+.today-morning-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 /* A row is a headline with its supporting line, and the verbs pushed to the
  * far edge so every button on the page sits on one vertical line — the reader's
  * hand learns where to go once. */

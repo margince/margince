@@ -5,7 +5,10 @@ import { throwProblem } from "./common";
 
 export type Attention = components["schemas"]["Attention"];
 export type AttentionItem = components["schemas"]["AttentionItem"];
-export type AttentionLane = "needs_you" | "planned" | "done_for_you";
+// Derived from the contract's own omitted-lane enum, not spelled again here: a
+// hand-written union goes stale the moment a lane is added, and it goes stale
+// silently — nothing compares the two.
+export type AttentionLane = NonNullable<Attention["lanes_omitted"]>[number];
 
 // Exported because completing a task from this surface invalidates it, and the
 // shared task mutation takes the keys to invalidate rather than knowing them.

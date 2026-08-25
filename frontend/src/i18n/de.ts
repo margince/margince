@@ -67,8 +67,11 @@ export const de = {
   "nav.companies": "Firmen",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
-  "nav.today": "Heute",
-  "day.title": "Heute",
+  "nav.today": "Arbeitsliste",
+  "day.title": "Arbeitsliste",
+  "day.thisMorning": "Heute Morgen",
+  "day.thisMorning.empty":
+    "Die Nacht hat nichts gefunden, was deine erste Stunde verdient. Das ist die Antwort, keine Lücke.",
   "day.loading": "Dein Tag wird geladen…",
   "day.lead.oneDecision": "Eine Entscheidung wartet auf dich.",
   "day.lead.decisions": "{count} Entscheidungen warten auf dich.",
@@ -2087,7 +2090,7 @@ export const de = {
   "home.snooze": "Zurückstellen",
   "home.snoozedState": "zurückgestellt",
 
-  "enrich.toInbox": "Heute öffnen",
+  "enrich.toInbox": "Arbeitsliste öffnen",
 
   "deepread.title": "Ganze Website lesen",
   "deepread.sub":

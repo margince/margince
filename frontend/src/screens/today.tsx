@@ -1,4 +1,4 @@
-import { CheckSquare, GitMerge, Sparkles } from "lucide-react";
+import { CheckSquare, GitMerge, Sparkles, Sunrise } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -8,6 +8,12 @@ import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
+import { BriefQueueItem } from "./briefqueue";
+import {
+  useBriefItemMark,
+  useHomeDeals,
+  useMorningBrief,
+} from "./home.queries";
 import { snoozedDueAt, useTaskUpdate } from "./taskactions";
 import { FocusLane } from "./today.focus";
 import {
@@ -246,6 +252,82 @@ function Lane({
   );
 }
 
+// The overnight brief's lane: what the night thought the day was for.
+//
+// It draws the same card Home does, through the same connected component, so
+// there is one answer to "what does a brief item look like and what happens
+// when you press its buttons".
+//
+// The lane's ITEMS come from the feed and their CONTENT from the brief's own
+// read, which is two requests for one lane and is deliberate. The alternative
+// is copying the ranking payload — five factors, the composite, the evidence —
+// through the attention contract as well, and then two wires carry the same
+// numbers and can disagree. The feed says WHICH entries are still waiting; the
+// brief says what each one is.
+//
+// Plain rather than `tone="accent"`: the decisions lane below is the one panel
+// that asks for a move, and a second tinted panel would leave the page with no
+// lead at all. A briefing item is a suggestion about where to start.
+function MorningLane({
+  items,
+  withheld,
+  total,
+}: Readonly<{
+  items: readonly AttentionItem[];
+  withheld: boolean;
+  total: number;
+}>) {
+  const t = useT();
+  const nowMs = useNow();
+  const brief = useMorningBrief();
+  const deals = useHomeDeals();
+  const mark = useBriefItemMark();
+  // The feed decides which entries are in the lane and in what order; the
+  // brief's own read supplies each one's content. An id the brief has not
+  // caught up with is dropped rather than drawn empty — the two reads settle
+  // independently, and half a card is worse than one card fewer.
+  const queued = (brief.data?.items ?? []).filter((item) =>
+    items.some((row) => row.id === item.id),
+  );
+  const ordered = items.flatMap((row) => {
+    const found = queued.find((item) => item.id === row.id);
+    return found ? [found] : [];
+  });
+  return (
+    <Panel
+      title={
+        <span className="today-lane-title">
+          <Sunrise size={16} aria-hidden />
+          {t("day.thisMorning")}
+        </span>
+      }
+      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
+    >
+      {withheld ? (
+        <PanelBody>
+          <EmptyState>{t("day.lane.withheld")}</EmptyState>
+        </PanelBody>
+      ) : ordered.length === 0 ? (
+        <PanelBody>
+          <EmptyState>{t("day.thisMorning.empty")}</EmptyState>
+        </PanelBody>
+      ) : (
+        <PanelBody className="today-morning-list">
+          {ordered.map((item) => (
+            <BriefQueueItem
+              key={item.id}
+              item={item}
+              deals={deals.data ?? []}
+              nowMs={nowMs}
+              mark={mark}
+            />
+          ))}
+        </PanelBody>
+      )}
+    </Panel>
+  );
+}
+
 // The day, assembled.
 export function TodayScreen() {
   const t = useT();
@@ -329,6 +411,11 @@ function TodayLanes({
   return (
     <>
       <p className="t-h2 today-lead">{leadLine(day, t, locale)}</p>
+      <MorningLane
+        items={day.this_morning ?? []}
+        withheld={omitted.includes("this_morning")}
+        total={day.counts.this_morning}
+      />
       <FocusLane
         items={queue}
         total={day.counts.needs_you}

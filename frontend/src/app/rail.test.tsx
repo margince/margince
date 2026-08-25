@@ -92,7 +92,7 @@ const CANONICAL_ORDER = [
   "Companies",
   "Leads",
   "Filters & views",
-  "Today",
+  "Worklist",
   "Pipeline",
   "Projects",
   "Reports",
