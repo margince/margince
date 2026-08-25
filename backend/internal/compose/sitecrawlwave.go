@@ -174,24 +174,29 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		return
 	}
 
-	servedURL := adm.url
-	if page.FinalURL != "" {
+	servedURL, kind := adm.url, adm.kind
+	if page.FinalURL != "" && page.FinalURL != adm.url {
 		// The page's evidence names the URL that actually served it, and that
 		// URL counts as read: a second candidate redirecting to the same
-		// place must not buy another fetch.
+		// place must not buy another fetch. The kind was read off the URL we
+		// asked for, so it is reclassified too — a guessed /impressum
+		// forwarding to a careers page is not a legal notice.
 		servedURL = page.FinalURL
 		r.markVisited(servedURL)
+		kind = classifyKind(servedURL)
 	}
 	r.seenText[page.Text] = true
 	r.canonicalDone[localeCanonical(adm.url)] = true
-	if adm.kind == crmcontracts.SiteReadPageKindImpressum {
+	if kind == crmcontracts.SiteReadPageKindImpressum {
 		r.impressumRead++
 	}
 	r.totalBytes += page.Bytes
-	if adm.cand.probe {
+	if adm.cand.probe && kind == adm.cand.kind {
+		// A probe whose redirect landed on another kind of page did not find
+		// what it guessed at; its kind stays open for the next guess.
 		r.probeKindDone[adm.cand.kind] = true
 	}
-	committed := crawlPage{URL: servedURL, Kind: adm.kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
+	committed := crawlPage{URL: servedURL, Kind: kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
 	r.crawl.Pages = append(r.crawl.Pages, committed)
 	if r.onPage != nil {
 		r.onPage(committed)

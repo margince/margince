@@ -196,3 +196,28 @@ func TestCrawlEvidenceNamesTheURLThatServedThePage(t *testing.T) {
 		t.Fatalf("the redirect target was fetched again %d times although its content was already read", site.pageCalls[newPath])
 	}
 }
+
+func TestCrawlClassifiesARedirectedPageByItsDestination(t *testing.T) {
+	// A guessed /impressum that forwards to a careers page is not a legal
+	// notice: the committed kind follows the URL that served the body, and
+	// the unsatisfied probe kind stays open, so the next legal-page guess is
+	// still tried and the entity census still gets its page.
+	site := &fakeSite{pages: seedOnly()}
+	site.pages[seedURL+"/impressum"] = fakeSitePage{finalURL: seedURL + "/jobs", text: readable("Open roles at Acme.")}
+	site.pages[seedURL+"/imprint"] = fakeSitePage{text: readable("Acme GmbH, HRB 12345.")}
+
+	crawl, err := testSiteCrawler(site).Crawl(context.Background(), seedURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := map[string]crmcontracts.SiteReadPageKind{}
+	for _, page := range crawl.Pages {
+		kinds[page.URL] = page.Kind
+	}
+	if kinds[seedURL+"/jobs"] != crmcontracts.SiteReadPageKindOther {
+		t.Fatalf("the careers destination was committed as %q, want other: %v", kinds[seedURL+"/jobs"], kinds)
+	}
+	if kinds[seedURL+"/imprint"] != crmcontracts.SiteReadPageKindImpressum {
+		t.Fatalf("the impressum kind was closed by a redirected probe; pages = %v", kinds)
+	}
+}
