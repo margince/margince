@@ -29,6 +29,12 @@ export type CoreFrame = Readonly<{
   mouse: readonly [number, number];
   /** 0 = the ball glows on a dark surface, 1 = opaque and dark on paper. */
   paper: number;
+  /** The ribbon palette, read off the tokens: five stops, in the order the
+   *  shader's uWork expects. Carried per frame so a theme change reaches the
+   *  ball without rebuilding the GL program. */
+  work: readonly (readonly [number, number, number])[];
+  /** The ball's own base gradient, read off the tokens: deep then ink. */
+  body: readonly (readonly [number, number, number])[];
 }>;
 
 export type CoreRenderer = Readonly<{
@@ -120,9 +126,66 @@ const UNIFORMS = [
   "uTintCol",
   "uIngest",
   "uPaper",
+  "uWork",
+  "uBody",
 ] as const;
 
 type UniformName = (typeof UNIFORMS)[number];
+
+/** How many stops each palette uniform carries, matching the shader's arrays. */
+const WORK_STOPS = 5;
+const BODY_STOPS = 2;
+
+/**
+ * Flattens a palette into the flat float list `uniform3fv` wants.
+ *
+ * Through a Float32Array rather than a cast: the frame's stops are a readonly
+ * tuple and `uniform3fv` wants a mutable float list, so there is no assertion
+ * that would make one into the other honestly. A stop the caller did not
+ * supply reads mid-grey rather than a hole, matching `readHue`'s own rule that
+ * a missing colour should look wrong, not look absent.
+ */
+function flatten(
+  stops: readonly (readonly [number, number, number])[],
+  count: number,
+): Float32Array {
+  const flat = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const [r, g, b] = stops[i] ?? [0.5, 0.5, 0.5];
+    flat[i * 3] = r;
+    flat[i * 3 + 1] = g;
+    flat[i * 3 + 2] = b;
+  }
+  return flat;
+}
+
+/**
+ * Reads a colour token off the document and hands back linear-ish 0..1 floats.
+ *
+ * The tokens are the one source for colour in this tree, and a shader cannot
+ * read a custom property, so this is the seam that carries a value from
+ * `tokens.css` into a uniform. Mirrors `agent-edge-gl.ts`'s reader of the same
+ * name: kept here rather than imported from it because that file sits in
+ * `app/`, one tier above this one, and a design-system primitive does not
+ * reach upward for a utility this small to duplicate. A token that resolves to
+ * nothing gets mid-grey rather than black, so a missing hue looks wrong rather
+ * than looking like a hole.
+ */
+export function readHue(name: string): readonly [number, number, number] {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  const hex = /^#([0-9a-f]{6})$/i.exec(raw);
+  if (!hex) {
+    return [0.5, 0.5, 0.5];
+  }
+  const value = Number.parseInt(hex[1], 16);
+  return [
+    ((value >> 16) & 255) / 255,
+    ((value >> 8) & 255) / 255,
+    (value & 255) / 255,
+  ];
+}
 
 function locate(
   gl: WebGL2RenderingContext,
@@ -191,6 +254,8 @@ export function createCoreRenderer(
       );
       gl.uniform1f(at.uIngest, frame.ingest);
       gl.uniform1f(at.uPaper, frame.paper);
+      gl.uniform3fv(at.uWork, flatten(frame.work, WORK_STOPS));
+      gl.uniform3fv(at.uBody, flatten(frame.body, BODY_STOPS));
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);

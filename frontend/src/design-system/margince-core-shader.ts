@@ -49,6 +49,8 @@ uniform vec3  uTintCol;    // the stopped-state colour: amber, grey or red
 uniform float uIngest;     // 0..1 the inward "pulling material in" sweep
 uniform float uPaper;      // 0 = the ball glows on a dark surface,
                            // 1 = it goes opaque and dark on light paper
+uniform vec3  uWork[5];    // the ribbon palette, read off the tokens
+uniform vec3  uBody[2];    // the ball's own base gradient, read off the tokens
 
 const float R  = 1.0;      // orb radius in world units
 const float PI = 3.14159265;
@@ -176,16 +178,18 @@ void main(){
      end. Amber survives the move to indigo here for the reason it survives it
      there, that one warm ribbon is what keeps five cool ones legible as five.
 
-     LITERALS, and that is a gap rather than a choice: this shader cannot read a
-     custom property, and unlike agent-edge.tsx nothing yet hands it the tokens
-     as uniforms. So repainting the orb family in tokens.css does NOT move the
-     ball, which is exactly how this file stayed green through one repaint. */
+     Arrives as a UNIFORM, read off the tokens on the host side (the engine
+     reads the document once per loop start and hands the numbers down), so a
+     repaint in tokens.css moves the ball. The literals still standing further
+     down this file are LIGHT rather than palette: near-white speculars, the
+     hot core between the ribbons, the lip, the sheen. Those describe how the
+     object is lit, not what colour it is, which is why they stay literal. */
   vec3 BASE[5];
-  BASE[0] = vec3(0.310, 0.330, 0.760);
-  BASE[1] = vec3(0.706, 0.722, 0.969);
-  BASE[2] = vec3(0.902, 0.560, 0.160);
-  BASE[3] = vec3(0.706, 0.722, 0.969);
-  BASE[4] = vec3(0.541, 0.502, 1.000);
+  BASE[0] = uWork[0];
+  BASE[1] = uWork[1];
+  BASE[2] = uWork[2];
+  BASE[3] = uWork[3];
+  BASE[4] = uWork[4];
 
   SHELL[0]=0.78; WIDTH[0]=0.310; WOB1[0]= 0.26; WOB2[0]= 0.11; WOB3[0]= 0.07; GAIN[0]=3.3;
   SHELL[1]=0.90; WIDTH[1]=0.250; WOB1[1]=-0.31; WOB2[1]= 0.08; WOB3[1]=-0.09; GAIN[1]=2.7;
@@ -343,7 +347,7 @@ void main(){
     vec2 gdir = normalize(n.xy + vec2(1e-5));
     float grad = 0.5 + 0.5 * dot(gdir, normalize(vec2(-0.7, 0.7)));   // TL to BR
 
-    vec3 ball = mix(vec3(0.105, 0.110, 0.255), vec3(0.170, 0.180, 0.400), grad);
+    vec3 ball = mix(uBody[0], uBody[1], grad);
     ball = mix(ball, uTintCol * vec3(0.30, 0.13, 0.09), uTint * 0.85);
     /* a sphere still has to turn away from the light, or it reads as a disc */
     ball *= 0.68 + 0.42 * ndv;

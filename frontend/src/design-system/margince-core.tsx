@@ -131,6 +131,10 @@ export function MarginceCoreScene({
     // The hero is the Core as the subject of a page rather than as a light in the
     // chrome, and it wears the same state with more life in it.
     hero: size === "hero",
+    // `paper` alone misses a theme flip on a `surface="dark"` Core, since that
+    // one holds paper constant: this is what lets the engine re-read the
+    // palette when the tokens it draws from could have changed.
+    dark: darkPage,
   });
 
   const classes = [
