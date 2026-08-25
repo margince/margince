@@ -31,6 +31,11 @@ import { TagsSection } from "./companyrailtags";
 import { byReach } from "./coverage";
 import { roleOf } from "./provider-status";
 import { signalKindLabel, signalTone } from "./record360";
+// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
+// are defined in company360.css. Imported HERE rather than left to the caller:
+// it works today only because the company record page pulls that stylesheet in
+// for its own sake, so this file renders unstyled anywhere else.
+import "./company360.css";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,
