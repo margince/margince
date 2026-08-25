@@ -7,6 +7,7 @@ import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
+import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -123,7 +124,7 @@ function orderedTiers(tiers: Routing["tiers"] | undefined): string[] {
     return i === -1 ? TIER_ORDER.length : i;
   };
   return Object.keys(tiers ?? {}).sort(
-    (a, b) => rank(a) - rank(b) || a.localeCompare(b),
+    (a, b) => rank(a) - rank(b) || stable(a, b),
   );
 }
 

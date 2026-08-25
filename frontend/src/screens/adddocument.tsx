@@ -20,6 +20,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { foldForMatch } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
@@ -190,7 +191,7 @@ async function walkAccountDeals(
   for (let page = 0; page < DEAL_SEARCH_PAGES; page += 1) {
     const answered = await fetchPage(cursor);
     for (const deal of answered.data) {
-      if (deal.name.toLocaleLowerCase().includes(needle)) {
+      if (foldForMatch(deal.name).includes(needle)) {
         matches.push({ id: deal.id, name: deal.name });
       }
     }
@@ -284,7 +285,7 @@ export function AddDocumentDialog({
   // clear the list under them.
   const searchDeals = useCallback(
     (query: string) =>
-      walkAccountDeals(fetchDealPage, query.trim().toLocaleLowerCase()),
+      walkAccountDeals(fetchDealPage, foldForMatch(query.trim())),
     [fetchDealPage],
   );
 

@@ -85,6 +85,7 @@ const extensionsDir = resolve(frontendRoot, "..", "extensions");
 // the directory it sits in — see `sourceFiles` for why that distinction is the
 // whole difference between a narrow exception and a blind spot.
 const formatModule = join(here, "format.ts");
+const collateModule = join(here, "collate.ts");
 const thisGate = fileURLToPath(import.meta.url);
 
 // Named so a reader of a finding can reach the open question rather than
@@ -193,9 +194,12 @@ const isRenderingMethod = (name: string): boolean =>
  * a walk is the worst place for a second answer, because the narrower one reads
  * a smaller tree and reports the same word for it: PASS.
  *
- * TWO files are excluded, named rather than the directory they sit in.
- * `format.ts` owns the mapping; this gate spells out the very shapes it hunts
- * for, and a sweep that read it would vouch for itself. The DIRECTORY is not
+ * THREE files are excluded, named rather than the directory they sit in.
+ * `format.ts` owns the mapping and `collate.ts` owns the two orderings — a
+ * reader's collation and the stable one — for the same reason: they are where
+ * the decision is made once so no screen makes it again. This gate spells out
+ * the very shapes it hunts for, and a sweep that read it would vouch for
+ * itself. The DIRECTORY is not
  * the unit, and excluding it was this gate's own first hole: `format/` holds
  * seven other modules, so a new formatter added beside `format.ts` could render
  * in the browser's locale and pass. A gate's exception is where it goes blind,
@@ -203,7 +207,10 @@ const isRenderingMethod = (name: string): boolean =>
  */
 function sourceFiles(): string[] {
   return [...filesUnder(srcRoot), ...extensionFrontendFiles(extensionsDir)]
-    .filter((path) => path !== formatModule && path !== thisGate)
+    .filter(
+      (path) =>
+        path !== formatModule && path !== collateModule && path !== thisGate,
+    )
     .sort();
 }
 

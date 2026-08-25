@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { stable } from "./../format/collate";
 import type { MessageKey } from "../i18n/en";
 
 // How the facts read off a company's website are arranged for display.
@@ -160,5 +161,5 @@ function order(a: OrganizationFact, b: OrganizationFact): number {
   if (conf !== 0) {
     return conf;
   }
-  return a.field.localeCompare(b.field) || a.value.localeCompare(b.value);
+  return stable(a.field, b.field) || stable(a.value, b.value);
 }
