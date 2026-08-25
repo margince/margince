@@ -2795,7 +2795,8 @@ export const de = {
   "import.rowsRead": "{rows} Zeilen gelesen, erkannt über {column}.",
   "import.linksOffered":
     "{offered} Zeilen nennen einen Arbeitgeber; bei {unresolved} ist die Firma noch nicht im CRM.",
-  "import.linksApplied": "{applied} von {offered} Arbeitgeber-Verknüpfungen geschrieben.",
+  "import.linksApplied":
+    "{applied} von {offered} Arbeitgeber-Verknüpfungen geschrieben.",
   "import.issuesLead":
     "Einige Zeilen können nicht importiert werden. Sie sind mit der Zeilennummer in Ihrer Datei aufgeführt.",
   "import.issueLine": "Zeile {line}:",
