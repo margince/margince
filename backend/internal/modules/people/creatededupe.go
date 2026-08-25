@@ -63,6 +63,9 @@ func manualDedupePerson(ctx context.Context, tx pgx.Tx, in CreatePersonInput) (P
 	if err := lockPhoneLane(ctx, tx, phones); err != nil {
 		return PersonResolution{}, err
 	}
+	if err := lockNameLane(ctx, tx, in.FullName); err != nil {
+		return PersonResolution{}, err
+	}
 	// QueueNameCollisions, because this caller creates rather than routes. A
 	// pair it names goes on the review queue and nowhere else — no message is
 	// delivered on the strength of it, so the worst case is a row a human
@@ -70,6 +73,35 @@ func manualDedupePerson(ctx context.Context, tx pgx.Tx, in CreatePersonInput) (P
 	return DedupePerson(ctx, tx, PersonCandidate{
 		FullName: in.FullName, Emails: emails, Phones: phones, QueueNameCollisions: true,
 	})
+}
+
+// lockNameLane makes the name lane's probe and the person row the create goes
+// on to write one indivisible step, for exactly the reason lockPhoneLane exists
+// and with exactly the same hole underneath.
+//
+// The name lane has no unique index and must not have one: two people really
+// can share a name, so the collision is a question and never a key. Nothing
+// structural is left. At READ COMMITTED two creates carrying the same name would
+// both read no committed incumbent, both fall to no-match, and both commit — two
+// live records with no dedupe_candidate row between them, and nothing writes one
+// afterwards, because every row on that queue comes from the path that detected
+// the collision. The lane exists to stop a silent duplicate, so a duplicate it
+// silently misses under contention is the lane not working.
+//
+// The key is the NORMALIZED name, which is what the lane compares. Locking the
+// raw string would let "Lucy Vo" and "LUCY VO" take different locks and race
+// each other, which is the pair most likely to be typed twice.
+//
+// Taken AFTER the phone lane and never interleaved with it: two lanes locked in
+// one fixed global order cannot deadlock, and phone-then-name is that order.
+// An empty name takes no lock — it can match nobody, since fuzzyPerson refuses a
+// nameless candidate before it scores.
+func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
+	key := normalizeName(fullName)
+	if key == "" {
+		return nil
+	}
+	return storekit.LockWriteIdentity(ctx, tx, "person_full_name", key)
 }
 
 // phoneLaneKeys is the request's numbers in the form the phone lane
