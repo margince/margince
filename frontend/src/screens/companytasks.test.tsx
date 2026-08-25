@@ -125,6 +125,7 @@ async function openTasksTab(user: UserEvent) {
   await user.click(await screen.findByRole("button", { name: "Tasks" }));
 }
 
+
 describe("CompanyScreen — the Tasks tab", () => {
   it("completes a task without leaving the account", async () => {
     const user = userEvent.setup();

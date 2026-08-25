@@ -1160,6 +1160,24 @@ export async function mockApi(
     if (path === "/organizations/o-brandt") {
       return json(brandt);
     }
+    // The company record page reads this, and nothing here answered it: the
+    // request fell through to the catch-all list shape at the bottom of this
+    // file, which carries no `sections_omitted`. That field is REQUIRED by the
+    // contract, so the page is right to read it without a guard — and did,
+    // throwing the whole record page into its error boundary while the axe
+    // sweep for that route reported only a missing <h1>.
+    //
+    // `sections_omitted` empty says every section was granted, which is what a
+    // fixture with no RBAC of its own means. It is never returned empty by the
+    // real server (empty and forbidden are different answers there); here there
+    // is nothing to forbid.
+    if (method === "GET" && /^\/organizations\/[^/]+\/360$/.test(path)) {
+      return json({
+        as_of: "2026-06-20T09:00:00Z",
+        organization: brandt,
+        sections_omitted: [],
+      });
+    }
     if (path === "/leads" && method === "GET") {
       return json(page([seededLead]));
     }
