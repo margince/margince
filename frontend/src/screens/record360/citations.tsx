@@ -44,7 +44,17 @@ export type CitationChip =
       // read as though it spoke for the rest.
       name?: string;
     }
-  | { openable: false; entityType: CitedKind; count: number };
+  | {
+      openable: false;
+      entityType: CitedKind;
+      count: number;
+      // A chip a reader cannot open needs its name MORE than an openable one,
+      // not less: there is no click to find out which record it means. An
+      // activity citation without it renders the bare word "activity", which
+      // is the run of identical labels the counted chip exists to avoid.
+      // Absent once the chip counts several, for the same reason as above.
+      name?: string;
+    };
 
 /**
  * citationChips turns a sentence's raw evidence into what a reader should see.
@@ -100,11 +110,21 @@ export function citationChips(
               entityId: cited.entity_id,
               count: 1,
             }
-          : { openable: false, entityType: cited.entity_type, count: 1 },
+          : {
+              openable: false,
+              entityType: cited.entity_type,
+              count: 1,
+              name: cited.name,
+            },
       );
       continue;
     }
-    chips[at].count += 1;
+    const grouped = chips[at];
+    grouped.count += 1;
+    // It now speaks for several records, so it may no longer carry one of
+    // their names: a chip reading "Slots for the pilot review" over three
+    // activities claims the other two are that thread as well.
+    grouped.name = undefined;
   }
   return chips;
 }
@@ -148,6 +168,34 @@ function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
     });
   }
   return out;
+}
+
+/**
+ * What one chip says — the same answer whether or not it can be opened, which
+ * is why it is decided once here.
+ *
+ * A chip that stands for ONE record names that record: "deal" told a reader
+ * nothing they could not already see; the deal's own name tells them which one.
+ * A chip a reader cannot open needs that most of all, because there is no click
+ * to find out which activity it means — an emailed citation rendering the bare
+ * word "activity" is the run of identical labels this design exists to avoid.
+ *
+ * A chip that stands for SEVERAL names the count and the kind instead. It
+ * carries no name by then (citationChips drops it), for the reason it must: one
+ * member's name would read as though it spoke for the rest. A grouped receipt
+ * chip opens the FIRST and the drawer's stepper reaches the others, which is the
+ * receipt kind's whole reason for having one.
+ *
+ * The kind label is also what a record with no name falls back to: the server
+ * sends `name` when it has one, and nothing here invents one when it does not.
+ */
+function chipLabel(chip: CitationChip, t: ReturnType<typeof useT>): string {
+  return (
+    chip.name ??
+    (chip.count === 1
+      ? t(`co.brief.cite.${chip.entityType}`)
+      : t(`co.brief.cite.${chip.entityType}.many`, { count: chip.count }))
+  );
 }
 
 /**
@@ -197,28 +245,11 @@ export function Citations({
               onOpenRecord?.(chip.entityType, chip.entityId, siblings)
             }
           >
-            {/* A grouped chip (fact/profile_field, several of the same kind
-                in one prose block) opens the FIRST and names the count; the
-                drawer's own stepper reaches the rest, which is the receipt
-                kind's whole reason for having one. A single deal or person
-                names ITSELF rather than its kind — "deal" told a reader
-                nothing they could not already see; the deal's own name tells
-                them which one. */}
-            {chip.count === 1 && chip.name
-              ? chip.name
-              : chip.count === 1
-                ? t(`co.brief.cite.${chip.entityType}`)
-                : t(`co.brief.cite.${chip.entityType}.many`, {
-                    count: chip.count,
-                  })}
+            {chipLabel(chip, t)}
           </button>
         ) : (
           <span key={chip.entityType} className="co-brief-cite-flat">
-            {chip.count === 1
-              ? t(`co.brief.cite.${chip.entityType}`)
-              : t(`co.brief.cite.${chip.entityType}.many`, {
-                  count: chip.count,
-                })}
+            {chipLabel(chip, t)}
           </span>
         ),
       )}
