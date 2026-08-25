@@ -22,7 +22,7 @@ import (
 // genuine TOCTOU race under READ COMMITTED, but forcing that
 // concurrently in a test would need either real goroutines racing
 // against a live database (flaky, no fixed outcome) or a sleep-based
-// interleaving (forbidden by T11/craft). Since offerTemplateUniqueViolation
+// interleaving (forbidden by P3/craft). Since offerTemplateUniqueViolation
 // is a pure function of (error, locale), this exercises the exact
 // mapping it performs by constructing the pgconn.PgError pgx itself
 // hands back on a 23505 — the same shape storekit.UniqueViolation

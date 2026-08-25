@@ -208,3 +208,35 @@ h1 {
 .scroll {
   overflow-x: auto;
 }
+
+/* The ONE control on these views, and it belongs to the location check alone.
+   The product views render and offer nothing to press — see their own headers
+   for why. This exists because asking the browser for a permission has to be a
+   deliberate act by a person, and a permission prompt fired on load spends the
+   one chance a host gives before anybody wanted the feature. */
+.probe-button {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-4);
+  border: 0;
+  border-radius: 8px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent);
+  color: var(--textOnAccent);
+  font: inherit;
+  font-weight: 600;
+  /* A touch target a thumb hits on a phone, which is where this gets run. */
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.probe-button:hover {
+  background: var(--accentBrand);
+}
+
+/* Keyboard focus stays visible. A control a host renders inside its own chrome
+   is one a person may well reach by tab rather than by pointer. */
+.probe-button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

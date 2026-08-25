@@ -34,7 +34,7 @@ import { signalKindLabel } from "./record360";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,
-// so it takes the wider of the two rail shares (record-zones-rail: 3fr/7fr)
+// so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
 // rather than the narrower `aside` share a right-hand column would get.
 //
 // Drawn as ONE panel, a details grid at the top then a collapsible section

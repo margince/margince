@@ -192,6 +192,27 @@
      under the content. */
   position: relative;
 }
+/* The page scrolls UNDER the top strip: the scroller reaches up behind the bar
+   by exactly the bar's height and pads its content back down, so a page's
+   resting position is unchanged and what scrolls past the strip is visible
+   through it (app/topbar.css draws the translucency and the blur).
+
+   `:has` guards the one case where this would hide something. An advisory strip
+   between the bar and the scroller — the economy notice, the reindex notice — is
+   opaque and belongs to the chrome, so while one is up the scroller starts below
+   it and nothing passes under the bar.
+
+   And NOT on the rail-less surfaces. They draw no top bar at all, so there is
+   nothing there to pass under — while this rule reached them it reserved the
+   strip's height on a full-height card measured against the viewport, which at
+   200% zoom pushed the sign-in button off the bottom edge. It is the same
+   exception `.app.railless .scroll` makes above, for the same reason, and it has
+   to be spelled here too: the exclusion is in the selector rather than left to
+   file order, so a later rule cannot silently reinstate it. */
+.app:not(.railless) .main:not(:has(> .appbanner)) > .scroll {
+  margin-top: calc(-1 * var(--topbarH));
+  padding-top: calc(var(--topbarH) + var(--pageGapTop));
+}
 /* The page gutter. Its left inset matches the page head's, so the heading and
    the content beneath it start on the same line — the shell no longer insets
    this column, the column does. */
@@ -251,7 +272,9 @@
  * reader walked into), More at phone width, then the installation's entitlement
  * pinned to the foot. */
 .rail {
-  background: var(--bgElevated);
+  /* Its own ground, a shade off the white page: the application's left edge is
+     visible as a surface rather than only as a hairline. */
+  background: var(--bgSidebar);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
@@ -1095,6 +1118,20 @@
   .app.railexpanded {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
+  }
+  /* The bar is fixed over the foot of the content, so every sticky element
+     inside the content column has to stand clear of it. The shell publishes
+     that offset because the shell is what knows the bar is there — a deck tray
+     or a record action bar guessing at its own breakpoint is how the tray came
+     to hide behind the nav between 641px and 700px. */
+  .app {
+    --stickyBottomInset: var(--phoneNavClearance);
+  }
+  /* Rail-less surfaces draw no bar (login, onboarding, booking, the client
+     frame), so a sticky element there stands on the plain ledge. The same
+     exception the .scroll padding below makes, for the same reason. */
+  .app.railless {
+    --stickyBottomInset: var(--space-2);
   }
   .rail,
   .rail.expanded,

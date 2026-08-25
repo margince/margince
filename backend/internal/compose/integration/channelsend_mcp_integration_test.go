@@ -160,7 +160,7 @@ func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *test
 	// delivery anchors on — otherwise the response could name any activity while
 	// the delivery transmits a different one.
 	var deliveryActivity string
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id::text FROM comms_outbound WHERE channel_user_id IS NOT NULL`).Scan(&deliveryActivity)
 	}); err != nil {

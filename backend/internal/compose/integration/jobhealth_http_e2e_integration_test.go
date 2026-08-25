@@ -138,11 +138,7 @@ func encodeAttemptError(t *testing.T, at time.Time, attempt int, text, trace str
 // session belongs to — the one the endpoint must scope itself to.
 func callerWorkspace(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var id string
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&id); err != nil {
-		t.Fatalf("resolving the caller's workspace: %v", err)
-	}
+	id := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	return id
 }
 

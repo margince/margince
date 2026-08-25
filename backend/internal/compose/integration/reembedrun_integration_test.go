@@ -104,7 +104,7 @@ func TestAStragglerOfAFinishedRunCannotActOnTheRunThatReplacedIt(t *testing.T) {
 // steppingClock advances by step on every read, so a pass that consults it once
 // per entity behaves as one whose embeds take that long — the suite pins the
 // clock rather than waiting out a reporting interval it would otherwise have to
-// sleep through (T11).
+// sleep through (P3).
 func steppingClock(step time.Duration) func() time.Time {
 	at := time.Now()
 	return func() time.Time {

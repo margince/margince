@@ -71,11 +71,25 @@ var updateRecordCopy = toolCopy{
 		"result if you intend to retry the same change once a human has released it.",
 }
 
+// The Purpose names the records on purpose, and the ordering is the fix.
+//
+// Driven from claude.ai on 2026-08-25 the model logged a meeting with NO links
+// and then relinked three times, staging three approvals — while in the same
+// run create_task linked deal, person and organization in one call, four times
+// over. The ids were all in hand: the meeting was created LAST, after the org,
+// the person and the deal. The difference was the copy. create_task's Purpose
+// says what it is "on which records", so the links are part of what the caller
+// is deciding; this one described a timeline and left linking to a subordinate
+// clause, with the instruction itself down in the `links` field description —
+// which is read after the call has already been shaped.
 var logActivityCopy = toolCopy{
 	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
-		"timeline of the records it was about.",
+		"records it was about: name every one of them in this call. A meeting is with a person, " +
+		"and also concerns their company and the deal it is for.",
 	Limits: "It writes history and changes nothing else: no deal moves, no field updates, nobody " +
-		"is notified. Unlinked, it appears on no timeline.",
+		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
+		"second call — relink_activity — which a person has to approve when it files under a " +
+		"project.",
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed.",
 	Retain: "Keep the activity id — draft_email, send_email and send_message identify a " +

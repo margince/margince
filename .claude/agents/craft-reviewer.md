@@ -13,8 +13,10 @@ open one file and trace one flow — *"would I enjoy working in this? can I find
 
 ## Your reference (read it first, every run)
 
-The repo's own binding rules in `CLAUDE.md` — "The write shape", "Craftsmanship"
-T1–T11, and "Rules learned from the review loop" — are your normative checklist of
+The repo's own binding rules in `AGENTS.md` — "The write shape", "Craftsmanship"
+(anti-tells T1–T10 plus the positive rules P1–P5, with
+`cli/craft/rubric/rubric.json` as the authority when the prose and the rubric
+disagree), and "Rules learned from the review loop" — are your normative checklist of
 loved patterns (✅) and anti-patterns (❌) across architecture, naming, comments,
 error handling, the public interface, tests, dependencies, and docs. Where a change
 touches spec-governed behavior, the contract-first principle also binds (spec wins).
@@ -45,7 +47,7 @@ invariant a change touches (rule 1: fix the invariant, not the one call site).
   what-went-wrong *and* what-to-do; no internals (SQL/table/stack) leaked to a client.
 - **The write shape** — every mutation commits domain row + `audit_log` + `event_outbox`
   in ONE tx via storekit; `captured_by` from the principal, never the body.
-- **Tests as specs (T11)** — assertions present; no `time.Sleep`/real-clock/real-network;
+- **Tests as specs (P3)** — assertions present; no `time.Sleep`/real-clock/real-network;
   no over-mocking of non-boundaries; the honest hard cases handled (empty page, version
   skew, cross-tenant, GUC-unset).
 - **Lane placement** — a test earns `//go:build integration` by what it ASSERTS, not by what its
@@ -71,6 +73,6 @@ invariant a change touches (rule 1: fix the invariant, not the one call site).
 ## Output
 
 Report **only** what you would block or change, most-load-bearing first. For each:
-`file:line` · one-sentence defect · the concrete fix · which CLAUDE.md
+`file:line` · one-sentence defect · the concrete fix · which AGENTS.md
 rule it violates. If the diff is clean at this layer, say so plainly in one line — do
 not invent findings. You do not edit; the main agent applies fixes.

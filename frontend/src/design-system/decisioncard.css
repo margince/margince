@@ -1,0 +1,305 @@
+/*
+ * DecisionCard — the staged-proposal card, in its two layouts.
+ *
+ * The ground is the staged one: an AI-tinted, dashed edge, because what is on
+ * this card is NOT real yet and the reader has to be able to tell it apart from
+ * a card of persisted facts before reading a word of it (design-language §5c).
+ * `.staging-card` in trust.css already draws exactly that, so this sheet does
+ * not redraw it — it declares only what a DECISION adds to a staged surface:
+ * the deadline's pressure, the proposal's own content, and the two layouts.
+ *
+ * Every colour is a token or a `color-mix()` over one. The urgency band is a
+ * mix rather than three new tokens on purpose: amber-at-6-hours and red-at-one
+ * are the SAME status family the countdown badge beside them reads, at a weight
+ * that belongs to a card edge rather than to a pill.
+ */
+
+/* The ground, the dashed edge and the radius come from `.staging-card`
+   (trust.css), which every one of these carries. What is declared here is only
+   what a DECISION adds to a staged surface. */
+.dcard {
+  position: relative;
+}
+
+/*
+ * The deadline, as a band down the card's leading edge. Three steps rather than
+ * a gradient: a reader has to be able to name which one they are looking at, and
+ * "somewhere between amber and red" is not a reading. The escalation is in the
+ * COLOUR and not in the opacity: a faded warn band beside a solid danger one is
+ * a weaker statement for no reason a reader could name.
+ *
+ * An INSET SHADOW rather than a border, and the reason is `.staging-card`: its
+ * dashed AI-tinted outline is the signal that says "not real yet", and a border
+ * declaration here would replace that edge with a solid one — trading the
+ * staged/real distinction for the urgency it was meant to add. A shadow paints
+ * over the padding instead, so the dashes stay and no card changes SIZE when its
+ * deadline starts to matter.
+ */
+.dcard[data-urgency="soon"] {
+  box-shadow: inset 3px 0 0 0 var(--warn);
+}
+
+/* Urgent takes the outline as well as the band. Not the GROUND: the staged card
+   paints `--aiLight` under its text, and trust.css records what happens when a
+   token that clears AA on a plain card is read over that tint — a tone the card
+   cannot see is a contrast failure nobody notices. So the pressure is drawn
+   where no text sits. */
+.dcard[data-urgency="urgent"] {
+  box-shadow: inset 3px 0 0 0 var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--aiMed));
+}
+
+/* Lapsed is not urgent — it is over. The dashes go solid, the ground goes
+   neutral and the whole card recedes, because the only thing left to do with it
+   is read it. */
+.dcard[data-lapsed],
+.dcard[data-urgency="lapsed"] {
+  box-shadow: inset 3px 0 0 0 var(--borderStrong);
+  border-color: var(--borderSubtle);
+  border-style: solid;
+  background: var(--bgCard);
+}
+
+.dcard-lapsed {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textMeta);
+}
+
+/* The chips line. Wraps, because a provenance tag, a kind label and a countdown
+   are all unbounded strings in some locales. */
+.dcard-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* The trailing affordance — a way through to the whole payload. Pushed to the
+   far edge rather than floated, so it stays on the chips' line at every width. */
+.dcard-aside {
+  margin-inline-start: auto;
+}
+
+/* The headline and the sentence under it are `.approval-headline` /
+   `.approval-why`, declared in trust.css under `.staging-card` — including the
+   note on why the second is demoted by SIZE and not by ink on this ground. They
+   are not respelled here. */
+
+.dcard-body {
+  margin-top: var(--space-3);
+}
+
+/* Each half of the proposal names itself, because "Subject" over a line of text
+   is the difference between a card a reader scans and one they have to parse.
+   The type is `.t-eyebrow` in the markup — the one spelling of uppercase
+   micro-type — so a kicker on this card reads in the same register as the
+   labels on the readings strip beside it. What is declared here is only the
+   block, and the space a kicker keeps from the line above it. */
+.dcard-draft-label {
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+/* The "Subject" kicker sits directly over the headline it names, so the pair
+   reads as one thing rather than as a label and an unrelated line. */
+.dcard-subject-label {
+  margin-top: var(--space-2);
+}
+
+.dcard-subject-label + .approval-headline {
+  margin-top: 0;
+}
+
+.dcard-draft {
+  margin-top: var(--space-3);
+}
+
+/* The words somebody is about to send in the reader's name. Newlines are kept:
+   a draft reflowed into one paragraph is not the message that would go out. */
+.dcard-draft-body {
+  margin-top: var(--space-1);
+  white-space: pre-wrap;
+  /* A URL or a signature block with no spaces in it is ordinary in a drafted
+     mail, and the deck card clips to its own radius — so an unbroken token
+     would be cut off rather than wrapped, with no scrollbar to reach it. */
+  overflow-wrap: anywhere;
+  color: var(--textContent);
+  font-size: var(--fs-body);
+  line-height: var(--lh-relaxed);
+}
+
+/* The clamp. A card that grows with its content stops being a card: one long
+   email pushes every verb below the fold, and in the deck it pushes the card
+   behind it off the plate. Eight lines is enough to judge a draft's tone and
+   short enough that the verbs stay visible. */
+.dcard-draft-body[data-clamped] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
+}
+
+.dcard-diff {
+  margin-top: var(--space-3);
+}
+
+.dcard-rest {
+  margin-top: var(--space-3);
+}
+
+/* A payload value, mono because it is a stored value rather than prose, and
+   wrapped because a jsonb document has no length a card can rely on. */
+.dcard-fact {
+  font-family: var(--f-mono);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.dcard-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Nothing to show is not a row of air: the container collapses so the verbs sit
+   against the content above them rather than across a gap that means nothing. */
+.dcard-evidence:empty {
+  display: none;
+  margin-top: 0;
+}
+
+.dcard-verbs {
+  margin-top: var(--space-3);
+}
+
+/*
+ * The deck layout: one card at a time, so it may be tall and the type may be
+ * read rather than scanned. The height floor is what keeps the peeked cards
+ * behind it from changing position as the reader works through a queue whose
+ * items are different lengths — a plate that resized on every verdict would
+ * move the verbs out from under the pointer.
+ */
+/*
+ * The deck card wears PANEL CHROME, in the AI hue.
+ *
+ * It is the same shape as the "Today with …" card on a person record (which is
+ * `Panel tone="accent"`, person360.css): a card on the page's own ground, a
+ * tinted header band carrying the chips, the headline at reading size under it,
+ * and a footer band the verbs stand in. Tinted end to end it read as a
+ * lavender slab — the tint was doing the work of a header band across 300px of
+ * card — and on a page of white panels that is the one card that looks like it
+ * came from another product.
+ *
+ * What does NOT change is the dashed edge. `.staging-card`'s dashes are the
+ * product's one signal that what is on a surface is PROPOSED rather than
+ * recorded (design-language §5c), and a solid border here would draw a draft
+ * with the same edge as a fact. So the hue and the dash stay; the tint moves
+ * into the band where a card's own chrome belongs.
+ */
+.dcard[data-layout="deck"] {
+  padding: var(--space-5);
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bgElevated);
+  /* The two bands are full-bleed by negative margin, so the card has to clip
+     them back to its own radius. */
+  overflow: hidden;
+}
+
+/* The header band: the chips line, edge to edge, on the staged tint. The
+   negative inline margins are how a band inside a padded card reaches the
+   card's edges — the same distinction `panel.css` draws, where a rule dividing
+   the CARD from its content runs edge to edge and a rule inside the content
+   stops at the padding. */
+.dcard[data-layout="deck"] > .dcard-meta {
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  min-height: 48px;
+  background: var(--aiLight);
+  border-bottom: 1px solid var(--aiMed);
+}
+
+/* The headline at the same size and weight the person record's moment card sets
+   it — 20px at 650, one notch above `.t-h2` — because both cards exist to be
+   landed on and read rather than scanned past. Stated here rather than shared:
+   the two live in different tiers (a design-system primitive and a screen), and
+   a token for "the moment headline" would be a third place to look. */
+.dcard[data-layout="deck"] .approval-headline {
+  font-size: var(--fs-h2);
+  font-weight: 650;
+  line-height: var(--lh-snug);
+}
+
+/*
+ * The proposal's own MEASURE. A deck card is as wide as the work column, and on
+ * a desktop that is 1200px of drafted email on one line — a length nobody reads
+ * a sentence at. The cap is on the content, not on the card: the chips line, the
+ * verbs and the urgency band still span the full card, so what narrows is the
+ * prose and nothing else.
+ */
+.dcard[data-layout="deck"] .dcard-body,
+.dcard[data-layout="deck"] .approval-headline,
+.dcard[data-layout="deck"] .approval-why {
+  max-inline-size: 72ch;
+}
+
+/*
+ * A lapsed card keeps the neutral ground the lapse rule above gives it, in the
+ * deck as well. The two rules tie on specificity and the deck's comes later, so
+ * without this an expired card in the deck drew the live card's paper and the
+ * only thing saying it was over was the sentence where the verbs had been.
+ */
+.dcard[data-lapsed][data-layout="deck"],
+.dcard[data-urgency="lapsed"][data-layout="deck"] {
+  background: var(--bgCard);
+}
+
+/* A lapsed card's bands go neutral with it: the staged tint on the header and
+   the AI rule under it belong to a proposal somebody can still answer. */
+.dcard[data-lapsed][data-layout="deck"] > .dcard-meta,
+.dcard[data-urgency="lapsed"][data-layout="deck"] > .dcard-meta {
+  background: transparent;
+  border-bottom-color: var(--borderSubtle);
+}
+
+.dcard[data-lapsed][data-layout="deck"] .dcard-verbs,
+.dcard[data-urgency="lapsed"][data-layout="deck"] .dcard-verbs {
+  border-top-color: var(--borderSubtle);
+}
+
+/* The evidence keeps its distance from the footer rule: without it the last chip
+   sits on the band's hairline, which reads as the chip belonging to the verbs.
+   Empty it collapses (`.dcard-evidence:empty` above), so this adds no gap to a
+   card with nothing to show. */
+.dcard[data-layout="deck"] .dcard-evidence {
+  margin-bottom: var(--space-4);
+}
+
+/* The footer band: the verbs, at the FOOT of the card rather than under the last
+   line of content, because one card at a time means the reader's hand returns to
+   the same place for every decision. Full-bleed like the header, and its rule is
+   the AI edge colour — the same band the moment card's footer draws in the
+   accent. */
+.dcard[data-layout="deck"] .dcard-verbs {
+  margin: auto calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--aiMed);
+}
+
+/* The row layout: the compact form a queue is a list of. It takes its padding
+   from `.staging-card` unchanged — every one of the seven surfaces that draws a
+   row was already that shape, and re-spelling the number here would move all of
+   them for no reason anybody could name. */
+
+.dcard[data-layout="row"] .approval-headline {
+  font-size: var(--fs-h3);
+}
+
+.dcard[data-layout="row"] .dcard-draft-body[data-clamped] {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}

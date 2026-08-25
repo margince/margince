@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package backendarch
 
 // The census over this repo's own gate machinery: a gate's exceptions are held
@@ -50,7 +52,7 @@ const (
 	// Permitting the marker without counting it would let it spread quietly and
 	// reopen the class these rules close; pinned, every new one moves a number a
 	// reviewer sees.
-	wantFixtureAnnotations = 23
+	wantFixtureAnnotations = 24
 )
 
 // censusDecl is one package-level declaration this census governs — a map from

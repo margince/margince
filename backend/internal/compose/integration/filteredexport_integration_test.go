@@ -289,7 +289,6 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Workspace-Slug", e.Slug)
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("export request: %v", err)
@@ -462,7 +461,6 @@ func exportCSV(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) [][]string 
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Workspace-Slug", e.Slug)
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("export request: %v", err)

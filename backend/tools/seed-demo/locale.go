@@ -354,3 +354,21 @@ func currencyFor(locale docLocale) string {
 		return "EUR"
 	}
 }
+
+// projectCloseReason is why a project finished, in the account's language.
+//
+// This used to be one German literal sent to every account, so a Vietnamese
+// customer's project closed with "Abgeschlossen und uebergeben" on it. The
+// rule the dataset states in company-locale.json is that an account's records
+// speak the account's language, and a close reason is a record: it is written
+// onto the phase-history row and shown on the project.
+func projectCloseReason(locale docLocale) string {
+	switch locale {
+	case localeVI:
+		return "Hoan thanh va ban giao"
+	case localeEN:
+		return "Completed and handed over"
+	default:
+		return "Abgeschlossen und uebergeben"
+	}
+}

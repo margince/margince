@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind shape H2
+
 package backendarch
 
 // Every River worker returns through jobs.Fault. River stores whatever a

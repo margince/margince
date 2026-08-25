@@ -85,7 +85,7 @@ afterEach(() => {
 });
 
 // The route id never changes with a label: `deals` presents as Pipeline and
-// `inbox` as Approvals, which names a governance surface rather than a mailbox.
+// `inbox` as Decisions, which names a governance surface rather than a mailbox.
 const CANONICAL_ORDER = [
   "Home",
   "Contacts",
@@ -96,7 +96,7 @@ const CANONICAL_ORDER = [
   "Pipeline",
   "Projects",
   "Tasks",
-  "Approvals",
+  "Decisions",
   "Reports",
   "Ask Margince",
 ];

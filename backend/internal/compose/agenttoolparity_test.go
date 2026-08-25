@@ -187,6 +187,16 @@ var composedIntents = map[string]bool{
 	// a different question from "who does this payload name". Read-only, and
 	// every record it names is read back through the datasource seam.
 	"resolve_entities": true,
+	// check_location_support composes over NOTHING, which makes it the odd entry
+	// in this map and worth saying rather than filing quietly. It reads no
+	// record and no principal: it answers what this build ASKED its host for,
+	// and the finding itself is produced in the browser by the card beside it.
+	// There is no operation to declare it because there is no operation — a
+	// second door onto it would be a door onto nothing.
+	//
+	// TEMPORARY. It answers one question per chat host, and it and its view
+	// should be deleted once the matrix is filled in (see apps.GeoProbeURI).
+	"check_location_support": true,
 }
 
 // An intent may write inside the workspace; it may NOT reach outside it.

@@ -44,9 +44,15 @@ import (
 type AppEnv struct {
 	TS     *httptest.Server
 	Client *http.Client
-	Slug   string
-	Owner  *pgx.Conn
-	Pool   *pgxpool.Pool
+	// Slug mirrors identity.slugify(organizationName). It is NOT tenancy
+	// state and selects nothing: ADR-0091 retired the column, and no request
+	// has ever carried a workspace. It survives as an EMAIL FRAGMENT — the
+	// agent seat's local address is agent@<slug>.gradion.local, and
+	// roster_integration_test.go reconstructs that address to assert the seat
+	// is listed. That is its one reader.
+	Slug  string
+	Owner *pgx.Conn
+	Pool  *pgxpool.Pool
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -162,16 +168,18 @@ func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
 	e.Slug = "fable-e2e" // slugify("Fable E2E")
 }
 
-// SetWorkspaceSeat flips a workspace's PEOPLE to a seat type through the
-// owner connection, inside a workspace-bound transaction so RLS (FORCE)
-// admits the UPDATE. Used to drive the read-seat ceiling from a test.
+// SetWorkspaceSeat flips the installation's PEOPLE to a seat type through the
+// owner connection, inside a workspace-bound transaction — not because core
+// needs the binding (0217 retired row-level security there) but because a
+// fixture that writes unbound is standing in for a production write that never
+// is. Used to drive the read-seat ceiling from a test.
 //
 // The agent seat is left alone because the schema refuses to demote it
 // (app_user_agent_is_full): an agent identity is never a read seat, and the
 // read ceiling reaches an agent through the human it acts for instead. Sweeping
 // it in would abort on the constraint, which a caller reads as a broken fixture
 // rather than as the rule it is.
-func (e *AppEnv) SetWorkspaceSeat(t *testing.T, slug, seat string) {
+func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 	t.Helper()
 	ctx := context.Background()
 	tx, err := e.Owner.Begin(ctx)
@@ -180,10 +188,7 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, slug, seat string) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	var wsID string
-	if err := tx.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, slug).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
+	wsID := InstallationWorkspaceID(ctx, t, tx)
 	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
 		t.Fatalf("set guc: %v", err)
 	}
@@ -368,11 +373,7 @@ func (e *AppEnv) DB() *database.DB {
 // cannot own makes it a second, weaker authority masquerading as a writer.
 func (e *AppEnv) DealWriterContext(t *testing.T) context.Context {
 	t.Helper()
-	var wsID ids.UUID
-	if err := e.Pool.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup for %q: %v", e.Slug, err)
-	}
+	wsID := InstallationWorkspaceUUID(context.Background(), t, e.Pool)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	user := ids.NewV7()

@@ -1,4 +1,4 @@
-import { Bell, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { Layers, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settings";
@@ -139,21 +139,27 @@ function TopBarSearch({
 /**
  * What is waiting on this person, wherever they are.
  *
- * Approvals are the product's one queue that BLOCKS somebody else — nothing an
+ * Decisions are the product's one queue that BLOCKS somebody else — nothing an
  * agent staged runs until a human answers it — so the count belongs in the strip
  * that is on screen on every route, not only on the sidebar row a collapsed rail
  * draws as an icon. It is a link rather than a menu: what to do about the count
- * is the Approvals surface, and a popover restating it would be a second inbox.
+ * is the Decisions surface, and a popover restating it would be a second copy
+ * of that queue.
  *
- * Silent at zero. A bell that is always on screen with nothing behind it teaches
+ * Silent at zero. A mark that is always on screen with nothing behind it teaches
  * a reader to stop looking at it, which is the one thing a queue cannot afford.
+ *
+ * A stack of layers rather than a bell: what waits here is a pile of decisions
+ * nobody has taken, not a notification somebody can read and be done with — and
+ * this product has no notification system for a bell to stand for. The same mark
+ * the sidebar row carries, because two glyphs for one queue read as two queues.
  */
-function ApprovalsBell({ waiting }: Readonly<{ waiting?: number }>) {
+function DecisionsMark({ waiting }: Readonly<{ waiting?: number }>) {
   const t = useT();
   const count = waiting ?? 0;
   return (
     <a
-      className="topbar-bell"
+      className="topbar-decisions"
       href={routeHash({ screen: "inbox" })}
       aria-label={
         count > 0
@@ -161,12 +167,12 @@ function ApprovalsBell({ waiting }: Readonly<{ waiting?: number }>) {
           : t("shell.approvals")
       }
     >
-      <Bell size={17} strokeWidth={1.8} aria-hidden />
+      <Layers size={17} strokeWidth={1.8} aria-hidden />
       {/* The number is in the name above, so the chip is decoration: read out it
           would say the count twice, and the second time without the word for
           what is counted. */}
       {count > 0 && (
-        <span className="topbar-bellcount" aria-hidden>
+        <span className="topbar-decisioncount" aria-hidden>
           {count}
         </span>
       )}
@@ -219,7 +225,7 @@ export function TopBar({
       <TopBarSearch onOpenSearch={onOpenSearch} />
       <div className="topbar-trail">
         <SorModeChip />
-        <ApprovalsBell waiting={counts?.inbox} />
+        <DecisionsMark waiting={counts?.inbox} />
         <AccountMenu />
       </div>
     </header>

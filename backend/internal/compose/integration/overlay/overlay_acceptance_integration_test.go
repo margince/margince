@@ -538,10 +538,7 @@ func TestAcceptance_OVA_AC_1_TeardownPurges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsing admin user id: %v", err)
 	}
-	var wsIDStr string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsIDStr); err != nil {
-		t.Fatalf("looking up the workspace id: %v", err)
-	}
+	wsIDStr := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	wsID, err := ids.Parse(wsIDStr)
 	if err != nil {
 		t.Fatalf("parsing workspace id: %v", err)
@@ -630,7 +627,7 @@ func TestAcceptance_OVA_AC_1_TeardownPurges(t *testing.T) {
 	// bug), so the SAME instance queried moments ago would still answer
 	// from that cache here; a fresh instance has no such cache to race
 	// against, without this test needing a real-clock sleep past the TTL
-	// (T11).
+	// (P3).
 	//
 	// The native deals module also gates Search on real object-RBAC
 	// (unlike the overlay mirror's own visibility join adminCtx above was

@@ -119,6 +119,13 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// there is nothing for a caller to narrow by — and the empty object is
 		// the shape the schema declares.
 		{"list_channel_providers", `{}`},
+		// No arguments, and there can be none: the schema declares an empty
+		// object and forbids every other member, so the second call its
+		// neighbours carry is impossible rather than merely redundant. It is
+		// also the one tool here that reads nothing off its context, so the
+		// seal supplies freshness, evidence and warnings unaided — an absent
+		// one would show here first.
+		{"check_location_support", `{}`},
 		{"search_records", `{"q":"Conformance"}`},
 		{"search_records", `{"q":"Conformance","record_type":"person","limit":5}`},
 		// A query that matches nothing: the empty answer has to keep the shape

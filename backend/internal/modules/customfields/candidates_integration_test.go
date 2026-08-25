@@ -79,7 +79,7 @@ func setupCandidates(t *testing.T) *candidatesFixture {
 	}
 
 	ws := ids.NewV7()
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id, slug) VALUES ($1, $2)`, ws, "candidates-"+ws.String()); err != nil {
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
 	}
 	// custom_field.created_by carries a real FK to app_user (the write

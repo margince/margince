@@ -38,7 +38,8 @@ const authCodeTTL = 5 * time.Minute
 
 // OAuthRouter serves the authorization-server endpoints. Mounted
 // behind the same workspace/session middleware as /v1: register, token
-// and revoke are public (the workspace still binds via slug/subdomain);
+// and revoke are public (the workspace binds from the installation resolver,
+// never from anything the request carries);
 // the consent POST demands the signed-in human whose authority the
 // passport will borrow, and the consent GET admits a session-less one
 // for the sole purpose of sending them somewhere they can sign in.

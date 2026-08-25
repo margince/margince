@@ -39,7 +39,6 @@ func boundedApp(t *testing.T, slug string, limit int) (*apptest.AppEnv, *agentqu
 	t.Helper()
 	meter := agentquota.New(budgettest.Client(t), agentquota.Limits{Reads: limit}, time.Hour)
 	e := apptest.SetupAppWithOptions(t, compose.WithAgentQuota(meter))
-	e.Slug = slug
 	apptest.BootstrapWorkspaceSession(t, e, "Read Bound", slug+"@fable.test", "Admin")
 	return e, meter
 }

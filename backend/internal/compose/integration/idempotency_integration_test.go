@@ -26,7 +26,6 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Probe", "admin@idem.test", "Admin")
-	e.Slug = "idem-probe"
 
 	keyed := map[string]string{"Idempotency-Key": "lead-retry-1"}
 	leadReq := apptest.AnyMap{
@@ -84,7 +83,6 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Erase", "admin@idemerase.test", "Admin")
-	e.Slug = "idem-erase"
 
 	keyed := map[string]string{"Idempotency-Key": "lead-erase-1"}
 	leadReq := apptest.AnyMap{
@@ -181,7 +179,6 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Activity", "admin@idem-act.test", "Admin")
-	e.Slug = "idem-activity"
 
 	var person apptest.AnyMap
 	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{

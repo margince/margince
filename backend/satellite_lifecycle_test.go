@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package backendarch
 
 // Person-satellite lifecycle reach as a fitness function. piicoverage_test.go

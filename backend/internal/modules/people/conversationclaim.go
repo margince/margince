@@ -258,3 +258,121 @@ func (h Handlers) RecordConversationClaim(w http.ResponseWriter, r *http.Request
 	}
 	httperr.WriteJSON(w, http.StatusCreated, claim)
 }
+
+// ProjectCommitment is one thing THEY said they would do, tied to the project
+// the conversation was filed under.
+type ProjectCommitment struct {
+	ProjectID ids.ProjectID
+	// Body is the claim verbatim. A caller quotes it; it is never a noun
+	// phrase to build a sentence around — the extractor writes free text, and
+	// "they owe us we'll revisit after legal" is what paraphrasing produces.
+	Body       string
+	Who        string
+	DueAt      *time.Time
+	ActivityID ids.UUID
+}
+
+// CommitmentsTheirsForProjects reads, for each of the named projects, the ONE
+// open commitment they made to us that most wants a person: the overdue one,
+// else the newest. One query for the whole set, because a record page asks
+// this of every project it lists and a per-row read would grow with the
+// account.
+//
+// The same two gates ClaimsForPerson keeps, for the same reasons. The activity
+// join and auth.ActivityContentClause keep a claim from outliving or
+// outreaching its evidence. The person row scope is new here and load-bearing:
+// ClaimsForPerson is called with a person the caller has already been admitted
+// to, while this read chooses the person itself, so an invisible person's
+// claim must be skipped and the next candidate win rather than the row
+// naming somebody this caller may not know of.
+//
+// status = 'open' AND NOT needs_review: a done or dismissed claim is settled,
+// and needs_review means the extractor found contradicting evidence — the
+// claim contract calls newest-wins no resolution, so presenting a disputed
+// claim as "they owe us this" would state a contested thing as a fact.
+//
+// The bool is whether the caller could see EVERY person a candidate claim was
+// made by. False means at least one was outside their scope and its claim was
+// dropped, which a caller must report rather than let a project with no
+// commitment read as a project with nothing outstanding.
+func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, projectIDs []ids.ProjectID, now time.Time) (map[ids.ProjectID]ProjectCommitment, bool, error) {
+	out := map[ids.ProjectID]ProjectCommitment{}
+	if len(projectIDs) == 0 {
+		return out, true, nil
+	}
+	// The claim names a PERSON, and the row it returns carries their name and
+	// what they said. Row scope alone does not admit the caller to people at
+	// all — auth.ScopeClauseFor narrows a set the object grant has already
+	// opened, and returns no predicate whatsoever for an unbounded actor. A
+	// reader holding project and activity but not person would otherwise be
+	// handed both.
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return nil, false, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	projectsPos := arg(projectIDs)
+	nowPos := arg(now)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	if activityScope == "" {
+		activityScope = sqlAlwaysVisible
+	}
+	personScope, err := auth.ScopeClauseFor(ctx, "person", "pr", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	if personScope == "" {
+		personScope = sqlAlwaysVisible
+	}
+	// Person scope is SELECTED, not filtered on. A WHERE clause would drop an
+	// invisible person's claim and hand back a project that looks like it has
+	// nothing outstanding — the silent answer this read exists to avoid. The
+	// row still wins its project, and the caller is told it was withheld.
+	//
+	// DISTINCT ON needs its key first in ORDER BY, and the id breaks the tie
+	// so two equally urgent commitments do not swap places between two reads
+	// of the same page.
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT DISTINCT ON (l.project_id)
+		       l.project_id, c.body, coalesce(pr.full_name, ''), c.due_at,
+		       c.source_activity_id, (%[4]s) AS person_visible
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN activity_link l ON l.activity_id = a.id AND l.project_id = ANY($%[1]d)
+		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
+		 WHERE c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review
+		   AND c.archived_at IS NULL
+		   AND (%[3]s)
+		 ORDER BY l.project_id,
+		          (c.due_at IS NOT NULL AND c.due_at < $%[2]d) DESC,
+		          c.created_at DESC, c.id`,
+		projectsPos, nowPos, activityScope, personScope), args...)
+	if err != nil {
+		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
+	}
+	defer rows.Close()
+
+	complete := true
+	for rows.Next() {
+		var projectID ids.ProjectID
+		var commitment ProjectCommitment
+		var personVisible bool
+		if err := rows.Scan(&projectID, &commitment.Body, &commitment.Who,
+			&commitment.DueAt, &commitment.ActivityID, &personVisible); err != nil {
+			return nil, false, fmt.Errorf("scan an open commitment: %w", err)
+		}
+		if !personVisible {
+			complete = false
+			continue
+		}
+		commitment.ProjectID = projectID
+		out[projectID] = commitment
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
+	}
+	return out, complete, nil
+}

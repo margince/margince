@@ -84,15 +84,15 @@
   opacity: 0.5;
   filter: blur(1px);
 }
+/* A blurred silhouette of the cards the build is about to produce — decoration,
+   and `aria-hidden` because of it. It is a real `Card` rather than a drawn
+   likeness of one so that it cannot stop resembling what it depicts: a ghost
+   holding its own copy of the chrome goes on showing the OLD card the day the
+   real one changes. Only what makes it a ghost is left here. */
 .ob-build-ghost {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
   animation: ob-build-ghost-in calc(var(--obBuildMs) * 0.32)
     calc(var(--obBuildMs) * (0.12 + 0.08 * var(--obGhost)))
     cubic-bezier(0.23, 1, 0.32, 1) both;

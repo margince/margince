@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind shape H1
+
 package backendarch
 
 // Table ownership as a fitness function: the import DAG is enforced three
@@ -56,6 +58,23 @@ const storekitOwned = "internal/platform/database/storekit"
 // widening to internal/platform would sweep in files this gate has not
 // judged.
 const extSecretsStoreDir = "internal/platform/extsecrets"
+
+// keyVaultStoreDir is the third, for the same reason and found the same way: the
+// local key-vault provider owns vault_secret, and until this gate walked it the
+// table had no owner entry at all.
+//
+// What that actually left open, stated narrowly because the wide version is not
+// true: a second writer in internal/modules or internal/compose was already
+// caught, by the no-declared-owner arm below. The unguarded case was a second
+// writer inside a platform package this gate does not walk — and two such
+// packages write rows today (platform/events/relay.go UPDATEs event_outbox,
+// which this map declares; platform/jobs/quiesce.go DELETEs river_job), so the
+// case is live rather than theoretical.
+//
+// The list is named rather than reached by widening to internal/platform, which
+// would sweep in files this gate has not judged. Deriving it instead is
+// https://github.com/margince/margince/issues/2554.
+const keyVaultStoreDir = "internal/platform/keyvault"
 
 // tableOwners maps every core-migration table to the ONE module whose store
 // owns its writes (module doc.go "Tables owned" declarations, kept in sync).
@@ -379,8 +398,13 @@ var tableOwners = map[string]string{
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other
 	// viewer's page.
 	"person_moment_dismissal": "internal/compose/person360",
-	// platform: the audit+outbox pair has ONE sanctioned writer, and the
-	// shared field-provenance layer (B-E02.12) is spelled once next to it.
+	// platform, the key vault: the local provider's ciphertext store. No
+	// workspace_id — a deployment credential belongs to the installation, not a
+	// tenant.
+	"vault_secret": keyVaultStoreDir,
+
+	// platform, storekit: the audit+outbox pair has ONE sanctioned writer, and
+	// the shared field-provenance layer (B-E02.12) is spelled once next to it.
 	// system_log is the non-entity operational ledger written through
 	// storekit.LogSystem, the same storekit-owned posture as audit_log.
 	"audit_log":        storekitOwned,
@@ -697,7 +721,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 	// versioned writes in it. The floor is what tells those two apart.
 	storekitWrites := 0
 	fset := token.NewFileSet()
-	roots := []string{"internal/modules", "internal/compose", settingsStoreDir, extSecretsStoreDir}
+	roots := []string{"internal/modules", "internal/compose", settingsStoreDir, extSecretsStoreDir, keyVaultStoreDir}
 	consts := stringConstsByPackage(t, fset, roots)
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {

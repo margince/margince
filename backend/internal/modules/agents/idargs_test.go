@@ -249,6 +249,12 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, errSeamReached },
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, errSeamReached })
 	RegisterCommsTools(r, &recordingComms{}, seamProbeProvider{})
+	// Registered so the registrar-parity gate stays satisfied, though it takes
+	// no seam and declares no argument at all — the walk below probes
+	// format:uuid properties, so this tool contributes nothing and is skipped on
+	// its own. Wiring it anyway is what keeps "every registrar is invoked here"
+	// a rule with no exceptions to remember.
+	RegisterGeoProbeTool(r)
 	RegisterLifecycleTools(r, seamProbeProvider{},
 		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})

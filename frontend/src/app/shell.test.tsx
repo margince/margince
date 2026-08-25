@@ -140,7 +140,7 @@ describe("PageTitle", () => {
     const { container } = render(<PageTitle route={{ screen: "inbox" }} />);
     const heading = screen.getByRole("heading", {
       level: 1,
-      name: "Approvals",
+      name: "Decisions",
     });
     const sub = container.querySelector(".pagesub");
     expect(sub?.textContent).toBe(
@@ -398,11 +398,15 @@ describe("Shell", () => {
   // get wrong: a company RECORD is capped, the company LIST is not, and the only
   // thing separating them is the id. The marker is what the stylesheet keys the
   // cap on, so a route landing in the wrong family is a layout regression that
-  // nothing else would catch. The set itself is GRIDDED_RECORD_SCREENS.
+  // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
+  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Home).
   it.each([
     ["#/settings/account", true],
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
+    // Home carries no id and is capped anyway: it reads down, and its decision
+    // cards carry drafted prose somebody has to read before deciding.
+    ["#/", true],
     ["#/companies", false],
     ["#/contacts", false],
     ["#/deals", false],

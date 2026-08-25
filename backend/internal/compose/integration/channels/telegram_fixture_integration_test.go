@@ -203,7 +203,7 @@ type telegramEnv struct {
 	inserter *jobs.Runner
 	log      *slog.Logger
 
-	ws, admin string
+	admin string
 	// conn is the live bot binding Connect wrote.
 	conn capture.ChannelConnection
 }
@@ -245,7 +245,6 @@ func setupTelegram(t *testing.T) *telegramEnv {
 		compose.WithKeyvault(vault),
 	)
 	apptest.BootstrapWorkspaceSession(t, e, telegramWorkspaceName, telegramAdminEmail, "Telegram Admin")
-	e.Slug = telegramWorkspaceSlug
 
 	c := &telegramEnv{AppEnv: e, vault: vault, api: api, inserter: inserter, log: quiet}
 	c.resolveActors(t)
@@ -258,22 +257,18 @@ func setupTelegram(t *testing.T) *telegramEnv {
 // carries a real composite foreign key.
 func (c *telegramEnv) resolveActors(t *testing.T) {
 	t.Helper()
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT (SELECT id FROM workspace ORDER BY created_at LIMIT 1), id FROM app_user WHERE email = $1`, telegramAdminEmail).Scan(&c.ws, &c.admin)
+			`SELECT id FROM app_user WHERE email = $1`, telegramAdminEmail).Scan(&c.admin)
 	}); err != nil {
 		t.Fatalf("resolving the acting admin: %v", err)
 	}
 }
 
-// workspaceID is the bootstrapped workspace as a typed id.
+// workspaceID is the installation's workspace as a typed id.
 func (c *telegramEnv) workspaceID(t *testing.T) ids.UUID {
 	t.Helper()
-	id, err := ids.Parse(c.ws)
-	if err != nil {
-		t.Fatalf("parsing the workspace id: %v", err)
-	}
-	return id
+	return apptest.InstallationWorkspaceUUID(context.Background(), t, c.Owner)
 }
 
 // adminCtx binds the principal Connect requires: a human on a full seat
@@ -452,7 +447,7 @@ func (c *telegramEnv) pollNow(t *testing.T, sub <-chan *river.Event, wantOffset 
 func (c *telegramEnv) pollCursor(t *testing.T) int64 {
 	t.Helper()
 	var offset int64
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT poll_offset FROM channel_connection WHERE id = $1`, c.conn.ID).Scan(&offset)
 	}); err != nil {
@@ -466,7 +461,7 @@ func (c *telegramEnv) pollCursor(t *testing.T) int64 {
 // the batch was never acknowledged, so the next poll asks for it again.
 func (c *telegramEnv) rewindPollCursor(t *testing.T, offset int64) {
 	t.Helper()
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE channel_connection SET poll_offset = $2 WHERE id = $1`, c.conn.ID, offset)
 		return err
@@ -482,7 +477,7 @@ func (c *telegramEnv) rewindPollCursor(t *testing.T, offset int64) {
 func (c *telegramEnv) count(t *testing.T, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting (%s): %v", query, err)

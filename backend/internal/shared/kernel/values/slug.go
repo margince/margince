@@ -10,11 +10,13 @@ import (
 	"strings"
 )
 
-// slugShape is the workspace-slug contract: lowercase alphanumeric
-// runs joined by single hyphens (the subdomain-safe form).
+// slugShape is the slug contract: lowercase alphanumeric runs joined by single
+// hyphens. The shape is subdomain-safe, which is also what makes it safe as an
+// email address label — the one thing a slug is still used for, since ADR-0091
+// retired the workspace column and nothing resolves a subdomain.
 var slugShape = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// Slug is a normalized URL/subdomain identifier.
+// Slug is a normalized identifier safe to place in a URL or an address label.
 type Slug struct{ s string }
 
 func ParseSlug(raw string) (Slug, error) {

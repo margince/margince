@@ -39,7 +39,6 @@ parse_test_dsn() {
   local o_tail="${o_body#*/}"                 # db?query  (or db)
   local o_db="${o_tail%%\?*}"
   O_QUERY=""; [[ "$o_tail" != "$o_db" ]] && O_QUERY="${o_tail#*\?}"
-  TEMPLATE_DB="$o_db"
 
   # App: same peel; the app credentials/host are preserved, only the db swaps.
   local a_body="${app#*://}"
@@ -47,7 +46,7 @@ parse_test_dsn() {
   local a_tail="${a_body#*/}"
   A_QUERY=""; local a_db="${a_tail%%\?*}"; [[ "$a_tail" != "$a_db" ]] && A_QUERY="${a_tail#*\?}"
 
-  export O_PREFIX O_QUERY A_PREFIX A_QUERY TEMPLATE_DB
+  export O_PREFIX O_QUERY A_PREFIX A_QUERY
 }
 
 # db_admin verb [flags…] — create/drop/probe databases through cmd/migrate's
@@ -148,7 +147,69 @@ declare_lane_budget() {
 
 # The migrated template every per-package clone is copied from. Exported so the
 # xargs -P worker subshells (fresh bash processes) see it — make_clone reads it.
-export TEMPLATE_NAME="${TEMPLATE_NAME:-margince_test}"
+#
+# ONE template per machine was a cross-session collision, not a saving. This
+# tree is worked in several git worktrees at once by design, and build_template
+# recreates the template from scratch: a parallel session on another branch
+# rebuilds it underneath you, and your lane then fails wholesale with
+# schema-shaped errors that read as your own migration being broken. A linked
+# worktree therefore gets its own template, named after itself.
+#
+# The PRIMARY worktree — and CI, which has no linked worktree — keeps
+# `margince_test` unchanged, so nothing about the existing lane moves.
+#
+# Per WORKTREE rather than per migration-set hash on purpose: migrate_template
+# migrates an EXISTING template up incrementally, which is what keeps the
+# migration-authoring inner loop fast. A content-addressed name would throw that
+# away, since every migration edit would name a database that does not exist yet
+# and rebuild the whole schema from scratch.
+#
+# Underscores, not hyphens: this name is only ever a Postgres identifier, and
+# `margince_test_cfg_retire` needs no quoting where `margince_test_cfg-retire`
+# would. That is a different constraint from dev.sh's bucket_for_slug, which
+# folds the other way for S3 — so the two expressions stay separate rather than
+# being unified into one helper that would be wrong for both.
+# An answer of "" means the shared `margince_test`, which is also the right
+# answer when the question cannot be asked: a tree with no git (a source tarball,
+# a container that copied the files in) has no worktrees to collide over, so
+# falling back to the shared name is correct rather than merely quiet.
+_testdb_worktree_slug() {
+  local gitdir commondir raw name
+  gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || return 0
+  commondir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || return 0
+  [[ "$gitdir" == "$commondir" ]] && return 0
+
+  # The full path, not the basename, is what identifies a worktree: two
+  # checkouts can both hold `.../worktrees/feature`, and a basename would give
+  # them one template to rebuild under each other.
+  raw="$(git rev-parse --show-toplevel)"
+  name="$(basename "$raw" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9_]/_/g; s/__*/_/g; s/^_//; s/_*$//')"
+
+  # `margince_test_` + this must fit Postgres's 63-byte identifier limit, so the
+  # budget here is 49. Over it — or when the name sanitises away to nothing, which
+  # a directory of pure punctuation does — the answer carries a digest of the full
+  # PATH instead of the name alone. Truncating without one would map every name
+  # sharing its first 49 characters onto a single template.
+  # sha256, not shasum's default sha1. This digest only disambiguates two
+  # directory names, so the strength is irrelevant to what it does — but a weak
+  # hash in the tree is a security finding whatever it is used for, and arguing
+  # the exception costs more than the flag.
+  local digest
+  digest="$(printf '%s' "$raw" | shasum -a 256 | cut -c1-8)"
+  if (( ${#name} == 0 )); then
+    printf 'wt_%s' "$digest"
+    return 0
+  fi
+  if (( ${#name} > 49 )); then
+    printf '%s_%s' "${name:0:40}" "$digest"
+    return 0
+  fi
+  printf '%s' "$name"
+}
+_testdb_slug="$(_testdb_worktree_slug)"
+export TEMPLATE_NAME="${TEMPLATE_NAME:-margince_test${_testdb_slug:+_${_testdb_slug}}}"
 
 owner_clone_dsn() { local db="$1"; echo "${O_PREFIX}/${db}${O_QUERY:+?$O_QUERY}"; }
 app_clone_dsn()   { local db="$1"; echo "${A_PREFIX}/${db}${A_QUERY:+?$A_QUERY}"; }

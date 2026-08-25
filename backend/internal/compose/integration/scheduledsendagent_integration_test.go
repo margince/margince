@@ -64,7 +64,7 @@ func (p *preflightEnv) scheduleAsAgent(t *testing.T, actor principal.Principal, 
 func (p *preflightEnv) auditActor(t *testing.T, entityType string, entityID ids.UUID, action string) (string, string) {
 	t.Helper()
 	var actorType, actorID string
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT actor_type, actor_id FROM audit_log
 			  WHERE entity_type = $1 AND entity_id = $2 AND action = $3
@@ -209,7 +209,7 @@ func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
 // storedProvenance reads the three scheduling-time agent columns.
 func (p *preflightEnv) storedProvenance(t *testing.T, id ids.UUID) (actorID *string, passport, behalf *ids.UUID) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT agent_actor_id, agent_passport_id, agent_on_behalf_of
 			   FROM scheduled_send WHERE id = $1`, id).Scan(&actorID, &passport, &behalf)
@@ -285,7 +285,7 @@ func TestARevokedPassportHoldsTheMessageItWasScheduledUnder(t *testing.T) {
 func (p *preflightEnv) issuePassport(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 			 VALUES ($1, $2, $2, 'scheduled-send probe',
@@ -302,7 +302,7 @@ func (p *preflightEnv) issuePassport(t *testing.T) ids.UUID {
 // query filters on.
 func (p *preflightEnv) revokePassport(t *testing.T, passport ids.UUID) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(context.Background(),
 			`UPDATE passport SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, passport)
 		if err != nil {

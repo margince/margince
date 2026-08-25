@@ -1,13 +1,32 @@
-// Package rubric is the machine-readable craftsmanship standard the review agent
-// reviews against. The canonical text is the Craftsmanship section of
-// AGENTS.md; rubric.json
-// is the version the gate consumes. See architecture/15 (ADR-0045/A60).
+// Package rubric is the craftsmanship standard the review agent reviews against,
+// and rubric.json is the standard rather than a copy of one: it is what the gate
+// consumes, it carries the severity model and the block-eligibility the gate acts
+// on, and it is versioned. AGENTS.md's Craftsmanship section is the prose form
+// for a human or an agent reading the rulebook, plus whatever per-directory
+// deltas a nested AGENTS.md adds — the gate is handed that section alongside this
+// file, never instead of it.
+//
+// TestTheProseFormNamesTheSameRules holds two things about the prose, and only
+// two: every T- or P-id it names is a real rule here, and it mentions the
+// positive rules at all. It does NOT establish full parity — the prose may still
+// describe a rule thinly or leave one out.
+//
+// That is the pair of failures it was written for. The prose advertised an
+// anti-tell catalogue of "T1-P3" against a rubric of T1-T10 plus P1-P5: it named
+// one rule that does not exist, and said nothing about five that the gate applies.
+// The positive rules are part of the standard the model is given; they carry no
+// severity, so unlike a BLOCKER or MAJOR anti-tell they do not by themselves stop
+// a push.
+//
+// See architecture/15 (ADR-0045/A60).
 package rubric
 
 import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 )
 
 //go:embed rubric.json
@@ -63,4 +82,78 @@ func (r *Rubric) BlockEligible(category string) bool {
 		}
 	}
 	return false
+}
+
+// CraftsmanshipHeading is the H2 a rulebook carries its craft deltas under.
+const CraftsmanshipHeading = "## Craftsmanship"
+
+// CraftsmanshipSection returns the body of that heading, from the heading itself
+// up to the next H2 or end of file, trimmed.
+//
+// It lives here, and not beside its caller in gate/, because there are two
+// readers of this one definition — the gate that feeds the section to the model,
+// and the parity test that checks the prose against these rules — and they had
+// already drifted apart: one trimmed the result and the other did not. gate/
+// imports this package, so this is the side the shared spelling can live on.
+func CraftsmanshipSection(content string) (string, bool) {
+	lines := strings.Split(content, "\n")
+	start := -1
+	inFence := false
+	for i, line := range lines {
+		// Fenced blocks are not headings. A rulebook that SHOWS a rulebook —
+		// this file's own docs do — would otherwise have its example selected
+		// ahead of the real section, and the gate would run against an
+		// illustration without anything looking wrong.
+		if fenceToggles(line, inFence) {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		// The heading EXACTLY, not a prefix: `## Craftsmanship notes` is a
+		// different section, and taking it as this one hands the gate somebody's
+		// aside as its rubric layer.
+		if strings.TrimSpace(line) == CraftsmanshipHeading {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return "", false
+	}
+	end := len(lines)
+	inFence = false
+	for i := start + 1; i < len(lines); i++ {
+		if fenceToggles(lines[i], inFence) {
+			inFence = !inFence
+			continue
+		}
+		if !inFence && strings.HasPrefix(lines[i], "## ") {
+			end = i
+			break
+		}
+	}
+	return strings.TrimSpace(strings.Join(lines[start:end], "\n")), true
+}
+
+// fenceOpener matches a fence that opens a block, including one that follows a
+// list marker — `- ```text` is an opener, and a scan anchored on the backticks
+// alone walks straight past it.
+var fenceOpener = regexp.MustCompile("^(?:[-*+]\\s+|\\d+[.)]\\s+)?```")
+
+// fenceToggles reports whether a line changes fenced state.
+//
+// The two directions are NOT symmetric, which is the part worth stating. Any
+// ```-prefixed line opens a block, info string and all. Only a bare run of
+// backticks CLOSES one: a ```go sitting inside a fenced example — exactly what a
+// document about markdown contains — is content, and treating it as a toggle
+// desynchronises the state so the next real closer reopens it and the rest of the
+// file reads as fenced.
+func fenceToggles(line string, inFence bool) bool {
+	trimmed := strings.TrimSpace(line)
+	if inFence {
+		return trimmed != "" && strings.Trim(trimmed, "`") == ""
+	}
+	return fenceOpener.MatchString(trimmed)
 }

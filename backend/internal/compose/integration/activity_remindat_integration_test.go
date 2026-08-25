@@ -18,7 +18,6 @@ import (
 
 func TestRemindAtIsTaskOnlyAndRoundTrips(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "reminders"
 	apptest.BootstrapWorkspaceSession(t, e, "Reminders", "admin@reminders.test", "Admin")
 
 	// Round-trip on create: the reminder lands and reads back.

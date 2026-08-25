@@ -2,14 +2,19 @@
 # One-command local dev stack on the ONE shared infra: Postgres + Redis, the api
 # (cmd/api), the background worker (cmd/worker — outbox relay + Surface-B runner),
 # and the Vite dev server — so the SPA runs in a real browser against a live api.
-# Bare `make dev` serves the app on :8080 (the api behind it on :18080);
-# `make dev DEV_SLUG=<slug>` gives an isolated `margince_dev_<slug>` database on
-# slug-derived ports, so two worktrees can run concurrently without colliding on
-# the database or the host ports.
+# One stack per WORKTREE, so several agent sessions can run at once. The primary
+# worktree serves the app on :8080 (the api behind it on :18080) against the
+# shared `margince` database; every linked worktree derives its own slug from
+# its directory name and claims its own database, Redis logical database, port
+# pair and object bucket — no flag to remember. `DEV_SLUG=<slug>` overrides the
+# derived name.
 #
-# MARGINCE_ENV=dev is set so the api trusts the X-Workspace-Slug header the FE
-# and the seed script send. localhost is a browser secure-context, so the Secure session
-# cookie survives over plain http — no TLS front door needed.
+# MARGINCE_ENV=dev relaxes the production-only postures (an unlicensed install
+# warns rather than refuses, the data reset is reachable). It does NOT switch on
+# a workspace header: one installation serves one organization (ADR-0061), the
+# server resolves it itself, and no request selects a tenant. localhost is a
+# browser secure-context, so the Secure session cookie survives over plain
+# http — no TLS front door needed.
 #
 # BYOK: if .env.local sets a cloud key (GEMINI_API_KEY / OPENAI_API_KEY /
 # ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY), sourcing it exports the var and
@@ -23,10 +28,12 @@
 # no secret literal beyond the shared dev defaults, and there is one set of names
 # rather than two.
 #
-#   scripts/dev.sh up   [slug] [--fresh]  # spin infra + db + api + FE
-#   scripts/dev.sh stop [slug] [--drop]   # stop servers; --drop also drops the db
+#   scripts/dev.sh up    [slug] [--fresh]  # spin infra + db + api + FE
+#   scripts/dev.sh stop  [slug] [--drop]   # stop THIS stack; --drop also drops its db
+#   scripts/dev.sh sweep       [--drop]    # stop EVERY stack on the machine
 set -euo pipefail
-# Runtime state under .tmp/dev/ (logs, pids) — keep everything this script
+# Runtime state (logs, pids, claims) lives under dev_state_root below, one
+# directory per machine rather than per worktree — keep everything this script
 # writes owner-only.
 umask 077
 
@@ -74,113 +81,312 @@ REDIS_PORT="${REDIS_PORT:-16379}"
 # production secret.
 MINIO_PORT="${MINIO_PORT:-29000}"
 
-# Bare `make dev` runs the shared `margince` database on the base ports, so it
-# stays coherent with `make migrate` / `seed-dev` / `verify-boot`. A DEV_SLUG
-# gives an isolated database on deterministically derived ports (same slug →
-# same db + ports, so a resume reuses whatever that database already holds).
+# Slug, state root and bucket come from the shared helper — three scripts need
+# the same answers and dev.sh knowing them alone is how `make dev-logs` came to
+# look for a file `make dev` no longer wrote.
+# shellcheck source=scripts/lib-devstate.sh
+. "${repo_root}/scripts/lib-devstate.sh"
+
+# Process helpers, defined HERE rather than beside the sweep that used to be their
+# only caller: the EXIT trap below names release_unconfirmed_stack, and a trap
+# installed above the definition calls a function that does not exist yet. Any
+# exit between the two — a DSN that will not resolve, for instance — printed
+# `command not found` and left the claim behind.
+
+kill_pids() { # pid… — TERM, then KILL whatever is still standing
+  local pids=("$@") alive=()
+  [[ ${#pids[@]} -gt 0 ]] || return 0
+  kill "${pids[@]}" 2>/dev/null || true
+  for _ in $(seq 1 10); do
+    alive=()
+    for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive+=("$p"); done
+    [[ ${#alive[@]} -eq 0 ]] && return 0
+    sleep 0.5
+  done
+  kill -9 "${alive[@]}" 2>/dev/null || true
+}
+# still_ours answers whether a pid recorded in an old state file is still a
+# process of ours. PIDs are recycled: a stack killed by a crash or a machine
+# sleep leaves its file behind, and by the time the next `make dev` reads it
+# that number can belong to anything. The pgrep paths already re-check the
+# live command line before killing — a recorded pid gets the same proof.
+still_ours() { # pid
+  local cmd
+  cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
+  [[ -n "$cmd" ]] || return 1
+  [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
+}
+# is_dev_launcher reports whether a pid is a live run of THIS script. The starter
+# recorded in a reservation is a shell running dev.sh, so that is what to look for
+# — checking liveness alone confuses a recycled pid for a peer.
+is_dev_launcher() { # pid
+  local cmd
+  cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
+  [[ -n "$cmd" ]] || return 1
+  [[ "$cmd" == *dev.sh* ]]
+}
+
+# release_unconfirmed_stack — give back this run's claim, and take down whatever
+# it started. Called from the EXIT trap while stack_recorded is 0, which is every
+# path that does not reach a stack answering its own readiness probe.
+release_unconfirmed_stack() {
+  [[ "${stack_recorded:-1}" == "0" ]] || return 0
+  # Never release a claim this run did not create: it belongs to a stack that was
+  # already up, and taking its record away would leave it running with nothing
+  # able to stop it.
+  [[ "${STACK_CLAIM_PREEXISTING:-0}" == "1" ]] && return 0
+  # Nor one another `make dev` is mid-way through starting. Two runs for the same
+  # slug both see a pid-less reservation, and without this the one that loses the
+  # port race deletes the claim the winner is still booting against.
+  local owner=''
+  # shellcheck disable=SC1090
+  [[ -f "$(dev_state_dir "$slug")/env" ]] && owner=$(
+    STARTER_PID=''
+    . "$(dev_state_dir "$slug")/env"
+    printf '%s' "${STARTER_PID:-}"
+  )
+  [[ -n "$owner" && "$owner" != "$$" ]] && return 0
+  # TERM then KILL, through the helper the sweep uses: a bare TERM can leave a
+  # server standing after its claim is gone, which is the orphan this is for.
+  local pids=()
+  local p
+  for p in "${be_pid:-}" "${fe_pid:-}" "${worker_pid:-}"; do
+    [[ -n "$p" ]] && pids+=("$p")
+  done
+  [[ ${#pids[@]} -gt 0 ]] && kill_pids "${pids[@]}"
+  # The CLAIM goes; the LOG stays. Removing the directory took the log with it,
+  # so a failed boot deleted the one file that said why it failed — which cost a
+  # debugging cycle here before it could cost anyone else one.
+  rm -f "$(dev_state_dir "$slug")/env"
+}
+
+slug="$(dev_resolve_slug "$slug")" || exit 1
 if [[ -z "$slug" ]]; then
   label="dev"
   db="margince"
-  hash=0
 else
-  # The slug flows into a filesystem path and a CREATE DATABASE identifier —
-  # keep it to a safe charset so it can neither traverse paths nor break SQL.
-  if ! [[ "$slug" =~ ^[a-z0-9_-]+$ ]]; then
-    echo "FAIL: DEV_SLUG must match ^[a-z0-9_-]+$ (got '$slug')" >&2
-    exit 1
-  fi
   label="dev '$slug'"
   db="margince_dev_${slug}"
-  hash=$(printf '%s' "$slug" | cksum | awk '{print $1 % 1000}')
 fi
-# :8080 is THE port — the app, the thing a human opens, always and only.
-# The api sits behind it on 18080 and the app's dev server proxies /v1 and
-# the probes through, so `curl localhost:8080/v1/...` still answers and
-# nobody has to remember which of two ports serves what. The two ranges
-# (8080.. and 18080..) cannot collide however the slug hashes.
-fe_port=$(( 8080 + hash ))
-api_port=$(( 18080 + hash ))
+blob_bucket="$(dev_bucket_for_slug "$slug")"
+# :8080 is THE port — the app, the thing a human opens, always and only. The api
+# sits behind it at fe+10000 and the app's dev server proxies /v1 and the probes
+# through, so `curl localhost:8080/v1/...` still answers and nobody has to
+# remember which of two ports serves what.
+#
+# The primary worktree's stack is FIXED at 8080/18080 rather than claimed, and
+# the claim range starts above it, so :8080 always means the same thing.
+DEV_FE_PORT_MIN=8081
+DEV_FE_PORT_MAX=8179
+DEV_API_PORT_OFFSET=10000
 
-# The Redis LOGICAL DATABASE this stack uses.
-#
-# One Redis serves every stack on the machine, and the stream names and
-# consumer groups are constants (`gw:events:crm:*`, `cg:*`). Two stacks on the
-# same index therefore share ONE consumer group: whichever worker reads an
-# entry first consumes it, resolves it against its OWN Postgres database, finds
-# nothing, and acks. The other stack's event is gone, and the symptom — a
-# projection or an accrual that never runs — is indistinguishable from a broken
-# feature. That cost a day and a wrongly-filed critical bug once.
-#
-# The instance serves 80 databases in three blocks that must not overlap
-# (infra/docker-compose.dev.yml says the same): db 0 is bare `make dev`, 1..63
-# belong to the parallel integration lane one per package, and 64..79 are
-# these slugged stacks. A slug landing in the test range would have its streams
-# FLUSHDB'd mid-run by a suite that believes it owns the db.
-#
-# The index is NOT the port hash. Two hashes differing by a multiple of the
-# block size would take different ports and the same db — a collision the port
-# check cannot see, which is the failure this whole change is about. It is
-# instead the lowest free index, claimed under a lock and recorded beside the
-# stack's other state, so a running stack's db is never handed out twice and a
-# resumed slug reclaims its own.
+# port_listeners names only the processes SERVING a port. Plain
+# `lsof -ti tcp:8080` also lists everything CONNECTED to it — the
+# developer's browser among them — and this sweep kills what it is given.
+port_listeners() { # port
+  lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
+}
+
+# The Redis instance serves 80 logical databases in three blocks that must not
+# overlap (infra/docker-compose.dev.yml says the same): 0 is the primary
+# worktree's stack, 1..63 belong to the parallel integration lane one per
+# package, and 64..79 are these per-worktree stacks. A stack landing in the test
+# range would have its streams FLUSHDB'd mid-run by a suite that believes it
+# owns the database.
 DEV_REDIS_DB_MIN=64
 DEV_REDIS_DB_MAX=79
 
-# claim_redis_db SLUG — the logical database this slug owns, on stdout.
+# read_registry SLUG — what every OTHER recorded stack holds, and what this slug
+# already holds itself. Sets TAKEN_DBS / TAKEN_PORTS (space-separated) and
+# MINE_DB / MINE_PORT.
 #
-# Same slug wins the same index back, so restarting a stack keeps whatever its
-# streams already hold. A NEW slug takes the lowest index no other recorded
-# stack is using; two starting at once are serialised by a lock directory, so
-# they cannot both read "64 is free" and both take it.
+# Globals rather than stdout because there are four answers, and a caller that
+# had to parse one string is the place the four would drift apart.
+read_registry() { # slug
+  local want="$1" root state_file other REDIS_DB FE_PORT
+  root="$(dev_state_root)"
+  TAKEN_DBS=''; TAKEN_PORTS=''; MINE_DB=''; MINE_PORT=''
+  for state_file in "$root"/*/env; do
+    [[ -f "$state_file" ]] || continue
+    other="$(basename "$(dirname "$state_file")")"
+    REDIS_DB=''; FE_PORT=''
+    # shellcheck disable=SC1090
+    . "$state_file"
+    if [[ "$other" == "$want" ]]; then
+      MINE_DB="$REDIS_DB"; MINE_PORT="$FE_PORT"
+      continue
+    fi
+    [[ -n "$REDIS_DB" ]] && TAKEN_DBS="${TAKEN_DBS}${TAKEN_DBS:+ }${REDIS_DB}"
+    [[ -n "$FE_PORT" ]] && TAKEN_PORTS="${TAKEN_PORTS}${TAKEN_PORTS:+ }${FE_PORT}"
+  done
+  return 0
+}
+
+# The lowest Redis database no recorded stack holds. Refuses rather than
+# wrapping: a 17th concurrent stack is a situation to notice, not to paper over,
+# and doubling up is the silent failure this mechanism exists to prevent.
+pick_free_db() { # → a free Redis logical database, or non-zero
+  local db t used
+  for (( db = DEV_REDIS_DB_MIN; db <= DEV_REDIS_DB_MAX; db++ )); do
+    used=0
+    for t in $TAKEN_DBS; do [[ "$t" == "$db" ]] && { used=1; break; }; done
+    (( used )) || { printf '%s' "$db"; return 0; }
+  done
+  return 1
+}
+
+# A port is free when no recorded stack claims it AND nothing is listening on
+# either half of the pair. The listener check is not redundant: the registry
+# knows only about OUR stacks, so a foreign process on a port would otherwise be
+# handed out, bind would fail, and wait_ready would then poll that foreign
+# server and report this stack ready.
+pick_free_port() { # → a free frontend port, or non-zero
+  local port t used
+  for (( port = DEV_FE_PORT_MIN; port <= DEV_FE_PORT_MAX; port++ )); do
+    used=0
+    for t in $TAKEN_PORTS; do [[ "$t" == "$port" ]] && { used=1; break; }; done
+    (( used )) && continue
+    [[ -n "$(port_listeners "$port")" ]] && continue
+    [[ -n "$(port_listeners "$(( port + DEV_API_PORT_OFFSET ))")" ]] && continue
+    printf '%s' "$port"
+    return 0
+  done
+  return 1
+}
+
+# claim_stack SLUG — reserve this slug's Redis database and port pair, and
+# RECORD the reservation before anything binds.
 #
-# Reading the recorded stacks rather than hashing is what makes the guarantee
-# real: a hash gives distinct ports and a shared db whenever two hashes differ
-# by a multiple of the block size, which the port check cannot see and which is
-# exactly the collision this change exists to remove.
-claim_redis_db() { # slug
-  local want="$1" lock=".tmp/dev/.redis-db.lock" taken=() db
-  mkdir -p .tmp/dev
-  # A stale lock from a killed run would wedge every later start, so it is
-  # cleared on exit AND bounded: mkdir is the atomic primitive here.
-  local waited=0
+# Recording inside the lock is the load-bearing part. The old code wrote its
+# state file only once the servers were up, so two `make dev` runs a second
+# apart both read "nothing is taken" and both picked the same database. A claim
+# that is invisible until the stack is running is not a claim.
+claim_stack() { # slug → "<redis_db> <fe_port>"
+  local want="$1" root lock waited=0 db port
+  root="$(dev_state_root)"
+  lock="${root}/.claim.lock"
+  mkdir -p "$root"
+  # mkdir is the atomic primitive here. A stale lock from a killed run would
+  # wedge every later start, so the wait is bounded and then breaks it.
   until mkdir "$lock" 2>/dev/null; do
     (( waited++ >= 50 )) && { rm -rf "$lock"; continue; }
     sleep 0.1
   done
   trap 'rm -rf "'"$lock"'"' RETURN
 
-  local state_file other_slug REDIS_DB
-  for state_file in .tmp/dev/*/env; do
-    [[ -f "$state_file" ]] || continue
-    other_slug="$(basename "$(dirname "$state_file")")"
-    REDIS_DB=''
-    # shellcheck disable=SC1090
-    . "$state_file"
-    [[ -z "$REDIS_DB" ]] && continue
-    # This slug's own recorded index is the one it reclaims.
-    if [[ "$other_slug" == "$want" ]]; then
-      printf '%s' "$REDIS_DB"
-      return 0
-    fi
-    taken+=("$REDIS_DB")
-  done
+  read_registry "$want"
+  db="$MINE_DB"; port="$MINE_PORT"
+  if [[ -z "$db" ]]; then
+    db="$(pick_free_db)" || {
+      echo "FAIL: every Redis database ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX} is claimed by another dev stack." >&2
+      echo "  Stop one (make dev-stop DEV_SLUG=<slug>), or clear them all with 'make dev-sweep'." >&2
+      return 1
+    }
+  fi
+  if [[ -z "$port" ]]; then
+    port="$(pick_free_port)" || {
+      echo "FAIL: no free port pair in ${DEV_FE_PORT_MIN}..${DEV_FE_PORT_MAX}." >&2
+      echo "  Stop a stack (make dev-stop DEV_SLUG=<slug>), or clear them all with 'make dev-sweep'." >&2
+      return 1
+    }
+  fi
+  # Whether this slug ALREADY had a started stack recorded. `make dev` run again
+  # in a worktree whose stack is up reaches here, reclaims its own numbers, and
+  # then fails the port check further down — at which point the release must not
+  # delete the entry, because those pids are a live stack that dev-stop still has
+  # to find. Reclaiming must also not overwrite the record with a pid-less one.
+  # An entry that already describes a started stack is returned as-is: rewriting
+  # it would replace live pids with a pid-less reservation, and dev-stop would
+  # then have nothing to kill.
+  if grep -q '^BACKEND_PID=[0-9]' "${root}/${want}/env" 2>/dev/null; then
+    printf '%s %s' "$db" "$port"
+    return 0
+  fi
+  # Nor one another `make dev` is still starting. Two runs that overlap before
+  # either writes its pids would otherwise both rewrite this file, and whichever
+  # wrote last would own it — so the one that then failed its port check released
+  # the claim the other was booting against.
+  local holder=''
+  if [[ -f "${root}/${want}/env" ]]; then
+    holder=$(
+      STARTER_PID=''
+      # shellcheck disable=SC1090
+      . "${root}/${want}/env"
+      printf '%s' "${STARTER_PID:-}"
+    )
+  fi
+  # A live process that is actually one of THESE. still_ours identifies a running
+  # SERVER, by the margince connection string on its command line, and a starter
+  # is a shell running this script — it carries neither, so still_ours rejected
+  # the very launcher this guard exists to notice. A bare `kill -0` is the other
+  # wrong answer: pids are recycled, and it would refuse every later `make dev`
+  # for this slug once an unrelated process inherited the number.
+  if [[ -n "$holder" && "$holder" != "$STACK_STARTER_PID" ]] && is_dev_launcher "$holder"; then
+    echo "FAIL: another 'make dev' (pid ${holder}) is already starting the '${want}' stack. Wait for it, or stop it with 'make dev-stop'." >&2
+    return 1
+  fi
 
-  for (( db = DEV_REDIS_DB_MIN; db <= DEV_REDIS_DB_MAX; db++ )); do
-    local used=0 t
-    for t in "${taken[@]:-}"; do [[ "$t" == "$db" ]] && { used=1; break; }; done
-    (( used )) || { printf '%s' "$db"; return 0; }
-  done
-
-  # Every index in the block is spoken for. Refuse rather than double up: a
-  # shared bus is the silent failure this whole mechanism prevents, and a
-  # 17th concurrent stack is a situation to notice, not to paper over.
-  echo "FAIL: all ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX} Redis databases are claimed by other dev stacks." >&2
-  echo "  Stop one (make dev-stop DEV_SLUG=<slug>), or a bare 'make dev' to sweep them all." >&2
-  exit 1
+  mkdir -p "${root}/${want}"
+  # STARTER_PID is who is booting this stack. release_unconfirmed_stack reads it
+  # so a run that loses the port race cannot delete a claim another run is still
+  # starting against. It is overwritten by the final state write.
+  printf 'SLUG=%s\nFE_PORT=%s\nAPI_PORT=%s\nREDIS_DB=%s\nSTARTER_PID=%s\n' \
+    "$want" "$port" "$(( port + DEV_API_PORT_OFFSET ))" "$db" "$STACK_STARTER_PID" \
+    >"${root}/${want}/env"
+  printf '%s %s' "$db" "$port"
 }
-redis_db=0
-if [[ -n "$slug" ]]; then
-  redis_db=$(claim_redis_db "$slug")
+
+if [[ -z "$slug" ]]; then
+  # Fixed, not claimed: :8080 and Redis db 0 belong to the primary worktree by
+  # construction, and both claim ranges start above them.
+  fe_port=8080
+  api_port=18080
+  redis_db=0
+elif [[ "$cmd" == "up" ]]; then
+  # Assign first, THEN read: `read … <<<"$(claim_stack)"` reports read's status,
+  # not the claim's, so a refused claim printed its FAIL and the stack carried on
+  # with an empty port and an api listening on :10000.
+  # Computed HERE, not inside claim_stack: that runs in a command substitution,
+  # which is a subshell, so a variable it sets never reaches this shell. The first
+  # version set it in there and the trap read the default — deleting the pids of a
+  # stack that was still running. Same subshell trap as the swallowed claim status
+  # above, one line apart.
+  STACK_CLAIM_PREEXISTING=0
+  recorded_be=$(
+    BACKEND_PID=''
+    # shellcheck disable=SC1090
+    [[ -f "$(dev_state_dir "$slug")/env" ]] && . "$(dev_state_dir "$slug")/env"
+    printf '%s' "${BACKEND_PID:-}"
+  )
+  # ALIVE, not merely recorded. A crashed stack leaves its pids in the file, and
+  # treating that as a live claim would disable the release for every later failed
+  # boot — the stale reservation then holds a port and a Redis database forever.
+  if [[ -n "$recorded_be" ]] && still_ours "$recorded_be"; then
+    STACK_CLAIM_PREEXISTING=1
+  fi
+  export STACK_STARTER_PID=$$
+  claimed="$(claim_stack "$slug")" || exit 1
+  read -r redis_db fe_port <<<"$claimed"
+  api_port=$(( fe_port + DEV_API_PORT_OFFSET ))
+  # A reservation that outlives a failed boot holds its port and Redis database
+  # against every later stack until somebody sweeps by hand, and nothing says so
+  # — the next `make dev` in a fresh worktree just gets a higher number, and the
+  # block runs out sixteen stacks early. Released on any exit before the final
+  # state write, which is the point the stack is actually running.
+  # Released on any exit before the stack is CONFIRMED up, and the release kills
+  # whatever this run started. Deleting the claim alone would leave an api or a
+  # vite running that nothing records any more — an orphan holding the port the
+  # claim just gave back, which is worse than the leak it was fixing.
+  stack_recorded=0
+  trap 'release_unconfirmed_stack' EXIT
+else
+  # stop and sweep READ; only `up` claims. Claiming here would mint a reservation
+  # for a stack nobody asked to start, and then the caller would tear it down
+  # again — a write on the path whose whole job is to clean up.
+  read_registry "$slug"
+  redis_db="${MINE_DB:-0}"
+  fe_port="${MINE_PORT:-0}"
+  api_port=$(( fe_port == 0 ? 0 : fe_port + DEV_API_PORT_OFFSET ))
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
@@ -240,7 +446,12 @@ psql_owner() { # db [psql args…] — SQL via args or stdin
     psql -U margince_owner -d "$db" "$@"
 }
 
-rundir=".tmp/dev/${slug:-_base}"
+# Under the machine-global root, not the worktree's own .tmp/ — the same reason
+# the claim registry moved there. The pids land in the SAME file claim_stack
+# reserved, so a sweep from any worktree can see this stack; while these were two
+# different files the reservation carried ports and no pids, and the sweep read a
+# directory only this worktree could see.
+rundir="$(dev_state_dir "$slug")"
 log="${rundir}/dev.log"
 state="${rundir}/env"
 
@@ -306,18 +517,6 @@ wait_ready() { # url timeout_s — only a 2xx counts as ready (a 401/500/503 is 
 # :8080 against `margince`. `DEV_SLUG` keeps its escape hatch (it sweeps
 # nothing, so an isolated env survives until the next bare `make dev`).
 
-kill_pids() { # pid… — TERM, then KILL whatever is still standing
-  local pids=("$@") alive=()
-  [[ ${#pids[@]} -gt 0 ]] || return 0
-  kill "${pids[@]}" 2>/dev/null || true
-  for _ in $(seq 1 10); do
-    alive=()
-    for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive+=("$p"); done
-    [[ ${#alive[@]} -eq 0 ]] && return 0
-    sleep 0.5
-  done
-  kill -9 "${alive[@]}" 2>/dev/null || true
-}
 
 # Margince server processes anywhere on this machine, not just this checkout: a
 # second worktree's api on :8081 owns a different database and is exactly the
@@ -336,32 +535,30 @@ margince_server_pids() {
 # the worktree path — that is what distinguishes our dev server from any other
 # Vite project the developer happens to be running.
 vite_pids() {
-  local pid cmd
+  local pid cmd root roots=()
+  # EVERY worktree of this repository, enumerated. Each resolves vite out of its
+  # own node_modules, so its command line carries its own path — matching on this
+  # checkout's root found only our own, and `make dev-sweep` promises to clear the
+  # machine. Deriving a parent directory from the git common dir was no better: a
+  # linked worktree can live anywhere, not only beside its siblings.
+  while IFS= read -r root; do
+    [[ -n "$root" ]] && roots+=("$root")
+  done < <(git worktree list --porcelain | awk '/^worktree /{print substr($0, 10)}')
   for pid in $(pgrep -f 'vite' 2>/dev/null || true); do
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"$repo_root"* ]] && echo "$pid"
+    for root in "${roots[@]}"; do
+      # "$root/" — with the separator. A bare substring match sweeps an unrelated
+      # project living at <root>-scratch, whose path merely starts with ours.
+      if [[ "$cmd" == *"$root/"* ]]; then
+        echo "$pid"
+        break
+      fi
+    done
   done
 }
 
-# port_listeners names only the processes SERVING a port. Plain
-# `lsof -ti tcp:8080` also lists everything CONNECTED to it — the
-# developer's browser among them — and this sweep kills what it is given.
-port_listeners() { # port
-  lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
-}
 
-# still_ours answers whether a pid recorded in an old state file is still a
-# process of ours. PIDs are recycled: a stack killed by a crash or a machine
-# sleep leaves its file behind, and by the time the next `make dev` reads it
-# that number can belong to anything. The pgrep paths already re-check the
-# live command line before killing — a recorded pid gets the same proof.
-still_ours() { # pid
-  local cmd
-  cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
-  [[ -n "$cmd" ]] || return 1
-  [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
-}
 
 sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
   local victims=() pids p port state_file
@@ -369,7 +566,7 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
   # 1. Every stack this script ever recorded — its own pids and its own ports.
   #    The locals above shadow what the state file sets, so sourcing one cannot
   #    leak a stale pid into the rest of the run.
-  for state_file in .tmp/dev/*/env; do
+  for state_file in "$(dev_state_root)"/*/env; do
     [[ -f "$state_file" ]] || continue
     BACKEND_PID=''; FE_PID=''; WORKER_PID=''; API_PORT=''; FE_PORT=''
     # shellcheck disable=SC1090
@@ -397,7 +594,7 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
     kill_pids $pids
     echo "dev: swept $(printf '%s\n' $pids | wc -l | tr -d ' ') stray process(es) from earlier stacks"
   fi
-  rm -rf .tmp/dev/*
+  rm -rf "$(dev_state_root)"/*
 }
 
 drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left behind
@@ -420,19 +617,20 @@ drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left
 
 case "$cmd" in
 up)
-  if [[ -z "$slug" ]]; then
-    # Bare `make dev` is the exclusive stack: clear the machine first, so the
-    # ports below are free by construction and the browser can only be talking
-    # to the api this command starts.
-    sweep_stacks
-  fi
-  # Belt and braces after the sweep, and the only guard a slugged env gets: a
-  # bound port must stop the boot, because binding would fail silently and
+  # `make dev` starts THIS worktree's stack and touches nobody else's. It used
+  # to sweep the machine first — every margince process, every recorded stack,
+  # every per-slug database — which made one engineer's routine command destroy
+  # every parallel session's stack, including the one another agent was
+  # mid-test against. The sweep is now `dev-sweep`, asked for by name.
+  #
+  # A bound port must still stop the boot: binding would fail silently and
   # wait_ready would then read "ready" off the OLD server. (Vite without
   # --strictPort would not even fail — it would walk to a port we never poll.)
   for _p in "$api_port" "$fe_port"; do
     if [[ -n "$(port_listeners "$_p")" ]]; then
-      echo "FAIL: port :${_p} already in use — is $label already running? (make dev-stop${slug:+ DEV_SLUG=$slug})" >&2
+      echo "FAIL: port :${_p} already in use — is $label already running?" >&2
+      echo "  Stop it:                      make dev-stop${slug:+ DEV_SLUG=$slug}" >&2
+      echo "  Or clear every stack here:    make dev-sweep" >&2
       exit 1
     fi
   done
@@ -447,13 +645,6 @@ up)
   {
     echo "=== infra + db ==="
     make db-up
-    # The stray-database sweep runs HERE, not with the process sweep above:
-    # every statement it issues goes through the compose Postgres, so running
-    # it before db-up on a stopped stack would connect to nothing, fail
-    # silently, and leave the databases to reappear the moment infra starts.
-    if [[ -z "$slug" ]]; then
-      drop_stray_dev_dbs
-    fi
     # --fresh means "the install a first customer gets": drop the database
     # and let the migrations and the bootstrap rebuild it. Deliberately not
     # the default — a restart to pick up a backend change must not cost the
@@ -690,7 +881,7 @@ up)
     MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
     MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET=margince-dev \
+    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
     --redis "${REDIS_ADDR}" \
@@ -744,7 +935,7 @@ up)
     MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
     MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET=margince-dev \
+    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
@@ -762,8 +953,12 @@ up)
   # index is spoken for.
   printf 'SLUG=%s\nAPI_PORT=%s\nFE_PORT=%s\nDB=%s\nREDIS_DB=%s\nBACKEND_PID=%s\nFE_PID=%s\nWORKER_PID=%s\nLOG=%s\n' \
     "$slug" "$api_port" "$fe_port" "$db" "$redis_db" "$be_pid" "$fe_pid" "$worker_pid" "$log" >"$state"
-
   if wait_ready "http://localhost:${fe_port}/" 90; then
+    # CONFIRMED up, and only here. This used to be set at the state write above,
+    # which is before this probe — so an FE that never came ready left a claim
+    # behind holding a port and a Redis database, while the script killed the
+    # processes and exited 1.
+    stack_recorded=1
     echo "$label ready"
     echo ""
     echo "  OPEN     http://localhost:${fe_port}"
@@ -795,18 +990,7 @@ up)
   ;;
 
 stop)
-  if [[ -z "$slug" ]]; then
-    # The mirror of `up`: bare dev-stop clears the machine, so `make dev-stop`
-    # is a promise you can trust before starting anything else. Stray databases
-    # are left alone unless DROP=1 asks for them — stopping is not deleting.
-    sweep_stacks
-    echo "stopped every dev stack (freed :$api_port :$fe_port)"
-    if [[ "$drop" == "1" ]]; then
-      drop_stray_dev_dbs
-      echo "note: the shared 'margince' database is kept — DROP=1 only removes the per-slug ones" >&2
-    fi
-    exit 0
-  fi
+  # This worktree's stack, and only it. `dev-sweep` is what clears the machine.
   if [[ -f "$state" ]]; then
     # shellcheck disable=SC1090
     . "$state"
@@ -820,11 +1004,10 @@ stop)
     rm -rf "$rundir"
     echo "stopped $label (freed :${API_PORT:-?} :${FE_PORT:-?})"
   else
-    for p in "$api_port" "$fe_port"; do
-      pids=$(lsof -ti "tcp:${p}" 2>/dev/null || true)
-      [[ -n "$pids" ]] && kill $pids 2>/dev/null || true
-    done
-    echo "no recorded env for $label (freed derived ports :$api_port :$fe_port if bound)"
+    # Ports are CLAIMED now, not derived from the slug, so there is nothing to
+    # guess at for a stack that was never recorded: naming a port here would
+    # print `:0`. Say what is true instead.
+    echo "no recorded stack for $label — nothing to stop"
   fi
   if [[ "$drop" == "1" ]]; then
     if [[ -z "$slug" ]]; then
@@ -838,8 +1021,24 @@ stop)
   fi
   ;;
 
+sweep)
+  # The machine-wide clear, now something you ask for by name. This used to be
+  # what a bare `make dev` did on the way up, so the routine command was also
+  # the destructive one.
+  sweep_stacks
+  echo "swept every dev stack on this machine"
+  if [[ "$drop" == "1" ]]; then
+    # db-up first: drop_stray_dev_dbs issues every statement through the compose
+    # Postgres, so on a stopped stack it would connect to nothing, fail
+    # silently, and leave the databases to reappear the moment infra started.
+    make db-up >/dev/null
+    drop_stray_dev_dbs
+    echo "note: the shared 'margince' database is kept — DROP=1 removes only the per-slug ones" >&2
+  fi
+  ;;
+
 *)
-  echo "usage: dev.sh {up|stop} [slug] [--drop]" >&2
+  echo "usage: dev.sh {up|stop|sweep} [slug] [--drop]" >&2
   exit 2
   ;;
 esac

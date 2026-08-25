@@ -210,13 +210,6 @@
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
-.rcard {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-}
 .rcard .rh {
   display: flex;
   align-items: center;
@@ -644,13 +637,11 @@
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
+/* What `Card` does not bring: `.card` declares no display, and these lines are a
+   stack with air between them rather than flowing text. */
 .legal-preview-card {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 .legal-preview-card strong,
 .legal-preview-card span,
@@ -712,18 +703,19 @@
     opacity: 0.35;
   }
 }
+/* `.finding-grid` sizes its columns `1fr 1fr` rather than `minmax(0, 1fr)`, so a
+   grid item's automatic minimum size is its CONTENT — one unbreakable value (a
+   URL, a long domain) widens the column past its share and the row overflows.
+   This is the guard against that, and it is not chrome, so `Card` does not
+   bring it. */
+.finding-card {
+  min-width: 0;
+}
 .finding-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
   padding: var(--space-5);
-}
-.finding-card {
-  min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgPage);
 }
 .finding-label {
   display: flex;
@@ -1232,7 +1224,14 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
-.legal-card {
+/* The one card a reader PICKS: a fact to keep, a legal entity to adopt. It is a
+   button with a pressed state, not a surface, which is why it is not `Card` —
+   `Card` is a section of a page.
+
+   One class, because the fact picker and the legal picker are the SAME control:
+   a check, a name, a detail line, a line of fine print. What they do not share
+   is what those lines mean, and that is what the two modifiers below carry. */
+.choice-card {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
@@ -1244,28 +1243,43 @@
   background: var(--bgElevated);
   cursor: pointer;
 }
-.legal-card.selected {
+.choice-card.selected {
   border-color: var(--accent);
   background: var(--accentLight);
 }
-.legal-card b,
-.legal-card span span,
-.legal-card small {
+.choice-check svg {
+  width: 14px;
+  color: var(--accent);
+}
+.choice-card b,
+.choice-card span span,
+.choice-card small {
   display: block;
 }
-.legal-card b {
+.choice-card b {
   font-size: var(--fs-meta);
 }
-.legal-card span span {
+.choice-card span span {
   margin-top: var(--space-1);
-  color: var(--textSecondary);
   font-size: var(--fs-meta);
+}
+.choice-card small {
+  color: var(--textTertiary);
+  font-size: var(--fs-meta);
+}
+/* The detail line is the fact's VALUE — the thing the reader is choosing — so it
+   keeps the card's own colour. Under a legal entity the same line is the
+   registered address, which is detail beneath the name, and reads as such. */
+.legal-card span span {
+  color: var(--textSecondary);
   line-height: var(--lh-normal);
 }
 .legal-card small {
   margin-top: var(--space-1);
-  color: var(--textTertiary);
-  font-size: var(--fs-meta);
+}
+.fact-card small {
+  margin-top: var(--space-2);
+  line-height: var(--lh-normal);
 }
 @media (max-width: 720px) {
   .legal-grid {
@@ -1296,44 +1310,6 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
   margin-top: var(--space-3);
-}
-.fact-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  color: var(--textPrimary);
-  text-align: left;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-  cursor: pointer;
-}
-.fact-card.selected {
-  border-color: var(--accent);
-  background: var(--accentLight);
-}
-.fact-check svg {
-  width: 14px;
-  color: var(--accent);
-}
-.fact-card b,
-.fact-card span span,
-.fact-card small {
-  display: block;
-}
-.fact-card b {
-  font-size: var(--fs-meta);
-}
-.fact-card span span {
-  margin-top: var(--space-1);
-  font-size: var(--fs-meta);
-}
-.fact-card small {
-  margin-top: var(--space-2);
-  color: var(--textTertiary);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
 }
 .understanding-reveal {
   margin: var(--space-6) 0;

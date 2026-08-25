@@ -48,7 +48,6 @@ func uploadExport(e *apptest.AppEnv, t *testing.T, csv string) (int, importSumma
 		t.Fatalf("building the request: %v", err)
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("X-Workspace-Slug", e.Slug)
 
 	resp, err := e.Client.Do(req)
 	if err != nil {

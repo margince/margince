@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind claim H1
+
 package backendarch
 
 // people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is
@@ -34,7 +36,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -130,6 +131,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		scope := helperScope{
 			qualifier: importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people"),
 			inside:    file.Name != nil && file.Name.Name == "people",
+			names:     map[string]bool{employmentHelper: true, primaryHelper: true},
 		}
 		for _, decl := range file.Decls {
 			for _, sql := range employmentStatements(decl, scope) {
@@ -201,141 +203,6 @@ func employmentStatements(decl ast.Decl, people helperScope) []string {
 	return out
 }
 
-// flattenSQL renders a string expression as the text it builds, marking every
-// node it consumed so an inner piece is not judged again on its own.
-//
-// A call to the ONE DEFINITION renders as a neutral marker: the predicate it
-// produces exists only at runtime, so the statement's text carries no
-// `ended_at` test from it, and a statement that calls the helper is simply a
-// statement with nothing hand-written left to find.
-//
-// That replaced an exemption — "this statement mentions the helper, so skip
-// it" — which was too coarse in the direction that matters: a query calling
-// the helper for one half and hand-writing the other was skipped WHOLESALE.
-// Calling the one definition is not a licence to write a second one beside it.
-//
-// Any other call renders as its ARGUMENTS and not its name, because a
-// formatter holds its SQL in an argument — `fmt.Sprintf(`… kind = 'employment'
-// … `, …)` keeps the whole statement inside the call, and a flattener that
-// stopped at the callee name would judge nothing. The name is dropped because
-// it is not part of the SQL; only the helper's is kept, as the marker that
-// says the one definition was reached.
-func flattenSQL(n ast.Node, seen map[ast.Node]bool, people helperScope) (string, bool) {
-	switch v := n.(type) {
-	case *ast.BasicLit:
-		if v.Kind != token.STRING {
-			return "", false
-		}
-		seen[n] = true
-		return strings.Trim(v.Value, "`\""), true
-	case *ast.BinaryExpr:
-		if v.Op != token.ADD {
-			return "", false
-		}
-		left, lok := flattenSQL(v.X, seen, people)
-		right, rok := flattenSQL(v.Y, seen, people)
-		if !lok && !rok {
-			return "", false
-		}
-		seen[n] = true
-		return left + right, true
-	case *ast.CallExpr:
-		seen[n] = true
-		if people.isOneDefinition(v) {
-			markSeen(v, seen)
-			return " " + employmentCalleeName(v) + " ", true
-		}
-		text := ""
-		for _, a := range v.Args {
-			if part, ok := flattenSQL(a, seen, people); ok {
-				text += part
-			}
-		}
-		return " " + text + " ", true
-	case ast.Expr:
-		seen[n] = true
-		return " ", true
-	}
-	return "", false
-}
-
-// helperScope says how the ONE DEFINITION is reachable from one file, and it is
-// a struct rather than a string because the string had two meanings.
-//
-// `qualifier == ""` was read as "this file IS package people", where a bare
-// call is the helper's own. But importAliasOf returns "" for every file that
-// does not import people at all — which is most of the tree — so in any of
-// them a bare `EmploymentIsCurrentSQL(…)` was accepted as canonical and its
-// arguments hidden. `inside` says the one thing the empty string could not.
-type helperScope struct {
-	qualifier string // the local name people is bound to, "" if not imported
-	inside    bool   // this file IS package people
-}
-
-// isOneDefinition reports whether the call is people's helper — the PACKAGE as
-// well as the name.
-//
-// The name alone was not enough, and the gap is the one this gate exists to
-// close: a helper call's whole subtree is claimed, so `other.
-// EmploymentIsCurrentSQL(…)` would have been treated as canonical and its
-// arguments hidden, letting a hand-written currency test ride inside a
-// lookalike.
-func (h helperScope) isOneDefinition(call *ast.CallExpr) bool {
-	named := func(n string) bool { return n == employmentHelper || n == primaryHelper }
-	switch f := call.Fun.(type) {
-	case *ast.Ident:
-		return h.inside && named(f.Name)
-	case *ast.SelectorExpr:
-		pkg, ok := f.X.(*ast.Ident)
-		return ok && h.qualifier != "" && pkg.Name == h.qualifier && named(f.Sel.Name)
-	}
-	return false
-}
-
-// importAliasOf returns the local name an import path is bound to in this file,
-// or "" if the file does not import it. A dot import returns "" too: a
-// dot-imported call is a bare identifier, and the gate would rather miss it
-// than name the wrong function.
-func importAliasOf(file *ast.File, path string) string {
-	for _, spec := range file.Imports {
-		if strings.Trim(spec.Path.Value, `"`) != path {
-			continue
-		}
-		if spec.Name != nil {
-			if spec.Name.Name == "." {
-				return ""
-			}
-			return spec.Name.Name
-		}
-		return "people"
-	}
-	return ""
-}
-
-// employmentCalleeName is the function's own name, however it is qualified.
-// Prefixed because retentionscope_test.go already has a calleeName in this
-// package.
-func employmentCalleeName(call *ast.CallExpr) string {
-	switch f := call.Fun.(type) {
-	case *ast.Ident:
-		return f.Name
-	case *ast.SelectorExpr:
-		return f.Sel.Name
-	}
-	return ""
-}
-
-// markSeen claims a whole subtree, so nothing inside a helper call is judged as
-// though somebody had written it into the statement.
-func markSeen(n ast.Node, seen map[ast.Node]bool) {
-	ast.Inspect(n, func(c ast.Node) bool {
-		if c != nil {
-			seen[c] = true
-		}
-		return true
-	})
-}
-
 // firstEmploymentLine returns the line of the statement that names the
 // employment kind, so the report points at the statement rather than dumping
 // it.
@@ -346,36 +213,6 @@ func firstEmploymentLine(sql string) string {
 		}
 	}
 	return strings.TrimSpace(strings.Split(sql, "\n")[0])
-}
-
-// handWrittenGoSources walks the module for source a person maintains.
-func handWrittenGoSources(t *testing.T) []string {
-	t.Helper()
-	var paths []string
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if name := entry.Name(); name == "node_modules" || name == "testdata" || name == ".git" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_gen.go") || strings.HasSuffix(name, ".gen.go") {
-			return nil
-		}
-		paths = append(paths, path)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking the module for Go source: %v", err)
-	}
-	if len(paths) < 500 {
-		t.Fatalf("the walk found only %d Go files, so this census covered almost nothing", len(paths))
-	}
-	return paths
 }
 
 // employmentProbe is one planted source file and the answer the gate must give
@@ -476,12 +313,13 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 	for _, tc := range employmentProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
-			scope := helperScope{qualifier: "people"}
+			names := map[string]bool{employmentHelper: true, primaryHelper: true}
+			scope := helperScope{qualifier: "people", names: names}
 			switch tc.mode {
 			case "people":
-				head, scope = "package people\n", helperScope{inside: true}
+				head, scope = "package people\n", helperScope{inside: true, names: names}
 			case "noimport":
-				scope = helperScope{}
+				scope = helperScope{names: names}
 			default:
 				head += "import (\n\t\"fmt\"\n\n\t\"github.com/gradionhq/margince/backend/internal/modules/people\"\n)\n"
 			}

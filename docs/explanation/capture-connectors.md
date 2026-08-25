@@ -284,7 +284,7 @@ which has no onboarding chip and so is Settings-only.
 
 ## Honest limitations
 
-Per [STATUS.md](../../STATUS.md) — the pipeline is live; these were scoped out, not missed:
+The pipeline is live; these were scoped out, not missed:
 
 - **No onboarding chip for Calendar.** `gcal` is a fully wired OAuth connector (same
   `connect`/`callback`/`disconnect` + sync as Gmail/Graph); Settings' **Add a connection** footer starts

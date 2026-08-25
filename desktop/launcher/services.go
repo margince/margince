@@ -120,8 +120,18 @@ func (b *backend) migrate() error {
 //
 // It is a default rather than a decision, so an operator who HAS a license can
 // put MARGINCE_ENV=production in margince.env and be held to it.
+// MARGINCE_BLOBSTORE_PATH is in the first layer for the same reason as
+// MARGINCE_ENV: it is a default, not a decision. A desktop installation has
+// local disk and no object storage service, and with no store wired the api
+// answers 501 on every attachment and serves no company logo — so the folder
+// points the filesystem provider at data/blobs and the feature simply works.
+// An operator who names a real S3 endpoint (or another path) in margince.env
+// overrides it, because the user layer comes after this one.
 func (b *backend) childEnv(launcherOwned ...string) []string {
-	env := []string{"MARGINCE_ENV=" + defaultRuntimeEnv}
+	env := []string{
+		"MARGINCE_ENV=" + defaultRuntimeEnv,
+		"MARGINCE_BLOBSTORE_PATH=" + b.layout.blobs(),
+	}
 	env = append(env, b.userEnv...)
 	return append(env, launcherOwned...)
 }

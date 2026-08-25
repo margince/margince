@@ -25,7 +25,7 @@
 #
 # Same teeth as the serial lane: zero-skip guard (a SKIP fails the run) and any
 # package failure fails the whole run. MARGINCE_ENV=dev is exported so the HTTP
-# e2e suites' X-Workspace-Slug trust switch is honored (same as the serial lane).
+# e2e suites boot under the same non-production postures the serial lane uses.
 #
 # Shard mode (the CI matrix): INTEGRATION_SHARD="k/N" slices the lane across N
 # independent runners BY TEST, not by package — package-level fan-out bottoms
@@ -253,7 +253,7 @@ while IFS='|' read -r d rel; do
       case "$expr" in
         integration) tagged=1 ;;
         # !integration is the mirror of `integration`: the unit-lane-only gates.
-        # The RBAC legacy-cohort gates read git history to derive the initial
+        # rbacbaselineerafixture_test.go reads git history to derive the baseline
         # commit's vocabulary, and the integration lanes clone shallow, so those
         # files are excluded from THIS build exactly as the compiler excludes
         # them. Statically decidable for the same reason `integration` is — this
@@ -403,9 +403,9 @@ fi
 # thinner run must never read as a passing one.
 echo "test-integration-parallel: $NTESTS tagged tests in $NPKGS_DISCOVERED packages; skipped $NUNTAGGED untagged (they run in \`make check\`)"
 if (( SHARD_TOTAL > 0 )); then
-  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_DB)"
+  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 else
-  echo "test-integration-parallel: $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_DB)"
+  echo "test-integration-parallel: $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 fi
 
 # One job = clone an empty db + own a private MinIO bucket, run that package

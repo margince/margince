@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Card } from "../design-system/atoms";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import { useT } from "../i18n";
 import { Wordmark } from "./auth";
@@ -209,10 +210,10 @@ function GhostCard({
 }: Readonly<{ rows: readonly string[]; index: number }>) {
   const vars: SceneVars = { "--obGhost": index };
   return (
-    <div className="ob-build-ghost" style={vars}>
+    <Card as="div" className="ob-build-ghost" style={vars}>
       {rows.map((width) => (
         <span className="ob-build-ghost-row" key={width} style={{ width }} />
       ))}
-    </div>
+    </Card>
   );
 }

@@ -60,15 +60,45 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 	return auth.EnsureVisible(ctx, tx, entityType, id)
 }
 
-// ensureAttachmentParentWritable is the upload's gate: hanging a file on a
-// record changes that record, so the parent must be the caller's to change,
-// not merely theirs to read. Out of scope still reads as ErrNotFound; a
-// readable parent the caller may not change answers ErrPermissionDenied.
+// ensureAttachmentParentWritable gates every change to a file already on a
+// record: the parent must be the caller's to change, not merely theirs to read.
+// Out of scope still reads as ErrNotFound; a readable parent the caller may not
+// change answers ErrPermissionDenied.
+//
+// It does not require a deal, person or organization parent to be LIVE, and
+// that is the point of it being separate from the upload's gate below.
+// Archiving a record must not strand the files on it: removing a misfiled
+// document, relabelling one, and finishing a reading already in flight all run
+// through here, and there is no unarchive verb to recover from refusing them.
+// Freezing a removal because its parent was retired is the opposite of what
+// retiring it meant.
+//
+// An ACTIVITY parent is the exception and always has been: EnsureActivityWritable
+// reaches EnsureActivityContentVisibleLive, so an archived activity refuses here
+// too. That asymmetry predates this split and is not part of it — an activity's
+// content gate is a different rule from a record's lifecycle — but it is stated
+// rather than left for a reader to discover, because the sentence above would
+// otherwise read as a promise this function does not keep for every parent.
 func ensureAttachmentParentWritable(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == "activity" {
 		return auth.EnsureActivityWritable(ctx, tx, id)
 	}
 	return auth.EnsureWritable(ctx, tx, entityType, id)
+}
+
+// ensureAttachmentParentWritableLive is the UPLOAD's gate, and the only place
+// the liveness applies: hanging a NEW file on a record adds to it, and an
+// archived record takes nothing new. Every other write here removes or amends
+// something already filed, which ensureAttachmentParentWritable admits.
+//
+// The activity arm needs no separate spelling — EnsureActivityWritable already
+// reaches EnsureActivityContentVisibleLive, so that arm has always been live and
+// the two gates differ only for a deal, person or organization parent.
+func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	if entityType == "activity" {
+		return auth.EnsureActivityWritable(ctx, tx, id)
+	}
+	return auth.EnsureWritableLive(ctx, tx, entityType, id)
 }
 
 // requireParentOrHide checks the parent object grant AFTER the attachment row

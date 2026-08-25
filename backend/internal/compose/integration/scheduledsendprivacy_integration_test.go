@@ -65,7 +65,7 @@ func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 			status, activities.ScheduledStatusCancelled)
 	}
 	var payload string
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT payload::text FROM scheduled_send WHERE id = $1`, id).Scan(&payload)
 	}); err != nil {

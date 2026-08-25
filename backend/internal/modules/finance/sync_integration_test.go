@@ -72,8 +72,7 @@ func setupFinance(t *testing.T) *financeEnv {
 	}
 	connID := ids.NewV7()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		e.ws, "fin-"+e.ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,

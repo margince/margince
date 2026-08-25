@@ -353,7 +353,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// LatestTranscriptRead, ReadTranscript) re-probes the same way rather than
 	// trusting the stored pointer.
 	"transcript_read.activity_id": "client-supplied and gated: every path resolves the activity through readActivity's ActivityContentClause walk, so an unseeable transcript is ErrNotFound rather than a readable run record",
-	// The retention floor's evidence (A165, migration 0289). Both columns are
+	// The retention floor's evidence (A165). Both columns are
 	// SERVER-DERIVED and neither has a writer yet — the table shipped ahead of
 	// the pass that fills it (#1557). activity_id is the record being held, and
 	// the row exists only because that record qualified; deal_id is the

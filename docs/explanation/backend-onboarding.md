@@ -11,12 +11,12 @@ re-explain what they already own.
 3. **[explanation/contract-first.md](contract-first.md)** — how the Go surface is generated from `crm.yaml`, and why drift is merge-blocking.
 4. **[explanation/authorization.md](authorization.md)** — why the auth check lives at the store entry point, not the handler.
 5. **This page** — the system in one screen, the find-it map, generated-vs-written, the code you call, the gates, the change-recipes.
-6. **[CONTRIBUTING.md](../../CONTRIBUTING.md)** + **[AGENTS.md](../../AGENTS.md)** — the PR loop and the binding engineering rules.
+6. **[CONTRIBUTING.md](../../CONTRIBUTING.md)** + **`AGENTS.md`** — the PR loop and the binding engineering rules.
 
-**[principles/](../principles/README.md)** — the handful of statements about this codebase's shape
+7. **[principles/](../principles/README.md)** — the handful of statements about this codebase's shape
 that settle a class of arguments before they start: one source of truth, the record is the code, every
 mutation leaves a trace, legibility is the product, derive the obligation, nothing here is private.
-Read one when you need the *why* behind a rule in [AGENTS.md](../../AGENTS.md), or when auditing a
+Read one when you need the *why* behind a rule in `AGENTS.md`, or when auditing a
 subsystem against it.
 
 **Deep dives** — read when you touch that area:

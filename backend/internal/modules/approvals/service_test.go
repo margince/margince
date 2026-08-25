@@ -263,6 +263,78 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 // releases put on the wire is a message — one governed on the timeline object.
 // A misspelling fails here rather than silently admitting the send it meant to
 // bound.
+// The rule the whole confirm-first tier rests on: a credential does not release
+// the proposal it made. Without it a passport stages a 🟡 action, approves its
+// own row and re-issues the call, and the confirmation was of nothing.
+//
+// It needs its own test rather than a row in the caps table above, because it is
+// the only rule about the PAIRING of a row and a principal — every principal in
+// that table carries a zero PassportID, which short-circuits this condition
+// before it is reached. That is how the rule went untested through several
+// refactors (#2585): the function was covered, this branch of it was not.
+func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
+	mine := ids.NewV7()
+	theirs := ids.NewV7()
+	proposer := principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:test", OnBehalfOf: ids.NewV7(),
+		PassportID: mine, Scopes: principal.NewScopeSet(principal.ScopeWrite),
+	}
+	stagedBy := func(id ids.UUID) row {
+		passport := ids.From[ids.PassportKind](id)
+		return row{Kind: "advance_deal", PassportID: &passport}
+	}
+
+	cases := []struct {
+		name    string
+		a       row
+		approve bool
+		want    bool // admitted
+	}{
+		{"the proposer cannot approve its own row", stagedBy(mine), true, false},
+		// Deliberately allowed: an agent that changes its mind takes its own
+		// request off somebody's desk rather than leaving it there.
+		{"but it may still reject its own row", stagedBy(mine), false, true},
+		{"another credential's row it may approve", stagedBy(theirs), true, true},
+		// serverProposed: a row nobody's passport staged is not self-approval.
+		{"a server-proposed row is nobody's own", row{Kind: "advance_deal"}, true, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := agentMayDecide(proposer, tc.a, tc.approve)
+			if tc.want && err != nil {
+				t.Fatalf("refused a decision it may make: %v", err)
+			}
+			if !tc.want {
+				if err == nil {
+					t.Fatal("a credential released the proposal it made")
+				}
+				// The SENTINEL, not merely an error: swapping the refusal for an
+				// unrelated internal failure would leave a bare non-nil check
+				// green while the caller stopped seeing a 403.
+				if !errors.Is(err, apperrors.ErrPermissionDenied) {
+					t.Fatalf("refused with %v, want a permission denial", err)
+				}
+			}
+		})
+	}
+}
+
+// A HUMAN is never caught by the rule, and the case that matters is the one the
+// type switch alone does not describe: a human whose OWN UserID is what the
+// staging passport was minted by. agentMayDecide returns early for every
+// non-agent, so this is a guard on the ORDER of that function rather than on new
+// behaviour — a spelling that read the row's passport before the principal's
+// type would lock the lender out of the inbox they lent from, and nothing else
+// in this file pairs a human with a passport-staged row.
+func TestTheHumanBehindACredentialStillDecidesItsProposal(t *testing.T) {
+	lender := ids.NewV7()
+	passport := ids.From[ids.PassportKind](lender)
+	human := principal.Principal{Type: principal.PrincipalHuman, UserID: lender}
+	if err := agentMayDecide(human, row{Kind: "advance_deal", PassportID: &passport}, true); err != nil {
+		t.Fatalf("a human was refused a proposal their own credential staged: %v", err)
+	}
+}
+
 func TestEverySendingKindIsAKindWhoseReleaseIsAMessage(t *testing.T) {
 	for kind := range sendingKinds {
 		grants, err := decisionGrantsFor(kind, nil)

@@ -136,12 +136,17 @@ jobs:
         with:
           persist-credentials: false
           # Full history: this job runs the backend unit lane, which includes
-          # the RBAC legacy-cohort gates. Those derive the initial commit's
-          # object vocabulary and grants by reading 2cb50021 — a fixture the
-          # migration replay seeds from, so it must not be hand-editable. They
-          # FAIL on a shallow checkout rather than degrading to an empty cohort,
-          # because a gate that quietly checks nothing looks exactly like a
-          # passing one.
+          # rbacbaselineerafixture_test.go. That gate pins the RBAC composition
+          # arm's pre-state to the seeded matrix as it stood at the migration
+          # baseline, read out of history — because the pre-state is exactly what
+          # an author whose backfill does not work would edit, and a committed
+          # file nothing re-derives is editable. It FAILS on a shallow checkout
+          # rather than degrading to "no history, nothing to compare", because a
+          # gate that quietly checks nothing looks exactly like a passing one.
+          #
+          # The integration SHARDS in this same file deliberately do NOT get full
+          # history: they read the committed fixture instead, so only the lane
+          # that needs history pays for it.
           fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:

@@ -87,8 +87,17 @@ func TestAskScopedToOneProjectDropsTheOtherEngagementAndReportsTheScope(t *testi
 	}
 	// Eight activities on the account; the scope drops the other
 	// engagement's mail, task and meeting.
-	if answer.Scope.InScope == nil || answer.Scope.Total == nil || *answer.Scope.InScope != 5 || *answer.Scope.Total != 8 {
-		t.Errorf("scope counts = %v of %v, want 5 of 8", answer.Scope.InScope, answer.Scope.Total)
+	if answer.Scope.InScope == nil || answer.Scope.Total == nil {
+		t.Fatalf("scope counts = %v of %v, want both reported", answer.Scope.InScope, answer.Scope.Total)
+	}
+	// The counts are named once and read by both the comparison and the
+	// message: spelled twice, a changed expectation leaves the failure
+	// reporting the number it no longer wants. And dereferenced, because
+	// %v on the pointers prints where the counts live, never what they are.
+	wantInScope, wantTotal := 5, 8
+	if *answer.Scope.InScope != wantInScope || *answer.Scope.Total != wantTotal {
+		t.Errorf("scope counts = %d of %d, want %d of %d",
+			*answer.Scope.InScope, *answer.Scope.Total, wantInScope, wantTotal)
 	}
 
 	unscoped, err := svc.Ask(e.Admin(), ids.From[ids.OrganizationKind](f.org), crmcontracts.OrganizationQuestionWhatsOpen)
@@ -134,8 +143,17 @@ func TestOrganizationBriefScopedToOneProjectWritesFromTheScopedSummaryOnly(t *te
 	if scoped.Scope == nil || scoped.Scope.ProjectId != crmcontracts.Id(f.erp.UUID) {
 		t.Fatalf("scope = %+v, want %s", scoped.Scope, f.erpKey)
 	}
-	if scoped.Scope.InScope == nil || scoped.Scope.Total == nil || *scoped.Scope.InScope != 4 || *scoped.Scope.Total != 7 {
-		t.Errorf("scope counts = %v of %v, want 4 of 7", scoped.Scope.InScope, scoped.Scope.Total)
+	if scoped.Scope.InScope == nil || scoped.Scope.Total == nil {
+		t.Fatalf("scope counts = %v of %v, want both reported", scoped.Scope.InScope, scoped.Scope.Total)
+	}
+	// The counts are named once and read by both the comparison and the
+	// message: spelled twice, a changed expectation leaves the failure
+	// reporting the number it no longer wants. And dereferenced, because
+	// %v on the pointers prints where the counts live, never what they are.
+	wantInScope, wantTotal := 4, 7
+	if *scoped.Scope.InScope != wantInScope || *scoped.Scope.Total != wantTotal {
+		t.Errorf("scope counts = %d of %d, want %d of %d",
+			*scoped.Scope.InScope, *scoped.Scope.Total, wantInScope, wantTotal)
 	}
 
 	lane.prompt = ""
@@ -197,8 +215,17 @@ func TestMeetingBriefTakesARequestedProjectForAnUnattributedMeeting(t *testing.T
 	}
 	// The attendee's nine activities include both meetings; the scope drops
 	// the other engagement's four.
-	if brief.Scope.InScope == nil || brief.Scope.Total == nil || *brief.Scope.InScope != 5 || *brief.Scope.Total != 9 {
-		t.Errorf("scope counts = %v of %v, want 5 of 9", brief.Scope.InScope, brief.Scope.Total)
+	if brief.Scope.InScope == nil || brief.Scope.Total == nil {
+		t.Fatalf("scope counts = %v of %v, want both reported", brief.Scope.InScope, brief.Scope.Total)
+	}
+	// The counts are named once and read by both the comparison and the
+	// message: spelled twice, a changed expectation leaves the failure
+	// reporting the number it no longer wants. And dereferenced, because
+	// %v on the pointers prints where the counts live, never what they are.
+	wantInScope, wantTotal := 5, 9
+	if *brief.Scope.InScope != wantInScope || *brief.Scope.Total != wantTotal {
+		t.Errorf("scope counts = %d of %d, want %d of %d",
+			*brief.Scope.InScope, *brief.Scope.Total, wantInScope, wantTotal)
 	}
 	text := meetingBriefText(brief)
 	if strings.Contains(text, "Rack") {

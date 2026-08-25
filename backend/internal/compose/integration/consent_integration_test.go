@@ -31,7 +31,6 @@ type consentEnv struct {
 func setupConsent(t *testing.T) *consentEnv {
 	t.Helper()
 	e := apptest.SetupApp(t)
-	e.Slug = "consent-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
 
 	var person struct {

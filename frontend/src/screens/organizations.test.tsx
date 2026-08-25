@@ -1934,16 +1934,23 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
 
-    // The overview stack: the account, what it is worth, the pipeline's own
-    // figures, and the money. "Worth doing next" is not asserted here — it is
-    // advice, and this fixture's account has none to give; the suggestions
-    // suite above exercises its own presence.
+    // The overview stack: what is worth doing, the pipeline's own figures, and
+    // the money. "Worth doing next" is not asserted here — it is advice, and
+    // this fixture's account has none to give; the suggestions suite above
+    // exercises its own presence.
     const stack = container.querySelector(".co-panel-stack");
     expect(stack).toBeTruthy();
-    for (const panel of ["The account, in short", "Commercial", "Finance"]) {
+    for (const panel of ["Commercial", "Finance"]) {
       expect(stack?.textContent).toContain(panel);
     }
     expect(stack?.textContent).not.toContain("Lists & tags");
+
+    // The lead slot holds ONE card, decided by whether the account has work in
+    // flight. This fixture's account has no deals and no live projects, so the
+    // question it is actually asking is whether to sell to them at all — and
+    // a work card over nothing would answer a question nobody asked.
+    expect(stack?.textContent).toContain("What they are worth to you");
+    expect(stack?.textContent).not.toContain("What is in flight");
 
     // The pipeline and the commercial picture have their own tab too.
     await userEvent.click(screen.getByRole("button", { name: "Deals" }));

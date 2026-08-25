@@ -234,7 +234,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 
 	// Demote to a read seat; the live seat is read at authentication, so the
 	// same session now hits the ceiling.
-	e.SetWorkspaceSeat(t, e.Slug, "read")
+	e.SetWorkspaceSeat(t, "read")
 
 	// Reads still succeed…
 	if status := e.Call(t, "GET", "/v1/people", nil, nil, nil); status != 200 {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H1
+
 package backendarch
 
 // ADR-0091 §5 took the workspace out of this tree's advisory-lock identities.

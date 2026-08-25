@@ -312,3 +312,86 @@ describe("BuyerRoomScreen", () => {
     ).toBeTruthy();
   });
 });
+
+// Whether the reader may write and why they may not are one decision. They
+// were two, and they disagreed: `conversationRefusal` named a preview and the
+// write test never mentioned one, so a preview session whose seat carried
+// `comment` was handed a working composer while the page told it a preview
+// cannot write. Only the server minting every preview seat read-only kept
+// that off the screen.
+describe("a preview never gets a working composer", () => {
+  it("refuses the write even when the seat itself says comment", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () => jsonResponse({ ...LIVE, preview: true }),
+      "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
+      "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    // LIVE's participant carries `capability: "comment"`, so a write gate that
+    // reads only the capability admits this reader.
+    expect(LIVE.participant.capability).toBe("comment");
+
+    const start = await screen.findByRole("button", { name: "New thread" });
+    expect(start).toBeDisabled();
+    // No open composer anywhere: a disabled button beside a live textarea
+    // would still let the reader type and press Post.
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+  });
+
+  it("still gives a commenting buyer a working composer", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () => jsonResponse(LIVE),
+      "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
+      "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    // The admit case, without which the refusal above passes against a page
+    // that refuses everybody.
+    expect(await screen.findByLabelText("New thread")).toBeTruthy();
+  });
+});
+
+// `BuyerRoomAccess` is a plain string on the wire, not a union, so the
+// compiler cannot enumerate the states and a server that grows a fifth one
+// reaches this build untouched. A write gate that lists the states it refuses
+// hands that state a working composer; one that names the single state it
+// admits refuses it. This test supplies a state no build has heard of, which
+// is the only way to check the DEFAULT rather than the four known branches.
+describe("an access state this build does not know", () => {
+  it("cannot write", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, access: "quarantined" }),
+      "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
+      "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    const start = await screen.findByRole("button", { name: "New thread" });
+    expect(start).toBeDisabled();
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+  });
+
+  it("is not told the room is closed, because that would be a guess", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, access: "quarantined" }),
+      "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
+      "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    expect(await screen.findByText("This room is now read-only.")).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "This room is closed; what it shared is a record now.",
+      ),
+    ).toBeNull();
+  });
+});

@@ -74,7 +74,12 @@ func TestAUnitsOwnWriteLandsAsARowALedgerRowAndAnEvent(t *testing.T) {
 	rowID := ids.NewV7()
 
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE workspace SET slug = $1 WHERE id = $2`, "ledger-probe", e.WS); err != nil {
+		// A write that stands in for the unit's own table, which arrives with
+		// the demo unit; what this suite is about is the ledger row beside it.
+		// app_user rather than workspace since ADR-0091 retired workspace.slug
+		// — see TestRuntimeTxCommitsAndRollsBack for why a core table is the
+		// stand-in at all.
+		if _, err := tx.Exec(ctx, `UPDATE app_user SET display_name = $1 WHERE id = $2`, "ledger-probe", e.Rep1); err != nil {
 			return err
 		}
 		return tx.Record(ctx,

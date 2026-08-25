@@ -25,8 +25,8 @@ feature is expected to argue with.
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2190 | 9% | 14810 | 14 | 8 |
-| _whole served catalog, for scale_ | 56 | 17106 | 71% | — | — | — |
+| `overnight_at_risk_sweep` | 7 | 2330 | 9% | 14670 | 15 | 8 |
+| _whole served catalog, for scale_ | 57 | 17533 | 73% | — | — | — |
 
 ### `morning_brief`
 
@@ -51,7 +51,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2190 tokens, leaving 14810 of its budget and 21810 tokens of the
+Attaches 7 tools for 2330 tokens, leaving 14670 of its budget and 21670 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -62,7 +62,7 @@ window for the goal, the grounding and everything it reads.
 - `review_commitments`
 - `whats_slipping_this_week`
 
-**14 dangling cross-references** — this agent's own tool copy points at tools it
+**15 dangling cross-references** — this agent's own tool copy points at tools it
 cannot call, so a run may spend a step discovering the refusal:
 
 - at_risk_relationships → account_coverage
@@ -75,6 +75,7 @@ cannot call, so a run may spend a step discovering the refusal:
 - log_activity → create_task
 - log_activity → draft_email
 - log_activity → progress_deal
+- log_activity → relink_activity
 - log_activity → send_email
 - log_activity → send_message
 - whats_slipping_this_week → draft_follow_ups_for
@@ -118,7 +119,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 281 tokens, mean 305, across 56 served tools.
+Median 275 tokens, mean 307, across 57 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -128,19 +129,19 @@ a term in an addition.
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
 | `run_report` | 1213 | 3 scenarios |
-| `update_record` | 565 | 4 scenarios |
+| `update_record` | 603 | 4 scenarios |
+| `log_activity` | 588 | 1 scenario |
 | `send_account_email` | 545 | — |
 | `resolve_entities` | 513 | — |
 | `list_records` | 475 | — |
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
-| `log_activity` | 448 | 1 scenario |
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 431 | — |
+| `create_record` | 429 | 1 scenario |
 | `query_workspace` | 402 | 3 scenarios |
 | `preview_import` | 396 | — |
 | `search_records` | 392 | 6 scenarios |
-| `create_record` | 391 | 1 scenario |
 | `enrich` | 386 | — |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
@@ -175,12 +176,13 @@ a term in an addition.
 | `remove_tag` | 190 | — |
 | `list_channel_providers` | 181 | — |
 | `account_coverage` | 178 | 2 scenarios |
+| `check_location_support` | 163 | — |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
 | `commit_import` | 149 | — |
 | `list_colleagues` | 148 | — |
+| `whoami` | 136 | — |
 | `list_tags` | 102 | — |
-| `whoami` | 88 | — |
 | `read_import_report` | 80 | — |
 | `read_import_run` | 75 | — |
 

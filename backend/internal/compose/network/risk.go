@@ -104,6 +104,13 @@ type DealCoverage struct {
 	// that as "do not judge", so a hand-built fixture cannot accidentally
 	// assert a cold deal it never described.
 	LastTouchAt time.Time
+	// EverTouched says a touch has actually been captured, as opposed to
+	// LastTouchAt standing in with the deal's creation. The engagement rules
+	// read it to tell a deal nobody has worked from one that is simply new:
+	// engagement requires a two-way exchange, so before any contact exists
+	// every seat is unengaged by construction and the findings that follow
+	// from that describe the calendar rather than the deal.
+	EverTouched bool
 	// DepartedPersonIDs are the stakeholders whose employment at the account
 	// has ended. Gathered rather than folded because it takes a second read,
 	// and carried as ids so the fold stays pure.
@@ -187,7 +194,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	if err != nil {
 		return out, err
 	}
-	out.Status, out.LastTouchAt = facts.status, facts.lastTouchAt
+	out.Status, out.LastTouchAt, out.EverTouched = facts.status, facts.lastTouchAt, facts.everTouched
 
 	stakeholders, err := deals.Stakeholders(ctx, tx, dealID, now)
 	if err != nil {
@@ -246,13 +253,23 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 	}
 
 	// REPORT-PARAM-1, verbatim: distinct_engaged_contacts < 2.
+	//
+	// Held back until the deal has been touched at all, for the reason
+	// ourSideMinInteractions exists a few lines down: engagement requires a
+	// two-way exchange inside the window, so before any contact is captured
+	// EVERY seat is unengaged by construction and this fires on every deal
+	// somebody just created. That is a statement about the calendar, not about
+	// the deal, and a warning that is always on is a warning nobody reads.
+	//
+	// The finding still arrives the moment there is something to find: one
+	// captured touch is enough to make the count mean what it says.
 	engaged := make([]ids.UUID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
 		if s.Engaged {
 			engaged = append(engaged, s.PersonID)
 		}
 	}
-	if len(engaged) < reportThreadingFloor {
+	if c.EverTouched && len(engaged) < reportThreadingFloor {
 		risks = append(risks, Risk{
 			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, PersonIDs: engaged,
 			Summary: "fewer than two engaged contacts — the deal rests on one relationship",
@@ -267,7 +284,13 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 	// A deal with seats but no engaged champion. Distinct from
 	// single-threading: three engaged contacts and no champion among them is
 	// a deal nobody inside is arguing for.
-	if !hasEngagedChampion(c.Stakeholders) && len(c.Stakeholders) > 0 {
+	//
+	// Same hold as above, and it mattered more here: this rule reads "engaged"
+	// while the deal page's readings strip reads the role alone, so an
+	// untouched deal with a named champion showed "a champion is named" and
+	// "No engaged champion" side by side on one screen. Both were true and the
+	// pair read as a fault.
+	if c.EverTouched && !hasEngagedChampion(c.Stakeholders) && len(c.Stakeholders) > 0 {
 		risks = append(risks, Risk{
 			Kind: RiskCoverageGap, DealID: c.DealID,
 			Summary: "no engaged champion — nobody inside the account is carrying this",

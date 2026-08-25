@@ -83,3 +83,31 @@ Follow this checklist — several obligations are enforced by fitness tests, so 
 
 Fork-local schema goes in `backend/migrations/custom/`, which has its own tracking table and applies
 after core (`YYYYMMDDHHMMSS`-named, `x_`-prefixed columns) and survives upstream merges untouched.
+
+## Why a shipped migration is never edited
+
+On the ordinary `up` path an applied version never re-runs — `migrate down`
+is the one thing that lets a version execute again, deliberately and by hand.
+Editing an applied migration therefore changes what a FRESH
+installation gets while every already-deployed database keeps the old behaviour,
+and the two diverge with nothing reporting it. Editing history without a second,
+additive half that reaches deployed databases is how an installation ends up
+permanently missing a backfill nobody can see is missing.
+
+Two edits to applied migrations are on the record, and each names the reason it
+was safe rather than the fact that it happened:
+
+1. **The 2026-08 tenant-scope sweep** edited applied migrations and shipped WITH
+   additive repair migrations, so every already-deployed database was reached.
+2. **The 2026-08-21 baseline consolidation** replaced core's 318 migrations and
+   custom's 24 with one baseline file each. It carries no repair half and needs
+   none: at the time no installation held data anybody could not rebuild. Rather
+   than reach a stale database it STOPS one — the baseline reuses version `0001`,
+   whose ledger row on such a database names a migration that no longer exists,
+   so `dbmigrate.assertLedgerMatches` refuses and tells the operator to run
+   `make dev-fresh`.
+
+**Neither generalizes.** The second was available only while every database was
+rebuildable, and it was checkable only because `scripts/migration-baseline.sh
+verify` could prove the baseline builds the schema the history built, byte for
+byte. Without both of those, the rule is the one at the top of this section.

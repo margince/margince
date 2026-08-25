@@ -79,8 +79,8 @@ coverage-extensions.out
 /docs/superpowers/
 
 # The company-record-page V2 implementation handoff and its state mockups.
-# A working handoff for whoever picks the slices up, not a repo doc; STATUS.md
-# is the tracked pickup record and names it.
+# A working handoff for whoever picks the slices up, not a repo doc; the tracked
+# record is the GitHub issue for that work.
 /docs/explanation/company-record-page-v2-implementation-plan.md
 /docs/explanation/assets/company-record-page-v2/
 
@@ -176,3 +176,4 @@ workspace/
 /backend/tools/gen-perfdoc/gen-perfdoc.exe
 /backend/tools/contract-overlay/contract-overlay
 /backend/tools/contract-overlay/contract-overlay.exe
+/seed-demo

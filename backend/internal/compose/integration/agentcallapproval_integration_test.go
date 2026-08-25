@@ -140,7 +140,7 @@ func (c *channelSendEnv) assertApprovalCount(t *testing.T, want int, after strin
 func (c *channelSendEnv) assertApprovalCountOf(t *testing.T, kind string, want int, after string) {
 	t.Helper()
 	var got int
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM approval WHERE kind = $1`, kind).Scan(&got)
 	}); err != nil {
@@ -301,7 +301,7 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 func assertPersonApprovalCount(t *testing.T, e *apptest.AppEnv, want int, after string) {
 	t.Helper()
 	var got int
-	if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM approval WHERE kind = 'update_record'`).Scan(&got)
 	}); err != nil {

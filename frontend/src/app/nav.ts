@@ -1,11 +1,11 @@
 import {
   BarChart3,
-  Bell,
   Briefcase,
   Building2,
   CheckSquare,
   Home,
   Kanban,
+  Layers,
   ListFilter,
   type LucideIcon,
   Merge,
@@ -51,7 +51,8 @@ export {
 //
 // `screen` is the route id and never changes with a label: `deals` presents as
 // Pipeline (it routes to the pipeline surface) and `inbox` presents as
-// Approvals (it is a governance surface, not a mailbox).
+// Decisions (it is a governance surface, not a mailbox — issue 2532 tracks the
+// identifier sweep that has yet to make the route say the same word).
 export type NavItem = {
   screen: Screen;
   labelKey: MessageKey;
@@ -103,13 +104,20 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // it: a project in delivery has no deal column to stand in.
       { screen: "projects", labelKey: "nav.projects", icon: Briefcase },
       { screen: "tasks", labelKey: "nav.tasks", icon: CheckSquare },
-      // The same bell the top bar rings. Approvals are the one queue that waits
-      // on a PERSON, and the chrome reports it in three places at once — this
-      // row, the strip's own affordance, and the phone bar; two glyphs for one
-      // queue reads as two queues. It also keeps the pair under Tasks readable:
-      // a shield-check beside a check-in-square was two ticks in two boxes at
-      // 20px, and this is a different shape entirely.
-      { screen: "inbox", labelKey: "nav.inbox", icon: Bell },
+      // The same mark the top bar carries. This queue waits on a PERSON, and the
+      // chrome reports it in three places at once — this row, the strip's own
+      // affordance, and the phone bar; two glyphs for one queue reads as two
+      // queues. It also keeps the pair under Tasks readable: a shield-check
+      // beside a check-in-square was two ticks in two boxes at 20px, and this
+      // is a different shape entirely.
+      //
+      // Layers, not a bell. A bell says a notification arrived and has been
+      // read; what is here is work nobody has decided yet, and it stays until
+      // somebody does — and the product has no notification system at all, so
+      // the bell promised the one thing it could not deliver. A stack of layers
+      // is what the surface IS: a pile of proposals to work through one at a
+      // time, which is exactly how the deck on Home draws it.
+      { screen: "inbox", labelKey: "nav.inbox", icon: Layers },
     ],
   },
   {
@@ -125,7 +133,7 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
   (group) => group.items,
 );
 
-// A badge counts only what wants a human's attention (Tasks due, Approvals
+// A badge counts only what wants a human's attention (Tasks due, Decisions
 // waiting). Ambient totals are deliberately absent: the list endpoints are
 // keyset-paginated and are not known to return one, and a decorative count
 // contradicts the badge rule.
@@ -133,7 +141,7 @@ export const BADGE_SCREENS: ReadonlySet<Screen> = new Set(["tasks", "inbox"]);
 
 // At phone width the sidebar becomes a bottom bar, which fits four thumb-sized
 // destinations plus More — twelve would need horizontal scrolling, and a nav you
-// have to scroll is a nav you cannot see. Approvals is non-negotiable here: the
+// have to scroll is a nav you cannot see. Decisions is non-negotiable here: the
 // 390px approval path is required for V1.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "home",
@@ -161,6 +169,14 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",
 ]);
+
+// Screens that keep the same reading column with NO id, because they are not
+// records and never carry one. Home is here for the reason the two records
+// above it are: it reads down — a briefing in sentences beside a rail of
+// context — and its decision cards carry the drafted prose somebody has to read
+// before they can decide. Uncapped, those cards ran the full width of a wide
+// display with the text hugging the left edge.
+export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set(["home"]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,
 // the public booking page, the extension client surfaces, and the OAuth

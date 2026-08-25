@@ -65,12 +65,16 @@ func evidenceOrg(ctx context.Context, t *testing.T, e *dedupeEnv) ids.Organizati
 
 // orgColumn reads one column off the organization row, so a test can assert on
 // the record itself rather than on what a read model chose to report.
+//
+// coalesced to the empty string: several of the columns worth asserting on are
+// nullable, and a company nobody has named yet would fail the scan rather than
+// the assertion — which reports a fixture problem in the words of a defect.
 func orgColumn(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID, column string) string {
 	t.Helper()
 	var v string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT `+column+` FROM organization WHERE id = $1`, orgID).Scan(&v)
+			`SELECT coalesce(`+column+`, '') FROM organization WHERE id = $1`, orgID).Scan(&v)
 	}); err != nil {
 		t.Fatalf("read organization.%s: %v", column, err)
 	}

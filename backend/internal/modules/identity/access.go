@@ -120,7 +120,7 @@ func teamsByID(ctx context.Context, tx pgx.Tx, teamIDs []ids.UUID) ([]teamRow, e
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT t.id, t.name,
-		       (SELECT count(*) FROM team_membership m JOIN app_user u ON u.id = m.user_id AND u.status = 'active' AND u.archived_at IS NULL
+		       (SELECT count(*) FROM team_membership m JOIN app_user u ON u.id = m.user_id AND `+LiveMemberSQL("u")+`
 		         WHERE m.team_id = t.id),
 		       t.created_at
 		  FROM team t WHERE t.id = ANY($1) AND t.archived_at IS NULL ORDER BY t.name`, teamIDs)

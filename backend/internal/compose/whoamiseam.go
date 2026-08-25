@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 )
@@ -23,6 +24,12 @@ import (
 // omission here: the question is "who is the caller", which a caller may always
 // know. What it cannot do is answer for anybody else — the principal decides
 // the subject, never an argument.
+//
+// The prose language is resolved HERE rather than in identity, because it is a
+// composition of two settings that belong to different owners: the member's
+// own choice and the installation's base language. identity keeps answering
+// the honest empty for a person who never chose, and this seam turns that into
+// the answer the agent can act on.
 func actingIdentity(pool *pgxpool.Pool) agents.IdentityReader {
 	service := identity.NewService(pool)
 	return func(ctx context.Context) (agents.ActingIdentity, error) {
@@ -31,13 +38,28 @@ func actingIdentity(pool *pgxpool.Pool) agents.IdentityReader {
 			return agents.ActingIdentity{}, err
 		}
 		return agents.ActingIdentity{
-			UserID:      profile.UserID,
-			DisplayName: profile.DisplayName,
-			Email:       profile.Email,
-			Locale:      profile.Locale,
-			Timezone:    profile.Timezone,
+			UserID:        profile.UserID,
+			DisplayName:   profile.DisplayName,
+			Email:         profile.Email,
+			Locale:        profile.Locale,
+			ProseLanguage: proseLanguage(ctx, pool, profile.Locale),
+			Timezone:      profile.Timezone,
 		}, nil
 	}
+}
+
+// proseLanguage names the language stored prose must be written in: the
+// member's own choice, or the installation's base language when they never
+// made one.
+//
+// It answers a language name rather than a code ("German", not "de"), for the
+// reason promptlang.Rule already gives: the reader is a model writing a
+// sentence, and a two-letter code is a lookup it can get wrong.
+func proseLanguage(ctx context.Context, pool *pgxpool.Pool, locale string) string {
+	if locale == "" {
+		locale = identity.BaseLanguageForPrompt(ctx, pool)
+	}
+	return promptlang.LanguageName(locale)
 }
 
 // colleagueLister reads the workspace roster.

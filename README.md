@@ -52,7 +52,7 @@ contract and the tests are the record of behaviour.
 - **[docs/README.md](docs/README.md)** — the full documentation index (tutorials, how-to, reference,
   explanation).
 
-Also: [STATUS.md](STATUS.md) — progress and session pickup point ·
+Also: open work lives in [GitHub issues](https://github.com/margince/margince/issues) ·
 [AGENTS.md](AGENTS.md) — binding engineering rules ·
 [SECURITY.md](SECURITY.md) — vulnerability reporting (private, via GitHub Security Advisories) ·
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — how we behave here, including about
@@ -313,7 +313,7 @@ per-client throttling at the proxy.
   task policy, behind the `company_context.rollout` kill switch. See
   [docs/explanation/ai-runtime.md](docs/explanation/ai-runtime.md) and
   [docs/explanation/company-context.md](docs/explanation/company-context.md).
-- **Projects**: the body of work a deal is about — four phases (initiative → pursuing → delivering → closed, movable both ways, closing needs a reason), a key that files any email carrying `[KEY]` in its subject, a deal win that moves its project into delivery, a project 360 with coverage figures, and the composer's project scope for AI drafts; walkthrough in [docs/tutorials/run-your-first-project.md](docs/tutorials/run-your-first-project.md).
+- **Projects**: the body of work a deal is about — four phases (initiative → pursuing → delivering → closed, movable both ways, closing needs a reason), a key that files any email carrying `[KEY]` in its subject, a deal win that moves its project into delivery, a project 360 with coverage figures, and the composer's project scope for AI drafts; walkthrough in [user-guide/run-your-first-project.md](user-guide/run-your-first-project.md).
 - **Web UI**: the Vite/React app in `frontend/` — login, the scene-based
   cold start (website read or manual entry, resumable, with a separate
   three-stop path for an invited member), a collapsible labeled shell over
@@ -361,9 +361,14 @@ Findings are routed, not lost:
   the decision records. What binds a change here is enforced by a gate, and
   a gate that refuses names what to do instead.
 - **Anything found but not fixed** — a bug, a gap, a follow-up — becomes a
-  GitHub issue in this repo, labelled.
-- **Session state** — progress, in-flight work, pickup point — goes in
-  [STATUS.md](STATUS.md), updated at the end of every working session.
+  GitHub issue in this repo, labeled. With one exception that is not a
+  preference: an exploitable weakness goes to a private security advisory and
+  never to a public issue or pull request, because this repository is public and
+  a report that lands before the fix does puts every deployment at risk. See
+  [SECURITY.md](SECURITY.md).
+- **Open work** — in-flight work and where to pick up — lives in GitHub issues.
+  There is no status file: an issue is the only place a finding survives a
+  session, and the commit and PR are the record of what was done.
 
 ## Engineering rules learned from the review loop
 

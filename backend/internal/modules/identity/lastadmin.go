@@ -67,7 +67,7 @@ func lastActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 		SELECT count(*) FROM app_user u
 		JOIN role_assignment ra ON ra.user_id = u.id
 		JOIN role r ON r.id = ra.role_id
-		WHERE r.key = 'admin' AND u.status = 'active' AND u.archived_at IS NULL
+		WHERE r.key = 'admin' AND `+LiveMemberSQL("u")+`
 		  AND NOT u.is_agent
 		  AND u.id <> $1`, userID).Scan(&otherAdmins); err != nil {
 		return false, err

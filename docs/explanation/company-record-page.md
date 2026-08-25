@@ -22,13 +22,14 @@ Six endpoints serve one screen. Which one owns which part:
         ┌──────────────────────────────────────────────────────────┐
         │  header · state strip · health          suggestions card │
         │  contacts · deals · timeline            connections card │
-        │  "since your last visit"                account brief    │
+        │  work in flight · facts box             Ask Margince     │
         └──────────────────────────────────────────────────────────┘
              ▲                    ▲                    ▲
- GET /organizations/{id}/360   GET …/graph        GET|POST …/brief
-   ONE tx, gated per section,    one-hop            per-viewer, cached on
-   a refused section is          node/edge set,     its inputs; POST …/ask
-   NAMED in sections_omitted     per-group grants   reuses the same machinery
+ GET /organizations/{id}/360   GET …/graph        POST …/ask
+   ONE tx, gated per section,    one-hop            per-viewer, prepared
+   a refused section is          node/edge set,     questions over the same
+   NAMED in sections_omitted     per-group grants   assembly (…/brief too,
+                                                    deprecated, no UI)
              │
  POST …/view-ack             advance the visit baseline (explicit, human-only)
  POST …/suggestions/dismiss  per-user, "not this, not now"
@@ -96,11 +97,26 @@ assemble from it. A mode-resolution *failure* refuses too — serving native dat
 because the lookup broke is exactly the silent fallback the overlay module
 exists to prevent. See [overlay-augmentation.md](overlay-augmentation.md).
 
-## The account brief
+## The work in flight, and the account brief behind it
 
-`GET /organizations/{id}/brief` (and `POST` for the explicit refresh behind
-"outdated — refresh") is a short written brief over the same records:
-what this account is, where it stands, and what changed. It lives in
+The overview's lead card is **the account's work in flight**
+(`frontend/src/screens/companywork.tsx`): one line per open deal, one per live
+project, each carrying at most ONE reason it needs a person — an overdue task,
+or a commitment they made to us that is still open. The reasons are decorated
+server-side (`compose/org360/workattention.go`) in three set-based queries, and
+rendered through i18n templates over typed fields. Nothing on the card is
+model-written, which is what makes each line checkable against the record it
+links to. When nothing is in flight the growth-fit panel takes the slot.
+
+It replaced a written account brief in that position. On an account carrying
+several engagements the brief blended them: correspondence about one project
+became a sentence about another, and a figure read out of the blend had nowhere
+to be checked. A deal and a project are two stories, and the card's structure
+says so — two groups under their own subheads, never interleaved.
+
+`GET /organizations/{id}/brief` (and `POST` for an explicit rewrite) still
+serves that brief and is **deprecated**: no screen renders it. It stays because
+`POST …/ask` is served from the same handlers and the same assembly. It lives in
 `internal/compose/orgbrief` and owns one table, `org_brief`.
 
 **Assembled AS the caller.** The brief's input comes from running the 360

@@ -387,15 +387,23 @@ func TestOrgExistsAnswersTheEntrypointsQuestion(t *testing.T) {
 		}
 	}()
 
-	if _, err := conn.Exec(ctx, `INSERT INTO workspace (slug) VALUES ('org-probe')`); err != nil {
+	var probeWS string
+	if err := conn.QueryRow(ctx, `INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&probeWS); err != nil {
 		t.Fatalf("seeding a workspace: %v", err)
 	}
 	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "true\n" {
 		t.Fatalf("org-exists against a bootstrapped installation printed %q, want %q", out, "true\n")
 	}
 
-	if _, err := conn.Exec(ctx, `UPDATE workspace SET archived_at = now() WHERE slug = 'org-probe'`); err != nil {
+	// By id, not table-wide: the probe archives the row it seeded. The database
+	// holds one today, so a bare UPDATE would pass — and would keep passing
+	// while quietly meaning something else the moment it holds two.
+	tag, err := conn.Exec(ctx, `UPDATE workspace SET archived_at = now() WHERE id = $1`, probeWS)
+	if err != nil {
 		t.Fatalf("archiving the workspace: %v", err)
+	}
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("archiving the seeded workspace touched %d rows, want 1", tag.RowsAffected())
 	}
 	if out := mustMigrate(t, "org-exists", "--dsn", dsn); out != "false\n" {
 		t.Fatalf("org-exists counted an ARCHIVED organization as present (printed %q); the api's boot count ignores it, so the two disagree", out)

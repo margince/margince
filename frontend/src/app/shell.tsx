@@ -23,6 +23,7 @@ import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import {
   GRIDDED_RECORD_SCREENS,
+  GRIDDED_SCREENS,
   MOBILE_PRIMARY,
   NAV,
   type NavCounts,
@@ -647,10 +648,14 @@ export function Shell({
   // and a list belongs to the other family.
   const griddedRecord =
     route.id !== undefined && GRIDDED_RECORD_SCREENS.has(route.screen);
+  // The id-less half of the same policy: a screen that reads down but is not a
+  // record, so there is no id to key on. Home is the one today.
+  const griddedScreen = GRIDDED_SCREENS.has(route.screen);
   // A unit is NOT in this family, though it is leveled: the reading column is a
   // claim about the page's own content, and a unit's surface is the unit's to
   // lay out.
-  const gridded = route.screen === SETTINGS_SCREEN || griddedRecord;
+  const gridded =
+    route.screen === SETTINGS_SCREEN || griddedRecord || griddedScreen;
   const [collapsed, setCollapsed] = useState(
     () => readStored(COLLAPSE_KEY) === "1",
   );

@@ -575,7 +575,7 @@ func TestNewDeclaresTheFloors(t *testing.T) {
 }
 ```
 
-A test with no assertion is noise (T11) — assert the actual floors, not just that `New()` returns.
+A test with no assertion is noise (P3, tests-as-spec) — assert the actual floors, not just that `New()` returns.
 
 ## Compose and verify
 

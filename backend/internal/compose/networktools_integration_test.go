@@ -192,10 +192,34 @@ func seedOpenDeal(t *testing.T, e *integration.Env) ids.UUID {
 			VALUES ($1, 'Qualified', 0) RETURNING id`, pipelineID).Scan(&stageID); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `
+		if err := tx.QueryRow(ctx, `
 			INSERT INTO deal (name, stage_id, pipeline_id, owner_id, source, captured_by)
 			VALUES ('Threadless', $1, $2, $3, 'manual', 'human:test')
-			RETURNING id`, stageID, pipelineID, e.Rep1).Scan(&dealID)
+			RETURNING id`, stageID, pipelineID, e.Rep1).Scan(&dealID); err != nil {
+			return err
+		}
+		// One captured touch. The coverage rules hold their findings back
+		// until a deal has been contacted at all: engagement needs a two-way
+		// exchange, so on an untouched deal every seat is unengaged by
+		// construction and the warnings describe the calendar rather than the
+		// deal. Every caller of this helper is asking the sweep what it FOUND,
+		// so an untouched deal would give them a clean pipeline to assert on.
+		//
+		// The link is inserted and deal.last_activity_at is left alone: the
+		// move_last_activity trigger sets it from the activity, and a seed that
+		// wrote the column itself would be agreeing with a value production
+		// never produced.
+		var activityID ids.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO activity (kind, subject, source, captured_by)
+			VALUES ('note', 'Kickoff notes', 'manual', 'human:test')
+			RETURNING id`).Scan(&activityID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_link (activity_id, entity_type, deal_id)
+			VALUES ($1, 'deal', $2)`, activityID, dealID)
+		return err
 	}, "seeding the deal")
 	return dealID
 }

@@ -32,6 +32,10 @@ type pipelineRefs struct {
 	// dealsByCompany is filled after the deals are seeded, so an activity can
 	// link to the deal it moved.
 	dealsByCompany map[string][]string
+	// projectsByCompany holds the seeded projects, keyed by company domain and
+	// ordered oldest first, so an activity can link to the delivery work it
+	// was about.
+	projectsByCompany map[string][]seededProject
 	// anchorName and orgNameByID name the parties a document prints.
 	anchorName  string
 	orgNameByID map[string]string
@@ -63,16 +67,17 @@ func (r pipelineRefs) timestamp(days int) string {
 // once, so each phase is a straight write rather than a search.
 func loadPipelineRefs(c *client, cfg demoConfig, now time.Time) (pipelineRefs, error) {
 	refs := pipelineRefs{
-		contractsByRef:   cfg.Contracts,
-		dealsByCompany:   map[string][]string{},
-		ownerRefByDomain: map[string]string{},
-		orgNameByID:      map[string]string{},
-		domainByOrgID:    map[string]string{},
-		anchorName:       cfg.Anchor.LegalName,
-		usersByRef:       map[string]string{},
-		orgsByDom:        map[string]string{},
-		stagesByNm:       map[string]string{},
-		now:              now,
+		contractsByRef:    cfg.Contracts,
+		dealsByCompany:    map[string][]string{},
+		projectsByCompany: map[string][]seededProject{},
+		ownerRefByDomain:  map[string]string{},
+		orgNameByID:       map[string]string{},
+		domainByOrgID:     map[string]string{},
+		anchorName:        cfg.Anchor.LegalName,
+		usersByRef:        map[string]string{},
+		orgsByDom:         map[string]string{},
+		stagesByNm:        map[string]string{},
+		now:               now,
 	}
 
 	var users struct {
@@ -149,7 +154,7 @@ func seedLeads(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (int,
 		// re-running finds the same lead rather than filing a second one.
 		body := jsonBody{
 			"source":        seedSource,
-			"source_system": "seed",
+			"source_system": seedSourceSystem,
 			"source_id":     lead.Ref,
 			"status":        lead.Status,
 		}

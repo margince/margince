@@ -32,7 +32,7 @@ SEED_DSN ?= postgres://margince_owner:dev@localhost:15432/margince
 # every company renders as a placeholder initial.
 MINIO_PORT ?= 29000
 
-.PHONY: help install ai-routing-local dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install ai-routing-local dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -74,7 +74,7 @@ ai-routing-local:
 ## #1639 is about: a backend-only author never runs the lane that would
 ## otherwise catch a stranded frontend schema. On a pull request CI covers the
 ## same ground from the other side, through fe-quality's fe-drift.
-check-backend: check-craft-doc craft-test test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze
+check-backend: check-craft-doc craft-test test-dev-isolation test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze
 	$(MAKE) -C backend check
 
 ## check — the full merge gate: backend + frontend
@@ -147,6 +147,14 @@ dev-fresh:
 ## just that one. DROP=1 also drops the per-slug databases (never `margince`).
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
+
+## dev-sweep — clear EVERY margince dev stack on this machine: kill every
+## api/worker/vite (recorded, orphaned, or belonging to another worktree) and
+## forget their claims. `DROP=1` also drops every per-slug margince_dev_*
+## database. This is the old bare-`make dev` behaviour, now explicit: `make dev`
+## starts your worktree's stack and leaves everyone else's alone.
+dev-sweep:
+	@bash scripts/dev.sh sweep "" $(if $(filter 1,$(DROP)),--drop,)
 
 ## dev-logs — follow the dev stack's log, coloured per process (api/worker/fe)
 ## and per severity, with the job-queue heartbeat hidden. ROLE=<api|worker|fe|boot>
@@ -275,8 +283,8 @@ ext-imports:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
 		scripts/ext-imports.test.ts
 
-## seed-dev — create/refresh the demo workspace (demo-workspace,
-## admin@demo.test / demo-password-123) through the public API, then seed
+## seed-dev — create/refresh the demo installation (admin@demo.test /
+## demo-password-123) through the public API, then seed
 ## demo FX rates (SQL — fx_rate has no API). Stack must be running
 ## (make dev). Idempotent; re-runs log in instead of re-bootstrapping.
 seed-dev:
@@ -602,6 +610,14 @@ test-api-entrypoint:
 test-dev-dsn:
 	@./scripts/test-dev-dsn.sh
 
+## test-dev-isolation — prove two worktrees get two stacks: the slug comes from
+## the worktree, the Redis database and the port pair are CLAIMED from one
+## machine-global registry rather than hashed, and the object bucket is
+## per-stack. The failure it replaces was silent — two stacks sharing one Redis
+## consumer group, each acking events the other never saw.
+test-dev-isolation:
+	@./scripts/test-dev-isolation.sh
+
 ## test-scheduled-report — prove the scheduled lane still files ONE issue per
 ## failing check: stub the tracker, and require the reporter to find an already
 ## open issue however far down the list it sits. A dedupe that misses reads
@@ -687,6 +703,13 @@ test-contract-frontend-drift:
 ## up claimed twice, which the per-tree loader test cannot see.
 migration-versions:
 	@./scripts/check-migration-versions.sh
+
+## test-migration-versions — prove the version gate fires on each defect it
+## names and, above all, that a DECLARED baseline reset is admitted only when the
+## namespace really is one: reset_admitted decides whether that gate enforces or
+## merely reports, and the declaration lives permanently in ci.yml.
+test-migration-versions:
+	@./scripts/test-migration-versions.sh
 
 ## test-lanes — hermetic-unit-lane enforcement: no untagged test may open a
 ## real Postgres/Redis; real-infra suites carry //go:build integration.

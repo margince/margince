@@ -24,6 +24,8 @@ type demoConfig struct {
 	Leads            []demoLead          `json:"leads"`
 	Activities       []demoActivity      `json:"activities"`
 	Contracts        []demoContract      `json:"contracts"`
+	DealRooms        []demoDealRoom      `json:"deal_rooms"`
+	Projects         []demoProject       `json:"projects"`
 	Products         []demoProduct       `json:"products"`
 	Offers           []demoOffer         `json:"offers"`
 	Consent          []demoConsent       `json:"consent"`
@@ -204,6 +206,37 @@ type demoContract struct {
 type demoCancelTerms struct {
 	NoticeInDays    int `json:"notice_in_days"`
 	EffectiveInDays int `json:"effective_in_days"`
+}
+
+// demoProject is one piece of delivery work, named by the dataset rather than
+// derived from the company name.
+//
+// It exists because the generated name — "<Company> — Einführung" and its two
+// translations — says only that a project happened, never what it was. A
+// dataset entry says "Ersatzteilportal", "Cong dat hang dai ly", "Phase 1 →
+// Phase 2", which is the difference between a list of rows and a list of
+// projects.
+//
+// Phase is the phase the project ENDS in, not one it is created in: the
+// seeder advances through initiative → pursuing → delivering → closed and
+// stops at this one, so the phase history reads as work. The close reason is
+// NOT carried here — it follows the account's language, from
+// company-locale.json, via projectCloseReason.
+//
+// Company is a domain under siteresults/, the same as everywhere else. A
+// company the dataset does not name still gets the generated project from the
+// profile plan, so this array names the accounts worth telling a story about
+// and leaves the long tail alone.
+type demoProject struct {
+	Ref         string `json:"ref"`
+	Company     string `json:"company"`
+	Name        string `json:"name"`
+	Phase       string `json:"phase"`
+	Description string `json:"description"`
+	// StartedInDays is an offset like every other date in this file: negative
+	// is the past, which is where a delivery project's start always is.
+	StartedInDays int    `json:"started_in_days"`
+	Owner         string `json:"owner"`
 }
 
 type demoProduct struct {

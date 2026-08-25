@@ -133,10 +133,17 @@ func hashIndex(key string, n int) int {
 func setOrganizationOwner(c *client, orgID, ownerID string) (bool, error) {
 	var current struct {
 		OwnerID string `json:"owner_id"`
+		Source  string `json:"source"`
 		Version int    `json:"version"`
 	}
 	if err := c.get("/v1/organizations/"+orgID, nil, &current); err != nil {
 		return false, fmt.Errorf("reading it back: %w", err)
+	}
+	// A company somebody else owns the record for keeps its owner. Reassigning
+	// an account by hand is a normal thing to do in a demo installation, and a
+	// re-seed that undid it would make the seeder unsafe to re-run.
+	if !seederOwns(current.Source) {
+		return false, nil
 	}
 	if current.OwnerID == ownerID {
 		return false, nil
@@ -162,10 +169,16 @@ func setStaffOwner(c *client, orgID, ownerID string, mode runMode) (int, error) 
 		}
 		var current struct {
 			OwnerID string `json:"owner_id"`
+			Source  string `json:"source"`
 			Version int    `json:"version"`
 		}
 		if err := c.get("/v1/people/"+personID, nil, &current); err != nil {
 			return changed, fmt.Errorf("reading person %s: %w", personID, err)
+		}
+		// Same rule as the company above: a hand-added or hand-edited person
+		// keeps their owner.
+		if !seederOwns(current.Source) {
+			continue
 		}
 		if current.OwnerID == ownerID {
 			continue
@@ -207,4 +220,21 @@ func employeesOf(c *client, orgID string) ([]string, error) {
 		return nil, fmt.Errorf("listing employments: %w", err)
 	}
 	return out, nil
+}
+
+// seederOwns says whether a record's `source` is one this tool wrote.
+//
+// The three phases that CORRECT a record already on file — owner, lifecycle,
+// relationship types — consult this first. They are replace-writes: they
+// compute the value the dataset says a company should have and PATCH it when
+// the live row disagrees. On a record somebody edited by hand that is not
+// convergence, it is reverting their edit, and a demo installation is exactly
+// where such edits live.
+//
+// So those phases now only correct rows this seeder created. A company added
+// through the UI, or one whose source a person changed, keeps whatever owner,
+// lifecycle and types it carries. Creation is untouched: a record the dataset
+// names and the database lacks is still created.
+func seederOwns(source string) bool {
+	return source == seedSource || source == inventedPersonSource
 }

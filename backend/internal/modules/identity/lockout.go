@@ -101,7 +101,7 @@ func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaint
 	err := tx.QueryRow(ctx,
 		`SELECT id, password_hash, display_name, seat_type, failed_login_count, locked_until, updated_at
 		 FROM app_user
-		 WHERE lower(email) = lower($1) AND status = 'active' AND archived_at IS NULL`,
+		 WHERE lower(email) = lower($1) AND `+LiveMemberSQL("")+``,
 		email).Scan(&account.UserID, &hash, &account.DisplayName, &account.SeatType,
 		&lock.FailedCount, &lock.LockedUntil, &lock.LastFailure)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && hash == nil) {
@@ -172,7 +172,7 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		var state lockoutState
 		err := tx.QueryRow(ctx,
 			`SELECT id, failed_login_count, locked_until, updated_at FROM app_user
-			 WHERE lower(email) = lower($1) AND status = 'active' AND archived_at IS NULL
+			 WHERE lower(email) = lower($1) AND `+LiveMemberSQL("")+`
 			 FOR UPDATE`,
 			email).Scan(&userID, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
 		switch {

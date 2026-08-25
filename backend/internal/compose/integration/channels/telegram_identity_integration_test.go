@@ -222,7 +222,7 @@ func (c *telegramEnv) seedPerson(t *testing.T, name string, phone *string) strin
 // there (which AC-TG-3 already proves).
 func (c *telegramEnv) bindChannelIdentity(t *testing.T, person string, identity connector.ChannelIdentity) {
 	t.Helper()
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by)
 			VALUES ($1, $2, $3, $4, 'telegram', 'connector:telegram')`,
@@ -355,7 +355,7 @@ func TestTwoConcurrentFirstMessagesYieldOnePersonAndTwoActivities(t *testing.T) 
 	// across two people is the failure this convergence exists to prevent.
 	var links int
 	var linkedPeople int
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*), count(DISTINCT l.person_id)
 			  FROM activity_link l JOIN activity a ON a.id = l.activity_id

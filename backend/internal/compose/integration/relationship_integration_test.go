@@ -37,7 +37,6 @@ type relEnv struct {
 func setupRelationships(t *testing.T) *relEnv {
 	t.Helper()
 	e := apptest.SetupApp(t)
-	e.Slug = "rel-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Rel E2E", "rel@fable.test", "Admin")
 	var person, org struct {
 		ID string `json:"id"`

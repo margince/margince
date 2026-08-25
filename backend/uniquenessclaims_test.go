@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind claim H1
+
 package backendarch
 
 // A comment that says a declaration is the ONLY one of its kind is not
@@ -57,8 +59,8 @@ package backendarch
 // never improve, which is the opposite of the point. `registeredDebt` is the
 // line where that growth is agreed to.
 //
-// The register is 646 lines with no reasons, and that is deliberate rather than
-// sloppy: a reason per entry would be 646 rationalisations written by somebody
+// The register is 642 lines with no reasons, and that is deliberate rather than
+// sloppy: a reason per entry would be 642 rationalisations written by somebody
 // who has not audited the claim, which is worse than an honest count of what is
 // unaudited. The number is the point. It is meant to go down.
 
@@ -399,7 +401,7 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 //
 // Lowering it is the point of the file it counts; raising it is legal and is
 // what a widened detector shape requires.
-const registeredDebt = 646
+const registeredDebt = 642
 
 func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
 	keys := readRegister(t)

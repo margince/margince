@@ -19,7 +19,7 @@ internal/compose/aicert/corpus/<task>/*.yaml     one or more scenarios
 
 Both `.go` files you add here (the case and its test) need the two-line BUSL-1.1
 SPDX header every hand-written Go file in this repo carries — see
-[AGENTS.md § License headers](../../AGENTS.md); `make check` fails a file that
+`AGENTS.md § License headers`; `make check` fails a file that
 skips it.
 
 ## What a reply can be — the four outcomes

@@ -113,8 +113,9 @@ That makes a typo in the migration's JSON path far worse than a missing grant. I
 you write `'{objects,webook_subscription}'`, the migration succeeds, the object is
 never granted, **and every user holding that role can no longer log in** — the
 document now names an object outside the closed set. Spell the path from the same
-string literal you added to `coreObjects`, and prove it by running the replay in
-step 6 rather than by reading it twice.
+string literal you added to `coreObjects`, and prove it by running the integration
+lane in step 6 rather than by reading it twice — a typo'd path leaves the object
+ungranted, which is what the convergence arms fail on.
 
 ## 4. Regenerate the published matrix
 
@@ -174,27 +175,47 @@ Run both lanes, and know which one proves what:
   matches the seeded documents. Catches step 4 not run.
 - `TestEveryStoreEntryPointIsAuthGated` — no ungated store entry point. Catches
   step 5 missing on the server.
-- `TestLegacyInstallFixtureIsTheInitialCommitVocabulary`,
-  `TestLegacyInstallFixtureReproducesTheInitialCommitGrants`,
-  `TestMidlifeInstallFixtureSitsBetweenTheInitialCohortAndHead`
-  (`backend/rbaclegacyinstall_test.go`, `backend/rbaclegacydocument_test.go`) —
-  the replay's *starting state* is still faithfully derived from git history, so
-  nobody can make step 6's replay pass by editing the fixture to already contain
-  the grant the migration failed to deliver.
 - `make check-fe` — the TypeScript build proves the new object is expressible in
   the capability hooks.
 
 **`make test-integration`** — the real-Postgres lane, and **the only thing that
-proves the backfill landed on an old install**.
-`TestUpgradingALegacyInstallationYieldsTheSeededMatrix`
-(`backend/migrations/rbac_upgrade_replay_integration_test.go`) seeds the role
-documents an old installation actually held, migrates it to head, and asserts the
-end state equals the matrix the server seeds today. It executes the obligation
-rather than approximating it — which is why no list of objects, and no scan of
-the migration SQL for `'{objects,<name>}'`, survives in that gate. Two
-installations are replayed, an oldest-possible one and a mid-life one, because a
-conditionally-written backfill only has somewhere to fail on a document that
-already holds half the vocabulary.
+proves the backfill landed on an old install**. All three gates live in
+`backend/internal/compose/integration/rbacseedparity_integration_test.go` and
+they EXECUTE the obligation rather than scanning for it, which is why no list of
+objects and no grep for `'{objects,<name>}'` decides any of them:
+
+- `TestTheRealBootstrapSeedsTheDocumentedMatrix` — the real bootstrap writes the
+  documented matrix. Catches step 1 or step 4 not landing on a fresh install.
+- `TestEveryRBACBackfillConvergesOnTheSeededMatrix` — each backfill, replayed
+  against today's matrix minus its own objects, converges back onto the matrix.
+  This is the arm that ISOLATES: a failure names your migration. It is where a
+  typo'd jsonb path from step 3, a wrong verb, or a `WHERE` clause that matches
+  no rows shows up.
+- `TestTheBackfillsComposeFromTheOldestUpgradableInstallation` — every backfill
+  replayed in version order over the documents an installation bootstrapped at
+  the migration baseline really held. **This is the arm that catches step 3
+  missing entirely**, for any object added since that baseline. The isolating arm
+  cannot: it derives its starting state from the migrations, so an object no
+  migration mentions is never absent from that state and its missing backfill is
+  invisible.
+
+The composed arm's starting state is a committed fixture,
+`backend/migrations/testdata/rbac_baseline_era_defaults.json` — and the reason it
+is safe to commit is a second gate, not the file itself. Editing that fixture is
+exactly how a backfill that does not work is made to look like one that does: move
+the object into the starting state and the convergence it never delivered is
+already there. So `TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded`
+(`backend/rbacbaselineerafixture_test.go`, unit lane) pins it to
+`git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json` —
+compared as decoded JSON, so re-indentation is not a difference but any changed
+key or value is — and
+proves that commit really is the consolidation floor rather than a commit somebody
+named — otherwise the pin could be moved forward instead of the fixture being
+edited, with the same effect. Regenerate it with the command that gate's failure
+message prints; never by hand.
+
+It lives in the unit lane because reading history needs a full checkout, and the
+integration shards check out shallow.
 
 Commit the policy change, the contract, the migration pair, the regenerated
 matrix and the UI binding together — they are one change, and any one of them

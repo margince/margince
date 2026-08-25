@@ -190,19 +190,20 @@ test.describe("company record — the mockup's page shape", () => {
   });
 
   // "Today on this account" and "Worth doing next" merged into one daily
-  // brief (companytoday.tsx), which LEADS the overview column. The account
-  // brief ("The account, in short") follows it in the same column.
+  // brief (companytoday.tsx), which LEADS the overview column. The account's
+  // work in flight ("Was gerade läuft") follows it in the same column, in the
+  // slot a written account brief used to hold.
   //
   // Anchored on the rendered HEADING rather than a class: NextSteps draws a
   // bare `.card.co-card` with nothing to name it by, so a class assertion here
   // would pass against any page — including one that still renders it.
   // The strings are the German chrome the suite pins via `locale: de-DE`.
-  test("the overview renders the account brief, but not next steps or the ask panel", async ({
+  test("the overview renders the work in flight, but not next steps or the ask panel", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
     await expect(
-      page.getByRole("heading", { name: "Der Account, kurz gefasst" }),
+      page.getByRole("heading", { name: "Was gerade läuft" }),
     ).toHaveCount(1);
     for (const heading of ["Nächste Schritte", "Diesen Account befragen"]) {
       await expect(page.getByRole("heading", { name: heading })).toHaveCount(0);
