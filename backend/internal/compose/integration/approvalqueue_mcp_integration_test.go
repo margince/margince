@@ -384,6 +384,11 @@ func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
 			`"phones":[{"phone":"`+shared+`","phone_type":"work","is_primary":true}]}}`)
 
 	var envelope struct {
+		Trust    string `json:"trust"`
+		Evidence []struct {
+			RecordType string `json:"record_type"`
+			RecordID   string `json:"record_id"`
+		} `json:"evidence"`
 		Warnings []struct {
 			Code    string `json:"code"`
 			Message string `json:"message"`
@@ -436,6 +441,29 @@ func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
 	if !warned {
 		t.Errorf("no %s warning on the answer, so a model summarising this call would report a clean create: %+v",
 			agents.CodeDuplicateFiled, envelope.Warnings)
+	}
+
+	// The disclosed record is CITED. Naming a record to an agent is handing it
+	// over, and this surface charges the read bound for that — a create that
+	// names five other records for the price of the one it wrote would be the
+	// cheapest read here, and repeating it walks the workspace for free.
+	var cited bool
+	for _, e := range envelope.Evidence {
+		if e.RecordID == first.ID {
+			cited = true
+		}
+	}
+	if !cited {
+		t.Errorf("the disclosed record %s is not in the answer's evidence, so it was handed over uncharged: %+v",
+			first.ID, envelope.Evidence)
+	}
+
+	// And the answer is labelled for what it carries. The evidence QUOTES the
+	// other record — a number, a name — and this call never read that row's
+	// provenance, so it cannot claim the tier of the record it just wrote.
+	if envelope.Trust != "t2" {
+		t.Errorf("trust = %q, want t2: the answer carries values off a record whose provenance it did not read",
+			envelope.Trust)
 	}
 }
 

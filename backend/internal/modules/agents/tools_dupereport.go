@@ -36,6 +36,7 @@ import (
 	"context"
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
 
 // DuplicateCandidate is one open review-queue pair naming a record this call
@@ -159,5 +160,25 @@ func (t createRecord) reportDuplicates(ctx context.Context, recordType string, i
 	// record's id, which no sentence should make it parse out of prose.
 	w := duplicateWarning(len(found))
 	noteWarning(ctx, w.Code, w.Message)
+
+	for _, d := range found {
+		// EACH disclosed record is cited and CHARGED, on this surface's own rule:
+		// naming a record to an agent is handing that record over, and a tool
+		// that names records without charging is the cheapest read on the
+		// surface. Without this a create discloses up to five other records for
+		// the price of the one it wrote, and repeating the create walks the
+		// workspace for free — the exact shape MCP-SESS-READS exists to bound.
+		if other, err := ids.Parse(d.OtherRecordID); err == nil {
+			noteEvidence(ctx, datasource.EntityType(recordType), other)
+		}
+	}
+	// The evidence QUOTES the other record — a phone number, a name, an address
+	// as it is stored there — and this call never read that row's provenance, so
+	// it cannot know what tier the values arrived at. A contact captured off an
+	// inbound mail is T2, and carrying its number under the T1 envelope of a
+	// record a human just typed would raise the trust of the untrusted half.
+	// Derived content is the honest label for material whose provenance this
+	// answer did not read.
+	noteDerivedContent(ctx)
 	return found
 }

@@ -70,7 +70,11 @@ func decodeEvidence(raw json.RawMessage) []agents.DuplicateEvidence {
 	// typed string member would fail the whole row on the first numeric value.
 	var rows []evidenceRow
 	if err := json.Unmarshal(raw, &rows); err != nil {
-		return nil
+		// An EMPTY list, not nil: the schema advertises an array, and `null`
+		// there reads as "not computed" where the truth is "the snapshot could
+		// not be read". The pair itself is still the finding, so losing the
+		// detail must not lose the report.
+		return []agents.DuplicateEvidence{}
 	}
 	out := make([]agents.DuplicateEvidence, 0, len(rows))
 	for _, r := range rows {
@@ -114,9 +118,17 @@ func (v *evidenceValue) UnmarshalJSON(b []byte) error {
 		v.s = strconv.FormatFloat(n, 'f', -1, 64)
 		return nil
 	}
-	// Null, or a shape nothing writes. Empty, never the word "null" on
-	// somebody's screen.
-	v.s = ""
+	if string(b) == jsonNull {
+		// How a one-sided signal spells "the other record has nothing here".
+		// Empty, never the word "null" on somebody's screen.
+		v.s = ""
+		return nil
+	}
+	// A bool, an array, an object — a shape nothing writes. It is reported
+	// rather than blanked, because a value that VANISHES reads to a reviewer as
+	// "this axis had nothing", which is a different and more comforting claim
+	// than the truth. The raw JSON is short and is what a bug report needs.
+	v.s = "unreadable: " + string(b)
 	return nil
 }
 
