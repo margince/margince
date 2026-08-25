@@ -56,22 +56,31 @@ own scheduled housekeeping is neither. `.provenance-unknown` borrows nobody's
 colour and reads as the absence it is. A sweep drawn in the AI colour would tell
 a reader a model decided something there.
 
-### The orb is not an exception to this, it answers a different question
+### The orb is the same claim, made loudest
 
-The agent Core and the lit window edge draw in the Core palette (jade, mint,
-lime, plus amber, red and grey for the states that are not work), not in
-`--ai`. That is deliberate and it is the third carve-out `tokens.css` documents:
+The agent Core and the lit window edge draw in the Core palette, and its working
+tones are the AI indigo: `--orbBody` is declared as `var(--ai)` so the two cannot
+drift, with `--orbGlow`, `--orbMid` and `--orbBright` around it. It is a family
+rather than three uses of `--ai` because a lit glass body needs tones a flat UI
+accent cannot supply: a light end to glow, a bright end for the one state with
+energy, a dark to be seen against.
 
-- **The Core palette shows the agent AS ITSELF**: its presence, and which of
-  eight states it is in. It is a lit glass body, and it needs a light tone to
-  glow and a dark one to be seen against, which a flat UI accent cannot supply.
-  The greens sit around `--accent` so a re-themed brand still moves the orb.
-- **`--ai` marks the agent's OUTPUT sitting inside human UI**: a decision card
-  in a person's queue, a staged field value, the workbench chrome around a run.
+These were greens sitting around `--accent` until 2026-08. What that bought was a
+re-themed brand that moved the orb with it; what it cost was the thing worth
+more, a reader learning ONE colour for "a machine did this" and then meeting the
+loudest machine on the surface wearing another.
 
-One is the agent; the other is the agent's work in somebody else's hands. Do not
-repaint either into the other's colour to make the product look consistent: the
-inconsistency is the information.
+The tones are named by ROLE, not by hue, and that is the second half of the same
+lesson: they were `--orbMint` / `--orbJade` / `--orbLime`, and a token called Jade
+holding an indigo lies to whoever reads it next. A role name survives the next
+repaint.
+
+**The three states that are not work keep their own hues.** `--orbAmber` asks a
+person for something, `--orbRed` failed, `--orbGrey` cannot reach a source, and
+none of them goes indigo. Provenance and outcome are different questions: an orb
+that turned indigo when a run failed would say who was working and stop saying
+how it went. `--orbRed` is also deliberately not `--danger`, which is UI chrome
+and goes muddy at 34px.
 
 **Colour is never the only signal.** Same standing rule as `Callout`: the words
 carry the meaning. An agent-authored surface says so in text (a
@@ -145,7 +154,7 @@ is what makes it findable at a glance for the readers who can see it.
 | **`DecisionDeck`** | **The morning queue of staged decisions, answered one at a time. STAGE, THEN COMMIT is the whole design and not a flourish: a recorded verdict is un-undoable (approving mints a single-use token and executes the effect), so a surface that sent on the swipe would be one where a flick of the wrist sends an email. A swipe or a key stages LOCALLY, the tray shows what is waiting, and nothing leaves the browser until an explicit commit — which makes the tray the undo the backend does not have. Un-staging is free until that press. Four inputs, one vocabulary: drag right/left/up/down and `→ ← ↑ ↓` both go through `dragVerdict`/`keyVerdict` (`U` un-stages the last, `Enter` commits, and staging the last card hands focus to the commit control, because the keyboard surface leaves with the card). Two peeked edges and a count say what is still behind; a `bundle_id` group collapses into ONE decision with its recipients behind an expander, because the API decides a bundle as a unit; `SegmentedControl` switches to the list form, which is the DEFAULT under `prefers-reduced-motion` — a deck IS its motion, and one without it is a list drawn the expensive way. Motion is CSS transforms on the six `tokens.css` durations (there is no motion library in this repo); the card that leaves is a blank silhouette, so nothing a reader or a test can reach is on screen twice — it leaves FROM the point the hand released and in the verdict's own colour, and past the threshold the live card carries a ring in that colour, so which direction means what is learned while the finger is still down. The moving box is keyed on the card and the keyboard surface around it is not: replacing the card cannot carry a reader's tab stop away with it, and the transform a swipe left behind cannot spring back on the card that has just arrived. Emptied, it shows the cleared plate: the count decided and the time, from the deck's own memory of what it watched leave. `title` puts the deck's heading on the toggle's own row through `SectionHeader`, because a title above the deck and a control inside it are two rows saying one thing** | `decisiondeck.tsx` | ✅ |
 | `RoleBadge` / `FieldGuard` | A principal's role, and a withheld value that reads as withheld rather than absent | `rbac.tsx` | — |
 | `ExplainNumber` | A converted aggregate opening into its contributing rows (FX lineage) | `explain.tsx` | ✅ |
-| `MarginceCoreScene` | The product's one piece of AI identity: a glass ball with four ribbons turning inside it, drawn on the GPU, in the closed five-state vocabulary of the agent's work lifecycle (idle · ingest · working · warning · error). State is MOTION first — one behaviour each, from the table in `margince-core-motion.ts` — and colour second; only the two that stop leave the green. `aria-hidden`, and it carries no click. Callers pass `state` and never restyle: `size` picks the hero dress or the chrome one, `surface` says whether it is lit against something dark or opaque on paper, and sizing goes through `--coreSize` / `--coreGlass` / `--coreHalo`. A host without WebGL2 (jsdom included) gets the static dress, same `data-core-state`, no motion. `margince-core-shader.ts` (the GLSL) / `margince-core-gl.ts` (context and uniforms) / `margince-core-engine.ts` (the loop) are its internals, not a caller's API | `margince-core.tsx` | ✅ |
+| `MarginceCoreScene` | The product's one piece of AI identity: a glass ball with four ribbons turning inside it, drawn on the GPU, in the closed five-state vocabulary of the agent's work lifecycle (idle · ingest · working · warning · error). State is MOTION first — one behaviour each, from the table in `margince-core-motion.ts` — and colour second; only the two that stop leave the indigo. `aria-hidden`, and it carries no click. Callers pass `state` and never restyle: `size` picks the hero dress or the chrome one, `surface` says whether it is lit against something dark or opaque on paper, and sizing goes through `--coreSize` / `--coreGlass` / `--coreHalo`. A host without WebGL2 (jsdom included) gets the static dress, same `data-core-state`, no motion. `margince-core-shader.ts` (the GLSL) / `margince-core-gl.ts` (context and uniforms) / `margince-core-engine.ts` (the loop) are its internals, not a caller's API | `margince-core.tsx` | ✅ |
 | `MarginceWorkbench` | The in-app agent workbench: steps, runtime chip, the Core in context | `margince-workbench.tsx` | — |
 | `PipelineBoard` / `DealCard` | The pipeline surface and its cards. A card's company slot has THREE readings and the caller declares which: `org` names it, `orgWithheld` says the payload refused it, and an empty `org` with no flag is the one reading that draws nothing. The refusal is drawn HERE, as `FieldGuard`'s mask — the same control the deals table's company cell draws — because a caller handing in its own words for it is how one reading ends up with two spellings, and a monogram cut from the word "withheld" would be a mark no company has | `composed.tsx` | ✅ (`RecordView → BoardInSurface`, `BoardWithWithheldCompany`) |
 | **`PageZones`** | **The page's columns, and the ONE grid that draws them: a work column plus up to two rails, in four named shapes (`single` / `rail` / `aside` / `both`). The work column always takes the largest share, folds to full width at 1200px while staying FIRST (a reader wants what is happening, not the firmographics), and the rails stack under it in one column at 720px. It carries the grid and nothing else — no name, no mark, no badge, no tabs — which is what lets a page that is not a record use it; `RecordView` composes it rather than owning it. `shape` names the TEMPLATE and the slots carry the content, because a grid track does not collapse when its item is missing: passing `both` with one rail draws an empty column** | `pagezones.tsx` | ✅ |

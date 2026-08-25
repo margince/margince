@@ -74,11 +74,17 @@ Two things go with it:
 - **`--aiText` for text over `--aiLight`, never `--ai`.** The two are close
   enough that the strong tone fails AA on the ground its own family paints.
 
-**The orb and the window edge are not exceptions.** They draw in the Core
-palette (jade, mint, lime, plus amber, red, grey), and the reason is in
-`tokens.css`: the Core shows the agent AS ITSELF and needs tones a flat UI accent
-cannot supply, while `--ai` marks the agent's output sitting inside human UI. Do
-not repaint either into the other's colour for consistency's sake.
+**The orb and the window edge make the same claim, loudest.** Their working
+tones ARE the AI indigo: `--orbBody` is declared as `var(--ai)`, with
+`--orbGlow` / `--orbMid` / `--orbBright` around it because a lit glass body needs
+tones a flat UI accent cannot supply. They were greens around `--accent` until
+2026-08; a re-themed brand moving the orb was not worth a reader meeting two
+colours for one meaning. The tones are named by role rather than by hue for the
+same reason a repaint taught: `--orbJade` holding an indigo is a name that lies.
+
+**`--orbAmber`, `--orbRed` and `--orbGrey` stay put.** Asks-you-something,
+failed, and cannot-reach-a-source are OUTCOME, not provenance, and an orb that
+went indigo when a run failed would stop saying how it went.
 
 The full section, with the token table and the provenance triad, is
 [`src/design-system/README.md`](src/design-system/README.md) under *Indigo says a

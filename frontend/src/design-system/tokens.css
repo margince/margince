@@ -118,30 +118,45 @@
   --aiMed: rgba(91, 97, 214, 0.3);
   --aiText: #3f45b0;
 
-  /* The Core's palette — the eight states of the agent orb, and nothing else in
-   * the product. Read only through the Core's own --coreC1/2/3 triples
-   * (margince-core.css); a button in --orbLime is a second accent.
+  /* The Core's palette: the states of the agent orb, and nothing else in the
+   * product. Read only through the Core's own --coreC1/2/3 triples
+   * (margince-core.css); a button in --orbBright is a second accent.
    *
-   * Its own family for the reason §2 gives AI its own hue: the Core is the one
-   * surface that shows the agent AS ITSELF, and a lit glass body needs tones a
-   * primary-action colour cannot supply — a light end to glow, a dark to be seen
-   * against. The greens sit around --accent (which IS the body tone for every
-   * working state, so a re-themed brand still moves the orb), and the three
-   * non-greens are the states that are not work: amber asks a person for
-   * something, grey cannot reach a source, red failed.
+   * The working tones sit around --ai, and that is the whole point of them. §2
+   * gives AI its own indigo because an indigo tint is a claim about provenance,
+   * and the orb is the surface making that claim loudest: it IS the agent. These
+   * tones were greens sitting around --accent until 2026-08, which bought a
+   * re-themed brand that moved the orb and cost the one thing worth more, a
+   * reader learning a single colour for "a machine did this". The link to --ai is
+   * declared rather than copied (--orbBody), so the two cannot drift.
    *
-   * --orbRed is deliberately not --danger. --danger is UI chrome — a destructive
-   * button, an error notice — and the orb's red has to survive being a 34px
+   * A lit glass body still needs tones a flat UI accent cannot supply, which is
+   * why this is a family and not three uses of --ai: a light end to glow, a
+   * bright end for the one state with energy, a dark to be seen against.
+   *
+   * Named by ROLE, not by hue. They were --orbMint/Jade/Lime, and a token called
+   * Jade holding an indigo is a name that lies to the next reader; a role name
+   * survives the next repaint.
+   *
+   * The three tones that are NOT work keep their own hues, because those are
+   * status and status is a different question from provenance: amber asks a
+   * person for something, red failed, grey cannot reach a source. An orb that
+   * went indigo when it failed would say who was working and stop saying how it
+   * went.
+   *
+   * --orbRed is deliberately not --danger. --danger is UI chrome (a destructive
+   * button, an error notice) and the orb's red has to survive being a 34px
    * glowing ball, where the chrome red goes muddy. Two reds is one more than
    * anyone wants; the alternative was a failed run that looks like a busy one. */
-  --orbMint: #7fd6b0;
-  --orbJade: #2fbe8f;
-  --orbLime: #a3e635;
+  --orbBody: var(--ai);
+  --orbGlow: #b4b8f7;
+  --orbMid: #7076e2;
+  --orbBright: #8a80ff;
   --orbAmber: #d9a23b;
   --orbRed: #d93b2b;
   --orbGrey: #a5aba9;
-  --orbInk: #33403a;
-  --orbDeep: #1b2e26;
+  --orbInk: #2e3168;
+  --orbDeep: #1a1c40;
 
   --success: #15803d;
   --successBg: rgba(34, 197, 94, 0.12);

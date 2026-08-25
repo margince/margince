@@ -11,9 +11,11 @@
  * changing what one means is one line.
  *
  * State DOES change the hue here, and the change is the design rather than a
- * drift: the agent's work lifecycle is greens (idle, ingest, working), a
- * problem it cannot resolve alone is amber, and a failed run is the one red
- * in the product.
+ * drift: the agent's work lifecycle is the AI indigo (idle, ingest, working),
+ * which is the same claim --ai makes everywhere else and here it is the agent
+ * itself making it; a problem it cannot resolve alone is amber, and a failed run
+ * is the one red in the product. The two that stop keep their own hues because
+ * how a run WENT is a different question from who was running it.
  *
  * `.core-shell` (`.core-rim` + `.core-glass`) is the STATIC DRESS: what a host
  * without WebGL2 shows, and what a lost GL context falls back to. It carries
@@ -39,9 +41,9 @@
   --coreGlass: 172px;
   /* The state triple, idle's by default: a Core with no data-core-state
      renders as rest rather than as nothing. */
-  --coreC1: var(--orbMint);
-  --coreC2: var(--accent);
-  --coreC3: var(--orbJade);
+  --coreC1: var(--orbGlow);
+  --coreC2: var(--orbBody);
+  --coreC3: var(--orbMid);
   /* Derived, so a state sets three properties and the fallback dress follows. */
   --coreTint: color-mix(in srgb, var(--coreC1) 5%, transparent);
   --coreTintEdge: color-mix(in srgb, var(--coreC2) 15%, transparent);
@@ -84,17 +86,17 @@
 /* ingest: pulling in captured calls, mail and meetings. The jade end leads,
    because intake is the agent at its most ordinary. */
 .core[data-core-state="ingest"] {
-  --coreC1: var(--orbJade);
-  --coreC2: var(--accent);
-  --coreC3: var(--orbMint);
+  --coreC1: var(--orbMid);
+  --coreC2: var(--orbBody);
+  --coreC3: var(--orbGlow);
 }
-/* working: traversing the context graph, drafting proposals from it. Lime is
-   the one high-energy green in the set, and this is the only state that
-   spins. */
+/* working: traversing the context graph, drafting proposals from it.
+   --orbBright is the one high-energy tone in the set, and this is the only state
+   that spins. */
 .core[data-core-state="working"] {
-  --coreC1: var(--orbLime);
-  --coreC2: var(--accent);
-  --coreC3: var(--orbJade);
+  --coreC1: var(--orbBright);
+  --coreC2: var(--orbBody);
+  --coreC3: var(--orbMid);
 }
 /* warning: a contradiction, an action without the permission it needs, a
    source the agent cannot reach. Amber against ink — held under tension, and

@@ -109,12 +109,32 @@ void main() {
   float t = uTime;
   float w = waves(along, t);
 
+  // One head of light, making a lap.
+  //
+  // The waves say the agent is working; the beam says it is still working NOW,
+  // which a standing wave pattern cannot: a reader who glances twice at a loop
+  // has no way to tell it apart from a still image. So one bright head travels
+  // the perimeter, and because along IS the perimeter unrolled, travelling is
+  // a fract() of the clock rather than anything that has to be animated.
+  //
+  // The distance is taken the SHORT way round (min(d, peri - d)), so the head
+  // crosses the seam where the last side meets the first without thinning to
+  // nothing and reappearing.
+  float peri = 2.0 * (size.x + size.y);
+  float head = fract(t * 0.105) * peri;
+  float d = abs(along - head);
+  d = min(d, peri - d);
+  // A twelfth of the way round, so it reads as a comet rather than as a lit
+  // half. Squared falloff: a linear one has a visible end, and a beam with an
+  // end is a bar.
+  float beam = exp(-pow(d / (peri * 0.085), 2.0));
+
   // The rim's thickness undulates with the wave, so the crests are visible as
   // the edge swelling and thinning rather than as a stripe moving inside it.
   // Amplitude, and it is generous on purpose: the rim nearly doubles at a crest
   // and thins to well under its resting width in a trough, which is what makes
   // the wave legible on something only a few pixels across.
-  float thick = uThick * (1.0 + 0.78 * w) + 1.0;
+  float thick = uThick * (1.0 + 0.78 * w + 0.85 * beam) + 1.0;
 
   // The whole reason this is a shader: one pixel of smoothstep across the
   // boundary, computed per fragment. There is no raster to displace and nothing
@@ -136,8 +156,12 @@ void main() {
   // its own right, and this one has a job. A third of the way out keeps the
   // shift visible as the light travels without the frame becoming the subject.
   vec3 tint = mix(uHueB, palette(along / 1850.0 + t * 0.045), 0.34);
+  // The head is the palette's light end, so the beam reads as MORE LIGHT rather
+  // than as a different colour arriving.
+  tint = mix(tint, uHueC, 0.55 * beam);
 
-  float alpha = (core * 0.95 + near * 0.34 + far * 0.13) * uLevel;
+  float alpha = (core * 0.95 + near * (0.34 + 0.30 * beam) + far * (0.13 + 0.10 * beam))
+              * uLevel;
   alpha = clamp(alpha, 0.0, 1.0);
 
   // Premultiplied, because this canvas composites over live application UI: a

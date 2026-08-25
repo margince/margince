@@ -18,7 +18,7 @@ import type { MarginceCoreState } from "./margince-core";
  *  - `ingest`  the whirlpool: ribbons migrating from the glass to the centre,
  *              dissolving as they arrive. This is the one state that reads as
  *              material going IN rather than the object being busy.
- *  - `tint`    how far the green palette collapses to `tintCol`. Only the two
+ *  - `tint`    how far the indigo palette collapses to `tintCol`. Only the two
  *              states that STOP leave the green, which is what keeps the three
  *              live ones readable as one run.
  *  - `tintCol` the colour it collapses to, looked at only when `tint` is above

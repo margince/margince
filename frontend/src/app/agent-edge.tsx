@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import { type EdgeHues, readHue } from "./agent-edge-gl";
-import { runEdgeLoop } from "./agent-edge-loop";
+import { type EdgeLoop, runEdgeLoop } from "./agent-edge-loop";
 import { useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
 
@@ -36,6 +36,17 @@ import "./agent-edge.css";
  */
 export function AgentEdge() {
   const { reading, waiting } = useAgentEdge();
+  // The edge outlives the reading that lit it, by exactly as long as it takes to
+  // go out. Unmounting on `reading` alone cut the light dead the instant the work
+  // finished, and a light that vanishes reads as something breaking; the shader
+  // owns the dimming (its own level uniform), so what this holds is only the
+  // canvas it dims on.
+  const [lingering, setLingering] = useState(false);
+  useEffect(() => {
+    if (reading) {
+      setLingering(true);
+    }
+  }, [reading]);
   return (
     <div
       className="agentedge"
@@ -44,7 +55,9 @@ export function AgentEdge() {
       data-waiting={waiting ? "" : undefined}
       aria-hidden="true"
     >
-      {reading && <LitEdge />}
+      {(reading || lingering) && (
+        <LitEdge lit={reading} onDark={() => setLingering(false)} />
+      )}
       <span className="agentedge-wait" />
     </div>
   );
@@ -72,10 +85,17 @@ export function AgentEdge() {
  * test can reach it. What stays here is the mounting: read the hues off the
  * document, start the loop, and wear the static rim if the host cannot run it.
  */
-function LitEdge() {
+function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const loop = useRef<EdgeLoop | null>(null);
   const [live, setLive] = useState(false);
   const reduced = usePrefersReducedMotion();
+  // Read through a ref so a caller's new closure does not restart the loop:
+  // rebuilding the GL program on every render of the parent would throw away the
+  // light this component exists to keep. Declared here because the effect below
+  // reads it, and a const is not hoisted.
+  const onDarkRef = useRef(onDark);
+  onDarkRef.current = onDark;
 
   useEffect(() => {
     const element = canvas.current;
@@ -85,23 +105,48 @@ function LitEdge() {
     // Read once per mount rather than per frame: a theme change remounts this
     // (the signal clears on unmount), and `getComputedStyle` is a layout read
     // with no business in a draw loop.
+    // The AI hue and the orb's own working tones, so the lit window and the orb
+    // inside it are one object rather than two decorations. --teal used to open
+    // this run and cannot any more: trust.css spends it on HUMAN provenance, and
+    // an edge that says a machine is working has no business starting there.
+    // Amber stays as the one warm stop, for the same reason the orb keeps it.
+    // Literal tokens only, no --orbBody: that one is declared as var(--ai) and a
+    // hue this seam cannot parse draws mid-grey rather than failing.
     const hues: EdgeHues = [
-      readHue("--teal"),
-      readHue("--orbJade"),
-      readHue("--orbMint"),
-      readHue("--orbLime"),
+      readHue("--ai"),
+      readHue("--orbMid"),
+      readHue("--orbGlow"),
+      readHue("--orbBright"),
       readHue("--orbAmber"),
     ];
-    const loop = runEdgeLoop(element, hues, {
+    const started = runEdgeLoop(element, hues, {
       reduced,
       // A context lost to a GPU reset is not recoverable in place: the program
       // and the buffer went with it, so the honest picture of what this machine
       // can draw is the static rim.
       onLost: () => setLive(false),
+      onDark: onDarkRef.current,
     });
-    setLive(loop !== null);
-    return () => loop?.stop();
+    loop.current = started;
+    setLive(started !== null);
+    return () => {
+      started?.stop();
+      loop.current = null;
+    };
   }, [reduced]);
+
+  useEffect(() => {
+    if (loop.current) {
+      loop.current.setLit(lit);
+      return;
+    }
+    // No shader on this host, so there is no light to take down: the static rim
+    // has nothing to dim and holding it would leave a rim on screen after the
+    // work stopped. Report immediately and let the caller unmount.
+    if (!lit) {
+      onDarkRef.current();
+    }
+  }, [lit]);
 
   return (
     <canvas

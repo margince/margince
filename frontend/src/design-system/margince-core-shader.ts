@@ -149,13 +149,21 @@ void main(){
   float SHELL[5], WIDTH[5], WOB1[5], WOB2[5], PHASE[5], GAIN[5];
   float FADE[5];   // ingest: how present each ribbon is on its way in
 
-  /* emerald, mint, amber as the single warm note, mint again, pale mint */
+  /* The working palette, mirroring the orb family in tokens.css: deep indigo,
+     the glow tone, amber as the single warm note, the glow again, the bright
+     end. Amber survives the move to indigo here for the reason it survives it
+     there, that one warm ribbon is what keeps five cool ones legible as five.
+
+     LITERALS, and that is a gap rather than a choice: this shader cannot read a
+     custom property, and unlike agent-edge.tsx nothing yet hands it the tokens
+     as uniforms. So repainting the orb family in tokens.css does NOT move the
+     ball, which is exactly how this file stayed green through one repaint. */
   vec3 BASE[5];
-  BASE[0] = vec3(0.024, 0.404, 0.259);
-  BASE[1] = vec3(0.204, 0.827, 0.600);
+  BASE[0] = vec3(0.310, 0.330, 0.760);
+  BASE[1] = vec3(0.706, 0.722, 0.969);
   BASE[2] = vec3(0.941, 0.663, 0.231);
-  BASE[3] = vec3(0.204, 0.827, 0.600);
-  BASE[4] = vec3(0.298, 0.804, 0.643);
+  BASE[3] = vec3(0.706, 0.722, 0.969);
+  BASE[4] = vec3(0.541, 0.502, 1.000);
 
   SHELL[0]=0.78; WIDTH[0]=0.310; WOB1[0]= 0.26; WOB2[0]= 0.11; GAIN[0]=3.3;
   SHELL[1]=0.90; WIDTH[1]=0.250; WOB1[1]=-0.31; WOB2[1]= 0.08; GAIN[1]=2.7;
@@ -269,7 +277,7 @@ void main(){
       }
       float heat = 1.0 + 1.4 * uLevel + 1.5 * uIngest * arrive;
       /* tinted, not white, and small: a big white core swallows the ribbons */
-      acc += vec3(0.72, 0.98, 0.88)
+      acc += vec3(0.80, 0.82, 1.00)
            * (exp(-pow(cd / 0.022, 2.0)) * 0.65 + exp(-pow(cd / 0.080, 2.0)) * 0.16) * heat;
     }
 
@@ -291,17 +299,17 @@ void main(){
 
     float edge = smoothstep(0.55, 1.0, 1.0 - ndv);
     body *= 1.0 - 0.42 * edge;
-    body += mix(vec3(0.24, 0.52, 0.44), uTintCol * 0.6, uTint) * fres * 0.16;
+    body += mix(vec3(0.30, 0.32, 0.62), uTintCol * 0.6, uTint) * fres * 0.16;
 
     /* a distinct hairline ring all the way round the ball */
     float lip = smoothstep(0.988, 1.0, 1.0 - ndv);
-    body += vec3(0.62, 0.98, 0.86) * lip * 0.08;
+    body += vec3(0.72, 0.74, 1.00) * lip * 0.08;
 
     /* one broad tinted sheen. never white: a white highlight on a coloured body
        reads as plastic */
     vec3 L = normalize(vec3(-0.55, 0.72, 0.62) + vec3(uMouse * 0.35, 0.0));
     vec3 H = normalize(L - rd);
-    body += vec3(0.74, 1.00, 0.90) * pow(max(dot(n, H), 0.0), 26.0) * 0.18;
+    body += vec3(0.82, 0.84, 1.00) * pow(max(dot(n, H), 0.0), 26.0) * 0.18;
 
     /* Everything above is emissive, so on a dark surface the ball is ADDED to
        whatever hosts it and its coverage is its own brightness. On paper the
@@ -313,7 +321,7 @@ void main(){
     vec2 gdir = normalize(n.xy + vec2(1e-5));
     float grad = 0.5 + 0.5 * dot(gdir, normalize(vec2(-0.7, 0.7)));   // TL to BR
 
-    vec3 ball = mix(vec3(0.030, 0.085, 0.075), vec3(0.055, 0.145, 0.115), grad);
+    vec3 ball = mix(vec3(0.105, 0.110, 0.255), vec3(0.170, 0.180, 0.400), grad);
     ball = mix(ball, uTintCol * vec3(0.30, 0.13, 0.09), uTint * 0.85);
     /* a sphere still has to turn away from the light, or it reads as a disc */
     ball *= 0.68 + 0.42 * ndv;
@@ -347,14 +355,14 @@ void main(){
   /* and the light it throws outward. On paper the same falloff is the shade the
      object casts, so it darkens instead of adding. */
   float outer = max(bgr - sr, 0.0);
-  vec3 glowTint = mix(rimCol, vec3(0.10, 0.55, 0.42), 0.45);
+  vec3 glowTint = mix(rimCol, vec3(0.20, 0.22, 0.62), 0.45);
   /* Tight and quiet: this is the light the ball throws, and a wide bloom on a
      surface that packs the Core next to other things is a smudge on them rather
      than an atmosphere around it. */
   float glowA = (exp(-outer * 44.0) * 0.10 + exp(-outer * 14.0) * 0.018)
               * (0.60 + 0.40 * uLevel);
   float lit = 1.0 - uPaper;
-  col   = mix(col, mix(glowTint, vec3(0.02, 0.06, 0.05), uPaper), (1.0 - alpha) * glowA);
+  col   = mix(col, mix(glowTint, vec3(0.030, 0.032, 0.075), uPaper), (1.0 - alpha) * glowA);
   alpha = max(alpha, glowA * mix(1.0, 0.35, uPaper));
   col  *= 1.0 - 0.10 * lit * smoothstep(0.5, 1.5, bgr);
 
