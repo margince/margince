@@ -46,9 +46,9 @@ import (
 // same way `id` is, and excluded from comparison the same way — see
 // isNonFieldTarget, which states why both must be.
 //
-// One value, taken from the source that also uses it as an edge endpoint kind,
-// so the target a caller maps to and the edge the source emits cannot drift
-// apart into two strings that merely look alike.
+// Assigned FROM the source's own constant rather than spelled again, so the
+// target a caller maps to and the edge the source emits are one value by
+// construction — there is no second string here to fall out of step.
 const csvEmployerName = migration.AssocTargetOrganizationName
 
 // employerResolution is a name looked up, and why it produced no company when

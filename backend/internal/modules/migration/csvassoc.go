@@ -32,9 +32,9 @@ import (
 // `organization` there would be right to send the value to its identity map,
 // which holds ids — and would get nothing, silently, for every row.
 //
-// It doubles as the mapping target a person file points its company column at:
-// the string the caller maps to and the string the edge travels under are one
-// value, so the two sides cannot drift.
+// It doubles as the mapping target a person file points its company column at.
+// compose assigns its own csvEmployerName from this constant rather than
+// spelling it again, so both sides are one value by construction.
 const AssocTargetOrganizationName = "organization_name"
 
 // assocCategoryEmployment is what the edge means: this person works here.
