@@ -13,6 +13,7 @@ package compose
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/gradionhq/margince/backend/internal/modules/people"
@@ -94,14 +95,58 @@ func organizationUpdateFrom(changed map[string]string) people.UpdateOrganization
 		SizeBand:    importString(changed, "size_band"),
 		Address:     addressFrom(changed),
 	}
-	// Domains is a replace-set behind a pointer: nil leaves the stored domains
-	// alone, an empty slice CLEARS them. A file that never mapped a domain
-	// column must reach the first case, never the second — so the pointer is
-	// taken only when the column actually carried a value.
+	// The replace-set behind a pointer: nil leaves the stored domains alone, an
+	// empty slice CLEARS them. Taken only when the column actually carried a
+	// value, so a file that never mapped one reaches the first case.
+	//
+	// This is the file's domain ALONE. The caller merges the company's other
+	// domains onto it before writing (domainsMergedOnto), because only the
+	// caller has the stored record to merge against — but the target has to
+	// reach this input for the round-trip rule to hold, and a domain that never
+	// arrives here would be accepted, reported as written, and dropped.
 	if domains := orgDomainsFrom(changed); domains != nil {
 		in.Domains = &domains
 	}
 	return in
+}
+
+// domainsMergedOnto folds the file's single domain column onto the domains the
+// company already holds, so an import that names one does not archive the rest.
+//
+// The store's Domains is a REPLACE-SET: whatever it is given becomes the whole
+// live set, and everything absent from it is archived. That is right for a form
+// submitting every domain a company has, and wrong for a spreadsheet carrying
+// one Website column — a company with three domains would keep the one the file
+// named and silently lose the other two.
+//
+// The file's domain becomes the primary; every stored domain it did not name is
+// carried through, demoted so exactly one row claims that slot.
+//
+// The bool reports whether the file carried a domain at all. False means leave
+// the company's domains alone rather than send an empty set, which the store
+// reads as "archive them all".
+func domainsMergedOnto(current []byte, mapped []people.OrgDomainInput) ([]people.OrgDomainInput, bool, error) {
+	if len(mapped) == 0 {
+		return nil, false, nil
+	}
+	var record struct {
+		Domains []struct {
+			Domain string `json:"domain"`
+		} `json:"domains"`
+	}
+	if err := json.Unmarshal(current, &record); err != nil {
+		return nil, false, fmt.Errorf("import: reading the stored domains: %w", err)
+	}
+	incoming := strings.ToLower(strings.TrimSpace(mapped[0].Domain))
+	merged := append([]people.OrgDomainInput(nil), mapped...)
+	merged[0].IsPrimary = true
+	for _, held := range record.Domains {
+		if strings.EqualFold(strings.TrimSpace(held.Domain), incoming) {
+			continue
+		}
+		merged = append(merged, people.OrgDomainInput{Domain: held.Domain, IsPrimary: false})
+	}
+	return merged, true, nil
 }
 
 // orgDomainsFrom reads the single domain column a spreadsheet carries into the

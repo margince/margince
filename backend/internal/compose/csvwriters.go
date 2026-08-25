@@ -290,6 +290,8 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Organization | crmcontracts
 // file whose columns are whatever the customer exported may not delete what it
 // never mentioned.
 func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte, source string) error {
+	// The update half of the same rule — see land above.
+	ctx = people.WithBulkWrite(ctx)
 	switch w.object {
 	case migration.ObjectLead:
 		_, err := w.people.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
@@ -302,6 +304,15 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 		}
 		if given {
 			in.Address = merged
+		}
+		// The same rule for domains, which the store also replaces wholesale: a
+		// file naming one must not archive the others.
+		mergedDomains, hasDomain, err := domainsMergedOnto(current, orgDomainsFrom(changed))
+		if err != nil {
+			return err
+		}
+		if hasDomain {
+			in.Domains = &mergedDomains
 		}
 		_, err = w.people.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id), in)
 		return err
@@ -396,6 +407,11 @@ const domainClaimedReason = "this domain is already held by another company in t
 // landing that then rolled back would make this run's later pages resolve an id
 // that does not exist, and lookup answers from the cache before it asks the map.
 func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx pgx.Tx) (ids.UUID, error)) error {
+	// Every row this importer writes is one of many under a single approval, so
+	// it carries the marker that says so. What it buys today is one thing: a
+	// standing domain refusal is NOT lifted by a spreadsheet, because approving
+	// a file is not the same act as a person putting one domain on one company.
+	ctx = people.WithBulkWrite(ctx)
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
