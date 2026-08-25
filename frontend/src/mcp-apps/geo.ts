@@ -49,7 +49,12 @@ export type GeoRefusal =
   | "position-unavailable";
 
 export type GeoResult =
-  | { readonly ok: true; readonly latitude: number; readonly longitude: number; readonly accuracyM: number }
+  | {
+      readonly ok: true;
+      readonly latitude: number;
+      readonly longitude: number;
+      readonly accuracyM: number;
+    }
   | {
       readonly ok: false;
       readonly refusal: GeoRefusal;
@@ -79,7 +84,9 @@ export type GeoResult =
 function classify(err: GeolocationPositionError): GeoRefusal {
   if (err.code === err.TIMEOUT) return "timeout";
   if (err.code === err.POSITION_UNAVAILABLE) return "position-unavailable";
-  return /permissions?\s+policy|feature\s+policy|disabled in this document/i.test(err.message)
+  return /permissions?\s+policy|feature\s+policy|disabled in this document/i.test(
+    err.message,
+  )
     ? "host-blocked"
     : "user-declined";
 }
@@ -118,7 +125,13 @@ export function readPosition(): Promise<GeoResult> {
           longitude: pos.coords.longitude,
           accuracyM: pos.coords.accuracy,
         }),
-      (err) => resolve({ ok: false, refusal: classify(err), code: err.code, message: err.message }),
+      (err) =>
+        resolve({
+          ok: false,
+          refusal: classify(err),
+          code: err.code,
+          message: err.message,
+        }),
       { enableHighAccuracy: true, timeout: TIMEOUT_MS, maximumAge: MAX_AGE_MS },
     );
   });
@@ -136,8 +149,13 @@ export function readPosition(): Promise<GeoResult> {
  */
 export async function describeEnvironment(): Promise<Record<string, string>> {
   const env: Record<string, string> = {
-    api: typeof navigator !== "undefined" && "geolocation" in navigator ? "present" : "absent",
-    secureContext: String(typeof window !== "undefined" && window.isSecureContext),
+    api:
+      typeof navigator !== "undefined" && "geolocation" in navigator
+        ? "present"
+        : "absent",
+    secureContext: String(
+      typeof window !== "undefined" && window.isSecureContext,
+    ),
     framed: String(typeof window !== "undefined" && window.self !== window.top),
   };
   try {
@@ -145,12 +163,19 @@ export async function describeEnvironment(): Promise<Record<string, string>> {
     if (permissions?.query) {
       // The name is a PermissionName the DOM lib types as a union; "geolocation"
       // is a member of it, so this needs no assertion.
-      env.permissionState = (await permissions.query({ name: "geolocation" })).state;
+      env.permissionState = (
+        await permissions.query({ name: "geolocation" })
+      ).state;
     } else {
       env.permissionState = "query-unavailable";
     }
-  } catch (e) {
-    env.permissionState = `query-threw: ${e instanceof Error ? e.message : String(e)}`;
+  } catch {
+    // The thrown message is deliberately NOT shown. `permissions.query` throws
+    // for a name an engine does not implement, and every such message is about
+    // the query rather than about geolocation — so it would be an engine's own
+    // words on the screen saying nothing a reader can act on. That it could not
+    // be asked IS the whole finding, and the real answer comes from the read.
+    env.permissionState = "query-threw";
   }
   return env;
 }

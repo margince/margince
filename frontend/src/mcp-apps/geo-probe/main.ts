@@ -28,7 +28,7 @@
 // left sitting in resources/list forever.
 
 import { el, onResult } from "../bridge";
-import { describeEnvironment, readPosition, type GeoResult } from "../geo";
+import { describeEnvironment, type GeoResult, readPosition } from "../geo";
 import "../view.css";
 
 /** What each refusal means for the person reading it — the finding in a
@@ -40,7 +40,8 @@ const MEANING: Record<string, string> = {
     "A prompt was shown and refused, or the system withheld it. The permission itself got through — try again and accept to confirm.",
   unavailable:
     "This document has no geolocation API at all, which usually means it is not a secure context.",
-  timeout: "Allowed, and asked, but no fix arrived in time. Not a permission problem.",
+  timeout:
+    "Allowed, and asked, but no fix arrived in time. Not a permission problem.",
   "position-unavailable":
     "Allowed, and asked, but the device could not produce a position. Not a permission problem.",
 };
@@ -79,7 +80,9 @@ function report(into: HTMLElement, result: GeoResult): void {
       ["message", result.message],
     ]),
   );
-  into.appendChild(el("p", "meta", MEANING[result.refusal] ?? "Unrecognised refusal."));
+  into.appendChild(
+    el("p", "meta", MEANING[result.refusal] ?? "Unrecognised refusal."),
+  );
 }
 
 function render(root: HTMLElement): void {
