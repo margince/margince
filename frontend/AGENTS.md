@@ -56,6 +56,35 @@ script gates — but none of them can tell that the perfectly good
 component you just wrote already existed under a different name. That part is
 yours.
 
+### Indigo is the AI hue, and it is a claim about provenance
+
+`--ai` / `--aiLight` / `--aiMed` / `--aiText` mark **information or a proposed
+action that came from an agent rather than from a person**: a decision card in
+somebody's queue, a staged field value, a `provenance-agent` chip, the workbench
+chrome around a run. It is a colour family of its own alongside brand and status
+because one colour carries one meaning, so it is never available as decoration.
+Tint a card indigo because indigo looked good and you have told every reader of
+that screen something false about who decided.
+
+Two things go with it:
+
+- **`1.5px dashed var(--aiMed)` means staged, not yet accepted.** The dashes
+  going solid is what acceptance looks like. The tint says who, the stroke says
+  whether it counts yet.
+- **`--aiText` for text over `--aiLight`, never `--ai`.** The two are close
+  enough that the strong tone fails AA on the ground its own family paints.
+
+**The orb and the window edge are not exceptions.** They draw in the Core
+palette (jade, mint, lime, plus amber, red, grey), and the reason is in
+`tokens.css`: the Core shows the agent AS ITSELF and needs tones a flat UI accent
+cannot supply, while `--ai` marks the agent's output sitting inside human UI. Do
+not repaint either into the other's colour for consistency's sake.
+
+The full section, with the token table and the provenance triad, is
+[`src/design-system/README.md`](src/design-system/README.md) under *Indigo says a
+machine did it*. `check-ds-purity.sh` holds that colours come from tokens at all;
+nothing automated can tell that the token you picked means the wrong thing.
+
 ## A test may not depend on how busy the machine is
 
 The frontend suite has produced two distinct flake families, and reading them

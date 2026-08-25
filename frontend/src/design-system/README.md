@@ -22,6 +22,62 @@ If what you need is genuinely not here, add it **here**, with a story and a
 spec, and it becomes the one spelling. Copy never lives in a primitive: words
 arrive through props, translated by the caller with `t()`.
 
+## Indigo says a machine did it
+
+**`--ai` is the AI hue, and it is not decoration.** An indigo tint on a surface
+is a claim about provenance: *this information, or this proposed action, came
+from an agent rather than from a person.* Paint it where that is true and
+nowhere else. A card tinted indigo because indigo looked good tells every reader
+of that screen something false about who decided.
+
+It is a family of its own for the same reason the status colours are: one
+meaning per colour. `--accent` (deep emerald) is brand and PRIMARY ACTION,
+`--success` / `--warn` / `--danger` are status, and neither of those is
+available to mean "authored by a model". The split is stated at the top of
+`tokens.css` and pinned by `tokens.test.ts`.
+
+| Token | Value | Role |
+|---|---|---|
+| `--ai` | `#5b61d6` | The line and the mark: a solid border on a staged card the reader has focused or accepted, a focus ring, a hairline. The strongest of the four, so it is the rarest. |
+| `--aiLight` | `rgba(91, 97, 214, 0.08)` | The GROUND under agent-authored text: staged cards, the workbench wash, a `badge-ai` fill. |
+| `--aiMed` | `rgba(91, 97, 214, 0.3)` | The border of something staged. Usually `1.5px dashed`, which is half the signal (see below). |
+| `--aiText` | `#3f45b0` light, `#9ba0f0` dark | Text and glyphs ON `--aiLight`. Never `--ai` for text over the tint: the two are close enough that it fails AA on the ground its own family paints. |
+
+**Dashed means proposed; solid means real.** `1.5px dashed var(--aiMed)` is the
+convention for a thing an agent has staged and a person has not yet accepted:
+`.staging-card`, `.deal-card.staged`, the deck's empty and staged slots. The
+dashes going solid is what acceptance looks like. So the tint says *who*, and
+the stroke says *whether it counts yet*, and those are two facts a reader needs separately.
+
+**The provenance triad** (`trust.css`) is the rule applied at its smallest:
+`.provenance-agent` is indigo, `.provenance-human` is teal, and
+`.provenance-system` is plain ink on the card ground, because an installation's
+own scheduled housekeeping is neither. `.provenance-unknown` borrows nobody's
+colour and reads as the absence it is. A sweep drawn in the AI colour would tell
+a reader a model decided something there.
+
+### The orb is not an exception to this, it answers a different question
+
+The agent Core and the lit window edge draw in the Core palette (jade, mint,
+lime, plus amber, red and grey for the states that are not work), not in
+`--ai`. That is deliberate and it is the third carve-out `tokens.css` documents:
+
+- **The Core palette shows the agent AS ITSELF**: its presence, and which of
+  eight states it is in. It is a lit glass body, and it needs a light tone to
+  glow and a dark one to be seen against, which a flat UI accent cannot supply.
+  The greens sit around `--accent` so a re-themed brand still moves the orb.
+- **`--ai` marks the agent's OUTPUT sitting inside human UI**: a decision card
+  in a person's queue, a staged field value, the workbench chrome around a run.
+
+One is the agent; the other is the agent's work in somebody else's hands. Do not
+repaint either into the other's colour to make the product look consistent: the
+inconsistency is the information.
+
+**Colour is never the only signal.** Same standing rule as `Callout`: the words
+carry the meaning. An agent-authored surface says so in text (a
+`.provenance-agent` chip, a "suggested" label, an "Approve" verb), and the tint
+is what makes it findable at a glance for the readers who can see it.
+
 ## What this directory already gives you
 
 | Primitive | For | File | Story |
