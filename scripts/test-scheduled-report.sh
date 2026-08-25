@@ -312,14 +312,27 @@ done
 # the workflow the same question it asks the reporter, and fails in the
 # direction that was missed rather than only the one that was covered.
 health="$root/.github/workflows/main-health.yml"
+# The REPORT JOB's own block, not the whole file. Searching the file would let
+# any other job's matching line stand in for the one that was removed — the
+# gate would go on passing while the job it is about lost the wiring, which is
+# the same "matched something, therefore fine" mistake it exists to catch.
+#
+# The slice runs from the job key at two-space indent to the next one; an empty
+# slice means the job was renamed or removed, and that fails rather than
+# silently checking nothing.
+report_job="$(awk '/^  report:/{inside=1} inside&&/^  [a-z_-]+:/&&!/^  report:/{exit} inside' "$health")"
+if [ -z "$report_job" ]; then
+	echo "FAIL: no 'report' job found in main-health.yml — the wiring checks below would pass by scanning nothing"
+	failures=$((failures + 1))
+fi
 for lane in $lanes; do
 	# MAIN_UAT_RESULT -> uat
 	job="$(printf '%s' "$lane" | sed -E 's/^MAIN_(.+)_RESULT$/\1/' | tr '[:upper:]' '[:lower:]')"
-	if ! grep -qE "needs\.${job}\.result == 'failure'" "$health"; then
+	if ! printf '%s' "$report_job" | grep -qE "needs\.${job}\.result == 'failure'"; then
 		echo "FAIL: $lane has a reporter arm, but main-health's report job does not run for a failing '${job}' — the arm is unreachable"
 		failures=$((failures + 1))
 	fi
-	if ! grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}" "$health"; then
+	if ! printf '%s' "$report_job" | grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}"; then
 		echo "FAIL: $lane has a reporter arm, but main-health never passes needs.${job}.result in as $lane"
 		failures=$((failures + 1))
 	fi
