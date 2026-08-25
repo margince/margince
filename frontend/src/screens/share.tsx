@@ -474,24 +474,28 @@ function ShareScreenBody({
     // excludes them — a record is shared with people/teams, never an agent.
     const users = ((usersQuery.data ?? []) as User[])
       .filter((u) => !u.is_agent)
-      .map((u) => ({
-        id: u.id,
-        name: u.display_name,
-        note: u.email,
-        kind: "user" as const,
-      }));
-    const teams = ((teamsQuery.data ?? []) as Team[]).map((team) => {
-      const count = team.member_count ?? 0;
-      return {
-        id: team.id,
-        name: team.name,
-        note: t(
-          count === 1 ? "share.teamMembers.one" : "share.teamMembers.other",
-          { count: formatNumber(count, locale) },
-        ),
-        kind: "team" as const,
-      };
-    });
+      .map(
+        (u): RosterSubject => ({
+          id: u.id,
+          name: u.display_name,
+          note: u.email,
+          kind: "user",
+        }),
+      );
+    const teams = ((teamsQuery.data ?? []) as Team[]).map(
+      (team): RosterSubject => {
+        const count = team.member_count ?? 0;
+        return {
+          id: team.id,
+          name: team.name,
+          note: t(
+            count === 1 ? "share.teamMembers.one" : "share.teamMembers.other",
+            { count: formatNumber(count, locale) },
+          ),
+          kind: "team",
+        };
+      },
+    );
     return [...users, ...teams];
   }, [usersQuery.data, teamsQuery.data, t, locale]);
 

@@ -24,7 +24,11 @@ import {
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDateAbbrev, formatNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatDecimal,
+  formatNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -279,7 +283,9 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
               }}
             >
               <span>{scoreFactorLabel(factor.factor, t)}</span>
-              <span className="t-mono">{factor.points.toFixed(1)}</span>
+              <span className="t-mono">
+                {formatDecimal(factor.points, locale, 1)}
+              </span>
               {factor.base_points != null && (
                 // The decay as arithmetic a reader can check: 25 halving
                 // every 14 days is why this row reads 12.5 today.
@@ -309,7 +315,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
       )}
       <span className="t-caption t-mono">
         {t("lead.scoreReconciles", {
-          raw: current.raw_sum.toFixed(2),
+          raw: formatDecimal(current.raw_sum, locale, 2),
           rounded: formatNumber(current.rounded_sum, locale),
           score: formatNumber(current.score_computed, locale),
         })}

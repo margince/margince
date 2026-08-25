@@ -13,7 +13,11 @@
 //
 // `useT` reads the merged catalogue, so a unit's own copy resolves through the
 // same lookup as core's rather than through a second mechanism.
-import { type ExtensionMessageKey, useT as useCoreT } from "../i18n";
+import {
+  type ExtensionMessageKey,
+  translate,
+  useLocale as useCoreLocale,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 export { useCan, useCanWrite } from "../app/capability";
@@ -53,8 +57,12 @@ export function useT(): (
   key: MessageKey | ExtensionMessageKey,
   params?: Record<string, string>,
 ) => string {
-  return useCoreT() as (
-    key: MessageKey | ExtensionMessageKey,
-    params?: Record<string, string>,
-  ) => string;
+  // Built from `translate`, which already takes the wider key, rather than cast
+  // from core's `useT`. A translator is CONTRAVARIANT in its key, so widening
+  // core's narrow one is not an assignment TypeScript can check — the cast that
+  // used to stand here suppressed the check on the one surface nothing in this
+  // repo typechecks against, which is the worst place in the tree to hold a
+  // claim by assertion. Same lookup, same merged catalogue, no `as`.
+  const { locale } = useCoreLocale();
+  return (key, params) => translate(locale, key, params);
 }

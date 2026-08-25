@@ -1,5 +1,6 @@
 import type { components } from "../api/schema";
-import { stable } from "./../format/collate";
+import { forReader } from "../format/collate";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 // How the facts read off a company's website are arranged for display.
@@ -124,7 +125,10 @@ function better(a: OrganizationFact, b: OrganizationFact): boolean {
  * fields, because product/service/capability are three ways of saying the one
  * thing (see OFFERING_RANK); elsewhere the field is part of the identity.
  */
-export function groupFacts(facts: readonly OrganizationFact[]): FactGroup[] {
+export function groupFacts(
+  facts: readonly OrganizationFact[],
+  locale: Locale,
+): FactGroup[] {
   const groups = new Map<FactCategory, Map<string, OrganizationFact>>();
   for (const fact of facts) {
     const byKey = groups.get(fact.category) ?? new Map();
@@ -149,17 +153,28 @@ export function groupFacts(facts: readonly OrganizationFact[]): FactGroup[] {
   return CATEGORY_ORDER.filter((category) => groups.has(category)).map(
     (category) => ({
       category,
-      facts: [...(groups.get(category) ?? new Map()).values()].sort(order),
+      facts: [...(groups.get(category) ?? new Map()).values()].sort((a, b) =>
+        order(a, b, locale),
+      ),
     }),
   );
 }
 
-// Within a category: the most confident first, then stable by field and value
-// so the same read never renders in two different orders.
-function order(a: OrganizationFact, b: OrganizationFact): number {
+// Within a category: the most confident first, then by field and value. Both
+// are RENDERED in the group, so the tiebreaker is the reader's own alphabet —
+// under code-unit order a German reader's "Ähnliche Marken" sorts after
+// "Zielgruppe". Two facts of equal confidence with the same field and value are
+// the same fact, so this is still a total order on what a reader can tell apart.
+function order(
+  a: OrganizationFact,
+  b: OrganizationFact,
+  locale: Locale,
+): number {
   const conf = (b.confidence ?? 0) - (a.confidence ?? 0);
   if (conf !== 0) {
     return conf;
   }
-  return stable(a.field, b.field) || stable(a.value, b.value);
+  return (
+    forReader(a.field, b.field, locale) || forReader(a.value, b.value, locale)
+  );
 }

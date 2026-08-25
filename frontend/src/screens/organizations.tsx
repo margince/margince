@@ -1555,6 +1555,7 @@ function FactsCard({
   onOpenHistory,
 }: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const factsQuery = useQuery({
     queryKey: ["org-facts", orgId],
     queryFn: async () => {
@@ -1588,7 +1589,7 @@ function FactsCard({
 
   return (
     <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-      {groupFacts(facts).map((group) => (
+      {groupFacts(facts, locale).map((group) => (
         <FactCategory
           key={group.category}
           orgId={orgId}
