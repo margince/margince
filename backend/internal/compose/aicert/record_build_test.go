@@ -47,7 +47,7 @@ func TestBuildRecordPricesPerBucketMeansAgainstTheSeedRateSheet(t *testing.T) {
 	withFixedNow(t, time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC))
 
 	acc := ratedAccumulation()
-	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.RoutingConfig{Profile: ai.ProfileEUHosted}, "p000000000000")
+	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
 
 	if rec.MeanTokensIn != 1500 || rec.MeanTokensOut != 250 || rec.MeanCachedTokens != 200 || rec.MeanCacheWriteTokens != 100 {
 		t.Fatalf("mean buckets = in=%d out=%d cached=%d cache_write=%d, want 1500/250/200/100",
@@ -74,7 +74,7 @@ func TestBuildRecordUnpricedWhenNoSeedRateMatchesTheServedModel(t *testing.T) {
 	acc.passed = 1
 	acc.tokensInTotal, acc.tokensOutTotal, acc.cachedTokensTotal, acc.cacheWriteTokensTotal = 1000, 200, 0, 0
 	acc.servedModel = "claude-does-not-exist"
-	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.RoutingConfig{Profile: ai.ProfileEUHosted}, "p000000000000")
+	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
 
 	if rec.EstCostMicroUSD != 0 {
 		t.Fatalf("est_cost_microusd = %d, want 0 for an unrated served model", rec.EstCostMicroUSD)
@@ -95,7 +95,7 @@ func TestBuildRecordIsByteForByteDeterministicForIdenticalInputs(t *testing.T) {
 
 	call := func() Record {
 		return buildRecord(ai.TaskSummarize, VerdictCertified, ratedAccumulation(),
-			ai.RoutingConfig{Profile: ai.ProfileEUHosted}, "p000000000000")
+			ai.ProfileEUHosted, "p000000000000")
 	}
 
 	first, err := json.Marshal(call())
@@ -131,7 +131,7 @@ func TestBuildRecordCountsWhatEachRunActuallyProduced(t *testing.T) {
 	acc.latencies = []int64{100, 100, 100, 100, 100}
 	acc.passed = 3
 	acc.certifiedScope = aitasks.ScopeSingleTurn
-	rec := buildRecord(ai.TaskSummarize, VerdictSupportedDegraded, acc, ai.RoutingConfig{Profile: ai.ProfileEUHosted}, "p000000000000")
+	rec := buildRecord(ai.TaskSummarize, VerdictSupportedDegraded, acc, ai.ProfileEUHosted, "p000000000000")
 
 	if rec.ReportedAccepted != 2 || rec.ReportedWrongAnswer != 1 || rec.ReportedInvalid != 1 || rec.ReportedAbstained != 1 {
 		t.Fatalf("reported outcome counts = accepted=%d wrong_answer=%d invalid=%d abstained=%d, want 2/1/1/1",
@@ -178,7 +178,7 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 			scoped++
 		}
 		rec := buildRecord(task, VerdictCertified, ratedAccumulation(),
-			ai.RoutingConfig{Profile: ai.ProfileEUHosted}, "p000000000000")
+			ai.ProfileEUHosted, "p000000000000")
 		if rec.ContextApplied {
 			t.Errorf("the %s record claims the company context was applied, and this lane has no database to assemble it from", task)
 		}
@@ -198,7 +198,7 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 func TestARecordDoesNotHandOutTheContractsOwnScopes(t *testing.T) {
 	withFixedNow(t, time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC))
 	rec := buildRecord(ai.TaskOfferDraft, VerdictCertified, ratedAccumulation(),
-		ai.RoutingConfig{Profile: ai.ProfileEUHosted}, "p000000000000")
+		ai.ProfileEUHosted, "p000000000000")
 	if len(rec.ContextScopes) == 0 {
 		t.Fatal("offer_draft declares no company-context scope, so this record has nothing to share")
 	}

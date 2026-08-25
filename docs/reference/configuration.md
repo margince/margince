@@ -38,7 +38,7 @@ configurable logger.
 | `--geocode-base-url` | `MARGINCE_GEOCODE_BASE_URL` | — | Nominatim base URL, on the worker role. Unset = no geocoding: company addresses keep no coordinates and every `within_radius` query answers unavailable. `public` uses OpenStreetMap's own service, which is POC-only — its terms hold a client that runs on a schedule to 4 requests a minute, single-threaded, with caching, so any real volume wants a self-hosted instance. |
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. This is the access control the fleet-wide-exposition note below calls for: unset (the default) `/metrics` answers **404**, rather than serving per-workspace job telemetry to anyone who asks. Set it wherever the scraper can present it |
 | `--hubspot-app-secret` | `MARGINCE_HUBSPOT_APP_SECRET` | — | the HubSpot app client secret. Verifies inbound overlay-webhook v3 signatures and, when set, mounts `/webhooks/hubspot`; unset, that route is absent rather than present-and-unverified |
-| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
+| `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
 | `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback |
 | — (env-only) | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) so the on-connect/Connect-time seeding path sees the same cap the periodic sweep does |
@@ -380,9 +380,9 @@ pipeline in memory — no Postgres, no Redis, no staging — and prints every
 intermediate: pages with skip reasons, every extracted field/fact with its
 evidence, every finding the gate DROPPED (with why), merge decisions, and
 per-model-call token/latency telemetry. Exactly one model selection is
-required: `--ai-routing <yaml>`, `--model provider:model` (e.g.
-`anthropic:claude-opus-4-8` — needs the provider's BYOK env key), or
-`--ai-fake` (crawl dry-run). `--max-pages/--max-bytes/--wall` override the
+required: `--model provider:model` (e.g. `anthropic:claude-opus-4-8` — needs
+the provider's BYOK env key) or `--ai-fake` (crawl dry-run). This lane opens no
+database, so it never reads the installation's stored binding. `--max-pages/--max-bytes/--wall` override the
 caps per run; `--json <path|->` writes a diffable machine-readable report;
 `--dump-pages <dir>` saves each page's reduced text.
 
@@ -395,7 +395,7 @@ identity-dense excerpts. Evidence is verified in Go against the cited
 passage (reference evidence: the stored snippet is the page's own
 text). Judge any candidate binding against the pinned quality floor:
 `make -C backend e2e-siteread` with `MARGINCE_E2E_MODEL=provider:model`
-or `MARGINCE_AI_ROUTING=<yaml>` (paid, network E2E vs gradion.com — a
+(paid, network E2E vs gradion.com — a
 different model must do the same or better to pass). Typical read:
 10–25 s end-to-end depending on how hard the origin throttles the
 crawl burst.
@@ -657,7 +657,11 @@ place keeps the api reading a password file that is no longer written. Use
 | `MARGINCE_TEST_POOL_MAX_CONNS` | integration tests | ceiling for EACH pool the harness opens from the clone DSNs, set by `scripts/test-integration-parallel.sh` to the per-pool number its connection budget was sized for. Unset (the one-package lane, a suite run by hand) the pool keeps `database.NewPool`'s own 16, because one package oversubscribes nothing. It is an env var rather than a DSN parameter because `pgx.ParseConfig` — which `cmd/migrate` and every bare `pgx` connection a fixture opens use — forwards an unrecognised `pool_*` key to the server as a startup parameter and dies with `FATAL: unrecognized configuration parameter`. A non-numeric or non-positive value fails loudly: a ceiling that silently fails to apply leaves the lane's budget describing a limit nothing enforces. |
 | `MARGINCE_TEST_BLOBSTORE_ENDPOINT`, `MARGINCE_TEST_BLOBSTORE_ACCESS_KEY`, `MARGINCE_TEST_BLOBSTORE_SECRET_KEY`, `MARGINCE_TEST_BLOBSTORE_BUCKET` | integration tests | the object store the blobstore lane runs against; exported by the Makefile at the `make db-up` MinIO, on its own `margince-test` bucket. The endpoint being unset **fails** the lane rather than skipping it — a skipped storage gate reads exactly like a passing one. |
 | `MARGINCE_AICERT` | `make e2e-ai` | the AI-certification lane's runtime switch. The `e2e_llm` build tag keeps this paid, live lane out of every ordinary lane; once the tag is set, an empty value here **fails** rather than skips, so the lane can never report success for having done nothing. |
-| `MARGINCE_AICERT_TASK`, `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_RUNS`, `MARGINCE_AICERT_TRACE` | `make e2e-ai` | narrow certification to one task / override the candidate model / repeat count / directory for the request+response dump. All optional: unset certifies everything the corpus covers, on the routing file's own bindings. Surfaced as `TASK=`, `MODEL=`, `RUNS=`, `TRACE=` on the make target. |
+| `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_JUDGE_MODEL` | `make e2e-ai` | **both required** — `provider:model` each. The candidate is what the run certifies; the judge grades it and must be a DIFFERENT model, because one grading itself is certified by construction. The run refuses the two being equal before a single paid call. Surfaced as `MODEL=` and `JUDGE=`. |
+| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. Surfaced as `BASE_URL=`. |
+| `MARGINCE_AICERT_PROFILE` | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `sovereign` \| `cloud_frontier`), default `eu_hosted`. Not a label: it is part of a record's identity, and it is enforced — a cloud vendor under `sovereign` is refused rather than run. Surfaced as `PROFILE=`. |
+| `MARGINCE_VOICE_MODEL`, `MARGINCE_VOICE_BASE_URL` | `TestVoiceLiveSmoke` | the model the manual voice-live smoke drives, `provider:model`, plus an endpoint host root when it is on a broker. Manual-only: the smoke fails rather than skips without one, so a run that measured nothing is never mistaken for a pass. |
+| `MARGINCE_AICERT_TASK`, `MARGINCE_AICERT_RUNS`, `MARGINCE_AICERT_TRACE` | `make e2e-ai` | narrow certification to one task / repeat count / directory for the request+response dump. All optional: unset certifies everything the corpus covers. Surfaced as `TASK=`, `RUNS=`, `TRACE=`. |
 | `MARGINCE_ANTHROPIC_KEY` | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
 | `MARGINCE_BENCH_TIER` | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
 | `MARGINCE_BENCH_RECORD` | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
@@ -1056,16 +1060,18 @@ removing it. It remains the runtime source, read on every run, in two cases: an
 installation with **no vault** configured, and the DB-less debug and
 certification lanes, which open no vault. Removing the variable breaks those.
 
-The **binding** is a stored setting. A fresh installation declares it under
-`seeds.ai_routing` (see `config/margince.example.yaml`), and a running one is
-rebound from the UI. The routing FILE format survives for the lanes that probe a
-binding without opening a database — `worker siteread`, `worker aitask` and
-`make e2e-ai` — and its annotated reference is
-[`config/ai-routing.example.yaml`](../../config/ai-routing.example.yaml), kept
-parseable by the fitness test in
-`backend/internal/modules/ai/exampleconfig_test.go`. Nothing copies it to a
-per-engineer `config/ai-routing.yaml` any more; a dev stack is bound by
-`seeds.ai_routing` in `config/margince.dev.yaml`.
+The **binding** is a stored setting, and there is no routing file left anywhere.
+A fresh installation declares it under `seeds.ai_routing` (see
+`config/margince.example.yaml`); a running one is rebound from Settings → AI. A
+dev stack is bound by `seeds.ai_routing` in `config/margince.dev.yaml`.
+
+The lanes that probe a binding without opening a database are told their model
+outright rather than handed a file: `worker siteread` and `worker aitask` take
+`--model provider:model` or `--ai-fake`, and `make e2e-ai` takes `MODEL=` and
+`JUDGE=` (see the certification variables below). The shape a binding has —
+`profile` plus a `tiers` map — is still described by
+[`config/ai-routing.schema.json`](../../config/ai-routing.schema.json), which is
+what an editor validates a `seeds.ai_routing` block against.
 
 The providers a binding may name, and what each requires. A cloud provider's
 BYOK key is **read from an environment variable** at boot — the routing file

@@ -150,7 +150,7 @@ function accountTrigger(page: Page) {
   });
 }
 
-// The canonical twelve, in order: Home alone, then records / work /
+// The canonical thirteen, in order: Home alone, then records / work /
 // intelligence. Not upstream's set: Duplicates is a destination here (the queue
 // had no address outside a home digest card) while Automations is not (it is
 // set-and-forget configuration on Settings → AI). Two labels differ from their
@@ -161,7 +161,13 @@ function accountTrigger(page: Page) {
 // src/app/nav.ts is the source of the rail; deriving this from it would assert
 // only that the rail renders itself, so a destination added there is meant to
 // fail here until somebody says what a person now reads and where.
-test("AC-shell-1: the rail renders the canonical 12 items in order", async ({
+//
+// Heute is the answer for the row added most recently. It LEADS the work group
+// rather than joining the end of it: every other row there is one producer's
+// queue, and this one is the sum a reader opens when the question is "what
+// needs me?" instead of "show me the approvals". A summary placed under the
+// things it summarises reads as a footnote to them.
+test("AC-shell-1: the rail renders the canonical 13 items in order", async ({
   page,
 }) => {
   await page.goto("/#/home");
@@ -170,7 +176,7 @@ test("AC-shell-1: the rail renders the canonical 12 items in order", async ({
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
   // while the foot's Settings door rides the same `.navitem` geometry without
   // being one of them.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(12);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(13);
   const labels = await page
     .locator("nav.rail .navlevel a.navitem")
     .evaluateAll((links) =>
@@ -183,6 +189,7 @@ test("AC-shell-1: the rail renders the canonical 12 items in order", async ({
     "Leads",
     "Duplikate",
     "Filter & Ansichten",
+    "Heute",
     "Pipeline",
     "Projekte",
     "Aufgaben",
@@ -277,7 +284,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(12);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(13);
 });
 
 // The account menu carries what belongs to the PERSON rather than to the page:

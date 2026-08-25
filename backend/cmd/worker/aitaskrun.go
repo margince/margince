@@ -412,7 +412,7 @@ func readJSONFile(path, what string) (json.RawMessage, error) {
 // the model-path assembly seam to exactly two files, and a cmd/ process role
 // constructing its own would be a third gate.
 func probeCompleter(cfg aiTaskFlags, task ai.Task) (compose.TaskProbeCompleter, string, error) {
-	complete, banner, err := compose.TaskProbeBrain(cfg.routingPath, cfg.modelSpec, cfg.fakeBrain, task)
+	complete, banner, err := compose.TaskProbeBrain(cfg.modelSpec, cfg.fakeBrain, task)
 	if err != nil {
 		return nil, "", fmt.Errorf("aitask run: %w", err)
 	}

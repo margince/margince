@@ -14,12 +14,9 @@ package main
 // internal/compose/integration/ai_fake_modelpath_integration_test.go.
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose"
@@ -155,10 +152,7 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 // desktop installation to canned answers and the settings screen would look
 // broken while being obeyed.
 func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
-	cfg, err := ai.LoadRoutingFile(writeFakeRoutingFile(t), nil)
-	if err != nil {
-		t.Fatalf("loading the offline routing file: %v", err)
-	}
+	cfg := fakeRouting(t)
 	_, state, profile, _, err := modelPathFor(
 		context.Background(), cfg, modelPathSpec{fakeBrain: true}, nil, discardLogger())
 	if err != nil {
@@ -176,10 +170,7 @@ func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 // every lane bound — over an offline (provider: fake) binding, so the case needs
 // no external credential and no network access.
 func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
-	cfg, err := ai.LoadRoutingFile(writeFakeRoutingFile(t), nil)
-	if err != nil {
-		t.Fatalf("loading the offline routing file: %v", err)
-	}
+	cfg := fakeRouting(t)
 	modelPath, state, profile, _, err := modelPathFor(context.Background(), cfg, modelPathSpec{}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -208,24 +199,6 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 		if lane == nil {
 			t.Errorf("%s lane is nil", name)
 		}
-	}
-}
-
-// LoadRoutingFile refuses a path it cannot read, rather than answering with an
-// empty binding.
-//
-// Still a live claim even though no boot path reads a file any more: the lanes
-// that DO read one — `worker siteread`, `worker aitask` and the certification
-// runner — each probe a binding with no database open, and an unreadable path
-// silently becoming "nothing bound" would make a probe report a model's absence
-// as a model's answer.
-//
-// The boot no longer has an opinion here: a path handed to the api or the worker
-// is ignored, which its own case in the compose integration suite covers.
-func TestLoadRoutingFileRefusesAnUnreadablePath(t *testing.T) {
-	_, err := ai.LoadRoutingFile(filepath.Join(t.TempDir(), "does-not-exist.yaml"), nil)
-	if err == nil {
-		t.Fatal("expected an error for a missing routing file, got nil")
 	}
 }
 
@@ -265,14 +238,13 @@ func TestOfferDraftOptionsRespectsResolvedPath(t *testing.T) {
 	}
 }
 
-// writeFakeRoutingFile writes a fully offline ai-routing.yaml (every
-// tier + embeddings bound to the fake provider) so the declared-routing
-// arm can be exercised without any external credential or network call.
-func writeFakeRoutingFile(t *testing.T) string {
+// fakeRouting parses a fully offline binding (every tier + embeddings on the
+// fake provider) so the bound arm can be exercised with no credential and no
+// network. Parsed from bytes rather than written to a file and read back: the
+// routing file is retired, and the shape is what these cases are about.
+func fakeRouting(t *testing.T) ai.RoutingConfig {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "ai-routing.yaml")
-	const yaml = `
-profile: eu_hosted
+	const routing = `profile: eu_hosted
 tiers:
   local_small: { provider: fake }
   cheap_cloud: { provider: fake }
@@ -280,8 +252,9 @@ tiers:
 embeddings:
   provider: fake
 `
-	if err := os.WriteFile(path, bytes.TrimLeft([]byte(yaml), "\n"), 0o600); err != nil {
-		t.Fatalf("writing fake routing file: %v", err)
+	cfg, err := ai.ParseRouting([]byte(routing))
+	if err != nil {
+		t.Fatalf("parsing the offline binding: %v", err)
 	}
-	return path
+	return cfg
 }

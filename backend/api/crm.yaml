@@ -7915,6 +7915,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /attention:
+    get:
+      tags: [Brief]
+      operationId: getAttention
+      summary: Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
+      description: |
+        The day's one surface. Five producers already ask a rep for something — staged
+        approvals, duplicate pairs, open tasks, the Morning-Brief queue, the overnight
+        digest — and before this they asked from four screens with four shapes, so the
+        rep's real question ("what needs me?") had no single answer.
+
+        The tier is derived from what the item COSTS, not from which producer raised it:
+
+        * `needs_you` — a decision only a person can make: an outbound send, a merge that
+          cannot be undone, a proposal against a record. Bounded, and ordered
+          highest-stakes-first.
+        * `planned` — work already agreed: today's and overdue tasks.
+        * `done_for_you` — what the system did on its own, as a receipt. Reported so a rep
+          can see and challenge it, never to ask for a decision that has already happened.
+
+        One transaction, one instant: `as_of` stamps the read, exactly as the record page
+        does. A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
+        than returned empty — "you may not see this" and "there is none" are different
+        answers, and a queue that conflated them would tell a rep their day is clear.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The tiered feed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attention' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /digest:
     get:
       tags: [Capture]
@@ -17490,7 +17524,10 @@ components:
         automatic_import:
           type: boolean
           default: false
-          description: Still requires import preview, maximum-credit estimate and explicit confirmation.
+          description: >-
+            Enrich every person a connector creates. A mailbox, channel or
+            other connection mints one person per counterparty it sees, and
+            each purchase spends credits; off by default for that reason.
         categories: { $ref: '#/components/schemas/ProviderCategorySelection' }
         refresh_after_days: { type: [integer, 'null'], minimum: 1 }
         daily_run_limit: { type: [integer, 'null'], minimum: 1 }
@@ -28125,6 +28162,102 @@ components:
         timing: { type: number, minimum: 0, maximum: 1, description: bucketed days-until-expected-close urgency. }
         momentum: { type: number, minimum: 0, maximum: 1, description: '1.0 with an evidenced overnight change, else the 0.4 floor.' }
         warmth: { type: number, minimum: 0, maximum: 1, description: strongest visible stakeholder's §4 strength / 100; floor 0 without contributing interactions. }
+
+    Attention:
+      type: object
+      description: |
+        What is waiting on the acting rep right now, in three tiers, plus the counts that
+        let a badge be drawn without paging the lanes. Every count here is scoped the way
+        its lane is scoped: a number a caller cannot page to would report the existence of
+        records they may not read.
+      required: [as_of, needs_you, planned, done_for_you, counts]
+      properties:
+        as_of: { type: string, format: date-time, description: "The instant every lane below was read at." }
+        lead:
+          type: string
+          description: |
+            One sentence naming what the day actually holds, in the reader's language.
+            Absent when there is nothing to lead with, which is itself the honest answer.
+        needs_you:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: "Decisions only a person can make, highest-stakes first."
+        planned:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: "Work already agreed: overdue first, then due today."
+        done_for_you:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: "What the system did on its own, most recent first. Receipts, not questions."
+        lanes_omitted:
+          type: array
+          items: { type: string, enum: [needs_you, planned, done_for_you] }
+          description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
+        counts: { $ref: '#/components/schemas/AttentionCounts' }
+
+    AttentionCounts:
+      type: object
+      description: |
+        How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
+        queue's own count under its both-sides-visible rule, kept separate because the
+        lane shows a bounded slice of it.
+      required: [needs_you, planned]
+      properties:
+        needs_you: { type: integer, minimum: 0 }
+        planned: { type: integer, minimum: 0 }
+        duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+
+    AttentionItem:
+      type: object
+      description: |
+        One thing waiting, in the words a reader recognises, with a typed reference back to
+        the record that owns it. The client routes a verb to that owner's endpoint — this
+        feed adds no decision authority of its own, exactly as the second approvals door
+        adds none.
+      required: [id, source, actions]
+      properties:
+        id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
+        source:
+          type: string
+          enum: [approval, dedupe_candidate, task, brief_item]
+          description: "Which producer raised it, and therefore which endpoint its verbs go to."
+        kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
+        title:
+          type: string
+          description: |
+            The server's own sentence for this item, when it has one — an approval
+            summary is composed at staging time out of the proposal's own facts.
+            ABSENT where the sentence would have to be invented: the product ships
+            three languages, so a duplicate pair sends its `kind` and `confidence`
+            and the client writes the line in the reader's own.
+        detail: { type: string, description: "One supporting line: what changed, or what the evidence said." }
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
+        subject:
+          $ref: '#/components/schemas/AttentionSubject'
+        due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
+        overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
+        occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
+        actions:
+          type: array
+          items: { type: string, enum: [decide, merge, complete, snooze, open] }
+          description: |
+            What this item offers. `decide` and `merge` mean the verb is irreversible and a
+            person must choose; `complete` and `snooze` are a task's own verbs; `open` is
+            the read-only fallback for a receipt.
+
+    AttentionSubject:
+      type: object
+      description: "The record this item is about, named so a reader knows who it concerns before opening anything."
+      required: [type, id]
+      properties:
+        type: { type: string, enum: [organization, person, deal, lead, activity, project] }
+        id: { type: string, format: uuid }
+        label: { type: string, description: "The record's display name. Absent when the caller may not read it, which is not the same as unnamed." }
 
     # ---- Quota + attainment (RD-T06, RD-WIRE-2/3, RD-DDL-2, RD-FORM-2) ----
     Quota:

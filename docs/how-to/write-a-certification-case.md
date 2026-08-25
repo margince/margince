@@ -273,7 +273,7 @@ post-secret-stripper), one object per call carrying `role`, `scenario`, `run`,
 typical find is not a quality problem but a reply the site's own validator
 refuses — a paraphrased evidence snippet where the gate demands a verbatim span.
 
-The run knobs (`MODEL=`, `RUNS=`, `MARGINCE_AI_ROUTING=`, `TRACE=`), the verdict
+The run knobs (`MODEL=`, `JUDGE=`, `RUNS=`, `TRACE=`), the verdict
 math, and how to read a record are all in
 [certify-an-ai-model.md](certify-an-ai-model.md).
 

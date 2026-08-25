@@ -82,7 +82,7 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	fs.StringVar(&cfg.addr, "addr", ":8080", "listen address")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
 	fs.BoolVar(&cfg.inlineRelay, "inline-relay", true, "run the outbox relay in this process (false when cmd/worker runs it)")
-	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else; the file format is still read by the debug and certification lanes")
+	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "drive the AI surfaces with the offline fake model (dev/test only)")
 	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
 	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
