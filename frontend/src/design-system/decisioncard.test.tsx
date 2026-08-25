@@ -10,6 +10,7 @@ import {
   type DecisionApproval,
   DecisionCard,
   type DecisionCardLabels,
+  type DecisionDeadline,
   DecisionStatusChip,
   type DecisionStatusLabels,
   DecisionToolChip,
@@ -287,12 +288,23 @@ const STATUS_LABELS: DecisionStatusLabels = {
   expired: "Expired",
 };
 
+// The chip reads a deadline, not a whole approval, so its fixture is one — and
+// that is what lets the "status this build has never heard of" case below be
+// written at all.
+function deadline(over: Partial<DecisionDeadline> = {}): DecisionDeadline {
+  return {
+    status: "pending",
+    expires_at: new Date(NOW + 9 * HOUR).toISOString(),
+    ...over,
+  };
+}
+
 function statusChip(
   over: Partial<Parameters<typeof DecisionStatusChip>[0]> = {},
 ) {
   return (
     <DecisionStatusChip
-      approval={approval()}
+      approval={deadline()}
       decided={false}
       now={NOW}
       labels={STATUS_LABELS}
@@ -313,7 +325,7 @@ describe("DecisionStatusChip", () => {
   it("escalates its tone through the same bands the card's edge reads", () => {
     const { container } = render(
       statusChip({
-        approval: approval({
+        approval: deadline({
           expires_at: new Date(NOW + 3 * HOUR).toISOString(),
         }),
       }),
@@ -323,7 +335,7 @@ describe("DecisionStatusChip", () => {
 
     const urgent = render(
       statusChip({
-        approval: approval({
+        approval: deadline({
           expires_at: new Date(NOW + 20 * 60 * 1000).toISOString(),
         }),
       }),
@@ -336,7 +348,7 @@ describe("DecisionStatusChip", () => {
   it("draws nothing on a lapsed proposal that has not been answered", () => {
     const { container } = render(
       statusChip({
-        approval: approval({ expires_at: new Date(NOW - HOUR).toISOString() }),
+        approval: deadline({ expires_at: new Date(NOW - HOUR).toISOString() }),
       }),
     );
     expect(container).toBeEmptyDOMElement();
@@ -344,31 +356,33 @@ describe("DecisionStatusChip", () => {
 
   it("draws nothing for a proposal that has no deadline at all", () => {
     const { container } = render(
-      statusChip({ approval: approval({ expires_at: null }) }),
+      statusChip({ approval: deadline({ expires_at: null }) }),
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("shows the verdict rather than a countdown once it has been decided", () => {
     render(
-      statusChip({ decided: true, approval: approval({ status: "approved" }) }),
+      statusChip({ decided: true, approval: deadline({ status: "approved" }) }),
     );
     expect(screen.getByText("Approved")).toBeInTheDocument();
     cleanup();
 
     render(
-      statusChip({ decided: true, approval: approval({ status: "rejected" }) }),
+      statusChip({ decided: true, approval: deadline({ status: "rejected" }) }),
     );
     expect(screen.getByText("Rejected")).toBeInTheDocument();
   });
 
-  // A decided card with no badge says less about itself than a slightly
-  // imprecise one, so an unrecognised status falls back rather than vanishing.
+  // The status vocabulary grows on the server, so this build is always one
+  // deploy from a status it has no word for — the case `inbox.kinds.test.tsx`
+  // already settled for `kind`. A decided card with no badge says less about
+  // itself than a slightly imprecise one, so it falls back rather than vanishes.
   it("falls back to the lapsed word for a status it has not learned", () => {
     render(
       statusChip({
         decided: true,
-        approval: approval({ status: "superseded" }),
+        approval: deadline({ status: "superseded" }),
       }),
     );
     expect(screen.getByText("Expired")).toBeInTheDocument();

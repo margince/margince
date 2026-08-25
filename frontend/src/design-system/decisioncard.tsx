@@ -65,8 +65,28 @@ export function decisionUrgency(msRemaining: number): DecisionUrgency {
   return msRemaining < 6 * HOUR_MS ? "soon" : "calm";
 }
 
+/**
+ * The deadline half of a staged proposal — all the readings below actually
+ * touch, and named as its own subject for the sake of ONE field: `status` is
+ * `string` here, not the generated wire union.
+ *
+ * The status vocabulary lives on the server and grows there, so a build is
+ * always one deploy from meeting a status it has no word for. This tree already
+ * settled that argument for `kind` (`screens/inbox.kinds.test.tsx`), and the
+ * answer was the same: render what arrived rather than drop it. Held to the
+ * closed union, the fallback in `verdictOf` would be unreachable to the compiler
+ * and dead by the letter of the rule, while still being the branch that runs the
+ * day the server adds a sixth status — and a test could not reach it at all.
+ *
+ * A full `Approval` satisfies this shape, so every existing caller passes one.
+ */
+export type DecisionDeadline = Readonly<{
+  status: string;
+  expires_at?: string | null;
+}>;
+
 /** When a staged proposal lapses, in wall-clock ms — null for one that never does. */
-export function decisionExpiryMs(approval: DecisionApproval): number | null {
+export function decisionExpiryMs(approval: DecisionDeadline): number | null {
   return approval.expires_at ? new Date(approval.expires_at).getTime() : null;
 }
 
@@ -77,7 +97,7 @@ export function decisionExpiryMs(approval: DecisionApproval): number | null {
  * approvable, so Accept is not drawn at all.
  */
 export function decisionLapsed(
-  approval: DecisionApproval,
+  approval: DecisionDeadline,
   now: number,
 ): boolean {
   const expiresAtMs = decisionExpiryMs(approval);
@@ -120,10 +140,11 @@ const VERDICT_TONE: Readonly<
   expired: "warn",
 };
 
-// A wire status this tier has not learned yet reads as `expired`: a decided card
-// with no badge says less about itself than a slightly imprecise one, and every
-// status the contract can add to the decided set is still something nobody can
-// act on any more.
+// A wire status this tier has not learned yet reads as `expired`. Reachable —
+// see `DecisionDeadline` — because the status vocabulary grows on the server,
+// and a decided card with no badge says less about itself than a slightly
+// imprecise one: whatever the contract adds to the decided set, it is still
+// something nobody can act on any more.
 function verdictOf(status: string): DecisionVerdict {
   if (status === "approved") {
     return "approved";
@@ -164,7 +185,8 @@ export function DecisionStatusChip({
   now,
   labels,
 }: Readonly<{
-  approval: DecisionApproval;
+  /** The deadline and the status; the chip reads nothing else off a proposal. */
+  approval: DecisionDeadline;
   /** History rather than a question: the verdict, not the time it had left. */
   decided: boolean;
   now: number;
