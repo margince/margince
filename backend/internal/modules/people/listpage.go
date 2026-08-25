@@ -190,7 +190,7 @@ func capturedByKindClause(kind *string, arg func(any) int) (string, bool, error)
 
 // agentPrefix matches the captured_by grammar's AI namespace. Shared by every
 // predicate below so "which prefix counts as an AI" has one answer, and it is
-// the same one the partial indexes in migration 0138 are built on — a mismatch
+// the same one the partial indexes on captured_by are built on — a mismatch
 // there silently costs the index rather than the result.
 const agentPrefix = "agent:" + likeWildcard
 
