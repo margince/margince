@@ -1,12 +1,21 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { AiUsageCard } from "./aiusage";
+
+// The reader's zone is an input to this card, so it is injected rather than
+// inherited from whatever machine runs the suite — a test that agrees with the
+// runner's clock proves nothing about a reader east of it.
+const viewer = vi.hoisted(() => ({ zone: "UTC" }));
+vi.mock("../format/timezone", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../format/timezone")>();
+  return { ...actual, viewerZone: () => viewer.zone };
+});
 
 const budget = { monthly_tokens: 1000, spent_tokens: 850, band: "degraded" };
 
@@ -186,4 +195,51 @@ it("withholds the spend from a principal without the automation grant, and asks 
   ).toBeTruthy();
   expect(screen.getByText("AI usage & budget")).toBeTruthy();
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);
+});
+
+// The month arrows, at the boundary where the reader's calendar and UTC's
+// disagree. 2026-08-31T20:00Z is already 1 September in Asia/Ho_Chi_Minh, so a
+// card that seeded from UTC would step back to July and would leave Next armed
+// for a month the reader has already left. Both are asserted, because the two
+// halves are one rule read twice and only the seed is zoned.
+it("steps back from the month the READER is in, not the one UTC is in", async () => {
+  // shouldAdvanceTime, because react-query's fetch loop is asynchronous and a
+  // frozen clock never lets it resolve. Only the WALL CLOCK is moved here; the
+  // zone is the mocked viewerZone above, and Intl does the real conversion.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-08-31T20:00:00Z"));
+  viewer.zone = "Asia/Ho_Chi_Minh";
+  try {
+    const { seen } = mount({ budget, days: [] });
+    // The card opens on the current month, so there is nothing later to show.
+    const next = await screen.findByLabelText("Next month");
+    expect(next.hasAttribute("disabled")).toBe(true);
+
+    await act(async () => {
+      screen.getByLabelText("Previous month").click();
+    });
+    await waitFor(() =>
+      expect(
+        seen.some((url) => url.includes("from=2026-08-01&to=2026-08-31")),
+      ).toBe(true),
+    );
+
+    // Having stepped off the reader's month, Next is a real destination again.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
+        false,
+      ),
+    );
+    await act(async () => {
+      screen.getByLabelText("Next month").click();
+    });
+    await waitFor(() =>
+      expect(
+        seen.some((url) => url.includes("from=2026-09-01&to=2026-09-30")),
+      ).toBe(true),
+    );
+  } finally {
+    vi.useRealTimers();
+    viewer.zone = "UTC";
+  }
 });
