@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarDay,
+  calendarMonth,
   dueInstant,
   localDateTimeValue,
   middayInstant,
@@ -119,6 +120,38 @@ describe("middayInstant", () => {
     ]) {
       const at = new Date(middayInstant("2026-03-29", zone));
       expect(calendarDay(at, zone)).toBe("2026-03-29");
+    }
+  });
+});
+
+describe("calendarMonth", () => {
+  // The case the day rule was respelled for, at month granularity: the last
+  // evening of a month in a zone east of UTC is still the previous month in
+  // UTC, and a page that read UTC's month opens on one the reader has left.
+  it("is the reader's month, not UTC's, on the last evening of one", () => {
+    const lastEveningInSaigon = new Date("2026-08-31T20:00:00Z");
+    expect(calendarMonth(lastEveningInSaigon, "Asia/Ho_Chi_Minh")).toBe(
+      "2026-09",
+    );
+    expect(calendarMonth(lastEveningInSaigon, "UTC")).toBe("2026-08");
+  });
+
+  // And its mirror, west of UTC: the first hours of a month in UTC are still
+  // the previous month in Los Angeles.
+  it("is the reader's month west of UTC too", () => {
+    const firstHoursInUTC = new Date("2026-09-01T02:00:00Z");
+    expect(calendarMonth(firstHoursInUTC, "America/Los_Angeles")).toBe(
+      "2026-08",
+    );
+    expect(calendarMonth(firstHoursInUTC, "UTC")).toBe("2026-09");
+  });
+
+  // It is the day rule cut short, not a second reading of the clock: the two
+  // granularities cannot answer about different months.
+  it("agrees with calendarDay it is derived from", () => {
+    const at = new Date("2026-02-28T23:30:00Z");
+    for (const zone of ["UTC", "Asia/Ho_Chi_Minh", "America/Los_Angeles"]) {
+      expect(calendarMonth(at, zone)).toBe(calendarDay(at, zone).slice(0, 7));
     }
   });
 });

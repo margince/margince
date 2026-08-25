@@ -59,6 +59,19 @@ export function calendarDay(at: Date, zone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+// The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.
+//
+// Derived from calendarDay rather than assembled again, so the two granularities
+// cannot answer about different months. It exists because the day rule was
+// spelled at month granularity by hand — `new Date().toISOString().slice(0, 7)`
+// — and a census looking for the day-length slice could not see it: for a
+// reader east of UTC late on the last evening of a month, that answers about
+// UTC's month rather than the one on their calendar, and a usage page opens on
+// a month they are no longer in.
+export function calendarMonth(at: Date, zone: string): string {
+  return calendarDay(at, zone).slice(0, "yyyy-mm".length);
+}
+
 // The wire instant for a due date the reader picked as a calendar day — the
 // `yyyy-mm-dd` a date input yields, which every caller has already checked is
 // non-empty.

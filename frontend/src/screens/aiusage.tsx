@@ -17,6 +17,8 @@ import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem, useMe } from "./common";
 import "./aiusage.css";
+import { calendarMonth } from "../format/calendarday";
+import { viewerZone } from "../format/timezone";
 
 type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
@@ -38,8 +40,16 @@ function bandLabel(
   return t("aiusage.band.unknown");
 }
 
+// Month boundaries are computed in UTC on purpose: once a month is NAMED, its
+// first and last day are arithmetic on that name, and re-reading them through a
+// zone would shift the window off the month the reader asked for. The zone
+// question is only about which month "now" falls in, which is why the seed —
+// and only the seed — is read in the reader's own.
 function adjacentMonth(month: Month | null, offset: number): Month {
-  const seed = month ? new Date(`${month.from}T00:00:00Z`) : new Date();
+  const readerMonth = month
+    ? month.from
+    : `${calendarMonth(new Date(), viewerZone())}-01`;
+  const seed = new Date(`${readerMonth}T00:00:00Z`);
   const first = new Date(
     Date.UTC(seed.getUTCFullYear(), seed.getUTCMonth() + offset, 1),
   );
@@ -52,9 +62,12 @@ function adjacentMonth(month: Month | null, offset: number): Month {
   };
 }
 
+// "This month" is the reader's month, not UTC's. On the last evening of a month
+// east of UTC the two disagree, and the page then refuses the Next arrow for a
+// month the reader has already left.
 function isCurrentMonth(month: Month | null): boolean {
   if (month === null) return true;
-  return month.from.slice(0, 7) >= new Date().toISOString().slice(0, 7);
+  return month.from.slice(0, 7) >= calendarMonth(new Date(), viewerZone());
 }
 
 function aggregate(days: AiUsage["days"]): UsageTask[] {

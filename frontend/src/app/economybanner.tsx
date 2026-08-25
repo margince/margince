@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { calendarDay } from "../format/calendarday";
+import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { bandTone } from "../screens/aiusage";
 import { throwProblem } from "../screens/common";
@@ -26,7 +28,11 @@ export function EconomyBanner() {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      // The reader's own today, not UTC's. The band this asks for is about
+      // the day they are having: east of UTC before the small hours, an ISO
+      // slice names yesterday and the banner reports a budget that has already
+      // been spent against a different day.
+      const today = calendarDay(new Date(), viewerZone());
       const { data, error } = await api.GET("/ai/usage", {
         params: { query: { from: today, to: today } },
       });
