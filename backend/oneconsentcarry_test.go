@@ -74,7 +74,7 @@ func writesConsentState(_ string, file *ast.File) bool {
 // theCarryFile is where the carry lives. Named because the two tests below ask
 // questions ABOUT that file rather than about a count.
 //
-// Held by: TestTheConsentCarryIsSpelledOnceInPeople (this file) — which fails
+// Held by: TestTheConsentCarryIsSpelledOnceInPeople (backend/oneconsentcarry_test.go) — which fails
 // if the people module's consent writes are in any other file, and fails again
 // if they have moved out of this one.
 const theCarryFile = "internal/modules/people/consentcarry.go"
