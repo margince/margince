@@ -15397,39 +15397,33 @@ paths:
   /knowledge/corpora/{id}/documents:
     parameters:
       - $ref: '#/components/parameters/Id'
-    post:
+    get:
       tags: [Knowledge]
-      operationId: uploadCorpusDocument
+      operationId: listCorpusDocuments
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
-      summary: Add a document to this corpus.
+      summary: The documents filed in this corpus, and how far each one's ingest got.
       description: >-
-        Accepts only files whose bytes are their own text — text/plain, text/markdown,
-        text/csv, application/json. Anything else is refused naming what is accepted;
-        there is no parser in this product and a silently empty ingest is worse than a
-        refusal. Ingest is asynchronous: the document lands `queued` and its status is
-        read back from the corpus.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file: { type: string, format: binary }
+        The corpus's coverage counts say how much of it is searchable; this says which
+        files those counts are made of. Every document is listed whatever state its
+        ingest reached, and a failed one carries `ingest_detail` — a corpus that is
+        quietly short of a file nobody can name answers worse than one that is empty,
+        because it still answers.
       responses:
-        '202':
-          description: Accepted for ingest.
+        '200':
+          description: The documents.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/KnowledgeDocument' }
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/KnowledgeDocument' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '413': { $ref: '#/components/responses/PayloadTooLarge' }
-        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
-        '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/documents/{id}:
     parameters:
@@ -15808,22 +15802,6 @@ components:
           examples:
             notFound:
               value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
-    PayloadTooLarge:
-      description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
-      content:
-        application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
-          examples:
-            tooLarge:
-              value: { type: 'https://errors.gradion.com/payload_too_large', title: Payload too large, status: 413, code: payload_too_large, detail: The upload exceeds this installation's ceiling for this route. }
-    UnsupportedMediaType:
-      description: 'The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success.'
-      content:
-        application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
-          examples:
-            unsupported:
-              value: { type: 'https://errors.gradion.com/unsupported_media_type', title: Unsupported media type, status: 415, code: unsupported_media_type, detail: This file type cannot be read; the accepted types are named in the operation. }
     RetentionHeld:
       description: 'The record is held under a statutory retention obligation and cannot be changed (`code: locked`).'
       content:
