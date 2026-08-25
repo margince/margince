@@ -44,7 +44,7 @@ var (
 // templates like any other offer-adjacent record; delete stays manager/
 // admin/ops (archiveOfferTemplate carries no x-agent-access gate — any
 // role holding delete may call it directly). overlay_connection follows
-// the SAME posture as quota (0068_quota_rbac.up.sql's backfill precedent):
+// the SAME posture as quota, and for the same reason:
 // connecting/disconnecting the workspace's incumbent binding is
 // destructive workspace-wide config (it purges the mirror and flips
 // sor_mode for everyone), so create/update/delete are admin/ops-only;
