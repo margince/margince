@@ -73,6 +73,9 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/people/providerclaims.go:WriteProviderClaims": "the bought values land in person_provider_claim and the person row is untouched, and quoting them would put a second copy of the subject's data in a table the erasure treats as evidence rather than as subject data",
+	"internal/modules/people/researchclaim.go:SaveResearchClaims":   "the claims land in person_profile_field and the person row is untouched; what arrived rides the evidence column, where field history will not read it as a field of the record",
+
 	"internal/modules/collections/tags.go:ApplyTag": "the tag row is untouched; the write inserts a taggable link, " +
 		"and the after image names the record it now points at.",
 	"internal/modules/collections/tags.go:RemoveTag": "the tag row is untouched; the write deletes a taggable link, " +

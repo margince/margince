@@ -136,7 +136,12 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 			}
 			saved++
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "person", personID.UUID, nil,
+		// The claims land in person_profile_field, never on the person row, so
+		// there is no column image to carry — and quoting the values would put a
+		// second copy of the subject's data in a table the erasure treats as
+		// evidence. What arrived rides the evidence column instead, where field
+		// history will not read it as a field of the record.
+		auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "person", personID.UUID, nil,
 			map[string]any{"research_claims_saved": saved})
 		if err != nil {
 			return fmt.Errorf("audit the saved research: %w", err)

@@ -74,7 +74,7 @@ func WriteProviderClaims(ctx context.Context, tx pgx.Tx, runID, personID, provid
 	if err != nil {
 		return fmt.Errorf("people: the claim's subject id does not parse, so the arrival cannot be audited: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "person", subject, nil, map[string]any{
+	if _, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "person", subject, nil, map[string]any{
 		auditKeyProvider: providerName, "run_id": runID, "claim_keys": claimKeyNames(claims),
 	}); err != nil {
 		return err
