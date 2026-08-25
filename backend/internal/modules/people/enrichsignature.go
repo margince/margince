@@ -58,25 +58,51 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 	sourceRef := "activity:" + sourceActivity.String()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var appliedFields []string
+		// Every field this pass landed, as it found it and as it left it —
+		// keyed by the field name, whether it is a column of the person or a
+		// row of person_profile_field. The site and search fills record the
+		// sidecar fields the same way, and a field that projected as a change
+		// from one writer and as nothing from another would give one field two
+		// histories.
+		before, after := map[string]any{}, map[string]any{}
 		for _, f := range fields {
-			applied, err := s.applySignatureField(ctx, tx, personID, sourceRef, f)
+			verdict, err := s.applySignatureField(ctx, tx, personID, sourceRef, f)
 			if err != nil {
 				return err
 			}
-			if applied {
-				res.Applied++
-				appliedFields = append(appliedFields, f.Name)
-			} else {
+			if !verdict.applied {
 				res.Skipped++
+				continue
 			}
+			res.Applied++
+			appliedFields = append(appliedFields, f.Name)
+			// Named, not quoted. This pass parses its values out of a message
+			// somebody sent, and one of the fields it can fill is a phone
+			// number; audit_log is append-only, so a value written here outlives
+			// the erasure that clears the record it came from. The same refusal
+			// the bought-claim writers make, for the same reason and the same
+			// closed vocabulary of field names.
+			//
+			// Fill-only-empty: the evidence row lands on ON CONFLICT DO NOTHING
+			// and each column write carries its own emptiness predicate, so a
+			// field this pass filled is one that held nothing.
+			before[f.Name] = nil
+			after[f.Name] = signatureFieldFilled
 		}
 		if len(appliedFields) == 0 {
 			return nil
 		}
 		// The write shape: the enrichment is a person mutation, so the
 		// audit row and the person.updated outbox event ride this commit.
-		auditID, err := storekit.Audit(ctx, tx, "update", entityPerson, personID.UUID,
-			nil, map[string]any{auditKeyFields: appliedFields, "source_ref": sourceRef})
+		//
+		// WHICH mail the signature came from, and which fields landed at all,
+		// are context ABOUT the mutation and ride evidence: anything placed in
+		// the images is projected by field history as a change to a field of
+		// that name (storekit.AuditWithEvidence).
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityPerson, personID.UUID,
+			before, after, map[string]any{
+				auditKeySource: enrichSource, auditKeyFields: appliedFields, "source_ref": sourceRef,
+			})
 		if err != nil {
 			return err
 		}
@@ -125,10 +151,22 @@ func readSignatureValue(f SignatureField) (string, bool) {
 	return parsed.String(), true
 }
 
-func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef string, f SignatureField) (bool, error) {
+// signatureVerdict is what one gated field did to the record: whether it landed
+// at all, and the value it landed — which is the value the audit image carries,
+// normalized, rather than the string the signature spelled.
+type signatureVerdict struct {
+	applied bool
+	value   string
+}
+
+// signatureFieldFilled marks a field this pass answered. The image says WHICH
+// field moved and does not carry what it moved to.
+const signatureFieldFilled = "filled"
+
+func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef string, f SignatureField) (signatureVerdict, error) {
 	value, readable := readSignatureValue(f)
 	if !readable {
-		return false, nil
+		return signatureVerdict{}, nil
 	}
 
 	// A machine fill: the signature claims a field nobody has answered and
@@ -138,9 +176,10 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
 	}, claimUnanswered)
 	if err != nil || !landed {
-		return false, err
+		return signatureVerdict{}, err
 	}
 
+	verdict := signatureVerdict{applied: true, value: value}
 	switch f.Name {
 	case "title":
 		// Fill-only-empty: the NULL predicate is the CAS — an occupied
@@ -155,13 +194,13 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		tag, err := tx.Exec(ctx, `
 			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, personID, value)
 		if err != nil {
-			return false, fmt.Errorf("people: signature title fill: %w", err)
+			return signatureVerdict{}, fmt.Errorf("people: signature title fill: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			// A concurrent writer filled the title after the candidate
 			// query: the evidence row must not claim a value that never
 			// applied — withdraw it and count the field skipped.
-			return false, revokeSignatureEvidence(ctx, tx, personID, f.Name)
+			return signatureVerdict{}, revokeSignatureEvidence(ctx, tx, personID, f.Name)
 		}
 	case "phone":
 		// A first phone only — a person with any live phone row keeps it.
@@ -172,10 +211,10 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 				SELECT 1 FROM person_phone WHERE person_id = $1 AND archived_at IS NULL)`,
 			personID, value, enrichSource, enrichCapturedBy)
 		if err != nil {
-			return false, fmt.Errorf("people: signature phone fill: %w", err)
+			return signatureVerdict{}, fmt.Errorf("people: signature phone fill: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
-			return false, revokeSignatureEvidence(ctx, tx, personID, f.Name)
+			return signatureVerdict{}, revokeSignatureEvidence(ctx, tx, personID, f.Name)
 		}
 	}
 	// role / linkedin / org_name live only in the sidecar: no record column
@@ -183,9 +222,9 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 
 	if err := storekit.StampFields(ctx, tx, entityPerson, personID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: f.Name}}); err != nil {
-		return false, err
+		return signatureVerdict{}, err
 	}
-	return true, nil
+	return verdict, nil
 }
 
 // revokeSignatureEvidence withdraws the just-inserted evidence row when

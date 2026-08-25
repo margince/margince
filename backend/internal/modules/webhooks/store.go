@@ -347,7 +347,7 @@ func (s *Store) RotateSecret(ctx context.Context, id ids.UUID) (Subscription, st
 			return apperrors.ErrNotFound
 		}
 		// The rotation is audited without recording either secret value.
-		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, nil,
+		if _, err := storekit.AuditEvent(ctx, tx, "update", rbacObject, id,
 			map[string]any{"signing_secret_rotated": true}); err != nil {
 			return err
 		}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -80,18 +81,20 @@ func emptyColdStartColumnImages() map[string]any {
 	}
 }
 
-// changedColumnsOnly narrows the two images to the columns that actually moved.
-// A field-history projection reads every key in the pair, so carrying an
-// untouched column through would publish "industry: Automotive → Automotive"
-// as a change on a run that only filled the legal name.
-func changedColumnsOnly(before, after map[string]any) (map[string]any, map[string]any) {
-	b, a := map[string]any{}, map[string]any{}
-	for column, afterValue := range after {
-		if before[column] == afterValue {
-			continue
-		}
-		b[column] = before[column]
-		a[column] = afterValue
+// anchorSaveImages is the pair of images a company save records: the columns as
+// the resolve found them, against the row as the save leaves it, narrowed to
+// what actually moved so a re-sent form does not present every field it echoed
+// back as an edit. A save that MINTED the row has no before-image, and its
+// after image stays whole — every column the create wrote is a change from
+// nothing.
+func anchorSaveImages(ctx context.Context, tx pgx.Tx, target anchorTarget) (map[string]any, map[string]any, error) {
+	after, err := readColdStartColumnImages(ctx, tx, target.id)
+	if err != nil {
+		return nil, nil, err
 	}
-	return b, a
+	if storekit.AbsentImage(target.before) {
+		return nil, after, nil
+	}
+	before, changed := storekit.ChangedColumns(target.before, after)
+	return before, changed, nil
 }

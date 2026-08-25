@@ -49,8 +49,8 @@ import (
 // dedupe review queue picks up like any other and a merge resolves. What skipping
 // costs is a disclosure no merge undoes.
 //
-// Only organizations: a lead's identity is its email, which the store's own
-// unique key already refuses, so there is no silent twin to warn about.
+// Not leads: a lead's identity is its email, which the store's own unique key
+// already refuses, so there is no silent twin to warn about.
 //
 // A read-only transaction, and NOT DedupeOrganizationForCreate — that one takes
 // a write lock to serialize concurrent creates, which a preview has no business
@@ -58,9 +58,17 @@ import (
 // create path runs the locking version itself and its answer is the one that
 // decides.
 func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectOrganization {
+	switch w.object {
+	case migration.ObjectOrganization:
+		return w.organizationCollides(ctx, row)
+	case migration.ObjectPerson:
+		return w.personCollides(ctx, row)
+	default:
 		return false, nil
 	}
+}
+
+func (w *csvWriters) organizationCollides(ctx context.Context, row migration.Row) (bool, error) {
 	fields := textFields(row.Fields)
 	candidate := people.OrganizationCandidate{
 		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),

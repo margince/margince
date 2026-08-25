@@ -211,10 +211,11 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		if err := lockCompanyState(ctx, tx); err != nil {
 			return err
 		}
-		orgID, created, err := resolveOrCreateAnchor(ctx, tx, in.DisplayName, by)
+		target, err := resolveOrCreateAnchor(ctx, tx, in.DisplayName, by)
 		if err != nil {
 			return err
 		}
+		orgID := target.id
 
 		fields := make(map[string]*string, len(in.Fields)+1)
 		for field, value := range in.Fields {
@@ -234,16 +235,26 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		applied["display_name"] = in.DisplayName
 
 		action := actionUpdate
-		if created {
-			action = "create"
+		if target.created {
+			action = actionCreate
 		}
-		auditID, err := storekit.Audit(ctx, tx, action, "organization", orgID.UUID, nil, map[string]any{
+		before, after, err := anchorSaveImages(ctx, tx, target)
+		if err != nil {
+			return err
+		}
+		// before/after carry the RECORD's own column images and nothing else.
+		// The form's own bookkeeping — which source typed it, that this is the
+		// installation's own company, which fields the submission touched —
+		// rides audit_log.evidence, because anything placed in the images is
+		// projected by field history as a change to a field of that name
+		// (storekit.AuditWithEvidence).
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "organization", orgID.UUID, before, after, map[string]any{
 			auditKeySource: companySourceHuman, "anchor": true, auditKeyFields: applied,
 		})
 		if err != nil {
 			return fmt.Errorf("audit company save: %w", err)
 		}
-		payload := companySaveEventPayload(created, applied, by)
+		payload := companySaveEventPayload(target.created, applied, by)
 		if err := storekit.EmitEvent(ctx, tx, auditID, orgID.UUID, payload); err != nil {
 			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
 		}
@@ -304,15 +315,25 @@ func anchorOrganization(ctx context.Context, tx pgx.Tx, lock bool) (ids.Organiza
 	return orgID, nil
 }
 
+// anchorTarget is the row a company save writes onto: which organization,
+// whether this save minted it, and the column images as they stood before the
+// resolve renamed it. A minted row has no before-image — nothing preceded it,
+// and a read taken after the insert would return what the insert itself wrote.
+type anchorTarget struct {
+	id      ids.OrganizationID
+	created bool
+	before  map[string]any
+}
+
 // resolveOrCreateAnchor returns the workspace's own company, minting it on the
 // first save, and reports whether it created it — which decides the audit
 // action and the event the caller emits. Creating and updating carry different
 // authority, so each arm gates on its own.
-func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by string) (ids.OrganizationID, bool, error) {
+func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by string) (anchorTarget, error) {
 	// The name lock precedes the row lock below, the one order every path
 	// holding both must use (UpdateOrganization says why).
 	if err := lockOrgNameWrites(ctx, tx); err != nil {
-		return ids.OrganizationID{}, false, err
+		return anchorTarget{}, err
 	}
 	// The company is a single standing record, not an optimistically
 	// concurrent one: the form carries no version, so the row is LOCKED for
@@ -321,26 +342,32 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	orgID, err := anchorOrganization(ctx, tx, true)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		if err := auth.Require(ctx, "organization", principal.ActionCreate); err != nil {
-			return ids.OrganizationID{}, false, err
+			return anchorTarget{}, err
 		}
 		orgID, err = createAnchorOrganization(ctx, tx, displayName, by)
-		return orgID, true, err
+		return anchorTarget{id: orgID, created: true}, err
 	}
 	if err != nil {
-		return ids.OrganizationID{}, false, err
+		return anchorTarget{}, err
 	}
 	if err := auth.Require(ctx, "organization", principal.ActionUpdate); err != nil {
-		return ids.OrganizationID{}, false, err
+		return anchorTarget{}, err
 	}
 	if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
-		return ids.OrganizationID{}, false, err
+		return anchorTarget{}, err
+	}
+	// Read before the rename below, because the name is one of the columns it
+	// moves: an image taken afterwards would report the new name as the old one.
+	before, err := readColdStartColumnImages(ctx, tx, orgID)
+	if err != nil {
+		return anchorTarget{}, err
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE organization SET display_name = $2, version = version + 1
 		 WHERE id = $1 AND display_name IS DISTINCT FROM $2`,
 		orgID, displayName)
 	if err != nil {
-		return ids.OrganizationID{}, false, fmt.Errorf("update company name: %w", err)
+		return anchorTarget{}, fmt.Errorf("update company name: %w", err)
 	}
 	// Renaming the workspace's own company can walk it onto a record captured
 	// from its own mail, which is the same duplicate every other rename path
@@ -348,10 +375,10 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	// name actually moved, so that is the signal to look.
 	if tag.RowsAffected() > 0 {
 		if err := recheckOrgNameForDuplicates(ctx, tx, orgID, by); err != nil {
-			return ids.OrganizationID{}, false, err
+			return anchorTarget{}, err
 		}
 	}
-	return orgID, false, nil
+	return anchorTarget{id: orgID, before: before}, nil
 }
 
 // createAnchorOrganization mints the company row, marked as the installation's

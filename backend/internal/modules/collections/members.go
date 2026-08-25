@@ -179,7 +179,7 @@ func (s *Store) AddMember(ctx context.Context, listID ids.ListID, entityType str
 		if err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "list", listID.UUID, nil, map[string]any{
+		_, err = storekit.AuditEvent(ctx, tx, "update", "list", listID.UUID, map[string]any{
 			"added": map[string]any{"entity_type": entityType, "entity_id": entityID},
 		})
 		return err

@@ -281,7 +281,7 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	if err != nil {
 		return err
 	}
-	before, after = changedColumnsOnly(before, after)
+	before, after = storekit.ChangedColumns(before, after)
 	// The facts and the profile-field evidence are NOT column images — they
 	// live in their own sidecar tables — so they ride the evidence column with
 	// the rest of the operation's metadata. Only what changed on the

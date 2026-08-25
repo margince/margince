@@ -66,17 +66,22 @@ func WriteProviderClaims(ctx context.Context, tx pgx.Tx, runID, personID, provid
 	// integrations when the run is queued; without this, the arrival of the
 	// values it bought would leave no trace on the record they landed on.
 	//
-	// The image names which claims arrived and from whom, never their
-	// contents: an audit row that quoted a bought mobile number would be a
-	// second copy of the subject's data in a table the erasure treats as
-	// evidence rather than as subject data.
+	// The image names which claims arrived, never their contents: an audit row
+	// that quoted a bought mobile number would be a second copy of the
+	// subject's data in a table the erasure treats as evidence rather than as
+	// subject data. The KEYS are a closed vocabulary and name nobody.
+	//
+	// It says that much rather than nothing, because a row whose before and
+	// after are both empty records that something happened and cannot say what.
+	// WHICH provider and WHICH run are context about the arrival and ride
+	// evidence, where field history will not read them as fields of the person.
 	subject, err := ids.Parse(personID)
 	if err != nil {
 		return fmt.Errorf("people: the claim's subject id does not parse, so the arrival cannot be audited: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "person", subject, nil, map[string]any{
-		auditKeyProvider: providerName, "run_id": runID, "claim_keys": claimKeyNames(claims),
-	}); err != nil {
+	if _, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "person", subject,
+		map[string]any{"provider_claims_received": claimKeyNames(claims)},
+		map[string]any{auditKeyProvider: providerName, "run_id": runID}); err != nil {
 		return err
 	}
 	return nil
