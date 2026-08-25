@@ -76,6 +76,7 @@ export const de = {
   "day.lead.oneDecision": "Eine Entscheidung wartet auf dich.",
   "day.lead.decisions": "{count} Entscheidungen warten auf dich.",
   "day.lead.plannedOnly": "Nichts zu entscheiden — {count} für heute geplant.",
+  "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.morningOnly":
     "Nichts wartet auf dich — die Nacht hat {count} zum Anfangen herausgesucht.",
   "day.lead.ranOvernight":

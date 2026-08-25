@@ -455,6 +455,57 @@ describe("what the night left on the worklist", () => {
       screen.queryByText(/found nothing worth your first hour/),
     ).toBeNull();
   });
+  // The same defect, one lane later, and caught the same way: the lead line
+  // read "Your day is clear" directly above an OVERDUE promise. It repeats
+  // because every new lane has to be added to a summary written before it, so
+  // this test is the sibling of the briefing one below rather than a copy of it.
+  it("never calls a day clear when a promise is still owed", async () => {
+    stub({
+      ...emptyDay,
+      commitments: [
+        {
+          id: "claim-1",
+          source: "conversation_claim",
+          title: "Referenzliste an Frau Wagner schicken",
+          detail: "Ich schicke Ihnen die Referenzliste bis Dienstag.",
+          subject: { type: "person", id: "person-1" },
+          due_at: "2026-08-25T16:00:00Z",
+          overdue: true,
+          actions: ["open"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, commitments: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Referenzliste an Frau Wagner schicken");
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+    expect(screen.getByText("You promised 1 — those come first.")).toBeTruthy();
+  });
+  // A promise outranks a briefing suggestion in the lead, because the reader
+  // already agreed to it and only ever suggested the other. Both present, the
+  // line must name the promise.
+  it("leads with the promise rather than the briefing when both are on the day", async () => {
+    stub({
+      ...emptyDay,
+      commitments: [
+        {
+          id: "claim-1",
+          source: "conversation_claim",
+          title: "Referenzliste an Frau Wagner schicken",
+          subject: { type: "person", id: "person-1" },
+          due_at: "2026-08-25T16:00:00Z",
+          actions: ["open"],
+        },
+      ],
+      counts: { this_morning: 2, needs_you: 0, planned: 0, commitments: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Referenzliste an Frau Wagner schicken");
+    expect(screen.queryByText(/the night picked out/)).toBeNull();
+    expect(screen.getByText("You promised 1 — those come first.")).toBeTruthy();
+  });
   // Caught in the browser, not by a test: the lead line was written before this
   // lane existed, so it read "Your day is clear" directly above two items the
   // night had picked out. A summary that contradicts the page under it is worse

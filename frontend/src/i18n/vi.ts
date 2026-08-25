@@ -85,6 +85,7 @@ export const vi = {
   "day.lead.decisions": "{count} quyết định đang chờ bạn.",
   "day.lead.plannedOnly":
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
+  "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.morningOnly":
     "Không có gì chờ bạn — đêm qua đã chọn ra {count} việc để bắt đầu.",
   "day.lead.ranOvernight":

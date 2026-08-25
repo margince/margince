@@ -80,6 +80,7 @@ export const en = {
   "day.lead.oneDecision": "One decision is waiting on you.",
   "day.lead.decisions": "{count} decisions are waiting on you.",
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
+  "day.lead.promises": "You promised {count} — those come first.",
   "day.lead.morningOnly":
     "Nothing waiting on you — the night picked out {count} to start with.",
   "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",

@@ -78,6 +78,14 @@ function leadLine(
       count: formatNumber(day.counts.planned, locale),
     });
   }
+  // Above the briefing lane and below planned work, which is what a promise
+  // IS: something the reader already agreed to, and the strongest claim on the
+  // day short of a decision waiting on them. A briefing item only suggests
+  // where to start; a promise is owed to somebody.
+  const promises = day.counts.commitments ?? 0;
+  if (promises > 0) {
+    return t("day.lead.promises", { count: formatNumber(promises, locale) });
+  }
   // Before "clear", because the briefing lane is on this page: a line reading
   // "your day is clear" above two items the night picked out is the one thing
   // this line exists to prevent. It sits below decisions and planned work,
