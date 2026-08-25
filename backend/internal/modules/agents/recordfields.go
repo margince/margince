@@ -117,7 +117,10 @@ const recordFieldsDescription = "The crm.yaml body for the record_type. The fiel
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
 	RecordFieldsURI + " — that document, not this description, is what says what a write may " +
 	"name. An extra key must be cf_<slug> for a custom field; any other key is refused BY NAME " +
-	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost."
+	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
+	"Any field holding a sentence a colleague will read — a description, a summary, a note — is " +
+	"written in the language whoami reports as prose_language, whatever language this conversation " +
+	"is in; names and quoted text are never translated."
 
 // customFieldPrefix is the only shape an extra key may take: the
 // customfields engine derives every column it adds as cf_<slug>, so a key
@@ -200,6 +203,21 @@ func rejectUnknownFields(shapes map[datasource.EntityType]reflect.Type, recordTy
 // spent on exactly that before the reason was visible, so the requirement is
 // stated where it is read rather than left implied by a keyword.
 const timestampNote = `,"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused."`
+
+// proseLanguageNote is the description on every argument that stores a
+// sentence a colleague will later read.
+//
+// The surface used to say nothing here, and a model with no instruction infers
+// a language from whatever context it has — a workspace named in German, a
+// Berlin timezone, records somebody else wrote — so an entirely English
+// conversation produced German notes in an English workspace. whoami answers
+// the language, but only a caller that thinks to ask; the schema is read on
+// every call, which is why the instruction lives here too.
+//
+// It names no language itself. These specs are compiled once and served to
+// every installation, so the value is whoami's to resolve per caller and this
+// text's job is to send the model there.
+const proseLanguageNote = `"Prose a colleague will read. Write it in the language whoami reports as prose_language, whatever language this conversation is in. Do not translate names, company names or quoted text."`
 
 // stageIDNote is appended to every stage-id argument the tool surface takes.
 // Two tools declared it as a bare format:uuid, which named the requirement

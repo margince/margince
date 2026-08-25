@@ -13,6 +13,13 @@ package agents
 // which is how a German sentence ended up in an English workspace's company
 // description.
 //
+// Locale alone did not close that, because it is empty until somebody picks a
+// language and most people never do: an English workspace whose members had
+// chosen nothing still got German records off an English conversation. So the
+// answer carries ProseLanguage as well — the member's choice where they made
+// one, the installation's base language otherwise — and it is never empty,
+// because a field that is usually absent teaches the reader to ignore it.
+//
 // A tool rather than a field on the capabilities resource: that document is
 // shape-versioned and cached, while identity is per-call and must never be
 // served from a cache belonging to a different passport.
@@ -34,8 +41,14 @@ type ActingIdentity struct {
 	// Locale is the language this person chose, empty when they never did.
 	// The caller decides what to do with empty rather than being handed a
 	// default that cannot be told apart from a choice.
-	Locale   string
-	Timezone string
+	Locale string
+	// ProseLanguage is that decision already made: the language stored prose
+	// must be written in, resolved from the member's choice or the
+	// installation's base language. Unlike Locale it is never empty, so the
+	// agent is never left to infer a language from the workspace's timezone
+	// and currency.
+	ProseLanguage string
+	Timezone      string
 }
 
 // IdentityReader answers who the call acts for. Declared here and implemented
@@ -73,10 +86,11 @@ func (t whoami) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage,
 	// it is who is asking. Stamping it would put the caller's own seat in the
 	// evidence list of every call that begins by asking who they are.
 	return json.Marshal(WhoamiResult{
-		ActingUserID: who.UserID,
-		DisplayName:  who.DisplayName,
-		Email:        who.Email,
-		Locale:       who.Locale,
-		Timezone:     who.Timezone,
+		ActingUserID:  who.UserID,
+		DisplayName:   who.DisplayName,
+		Email:         who.Email,
+		Locale:        who.Locale,
+		ProseLanguage: who.ProseLanguage,
+		Timezone:      who.Timezone,
 	})
 }

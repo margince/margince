@@ -350,7 +350,8 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
 			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider list_channel_providers names."},
-			"subject":{"type":"string"},"body":{"type":"string"},
+			"subject":{"type":"string","description":` + proseLanguageNote + `},
+			"body":{"type":"string","description":` + proseLanguageNote + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
