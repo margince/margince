@@ -26,9 +26,10 @@ runtime from day one:
    un-tiered endpoint cannot ship.
 4. `tools/gen-aitasks` compiles the **AI task contract**
    (`backend/api/ai-tasks.yaml` — the task/tier/ladder table) into
-   `internal/modules/ai/tasks_gen.go` and the routing-config schema
-   the routing shape in `config/margince.schema.json`, so the runtime's task registry and
-   the operator's config validation both derive from the one contract.
+   `internal/modules/ai/tasks_gen.go`; `tools/gen-configschema` reads the tier
+   names from there into the routing shape in `config/margince.schema.json`, so
+   the runtime's task registry and the operator's config validation both derive
+   from the one contract.
 
 ## Drift is merge-blocking
 

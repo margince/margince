@@ -87,6 +87,15 @@ func structNode(t reflect.Type, docs docIndex) (object, error) {
 	props := &object{}
 	for i := range t.NumField() {
 		f := t.Field(i)
+		if inlined(f) {
+			// Refused rather than skipped. An inline embed's fields are decoded
+			// at THIS level, so skipping it emits a schema missing keys the
+			// loader accepts — and with additionalProperties:false that schema
+			// then reports valid config as an error. deployconfig has no inline
+			// field today; the day it gains one, generation stops here instead
+			// of shipping a document that is wrong in the strictest direction.
+			return object{}, fmt.Errorf("%s.%s is yaml:\",inline\" and this generator does not flatten it — teach structNode, do not skip", t.Name(), f.Name)
+		}
 		name, ok := yamlName(f)
 		if !ok {
 			continue
@@ -121,6 +130,20 @@ func fieldNode(owner reflect.Type, f reflect.StructField, docs docIndex) (object
 		return documented, nil
 	}
 	return node, nil
+}
+
+// inlined reports whether a field's contents are decoded at the parent's level.
+func inlined(f reflect.StructField) bool {
+	tag, ok := f.Tag.Lookup("yaml")
+	if !ok {
+		return false
+	}
+	for _, opt := range strings.Split(tag, ",")[1:] {
+		if opt == "inline" {
+			return true
+		}
+	}
+	return false
 }
 
 // yamlName reads the field's yaml key, or reports that it has none.
@@ -195,7 +218,11 @@ func specialNode(t reflect.Type) (object, bool) {
 		var out object
 		out.set("type", "string")
 		out.set("pattern", deployconfig.SecretRefPattern)
-		out.set("examples", []string{"${env:MARGINCE_SMTP_PASSWORD}", "${file:/run/secrets/smtp}"})
+		// The two FORMS, named after neither field nor vendor: this node is
+		// reached by every Secret in the file, and an example naming one of them
+		// is wrong everywhere else — the admin password suggesting an SMTP
+		// variable is worse than no example at all.
+		out.set("examples", []string{"${env:VARIABLE_NAME}", "${file:/run/secrets/name}"})
 		return out, true
 	case reflect.TypeOf(yaml.Node{}):
 		// The one free-form subtree: seeds.ai_routing is decoded later, by the

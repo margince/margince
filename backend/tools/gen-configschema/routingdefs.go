@@ -61,7 +61,7 @@ const routingDefsTemplate = `{
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
       "input": {
-        "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take pdf away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
+        "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
         "type": "array",
         "minItems": 1,
         "uniqueItems": true,
