@@ -142,20 +142,37 @@ func persistDerivedVoiceVersion(ctx context.Context, tx pgx.Tx, build derivedPro
 		voiceKeySignatureJaccard: 1, "removed_avoid_rules": 0,
 		"removed_register_rules": 0, "classification": "routine", "passed": true,
 	}
-	var versionID ids.UUID
-	err := tx.QueryRow(ctx, `
-			INSERT INTO voice_profile_version
-			  (voice_profile_id, profile_version, status, voice_profile_md,
-			   profile_json, stats_json, source_hash, source_count, reason, predecessor_version,
-			   model_provider, model_name, builder_version, activation_policy_version,
-			   evaluation_json, activated_at, source, captured_by, updated_at)
-			VALUES ($1, $2, 'active', $3, $4, '{}'::jsonb, $5, $6, 'manual', $7,
-			        'internal', $8, 'legacy-set-derived', '1', $9, $10, 'manual', $11, $10)
-			RETURNING id`, build.profileID, build.nextVersion, build.voiceProfileMD,
-		storekit.JSONArg(map[string]any{voiceKeyDocument: build.voiceProfileMD}), build.sourceHash,
-		build.sourceCount, build.predecessorVersion, modelName, storekit.JSONArg(evaluation), build.now,
-		build.actorID).Scan(&versionID)
-	return versionID, err
+	version, err := insertVoiceVersion(ctx, tx, voiceVersionRow{
+		profileID:      build.profileID,
+		profileVersion: build.nextVersion,
+		status:         voiceVersionStatusActive,
+		voiceProfileMD: build.voiceProfileMD,
+		profileJSON:    storekit.JSONArg(map[string]any{voiceKeyDocument: build.voiceProfileMD}),
+		// A derived rebuild carries no corpus statistics: it rewrites the
+		// artifact from a set somebody already curated, so there is no sample
+		// to describe.
+		statsJSON:          storekit.JSONArg(map[string]any{}),
+		sourceHash:         build.sourceHash,
+		sourceCount:        build.sourceCount,
+		reason:             voiceVersionReasonManual,
+		predecessorVersion: build.predecessorVersion,
+		modelProvider:      voiceProviderInternal,
+		modelName:          modelName,
+		builderVersion:     voiceBuilderLegacySetDerived,
+		// Policy version 1: this path activates on the operator's instruction
+		// rather than on the evaluation gate the builder applies.
+		activationPolicyVersion: "1",
+		evaluation:              storekit.JSONArg(evaluation),
+		// Explicitly none. A human asked for this version by hand, so there is
+		// nothing for a reviewer to look at before it goes live — which is a
+		// different fact from a column nobody filled.
+		reviewReasons: []string{},
+		activatedAt:   &build.now,
+		source:        voiceVersionSourceManual,
+		capturedBy:    build.actorID,
+		now:           build.now,
+	})
+	return version.ID, err
 }
 
 func updateDerivedVoiceProfile(ctx context.Context, tx pgx.Tx, build derivedProfileBuild) (VoiceProfile, error) {
@@ -184,13 +201,14 @@ func insertDerivedProfileDelta(ctx context.Context, tx pgx.Tx, build derivedProf
 		voiceKeySignatureJaccard: 1, "avoid_rules_added": 0,
 		"avoid_rules_removed": 0, "register_rules_removed": 0,
 	}
-	_, err := tx.Exec(ctx, `
-			INSERT INTO voice_profile_delta
-			  (voice_profile_id, from_version, to_version, classification,
-			   activation_outcome, delta_json)
-			VALUES ($1, $2, $3, 'routine', 'manually_activated', $4)`,
-		build.profileID, build.predecessorVersion, build.nextVersion, storekit.JSONArg(delta))
-	return err
+	return insertVoiceDelta(ctx, tx, voiceDeltaRow{
+		profileID:         build.profileID,
+		fromVersion:       build.predecessorVersion,
+		toVersion:         build.nextVersion,
+		classification:    voiceClassificationRoutine,
+		activationOutcome: voiceOutcomeManuallyActivated,
+		delta:             delta,
+	})
 }
 
 func emitDerivedProfileVersion(ctx context.Context, tx pgx.Tx, before, profile VoiceProfile, versionID ids.UUID) error {
@@ -205,5 +223,5 @@ func emitDerivedProfileVersion(ctx context.Context, tx pgx.Tx, before, profile V
 	if err != nil {
 		return err
 	}
-	return emitVoiceVersion(ctx, tx, auditID, version, "routine", "manually_activated")
+	return emitVoiceVersion(ctx, tx, auditID, version, voiceClassificationRoutine, voiceOutcomeManuallyActivated)
 }

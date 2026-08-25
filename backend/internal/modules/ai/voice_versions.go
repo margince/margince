@@ -236,12 +236,15 @@ func recordVoiceVersionTransition(ctx context.Context, tx pgx.Tx, result VoicePr
 	outcome := voiceOutcomeRejected
 	auditAction := "reject"
 	if target == voiceVersionStatusActive {
-		outcome = "manually_activated"
+		outcome = voiceOutcomeManuallyActivated
 		auditAction = "update"
 	}
 	var classification string
+	// updated_at is stamped with the outcome. The column is null while a delta
+	// row has never been touched, which is what a reader takes it to mean, so
+	// an update that left it null would say the decision never happened.
 	if err := tx.QueryRow(ctx, `
-			UPDATE voice_profile_delta SET activation_outcome = $3
+			UPDATE voice_profile_delta SET activation_outcome = $3, updated_at = now()
 			WHERE voice_profile_id = $1 AND to_version = $2
 			RETURNING classification`, result.ProfileID, result.ProfileVersion, outcome).Scan(&classification); err != nil {
 		return err
@@ -287,19 +290,8 @@ func (s *VoiceStore) RollbackVersion(ctx context.Context, profileID ids.UUID, so
 		if err != nil {
 			return err
 		}
-		result, err = scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(`
-			INSERT INTO voice_profile_version
-			  (voice_profile_id, profile_version, status, voice_profile_md,
-			   profile_json, stats_json, source_hash, source_count, reason, predecessor_version,
-			   model_provider, model_name, builder_version, activation_policy_version,
-			   evaluation_json, review_reasons, activated_at, source, captured_by, updated_at)
-			VALUES ($1, $2, 'active', $3, $4, $5, $6, $7, 'rollback', $8,
-			        $9, $10, $11, $12, $13, $14, $15, 'manual', $16, $15)
-			RETURNING %s`, voiceVersionColumns), profileID, nextVersion, source.VoiceProfileMD,
-			storekit.JSONArg(source.ProfileJSON), storekit.JSONArg(source.StatsJSON), source.SourceHash,
-			source.SourceCount, profile.ProfileVersion, source.ModelProvider, source.ModelName,
-			source.BuilderVersion, source.ActivationPolicyVersion, storekit.JSONArg(source.Evaluation),
-			source.ReviewReasons, now, actor.ID))
+		result, err = insertVoiceVersion(ctx, tx,
+			rolledBackVersionRow(profileID, nextVersion, profile, source, now, actor.ID))
 		if err != nil {
 			return err
 		}
@@ -311,17 +303,17 @@ func (s *VoiceStore) RollbackVersion(ctx context.Context, profileID ids.UUID, so
 			result.SourceHash, now); err != nil {
 			return err
 		}
-		delta := map[string]any{
-			"words_added": 0, "sources_added": 0, "sources_excluded": 0,
-			voiceKeyIdentityJaccard: 1, voiceKeySignatureJaccard: 1,
-			"avoid_rules_added": 0, "avoid_rules_removed": 0, "register_rules_removed": 0,
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO voice_profile_delta
-			  (voice_profile_id, from_version, to_version, classification,
-			   activation_outcome, delta_json)
-			VALUES ($1, $2, $3, 'routine', 'rollback', $4)`,
-			profileID, profile.ProfileVersion, result.ProfileVersion, storekit.JSONArg(delta)); err != nil {
+		if err := insertVoiceDelta(ctx, tx, voiceDeltaRow{
+			profileID:         profileID,
+			fromVersion:       &profile.ProfileVersion,
+			toVersion:         result.ProfileVersion,
+			classification:    voiceClassificationRoutine,
+			activationOutcome: voiceOutcomeRollback,
+			// A rollback changes no words: it re-activates an artifact that
+			// already existed, so every measure of difference is zero and the
+			// two similarity scores are a perfect match with themselves.
+			delta: unchangedVoiceDelta(),
+		}); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "restore", "voice_profile_version", result.ID, nil,
@@ -329,9 +321,51 @@ func (s *VoiceStore) RollbackVersion(ctx context.Context, profileID ids.UUID, so
 		if err != nil {
 			return err
 		}
-		return emitVoiceVersion(ctx, tx, auditID, result, "routine", "rollback")
+		return emitVoiceVersion(ctx, tx, auditID, result, voiceClassificationRoutine, voiceOutcomeRollback)
 	})
 	return result, err
+}
+
+// rolledBackVersionRow is the version a rollback writes. Every column
+// describing the ARTIFACT is copied from the version being restored —
+// including its review reasons, which stay attached to the artifact they were
+// written about. What the rollback chooses for itself is the version number,
+// why it exists, when it went live, and who asked.
+func rolledBackVersionRow(profileID ids.UUID, nextVersion int, profile VoiceProfile, source VoiceProfileVersion,
+	now time.Time, actorID string,
+) voiceVersionRow {
+	return voiceVersionRow{
+		profileID:               profileID,
+		profileVersion:          nextVersion,
+		status:                  voiceVersionStatusActive,
+		voiceProfileMD:          source.VoiceProfileMD,
+		profileJSON:             storekit.JSONArg(source.ProfileJSON),
+		statsJSON:               storekit.JSONArg(source.StatsJSON),
+		sourceHash:              source.SourceHash,
+		sourceCount:             source.SourceCount,
+		reason:                  voiceVersionReasonRollback,
+		predecessorVersion:      &profile.ProfileVersion,
+		modelProvider:           source.ModelProvider,
+		modelName:               source.ModelName,
+		builderVersion:          source.BuilderVersion,
+		activationPolicyVersion: source.ActivationPolicyVersion,
+		evaluation:              storekit.JSONArg(source.Evaluation),
+		reviewReasons:           source.ReviewReasons,
+		activatedAt:             &now,
+		source:                  voiceVersionSourceManual,
+		capturedBy:              actorID,
+		now:                     now,
+	}
+}
+
+// unchangedVoiceDelta is the delta of a version that restored an artifact
+// rather than building one.
+func unchangedVoiceDelta() map[string]any {
+	return map[string]any{
+		"words_added": 0, "sources_added": 0, "sources_excluded": 0,
+		voiceKeyIdentityJaccard: 1, voiceKeySignatureJaccard: 1,
+		"avoid_rules_added": 0, "avoid_rules_removed": 0, "register_rules_removed": 0,
+	}
 }
 
 func emitVoiceVersion(ctx context.Context, tx pgx.Tx, auditID ids.UUID, version VoiceProfileVersion, classification, outcome string) error {
