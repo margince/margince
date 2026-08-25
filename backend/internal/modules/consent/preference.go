@@ -41,7 +41,7 @@ const PurposeTransactional = "transactional"
 // public preference surface. Locked purposes also carry no unsubscribe
 // header — there is nothing to unsubscribe from.
 func LockedPurpose(key string) bool {
-	return strings.TrimSpace(strings.ToLower(key)) == PurposeTransactional
+	return normalizedPurposeKey(key) == PurposeTransactional
 }
 
 // PreferenceRef is a token's resolution: whose consent.
@@ -277,10 +277,16 @@ func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) 
 // same proof row, audit, and consent.changed event as any other consent
 // write — with a distinct `preference_center` source. The mailbox-proving
 // token holder is the data subject, so NeverOverrideExisting is NOT set:
-// an explicit re-grant is their own opt-in, and a withdrawal always
-// applies.
+// an explicit re-grant is their own opt-in rather than a machine's guess.
+//
+// The two halves part company once the subject is archived. A withdrawal
+// still applies — Record admits one against any subject — while a re-grant is
+// refused, because an anonymized person goes on accruing consent rows through
+// a capability their erasure destroyed. UpdatePreferences records the
+// withdrawals in a save before its grants for that reason, so a refused
+// re-grant costs the re-grant and nothing beside it.
 func (s *Store) PublicSetConsent(ctx context.Context, personID ids.PersonID, purposeKey, newState string, wording *string) (State, error) {
-	purposeKey = strings.TrimSpace(strings.ToLower(purposeKey))
+	purposeKey = normalizedPurposeKey(purposeKey)
 	if LockedPurpose(purposeKey) {
 		return State{}, &ValidationError{Field: "purpose_key", Reason: "transactional consent is locked and cannot be changed from the preference center"}
 	}

@@ -302,6 +302,12 @@ var erasureCascadeFiles = []string{
 	// Retention’s graph invalidation — same Art. 17/retention transaction.
 	"internal/modules/privacy/erasure_attachments.go",
 	"internal/modules/privacy/erasure_channels.go",
+	// The live capabilities over the subject's consent record — the
+	// preference-center token and the double-opt-in token. Split out of
+	// erasure.go for the same size reason as the timeline, and named here for
+	// the reason this list's own header gives: leaving it off would make
+	// preference_token look uncovered the moment its DELETE moved file.
+	"internal/modules/privacy/erasure_consent.go",
 	"internal/modules/privacy/erasure_rivals.go",
 	// What a licensed data provider was PAID to tell us about the subject,
 	// and the runs that bought it (ADR-0101). Same Art. 17 transaction, its

@@ -277,6 +277,16 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(personCustom)), id, erasedName)
 	if err == nil {
+		// The double-opt-in token goes with the addresses it was sent to. It is
+		// a bearer secret whose only function is to authorise a consent GRANT
+		// for this subject, so one left standing after an anonymization is a
+		// live invitation to record a lawful basis for somebody the row no
+		// longer names. An anonymized subject may lawfully return, which is
+		// what the suppression list is for — but they return by being invited
+		// again, not by an old token in an old mailbox still working.
+		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, id)
+	}
+	if err == nil {
 		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
 	}
 	if err == nil {
