@@ -47,8 +47,8 @@ func (knowledgeHandlers) ArchiveCorpus(w http.ResponseWriter, r *http.Request, _
 	httperr.NotImplemented(w, r, "archiveCorpus")
 }
 
-func (knowledgeHandlers) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "uploadCorpusDocument")
+func (knowledgeHandlers) ListCorpusDocuments(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "listCorpusDocuments")
 }
 
 func (knowledgeHandlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {

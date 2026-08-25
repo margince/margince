@@ -10223,13 +10223,13 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product and a silently empty ingest is worse than a refusal. Ingest is asynchronous: the document lands `queued` and its status is read back from the corpus.
+         * The documents filed in this corpus, and how far each one's ingest got.
+         * @description The corpus's coverage counts say how much of it is searchable; this says which files those counts are made of. Every document is listed whatever state its ingest reached, and a failed one carries `ingest_detail` — a corpus that is quietly short of a file nobody can name answers worse than one that is empty, because it still answers.
          */
-        post: operations["uploadCorpusDocument"];
+        get: operations["listCorpusDocuments"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -22067,24 +22067,6 @@ export interface components {
         };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
-        PayloadTooLarge: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success. */
-        UnsupportedMediaType: {
             headers: {
                 [name: string]: unknown;
             };
@@ -39809,7 +39791,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    uploadCorpusDocument: {
+    listCorpusDocuments: {
         parameters: {
             query?: never;
             header?: never;
@@ -39819,30 +39801,22 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Accepted for ingest. */
-            202: {
+            /** @description The documents. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["KnowledgeDocument"];
+                    "application/json": {
+                        items: components["schemas"]["KnowledgeDocument"][];
+                    };
                 };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
         };
     };
     deleteCorpusDocument: {
