@@ -183,18 +183,18 @@ func TestAcceptingACaptureCollisionFillsTheLeadsEmptyFields(t *testing.T) {
 		t.Fatalf("reading the lead back: %v", err)
 	}
 	if company == nil || *company != "Nordwind Systeme" {
-		t.Errorf("company_name is %q; approving the card wrote nothing", derefOr(company, "<unset>"))
+		t.Errorf("company_name is %q; approving the card wrote nothing", unsetOr(company))
 	}
 	if title == nil || *title != "Head of Operations" {
-		t.Errorf("title is %q; approving the card wrote nothing", derefOr(title, "<unset>"))
+		t.Errorf("title is %q; approving the card wrote nothing", unsetOr(title))
 	}
 }
 
-// derefOr reads a nullable column for a failure message. A test that printed
+// unsetOr reads a nullable column for a failure message. A test that printed
 // the pointer would report an address where the reader needs the value.
-func derefOr(value *string, absent string) string {
+func unsetOr(value *string) string {
 	if value == nil {
-		return absent
+		return "<unset>"
 	}
 	return *value
 }
@@ -276,7 +276,7 @@ func TestAcceptingACaptureCollisionNeverOverwritesWhatIsAlreadyThere(t *testing.
 	} {
 		if held.got == nil || *held.got != held.want {
 			t.Errorf("%s is %q, want %q — a captured value overwrote one already there",
-				held.field, derefOr(held.got, "<unset>"), held.want)
+				held.field, unsetOr(held.got), held.want)
 		}
 	}
 }

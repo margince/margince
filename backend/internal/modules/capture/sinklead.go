@@ -187,15 +187,7 @@ func (s *Sink) findLeadCollision(ctx context.Context, tx pgx.Tx, rec connector.N
 		}
 		return nil, nil, err
 	}
-	// The proposal carries the incumbent's id, not only the captured values.
-	// An approval's effect is handed its payload and nothing else, so an id
-	// that lives only in the approval row's target column is an id the effect
-	// cannot reach — which is how this kind spent its life staging a question
-	// whose answer could not be applied.
-	captured, err := json.Marshal(struct {
-		LeadFields
-		LeadID ids.LeadID `json:"lead_id"`
-	}{LeadFields: fields, LeadID: existing})
+	captured, err := json.Marshal(fields)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -150,10 +150,11 @@ type CapturedLeadFields struct {
 // that it knows better — the same rule the enrich and cold-start accepts keep,
 // and what makes accepting the card safe enough to offer at all.
 //
-// The comparison happens HERE, inside the caller's transaction, rather than in
-// the seam that calls it. A caller reading the lead first and patching second
-// would leave a window in which a person's edit lands between the two and is
-// then overwritten by a value this rule exists to keep out.
+// The comparison happens HERE, under a row lock taken inside the caller's
+// transaction, rather than in the seam that calls it. A caller reading the lead
+// first and patching second would leave a window in which a person's edit lands
+// between the two and is then overwritten by a value this rule exists to keep
+// out.
 //
 // Writing nothing is a normal outcome, not a failure: a lead that already
 // carries everything the message knew is a lead the fold has no work on.
@@ -166,6 +167,23 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	in CapturedLeadFields, active CustomColumns,
 ) error {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return err
+	}
+	// The row-scope gate comes BEFORE the read, not with the write.
+	//
+	// `readLead` is a bare `WHERE id = $1` that trusts its caller to have gated
+	// already — so reading first and leaving the gate to the write would
+	// disclose a lead's field values to a caller outside its scope, and
+	// disclose them most completely in the case that writes nothing.
+	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+		return err
+	}
+	// And the LOCK comes before the decision read, which is the rule for every
+	// internal multi-step flow (storekit.ApplyGuarded's own comment states it).
+	// Deciding which fields are empty from an unlocked read leaves an interval
+	// in which a person fills one; the write would then wait for its lock and
+	// overwrite what they typed with a value this rule exists to keep out.
+	if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly); err != nil {
 		return err
 	}
 	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active.cols)

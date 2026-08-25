@@ -36,23 +36,26 @@ import (
 // every installation already carries; renaming it would strand them.
 const captureCollisionKind = "merge_records"
 
-// captureCollisionActor is the provenance of the write.
-//
-// The values came from an inbound message, not from somebody typing them, so
-// the write is stamped to this actor while the human's decision stays on the
-// approval's own audit row. A later human edit must still outrank it.
-const captureCollisionActor = "capture-collision"
+// captureCollisionTarget is the only entity type capture stages this kind
+// against. Checked rather than assumed: the target columns decide where this
+// writes, so a row naming something else is a write nobody proposed.
+const captureCollisionTarget = "lead"
 
-// capturedLead is the proposal's payload: the incumbent this fold applies to,
-// plus what the message knew.
+// capturedLead is the proposal's payload: what the message knew.
 //
-// The field keys are Go field names rather than snake_case, and they have to
-// stay that way: capture marshals its own `LeadFields` struct, which carries no
-// json tags, so every approval already staged in every installation holds
-// `FullName` and `CompanyName` on disk. Tagging the writer would read those
-// pending rows as empty and fold nothing.
+// It carries no record id, and must not. The lead this folds onto comes from
+// the approval's own target columns, which are NOT editable — the payload is
+// what the deciding human sees and may correct, so an id carried there would
+// let an approver retarget the write onto a record they were never shown.
+// `StagedTarget` is the API built for exactly this, and reading it back is
+// what binds the row written to the target the decision grants were checked
+// against.
+//
+// The keys are capture's Go field names, not snake_case: capture marshals its
+// own tagless `LeadFields`, so every approval already staged in every
+// installation holds them on disk. Tagging the writer would read those pending
+// rows as empty and fold nothing.
 type capturedLead struct {
-	LeadID ids.LeadID `json:"lead_id"`
 	//nolint:tagliatelle // the keys are capture's Go field names, already on disk in every pending row
 	FullName string `json:"FullName"`
 	//nolint:tagliatelle // as above
@@ -67,42 +70,45 @@ type capturedLead struct {
 // collided with.
 //
 // Which fields actually change is the people module's decision, not this
-// seam's: `FillEmptyLeadFieldsTx` compares against the row inside the same
-// transaction it writes. Deciding it here would mean reading the lead first and
-// patching after, and a concurrent edit landing between the two would let a
+// seam's: `FillEmptyLeadFieldsTx` locks the row and compares against it inside
+// the same transaction it writes. Deciding it here would mean reading the lead
+// first and patching after, and an edit landing between the two would let a
 // captured value overwrite a value a person had just typed.
+//
+// The write runs under the DECIDING HUMAN's own principal. Swapping in a system
+// principal would bypass object RBAC and unbound row scope — so an ownership
+// change landing between the decision's authority check and this write would be
+// ignored, and the effect would write where the person no longer may. Machine
+// provenance belongs on the audit row, not in the authorization principal.
 func captureCollisionAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var captured capturedLead
 		if err := json.Unmarshal(proposedChange, &captured); err != nil {
 			return fmt.Errorf("compose: decoding the captured lead fields: %w", err)
 		}
-		if captured.LeadID.IsZero() {
-			// A proposal staged before the payload carried the incumbent's id.
-			// There is no record to fold onto, and guessing one from the target
-			// column would be writing to a lead this effect never verified.
-			return fmt.Errorf("compose: the capture-collision proposal names no lead")
-		}
-		decider, ok := principal.Actor(ctx)
-		if !ok {
+		if _, ok := principal.Actor(ctx); !ok {
 			return fmt.Errorf("compose: capture-collision accept without a deciding principal")
 		}
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         captureCollisionActor,
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
+		entityType, entityID, err := svc.StagedTarget(ctx, approvalID)
+		if err != nil {
+			return err
+		}
+		if entityType != captureCollisionTarget {
+			// Capture stages this kind against a lead and nothing else. A row
+			// naming another type is not a collision this effect can fold, and
+			// writing to it would be writing somewhere nobody proposed.
+			return fmt.Errorf("compose: capture-collision names a %s target, not a lead", entityType)
+		}
 		// The custom-field catalog is read BEFORE the transaction opens. Read
 		// inside it, this would acquire a second connection within a
 		// transaction it does not own — which commits separately and can
 		// deadlock against a lock that transaction holds.
-		active, err := store.ActiveLeadColumns(execCtx)
+		active, err := store.ActiveLeadColumns(ctx)
 		if err != nil {
 			return err
 		}
 		return svc.RedeemAndApply(ctx, approvalID, captureCollisionKind, diffHash, func(tx pgx.Tx) error {
-			return store.FillEmptyLeadFieldsTx(execCtx, tx, captured.LeadID, people.CapturedLeadFields{
+			return store.FillEmptyLeadFieldsTx(ctx, tx, ids.From[ids.LeadKind](entityID), people.CapturedLeadFields{
 				FullName:    captured.FullName,
 				Email:       captured.Email,
 				CompanyName: captured.CompanyName,
