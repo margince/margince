@@ -129,7 +129,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // #/contacts/<person>/<tab> — the six person tabs are a view of one person,
   // and they are the reason this table exists.
   contacts: 2,
-  companies: WHOLE_ADDRESS,
+  // #/companies/<account>/<tab> — the account's tabs are a view of one
+  // account, exactly as the contact's are above.
+  companies: 2,
   partners: WHOLE_ADDRESS,
   leads: WHOLE_ADDRESS,
   deals: WHOLE_ADDRESS,
