@@ -10170,6 +10170,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/knowledge/corpora": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The document corpora this workspace has defined. */
+        get: operations["listCorpora"];
+        put?: never;
+        /** Define a document corpus. */
+        post: operations["createCorpus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/knowledge/corpora/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** One corpus, with its documents' coverage. */
+        get: operations["readCorpus"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive a corpus and everything filed in it.
+         * @description Cascades in one transaction: every live document archives, their chunks are stamped, and any in-flight ingest self-cancels on its next state re-read.
+         */
+        delete: operations["archiveCorpus"];
+        options?: never;
+        head?: never;
+        /** Edit a corpus — its words, its floor, or which one the palette asks. */
+        patch: operations["updateCorpus"];
+        trace?: never;
+    };
+    "/knowledge/corpora/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a document to this corpus.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product and a silently empty ingest is worse than a refusal. Ingest is asynchronous: the document lands `queued` and its status is read back from the corpus.
+         */
+        post: operations["uploadCorpusDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/knowledge/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a document, its chunks, its vectors and its stored file.
+         * @description A hard delete, not an archive. The stored object goes with the row: an embedding of the text is that text in another shape, and a blob left behind would make the deletion decorative.
+         */
+        delete: operations["deleteCorpusDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/knowledge/corpora/{id}/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask this corpus a question, answered only from its documents.
+         * @description Free text, unlike `POST /organizations/{id}/ask` — and what earns the text box
+         *     is the bound: "everything" here is one finite corpus, so the retrieval can prove
+         *     what it did not find.
+         *
+         *     Four outcomes and they are not interchangeable. `not_covered` says the corpus
+         *     does not answer this question. `not_ready` says the corpus is not finished
+         *     ingesting or is re-embedding, which is a statement about the corpus and never
+         *     about the question. `retrieval_unavailable` says no embed lane is bound, so
+         *     nothing was searched.
+         *
+         *     The answer is a list of CLAIMS, each carrying the passage it rests on and a
+         *     verbatim quote from it. A claim whose quote is not found in the retrieved text
+         *     is dropped; an answer with no surviving claim is `not_covered`.
+         *
+         *     Read-only: no record field changes, and nothing is sent.
+         */
+        post: operations["askCorpus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -21797,6 +21923,74 @@ export interface components {
              */
             base_value_minor: number;
         };
+        KnowledgeCorpus: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string | null;
+            /** @description What this corpus covers, in the workspace's own words. Quoted back in the refusal when a question falls below the grounding floor, so it is read by a person at their least patient moment — write it as a sentence, not a label. */
+            topic_statement: string;
+            /**
+             * Format: double
+             * @description The grounding floor. Below it a question is refused before any model call.
+             */
+            min_similarity: number;
+            /** @description True when min_similarity was tuned under an embed identity that no longer serves this workspace. The number is then a leftover, not a threshold. */
+            tuning_stale?: boolean;
+            /** @description The corpus the command palette's ask lands on. At most one per workspace. */
+            default_ask: boolean;
+            /** @description A re-embed is in flight; every ask answers not_ready until it finishes. */
+            reindexing?: boolean;
+            coverage: components["schemas"]["KnowledgeCoverage"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        KnowledgeCoverage: {
+            chunks_total: number;
+            chunks_embedded: number;
+            documents_total: number;
+        };
+        KnowledgeDocument: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            corpus_id: string;
+            filename: string;
+            content_type: string;
+            /** Format: int64 */
+            byte_size: number;
+            /** @enum {string} */
+            ingest_status: "queued" | "running" | "done" | "failed";
+            /** @description Why it failed, in words the uploader can act on. Null unless failed. */
+            ingest_detail?: string | null;
+            chunk_count?: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        KnowledgeClaim: {
+            /** @description One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written. */
+            text?: string | null;
+            /** Format: uuid */
+            chunk_id: string;
+            /** Format: uuid */
+            document_id: string;
+            document_name: string;
+            /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
+            quote: string;
+        };
+        KnowledgeAnswer: {
+            /**
+             * @description The four are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all. Collapsing them is the failure this endpoint exists to avoid.
+             * @enum {string}
+             */
+            outcome: "answered" | "not_covered" | "not_ready" | "retrieval_unavailable";
+            /** @description The answer IS this list, in order. Empty unless outcome is answered. */
+            claims?: components["schemas"]["KnowledgeClaim"][];
+            corpus: components["schemas"]["KnowledgeCorpus"];
+            coverage: components["schemas"]["KnowledgeCoverage"];
+            /** @enum {string} */
+            generated_by: "model" | "deterministic";
+        };
     };
     responses: {
         /** @description No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path). */
@@ -21873,6 +22067,24 @@ export interface components {
         };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success. */
+        UnsupportedMediaType: {
             headers: {
                 [name: string]: unknown;
             };
@@ -39448,6 +39660,245 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listCorpora: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The corpora. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["KnowledgeCorpus"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string | null;
+                    topic_statement: string;
+                    /** Format: double */
+                    min_similarity?: number;
+                    default_ask?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The corpus. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    readCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The corpus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    archiveCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string | null;
+                    topic_statement?: string;
+                    /** Format: double */
+                    min_similarity?: number;
+                    default_ask?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The corpus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    uploadCorpusDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted for ingest. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteCorpusDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    askCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    question: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The answer, or the refusal — `outcome` says which. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeAnswer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

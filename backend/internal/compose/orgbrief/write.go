@@ -124,7 +124,7 @@ func briefSystemFor(fence promptfence.Fence, lang string) string {
 func Write(ctx context.Context, lane Completer, orgID string, in Input, lang string) ([]Section, crmcontracts.WrittenBy, error) {
 	deterministic := DeterministicSections(orgID, in)
 	if lane == nil {
-		return deterministic, crmcontracts.Deterministic, nil
+		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
 	written, err := writeWithModel(ctx, lane, orgID, in, lang)
 	if err != nil {
@@ -133,9 +133,9 @@ func Write(ctx context.Context, lane Completer, orgID string, in Input, lang str
 		// not take the card down with it: the reader gets the floor, and
 		// generated_by tells them which of the two they are reading.
 		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
-		return deterministic, crmcontracts.Deterministic, nil
+		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
-	return written, crmcontracts.Model, nil
+	return written, crmcontracts.WrittenByModel, nil
 }
 
 // accountEvidence cites the account itself: the company description is about

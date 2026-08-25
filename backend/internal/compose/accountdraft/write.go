@@ -100,7 +100,7 @@ func Write(
 ) (Draft, crmcontracts.WrittenBy, error) {
 	floor := Deterministic(in)
 	if lane == nil {
-		return floor, crmcontracts.Deterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, nil
 	}
 	written, err := writeChecked(ctx, lane, in)
 	if err != nil {
@@ -111,9 +111,9 @@ func Write(
 		// lane, not about this account, and there is nothing the caller could
 		// do with it.
 		//nolint:nilerr // degrading to the floor IS the answer; see the doc comment
-		return floor, crmcontracts.Deterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, nil
 	}
-	return written, crmcontracts.Model, nil
+	return written, crmcontracts.WrittenByModel, nil
 }
 
 // writeChecked drafts through the shared correct-and-retry loop, so this

@@ -163,7 +163,7 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 ) (Assessment, crmcontracts.WrittenBy, bool) {
 	if lane == nil {
 		return Assess(in, crmcontracts.GrowthFitBandUnknown, selfConfirmed, AbstainedNoWriter, now()),
-			crmcontracts.Deterministic, false
+			crmcontracts.WrittenByDeterministic, false
 	}
 	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now, lang)
 	if err != nil {
@@ -176,7 +176,7 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 		// caller needs that to decide whether this answer may replace a good
 		// cached one — a transient outage must not overwrite a real assessment.
 		return Assess(in, crmcontracts.GrowthFitBandUnknown, selfConfirmed, AbstainedLaneFailed, now()),
-			crmcontracts.Deterministic, true
+			crmcontracts.WrittenByDeterministic, true
 	}
 	// An assessment the counting reduced to an abstention is the FLOOR's
 	// answer, not the model's: its band was discarded and its claims withheld,
@@ -184,9 +184,9 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 	// it `model` would pass the floor's answer off as the model's, which is the
 	// same dishonesty as the reverse (DOSS-AC-7).
 	if assessed.Band == crmcontracts.GrowthFitBandUnknown {
-		return assessed, crmcontracts.Deterministic, false
+		return assessed, crmcontracts.WrittenByDeterministic, false
 	}
-	return assessed, crmcontracts.Model, false
+	return assessed, crmcontracts.WrittenByModel, false
 }
 
 func assessWithModel(ctx context.Context, lane Completer, in Input,
