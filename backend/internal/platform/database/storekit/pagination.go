@@ -4,8 +4,6 @@
 package storekit
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -36,11 +34,7 @@ func EncodeCursor(createdAt time.Time, id ids.UUID) string {
 	return mintCursorToken(Cursor{CreatedAt: createdAt, ID: id})
 }
 
-func mintCursorToken(c Cursor) string {
-	//craft:ignore swallowed-errors Cursor is plain data (time, uuid, string fields) — json.Marshal cannot fail on it, and a token mint has no error channel to a caller mid-page
-	raw, _ := json.Marshal(c)
-	return base64.RawURLEncoding.EncodeToString(raw)
-}
+func mintCursorToken(c Cursor) string { return EncodeOpaque(c) }
 
 // SweepCursor is a position in a walk across SEVERAL streams: which stream the
 // page stopped in, and where inside that stream it stopped.
@@ -68,13 +62,7 @@ type SweepCursor struct {
 // result with "there is more" — a silent empty cursor there would report a
 // remainder with no way to reach it, which is the defect a resumable sweep
 // exists to remove.
-func EncodeSweepCursor(position SweepCursor) (string, error) {
-	raw, err := json.Marshal(position)
-	if err != nil {
-		return "", fmt.Errorf("store: encoding the sweep position in %s: %w", position.Stream, err)
-	}
-	return base64.RawURLEncoding.EncodeToString(raw), nil
-}
+func EncodeSweepCursor(position SweepCursor) string { return EncodeOpaque(position) }
 
 // DecodeSweepCursor reads a resume position back. An empty token is the start
 // of the walk, not a fault.
@@ -88,14 +76,12 @@ func DecodeSweepCursor(token string) (SweepCursor, error) {
 	if token == "" {
 		return SweepCursor{}, nil
 	}
-	raw, err := base64.RawURLEncoding.DecodeString(token)
+	position, err := DecodeOpaque[SweepCursor](token)
 	if err != nil {
-		return SweepCursor{}, &MalformedCursorError{}
+		return SweepCursor{}, err
 	}
-	var position SweepCursor
-	if err := json.Unmarshal(raw, &position); err != nil {
-		return SweepCursor{}, &MalformedCursorError{}
-	}
+	// Well-formed JSON is not yet a position: `{}` unmarshals cleanly and
+	// leaves an unnamed stream, which would resume a sweep from nowhere.
 	if position.Stream == "" {
 		return SweepCursor{}, &MalformedCursorError{}
 	}
@@ -123,15 +109,7 @@ func (*CursorSortMismatchError) Error() string {
 }
 
 func DecodeCursor(token string) (Cursor, error) {
-	raw, err := base64.RawURLEncoding.DecodeString(token)
-	if err != nil {
-		return Cursor{}, &MalformedCursorError{}
-	}
-	var c Cursor
-	if err := json.Unmarshal(raw, &c); err != nil {
-		return Cursor{}, &MalformedCursorError{}
-	}
-	return c, nil
+	return DecodeOpaque[Cursor](token)
 }
 
 // SQLf keeps store-side SQL assembly lines readable; arguments are

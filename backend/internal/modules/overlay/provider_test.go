@@ -269,10 +269,7 @@ func TestProviderSearchRefusesATypeTheMirrorCannotHold(t *testing.T) {
 // token has to mean the same place when the request presenting it is not the
 // one that minted it.
 func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.T) {
-	minted, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(datasource.EntityOrganization), Inner: "mirror-42"})
-	if err != nil {
-		t.Fatalf("encoding a sweep position: %v", err)
-	}
+	minted := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(datasource.EntityOrganization), Inner: "mirror-42"})
 	resumeAt, inner, err := resumeStream(minted)
 	if err != nil {
 		t.Fatalf("decoding a cursor the sweep minted: %v", err)
@@ -290,7 +287,7 @@ func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.
 	for _, probe := range []struct{ name, cursor string }{
 		{"not base64 at all", "not a cursor!!"},
 		{"base64 of something that is not a position", base64.RawURLEncoding.EncodeToString([]byte("nonsense"))},
-		{"naming an object class the mirror cannot hold", mustEncodeSweepCursor(t, datasource.EntityProject)},
+		{"naming an object class the mirror cannot hold", sweepCursorFor(datasource.EntityProject)},
 	} {
 		t.Run(probe.name, func(t *testing.T) {
 			_, _, err := resumeStream(probe.cursor)
@@ -302,15 +299,9 @@ func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.
 	}
 }
 
-// mustEncodeSweepCursor mints a position for a probe, failing the test rather
-// than swallowing an encoding error into an empty cursor.
-func mustEncodeSweepCursor(t *testing.T, et datasource.EntityType) string {
-	t.Helper()
-	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: "mirror-7"})
-	if err != nil {
-		t.Fatalf("encoding a sweep position for %s: %v", et, err)
-	}
-	return cursor
+// sweepCursorFor mints a position for a probe.
+func sweepCursorFor(et datasource.EntityType) string {
+	return storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: "mirror-7"})
 }
 
 // TestAResumedSweepSurvivesTheWalkChangingUnderIt is the half a cursor over a

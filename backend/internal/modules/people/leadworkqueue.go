@@ -5,8 +5,6 @@ package people
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -40,22 +38,22 @@ const (
 	leadQueueRankInactive
 )
 
-func encodeLeadQueueCursor(cursor leadQueueCursor) (string, error) {
-	raw, err := json.Marshal(cursor)
-	if err != nil {
-		return "", fmt.Errorf("encode lead queue cursor: %w", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(raw), nil
-}
+func encodeLeadQueueCursor(cursor leadQueueCursor) string { return storekit.EncodeOpaque(cursor) }
 
 func decodeLeadQueueCursor(token string) (leadQueueCursor, error) {
-	var cursor leadQueueCursor
-	raw, err := base64.RawURLEncoding.DecodeString(token)
-	if err != nil || json.Unmarshal(raw, &cursor) != nil || cursor.AsOf.IsZero() || cursor.CreatedAt.IsZero() || cursor.ID.IsZero() {
-		return cursor, &storekit.MalformedCursorError{}
+	cursor, err := storekit.DecodeOpaque[leadQueueCursor](token)
+	if err != nil {
+		return leadQueueCursor{}, err
+	}
+	// The envelope proves the token is ours; these prove it names a position in
+	// THIS queue. A zero instant or id is `{}` unmarshalling cleanly, and a
+	// rank or score outside its range is a token edited by hand — both would
+	// otherwise page from a place no row occupies.
+	if cursor.AsOf.IsZero() || cursor.CreatedAt.IsZero() || cursor.ID.IsZero() {
+		return leadQueueCursor{}, &storekit.MalformedCursorError{}
 	}
 	if cursor.Rank < leadQueueRankBreached || cursor.Rank > leadQueueRankInactive || cursor.Score < 0 || cursor.Score > 100 {
-		return cursor, &storekit.MalformedCursorError{}
+		return leadQueueCursor{}, &storekit.MalformedCursorError{}
 	}
 	return cursor, nil
 }
@@ -195,13 +193,9 @@ func (s *Store) readLeadQueuePage(ctx context.Context, query string, args []any,
 	if len(leads) > limit {
 		leads = leads[:limit]
 		last := leads[limit-1]
-		next, err := encodeLeadQueueCursor(leadQueueCursor{
+		page = storekit.Page{HasMore: true, NextCursor: encodeLeadQueueCursor(leadQueueCursor{
 			AsOf: asOf, Rank: ranks[limit-1], Score: last.Score, CreatedAt: last.CreatedAt, ID: ids.UUID(last.Id),
-		})
-		if err != nil {
-			return nil, storekit.Page{}, err
-		}
-		page = storekit.Page{HasMore: true, NextCursor: next}
+		})}
 	}
 	if leads == nil {
 		leads = []crmcontracts.Lead{}

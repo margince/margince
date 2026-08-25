@@ -89,12 +89,9 @@ func TestATypeOutsideTheVocabularyIsStillRefused(t *testing.T) {
 // against the sweep's default set refuses this seam's own token as malformed
 // on the second page.
 func TestACursorInANamedOnlyStreamIsNotMalformed(t *testing.T) {
-	token, err := storekit.EncodeSweepCursor(storekit.SweepCursor{
+	token := storekit.EncodeSweepCursor(storekit.SweepCursor{
 		Stream: string(datasource.EntityPartner), Inner: "opaque-keyset",
 	})
-	if err != nil {
-		t.Fatalf("minting a partner cursor: %v", err)
-	}
 	position, err := resumeStream(token)
 	if err != nil {
 		t.Fatalf("a partner cursor was refused: %v", err)
@@ -110,10 +107,7 @@ func TestACursorInANamedOnlyStreamIsNotMalformed(t *testing.T) {
 // The refusal still works: a stream this seam never serves is malformed, so
 // widening the check to nameable did not turn it into a pass-through.
 func TestACursorInAnUnservedStreamIsStillMalformed(t *testing.T) {
-	token, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: "nonsense", Inner: "x"})
-	if err != nil {
-		t.Fatalf("minting the cursor: %v", err)
-	}
+	token := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: "nonsense", Inner: "x"})
 	if _, err := resumeStream(token); err == nil {
 		t.Fatal("a cursor naming an unserved stream was accepted")
 	}

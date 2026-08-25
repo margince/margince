@@ -10,7 +10,6 @@ package overlay
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -98,28 +97,23 @@ func (s *MirrorStore) List(ctx context.Context, objectClass, cursor string, limi
 	return rows, next, nil
 }
 
-// encodeMirrorCursor/decodeMirrorCursor keep the List cursor opaque to
-// callers (a client must never construct or edit one by hand) while
-// staying a plain external_id underneath — there is no sort/direction
-// variance to encode, unlike storekit's general keyset cursor.
+// encodeMirrorCursor/decodeMirrorCursor keep the List cursor opaque to callers
+// — a client must never construct or edit one by hand — while the position
+// underneath stays a plain external_id: there is no sort/direction variance to
+// encode, unlike storekit's general keyset cursor.
+//
+// The ENVELOPE is storekit's, and the refusal comes with it: the cursor is
+// client-supplied input on every surface that pages this store, so a token that
+// does not decode is the caller's mistake and httperr must be able to answer
+// 422 rather than falling through to a 500 and sending an admin looking for an
+// outage that is not there.
 func encodeMirrorCursor(externalID string) string {
-	return base64.RawURLEncoding.EncodeToString([]byte(externalID))
+	return storekit.EncodeOpaque(externalID)
 }
 
-// decodeMirrorCursor answers storekit.MalformedCursorError, not a bare wrap:
-// the cursor is client-supplied input on every surface that pages this store,
-// so a token that does not decode is the caller's mistake and httperr must be
-// able to say so (422 malformed_cursor). An opaque wrap falls through to a 500
-// and sends an admin looking for an outage that is not there. The base64
-// cause is deliberately dropped — it tells the client nothing it can act on
-// beyond "the token is not one we minted".
 func decodeMirrorCursor(cursor string) (string, error) {
 	if cursor == "" {
 		return "", nil
 	}
-	raw, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return "", &storekit.MalformedCursorError{}
-	}
-	return string(raw), nil
+	return storekit.DecodeOpaque[string](cursor)
 }
