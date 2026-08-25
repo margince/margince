@@ -274,6 +274,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// person is asking before they approve, and an omitted field reads as "not
 	// checked" rather than "none found".
 	out.Disposition.Duplicates = &duplicates
+	out.Links = linksOf(run.Report, committed)
 
 	// A finished run's stored report can carry more outcomes than the file has
 	// rows, and there are two causes with different right answers.
@@ -350,6 +351,48 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 		Kept:          kept,
 		Errored:       errored,
 	}
+}
+
+// linksOf renders the connections a run makes, for the half of the report that
+// is not about rows.
+//
+// The stored count means two different things either side of approval, which is
+// the engine's own shape rather than a quirk to smooth over. A dry run cannot
+// resolve an endpoint — it writes nothing and reads nothing about the other end
+// — so what it can honestly say is how many rows NAMED an employer. After the
+// commit the same field counts the edges actually written. Reporting them under
+// one number would let a preview promising 12,000 links be answered by 3,000
+// applied without either figure ever being wrong.
+//
+// Always non-nil for the same reason `duplicates` is: "0 links" answers the
+// question, an absent field reads as "not checked".
+func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks {
+	links := crmcontracts.ImportRunLinks{}
+	if rep == nil {
+		empty := []crmcontracts.ImportUnresolvedLink{}
+		links.Unresolved = &empty
+		return &links
+	}
+	// One stored count, two meanings, decided by which side of approval the run
+	// is on. Before it, the engine has no writer and cannot resolve an endpoint,
+	// so the number is what the file asks for that CAN be linked. After it, the
+	// same field holds what was actually written. Reporting both under one name
+	// would let a preview promising 12,000 links be answered by 3,000 applied
+	// without either figure ever having been wrong.
+	if committed {
+		links.Applied = rep.Associations
+	}
+	// Offered is the whole ask either way: what landed, plus what named a company
+	// the run could not find.
+	links.Offered = rep.Associations + len(rep.AssociationsSkipped)
+	unresolved := make([]crmcontracts.ImportUnresolvedLink, 0, len(rep.AssociationsSkipped))
+	for _, s := range rep.AssociationsSkipped {
+		unresolved = append(unresolved, crmcontracts.ImportUnresolvedLink{
+			From: s.From, To: s.To, Reason: s.Reason,
+		})
+	}
+	links.Unresolved = &unresolved
+	return &links
 }
 
 // lineOf recovers the file line a skip named. The source records skips as

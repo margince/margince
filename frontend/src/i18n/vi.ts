@@ -2771,6 +2771,9 @@ export const vi = {
   "import.count.unchanged": "Không đổi",
   "import.count.skipped": "Bỏ qua",
   "import.rowsRead": "Đã đọc {rows} dòng, nhận diện bằng {column}.",
+  "import.linksOffered":
+    "{offered} dòng có nêu nơi làm việc; {unresolved} dòng nêu công ty chưa có trong CRM.",
+  "import.linksApplied": "Đã ghi {applied}/{offered} liên kết nơi làm việc.",
   "import.issuesLead":
     "Một số dòng không nhập được. Danh sách kèm số dòng để bạn mở trong tệp.",
   "import.issueLine": "Dòng {line}:",

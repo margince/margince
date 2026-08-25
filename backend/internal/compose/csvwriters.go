@@ -48,6 +48,9 @@ type csvWriters struct {
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
+	// employers is the normalized company-name index, built once per run by
+	// employerIndex and nil until the first row needs it.
+	employers map[string]employerCandidate
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -100,13 +103,20 @@ func (w *csvWriters) Exists(ctx context.Context, object, externalID string) (boo
 // answer for a writer that lands both together.
 func (w *csvWriters) ReconcileIdentities(context.Context) error { return nil }
 
-// Associate discloses rather than applies. A flat file carries no edges, so an
-// edge reaching here came from somewhere this writer does not understand, and
-// swallowing it as applied would report work that never happened.
-func (w *csvWriters) Associate(_ context.Context, a migration.Assoc) (migration.AssocResult, error) {
+// Associate applies the one edge a delimited file can carry — a person's
+// employer, named by a company column — and discloses anything else.
+//
+// The default arm is kept rather than replaced. An edge shape this writer does
+// not understand still has to be reported as unapplied: swallowing it as applied
+// would report work that never happened, which is the reason this method existed
+// at all before there was an edge to write.
+func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
+	if a.FromType == migration.ObjectPerson && a.ToType == migration.AssocTargetOrganizationName {
+		return w.linkEmployer(ctx, a)
+	}
 	return migration.AssocResult{
 		Applied: false,
-		Reason:  fmt.Sprintf("a delimited import carries no edges; %s→%s was not applied", a.FromType, a.ToType),
+		Reason:  fmt.Sprintf("a delimited import carries no %s→%s edge; it was not applied", a.FromType, a.ToType),
 	}, nil
 }
 

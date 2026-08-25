@@ -36,6 +36,50 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
 		report.Objects[i].Duplicates += p.duplicates
 	}
+	return withPredictedLinks(ctx, source, writers, report)
+}
+
+// withPredictedLinks answers, before anything is written, how many of the
+// employer links the file asks for will actually find a company.
+//
+// The engine's own dry run counts edges OFFERED — it has no writer, so it cannot
+// resolve an endpoint. That number alone would tell a person approving a file of
+// 12,000 contacts that 12,000 links are coming, when the truthful answer might be
+// 3,000 and 9,000 companies nobody has imported yet. So the resolvable half is
+// computed here through the SAME resolver the commit will use, and the names that
+// resolve to nothing are listed rather than counted — the answer a person needs
+// is WHICH company was not found, because that is the row they have to go fix.
+//
+// Only the COMPANY end is resolved. At dry-run time no person has landed, so the
+// person end would answer "not imported" for every row, and predicting that would
+// be worse than saying nothing. The asymmetry is deliberate: a preview reports
+// what it can honestly know, and claiming more is the preview/commit disagreement
+// this whole pass exists to prevent.
+func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writers *csvWriters, report migration.Report) (migration.Report, error) {
+	edges, err := source.Associations(ctx)
+	if err != nil {
+		return migration.Report{}, err
+	}
+	if len(edges) == 0 {
+		return report, nil
+	}
+	resolvable := 0
+	for _, edge := range edges {
+		resolved, err := writers.resolveEmployer(ctx, edge.ToID)
+		if err != nil {
+			return migration.Report{}, err
+		}
+		if resolved.found {
+			resolvable++
+			continue
+		}
+		report.AssociationsSkipped = append(report.AssociationsSkipped, migration.SkippedAssoc{
+			From:   edge.FromType + "/" + edge.FromID,
+			To:     edge.ToType + "/" + edge.ToID,
+			Reason: resolved.reason,
+		})
+	}
+	report.Associations = resolvable
 	return report, nil
 }
 

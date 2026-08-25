@@ -2823,6 +2823,9 @@ export const en = {
   "import.count.unchanged": "Unchanged",
   "import.count.skipped": "Skipped",
   "import.rowsRead": "{rows} rows read, identified by {column}.",
+  "import.linksOffered":
+    "{offered} rows name an employer; {unresolved} name a company that is not in the CRM yet.",
+  "import.linksApplied": "{applied} of {offered} employer links written.",
   "import.issuesLead":
     "Some rows cannot be imported. They are listed with the line to open in your file.",
   "import.issueLine": "Line {line}:",

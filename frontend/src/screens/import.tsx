@@ -348,6 +348,24 @@ function ImportOutcome({
           column: report.source_key_used,
         })}
       </p>
+      {/* Links sit apart from the four counts above because they are not rows:
+          one person can arrive as a created row AND an applied link, and adding
+          them would make the four stop summing to the rows read. Shown only when
+          the file asked for some — an unmapped company column has no number
+          worth a line. */}
+      {report.links && report.links.offered > 0 ? (
+        <p className="import__hint">
+          {committed
+            ? t("import.linksApplied", {
+                applied: formatNumber(report.links.applied, locale),
+                offered: formatNumber(report.links.offered, locale),
+              })
+            : t("import.linksOffered", {
+                offered: formatNumber(report.links.offered, locale),
+                unresolved: formatNumber(report.links.unresolved?.length ?? 0, locale),
+              })}
+        </p>
+      ) : null}
 
       {report.issues.length > 0 ? (
         <>

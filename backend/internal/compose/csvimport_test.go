@@ -112,10 +112,13 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			created, patched := build(fields)
 			for _, target := range targets {
-				if target == csvTargetID {
-					// A SELECTOR, not a field: it names the record the row is, and
-					// writes nothing. Exempt here and asserted the other way round
-					// below — advertised, and reaching neither input on purpose.
+				if reason, exempt := nonFieldTargets[target]; exempt {
+					// Not a field, so the round-trip rule does not apply. Each
+					// exemption is asserted the other way round below: advertised,
+					// and reaching neither input on purpose. Naming the reason here
+					// is what stops a future target being exempted by accident —
+					// a target with no entry is held to the rule.
+					_ = reason
 					continue
 				}
 				if !created[target] {
@@ -125,16 +128,15 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					t.Errorf("%s: target %q is advertised but never reaches the update input", object, target)
 				}
 			}
-			if !selectsByID(object) {
-				return
+			if selectsByID(object) {
+				assertNonFieldTarget(t, object, csvTargetID, targets, created, patched,
+					"it names the record a row IS, and writing it would let a file move a company onto another company's id",
+					"a corrections file naming its records would be refused")
 			}
-			if created[csvTargetID] || patched[csvTargetID] {
-				t.Errorf("%s: %q reached a write input — it names the record a row IS, and writing "+
-					"it would let a file move a company onto another company's id", object, csvTargetID)
-			}
-			if !slices.Contains(targets, csvTargetID) {
-				t.Errorf("%s: %q is not an accepted column, so a corrections file naming its records "+
-					"would be refused", object, csvTargetID)
+			if linksEmployer(object) {
+				assertNonFieldTarget(t, object, csvEmployerName, targets, created, patched,
+					"it names the company a person works AT, and writing it would put a company's name in a field on the person",
+					"a contact file naming employers would be refused")
 			}
 		})
 	}
@@ -467,5 +469,33 @@ func TestColumnProfileReachesTheWireWithSamplesAndRate(t *testing.T) {
 	// An empty column answers [], never null: the contract promises an array.
 	if out[1].Samples == nil {
 		t.Fatal("a column with no samples serialized as null")
+	}
+}
+
+// nonFieldTargets are the advertised targets that write nothing to the record,
+// each with the reason it is not held to the round-trip rule.
+//
+// A map rather than a condition, so exempting a target is a deliberate entry
+// with a stated reason rather than a boolean somebody widened. A target absent
+// from here must reach both the create and the update input.
+var nonFieldTargets = map[string]string{
+	csvTargetID:     "names the RECORD the row is — a selector, not a value",
+	csvEmployerName: "names an EDGE from the record to a company — written as a relationship, not a column",
+}
+
+// assertNonFieldTarget holds one exemption to what it promises: accepted as a
+// column, and reaching neither write input.
+func assertNonFieldTarget(t *testing.T, object, target string, targets []string,
+	created, patched map[string]bool, writeHarm, absenceHarm string,
+) {
+	t.Helper()
+	if _, declared := nonFieldTargets[target]; !declared {
+		t.Errorf("%s: %q is treated as a non-field target but has no entry in nonFieldTargets saying why", object, target)
+	}
+	if created[target] || patched[target] {
+		t.Errorf("%s: %q reached a write input — %s", object, target, writeHarm)
+	}
+	if !slices.Contains(targets, target) {
+		t.Errorf("%s: %q is not an accepted column, so %s", object, target, absenceHarm)
 	}
 }
