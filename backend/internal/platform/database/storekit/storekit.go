@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -87,43 +86,7 @@ func Audit(ctx context.Context, tx pgx.Tx, action, entityType string, entityID i
 //
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (ids.UUID, error) {
-	p, err := Actor(ctx)
-	if err != nil {
-		return ids.Nil, err
-	}
-
-	beforeJSON, err := marshalOrNil(before)
-	if err != nil {
-		return ids.Nil, err
-	}
-	afterJSON, err := marshalOrNil(after)
-	if err != nil {
-		return ids.Nil, err
-	}
-	evidence, err = withExtensionAttribution(ctx, evidence)
-	if err != nil {
-		return ids.Nil, err
-	}
-	var evidenceJSON []byte
-	if evidence != nil {
-		evidenceJSON, err = json.Marshal(evidence)
-		if err != nil {
-			return ids.Nil, err
-		}
-	}
-
-	id := ids.NewV7()
-	_, err = tx.Exec(ctx,
-		// No tenant column. It came from the TRANSACTION's binding until
-		// ADR-0091 §8 phase D reached the ledgers — the last two tables that
-		// carried one — so an audit row now names WHAT happened and WHO did it,
-		// and the installation is the only answer to where.
-		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
-		action, entityType, entityID, beforeJSON, afterJSON, evidenceJSON,
-		auth.AuthzRule(p, entityType, action))
-	return id, err
+	return writeAuditRow(ctx, tx, action, entityType, entityID, before, after, evidence)
 }
 
 // withExtensionAttribution adds the bound extension attribution to a write's
