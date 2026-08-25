@@ -32,7 +32,7 @@ var passportScopeVocabulary = map[principal.Scope]bool{
 
 func TestEveryToolScopeIsGrantableAndEgressNeedsAnOutboundCap(t *testing.T) {
 	registry := NewRegistry(nil, nil)
-	RegisterCoreTools(registry, nil, nil, nil, nil, nil)
+	RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 
 	for _, spec := range registry.Specs() {
 		if !passportScopeVocabulary[spec.RequiredScope] {

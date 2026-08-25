@@ -164,8 +164,12 @@ func projectUUIDs(projects []ids.ProjectID) []ids.UUID {
 //
 // The task must also reach the account: a link row alone would let a task
 // filed under a project this company shares with another reach a page it does
-// not belong to. activities.OrgLinkedActivityExists performs that walk, and is
-// called rather than restated so the two cannot answer differently.
+// not belong to, so the walk is activities.OrgLinkedActivityExists rather than
+// a link test written here.
+//
+// Who the task is assigned to is read through identity.LiveMemberSQL, which is
+// the definition of "still works here" and belongs to the module that owns
+// app_user (ADR-0054 §3).
 func overdueTasksBy(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	linkColumn string, keys []ids.UUID, now time.Time,

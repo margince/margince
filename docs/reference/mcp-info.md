@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 57 |
 | Resources | 9 |
-| Tool catalog | 155.4 KB |
+| Tool catalog | 155.8 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 40663 |
+| Approx. wire tokens | 40772 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 73.0 KB | 46% | **No** — a result's shape, never listed to a model |
+| Output schemas | 73.4 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.9 KB | 23% | Yes, every step |
 | Input schemas | 34.4 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.1 KB | 7% | Partly |
@@ -72,7 +72,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 2.8 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 3.3 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
@@ -2253,6 +2253,51 @@ Create a person, organization, deal, lead, project, activity or relationship tha
   "properties": {
     "data": {
       "properties": {
+        "duplicate_candidates": {
+          "items": {
+            "properties": {
+              "confidence": {
+                "type": "number"
+              },
+              "evidence": {
+                "items": {
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "left_value": {
+                      "type": "string"
+                    },
+                    "right_value": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "type": "number"
+                    },
+                    "signal": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "field"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "other_record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "confidence",
+              "evidence",
+              "other_record_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "fields": {
           "type": "object"
         },
