@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { type Locale, LocaleProvider } from "../i18n";
 import { TodayScreen } from "./today";
 
 // The day's surface, and the ways it can mislead the person reading it.
@@ -29,13 +30,15 @@ function stub(day: Attention) {
   );
 }
 
-function renderToday() {
+function renderToday(locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <TodayScreen />
+      <LocaleProvider initial={locale}>
+        <TodayScreen />
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -158,6 +161,50 @@ describe("what the day's surface offers", () => {
     // is empty instead of asserting that it is.
     expect(screen.queryByText("Your day is clear.")).toBeNull();
     expect(screen.getByText("Hidden from your account.")).toBeTruthy();
+  });
+
+  // Every figure on this page is a MAGNITUDE — a count of decisions, a count
+  // of duplicate pairs, a match percentage — so each one is written in the
+  // reader's own notation rather than coerced. A German reader reads "1.234";
+  // the coerced form says "1234", which they read as a different number.
+  //
+  // The compiler holds that these are strings. It cannot hold that they are
+  // FORMATTED ones: `String(n)` typechecks and is the right answer for a
+  // position — a page ordinal, a step, a version. It is the wrong answer here,
+  // and en-GB renders both spellings identically, so only a reader whose
+  // notation differs can tell the two apart. Hence German.
+  it("writes the day's figures in the reader's own notation", async () => {
+    stub({
+      ...emptyDay,
+      counts: { needs_you: 1234, planned: 0, duplicates_open: 5678 },
+      needs_you: [
+        {
+          id: "dc-1",
+          source: "dedupe_candidate",
+          kind: "organization",
+          confidence: 0.92,
+          actions: ["merge"],
+        },
+      ],
+    });
+    renderToday("de");
+    await screen.findByText("1.234 Entscheidungen warten auf dich.");
+    expect(
+      screen.getByText("5.678 Dubletten-Paare insgesamt offen"),
+    ).toBeTruthy();
+    // A percentage is a magnitude too, and below the grouping threshold it
+    // reads the same in both notations — asserted so the site is covered by
+    // name rather than by being too small to disagree.
+    expect(screen.getByText("92% Übereinstimmung")).toBeTruthy();
+  });
+
+  // The planned lead is a separate arm of the same function, reachable only
+  // when nothing needs deciding — so the test above cannot enter it, and a
+  // fourth site would otherwise be ruled by the compiler and by nobody else.
+  it("writes the planned figure in the reader's notation too", async () => {
+    stub({ ...emptyDay, counts: { needs_you: 0, planned: 4321 } });
+    renderToday("de");
+    await screen.findByText("Nichts zu entscheiden — 4.321 für heute geplant.");
   });
 
   it("leads with the count of what actually needs deciding", async () => {
