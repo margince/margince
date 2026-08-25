@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
@@ -89,7 +88,22 @@ func (e *BriefEngine) SnapshotRun(ctx context.Context, now time.Time) (BriefRun,
 // SnapshotRunForDay is SnapshotRun, additionally reporting whether this call is
 // the one that assembled the day's run. The transport needs the distinction to
 // answer 201 versus 200; nothing else does.
+//
+// The day's existing run is looked for BEFORE ranking, not after. Ranking is
+// the expensive half — the candidate SQL plus, on the api role, a model call —
+// and once the night has assembled the morning that work is thrown away by the
+// insert's conflict clause. Paying for it to discard it also made the answer
+// worse than useless on the api role: the caller waited for a model re-order
+// and was then served the deterministic run the worker had already stored.
 func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (BriefRun, bool, error) {
+	existing, err := e.LatestRun(ctx, now)
+	switch {
+	case err == nil:
+		return existing, false, nil
+	case !errors.Is(err, apperrors.ErrNotFound):
+		return BriefRun{}, false, err
+	}
+
 	ranking, err := e.Rank(ctx, now)
 	if err != nil {
 		return BriefRun{}, false, err
@@ -115,6 +129,10 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 			return err
 		}
 		run.LocalDay = day
+		// This, not the read above, is what makes one run per day true: the read
+		// is an optimisation that skips the ranking when the answer is already
+		// there, and two callers can still pass it together.
+		//
 		// DO NOTHING rather than DO UPDATE: the run already there was assembled
 		// from the same day's facts and the rep may already have marked its
 		// items, so replacing it would silently discard those marks.
@@ -126,28 +144,11 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 			joinedExisting = true
 			return nil
 		}
-		for i, item := range ranking.Queue {
-			features, err := json.Marshal(item.Features)
-			if err != nil {
-				return err
-			}
-			persisted := BriefRunItem{
-				ID:          ids.NewV7(),
-				DealID:      item.DealID,
-				Rank:        i + 1,
-				Composite:   item.Composite,
-				Features:    item.Features,
-				EvidenceIDs: item.EvidenceIDs,
-				State:       briefStateNew,
-			}
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO brief_item (id, brief_run_id, deal_id, rank, composite, feature_vector, evidence_ids, state)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-				persisted.ID, run.ID, persisted.DealID, persisted.Rank,
-				persisted.Composite, features, persisted.EvidenceIDs, briefStateNew); err != nil {
-				return err
-			}
-			run.Items = append(run.Items, persisted)
+		run.Items, err = insertRunItems(ctx, tx, run.ID, ranking.Queue)
+		if err != nil {
+			return err
+		}
+		for _, item := range run.Items {
 			queueDeals = append(queueDeals, item.DealID)
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "brief_run", run.ID, nil, map[string]any{
@@ -173,40 +174,38 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 	return run, true, nil
 }
 
-// insertRunIfDayFree writes the run unless this rep already has one for the
-// same local day, reporting which of the two happened. The unique constraint
-// is the arbiter, so two writers racing produce one run and no error.
-func insertRunIfDayFree(ctx context.Context, tx pgx.Tx, run BriefRun) (bool, error) {
-	tag, err := tx.Exec(ctx, `
-		INSERT INTO brief_run (id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT ON CONSTRAINT uq_brief_run_user_day DO NOTHING`,
-		run.ID, run.UserID, run.GeneratedAt, run.AsOf, run.LocalDay, run.CandidateCount, run.RevenueNormMinor)
-	if err != nil {
-		return false, err
-	}
-	return tag.RowsAffected() == 1, nil
-}
-
-// localDay is the calendar date the given instant falls on in the
-// installation's reporting zone — the "which morning is this" the overnight
-// pass and the on-open read must agree on.
+// insertRunItems writes the ranked queue as this run's items, in rank order,
+// and returns them as persisted.
 //
-// The installation zone, not the rep's: app_user.timezone is display-only and
-// InviteUser never writes it, so scheduling on it would give every invited
-// seat a UTC morning. installation.timezone is validated as a real IANA zone
-// at write time, which is what makes a date computed from it reproducible.
-func localDay(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
-	if err != nil {
-		return time.Time{}, err
+// Rank comes from the queue's position rather than from the composite: the L2
+// re-order is allowed to disagree with the deterministic score, and what the
+// rep sees is the order the queue arrived in.
+func insertRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID, queue []BriefQueueItem) ([]BriefRunItem, error) {
+	items := make([]BriefRunItem, 0, len(queue))
+	for i, item := range queue {
+		features, err := json.Marshal(item.Features)
+		if err != nil {
+			return nil, err
+		}
+		persisted := BriefRunItem{
+			ID:          ids.NewV7(),
+			DealID:      item.DealID,
+			Rank:        i + 1,
+			Composite:   item.Composite,
+			Features:    item.Features,
+			EvidenceIDs: item.EvidenceIDs,
+			State:       briefStateNew,
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO brief_item (id, brief_run_id, deal_id, rank, composite, feature_vector, evidence_ids, state)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			persisted.ID, runID, persisted.DealID, persisted.Rank,
+			persisted.Composite, features, persisted.EvidenceIDs, briefStateNew); err != nil {
+			return nil, err
+		}
+		items = append(items, persisted)
 	}
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("brief: the installation timezone %q does not resolve: %w", zone, err)
-	}
-	local := now.In(loc)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC), nil
+	return items, nil
 }
 
 // LatestRun re-reads the acting rep's brief FOR THE CURRENT LOCAL DAY — the

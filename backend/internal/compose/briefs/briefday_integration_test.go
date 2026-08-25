@@ -25,6 +25,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
 func TestBriefReadServesTodaysRunAndNotAnOlderOne(t *testing.T) {
@@ -124,4 +125,44 @@ func TestAnotherRepsRunIsNeverServedAsMine(t *testing.T) {
 // rather than repeating the wrapping check at each of them.
 func apperrorsIsNotFound(err error) bool {
 	return errors.Is(err, apperrors.ErrNotFound)
+}
+
+// countingBrain answers like scriptedBrain and records how often it was asked.
+// A model call is the expensive half of a ranking pass, so "was the model
+// asked at all" is the observable that separates re-ranking from re-reading.
+type countingBrain struct{ calls *int }
+
+func (b countingBrain) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+	*b.calls++
+	return model.Response{}, errors.New("the model must not be asked once the day's run exists")
+}
+
+func TestAskingForTodaysBriefAgainReadsItRatherThanReRanking(t *testing.T) {
+	b := setupBrief(t)
+
+	// The night assembled the morning deterministically, as the worker role does.
+	overnight, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now the rep presses the button on the api role, which carries the model
+	// lane. The day's run already exists, so its order is what she must be
+	// served — and ranking again would spend a model call to produce an order
+	// the insert then discards, leaving her waiting for an answer nobody uses.
+	calls := 0
+	api := NewBriefEngine(b.Pool, b.People).WithL2Ranker(countingBrain{calls: &calls}, nil)
+	served, assembled, err := api.SnapshotRunForDay(b.repCtx, briefClock.Add(2*time.Hour))
+	if err != nil {
+		t.Fatalf("asking for today's brief again failed: %v", err)
+	}
+	if assembled {
+		t.Fatal("the call reported it assembled today's run, but the night already had")
+	}
+	if served.ID != overnight.ID {
+		t.Fatalf("served run %s, want the one the night assembled %s", served.ID, overnight.ID)
+	}
+	if calls != 0 {
+		t.Fatalf("the model was asked %d times to produce an order that would be discarded, want 0", calls)
+	}
 }

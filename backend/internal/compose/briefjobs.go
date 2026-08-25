@@ -203,19 +203,17 @@ func (w *briefGenerateWorkspaceWorker) repsDueTheirMorning(ctx context.Context, 
 				"workspace", wsID)
 			return nil
 		}
-		zone, err := identity.TimezoneOf(ctx, tx)
+		// The engine's own day arithmetic, not a second copy of it: this decides
+		// which reps are due, and the store then dates the run it writes. Two
+		// spellings would let the pair disagree about which morning a run belongs
+		// to, which is how a rep gets a brief dated to a day she has not lived.
+		day, local, err := briefs.LocalDayAt(ctx, tx, now)
 		if err != nil {
-			return fmt.Errorf("reading the installation timezone: %w", err)
+			return err
 		}
-		loc, err := time.LoadLocation(zone)
-		if err != nil {
-			return fmt.Errorf("the installation timezone %q does not resolve: %w", zone, err)
-		}
-		local := now.In(loc)
 		if local.Hour() < briefingHour {
 			return nil
 		}
-		day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 		due, err = repsWithoutARunFor(ctx, tx, day)
 		return err
 	})
