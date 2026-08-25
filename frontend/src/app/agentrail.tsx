@@ -27,6 +27,7 @@ import { useDedupeQueue } from "../screens/dedupe";
 import { usePendingApprovals } from "../screens/inbox.queries";
 import { useLicenseEntitlement } from "../screens/license";
 import { type AppActivity, useAppActivity } from "./activity";
+import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import {
   IDLE_ORDER,
   type IdleKind,
@@ -1021,6 +1022,21 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
   // request, and it lasts seconds.
   const state = demo.state ?? override ?? derive(activity, signals, server);
 
+  // What the screen's margins draw, published rather than re-derived: the run,
+  // the switcher and the reads above are all local to this component, so a second
+  // consumer calling the same hooks would get a second run and report on it.
+  // `waiting` is undefined until the approvals read answers, and an undefined
+  // count is not an empty queue — a contour drawn on a guess would be this
+  // surface inventing a fact.
+  const reading = RUNNING.has(state);
+  const waiting = (signals.waiting ?? 0) > 0;
+  useEffect(() => {
+    publishAgentEdge({ reading, waiting });
+  }, [reading, waiting]);
+  // The last word belongs to the unmount: a reading left behind would outlive the
+  // session that made it, and the signed-out screen would inherit a lit margin.
+  useEffect(() => clearAgentEdge, []);
+
   // Put focus back on the block only when the panel actually HELD it: an outside
   // click usually lands on something focusable of its own, and pulling focus
   // back after it would undo what the click just did.
@@ -1083,7 +1099,7 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
       : barLine(state, signals, record, t("auth.coreDevelopment"), serverLine));
   return (
     <section
-      className={RUNNING.has(state) ? "arblock working" : "arblock"}
+      className="arblock"
       data-core-state={state}
       aria-label={LABELS.region}
       ref={block}
