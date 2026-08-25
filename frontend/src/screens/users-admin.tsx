@@ -18,7 +18,8 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
 import { useHoldsAdminRole } from "../app/capability";
@@ -118,6 +119,7 @@ function MembersCard({
   canAdminister: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const roster = members.data;
   return (
     <Panel
@@ -136,7 +138,7 @@ function MembersCard({
                 roster.length === 1
                   ? "users.memberCount.one"
                   : "users.memberCount.other",
-                { count: roster.length },
+                { count: formatNumber(roster.length, locale) },
               )}
             </Badge>
           )}

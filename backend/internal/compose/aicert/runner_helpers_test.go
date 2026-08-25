@@ -48,142 +48,79 @@ func TestRepeatsOrDefault(t *testing.T) {
 	}
 }
 
-func TestOverrideForTaskRebindsOnlyTheTaskLadderAndNeverMutatesBase(t *testing.T) {
-	base := ai.FakeRoutingConfig()
-	before := len(base.Tiers)
+func TestLadderForTaskBindsEveryTierTheTaskCanFallThrough(t *testing.T) {
+	binding := ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"}
 
-	overridden, err := overrideForTask(base, ai.TaskColdStart, "anthropic:claude-cert-test")
+	bound, err := ladderForTask(binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
 	if err != nil {
-		t.Fatalf("valid override rejected: %v", err)
+		t.Fatalf("valid binding rejected: %v", err)
 	}
 	for _, tier := range ai.TaskLadder(ai.TaskColdStart) {
-		binding := overridden.Tiers[tier]
-		if binding.Provider != "anthropic" || binding.Model != "claude-cert-test" {
-			t.Errorf("tier %s = %+v, want the override binding", tier, binding)
+		if got := bound.Tiers[tier]; got.Provider != "anthropic" || got.Model != "claude-cert-test" {
+			t.Errorf("tier %s = %+v, want the run's binding", tier, got)
 		}
 	}
-	if binding := overridden.Tiers[ai.TierLocalSmall]; binding.Provider != ai.ProviderFake {
-		t.Errorf("a tier off TaskColdStart's ladder must be untouched, got %+v", binding)
+	// EVERY tier, not just the ladder's rungs. The router demotes under budget
+	// pressure onto tiers the ladder does not name, and an unbound one fails as
+	// "no bound tier can serve" — which reads like the task being unsupported
+	// rather than the binding being partial.
+	if len(bound.Tiers) != len(ai.AllTiers()) {
+		t.Errorf("bound %d tiers, want every one of the %d a binding may declare", len(bound.Tiers), len(ai.AllTiers()))
 	}
-	if len(base.Tiers) != before || base.Tiers[ai.TierCheapCloud].Provider != ai.ProviderFake {
-		t.Fatalf("overrideForTask mutated the base config's own tier map: %+v", base.Tiers)
-	}
-}
-
-func TestOverrideForTaskNoOpOnEmptyOverride(t *testing.T) {
-	base := ai.FakeRoutingConfig()
-	got, err := overrideForTask(base, ai.TaskColdStart, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Tiers[ai.TierCheapCloud].Provider != ai.ProviderFake {
-		t.Fatalf("empty override must leave the base binding untouched, got %+v", got.Tiers[ai.TierCheapCloud])
+	for _, tier := range ai.AllTiers() {
+		if got := bound.Tiers[tier]; got.Provider == "" {
+			t.Errorf("tier %s left unbound; a budget demote onto it would read as an unsupported task", tier)
+		}
 	}
 }
 
-func TestOverrideForTaskRefusesAMalformedOverride(t *testing.T) {
-	_, err := overrideForTask(ai.FakeRoutingConfig(), ai.TaskColdStart, "no-colon-here")
-	if err == nil || !strings.Contains(err.Error(), "provider:model") {
-		t.Fatalf("want a provider:model complaint, got %v", err)
-	}
-}
-
-func TestOverrideForTaskRefusesATaskWithNoLadder(t *testing.T) {
-	_, err := overrideForTask(ai.FakeRoutingConfig(), ai.Task("not_a_real_task"), "anthropic:claude-x")
+func TestLadderForTaskRefusesATaskWithNoLadder(t *testing.T) {
+	_, err := ladderForTask(ai.ProviderConfig{Provider: "anthropic", Model: "x"}, ai.ProfileCloudFrontier, ai.Task("not_a_real_task"))
 	if err == nil || !strings.Contains(err.Error(), "no routing ladder") {
 		t.Fatalf("want a no-routing-ladder complaint, got %v", err)
 	}
 }
 
-// openRouterRoutingConfig is a base bound the way an operator binds
-// OpenRouter: the generic OpenAI-wire provider, whose endpoint is a property
-// of the vendor rather than of the model, so every tier carries the same
-// base_url.
-func openRouterRoutingConfig() ai.RoutingConfig {
-	openRouter := ai.ProviderConfig{
+// The broker case. SelectBrain fails closed on openai_compatible without a
+// base_url, so the endpoint has to reach every rung of the ladder — this is the
+// one the retired routing file used to carry, and losing it would make every
+// OpenRouter certification unrunnable rather than merely wrong.
+func TestLadderForTaskCarriesTheEndpointToEveryRung(t *testing.T) {
+	binding := ai.ProviderConfig{
 		Provider: "openai_compatible",
-		Model:    "mistralai/mistral-small-3.2-24b-instruct",
+		Model:    "z-ai/glm-5.2",
 		BaseURL:  "https://openrouter.ai/api",
 	}
-	return ai.RoutingConfig{
-		Profile: ai.ProfileCloudFrontier,
-		Tiers: map[ai.Tier]ai.ProviderConfig{
-			ai.TierLocalSmall: openRouter,
-			ai.TierCheapCloud: openRouter,
-			ai.TierPremium:    openRouter,
-		},
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 1024},
-	}
-}
-
-func TestOverrideForTaskKeepsTheEndpointWhenTheOverrideNamesTheSameProvider(t *testing.T) {
-	base := openRouterRoutingConfig()
-
-	overridden, err := overrideForTask(base, ai.TaskColdStart, "openai_compatible:z-ai/glm-5.2")
+	bound, err := ladderForTask(binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
 	if err != nil {
-		t.Fatalf("same-provider override rejected: %v", err)
+		t.Fatalf("broker binding rejected: %v", err)
 	}
 	for _, tier := range ai.TaskLadder(ai.TaskColdStart) {
-		binding := overridden.Tiers[tier]
-		if binding.Model != "z-ai/glm-5.2" {
-			t.Errorf("tier %s model = %q, want the override's model", tier, binding.Model)
-		}
-		// SelectBrain fails closed on openai_compatible without a base_url,
-		// so an override that drops it cannot be run at all.
-		if binding.BaseURL != "https://openrouter.ai/api" {
-			t.Errorf("tier %s base_url = %q, want the base binding's endpoint", tier, binding.BaseURL)
+		if got := bound.Tiers[tier].BaseURL; got != "https://openrouter.ai/api" {
+			t.Errorf("tier %s base_url = %q, want the binding's endpoint on every rung", tier, got)
 		}
 	}
 }
 
-func TestOverrideForTaskDropsTheEndpointWhenTheOverrideSwitchesProvider(t *testing.T) {
-	base := openRouterRoutingConfig()
+func TestParseBindingRefusesAMalformedSpec(t *testing.T) {
+	for _, spec := range []string{"no-colon-here", ":model-only", "provider-only:"} {
+		if _, err := ParseBinding(spec, ""); err == nil || !strings.Contains(err.Error(), "provider:model") {
+			t.Errorf("ParseBinding(%q) = %v, want a provider:model complaint", spec, err)
+		}
+	}
+}
 
-	overridden, err := overrideForTask(base, ai.TaskColdStart, "gemini:gemini-3.5-flash")
+func TestParseBindingKeepsAVariantSuffixedModelSlugWhole(t *testing.T) {
+	// OpenRouter marks a model's served variant with a colon suffix (":free",
+	// ":batch", ":thinking"), so the split must cut at the FIRST colon —
+	// cutting at the last would certify a different variant than was asked for
+	// and file the record under the name of the one that was not run.
+	got, err := ParseBinding("openai_compatible:openai/gpt-oss-20b:free", "https://openrouter.ai/api")
 	if err != nil {
-		t.Fatalf("cross-provider override rejected: %v", err)
+		t.Fatalf("variant-suffixed spec rejected: %v", err)
 	}
-	for _, tier := range ai.TaskLadder(ai.TaskColdStart) {
-		binding := overridden.Tiers[tier]
-		if binding.Provider != "gemini" {
-			t.Errorf("tier %s provider = %q, want the override's provider", tier, binding.Provider)
-		}
-		if binding.BaseURL != "" {
-			t.Errorf("tier %s kept base_url %q across a provider switch; one vendor's host root addresses no other", tier, binding.BaseURL)
-		}
-	}
-}
-
-func TestOverrideForTaskKeepsAVariantSuffixedModelSlugWhole(t *testing.T) {
-	base := openRouterRoutingConfig()
-
-	// OpenRouter marks a model's served variant with a colon suffix
-	// (":free", ":batch", ":thinking"), so the provider/model split must cut
-	// at the FIRST colon and leave the rest of the slug alone.
-	overridden, err := overrideForTask(base, ai.TaskColdStart, "openai_compatible:openai/gpt-oss-20b:free")
-	if err != nil {
-		t.Fatalf("variant-suffixed override rejected: %v", err)
-	}
-	for _, tier := range ai.TaskLadder(ai.TaskColdStart) {
-		if got := overridden.Tiers[tier].Model; got != "openai/gpt-oss-20b:free" {
-			t.Errorf("tier %s model = %q, want the whole slug including its variant suffix", tier, got)
-		}
-	}
-}
-
-// sovereignRoutingConfig is a base bound the way a sovereign customer binds
-// one: every chat tier and the embed lane on same-host inference, with no
-// base_url, so each resolves to its provider's loopback default.
-func sovereignRoutingConfig() ai.RoutingConfig {
-	local := ai.ProviderConfig{Provider: "ollama", Model: "llama3.1:8b"}
-	return ai.RoutingConfig{
-		Profile: ai.ProfileSovereign,
-		Tiers: map[ai.Tier]ai.ProviderConfig{
-			ai.TierLocalSmall: local,
-			ai.TierCheapCloud: local,
-			ai.TierPremium:    local,
-		},
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: local, Dimensions: 1024},
+	if got.Provider != "openai_compatible" || got.Model != "openai/gpt-oss-20b:free" {
+		t.Fatalf("ParseBinding split to %+v, want the whole slug including its variant suffix", got)
 	}
 }
 
@@ -192,20 +129,17 @@ func sovereignRoutingConfig() ai.RoutingConfig {
 // legitimate thing to want; doing it against a config that still says
 // sovereign, with nothing said about it, produces numbers describing a
 // deployment nobody has.
-func TestOverrideForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
-	base := sovereignRoutingConfig()
-	if err := base.Validate(); err != nil {
-		t.Fatalf("the fixture base must itself be valid, or this proves nothing: %v", err)
-	}
-
-	_, err := overrideForTask(base, ai.TaskColdStart, "anthropic:claude-cert-test")
+func TestLadderForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
+	_, err := ladderForTask(
+		ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"},
+		ai.ProfileSovereign, ai.TaskColdStart)
 	if err == nil {
-		t.Fatal("a cloud override under profile sovereign was accepted; the run would have built the client and called api.anthropic.com")
+		t.Fatal("a cloud binding under profile sovereign was accepted; the run would have built the client and called api.anthropic.com")
 	}
 	// The refusal has to name both halves or it is unactionable: WHICH knob
 	// caused it, and WHAT rule it broke.
 	if !strings.Contains(err.Error(), "MARGINCE_AICERT_MODEL=anthropic:claude-cert-test") {
-		t.Errorf("the refusal must name the override that caused it, got %q", err)
+		t.Errorf("the refusal must name the binding that caused it, got %q", err)
 	}
 	if !strings.Contains(err.Error(), "profile sovereign forbids cloud provider") {
 		t.Errorf("the refusal must carry the rule the config's own boot would have given, got %q", err)
@@ -213,17 +147,17 @@ func TestOverrideForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
 }
 
 // The other arm, and the one that stops the check above from passing for the
-// wrong reason: re-validating must not refuse an override the profile allows.
-func TestOverrideForTaskAcceptsALocalModelUnderASovereignProfile(t *testing.T) {
-	base := sovereignRoutingConfig()
-
-	overridden, err := overrideForTask(base, ai.TaskColdStart, "ollama:qwen3:14b")
+// wrong reason: validating must not refuse a binding the profile allows.
+func TestLadderForTaskAcceptsALocalModelUnderASovereignProfile(t *testing.T) {
+	bound, err := ladderForTask(
+		ai.ProviderConfig{Provider: "ollama", Model: "qwen3:14b"},
+		ai.ProfileSovereign, ai.TaskColdStart)
 	if err != nil {
-		t.Fatalf("a local override under profile sovereign must run, got %v", err)
+		t.Fatalf("a local binding under profile sovereign must run, got %v", err)
 	}
 	for _, tier := range ai.TaskLadder(ai.TaskColdStart) {
-		if got := overridden.Tiers[tier].Model; got != "qwen3:14b" {
-			t.Errorf("tier %s model = %q, want the override's model", tier, got)
+		if got := bound.Tiers[tier].Model; got != "qwen3:14b" {
+			t.Errorf("tier %s model = %q, want the binding's model", tier, got)
 		}
 	}
 }

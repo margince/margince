@@ -7,7 +7,7 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter, Sparkline } from "../design-system/readings";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDate, formatMoney } from "../format/format";
+import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, useFinanceSummary } from "./common";
@@ -315,16 +315,20 @@ function FinanceLede({
   split,
 }: Readonly<{ summary: FinanceSummary; split: OpenSplit | null }>) {
   const t = useT();
+  const { locale } = useLocale();
   const clauses: string[] = [];
   if (split) {
     clauses.push(
       t("finance.shareOfOpen", {
-        percent: Math.round((split.overdue / split.open) * 100),
+        percent: formatNumber(
+          Math.round((split.overdue / split.open) * 100),
+          locale,
+        ),
       }),
     );
   }
   if (summary.median_days_after_due != null) {
-    clauses.push(medianDaysLabel(summary.median_days_after_due, t));
+    clauses.push(medianDaysLabel(summary.median_days_after_due, locale, t));
   }
   if (clauses.length === 0) {
     return null;
@@ -472,7 +476,7 @@ function InvoiceRow({
         <Badge tone={STATUS_TONE[invoice.status]} quiet>
           {late && invoice.days_late != null
             ? t(daysLateKey(invoice.status, invoice.days_late), {
-                days: invoice.days_late,
+                days: formatNumber(invoice.days_late, locale),
               })
             : t(STATUS_LABEL[invoice.status])}
         </Badge>

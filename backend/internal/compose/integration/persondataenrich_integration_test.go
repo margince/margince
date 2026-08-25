@@ -96,6 +96,20 @@ func actorEnvelope(personID ids.UUID, actorType, actorID string) events.Envelope
 	}
 }
 
+// admitCapturedContacts is the customer switching automatic_import on, through
+// the same column the settings card writes. Separate from the setup so every
+// other case here keeps the default the server ships, which is off.
+func (c *providerConsumerEnv) admitCapturedContacts(t *testing.T) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE provider_connection SET automatic_import = true WHERE provider = 'surfe'`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func (c *providerConsumerEnv) runsForPerson(t *testing.T) int {
 	t.Helper()
 	var runs int
@@ -168,10 +182,29 @@ func TestAnAgentCreatedPersonBuysNothing(t *testing.T) {
 	}
 }
 
+// The other half of the import toggle: switched ON, a captured counterparty
+// buys exactly like a typed one. Without this case the refusal below passes
+// against a gate that admits nobody — the toggle could be wired to a constant
+// false and every assertion in this file would still be green.
+func TestACapturedContactIsBoughtOnceTheImportToggleIsOn(t *testing.T) {
+	c := setupProviderConsumer(t, "automatic_on_create")
+	c.admitCapturedContacts(t)
+
+	if err := c.consumer.HandleEvent(context.Background(),
+		actorEnvelope(c.personID, "connector", "connector:gmail")); err != nil {
+		t.Fatal(err)
+	}
+	if runs := c.runsForPerson(t); runs != 1 {
+		t.Errorf("%d runs exist for a captured counterparty with automatic_import on, want 1 — the customer switched capture enrichment on and got nothing", runs)
+	}
+	if *c.enqueued != 1 {
+		t.Errorf("%d submit jobs were committed, want 1 — a queued run with no job blocks every later attempt at that subject", *c.enqueued)
+	}
+}
+
 // Capture creates a person per external counterparty, so a mailbox connect
 // with a year of history would buy thousands of records. That is what
-// automatic_import governs — off by default, with a preview and an estimate
-// behind it — and it is NOT the individual-create toggle.
+// automatic_import governs, and it is NOT the individual-create toggle.
 func TestAConnectorCreatedPersonIsGovernedByTheImportToggle(t *testing.T) {
 	c := setupProviderConsumer(t, "automatic_on_create")
 

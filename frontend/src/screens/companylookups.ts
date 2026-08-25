@@ -1,5 +1,6 @@
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useFinanceSummary } from "./common";
 
@@ -90,6 +91,7 @@ export const PAYMENT_LATE_DAYS = 5;
  */
 export function usePaymentHealth(orgId?: string) {
   const t = useT();
+  const { locale } = useLocale();
   const { data } = useFinanceSummary(orgId ?? "");
   if (!orgId || !data) {
     return undefined;
@@ -108,14 +110,18 @@ export function usePaymentHealth(orgId?: string) {
   if (median > PAYMENT_LATE_DAYS) {
     return {
       rating: "good" as const,
-      reason: t("co.health.payment.late", { days: median }),
+      reason: t("co.health.payment.late", {
+        days: formatNumber(median, locale),
+      }),
     };
   }
   return {
     rating: "strong" as const,
     reason:
       median < 0
-        ? t("finance.medianEarly", { days: Math.abs(median) })
+        ? t("finance.medianEarly", {
+            days: formatNumber(Math.abs(median), locale),
+          })
         : t("co.health.payment.onTime"),
   };
 }

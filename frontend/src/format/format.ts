@@ -1,5 +1,4 @@
-import type { Locale } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import type { Locale, Translator } from "../i18n";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
 
 // The presentation edge (architecture/10 §1–3): everything here formats
@@ -108,6 +107,24 @@ export function formatMoneyCompact(
 }
 
 /**
+ * An FX rate, at whatever precision the record actually carries.
+ *
+ * Separate from `formatNumber` because that one's Intl default caps at three
+ * fraction digits, which SILENTLY drops the rest: a rate stored as 0.9293458
+ * renders "0,929", and the reader is then looking at a number the lineage does
+ * not hold — in the one place the product exists to show its arithmetic.
+ * Separate from `formatDecimal` because that pins the digits open, and a rate
+ * of exactly 2 should read "2" rather than "2,0000000000".
+ *
+ * Ten is the scale the server stores a rate at, so it is the ceiling here.
+ */
+export function formatRate(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    maximumFractionDigits: 10,
+  }).format(value);
+}
+
+/**
  * The month's own name in the reader's language, from Intl rather than a table
  * of our own — a list of twelve month names per locale is a translation file
  * that goes stale, and the platform already ships them.
@@ -137,6 +154,29 @@ export function monthName(month: number, locale: Locale): string {
 
 export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
+}
+
+/**
+ * A figure whose DECIMALS are part of what it says — a score, a rate, a factor.
+ *
+ * `formatNumber` renders a count, where a trailing `.0` would be noise. This
+ * one pins the fraction digits open, so a scoring breakdown reads "12.50 → 13"
+ * with both figures at the precision the reader is being shown them at.
+ *
+ * The alternative every site reached for first was `value.toFixed(2)`, which is
+ * not a formatter: it is locale-blind by construction, so a German reader is
+ * shown a decimal POINT where their own numbers carry a comma — and reads
+ * "12.50" as twelve hundred and fifty, in a sentence whose next figure is 13.
+ */
+export function formatDecimal(
+  value: number,
+  locale: Locale,
+  fractionDigits: number,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
 }
 
 // IANA zone names only (AC-DS-TZ4): fixed offsets ("+01:00", "Etc/GMT-1")
@@ -338,7 +378,8 @@ export function calendarDaysBetween(from: Date, to: Date): number {
  */
 export function relativeDays(
   at: string | null | undefined,
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+  t: Translator,
+  locale: Locale,
   now: Date = new Date(),
 ): string {
   if (!at) {
@@ -351,7 +392,12 @@ export function relativeDays(
   if (days === 1) {
     return t("person.strip.yesterday");
   }
-  return t("person.strip.days", { count: days });
+  // The count is a MAGNITUDE, so it is grouped in the reader's own notation.
+  // Handed to `t` as a raw number it reached the catalog sentence through
+  // string coercion, which groups for nobody: a person last written to 1200
+  // days ago read "1200 days" in a German sentence that spells every other
+  // figure on the page "1.200".
+  return t("person.strip.days", { count: formatNumber(days, locale) });
 }
 
 // Idle/SLA spans display as ABSOLUTE durations (no naive calendar diff —

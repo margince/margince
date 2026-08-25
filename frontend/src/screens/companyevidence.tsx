@@ -9,8 +9,8 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
-import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { formatDateTime, formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 
@@ -131,7 +131,10 @@ export function EvidenceModal({
           {typeof shown.confidence === "number" && (
             <p className="co-evidence-line">
               {t("co.evidence.confidence", {
-                percent: Math.round(shown.confidence * 100),
+                percent: formatNumber(
+                  Math.round(shown.confidence * 100),
+                  locale,
+                ),
               })}
             </p>
           )}
@@ -256,7 +259,7 @@ function EvidenceTimes({
 }: Readonly<{
   retrievedAt?: string | null;
   lastVerifiedAt?: string | null;
-  locale: "en" | "de" | "vi";
+  locale: Locale;
 }>) {
   const t = useT();
   const recordZone = useRecordZone();

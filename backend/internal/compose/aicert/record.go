@@ -283,7 +283,7 @@ func LoadRecords(dir string) ([]Record, error) {
 // than as one parameter per number: the record IS that accumulation written
 // down, and a dozen same-typed positional arguments is a transposition waiting
 // to happen that no test would catch.
-func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, baseCfg ai.RoutingConfig, promptVersion string) Record {
+func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profile ai.Profile, promptVersion string) Record {
 	results := acc.allResults
 	scores := make([]int, len(results))
 	for i, r := range results {
@@ -316,7 +316,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, baseCf
 		Task:                 string(task),
 		Provider:             acc.provider,
 		ServedModel:          acc.servedModel,
-		EnvClass:             string(baseCfg.Profile),
+		EnvClass:             string(profile),
 		PromptVersion:        promptVersion,
 		CorpusVersion:        corpusVersionV1,
 		Verdict:              taskVerdict,

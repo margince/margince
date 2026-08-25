@@ -27,7 +27,8 @@ func TestCertifyTaskCountsAnAcceptedRunThatFailedItsScenarioAsFailed(t *testing.
 	sc.Expect.Outcome = aitasks.OutcomeAbstained
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
-		ai.FakeRoutingConfig(), "", 3, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		})
@@ -57,7 +58,8 @@ func TestCertifyTaskRecordsEachScenariosOwnCounts(t *testing.T) {
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize,
 		[]Scenario{testScenario("answers", wideBands), testScenario("wanders", wideBands)},
-		testCensus(t), ai.FakeRoutingConfig(), "", 3, quietLogger(), &certifyHooks{
+		testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		})

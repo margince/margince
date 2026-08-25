@@ -26,7 +26,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/platform/config"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -56,18 +55,66 @@ type RunnerConfig struct {
 	// turns a scenario into something runnable: every site's certification case
 	// is bound there, and a run drives those cases rather than prompts of its
 	// own. Required — see Run.
-	Census      *aitasks.Registry
-	RoutingPath string // MARGINCE_AI_ROUTING
-	TaskFilter  string // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
-	Override    string // MARGINCE_AICERT_MODEL "provider:model" — candidate only
-	Repeats     int    // MARGINCE_AICERT_RUNS, default 3, must be odd
-	RecordDir   string
-	CorpusDir   string
+	Census *aitasks.Registry
+	// Binding is what this run certifies, stated outright rather than read from
+	// a routing file: the model binding is a stored setting now, and this lane
+	// opens no database, so a run says which model it measured instead of
+	// inheriting whatever a file on the runner's disk happened to bind.
+	//
+	// BaseURL carries the broker case. openai_compatible fails closed without
+	// one, so a run against OpenRouter or any other OpenAI-wire host supplies it
+	// here; a native vendor leaves it empty and gets the vendor default.
+	// Required — see Run.
+	Binding ai.ProviderConfig // MARGINCE_AICERT_MODEL + MARGINCE_AICERT_BASE_URL
+	// JudgeBinding grades the candidate, and is stated separately BECAUSE it
+	// must differ: a judge on the candidate's own binding marks its own homework,
+	// which is the one result a certification run must never be able to produce.
+	// The retired routing file supplied this implicitly — the judge rode the
+	// file's binding while MODEL= moved only the candidate — so deleting the file
+	// without naming a judge would have collapsed the two silently.
+	JudgeBinding ai.ProviderConfig // MARGINCE_AICERT_JUDGE_MODEL + _JUDGE_BASE_URL
+	// Profile is the environment class each record is filed under — it is part of
+	// a record's identity (its path and its sort key), not a label, so a run says
+	// which one it measured rather than inheriting it from a file.
+	Profile    ai.Profile // MARGINCE_AICERT_PROFILE
+	TaskFilter string     // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
+	Repeats    int        // MARGINCE_AICERT_RUNS, default 3, must be odd
+	RecordDir  string
+	CorpusDir  string
 	// TraceDir, when non-empty, turns on the opt-in payload trace
 	// (MARGINCE_AICERT_TRACE): every candidate and judge call's
 	// post-stripper request+response is dumped to a JSONL file under this
 	// directory and its path printed to stdout. Empty = no trace.
 	TraceDir string
+}
+
+// validateBindings refuses a run that could not produce a trustworthy verdict,
+// before a single paid call is made.
+//
+// Both bindings are required because there is no routing file left to fall back
+// on, and they must DIFFER because a model grading itself passes by
+// construction. The old file made the second point structurally — the judge rode
+// the file while MODEL= moved only the candidate — so with the file gone it has
+// to be checked outright rather than assumed.
+func validateBindings(cfg RunnerConfig) error {
+	if cfg.Binding.Provider == "" || cfg.Binding.Model == "" {
+		return errors.New("no candidate binding — set MARGINCE_AICERT_MODEL=provider:model " +
+			"(and MARGINCE_AICERT_BASE_URL for an openai_compatible host, which fails closed without one)")
+	}
+	if cfg.JudgeBinding.Provider == "" || cfg.JudgeBinding.Model == "" {
+		return errors.New("no judge binding — set MARGINCE_AICERT_JUDGE_MODEL=provider:model; " +
+			"the judge is a SECOND model on purpose, and the run has no file to inherit one from")
+	}
+	if cfg.Binding.Provider == cfg.JudgeBinding.Provider && cfg.Binding.Model == cfg.JudgeBinding.Model {
+		return fmt.Errorf("candidate and judge are both %s:%s — a model grading itself is certified "+
+			"by construction; name a different MARGINCE_AICERT_JUDGE_MODEL",
+			cfg.Binding.Provider, cfg.Binding.Model)
+	}
+	if !cfg.Profile.Valid() {
+		return fmt.Errorf("MARGINCE_AICERT_PROFILE=%q is not an environment class; a record is filed "+
+			"under it, so a run states which one it measured", cfg.Profile)
+	}
+	return nil
 }
 
 // Run certifies every task named by cfg.TaskFilter (or, when empty,
@@ -93,8 +140,10 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		return nil, err
 	}
 
-	baseCfg, err := ai.LoadRoutingFile(cfg.RoutingPath, config.FromOS)
-	if err != nil {
+	// Refused here rather than per task: with no routing file to fall back on,
+	// a run with no binding could only report that it measured nothing, after
+	// paying for it.
+	if err := validateBindings(cfg); err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
@@ -127,7 +176,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, baseCfg, cfg.Override, repeats, log, &certifyHooks{trace: trace})
+		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, cfg.Binding, cfg.JudgeBinding, cfg.Profile, repeats, log, &certifyHooks{trace: trace})
 		if err != nil {
 			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
 			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
@@ -159,8 +208,8 @@ type certifyHooks struct {
 
 // certifyTask runs every scenario for one task over a fresh
 // candidate/judge router pair and folds the outcome into one Record.
-func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census *aitasks.Registry, baseCfg ai.RoutingConfig, override string, repeats int, log *slog.Logger, hooks *certifyHooks) (Record, error) {
-	candidateCfg, err := overrideForTask(baseCfg, task, override)
+func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census *aitasks.Registry, binding, judgeBinding ai.ProviderConfig, profile ai.Profile, repeats int, log *slog.Logger, hooks *certifyHooks) (Record, error) {
+	candidateCfg, err := ladderForTask(binding, profile, task)
 	if err != nil {
 		return Record{}, err
 	}
@@ -191,12 +240,16 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 		return Record{}, fmt.Errorf("aicert: task %s: candidate router: %w", task, err)
 	}
 
-	// The judge NEVER rides the override — grading the candidate with the
-	// candidate's own binding would let a MODEL= override judge itself by
-	// construction, defeating the whole point of a second router.
+	// The judge NEVER rides the candidate's binding — a model grading itself is
+	// certified by construction, which defeats the whole point of a second
+	// router. Run refuses the two being equal before a single call is paid for.
+	judgeCfg, err := ladderForTask(judgeBinding, profile, task)
+	if err != nil {
+		return Record{}, err
+	}
 	judgeRec := newTraceRecorder()
 	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(judgeRec)}, judgeExtra...)
-	judgeRouter, err := compose.NewLocalRouterForCert(baseCfg, judgeOpts...)
+	judgeRouter, err := compose.NewLocalRouterForCert(judgeCfg, judgeOpts...)
 	if err != nil {
 		return Record{}, fmt.Errorf("aicert: task %s: judge router: %w", task, err)
 	}
@@ -212,7 +265,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 		taskVerdict = worstVerdict(taskVerdict, scenarioVerdict)
 	}
 
-	return buildRecord(task, taskVerdict, acc, baseCfg, promptVersion), nil
+	return buildRecord(task, taskVerdict, acc, profile, promptVersion), nil
 }
 
 // taskAccumulation collects the pooled stats certifyTask folds across

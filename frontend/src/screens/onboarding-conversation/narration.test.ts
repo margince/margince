@@ -72,7 +72,7 @@ describe("diffSiteRead", () => {
         field("industry", "Robotics"),
       ],
     });
-    const events = diffSiteRead(prev, next);
+    const events = diffSiteRead(prev, next, "en");
     expect(events).toEqual([
       {
         kind: "say",
@@ -80,7 +80,7 @@ describe("diffSiteRead", () => {
         // the machine replaces the earlier pages bubble in place.
         id: `${READ_ID}:pages`,
         i18nKey: "ob.conv.read.pages",
-        params: { pages: 5 },
+        params: { pages: "5" },
       },
       {
         kind: "say",
@@ -102,6 +102,7 @@ describe("diffSiteRead", () => {
     const events = diffSiteRead(
       null,
       read({ profile_fields: [field("offer_summary", "Robots as a service")] }),
+      "en",
     );
     expect(events[0]).toMatchObject({
       paramKeys: { field: "ob.field.offer_summary" },
@@ -113,8 +114,8 @@ describe("diffSiteRead", () => {
     const snapshot = read({
       profile_fields: [field("display_name", "Acme"), field("icp", "SMB ops")],
     });
-    expect(diffSiteRead(null, snapshot)).toHaveLength(2);
-    expect(diffSiteRead(snapshot, snapshot)).toEqual([]);
+    expect(diffSiteRead(null, snapshot, "en")).toHaveLength(2);
+    expect(diffSiteRead(snapshot, snapshot, "en")).toEqual([]);
   });
 
   it("truncates long field values by code points to the 80-glyph preview", () => {
@@ -122,6 +123,7 @@ describe("diffSiteRead", () => {
     const events = diffSiteRead(
       null,
       read({ profile_fields: [field("history", long)] }),
+      "en",
     );
     const first = events[0];
     if (first?.kind !== "say") throw new Error("expected a say event");
@@ -135,7 +137,7 @@ describe("diffSiteRead", () => {
     const next = read({
       warnings: ["robots.txt blocked /careers", "sitemap missing"],
     });
-    expect(diffSiteRead(prev, next)).toEqual([
+    expect(diffSiteRead(prev, next, "en")).toEqual([
       {
         kind: "say",
         id: `${READ_ID}:warning:sitemap missing`,
@@ -148,13 +150,13 @@ describe("diffSiteRead", () => {
   it("signals a flush on a fresh terminal instead of narrating it", () => {
     const prev = read({ status: "reading" });
     const next = read({ status: "ready" });
-    expect(diffSiteRead(prev, next)).toEqual([
+    expect(diffSiteRead(prev, next, "en")).toEqual([
       { kind: "flush", id: `${READ_ID}:flush:ready` },
     ]);
     // Polling the same terminal snapshot again stays silent.
-    expect(diffSiteRead(next, next)).toEqual([]);
+    expect(diffSiteRead(next, next, "en")).toEqual([]);
     for (const status of ["partial", "failed", "deferred"] as const) {
-      expect(diffSiteRead(prev, read({ status }))).toEqual([
+      expect(diffSiteRead(prev, read({ status }), "en")).toEqual([
         { kind: "flush", id: `${READ_ID}:flush:${status}` },
       ]);
     }
@@ -170,7 +172,7 @@ describe("diffSiteRead", () => {
       status: "ready",
       profile_fields: [field("display_name", "Acme")],
     });
-    const events = diffSiteRead(oldRun, newRun);
+    const events = diffSiteRead(oldRun, newRun, "en");
     // Same field, same status — but a NEW run, so both narrate again.
     expect(events).toEqual([
       expect.objectContaining({ id: `${READ_ID}:field:display_name` }),
@@ -180,10 +182,18 @@ describe("diffSiteRead", () => {
 
   it("stays silent on post-outcome lifecycle transitions (confirmed, abandoned)", () => {
     expect(
-      diffSiteRead(read({ status: "ready" }), read({ status: "confirmed" })),
+      diffSiteRead(
+        read({ status: "ready" }),
+        read({ status: "confirmed" }),
+        "en",
+      ),
     ).toEqual([]);
     expect(
-      diffSiteRead(read({ status: "failed" }), read({ status: "abandoned" })),
+      diffSiteRead(
+        read({ status: "failed" }),
+        read({ status: "abandoned" }),
+        "en",
+      ),
     ).toEqual([]);
   });
 });
@@ -273,13 +283,15 @@ describe("diffCorpus", () => {
   });
 
   it("narrates word growth and band changes, band as an i18n label key", () => {
-    expect(diffCorpus(summary(400, "thin"), summary(1240, "good"))).toEqual([
+    expect(
+      diffCorpus(summary(400, "thin"), summary(1240, "good"), "en"),
+    ).toEqual([
       {
         kind: "say",
         // Stable counter id: the latest total replaces the earlier bubble.
         id: "words",
         i18nKey: "ob.conv.corpus.words",
-        params: { words: 1240 },
+        params: { words: "1,240" },
       },
       {
         kind: "say",
@@ -288,9 +300,9 @@ describe("diffCorpus", () => {
         paramKeys: { band: "settings.voice.bandGood" },
       },
     ]);
-    expect(diffCorpus(summary(1240, "good"), summary(1240, "good"))).toEqual(
-      [],
-    );
+    expect(
+      diffCorpus(summary(1240, "good"), summary(1240, "good"), "en"),
+    ).toEqual([]);
   });
 });
 
@@ -306,7 +318,7 @@ describe("useNarrationQueue", () => {
     kind: "say",
     id,
     i18nKey: "ob.conv.read.pages",
-    params: { pages: 1 },
+    params: { pages: "1" },
   });
   const flush = (id: string): NarrationEvent => ({ kind: "flush", id });
 

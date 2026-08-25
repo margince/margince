@@ -64,7 +64,7 @@ export type GateNoticeInput = Readonly<{
    */
   translate: (
     key: NarrationEntry["i18nKey"],
-    params?: Record<string, string | number>,
+    params?: Record<string, string>,
   ) => string;
   /** ob.gate.startFailed / ob.gate.readPaused, already translated with {detail}. */
   failedWithDetail: (detail: string) => string;

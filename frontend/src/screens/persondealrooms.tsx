@@ -8,6 +8,7 @@ import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelRow } from "../design-system/panel";
+import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { STATE_LABELS } from "./dealroom";
@@ -24,18 +25,12 @@ type DealRoom = components["schemas"]["DealRoom"];
 // The rooms a contact holds a seat in, keyed on the whole address list so a
 // revoke anywhere refreshes it.
 //
-// The bare sort is deliberate and must stay bare: this is a CACHE KEY, not a
-// list a person reads. Default string sort is lexicographic by UTF-16 code
-// unit — deterministic and identical on every machine, which is the whole
-// requirement for a key. localeCompare is locale-DEPENDENT, so the same
-// addresses would key differently under different locales and a revoke would
-// refresh a cache entry nobody is looking at. Sonar's S2871 asks for
-// localeCompare here: it flags a bare sort on strings because code-unit order
-// is not human alphabetical order — "Ä" after "Z", "a" after "Z". That is a
-// real concern for a list somebody READS and no concern at all for a key
-// nobody reads, where identical-everywhere is the only property that matters.
+// `stable`, and the name is the whole record of why: this is a CACHE KEY, not a
+// list a person reads, so identical-everywhere is the only property that
+// matters. Under a reader's collation the same addresses would key differently
+// per reader and a revoke would refresh an entry nobody is looking at.
 export function roomsOfKey(emails: readonly string[]) {
-  return ["deal-rooms-of", [...emails].sort().join(",")] as const;
+  return ["deal-rooms-of", [...emails].sort(stable).join(",")] as const;
 }
 
 // More rooms than any one contact sits in; past this the card says the list

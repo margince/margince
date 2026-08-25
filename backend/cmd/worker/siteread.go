@@ -29,18 +29,17 @@ import (
 )
 
 type siteReadFlags struct {
-	maxPages    int
-	maxBytes    int
-	wall        time.Duration
-	routingPath string
-	modelSpec   string
-	fakeBrain   bool
-	jsonPath    string
-	dumpDir     string
-	urlsFile    string
-	logLevel    string
-	logFormat   string
-	seeds       []string
+	maxPages  int
+	maxBytes  int
+	wall      time.Duration
+	modelSpec string
+	fakeBrain bool
+	jsonPath  string
+	dumpDir   string
+	urlsFile  string
+	logLevel  string
+	logFormat string
+	seeds     []string
 }
 
 func parseSiteReadFlags(args []string) (siteReadFlags, error) {
@@ -50,7 +49,6 @@ func parseSiteReadFlags(args []string) (siteReadFlags, error) {
 	fs.IntVar(&cfg.maxPages, "max-pages", 0, "crawl page cap; 0 takes the built-in default")
 	fs.IntVar(&cfg.maxBytes, "max-bytes", 0, "crawl aggregate byte cap; 0 takes the built-in default")
 	fs.DurationVar(&cfg.wall, "wall", 0, "crawl wall clock; 0 takes the built-in default")
-	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "the model binding for THIS debug run, read straight from the file. This lane opens no database, so the installation's stored binding is not what it probes — pick exactly one of --ai-routing, --model, --ai-fake")
 	fs.StringVar(&cfg.modelSpec, "model", "", "direct model override, provider:model (e.g. anthropic:claude-sonnet-4-6)")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "offline fake model: crawl dry-run, extraction yields nothing")
 	fs.StringVar(&cfg.jsonPath, "json", "", "write the machine-readable report here ('-' = stdout). Diff two runs with: jq 'del(.crawl.duration_ms, .crawl.pages[].fetch_ms, .model_calls[].latency_ms)'")
@@ -138,7 +136,7 @@ func runSiteReadDebug(ctx context.Context, args []string, stdout io.Writer) erro
 		return err
 	}
 
-	profileBrain, factBrain, triageBrain, banner, err := compose.SiteReadDebugBrain(cfg.routingPath, cfg.modelSpec, cfg.fakeBrain)
+	profileBrain, factBrain, triageBrain, banner, err := compose.SiteReadDebugBrain(cfg.modelSpec, cfg.fakeBrain)
 	if err != nil {
 		return err
 	}

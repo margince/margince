@@ -5,7 +5,11 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { formatDayMonth, formatMoneyCompact } from "../format/format";
+import {
+  formatDayMonth,
+  formatMoneyCompact,
+  formatNumber,
+} from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -459,6 +463,7 @@ function loopPrefix(
 
 function LoopStatus({ claim }: Readonly<{ claim: ConversationClaim }>) {
   const t = useT();
+  const { locale } = useLocale();
   // An unreadable due instant names no deadline, so the claim reads as one with
   // no date rather than as a promise due at some NaN o'clock.
   const dueMs = claim.due_at ? Date.parse(claim.due_at) : Number.NaN;
@@ -473,14 +478,14 @@ function LoopStatus({ claim }: Readonly<{ claim: ConversationClaim }>) {
       return (
         <span className="pe-loop-due pe-loop-overdue">
           {days > 0
-            ? t("person.loops.overdue", { count: days })
+            ? t("person.loops.overdue", { count: formatNumber(days, locale) })
             : t("person.loops.overdueUnderDay")}
         </span>
       );
     }
     return (
       <span className="pe-loop-due">
-        {t("person.loops.due", { when: dueWord(nowMs, dueMs, t) })}
+        {t("person.loops.due", { when: dueWord(nowMs, dueMs, t, locale) })}
       </span>
     );
   }
@@ -500,6 +505,7 @@ function dueWord(
   nowMs: number,
   dueMs: number,
   t: ReturnType<typeof useT>,
+  locale: Locale,
 ): string {
   const { days } = daysPast(nowMs, dueMs);
   if (days === 0) {
@@ -508,5 +514,5 @@ function dueWord(
   if (days === 1) {
     return t("person.loops.dueTomorrow");
   }
-  return t("person.loops.dueInDays", { count: days });
+  return t("person.loops.dueInDays", { count: formatNumber(days, locale) });
 }

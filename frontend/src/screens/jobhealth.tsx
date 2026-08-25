@@ -14,9 +14,8 @@ import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
-import type { Translator } from "../format/now";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
 import "./jobhealth.css";
@@ -53,7 +52,11 @@ const FAILURE_STATE: Record<
 // the reading an operator opens this card for.
 // A count of one takes the singular key, the house `.one`/`.other` pattern — a
 // queue that jammed sixty-one minutes ago read "waited 1 hours".
-function formatWaitedFor(seconds: number, t: Translator): string {
+function formatWaitedFor(
+  seconds: number,
+  t: Translator,
+  locale: Locale,
+): string {
   const [unit, count] =
     seconds >= 86_400
       ? (["Days", Math.floor(seconds / 86_400)] as const)
@@ -66,7 +69,7 @@ function formatWaitedFor(seconds: number, t: Translator): string {
   // Annotated so an unknown unit or form is a compile error rather than a key
   // the catalog silently echoes back.
   const key: MessageKey = `jobs.waited${unit}.${plural}`;
-  return t(key, { count });
+  return t(key, { count: formatNumber(count, locale) });
 }
 
 // All four states of one kind, always all four. A zero is a fact an operator
@@ -91,7 +94,11 @@ function KindCounts({ kind }: Readonly<{ kind: JobKindHealth }>) {
   );
 }
 
-function kindFacts(kinds: readonly JobKindHealth[], t: Translator): Fact[] {
+function kindFacts(
+  kinds: readonly JobKindHealth[],
+  t: Translator,
+  locale: Locale,
+): Fact[] {
   return kinds.map((kind) => ({
     // `kind` is unique per queue, not globally — the same worker kind can be
     // registered on two queues, and the pair is what names one row. Serialized
@@ -111,7 +118,7 @@ function kindFacts(kinds: readonly JobKindHealth[], t: Translator): Fact[] {
             late — and a row claiming a wait of zero would read as a queue
             that just started rather than one with nothing in it. */}
         {kind.oldest_waiting_age_seconds !== null && (
-          <> · {formatWaitedFor(kind.oldest_waiting_age_seconds, t)}</>
+          <> · {formatWaitedFor(kind.oldest_waiting_age_seconds, t, locale)}</>
         )}
       </>
     ),
@@ -137,6 +144,7 @@ function KindSection({
   emptyText: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <SettingRow
       label={label}
@@ -147,7 +155,7 @@ function KindSection({
           {kinds.length === 0 ? (
             <EmptyState>{emptyText}</EmptyState>
           ) : (
-            <FactList numeric facts={kindFacts(kinds, t)} />
+            <FactList numeric facts={kindFacts(kinds, t, locale)} />
           )}
         </div>
       }
@@ -185,9 +193,11 @@ function failureNote(
           {" · "}
         </>
       )}
+      {/* Two rungs of the retry ladder, never grouped: "attempt 1.234 of
+          2.000" reads as a quantity where the pair states a position. */}
       {t("jobs.attempt", {
-        attempt: failure.attempt,
-        max: failure.max_attempts,
+        attempt: String(failure.attempt),
+        max: String(failure.max_attempts),
         when: formatDateTime(failure.failed_at, locale, zone),
       })}
       {/* Interpolated as-is, never through formatNumber: this is the id River
@@ -196,7 +206,7 @@ function failureNote(
       {jobID !== undefined && (
         <>
           {" · "}
-          {t("jobs.jobId", { id: jobID })}
+          {t("jobs.jobId", { id: String(jobID) })}
         </>
       )}
       {/* Only when an attempt error was actually recorded. A job cancelled

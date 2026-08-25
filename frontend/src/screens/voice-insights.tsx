@@ -161,7 +161,9 @@ export function VoiceInsights({
   return (
     <div className="vdna-insights">
       <div className="vdna-provenance t-small">
-        {t("voice.insights.provenance", { n: profileVersion })}
+        {/* The build's version is a name, not a magnitude: grouped, build 1234
+            would read as "1.234" and stop matching what it refers to. */}
+        {t("voice.insights.provenance", { n: String(profileVersion) })}
         {data.modelName && data.modelName !== "unrecorded"
           ? ` · ${data.modelName}`
           : ""}
@@ -249,6 +251,7 @@ function SignatureMoves({ moves }: Readonly<{ moves: VoiceSignatureMove[] }>) {
 
 function SampleDrafts({ drafts }: Readonly<{ drafts: VoiceSampleDraft[] }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (drafts.length === 0) {
     return null;
   }
@@ -268,7 +271,7 @@ function SampleDrafts({ drafts }: Readonly<{ drafts: VoiceSampleDraft[] }>) {
             {draft.score !== null && (
               <span className="t-small">
                 {t("voice.insights.voiceScore", {
-                  pct: Math.round(draft.score * 100),
+                  pct: formatNumber(Math.round(draft.score * 100), locale),
                 })}
               </span>
             )}

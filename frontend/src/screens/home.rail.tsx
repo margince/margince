@@ -9,7 +9,11 @@ import { Callout } from "../design-system/callout";
 import { DealCard } from "../design-system/composed";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDate, formatMoneyOrAbsent } from "../format/format";
+import {
+  formatDate,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate } from "./common";
@@ -76,6 +80,7 @@ function DigestProjectsBlock({
   projects,
 }: Readonly<{ projects: DigestProjects }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { phase_changes, new_commitments, gone_quiet } = projects;
   // The birth row of a project created overnight carries no from_phase; a move
   // between rungs is the news, so only those are listed.
@@ -118,7 +123,7 @@ function DigestProjectsBlock({
               <EntityRef kind="project" id={item.project_id} />{" "}
               <span className="t-caption">
                 {t("home.digestCommitmentCount", {
-                  count: item.new_open_commitments,
+                  count: formatNumber(item.new_open_commitments, locale),
                 })}
               </span>
             </li>
@@ -134,7 +139,9 @@ function DigestProjectsBlock({
             <li key={item.project_id}>
               <EntityRef kind="project" id={item.project_id} />{" "}
               <span className="t-caption">
-                {t("home.digestQuietDays", { days: item.days_quiet })}
+                {t("home.digestQuietDays", {
+                  days: formatNumber(item.days_quiet, locale),
+                })}
               </span>
             </li>
           ))}
@@ -200,9 +207,15 @@ export function OvernightPanel() {
             <PanelBody>
               <p className="t-caption">
                 {t("home.digestClassify", {
-                  commitments: review.classify?.commitments ?? 0,
-                  meetings: review.classify?.meetings ?? 0,
-                  noise: review.classify?.noise ?? 0,
+                  commitments: formatNumber(
+                    review.classify?.commitments ?? 0,
+                    locale,
+                  ),
+                  meetings: formatNumber(
+                    review.classify?.meetings ?? 0,
+                    locale,
+                  ),
+                  noise: formatNumber(review.classify?.noise ?? 0, locale),
                 })}
               </p>
             </PanelBody>
@@ -276,7 +289,9 @@ export function PositionPanel() {
         // wrong one.
         excluded > 0 ? (
           <span className="t-caption">
-            {t("home.pipelinePartial", { count: excluded })}
+            {t("home.pipelinePartial", {
+              count: formatNumber(excluded, locale),
+            })}
           </span>
         ) : undefined
       }
@@ -289,8 +304,10 @@ export function PositionPanel() {
             </span>
             <span className="t-caption">
               {t("home.pipelineWeighted", {
-                amount: String(
-                  formatMoneyOrAbsent(row.weightedMinor, row.currency, locale),
+                amount: formatMoneyOrAbsent(
+                  row.weightedMinor,
+                  row.currency,
+                  locale,
                 ),
               })}
             </span>
@@ -299,7 +316,7 @@ export function PositionPanel() {
                 row.deals === 1
                   ? "home.pipelineCount.one"
                   : "home.pipelineCount.other",
-                { count: row.deals },
+                { count: formatNumber(row.deals, locale) },
               )}
             </span>
           </span>

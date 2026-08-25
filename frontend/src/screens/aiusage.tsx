@@ -184,7 +184,7 @@ function AiUsageBody({
         description={t("aiusage.budget", {
           spent: formatNumber(data.budget.spent_tokens, locale),
           budget: formatNumber(data.budget.monthly_tokens, locale),
-          pct,
+          pct: formatNumber(pct, locale),
         })}
         control={
           <div className="settingrow-measure aiusage-budget">

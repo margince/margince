@@ -7,7 +7,7 @@ package compose
 
 // Manual live smoke (never CI): drives DeriveVoice + evaluation through the
 // REAL routing config to prove the bound provider returns valid inference.
-// Run: MARGINCE_AI_ROUTING=../../config/ai-routing.yaml GEMINI_API_KEY=... \
+// Run: MARGINCE_VOICE_MODEL=gemini:gemini-3.1-flash GEMINI_API_KEY=... \
 //   go test -tags voicelive ./internal/compose/ -run TestVoiceLiveSmoke -v -count=1
 
 import (
@@ -24,14 +24,22 @@ import (
 )
 
 func TestVoiceLiveSmoke(t *testing.T) {
-	routing := os.Getenv("MARGINCE_AI_ROUTING")
-	if routing == "" {
-		t.Fatal("set MARGINCE_AI_ROUTING to the routing yaml (this smoke is manual-only)")
+	// A binding, not a file: there is no routing file left to point at, and a
+	// manual smoke should say which model it drove anyway.
+	spec := os.Getenv("MARGINCE_VOICE_MODEL")
+	if spec == "" {
+		t.Fatal("set MARGINCE_VOICE_MODEL=provider:model (this smoke is manual-only)")
 	}
-	cfg, err := ai.LoadRoutingFile(routing, config.Static(nil))
+	binding, err := aicert.ParseBinding(spec, os.Getenv("MARGINCE_VOICE_BASE_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	cfg := ai.RoutingConfig{Profile: ai.ProfileEUHosted, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	for _, tier := range ai.AllTiers() {
+		cfg.Tiers[tier] = binding
+	}
+	cfg.Embeddings = ai.EmbeddingsConfig{ProviderConfig: binding}
+	cfg = cfg.WithKeys(config.FromOS)
 	path, err := NewLocalModelPath(cfg)
 	if err != nil {
 		t.Fatal(err)

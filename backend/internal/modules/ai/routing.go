@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -148,21 +148,6 @@ func (cfg RoutingConfig) WithCredentialVersion(version string) RoutingConfig {
 // CredentialVersion reports that digest. Empty when nothing stamped one.
 func (cfg RoutingConfig) CredentialVersion() string { return cfg.credentialVersion }
 
-// LoadRoutingFile reads and validates a deployment's routing config. keys is
-// where the BYOK secrets come from — the file names providers, never their
-// credentials, so the two arrive together only here.
-func LoadRoutingFile(path string, keys config.Lookup) (RoutingConfig, error) {
-	raw, err := os.ReadFile(path) // #nosec G304 -- deployment config path, operator-chosen
-	if err != nil {
-		return RoutingConfig{}, fmt.Errorf("ai: routing config: %w", err)
-	}
-	cfg, err := ParseRouting(raw)
-	if err != nil {
-		return RoutingConfig{}, err
-	}
-	return cfg.WithKeys(keys), nil
-}
-
 // WithKeys binds where this config's BYOK secrets come from, and returns the
 // bound copy. ParseRouting works on bytes alone and so cannot know: the routing
 // file names providers and never their credentials. LoadRoutingFile binds it
@@ -279,27 +264,25 @@ func ProviderIsLocal(provider string) bool {
 	return localProviders[provider]
 }
 
-// Validate runs the same rule set ParseRouting applies — the profile, the
-// tier bindings, the sovereign endpoint rule, the `input:` declarations and
-// the embed lane — over a config that reached its bindings some other way.
+// Valid reports whether p is one of the declared environment classes.
 //
-// It exists for one caller and would not otherwise be exported: the aicert
-// runner's MARGINCE_AICERT_MODEL override rebinds a task's ladder AFTER the
-// file was parsed, so the loaded file's guarantees do not survive it. A config
-// that never comes back through here can carry a cloud provider under
-// `profile: sovereign` with nothing said about it. Same reasoning as
-// TaskLadder and ProviderIsLocal above: the smallest export that stops a
-// caller outside this package re-encoding a rule this package owns.
-//
-// Pure over the receiver, so running it twice costs nothing.
-func (cfg RoutingConfig) Validate() error { return cfg.validate() }
+// Exported because the certification lane files a record under the profile it
+// measured and has to refuse an unknown one, and a second switch over the same
+// three constants there would go quietly stale the day a fourth is added.
+func (p Profile) Valid() bool {
+	switch p {
+	case ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier:
+		return true
+	default:
+		return false
+	}
+}
 
 func (cfg RoutingConfig) validate() error {
-	switch cfg.Profile {
-	case ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier:
-	case "":
+	if cfg.Profile == "" {
 		return fmt.Errorf("ai: routing config: profile is required (eu_hosted | sovereign | cloud_frontier)")
-	default:
+	}
+	if !cfg.Profile.Valid() {
 		return fmt.Errorf("ai: routing config: unknown profile %q", cfg.Profile)
 	}
 	if len(cfg.Tiers) == 0 {
@@ -309,22 +292,7 @@ func (cfg RoutingConfig) validate() error {
 		if !knownTiers[tier] {
 			return fmt.Errorf("ai: routing config: unknown tier %q", tier)
 		}
-		if binding.Provider == "" {
-			return fmt.Errorf("ai: routing config: tier %s has no provider", tier)
-		}
-		// Sovereign means zero egress BY CONSTRUCTION, which takes both halves:
-		// a cloud provider in any chat tier is a config error, and so is a local
-		// provider pointed at somebody else's host (sovereignendpoint.go).
-		// Neither is a runtime surprise.
-		if cfg.Profile == ProfileSovereign {
-			if !localProviders[binding.Provider] {
-				return fmt.Errorf("ai: routing config: profile sovereign forbids cloud provider %q on tier %s", binding.Provider, tier)
-			}
-			if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
-				return err
-			}
-		}
-		if err := validateInput(fmt.Sprintf("tier %s", tier), binding.Input); err != nil {
+		if err := ValidateTierBinding(cfg.Profile, tier, binding); err != nil {
 			return err
 		}
 	}
@@ -352,6 +320,53 @@ func (cfg RoutingConfig) validate() error {
 		}
 	}
 	return nil
+}
+
+// AllTiers lists the tier names knownTiers admits, sorted for determinism.
+//
+// Derived from that map rather than restated, so it cannot fall behind the
+// generated contract it reads from.
+//
+// Exported for the certification lane, which builds a config from an
+// environment variable rather than parsing one and must bind EVERY tier: the
+// router demotes under budget pressure, and a demote that lands on an unbound
+// tier fails as "no bound tier can serve" — which reads like the task being
+// unsupported rather than the config being partial.
+func AllTiers() []Tier {
+	out := make([]Tier, 0, len(knownTiers))
+	for tier := range knownTiers {
+		out = append(out, tier)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+// ValidateTierBinding checks one tier's binding against the profile it is
+// declared under.
+//
+// Exported because the certification lane builds a binding from environment
+// variables rather than parsing a config, and still has to meet this rule — a
+// sovereign profile is a claim about where inference may happen, and a run that
+// ignored it would call the vendor's API for a deployment that says it never
+// does. A second switch over the same rules there would go stale the day this
+// one gains a case.
+func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) error {
+	if binding.Provider == "" {
+		return fmt.Errorf("ai: routing config: tier %s has no provider", tier)
+	}
+	// Sovereign means zero egress BY CONSTRUCTION, which takes both halves:
+	// a cloud provider in any chat tier is a config error, and so is a local
+	// provider pointed at somebody else's host (sovereignendpoint.go).
+	// Neither is a runtime surprise.
+	if profile == ProfileSovereign {
+		if !localProviders[binding.Provider] {
+			return fmt.Errorf("ai: routing config: profile sovereign forbids cloud provider %q on tier %s", binding.Provider, tier)
+		}
+		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
+			return err
+		}
+	}
+	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }
 
 // UnboundLadderWarnings reports every task whose entire fallback ladder

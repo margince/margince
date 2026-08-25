@@ -37,7 +37,7 @@ const thread: readonly ThreadEntry[] = [
     kind: "narration",
     id: "1:pages:5",
     i18nKey: "ob.conv.read.pages",
-    params: { pages: 5 },
+    params: { pages: "5" },
   },
   {
     kind: "narration",

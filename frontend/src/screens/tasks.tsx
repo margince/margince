@@ -13,7 +13,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { calendarDay, dueInstant } from "../format/calendarday";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -163,6 +163,7 @@ function ReminderControl({
  */
 function ScheduledSendsLink() {
   const t = useT();
+  const { locale } = useLocale();
   const query = useScheduledSends();
   const waiting = query.data ? waitingCount(query.data) : 0;
   if (waiting === 0) {
@@ -184,7 +185,7 @@ function ScheduledSendsLink() {
         waiting === 1
           ? "tasks.scheduledWaiting.one"
           : "tasks.scheduledWaiting.other",
-        { count: waiting },
+        { count: formatNumber(waiting, locale) },
       )}
     </Callout>
   );

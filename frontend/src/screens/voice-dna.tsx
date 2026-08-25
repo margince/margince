@@ -213,7 +213,11 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
               </span>
             )}
             <span className="t-small vdna-version">
-              {t("settings.voice.version", { n: profile.profile_version ?? 0 })}
+              {/* A version number is a name, not a magnitude: grouped, build
+                  1234 would read as "1.234". */}
+              {t("settings.voice.version", {
+                n: String(profile.profile_version ?? 0),
+              })}
             </span>
           </div>
 
@@ -509,7 +513,9 @@ function FloorMeter({ words }: Readonly<{ words: number }>) {
       <progress
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
-        aria-label={t("settings.voice.floorLabel", { min: VOICE_MIN_WORDS })}
+        aria-label={t("settings.voice.floorLabel", {
+          min: formatNumber(VOICE_MIN_WORDS, locale),
+        })}
       />
       <span>
         {t("settings.voice.floorProgress", {
@@ -644,6 +650,7 @@ function BuildControls({
   intakeBusy?: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [status, setStatus] = useState<
     "succeeded" | "failed" | "deferred" | "pending" | null
   >(null);
@@ -707,13 +714,13 @@ function BuildControls({
   const blocked =
     tooThin && words !== null
       ? t("settings.voice.buildNeedsWords", {
-          n: Math.max(0, VOICE_FIRST_BUILD_WORDS - words),
+          n: formatNumber(Math.max(0, VOICE_FIRST_BUILD_WORDS - words), locale),
         })
       : null;
   const reach =
     profile.maturity === "provisional" && words !== null
       ? t("settings.voice.buildProvisional", {
-          n: Math.max(0, VOICE_FULL_BUILD_WORDS - words),
+          n: formatNumber(Math.max(0, VOICE_FULL_BUILD_WORDS - words), locale),
         })
       : null;
 

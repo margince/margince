@@ -221,23 +221,24 @@ test-integration: composition ## Integration lane: real Postgres, fails loudly w
 ENV_LOCAL      := $(CURDIR)/../.env.local
 LOAD_ENV_LOCAL := set -a; [ -f $(ENV_LOCAL) ] && . $(ENV_LOCAL); set +a;
 
-e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (paid: real model + network; opt-in). BYOK key auto-loaded from .env.local; judge a model with MARGINCE_E2E_MODEL=provider:model or MARGINCE_AI_ROUTING.
+e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (paid: real model + network; opt-in). BYOK key auto-loaded from .env.local; judge a model with MARGINCE_E2E_MODEL=provider:model.
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/ -run TestSiteReadE2E -v -count=1 -timeout 20m
 
-# TestE2ECertify has no MARGINCE_E2E_MODEL-style fallback of its own — it
-# hard-fails without a routing file — so, unlike e2e-siteread, e2e-ai supplies
-# one. It names the TRACKED example, not a per-engineer copy: the certification
-# lane asks whether a model clears a prompt's bar, which is a property of the
-# model and not of this installation, and an answer recorded against whatever
-# each engineer happened to bind is not comparable with anybody else's. The
-# installation's own binding is a stored setting and deliberately not a file
-# any more, so there is nothing local left to default to.
+# The certification lane is TOLD what to certify: the binding is a stored
+# setting now and this lane opens no database, so there is nothing local to
+# default to. Nor should there be — a verdict recorded against whatever a file
+# on one engineer's disk happened to bind was never comparable with anybody
+# else's, and the record names the model it measured.
 #
-# $(CURDIR) makes it absolute: `go test` runs the binary with its cwd set to the
-# aicert package directory, not to backend/, so a relative "../config/..." would
-# resolve from the wrong place. Override with MARGINCE_AI_ROUTING=<path> to
-# certify a different binding.
-MARGINCE_AI_ROUTING ?= $(CURDIR)/../config/ai-routing.example.yaml
+# JUDGE is a SECOND model on purpose: one grading itself is certified by
+# construction, so the run refuses the two being equal before paying for a call.
+# BASE_URL carries a broker host — openai_compatible fails closed without one —
+# and a native vendor leaves it empty.
+MARGINCE_AICERT_MODEL          ?=
+MARGINCE_AICERT_BASE_URL       ?=
+MARGINCE_AICERT_JUDGE_MODEL    ?=
+MARGINCE_AICERT_JUDGE_BASE_URL ?=
+MARGINCE_AICERT_PROFILE        ?= eu_hosted
 
 # TRACE names a directory for the payload trace — every candidate and judge
 # call's post-stripper request+response (the ai_call_payload shape), dumped to
@@ -262,8 +263,14 @@ endif
 # AICERT_TIMEOUT=<dur>.
 AICERT_TIMEOUT ?= 90m
 
-e2e-ai: composition ## Certify AI tasks vs the local binding (paid: real model + network; opt-in). BYOK key auto-loaded from .env.local. Payload trace ON by default (TRACE= to disable). TASK=x MODEL=prov:model RUNS=3 MARGINCE_AI_ROUTING=path AICERT_TIMEOUT=90m
-	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AI_ROUTING=$(MARGINCE_AI_ROUTING) MARGINCE_AICERT_TASK=$(TASK) MARGINCE_AICERT_MODEL=$(MODEL) MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE=$(TRACE) \
+e2e-ai: composition ## Certify AI tasks vs the local binding (paid: real model + network; opt-in). BYOK key auto-loaded from .env.local. Payload trace ON by default (TRACE= to disable). MODEL=prov:model JUDGE=prov:model (both required) TASK=x RUNS=3 BASE_URL=... PROFILE=eu_hosted AICERT_TIMEOUT=90m
+	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
+	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
+	  MARGINCE_AICERT_BASE_URL=$(if $(BASE_URL),$(BASE_URL),$(MARGINCE_AICERT_BASE_URL)) \
+	  MARGINCE_AICERT_JUDGE_MODEL=$(if $(JUDGE),$(JUDGE),$(MARGINCE_AICERT_JUDGE_MODEL)) \
+	  MARGINCE_AICERT_JUDGE_BASE_URL=$(MARGINCE_AICERT_JUDGE_BASE_URL) \
+	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
+	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE=$(TRACE) \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.

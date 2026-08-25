@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { stable } from "../format/collate";
 
 type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
 
@@ -19,9 +20,7 @@ export function groupByField(entries: FieldHistoryEntry[]): FieldGroup[] {
   }
   return [...byField.entries()].map(([field, changes]) => ({
     field,
-    changes: [...changes].sort((a, b) =>
-      b.changed_at.localeCompare(a.changed_at),
-    ),
+    changes: [...changes].sort((a, b) => stable(b.changed_at, a.changed_at)),
   }));
 }
 

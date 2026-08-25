@@ -14,7 +14,9 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
-import { useT } from "../i18n";
+import { stable } from "../format/collate";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import "./connections.css";
 import { EntityRef } from "./entityref";
@@ -396,7 +398,7 @@ export function routesTo(
       BUCKET_ORDER[b.bucket] - BUCKET_ORDER[a.bucket] ||
       b.strength - a.strength ||
       // Ids last, so the order is the same on every read of the same graph.
-      a.id.localeCompare(b.id),
+      stable(a.id, b.id),
   );
   // The 0-100 number stays off this page (AC-company-3): the rows carry their
   // band and nothing a reader could threshold on.
@@ -641,6 +643,7 @@ function Withheld({ groups }: Readonly<{ groups: readonly Group[] }>) {
  */
 function ConnectionsBody({ graph }: Readonly<{ graph: Graph }>) {
   const t = useT();
+  const { locale } = useLocale();
   const neighbours = graph.nodes.filter((node) => !node.root);
   const ourSide = neighbours.filter((node) => node.kind === "user");
   const theirSide = neighbours.filter((node) => node.kind !== "user");
@@ -668,7 +671,9 @@ function ConnectionsBody({ graph }: Readonly<{ graph: Graph }>) {
       <Withheld groups={graph.groups_omitted} />
       {graph.dropped_count > 0 && (
         <p className="co-row-meta">
-          {t("co.connections.more", { count: graph.dropped_count })}
+          {t("co.connections.more", {
+            count: formatNumber(graph.dropped_count, locale),
+          })}
         </p>
       )}
     </>
