@@ -120,11 +120,35 @@ function completedWizardFetch(shape: InstallShape) {
 }
 
 /** Every address the app moved to, in order, so a ping-pong is legible as one. */
+/**
+ * Every address the app MOVES to, by whichever primitive it moves with.
+ *
+ * A `hashchange` listener alone is not enough and stopped seeing anything the
+ * moment redirects began replacing the entry rather than assigning to the hash:
+ * `history.replaceState` fires no `hashchange`, so a loop would have counted
+ * zero moves and passed. What this test is about is how many times the app
+ * decides to go somewhere, so it counts the decisions.
+ */
 function recordHashChanges(): string[] {
   const seen: string[] = [];
+  const at = () => window.location.hash;
   window.addEventListener("hashchange", () => {
-    seen.push(window.location.hash);
+    seen.push(at());
   });
+  for (const write of ["pushState", "replaceState"] as const) {
+    // The prototype's own, not whatever is on `history` right now: binding the
+    // latter binds the PREVIOUS test's spy, and the two then call each other
+    // until the stack runs out.
+    const original = History.prototype[write];
+    vi.spyOn(window.history, write).mockImplementation((...args) => {
+      original.apply(window.history, args);
+      // A stamp on the entry the reader is already on names it; it is not a
+      // move, and it passes no URL.
+      if (args[2] !== undefined && args[2] !== null) {
+        seen.push(at());
+      }
+    });
+  }
   return seen;
 }
 
@@ -158,6 +182,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   window.location.hash = "";
 });
 
@@ -191,5 +216,25 @@ describe("the onboarding gate and the wizard's restore", () => {
     });
     expect(moves.filter((hash) => hash === HOME)).toHaveLength(1);
     expect(moves.at(-1)).toBe(HOME);
+  });
+
+  it("leave no entry behind for Back to land on", async () => {
+    // Both moves above are REDIRECTS: an address the product answers by sending
+    // the reader somewhere else. Pushed, each leaves the address it came from
+    // in history — so Back returns to it, it redirects again, and the reader
+    // cannot get out with the one key that exists for getting out of things.
+    // The settled hash cannot see this; the depth of the stack can.
+    // Measured from the reader's ARRIVAL, not from before it: setting the
+    // starting hash is itself an entry, and counting it would leave the
+    // assertion satisfied by a gate that pushed.
+    window.location.hash = HOME;
+    const onArrival = window.history.length;
+    mount({ companySaved: false }, HOME);
+
+    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.hash).toBe(GATE_TARGET);
+    });
+    expect(window.history.length).toBe(onArrival);
   });
 });

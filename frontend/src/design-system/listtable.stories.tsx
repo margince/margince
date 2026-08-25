@@ -108,6 +108,9 @@ function Surface({
   hasMore?: boolean;
   caption?: string;
   note?: string;
+  /** Passed through, for the story that holds the page itself. */
+  page?: number;
+  onPage?: (next: number) => void;
 }>) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("display_name");
@@ -161,6 +164,36 @@ export const Default: Story = {
 // count reads as a range, and the page resets whenever the set narrows.
 export const Paged: Story = {
   render: () => <Surface rows={companies(60)} />,
+};
+
+// The same pager, with the PAGE held by the caller. A list screen keeps it in
+// the address, so a reader who paged through a list and opened a record comes
+// back to the page they left; here the holder is a story so the contract is
+// visible on its own — the number in the caption is the caller's, and the strip
+// is drawing what it was handed rather than what it counted.
+//
+// Narrowing still resets it: type in the search box and the caller is told 1.
+// That reset is compared by VALUE, not by counting effect runs, because an
+// effect runs on arrival — twice under StrictMode, and again for any dial that
+// settles a tick after mount — and a reset that believed those took the reader
+// off the page their own address had asked for.
+export const PagedByTheCaller: Story = {
+  render: () => {
+    function Holder() {
+      const [page, setPage] = useState(3);
+      return (
+        <div style={{ display: "grid", gap: "var(--space-2)" }}>
+          <Surface
+            rows={companies(60)}
+            page={page}
+            onPage={setPage}
+            caption={`The caller is holding page ${page}`}
+          />
+        </div>
+      );
+    }
+    return <Holder />;
+  },
 };
 
 // hasMore is what a keyset cursor reports: no total, so the pager numbers the

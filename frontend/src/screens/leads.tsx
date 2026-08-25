@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { navigate, useRoute } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
@@ -1259,6 +1260,25 @@ function PromotedLeadPanel({
 const LEAD_TABS = ["overview", "history"] as const;
 type LeadTab = (typeof LEAD_TABS)[number];
 
+/** isLeadTab narrows a URL segment, which is any string a reader can type. */
+function isLeadTab(value: string | undefined): value is LeadTab {
+  return LEAD_TABS.some((tab) => tab === value);
+}
+
+// The lead's tab, addressed rather than held beside the address: a tab that
+// survives a reload and can be linked to, and Back that steps between the tabs
+// a reader opened instead of leaving the lead altogether. Same shape as the
+// account's (screens/organizations.tsx) and the contact's.
+function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
+  const route = useRoute();
+  const addressed =
+    route.screen === "leads" && route.id === recordId ? route.id2 : undefined;
+  return [
+    isLeadTab(addressed) ? addressed : "overview",
+    (next: LeadTab) => navigate({ screen: "leads", id: recordId, id2: next }),
+  ];
+}
+
 // The lead-360's "overview" pane, split out of LeadScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved (or owned as local state) by
@@ -1519,7 +1539,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   // ONE sentence about this lead being closed, minted here and pointed at by
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
-  const [tab, setTab] = useState<LeadTab>("overview");
+  const [tab, setTab] = useLeadTab(id);
   // The seam serves update for a mirrored lead (write-back projects onto the
   // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
   // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type

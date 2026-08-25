@@ -146,6 +146,76 @@ check "http://localhost:8093 margince_dev_alpha" "$(cat "$probe_state/answer2")"
       "once the stack is recorded both halves name it — the API base takes the claimed port"
 rm -rf "$probe_state"
 
+echo "Makefile: a target that drives a live stack names it through the helpers"
+
+# The check above proves the HELPERS agree. It cannot prove anybody calls them,
+# and for a long time the demo seeder did not: `make seed-demo` carried :8080,
+# `margince` and `margince-dev` as literals, so from a linked worktree all three
+# halves — records, SQL and object bytes — went to the PRIMARY worktree's stack.
+# Nothing failed, because that stack answers whoever asks.
+#
+# So the corpus is READ from the Makefile rather than listed here: a recipe that
+# reaches a running stack is one that hands the seeder or Playwright a base URL,
+# and any future one is caught by the same scan. Listing the four known targets
+# would be a second copy of the Makefile, and would report PASS over a fifth.
+literals='localhost:8080|margince_owner:dev@[^"]*/margince"|BLOBSTORE_BUCKET=margince-dev( |$)'
+offenders="$(awk '
+    # A recipe line is TAB-indented; a target line is not. Track which recipe
+    # each line belongs to so the report names the target a reader must fix.
+    /^[a-zA-Z0-9_.-]+:/ { target = $0; sub(/:.*/, "", target) }
+    /^\t/               { print target "\t" $0 }
+' "$root/Makefile" | grep -Ei "$literals" | grep -v '^help\t' || true)"
+check "" "$offenders" \
+      "no recipe hardcodes the primary stack's URL, database or bucket — they come from lib-devstate.sh"
+
+# And the scan can still SEE one. A census that only ever reports clean is
+# indistinguishable from a census that stopped reading, so plant the defect that
+# was actually shipped and require the pattern to catch it.
+planted="$(printf 'seed-demo:\n\tBASE_URL=http://localhost:8080 pnpm e2e\n' \
+    | awk '/^[a-zA-Z0-9_.-]+:/ { t = $0; sub(/:.*/, "", t) } /^\t/ { print t "\t" $0 }' \
+    | grep -Ec "$literals" || true)"
+check "1" "$planted" \
+      "the scan recognises a hardcoded :8080 in a recipe — otherwise the clean result above means nothing"
+
+echo "reaching another stack is all three of it or none"
+
+# A stack is an API base, a database and a bucket. Overriding one and letting the
+# other two resolve from this worktree is the same split the scan above exists to
+# catch, arriving by the front door: each half succeeds, so nothing reports it.
+#
+# The rule is tested where it LIVES, not through `make seed-demo`: a check that
+# drove the recipe needed the demo dataset and a reachable API, so in CI it died
+# before reaching the rule and reported the rule broken.
+check "none" "$(dev_seed_override "" "" "")" \
+      "no override at all resolves this worktree's stack, as every seed does by default"
+check "all" "$(dev_seed_override "postgres://x/other" "http://localhost:9" "other-bucket")" \
+      "all three together name the stack they say — the flags exist to be used"
+for partial in "dsn:::" ":api::" "::bucket:"; do
+    dsn="$(printf '%s' "$partial" | cut -d: -f1)"
+    api="$(printf '%s' "$partial" | cut -d: -f2)"
+    bucket="$(printf '%s' "$partial" | cut -d: -f3)"
+    check "1" "$(dev_seed_override "$dsn" "$api" "$bucket" >/dev/null 2>&1; echo $?)" \
+          "a partial override ($partial) is refused rather than splitting one seed across two stacks"
+done
+
+# The seeder takes the API base as a flag too, so the same split arrives through
+# SEED_ARGS: `-api` there lands after the resolved one and wins, while the
+# database and the bucket stay this worktree's. A pass-through nobody reads is
+# how the three-name rule above was walked around.
+for flag in "-api http://other" "-api=http://other" "--api http://other" "-limit 5 -api http://other"; do
+    check "1" "$(dev_seed_override "" "" "" "$flag" >/dev/null 2>&1; echo $?)" \
+          "SEED_ARGS='$flag' is refused rather than moving the API leg alone"
+done
+check "none" "$(dev_seed_override "" "" "" "-dry-run -limit 5")" \
+      "the flags a seed run actually passes are still passed — the check is about -api, not about SEED_ARGS"
+
+# And the Makefile still ASKS, with the flags. The rule refusing in a library
+# nothing calls is the same as no rule, and this is the seam the recipes go
+# through; a prelude that dropped the fourth argument would silently stop
+# checking the flag path while every case above kept passing.
+check "1" "$(grep -q 'seed_override=.*dev_seed_override.*SEED_ARGS' "$root/Makefile" && echo 1 || echo 0)" \
+      "the seed prelude asks the library about the pass-through flags too"
+
 lift port_listeners
 lift read_registry
 lift pick_free_db

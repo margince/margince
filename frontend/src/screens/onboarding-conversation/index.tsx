@@ -4,7 +4,7 @@ import type { Dispatch } from "react";
 import { useEffect, useReducer, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { navigate, useRoute } from "../../app/router";
+import { navigateReplacing, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
@@ -226,7 +226,13 @@ function useRestore(
       locale,
     });
     if (plan.kind === "complete") {
-      navigate({ screen: "home" });
+      // Replacing, not pushing. This is the app's OTHER automatic navigator,
+      // and it and the onboarding gate answer the same question from opposite
+      // sides: a reader whose wizard is finished does not belong on
+      // `#/onboarding`, and one whose installation is undescribed does not
+      // belong anywhere else. Two pushes between those two addresses is a
+      // history a reader cannot walk out of.
+      navigateReplacing({ screen: "home" });
       return;
     }
     dispatch({

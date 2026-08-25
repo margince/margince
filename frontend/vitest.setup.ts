@@ -81,6 +81,26 @@ if (typeof window !== "undefined") {
 
   stubCanvasContext();
   beforeEach(stubCanvasContext);
+
+  // Every case opens at the same address, the way a new tab does.
+  //
+  // The address is not a detail of the router any more: a list reads its
+  // search, sort, filters and page size out of it (app/urlstate.ts), so the
+  // hash one case leaves behind is state the NEXT case starts narrowed by.
+  // That reads as an unrelated failure — a table with no rows, a chip already
+  // chosen — and it is order-dependent, so the file passes when the case is run
+  // alone. Registered here rather than per file because the leak belongs to
+  // every suite that renders a list, including the ones nobody has written yet.
+  //
+  // Cleared to NOTHING rather than to `#/`, which is the same address but not
+  // the same string: a suite proving that some path did not navigate asserts on
+  // the hash it started with, and a baseline of `#/` would read as a move.
+  //
+  // This hook runs BEFORE a test file's own, so a suite that opens at a
+  // specific address still gets it.
+  beforeEach(() => {
+    window.location.hash = "";
+  });
 }
 
 // The calendar-drift lane: run the whole suite as if it were N days from now.

@@ -27,6 +27,16 @@ function installAppStub() {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
+    // The record zone reads the installation's timezone, and the contract makes
+    // that field REQUIRED — so a settled answer without one is a server this
+    // bundle does not match, which the app reports rather than papers over. The
+    // list-shaped fallback below is exactly that answer, so this one is routed.
+    if (url.endsWith("/v1/installation/settings")) {
+      return new Response(JSON.stringify({ timezone: "Europe/Berlin" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return new Response(
       JSON.stringify({
         data: [],

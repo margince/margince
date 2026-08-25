@@ -26,6 +26,7 @@ import { RecordZoneProvider, useConfiguredRecordZone } from "./app/recordzone";
 import { SPA_RELEASE } from "./app/release";
 import {
   navigate,
+  navigateReplacing,
   parseHash,
   routeHash,
   routeIdentity,
@@ -758,7 +759,11 @@ function AuthedApp({
       !described &&
       !ONBOARDING_GATE_EXEMPT_SCREENS.has(route.screen)
     ) {
-      navigate({ screen: "onboarding", id: "company" });
+      // Replacing, not pushing: this is a redirect, and the address it sends
+      // the reader away from answers by sending them here again. Pushed, Back
+      // lands on that address, the effect fires, and the reader is returned to
+      // onboarding by the one key that exists for getting out of things.
+      navigateReplacing({ screen: "onboarding", id: "company" });
     }
   }, [authed, company.isSuccess, described, route.screen]);
 

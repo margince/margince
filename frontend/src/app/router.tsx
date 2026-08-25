@@ -129,13 +129,18 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // #/contacts/<person>/<tab> — the six person tabs are a view of one person,
   // and they are the reason this table exists.
   contacts: 2,
-  companies: WHOLE_ADDRESS,
+  // #/companies/<account>/<tab> — the account's tabs are a view of one
+  // account, exactly as the contact's are above.
+  companies: 2,
   partners: WHOLE_ADDRESS,
-  leads: WHOLE_ADDRESS,
+  // #/leads/<lead>/<tab> — the lead's two tabs are a view of one lead.
+  leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
   today: WHOLE_ADDRESS,
-  reports: WHOLE_ADDRESS,
+  // #/reports/<report> — the picker chooses a view of one screen, so switching
+  // reports re-renders the panel instead of throwing the screen away.
+  reports: 1,
   ai: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.
@@ -186,13 +191,24 @@ export function navigate(route: Route): void {
  * on it, it redirects again, and the reader cannot get out of the loop with the
  * one key that exists for getting out of things.
  *
- * `location.replace` rather than `history.replaceState`, because the hash IS
- * this router's state: `replaceState` leaves no `hashchange` behind, so the
- * store would keep serving the old address while the URL bar showed the new
- * one.
+ * `history.replaceState` and not `location.replace`, which is the obvious
+ * spelling and the wrong one: `location.replace` DISCARDS the entry's state
+ * object. app/scrollmemory.ts stamps the entry's identity in there, so a
+ * redirect — or any of the several screens that normalise their own address on
+ * arrival — wiped the name of the place the reader was standing in, and the
+ * offset remembered under it could never be found again. Carrying the current
+ * state through keeps the entry the same entry.
+ *
+ * It fires no `hashchange`, so the store has to be told; app/urlstate.ts's
+ * `replaceParams` is the same write for the QUERY half and says the same thing.
  */
 export function navigateReplacing(route: Route): void {
-  globalThis.location.replace(routeHash(route));
+  globalThis.history.replaceState(
+    globalThis.history.state,
+    "",
+    routeHash(route),
+  );
+  announce();
 }
 
 // The one-time credentials an address may carry, and why they are taken HERE.
@@ -296,30 +312,83 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
   }
 }
 
-function subscribe(onChange: () => void): () => void {
-  const addressChanged = () => {
-    // A second link pasted into an open tab is a hash change and nothing else:
-    // the screen does not remount for one, and whatever renders next is decided
-    // above the route. So the credential comes out of the new address before
-    // React is told there is one.
-    takeFromHash();
-    onChange();
-  };
-  globalThis.addEventListener("hashchange", addressChanged);
-  return () => globalThis.removeEventListener("hashchange", addressChanged);
+// Everything watching the address. Kept here rather than one `hashchange`
+// listener per reader, because the app also has to be told about a move it made
+// ITSELF: `hashchange` is delivered asynchronously, so between a write and the
+// browser's event the screen still renders the address it has just left. That
+// gap is invisible for a whole-page move — the screen re-renders either way —
+// and not for a dial, where the list would fetch the previous query first.
+const watchers = new Set<() => void>();
+
+function announce(): void {
+  // A copy, so a watcher that unsubscribes while being told does not change the
+  // set underneath the loop.
+  for (const watcher of [...watchers]) {
+    watcher();
+  }
 }
 
-export function useRoute(): Route {
-  // Taken during this component's FIRST render, ahead of the snapshot below, so
-  // the address React routes on is the scrubbed one and nothing can render with
-  // a credential still in the bar. An effect would be late by exactly the gate
-  // this exists for: it runs after that gate has rendered, and the gate is what
-  // stops the screen mounting to scrub it at all.
+function addressChanged(): void {
+  // A second link pasted into an open tab is a hash change and nothing else:
+  // the screen does not remount for one, and whatever renders next is decided
+  // above the route. So the credential comes out of the new address before
+  // React is told there is one.
+  takeFromHash();
+  announce();
+}
+
+function subscribe(onChange: () => void): () => void {
+  if (watchers.size === 0) {
+    globalThis.addEventListener("hashchange", addressChanged);
+  }
+  watchers.add(onChange);
+  return () => {
+    watchers.delete(onChange);
+    if (watchers.size === 0) {
+      globalThis.removeEventListener("hashchange", addressChanged);
+    }
+  };
+}
+
+/**
+ * Tell the address store the hash moved, for a move this app made itself.
+ *
+ * Only app/urlstate.ts needs it: it writes the address directly, so nothing has
+ * dispatched anything yet. A second announcement when the browser's own
+ * `hashchange` lands costs nothing — the snapshot is a string, and an unchanged
+ * one re-renders nobody.
+ */
+export function announceAddressChanged(): void {
+  announce();
+}
+
+/**
+ * The whole address, as a value that changes when the reader navigates.
+ *
+ * Exported because an address has two halves with two owners. The PATH names
+ * what is on screen and is this module's; the QUERY names which VIEW of it —
+ * how a list is narrowed, ordered and paged — and belongs to app/urlstate.ts.
+ * Both must re-render on the same event, and a second subscription to
+ * `hashchange` would be a second answer to where the reader is.
+ */
+export function useHash(): string {
+  // Taken during the FIRST render of whoever reads the address, ahead of the
+  // snapshot below, so the address React routes on is the scrubbed one and
+  // nothing can render with a credential still in the bar. An effect would be
+  // late by exactly the gate this exists for: it runs after that gate has
+  // rendered, and the gate is what stops the screen mounting to scrub it at all.
+  //
+  // It lives HERE rather than in useRoute because the query half has its own
+  // reader now (app/urlstate.ts), and a scrub that only one of the two
+  // performed would depend on which of them a screen happened to call first.
   useState(takeFromHash);
-  const hash = useSyncExternalStore(
+  return useSyncExternalStore(
     subscribe,
     () => globalThis.location.hash,
     () => "",
   );
-  return parseHash(hash);
+}
+
+export function useRoute(): Route {
+  return parseHash(useHash());
 }

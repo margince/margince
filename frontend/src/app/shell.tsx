@@ -42,6 +42,7 @@ import {
 import { PAGE_SUB_KEYS, resolveTitle, sectionHead } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
 import { type Route, routeHash, useRoute } from "./router";
+import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
 import { usePhoneViewport } from "./viewport";
 import "./shell.css";
@@ -681,13 +682,13 @@ export function Shell({
   // it is what the list surface's own reset already uses, and it is a property
   // every environment the tests run in actually has.
   const address = routeHash(route);
-  // biome-ignore lint/correctness/useExhaustiveDependencies(address): the effect never reads it, which is the point. It is the trigger — the address changing IS the event this reacts to, exactly as the list surface's own scroll reset is triggered by the query it never reads.
-  useEffect(() => {
-    const column = scroller.current;
-    if (column) {
-      column.scrollTop = 0;
-    }
-  }, [address]);
+  // A new page opens at its top; a page the reader is RETURNING to opens where
+  // they left it. Both live in app/scrollmemory.ts, because the second one needs
+  // an identity for the history entry that the browser does not give an entry,
+  // and a retry while the column grows — a list restores its rows a moment after
+  // the address arrives, so a single assignment lands against a column that is
+  // still short and gets clamped.
+  useScrollMemory(scroller, address);
 
   const toggle = useCallback(() => {
     setCollapsed((current) => {

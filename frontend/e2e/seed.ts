@@ -1250,6 +1250,10 @@ export async function mockApi(
       );
     }
     if (path === "/pipelines") {
+      // TWO boards, because the deals screen holds the pipeline in the address
+      // rather than on the wire: with only the default one there is no way to
+      // tell a screen that keeps the chosen pipeline from one that always shows
+      // the default.
       return json(
         page([
           {
@@ -1259,6 +1263,55 @@ export async function mockApi(
             is_default: true,
             position: 0,
             stages,
+          },
+          {
+            id: "pl-partner",
+            workspace_id: "w",
+            name: "Partner",
+            is_default: false,
+            position: 1,
+            stages: [
+              {
+                id: "s-partner",
+                workspace_id: "w",
+                pipeline_id: "pl-partner",
+                name: "Referred",
+                position: 1,
+                semantic: "open",
+                win_probability: 30,
+              },
+            ],
+          },
+        ]),
+      );
+    }
+    if (path === "/views" && method === "GET") {
+      // One saved deals view, and it names the NON-default pipeline. A view is
+      // stored as the reader's whole list state, so the pipeline it was saved
+      // on is part of what pressing its tab has to restore.
+      if (url.searchParams.get("resource") !== "deals") {
+        return json(page([]));
+      }
+      return json(
+        page([
+          {
+            id: "v-partner",
+            workspace_id: "w",
+            resource: "deals",
+            name: "Partner deals",
+            owner_id: "u1",
+            shared_scope: "private",
+            query: {
+              list: {
+                q: "",
+                sort: "",
+                includeArchived: false,
+                filters: { pipeline_id: "pl-partner" },
+              },
+            },
+            version: 1,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
           },
         ]),
       );

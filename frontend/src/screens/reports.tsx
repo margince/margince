@@ -2,6 +2,7 @@ import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { navigate, useRoute } from "../app/router";
 import {
   Button,
   Card,
@@ -60,6 +61,18 @@ type ReportKey = "deals-by-stage" | "forecast" | "open-deals-per-company";
 // deal reports. Quotas runs its own query lifecycle (no /reports/{report}
 // call), so the report machinery below is gated off while it is active.
 type Segment = ReportKey | "quotas";
+
+const SEGMENTS: readonly Segment[] = [
+  "deals-by-stage",
+  "forecast",
+  "open-deals-per-company",
+  "quotas",
+];
+
+/** isSegment narrows a URL segment, which is any string a reader can type. */
+function isSegment(value: string | undefined): value is Segment {
+  return SEGMENTS.some((segment) => segment === value);
+}
 
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 type Derivation = components["schemas"]["ReportDerivation"];
@@ -548,7 +561,17 @@ export function ReportsScreen() {
   const { locale } = useLocale();
   const [explain, setExplain] = useState(false);
   const explainId = useId();
-  const [segment, setSegment] = useState<Segment>("deals-by-stage");
+  // Which report is open is an ADDRESS, so a reader can link to one and Back
+  // steps between the reports they looked at rather than leaving the screen.
+  // Read here rather than taken as a prop, so this screen stays drivable on its
+  // own: a suite that renders it directly goes on pressing the picker.
+  const route = useRoute();
+  const segment: Segment =
+    route.screen === "reports" && isSegment(route.id)
+      ? route.id
+      : "deals-by-stage";
+  const setSegment = (next: Segment) =>
+    navigate({ screen: "reports", id: next });
   // The report machinery needs a valid ReportKey; while "quotas" is active the
   // report/pipeline queries are disabled, so this fallback key is inert.
   const report: ReportKey = segment === "quotas" ? "deals-by-stage" : segment;

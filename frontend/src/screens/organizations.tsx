@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, useRoute } from "../app/router";
 import {
   Avatar,
   Badge,
@@ -92,6 +92,12 @@ import {
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { CompanySpine } from "./companyspine";
+import {
+  COMPANY_TABS,
+  type CompanyTab,
+  companyTabRoute,
+  isCompanyTab,
+} from "./companytab";
 import { TodayOnThisAccount } from "./companytoday";
 import {
   CompanyWorkCard,
@@ -1445,17 +1451,6 @@ function FactsCard({
 // reader who wants any of that checks one tab instead of a scatter of
 // disclosures under every other one. Partner stays a tab: it is a form, not
 // a reading of this account.
-const COMPANY_TABS = [
-  "overview",
-  "people",
-  "deals",
-  "tasks",
-  "timeline",
-  "documents",
-  "profile",
-  "partner",
-] as const;
-type CompanyTab = (typeof COMPANY_TABS)[number];
 
 // Partner is not a permanent tab. It renders the partner programme —
 // certification, role, margin tier — which is a form about a commercial
@@ -1491,13 +1486,24 @@ function companyTabsFor(
 function useCompanyTab(
   recordId: string,
 ): [CompanyTab, (next: CompanyTab) => void] {
-  const [tab, setTab] = useState<CompanyTab>("overview");
-  const [tabFor, setTabFor] = useState(recordId);
-  if (tabFor !== recordId) {
-    setTabFor(recordId);
-    setTab("overview");
-  }
-  return [tab, setTab];
+  const route = useRoute();
+  // Read off the ADDRESS rather than held beside it, so the tab a reader is on
+  // is the tab the URL names — and the per-record reset this used to do by
+  // hand is gone with it: a tab belongs to the account it is addressed with,
+  // so swapping accounts cannot carry one along.
+  const addressed =
+    route.screen === "companies" && route.id === recordId
+      ? route.id2
+      : undefined;
+  return [
+    isCompanyTab(addressed) ? addressed : "overview",
+    // A PUSH, so Back steps between the tabs a reader opened rather than
+    // leaving the account altogether — the same thing the contact page's strip
+    // does. The per-record reset this used to hold is now the address's: a tab
+    // belongs to the account it names, so moving to another account cannot
+    // carry one along.
+    (next: CompanyTab) => navigate(companyTabRoute(recordId, next)),
+  ];
 }
 
 // openTaskId is scoped to the ACCOUNT being read, the same reason

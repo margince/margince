@@ -284,6 +284,45 @@ function writeWidths(key: string | undefined, widths: Record<string, number>) {
 /** Placeholder rows while the first page loads: enough to read as a list. */
 const PLACEHOLDER_ROWS = [0, 1, 2, 3, 4];
 
+/**
+ * Everything narrowing a list, as one value two renders can be compared by.
+ *
+ * Exported for the tests that pin it: what it must and must not call a change
+ * is the whole of why the reset below fires when it does.
+ *
+ * A caller that declares `narrowKey` has already answered what its narrowing
+ * is; the rest are read straight off the dials. `chosen`'s keys are sorted
+ * because two objects holding the same filters in a different insertion order
+ * are the same narrowing, and a signature that said otherwise would send the
+ * reader back to page one for nothing.
+ */
+export function narrowingSignature(dials: {
+  search?: string;
+  narrowKey?: string;
+  chosen: Readonly<Record<string, string>>;
+  perPage: number;
+  sort?: string;
+  archived?: boolean;
+  scopeKey: string;
+}): string {
+  const narrowedBy =
+    dials.narrowKey ??
+    Object.keys(dials.chosen)
+      // Byte order, not the reader's: this is an identity being compared with
+      // itself a render ago, so it has to be the same string in every locale.
+      .sort((one, other) => (one === other ? 0 : one < other ? -1 : 1))
+      .map((name) => `${name}=${dials.chosen[name]}`)
+      .join("&");
+  return JSON.stringify([
+    dials.search ?? "",
+    narrowedBy,
+    dials.perPage,
+    dials.sort ?? "",
+    dials.archived ?? false,
+    dials.scopeKey,
+  ]);
+}
+
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 /** Is this column the one currently sorted, and which way? */
@@ -328,6 +367,9 @@ export function ListTable<Row>({
   onLoadMore,
   perPage = PAGE_SIZES[0],
   onPerPage,
+  page: controlledPage,
+  onPage,
+  bodyRef,
   pending = false,
   problem,
   widthsKey,
@@ -444,6 +486,31 @@ export function ListTable<Row>({
    */
   onPerPage?: (next: number) => void;
   /**
+   * Which RENDERED page is on screen, for a caller that keeps it somewhere the
+   * table cannot — the address, so a reader who paged through a list and
+   * opened a record comes back to the page they left.
+   *
+   * Omit it and the table holds the number itself, which is what every caller
+   * did before this existed. Pass it and the table still tells you when it
+   * moves, through `onPage`: the pager, the reset on a new narrowing, and
+   * stepping past what is loaded all go through one place.
+   */
+  page?: number;
+  /** The rendered page changed, whether by the pager or by a reset. */
+  onPage?: (next: number) => void;
+  /**
+   * The element the ROWS scroll in, handed back to a caller that has something
+   * to do with it — remembering where the reader was, which only the caller
+   * knows the history entry for.
+   *
+   * A full-height list is the one place the page column never moves: the rows
+   * take the overflow and the column around them is exactly its own height, so
+   * a caller watching the column watches an element that is always at zero.
+   * The table keeps owning the scrolling; this is a second reference to the
+   * same element, not a second scroller.
+   */
+  bodyRef?: React.RefObject<HTMLDivElement | null>;
+  /**
    * The rows are still loading. The surface keeps its header and controls and
    * puts placeholders in the body: the primary action and the dials belong to
    * the screen, not to the response, and a create button that disappears while
@@ -477,7 +544,18 @@ export function ListTable<Row>({
     live.current = next;
     setWidths(next);
   };
-  const [page, setPage] = useState(1);
+  // The rendered page is the table's own by default, and the caller's when it
+  // offers one. It becomes the caller's on a screen that puts the page in the
+  // ADDRESS — a reader who paged through a list, opened a record and pressed
+  // Back arrived on page one, having lost their place — and the table goes on
+  // owning it everywhere else, so no caller is made to hold a number it has
+  // nowhere to keep.
+  const [ownPage, setOwnPage] = useState(1);
+  const page = controlledPage ?? ownPage;
+  const setPage = (to: number) => {
+    setOwnPage(to);
+    onPage?.(to);
+  };
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
   // The frozen column only casts a shadow once columns have actually slid under
@@ -657,22 +735,48 @@ export function ListTable<Row>({
   // looking at rows they never asked for. Same for widening the set with
   // Show archived.
   //
-  // These deps are the TRIGGER, not values the body reads — the body only calls
-  // setPage(1). The lint rule cannot see that distinction, and dropping them
-  // would break the reset.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only deps
-  useEffect(
-    () => setPage(1),
-    [
-      search?.value,
-      narrowKey ?? chosen,
-      activeView,
-      perPage,
-      sort?.value,
-      archived?.checked,
-      scopeKey,
-    ],
-  );
+  // Not on ARRIVAL, though: a caller whose page comes from the address would be
+  // reset off the page it was addressed with, and a reader following a link to
+  // page 6 would watch it become page 1 and the URL rewrite itself.
+  //
+  // So the reset compares the narrowing to what it was, rather than counting
+  // effect runs. Counting runs looks equivalent and is not: an effect runs on
+  // arrival, it runs TWICE on arrival under StrictMode, and it runs again for
+  // any dep that settles a tick after mount — three different arrivals a
+  // run-counter reads as a dial the reader moved. Comparing values has no such
+  // gap, because arriving cannot change a value that was read during the same
+  // render.
+  const narrowing = narrowingSignature({
+    search: search?.value,
+    narrowKey,
+    chosen,
+    perPage,
+    sort: sort?.value,
+    archived: archived?.checked,
+    scopeKey,
+  });
+  // Seeded during the FIRST render, not in the effect, so arrival is never a
+  // change no matter how many times the effect runs for it.
+  const narrowedBy = useRef(narrowing);
+  // `setPage` is re-made every render and the effect must not re-run for that;
+  // what it does depends only on the signature.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setPage is stable in effect
+  useEffect(() => {
+    if (narrowedBy.current === narrowing) {
+      return;
+    }
+    narrowedBy.current = narrowing;
+    setPage(1);
+    // The PAGE and nothing else. Scrolling the rows back to the top belongs here
+    // by the same argument, and must not be done from here: this effect also
+    // fires on the way OUT, when the list gets a last render against an address
+    // that is no longer its own and every dial it reads is empty. The page
+    // survives that — it lives in the address and is derived again on the way
+    // back — while an offset written then is memory overwritten, and the reader
+    // returns to the top of a list they had scrolled a long way down. The pager
+    // scrolls to the top for its own moves, where the trigger is a press and
+    // cannot be a teardown.
+  }, [narrowing]);
 
   // The overlay needs two numbers CSS cannot work out for itself: where the
   // frozen column ends, which a reader changes by dragging its grip, and how
@@ -837,7 +941,12 @@ export function ListTable<Row>({
       {body ?? (
         <div
           className={`lt-scroll${shifted ? " shifted" : ""}`}
-          ref={scroller}
+          ref={(node) => {
+            scroller.current = node;
+            if (bodyRef) {
+              bodyRef.current = node;
+            }
+          }}
           {...region}
           onScroll={(event) => {
             const next = event.currentTarget.scrollLeft > 0;

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import type { ListQuery } from "./listquery";
 import {
   LoadFilterViewMenu,
@@ -61,8 +62,19 @@ const VIEWS = {
   page: { next_cursor: null, has_more: false },
 };
 
-function routes(): void {
-  installFetchStub({ "GET /views": () => jsonResponse(VIEWS) });
+// A saved view is per-USER, so every surface here sits behind a session — the
+// rail reads it to decide whose views these are. Routed explicitly rather than
+// left to the stub's fallback: an unrouted /me answers a list shape, which
+// reads as a malformed session, fails every grant closed, and renders a
+// refusal none of these stories is named for.
+const SESSION: GrantSpec = { saved_view: ["read", "create"], person: ["read"] };
+
+function routes(extra: Parameters<typeof installFetchStub>[0] = {}): void {
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({ allow: SESSION })),
+    "GET /views": () => jsonResponse(VIEWS),
+    ...extra,
+  });
 }
 
 const NARROWED: ListQuery = {
@@ -139,7 +151,7 @@ export const TheRailFailedToLoad: Story = {
   // surface: the notice lands beside a list's Columns and Compact buttons, where
   // an unnamed "this section did not load" could be any of the three.
   render: () => {
-    installFetchStub({
+    routes({
       "GET /views": () => jsonResponse({ title: "Server error" }, 500),
     });
     return <SaveViewAction resource="people" query={NARROWED} />;

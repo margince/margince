@@ -22,6 +22,7 @@ import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
+import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
@@ -113,6 +114,10 @@ import {
   type ListQuery,
   type ListState,
   ListTable,
+  listQueryFromParams,
+  mergeScreenDials,
+  paramsFromListQuery,
+  withoutScreenDials,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
@@ -206,6 +211,34 @@ type DealFilters = {
   // mirror deal, whose pipeline/stage is null in overlay, OVA-MAP-6).
   overlay: boolean;
 };
+
+// The two dials this screen owns beyond the shared list vocabulary.
+//
+// `pipeline_id` is already a wire parameter name, so the address and the
+// endpoint say it the same way. `view` is the screen's own, because which of
+// the board and the table is drawn changes nothing about which deals exist —
+// and it is why these two are held out of the list codec rather than passed
+// through it: read as filters they would be sent to /deals, which takes
+// neither.
+const PIPELINE_PARAM = "pipeline_id";
+const VIEW_PARAM = "view";
+
+// This screen's own dials, held out of the list's parameter space by the codec's
+// shared pair rather than by copies kept here: the copies were the difference
+// between this screen getting it right and the leads queue sending its drawing
+// choice to the server as a filter.
+const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
+
+/** `params` with one dial set, or removed when the value is empty. */
+function withDialSet(params: UrlParams, key: string, value: string): UrlParams {
+  const next = new Map(params);
+  if (value) {
+    next.set(key, value);
+  } else {
+    next.delete(key);
+  }
+  return next;
+}
 
 // dealsQueryParams builds the native board's /deals query — the full dial
 // set (pipeline/stage/owner/org filters + sort). It is never called in
@@ -1642,17 +1675,61 @@ export function DealsScreen({
   const pipelinesQuery = usePipelines(!overlay);
   const meQuery = useMe();
   const savedViews = useSavedViewTabs("deals");
-  const [pipelineId, setPipelineId] = useState("");
-  const [query, setQuery] = useState<ListQuery>({
-    q: "",
-    sort: "",
-    includeArchived: false,
-    filters: {},
-    // The deal list reads its own fixed page (the board is capped at 100 and
-    // documented as such), so this is the shape's default rather than a dial
-    // the footer offers.
-    perPage: LIST_PAGE_SIZES[0],
-  });
+  // Every dial on this screen lives in the ADDRESS, the way the shared list
+  // stack's do (screens/listquery.tsx) — this screen hand-rolls its ListQuery
+  // because it drives a board as well as a table, so it reaches for the same
+  // codec rather than growing a second answer to what a narrowed list's URL
+  // looks like.
+  //
+  // `pipeline_id` and `view` sit beside the query's own dials: the first is
+  // already a wire parameter name, and the second is the one dial here that is
+  // about DRAWING rather than about which deals exist.
+  const [params, setParams] = useUrlParams();
+  const opening = useMemo<ListQuery>(
+    () => ({
+      q: "",
+      sort: "",
+      includeArchived: false,
+      filters: {},
+      // The deal list reads its own fixed page (the board is capped at 100 and
+      // documented as such), so this is the shape's default rather than a dial
+      // the footer offers.
+      perPage: LIST_PAGE_SIZES[0],
+    }),
+    [],
+  );
+  const query = useMemo(
+    () =>
+      listQueryFromParams(
+        withoutScreenDials(params, DEAL_SCREEN_DIALS),
+        opening,
+        true,
+      ),
+    [params, opening],
+  );
+  const setQuery = (update: SetStateAction<ListQuery>) => {
+    const live = currentParams();
+    const next =
+      typeof update === "function"
+        ? update(
+            listQueryFromParams(
+              withoutScreenDials(live, DEAL_SCREEN_DIALS),
+              opening,
+              true,
+            ),
+          )
+        : update;
+    setParams(
+      mergeScreenDials(
+        paramsFromListQuery(next, opening),
+        live,
+        DEAL_SCREEN_DIALS,
+      ),
+    );
+  };
+  const pipelineId = params.get(PIPELINE_PARAM) ?? "";
+  const setPipelineId = (next: string) =>
+    setParams(withDialSet(currentParams(), PIPELINE_PARAM, next));
   const effectivePipeline: Pipeline | undefined =
     pipelinesQuery.data?.find((p) => p.id === pipelineId) ??
     pipelinesQuery.data?.find((p) => p.is_default) ??
@@ -1674,9 +1751,12 @@ export function DealsScreen({
   // null pipeline/stage), so overlay mode opens on the flat table and hides the toggle
   // (below) — the mode is fixed for the page's life, so a static initial value
   // is enough.
-  const [view, setView] = useState<"board" | "table">(
-    overlay ? "table" : "board",
-  );
+  const view: "board" | "table" =
+    overlay || params.get(VIEW_PARAM) === "table" ? "table" : "board";
+  const setView = (next: "board" | "table") =>
+    setParams(
+      withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
+    );
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   // Bulk selection, by deal id. Cleared after any bulk run except for the rows
   // that refused, since every other row's version has moved.

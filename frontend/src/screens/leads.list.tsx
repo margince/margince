@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
+import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ToastRegion, useToast } from "../design-system/toast";
@@ -197,6 +198,11 @@ export function LeadsScreen() {
 // read.
 const SEGREGATION_NOTE_KEY = "margince.leads.segregationNoteDismissed";
 
+// The queue's own dial: board or table. Not a wire parameter, because /leads
+// takes neither — it decides how the same rows are drawn.
+const LEAD_VIEW_PARAM = "view";
+const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
+
 function LeadsWorkbench({
   viewerId,
   opensOnAll,
@@ -218,6 +224,11 @@ function LeadsWorkbench({
     initialSort: "",
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
     fetchPage: fetchLeadsPage,
+    // Board or table is this screen's own, so the codec must not read it as a
+    // lead filter: unheld it was spread onto `GET /leads?view=board`, counted
+    // as a narrowing, and cleared by "clear filters" — which flipped the board
+    // back to a table.
+    screenDials: LEAD_SCREEN_DIALS,
   });
   const [noteDismissed, setNoteDismissed] = useState(
     () => window.localStorage.getItem(SEGREGATION_NOTE_KEY) === "1",
@@ -234,7 +245,23 @@ function LeadsWorkbench({
   const liveSelection = new Set(selectedRows.map((lead) => lead.id));
   // The board writes status, which the mirror refuses (a lead's lifecycle is
   // not a field write-back), so overlay gets the table and no toggle.
-  const [view, setView] = useState<"table" | "board">("table");
+  // The board/table choice is a dial like the filters beside it, so it lives in
+  // the address: a reader can link to the board, and it survives a reload. It
+  // is the screen's OWN name rather than a wire one, because which of the two
+  // is drawn changes nothing about which leads exist — the same split the deals
+  // screen makes.
+  const [params, setParams] = useUrlParams();
+  const view: "table" | "board" =
+    params.get(LEAD_VIEW_PARAM) === "board" ? "board" : "table";
+  const setView = (next: "table" | "board") => {
+    const dials = new Map(currentParams());
+    if (next === "board") {
+      dials.set(LEAD_VIEW_PARAM, next);
+    } else {
+      dials.delete(LEAD_VIEW_PARAM);
+    }
+    setParams(dials);
+  };
   const sources = useLeadSources();
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
