@@ -1103,13 +1103,57 @@ async function expectNoAaViolations(page: Page, screen: string) {
       `axe could not decide ${undecided.length} finding(s) on #/${screen}; a human has to:\n  ${undecided.join("\n  ")}`,
     );
   }
-  expect(
-    results.violations.flatMap((violation) =>
-      violation.nodes.map(
-        (node) => `${violation.id}: ${node.target.join(" ")}`,
-      ),
-    ),
-  ).toEqual([]);
+  // A violation names the SELECTOR and nothing else, which is unactionable for
+  // the one class of failure this sweep actually produces: a contrast finding
+  // that appears on CI and on no developer's machine. Four runs named four
+  // different screens and every finding was small meta text, and none of them
+  // said what colours were measured — so there was nothing to compare against
+  // the tokens, and the investigation ran on hypotheses instead of readings.
+  //
+  // Axe already computed the pair. Reporting it costs nothing on a green run
+  // and turns a red one into evidence: the resolved theme, the two colours and
+  // the ratio, beside the threshold that rejected them.
+  const failures = results.violations.flatMap((violation) =>
+    violation.nodes.map((node) => {
+      const detail = node.any
+        .map((check) => {
+          const data = check.data as
+            | {
+                fgColor?: string;
+                bgColor?: string;
+                contrastRatio?: number;
+                expectedContrastRatio?: string;
+              }
+            | undefined;
+          if (!data?.fgColor) {
+            return check.message;
+          }
+          return `${data.fgColor} on ${data.bgColor} = ${data.contrastRatio}:1, needs ${data.expectedContrastRatio}`;
+        })
+        .join("; ");
+      return `${violation.id}: ${node.target.join(" ")} — ${detail}`;
+    }),
+  );
+  if (failures.length > 0) {
+    // The document's own theme, not the emulated scheme: a stamped
+    // `data-theme` outranks `prefers-color-scheme`, so the scheme a test asked
+    // for is not proof of the palette it got.
+    const painted = await page.evaluate(() => ({
+      dataTheme: document.documentElement.getAttribute("data-theme"),
+      prefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
+      textMeta: getComputedStyle(document.documentElement)
+        .getPropertyValue("--textMeta")
+        .trim(),
+      bgPage: getComputedStyle(document.documentElement)
+        .getPropertyValue("--bgPage")
+        .trim(),
+    }));
+    throw new Error(
+      `axe found ${failures.length} AA violation(s) on #/${screen}\n` +
+        `  painted as: ${JSON.stringify(painted)}\n  ` +
+        failures.join("\n  "),
+    );
+  }
 }
 
 test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
